@@ -1,0 +1,23 @@
+{
+  "name": "@contentgrid/navigator-data",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "peerDependencies": {
+    "@contentgrid/hal": "^0.4.0",
+    "@contentgrid/hal-forms": "^0.4.0",
+    "@contentgrid/typed-fetch": "^0.4.0",
+    "@contentgrid/fetch-hooks": "^0.4.0",
+    "@contentgrid/fetch-hook-authentication": "^0.4.0",
+    "@contentgrid/problem-details": "^0.4.0",
+    "@contentgrid/uri-template": "^0.4.0"
+  },
+  "devDependencies": {
+    "@contentgrid/tsconfig": "workspace:*"
+  }
+}

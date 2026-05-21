@@ -1,0 +1,13 @@
+{
+  "name": "@contentgrid/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

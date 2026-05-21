@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.turbo/
+.tanstack/
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example

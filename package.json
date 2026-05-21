@@ -1,0 +1,13 @@
+{
+  "name": "contentgrid-navigator-horizon",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "dev:navigator": "pnpm --filter navigator dev",
+    "dev:navigator-experimental": "pnpm --filter navigator-experimental dev",
+    "build": "pnpm -r run --if-present build",
+    "typecheck": "pnpm -r exec --if-present tsc --noEmit"
+  }
+}
