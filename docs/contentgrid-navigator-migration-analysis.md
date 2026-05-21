@@ -3,9 +3,10 @@
 **Date:** 2026-04-27 (revised 2026-04-29 — cutover-first scope, ADRs extracted; prepared for Xenit review 2026-05-06) (2026-05-07: reframed — the new front-end layer is the deliverable, not the prototype)
 **Author:** Nick Van Vynckt
 **Repos analysed:**
+
 - `contentgrid-navigator` (existing navigator — feature spec / behaviour reference)
 - `contentgrid-navigator-prototype` (architectural reference — idioms, primitives, hooks as starting points)
-**Companion docs:** `contentgrid-navigator-migration-roadmap.md`, ADR index (ADRs 001–015, available in prototype repo)
+  **Companion docs:** `contentgrid-navigator-migration-roadmap.md`, ADR index (ADRs 001–015, available in prototype repo)
 
 ---
 
@@ -48,7 +49,7 @@ What the **prototype has that the original does not** (keep, do not regress):
 - Theme toggle (light/dark via next-themes)
 - Keyboard shortcut system
 
-*(Dashboards and AI chat assistant exist in the prototype but are scoped as demo-only — see roadmap §Out of scope.)*
+_(Dashboards and AI chat assistant exist in the prototype but are scoped as demo-only — see roadmap §Out of scope.)_
 
 **Real work**: only the extraction/PDF-annotation flow is genuinely hard. Everything else is mechanical.
 
@@ -58,14 +59,14 @@ What the **prototype has that the original does not** (keep, do not regress):
 
 The prototype's stack is **strictly more modern** than the original on every axis:
 
-| Dimension       | Original                                     | Prototype                                           | Winner    |
-| --------------- | -------------------------------------------- | --------------------------------------------------- | --------- |
-| Router          | React Router v7                              | TanStack Router (file-based, type-safe, code-split) | Prototype |
-| State           | Context + ad-hoc reducers                    | Zustand + TanStack Query                            | Prototype |
-| Styling         | MUI v6 + tss-react (Emotion)                 | Tailwind v4 + shadcn/ui + Radix                     | Prototype |
+| Dimension       | Original                                     | Prototype                                                          | Winner    |
+| --------------- | -------------------------------------------- | ------------------------------------------------------------------ | --------- |
+| Router          | React Router v7                              | TanStack Router (file-based, type-safe, code-split)                | Prototype |
+| State           | Context + ad-hoc reducers                    | Zustand + TanStack Query                                           | Prototype |
+| Styling         | MUI v6 + tss-react (Emotion)                 | Tailwind v4 + shadcn/ui + Radix                                    | Prototype |
 | Forms           | JSONForms v3.6.0 (pinned exact, fragile)     | Custom field builder over shadcn (TanStack Form spike in Phase 5A) | Prototype |
-| Config          | `window.contentGridConfig` runtime injection | Zod-validated + localStorage                        | Prototype |
-| Type strictness | `noUnusedParameters` disabled                | Full strict                                         | Prototype |
+| Config          | `window.contentGridConfig` runtime injection | Zod-validated + localStorage                                       | Prototype |
+| Type strictness | `noUnusedParameters` disabled                | Full strict                                                        | Prototype |
 
 **Recommendation: do not port the original's architecture. Implement only the missing features in the new app, lifting the prototype's idioms as starting points.** MUI/JSONForms going away is a feature, not a loss.
 
@@ -75,7 +76,7 @@ TanStack Query owns server state; Zustand owns client UI state. Jotai was consid
 
 ## 2A. Delivery model
 
-The modernised navigator ships from a single monorepo in three coordinated tracks: **generic** (`apps/navigator`, production domain, stable features only), **experimental** (`apps/navigator-experimental`, separate domain, all stability tiers), and **custom** (`apps/<customer>/`, per-customer bespoke UIs scaffolded from shared packages — *deferred to first-customer trigger, see ADR-010*). Features live in `packages/features/<name>/` and carry an explicit stability flag (`experimental → candidate → stable`). The generic build enforces that it imports only `stable`-flagged features via an ESLint rule and CI bundle audit (Phase 1). See ADR-006 and roadmap §Three-track delivery model for the full promotion workflow.
+The modernised navigator ships from a single monorepo in three coordinated tracks: **generic** (`apps/navigator`, production domain, stable features only), **experimental** (`apps/navigator-experimental`, separate domain, all stability tiers), and **custom** (`apps/<customer>/`, per-customer bespoke UIs scaffolded from shared packages — _deferred to first-customer trigger, see ADR-010_). Features live in `packages/features/<name>/` and carry an explicit stability flag (`experimental → candidate → stable`). The generic build enforces that it imports only `stable`-flagged features via an ESLint rule and CI bundle audit (Phase 1). See ADR-006 and roadmap §Three-track delivery model for the full promotion workflow.
 
 **Custom-track apps cannot live in the public OSS monorepo.** A custom app for a specific customer contains prospect or customer names, bespoke UI decisions, and potentially NDA-bound business logic — none of which belongs in an Apache-2.0 public repo. Thijs confirmed this explicitly: "I don't think it's okay to put in prospect names." The concrete model: custom apps live in **private per-customer repos** and consume `@contentgrid/ui`, `@contentgrid/navigator-data`, and `packages/features/*` as **published npm dependencies** (not workspace protocol). This makes the `@contentgrid/*` publish ceremony a hard prerequisite for the first custom-track customer app, not an indefinite deferral. ADR-010 defers Phase 8 scaffolding to the first-customer trigger — that trigger simultaneously fires the publish ceremony for `@contentgrid/navigator-data` and `@contentgrid/ui`. The `pnpm workspace:*` protocol is fine during the cutover scope (Phases 0–7, 10) when all consumers live inside the monorepo; it cannot survive the OSS publish event for a custom-track app that lives outside it. See ADR-013 for the full private-repo delivery model and rejected alternatives.
 
@@ -131,7 +132,7 @@ Net: pnpm matches Yarn on `resolutions` and is strictly ahead on patching unrele
 
 ## 3A. Forms architecture — JSON Forms vs HAL-Forms-native renderer
 
-The "drop JsonForms" decision (ADR 0.4) is the single biggest behavioural change in the new app, and the meeting raised the legitimate question of whether JSON Forms could be retained as an *adapter layer* (swap the MUI renderer set for a shadcn renderer set, keep the rest). This section makes the trade-off explicit so the team can sign off on the call without surprises.
+The "drop JsonForms" decision (ADR 0.4) is the single biggest behavioural change in the new app, and the meeting raised the legitimate question of whether JSON Forms could be retained as an _adapter layer_ (swap the MUI renderer set for a shadcn renderer set, keep the rest). This section makes the trade-off explicit so the team can sign off on the call without surprises.
 
 ### What JSON Forms actually provides
 
@@ -166,22 +167,22 @@ Honest list, not minimised:
 
 ### Side-by-side comparison
 
-| Dimension | JSON Forms (existing) | HAL-Forms-native shadcn renderer (proposed) |
-|---|---|---|
-| Schema source | HAL-Forms → translator → JSON Schema → JSON Forms | HAL-Forms → `FieldDescriptor[]` → renderer |
-| Translation layers | 3 (HAL→JSON Schema, JSON Schema→UI Schema, UI Schema→renderer) | 1 (HAL→FieldDescriptor) |
-| Validation | Ajv + custom keywords | Zod, derived from FieldDescriptor |
-| Dispatch | Runtime tester ranking | Compile-time discriminated union |
-| Conditional logic | Built-in `rule.effect` against JSON pointer | Explicit predicate on form state (react-hook-form `watch` + condition) |
-| Layout primitives | `VerticalLayout`/`Group`/`Categorization` built-in | Compose shadcn `<Card>` / `<Tabs>` / `<Fieldset>` directly |
-| `oneOf` / `anyOf` | First-class renderer | Hand-rolled per case (audit-driven, see 5D.7) |
-| UI library coupling | Tied to MUI (or rewrite renderer set) | Tied to shadcn/Radix — already chosen |
-| Runtime weight (gzip) | ~150 KB (JSON Forms + Ajv + MUI renderers) | ~15 KB (react-hook-form + Zod, already required) |
-| Dev velocity for novel field type | Add tester + renderer + register; navigate JSON Forms internals | Add variant to `FieldDescriptor`, add `case` to renderer, write story |
-| Type safety | String-typed scopes, dynamic dispatch | Exhaustive switch on union |
-| AI-readability | Low (framework-specific patterns) | High (plain switch + shadcn primitives) |
-| External ecosystem | Yes (renderer packages, SO answers) | None — bespoke |
-| Upgrade tax | JSON Forms major versions + Ajv + MUI | Only shadcn/Radix/Tailwind (already owned) |
+| Dimension                         | JSON Forms (existing)                                           | HAL-Forms-native shadcn renderer (proposed)                            |
+| --------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Schema source                     | HAL-Forms → translator → JSON Schema → JSON Forms               | HAL-Forms → `FieldDescriptor[]` → renderer                             |
+| Translation layers                | 3 (HAL→JSON Schema, JSON Schema→UI Schema, UI Schema→renderer)  | 1 (HAL→FieldDescriptor)                                                |
+| Validation                        | Ajv + custom keywords                                           | Zod, derived from FieldDescriptor                                      |
+| Dispatch                          | Runtime tester ranking                                          | Compile-time discriminated union                                       |
+| Conditional logic                 | Built-in `rule.effect` against JSON pointer                     | Explicit predicate on form state (react-hook-form `watch` + condition) |
+| Layout primitives                 | `VerticalLayout`/`Group`/`Categorization` built-in              | Compose shadcn `<Card>` / `<Tabs>` / `<Fieldset>` directly             |
+| `oneOf` / `anyOf`                 | First-class renderer                                            | Hand-rolled per case (audit-driven, see 5D.7)                          |
+| UI library coupling               | Tied to MUI (or rewrite renderer set)                           | Tied to shadcn/Radix — already chosen                                  |
+| Runtime weight (gzip)             | ~150 KB (JSON Forms + Ajv + MUI renderers)                      | ~15 KB (react-hook-form + Zod, already required)                       |
+| Dev velocity for novel field type | Add tester + renderer + register; navigate JSON Forms internals | Add variant to `FieldDescriptor`, add `case` to renderer, write story  |
+| Type safety                       | String-typed scopes, dynamic dispatch                           | Exhaustive switch on union                                             |
+| AI-readability                    | Low (framework-specific patterns)                               | High (plain switch + shadcn primitives)                                |
+| External ecosystem                | Yes (renderer packages, SO answers)                             | None — bespoke                                                         |
+| Upgrade tax                       | JSON Forms major versions + Ajv + MUI                           | Only shadcn/Radix/Tailwind (already owned)                             |
 
 ### The middle path examined: keep JSON Forms, swap renderer set
 
@@ -257,14 +258,17 @@ Onboarding task tracked in Phase 1 of the roadmap (task 1.12): "Onboard Premchit
 Navigator migration tickets land in the **same Jira project as the existing Xenit sprint flow**. Confirm project key and ticket labelling convention with Thijs before 21 May (next sprint planning, moved due to Ascension + collective day off).
 
 **Per-sprint cadence:**
+
 - Nick prepares the next sprint's navigator tickets at least 2 working days before sprint planning.
 - Tickets reviewed at the existing sprint planning meeting; Xenit team flags conflicts with prior work or known issues.
 - Premchitra is primary executor for in-flight tickets; see section 4A for agentic operating model.
 
 **Technical decisions:**
+
 - Captured as ADRs in `docs/adr/`. Nick owns ADR drafts; Xenit team (Lars, Thijs, Ronny) review before merge. Decisions are not considered settled until the ADR is merged.
 
 **Standup and escalation:**
+
 - Align with the existing Xenit standup. Escalation path: Thijs first, then Ronny.
 
 **Action:** Nick to confirm sprint cadence and Jira labelling convention with Thijs before 21 May.
@@ -277,13 +281,13 @@ Neither codebase has meaningful tests. Don't try to back-fill the original — w
 
 **Pyramid:**
 
-| Layer                    | Tool                           | Target                                                    | Notes                                                        |
-| ------------------------ | ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------ |
-| Unit (pure logic)        | **Vitest**                     | 80%                                                       | URL encoders, accessors, schema converters, Zustand reducers |
-| Component                | **Vitest + Testing Library**   | Every primitive + pattern via Storybook `@storybook/test` | Stories ARE tests with `play()`                              |
-| Integration (hook + MSW) | Vitest + **MSW**               | All TanStack Query hooks                                  | Mock HAL responses                                           |
+| Layer                    | Tool                           | Target                                                                                                                    | Notes                                                        |
+| ------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Unit (pure logic)        | **Vitest**                     | 80%                                                                                                                       | URL encoders, accessors, schema converters, Zustand reducers |
+| Component                | **Vitest + Testing Library**   | Every primitive + pattern via Storybook `@storybook/test`                                                                 | Stories ARE tests with `play()`                              |
+| Integration (hook + MSW) | Vitest + **MSW**               | All TanStack Query hooks                                                                                                  | Mock HAL responses                                           |
 | E2E                      | **Playwright** (already there) | Critical journeys × {Chromium, Firefox, WebKit} × {desktop, mobile}; PRs run Chromium-only, full matrix nightly + on main | Inherit the original's spec, expand                          |
-| Visual                   | **Playwright**                 | All stories                                               | Auto-baseline, agent-friendly                                |
+| Visual                   | **Playwright**                 | All stories                                                                                                               | Auto-baseline, agent-friendly                                |
 
 **Target: 80% line + 100% of critical user journeys via Playwright.** Use `@vitest/coverage-v8` with thresholds enforced in CI.
 
@@ -311,20 +315,20 @@ The roadmap defines **11 phases (0–10)** but commits only to the **cutover-fir
 
 Cutover-first scope total: **64 optimistic / 81.5 realistic / 99 pessimistic net engineer-days**, calendar estimates ~14 weeks (single engineer), ~10 weeks (two engineers), or ~7 weeks (three engineers). The +1.5d increase vs. the original 79d realistic estimate reflects three post-initial-plan task additions: 1.12 (Premchitra onboarding), 2.6 (HAL contract tests, ADR-014), and 6A.5 (video preview port). Phase titles and one-line scope (full task breakdowns and sprint plans in `contentgrid-navigator-migration-roadmap.md`):
 
-| Phase | Title | Scope | Status |
-|---|---|---|---|
-| 0 | Alignment & decisions | ADRs 001–015 captured; outstanding: extraction LLM strategy (Phase 0.6) | ✅ in scope |
-| 0.5 | Production entity-profile audit | HAL-Forms `_templates` shapes + JSONForms-only behaviours catalogued as fixtures | ✅ in scope |
-| 1 | Monorepo + tooling foundation | pnpm workspaces, generic + experimental app shells, ESLint stability-flag enforcement, CI two deploy lanes, Playwright story snapshots | ✅ in scope |
-| 2 | Test scaffolding | Vitest, MSW, coverage thresholds, Playwright config ported | ✅ in scope |
-| 3 | Component library hardening | Stories + play-fn tests for all shadcn primitives and patterns; design tokens; a11y audit | ✅ in scope |
-| 4 | `@contentgrid/navigator-data` extraction | Move hooks/auth/config to workspace package; MSW integration tests; publish-ready surface (publish ceremony deferred) | ✅ in scope |
-| 5 | Feature parity & correctness | 5A HAL-Forms bridge + renderers; 5B ETag concurrency; 5C search/list parity; 5D easy original gaps | ✅ in scope |
-| 6 | PDF preview & AI extraction | 6A PDF viewer toolbar parity (with ADR-011 fallback); 6B extraction flow port (highest-risk — see spike 6B.1) | ✅ in scope |
-| 7 | Production hardening | Error boundaries, i18n, RBAC-aware rendering, a11y CI, security review, Docker/deploy | ✅ in scope |
-| 8 | Custom track scaffolding | Customer-app template, `customer.config.ts` schema (Claude skill dropped) | ⏸ deferred — first-customer trigger |
-| 9 | Apache-2.0 OSS release | Repo hygiene, secrets scan, CI/release pipeline, docs site | ⏸ deferred — post-cutover re-plan |
-| 10 | Cutover | Staging side-by-side, beta-tester pass, production cutover, original repo archived | ✅ in scope |
+| Phase | Title                                    | Scope                                                                                                                                  | Status                              |
+| ----- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 0     | Alignment & decisions                    | ADRs 001–015 captured; outstanding: extraction LLM strategy (Phase 0.6)                                                                | ✅ in scope                         |
+| 0.5   | Production entity-profile audit          | HAL-Forms `_templates` shapes + JSONForms-only behaviours catalogued as fixtures                                                       | ✅ in scope                         |
+| 1     | Monorepo + tooling foundation            | pnpm workspaces, generic + experimental app shells, ESLint stability-flag enforcement, CI two deploy lanes, Playwright story snapshots | ✅ in scope                         |
+| 2     | Test scaffolding                         | Vitest, MSW, coverage thresholds, Playwright config ported                                                                             | ✅ in scope                         |
+| 3     | Component library hardening              | Stories + play-fn tests for all shadcn primitives and patterns; design tokens; a11y audit                                              | ✅ in scope                         |
+| 4     | `@contentgrid/navigator-data` extraction | Move hooks/auth/config to workspace package; MSW integration tests; publish-ready surface (publish ceremony deferred)                  | ✅ in scope                         |
+| 5     | Feature parity & correctness             | 5A HAL-Forms bridge + renderers; 5B ETag concurrency; 5C search/list parity; 5D easy original gaps                                     | ✅ in scope                         |
+| 6     | PDF preview & AI extraction              | 6A PDF viewer toolbar parity (with ADR-011 fallback); 6B extraction flow port (highest-risk — see spike 6B.1)                          | ✅ in scope                         |
+| 7     | Production hardening                     | Error boundaries, i18n, RBAC-aware rendering, a11y CI, security review, Docker/deploy                                                  | ✅ in scope                         |
+| 8     | Custom track scaffolding                 | Customer-app template, `customer.config.ts` schema (Claude skill dropped)                                                              | ⏸ deferred — first-customer trigger |
+| 9     | Apache-2.0 OSS release                   | Repo hygiene, secrets scan, CI/release pipeline, docs site                                                                             | ⏸ deferred — post-cutover re-plan   |
+| 10    | Cutover                                  | Staging side-by-side, beta-tester pass, production cutover, original repo archived                                                     | ✅ in scope                         |
 
 For per-phase task breakdowns, effort by task, sprint plans (single / two / three engineer), and dependency graph see `contentgrid-navigator-migration-roadmap.md` (filename preserved). For decision rationale see `adr/README.md`.
 
@@ -334,14 +338,15 @@ For per-phase task breakdowns, effort by task, sprint plans (single / two / thre
 
 Three documentation surfaces currently exist for ContentGrid navigator work:
 
-| Surface | Audience | Owns |
-|---|---|---|
-| Obsidian (author's PARA vault) | Author | Current home for in-flight planning docs (analysis, roadmap, ADR set) until Phase 1; migration trigger is Phase 1 monorepo bootstrap |
-| In-repo `docs/` (ADRs, this analysis, roadmap) | Developers, architects | Architecture decisions, version-controlled with code (post-Phase 1 destination) |
-| Public docs site | End users | How to use the navigator (how-to guides, config reference) |
-| Confluence | Operators, internal team | Operational runbooks, deployment ops, internal notes |
+| Surface                                        | Audience                 | Owns                                                                                                                                 |
+| ---------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Obsidian (author's PARA vault)                 | Author                   | Current home for in-flight planning docs (analysis, roadmap, ADR set) until Phase 1; migration trigger is Phase 1 monorepo bootstrap |
+| In-repo `docs/` (ADRs, this analysis, roadmap) | Developers, architects   | Architecture decisions, version-controlled with code (post-Phase 1 destination)                                                      |
+| Public docs site                               | End users                | How to use the navigator (how-to guides, config reference)                                                                           |
+| Confluence                                     | Operators, internal team | Operational runbooks, deployment ops, internal notes                                                                                 |
 
 **Proposed split during the cutover scope:**
+
 - Architecture decisions, ADRs, this analysis, and the roadmap → in-repo `docs/` (closest to code, versioned with changes, reviewable in PRs). Until Phase 1: these live in the Obsidian vault as in-flight planning docs and migrate to the repo during Phase 1.1 (monorepo bootstrap).
 - User-facing UI documentation (how to use the navigator) → public docs site, deferred to Phase 9D.
 - Operational runbooks, deployment ops → Confluence (existing convention, internal).
@@ -375,11 +380,11 @@ Substantially beyond a scaffold — a functioning navigator with real HAL/Conten
 
 ## Appendix D — Team-reported pain points
 
-*Opened by Ranec on 2026-05-08. Xenit team members can append current frustrations or pain points with the existing navigator directly in this section, or file them as Jira tickets with a `nav-pain` label.*
+_Opened by Ranec on 2026-05-08. Xenit team members can append current frustrations or pain points with the existing navigator directly in this section, or file them as Jira tickets with a `nav-pain` label._
 
-*Format per entry: short description | raised by | date. Nick triages weekly — items become roadmap scope additions, risk register entries, or explicit out-of-scope calls.*
+_Format per entry: short description | raised by | date. Nick triages weekly — items become roadmap scope additions, risk register entries, or explicit out-of-scope calls._
 
-*(No entries yet — add yours below.)*
+_(No entries yet — add yours below.)_
 
 ---
 

@@ -32,7 +32,7 @@ pnpm --filter "...[origin/main]" run test
 pnpm --filter "...[origin/main]" run build
 ```
 
-This runs the target only on workspaces changed since `origin/main` *plus* their dependents — the same blast-radius semantics as Turborepo's `--filter=...[origin/main]` for affected runs, without adopting a second tool. CI uses this for PR builds; only when this strategy itself hits the 5-minute threshold (e.g. broad cross-package changes dominate) does Turborepo's task-level caching become the next lever.
+This runs the target only on workspaces changed since `origin/main` _plus_ their dependents — the same blast-radius semantics as Turborepo's `--filter=...[origin/main]` for affected runs, without adopting a second tool. CI uses this for PR builds; only when this strategy itself hits the 5-minute threshold (e.g. broad cross-package changes dominate) does Turborepo's task-level caching become the next lever.
 
 ## Why pnpm alone
 
@@ -51,17 +51,19 @@ This runs the target only on workspaces changed since `origin/main` *plus* their
 
 - Solves one real problem — task-level caching and parallelism — without imposing a project-graph mental model.
 - But: at our scale today, vanilla pnpm `--filter` + GitHub Actions caching covers the same ground. Turborepo's leverage shows up when CI runs hit ~5+ minutes on no-op PRs and developers feel it.
-- **Adoption trigger:** CI no-op PR build time crosses 5 minutes consistently, *or* `pnpm test` on a typo-only change exceeds ~30s locally.
-- When triggered, Turborepo sits *alongside* pnpm — it doesn't replace anything. Migration is additive.
+- **Adoption trigger:** CI no-op PR build time crosses 5 minutes consistently, _or_ `pnpm test` on a typo-only change exceeds ~30s locally.
+- When triggered, Turborepo sits _alongside_ pnpm — it doesn't replace anything. Migration is additive.
 
 ## Consequences
 
 **Positive:**
+
 - One tool to learn. New contributors are productive on day one.
 - OSS consumers see a vanilla pnpm setup — no proprietary configuration to decode.
 - Reversibility is high — switching to Turborepo later is additive, not a rewrite.
 
 **Negative / accepted:**
+
 - No automatic affected-detection. CI runs every package's tests on every PR until we add filtering manually.
 - No remote build cache. Acceptable at our build times today.
 - If/when CI time crosses the threshold, there's a small migration cost to add Turborepo. Budgeted as "later" rather than now.

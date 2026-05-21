@@ -131,12 +131,14 @@ Story coverage and snapshot coverage are separate requirements:
 ## Consequences
 
 **Positive:**
+
 - Zero recurring cost for visual regression.
 - Baselines are version-controlled artefacts. History of UI changes lives in git.
 - No new account, no new dashboard, no new permissions to manage.
 - OSS consumers inherit the testing setup without needing a Chromatic account.
 
 **Negative / accepted:**
+
 - Snapshot diffs are PNG-in-PR, not a hosted UI. Reviewers must look at the artefact link.
 - Repo size grows with baselines. Mitigated by limiting to one viewport per story by default; PNG storage is cheap.
 - Re-baselining a wide UI change (e.g. design token tweak) touches many files in one PR. Acceptable; the alternative is a hidden "approve all" button.

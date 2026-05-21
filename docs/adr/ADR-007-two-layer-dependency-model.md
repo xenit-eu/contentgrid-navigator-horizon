@@ -46,10 +46,10 @@ It does **not** re-implement HAL parsing, HAL-Forms parsing, fetch composition, 
 
 ## Why externalise (vs. a single internal workspace forever)
 
-| Choice | Pro | Con |
-|---|---|---|
+| Choice                                      | Pro                                                                                                     | Con                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | **Externalised + published (target state)** | One bump propagates to all tracks + customer apps; reusable in non-navigator frontends; OSS-publishable | Release ceremony (changesets, semver, CHANGELOG); version-skew risk between consumers |
-| **Internal workspace only** (current state) | Zero ceremony, atomic changes | No reuse outside this repo; out-of-tree consumers blocked |
+| **Internal workspace only** (current state) | Zero ceremony, atomic changes                                                                           | No reuse outside this repo; out-of-tree consumers blocked                             |
 
 We pay the ceremony only when the second column's pain is real. See ADR-010 for the deferral and ADR-013 for the custom-track private-repo model that makes the publish ceremony a hard prerequisite at first-customer trigger.
 
@@ -64,12 +64,14 @@ We pay the ceremony only when the second column's pain is real. See ADR-010 for 
 ## Consequences
 
 **Positive:**
+
 - Backend HAL contract changes propagate by Xenit version bump, not by editing every consumer.
 - Navigator-side conventions (ETag, query-hook shape, config schema) have a single home.
 - Workspace-protocol consumption is friction-free during the migration.
 - Path to publication is short and well-defined when needed.
 
 **Negative / accepted:**
+
 - Two-package mental model: "is this a Xenit responsibility or ours?" — usually obvious, but adds a moment of thought when the boundary is ambiguous.
 - When Xenit ships a breaking change in a layer-1 package, we may need a short-lived shim in `@contentgrid/navigator-data` until consumers catch up. That's the price of the layered model.
 - Compat matrix (Xenit `@contentgrid/*` versions ↔ our `@contentgrid/navigator-data` majors) is a real artefact at publish time.

@@ -10,7 +10,7 @@
 
 ContentGrid has a console (user/IAM management, deployment management, data-model management). It is admin/operator-facing, not end-user-facing. Distinct audience, distinct release cadence, likely distinct sub-team. Visual consistency with the navigator is required: same buttons, dialogs, tables, design tokens.
 
-The question is not *whether* to share UI code (we will), but *where* console lives:
+The question is not _whether_ to share UI code (we will), but _where_ console lives:
 
 1. Inside the navigator monorepo as `apps/console`, alongside generic/experimental.
 2. As a separate project consuming `@contentgrid/ui` via npm.
@@ -37,17 +37,17 @@ The roadmap already treats Console-side ACC-2694 tickets as out of scope, so the
 
 ## Why a published `@contentgrid/ui` is correct anyway
 
-Visual consistency between two apps living in different repos *requires* a versioned design system. There's no escape from this — it's true whether console and navigator share a repo or not, because once a customer-track app moves out of the monorepo (ADR-006, ADR-009), we already need a publishable `@contentgrid/ui`.
+Visual consistency between two apps living in different repos _requires_ a versioned design system. There's no escape from this — it's true whether console and navigator share a repo or not, because once a customer-track app moves out of the monorepo (ADR-006, ADR-009), we already need a publishable `@contentgrid/ui`.
 
 Console is the natural **first external consumer** of the design system. That makes it the publish trigger — same pattern as ADR-007 for `navigator-data`.
 
 ## What console consumes
 
-| Package | Provider | Notes |
-|---|---|---|
-| `@contentgrid/ui` | this monorepo (published) | Primitives + patterns + Tailwind preset + tokens |
-| `@contentgrid/typed-fetch`, `fetch-hooks`, `fetch-hook-authentication`, `problem-details` | Xenit (peerDeps) | Same as navigator's layer 1 |
-| `@contentgrid/uri-template` | Xenit (peerDeps) | If console builds typed admin URLs |
+| Package                                                                                   | Provider                  | Notes                                            |
+| ----------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------ |
+| `@contentgrid/ui`                                                                         | this monorepo (published) | Primitives + patterns + Tailwind preset + tokens |
+| `@contentgrid/typed-fetch`, `fetch-hooks`, `fetch-hook-authentication`, `problem-details` | Xenit (peerDeps)          | Same as navigator's layer 1                      |
+| `@contentgrid/uri-template`                                                               | Xenit (peerDeps)          | If console builds typed admin URLs               |
 
 What console does **not** consume:
 
@@ -61,6 +61,7 @@ That's a clean three-package contract.
 **Trigger:** console (or another out-of-tree consumer) is ready to adopt the new design system.
 
 **When triggered:**
+
 - Add changesets to the navigator monorepo for `packages/ui`.
 - Configure publish workflow: `npm publish` (or ghcr-npm) on tag `ui-vX.Y.Z`.
 - Tree-shaking validation; bundle-size baseline.
@@ -79,12 +80,14 @@ That's a clean three-package contract.
 ## Consequences
 
 **Positive:**
+
 - Navigator cutover stays focused. Console team has zero new dependency on navigator timelines.
 - `@contentgrid/ui` becomes a real, externally-versioned design system — the right shape for any future second consumer (custom-track customer apps, embedded uses, OSS).
 - Clean three-package contract for console: layer-1 Xenit + `@contentgrid/ui` + admin APIs.
 - OSS release scope stays unambiguous: just navigator.
 
 **Negative / accepted:**
+
 - Two repos to maintain. Two CI setups. Two test infrastructures.
 - Design-system bumps require coordinated PRs across repos. Mitigated by semver discipline and avoiding gratuitous breaking changes in `@contentgrid/ui`.
 - Console will trail the navigator on UI improvements until it adopts the new design system. Acceptable — visual drift between admin and end-user UIs is tolerable short-term.
@@ -92,7 +95,7 @@ That's a clean three-package contract.
 ## Reconsider when
 
 - Console contributors and navigator contributors converge to the same 1–2 people. Then monorepo overhead is worth paying for atomic refactors.
-- A console-side pattern (e.g. a deployment-status dashboard) is reused *inside* the navigator. Then the shared surface is bigger than `@contentgrid/ui` alone, and monorepo gains real leverage.
+- A console-side pattern (e.g. a deployment-status dashboard) is reused _inside_ the navigator. Then the shared surface is bigger than `@contentgrid/ui` alone, and monorepo gains real leverage.
 - Console is about to be rewritten from scratch. Folding it in then is a one-time cost on a clean slate; cheaper than later.
 
 ---

@@ -37,22 +37,24 @@ The navigator has non-trivial URL-state requirements: cursor-encoded search filt
 
 ## Alternatives considered
 
-| Option | Why rejected |
-|---|---|
-| **React Router v7** | Status quo, but loses type safety and overlaps with TanStack Query. |
-| **Next.js / Remix file-based router** | Forces a server runtime we don't need. Navigator is an SPA inside a host environment. |
-| **Hash routing or history-only** | Insufficient for a multi-route app with deep links and shareable filter state. |
-| **Wouter / Reach Router** | Smaller, but neither offers typed search params or loaders. We'd outgrow them quickly. |
+| Option                                | Why rejected                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| **React Router v7**                   | Status quo, but loses type safety and overlaps with TanStack Query.                    |
+| **Next.js / Remix file-based router** | Forces a server runtime we don't need. Navigator is an SPA inside a host environment.  |
+| **Hash routing or history-only**      | Insufficient for a multi-route app with deep links and shareable filter state.         |
+| **Wouter / Reach Router**             | Smaller, but neither offers typed search params or loaders. We'd outgrow them quickly. |
 
 ## Consequences
 
 **Positive:**
+
 - URL is the durable source of truth for navigational state. Refresh, share, back/forward all "just work."
 - Type-safe `<Link to="...">` calls fail at compile time when a route is renamed.
 - Code-splitting is automatic per route — bundle size stays disciplined.
 - Pairs naturally with TanStack Query (same vendor, similar APIs).
 
 **Negative / accepted:**
+
 - File-based generation introduces a build-time codegen step. CI must regenerate on route changes; lint checks catch staleness.
 - Fewer Stack Overflow hits than React Router. Compensated by good official docs.
 - Migrating any embedded host that assumes React Router patterns requires a small adapter.

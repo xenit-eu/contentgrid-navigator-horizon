@@ -47,6 +47,7 @@ reason — only one instance of each must exist at runtime.
 Hooks in this package wrap TanStack Query. Follow these conventions:
 
 **Naming:**
+
 - Collection queries: `useList<EntityName>` (e.g. `useListEntities`)
 - Single-item queries: `useEntity` (generic, entity type via type param)
 - Mutations — create: `useCreate<EntityName>`, update: `useUpdate<EntityName>`,
@@ -55,6 +56,7 @@ Hooks in this package wrap TanStack Query. Follow these conventions:
 - Search: `useSearch<EntityName>`
 
 **Return shape:**
+
 - Queries return the standard TanStack Query result shape:
   `{ data, isLoading, isError, error, refetch }`.
 - `data` for collection hooks is `HalSlice` from `@contentgrid/hal`.
@@ -63,6 +65,7 @@ Hooks in this package wrap TanStack Query. Follow these conventions:
   to the consumer (pattern component or feature).
 
 **Error handling:**
+
 - Use `@contentgrid/problem-details` to parse `application/problem+json`
   responses. Do NOT manually inspect `response.status` for domain logic.
 - Surface the parsed problem detail via TanStack Query's `error` field.
@@ -70,6 +73,7 @@ Hooks in this package wrap TanStack Query. Follow these conventions:
   retry. The hook must not swallow or auto-retry 412.
 
 **HAL contract tests (ADR-014):**
+
 - MSW handler fixtures live alongside hooks in this package and are exported
   for consumer reuse.
 - When adding or changing a hook, update the corresponding MSW fixture so
@@ -84,6 +88,7 @@ The platform uses ETags for optimistic concurrency (RFC 9110).
 Problem type for mismatch: `unsatisfied-version` (HTTP 412).
 
 Canonical flow:
+
 1. **GET** `/{plural}/{id}` — capture the `ETag` response header.
    Store the ETag value exactly as received (including surrounding quotes).
 2. **PUT or PATCH** `/{plural}/{id}` — send `If-Match: <stored-ETag>`.
@@ -91,6 +96,7 @@ Canonical flow:
    current state + new ETag, re-apply the user's changes, and retry.
 
 Rules:
+
 - Always send `If-Match` on mutating requests for entity items.
 - Do NOT strip or modify the ETag value — the platform compares verbatim.
 - Do NOT store ETags permanently (session state only).
@@ -101,6 +107,7 @@ Rules:
 ## What belongs here vs. elsewhere
 
 Belongs here:
+
 - TanStack Query hooks for HAL resources.
 - ETag / `If-Match` policy implementation.
 - HAL-Forms → `FieldDescriptor[]` bridge (ADR-004).
@@ -108,6 +115,7 @@ Belongs here:
 - MSW handler fixtures (exported for consumers).
 
 Does NOT belong here:
+
 - UI components — those go in `packages/ui`.
 - Feature-specific business logic — that goes in `packages/features/<name>/`.
 - Re-implementations of anything in `@contentgrid/hal`, `@contentgrid/hal-forms`,

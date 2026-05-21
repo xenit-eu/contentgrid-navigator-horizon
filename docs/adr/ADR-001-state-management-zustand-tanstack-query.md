@@ -59,26 +59,26 @@ We need an explicit, durable rule for which library owns which kind of state, pl
 **Negative / accepted costs:**
 
 - Two mental models coexist. New contributors must learn the boundary. Mitigated by per-package `CLAUDE.md` callouts and this ADR linked from the navigator README.
-- Genuinely cross-cutting state (e.g. a "unsaved changes across multiple open forms" tracker) needs a small Zustand store *plus* coordination with TanStack Query mutations. Acceptable; document the pattern in `packages/navigator-data` when it first appears.
+- Genuinely cross-cutting state (e.g. a "unsaved changes across multiple open forms" tracker) needs a small Zustand store _plus_ coordination with TanStack Query mutations. Acceptable; document the pattern in `packages/navigator-data` when it first appears.
 - Refactor cost: the prototype already mixes some server-shaped data into client state. Phase 5 reviews each touched feature and migrates as part of parity work.
 
 ---
 
 ## Alternatives considered
 
-| Option | Why rejected |
-|---|---|
-| **Jotai** (atom-based) | Atom granularity solves rendering issues at a scale we don't have. Complexity tax (atom families, providers, derived atoms) outweighs benefit. Reconsider only on measured perf evidence. |
-| **Redux Toolkit + RTK Query** | Distinguishing features (devtools, time-travel, RTK Query) are either covered by TanStack Query or unused in production. Boilerplate cost is real and persistent. |
-| **Zustand only** (no TanStack Query) | We'd be hand-rolling cache invalidation, request dedup, background refetch, optimistic updates, and ETag handling. TanStack Query is battle-tested for exactly this. |
-| **React Context + `useReducer`** (original navigator) | Coarse re-renders, no async primitives, no devtools, awkward async-data flows. The original's pain is the proof. |
-| **Valtio / MobX** (proxy-based) | Implicit reactivity is harder to reason about than explicit selectors. Trades clarity for ergonomics. Not worth the swap. |
+| Option                                                | Why rejected                                                                                                                                                                              |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Jotai** (atom-based)                                | Atom granularity solves rendering issues at a scale we don't have. Complexity tax (atom families, providers, derived atoms) outweighs benefit. Reconsider only on measured perf evidence. |
+| **Redux Toolkit + RTK Query**                         | Distinguishing features (devtools, time-travel, RTK Query) are either covered by TanStack Query or unused in production. Boilerplate cost is real and persistent.                         |
+| **Zustand only** (no TanStack Query)                  | We'd be hand-rolling cache invalidation, request dedup, background refetch, optimistic updates, and ETag handling. TanStack Query is battle-tested for exactly this.                      |
+| **React Context + `useReducer`** (original navigator) | Coarse re-renders, no async primitives, no devtools, awkward async-data flows. The original's pain is the proof.                                                                          |
+| **Valtio / MobX** (proxy-based)                       | Implicit reactivity is harder to reason about than explicit selectors. Trades clarity for ergonomics. Not worth the swap.                                                                 |
 
 ---
 
 ## Reconsider when
 
-- A *measured* rendering bottleneck appears that Zustand selector memoisation can't solve → evaluate Jotai for that hotspot only.
+- A _measured_ rendering bottleneck appears that Zustand selector memoisation can't solve → evaluate Jotai for that hotspot only.
 - Real-time collaborative editing (Y.js / Liveblocks / Convex) lands on the roadmap → server-state model changes fundamentally; warrants its own ADR.
 - The Zustand store count crosses ~10 → "slice by feature" needs a stricter convention or a code generator. Don't pre-emptively design for it.
 - ContentGrid backend grows a websocket / SSE channel for entity updates → invalidation strategy in TanStack Query gets a dedicated ADR.

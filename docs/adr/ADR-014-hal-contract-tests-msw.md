@@ -33,20 +33,22 @@ Concrete scope for Phase 2 (task 2.6): extend the MSW handlers from task 2.4 to 
 
 ## Alternatives considered
 
-| Option | Why rejected |
-|---|---|
+| Option                                                | Why rejected                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **(a) Publish Playwright suite as runnable artefact** | Heavyweight: requires a deployed navigator instance, a live or stubbed platform, and a network. Slow. Couples CI of one repo to the runtime state of another. Rejected as a primary mechanism — may still be added as a secondary layer after Phase 2 demonstrates (b)'s coverage. |
-| **(c) Leave out of scope** | Explicitly rejected. The production breakage Thijs described is a recurring class of failure, not a one-off. The cost of (b) is low (MSW handlers are being written anyway); deferring leaves a known gap open. |
+| **(c) Leave out of scope**                            | Explicitly rejected. The production breakage Thijs described is a recurring class of failure, not a one-off. The cost of (b) is low (MSW handlers are being written anyway); deferring leaves a known gap open.                                                                    |
 
 ## Consequences
 
 **Positive:**
+
 - A class of silent production breakage (platform shape change + no navigator test failure) is caught in CI before it ships.
 - Fixtures are a reusable artefact: Phase 0.5 produces them for the audit; Phase 2 extends them for contract testing; Phase 5A reuses them for HAL-Forms round-trip parity tests (task 5A.6).
 - Contract tests are runnable by any consumer of `@contentgrid/navigator-data` — the test layer is not navigator-internal.
 - No new external dependency or running environment required.
 
 **Negative / accepted:**
+
 - MSW fixtures are a snapshot of the platform's response shapes at a point in time. They must be updated when the platform evolves intentionally (e.g. a deliberate HAL contract change). This is the mechanism working correctly, not a flaw — the fixture update is the review step.
 - Contract tests do not catch every class of cross-repo breakage (e.g. a new platform endpoint required for a new feature). They catch shape drift at existing endpoints. Other classes of integration risk remain outside this scope.
 - Small Phase 2 estimate increase: 0.5d (task 2.6) on top of the original 2.0d Phase 2 total.

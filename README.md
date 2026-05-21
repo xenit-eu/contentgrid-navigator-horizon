@@ -32,17 +32,17 @@ contentgrid-navigator-horizon/
 
 ## Where things live
 
-| What | Where |
-|---|---|
-| Architecture principles | Project `.claude/settings.local.json`; public docs at docs.contentgrid.com |
-| Architecture decisions | `docs/adr/` — 15 ADRs, each with context, decision, alternatives, consequences |
-| Migration roadmap | `docs/contentgrid-navigator-migration-roadmap.md` |
-| Migration analysis | `docs/contentgrid-navigator-migration-analysis.md` |
-| Shared features | `packages/features/` — see below |
-| Shared UI components | `packages/ui/src/` |
-| Data / API layer | `packages/navigator-data/src/` |
-| TypeScript base config | `packages/tsconfig/tsconfig.base.json` |
-| ESLint config | `packages/eslint-config/index.js` |
+| What                    | Where                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| Architecture principles | Project `.claude/settings.local.json`; public docs at docs.contentgrid.com     |
+| Architecture decisions  | `docs/adr/` — 15 ADRs, each with context, decision, alternatives, consequences |
+| Migration roadmap       | `docs/contentgrid-navigator-migration-roadmap.md`                              |
+| Migration analysis      | `docs/contentgrid-navigator-migration-analysis.md`                             |
+| Shared features         | `packages/features/` — see below                                               |
+| Shared UI components    | `packages/ui/src/`                                                             |
+| Data / API layer        | `packages/navigator-data/src/`                                                 |
+| TypeScript base config  | `packages/tsconfig/tsconfig.base.json`                                         |
+| ESLint config           | `packages/eslint-config/index.js`                                              |
 
 ### What is a "feature"?
 
@@ -58,12 +58,12 @@ A composition layer (Layer 2) that wires together the seven Xenit `@contentgrid/
 
 Both apps have identical dependencies, tooling (Vite + TanStack Router file-based routing, React 19, TypeScript), and build scripts. The difference is intentional and structural, not accidental:
 
-| | `apps/navigator` | `apps/navigator-experimental` |
-|---|---|---|
-| Dev port | 5173 | 5174 |
-| Deployment target | Public production | Internal-only, auth-gated preview environment — never a public URL |
-| Feature stability tiers allowed | `stable` only (lint + bundle audit enforced) | `stable` + `candidate` + `experimental` |
-| Purpose | Robust default UI for any ContentGrid content model; drives the OSS release | Customer demos, in-flight ideas, features not yet promoted to stable |
+|                                 | `apps/navigator`                                                            | `apps/navigator-experimental`                                        |
+| ------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Dev port                        | 5173                                                                        | 5174                                                                 |
+| Deployment target               | Public production                                                           | Internal-only, auth-gated preview environment — never a public URL   |
+| Feature stability tiers allowed | `stable` only (lint + bundle audit enforced)                                | `stable` + `candidate` + `experimental`                              |
+| Purpose                         | Robust default UI for any ContentGrid content model; drives the OSS release | Customer demos, in-flight ideas, features not yet promoted to stable |
 
 The lint rule and CI bundle audit that enforce the stability boundary are planned as part of phase HZN-1.9 and are not yet wired. Until they are, the split is structural (separate Vite entry points on separate ports) but not yet machine-enforced at the import level.
 

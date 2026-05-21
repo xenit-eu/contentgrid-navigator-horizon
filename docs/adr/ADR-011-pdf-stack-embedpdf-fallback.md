@@ -37,6 +37,7 @@ Any one of the following, surfaced during spike 6B.2:
 ### What "fallback" means in concrete terms
 
 If invoked:
+
 - Replace `@embedpdf` packages in `apps/navigator` and `packages/features/pdf-preview/` with a direct `pdfjs-dist@^5` dependency.
 - Build a small custom highlight overlay component in `packages/ui/src/patterns/PdfHighlightOverlay.tsx` — absolute-positioned divs over the canvas, using fractional coords from extract-service mapped via canvas viewport.
 - Re-implement the toolbar (search, print, fullscreen, download, zoom) directly against pdfjs APIs. Larger surface than `@embedpdf/plugin-search` but no plugin-compatibility risk.
@@ -59,12 +60,12 @@ If invoked:
 
 ## Alternatives considered
 
-| Option | Why not the fallback |
-|---|---|
-| **`react-pdf` (wojtekmaj)** | Mature, but the highlight/annotation story is essentially "build it yourself" — same as the vanilla pdfjs fallback. No advantage, more dependency. |
-| **`@react-pdf-viewer` (the original)** | The original lib is `@react-pdf-viewer/core` + plugins — the prototype already deliberately moved off it. Going back undoes a deliberate choice. |
-| **Build entirely on canvas APIs (no pdfjs at all)** | Reinventing PDF rendering. Unserious. |
-| **PDFKit / native PDF viewer iframe** | Loses the annotation overlay entirely. Defeats the purpose of the extraction flow. |
+| Option                                              | Why not the fallback                                                                                                                               |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`react-pdf` (wojtekmaj)**                         | Mature, but the highlight/annotation story is essentially "build it yourself" — same as the vanilla pdfjs fallback. No advantage, more dependency. |
+| **`@react-pdf-viewer` (the original)**              | The original lib is `@react-pdf-viewer/core` + plugins — the prototype already deliberately moved off it. Going back undoes a deliberate choice.   |
+| **Build entirely on canvas APIs (no pdfjs at all)** | Reinventing PDF rendering. Unserious.                                                                                                              |
+| **PDFKit / native PDF viewer iframe**               | Loses the annotation overlay entirely. Defeats the purpose of the extraction flow.                                                                 |
 
 ## What stays the same in either path
 
@@ -87,14 +88,16 @@ If any of (1)–(4) fails or surfaces unbounded work, fallback is taken. Decisio
 ## Consequences
 
 **Positive:**
+
 - Phase 6 has a written decision rule rather than a "we'll figure it out" stance.
 - Fallback path is sized and scheduled. Not infinite work.
 - CVE-2024-4367 posture is a mandatory test case in either path — security doesn't get skipped under time pressure.
 - The estimate buffer covers the fallback if taken (Phase 6 doubling is already in the pessimistic case).
 
 **Negative / accepted:**
+
 - Two-path planning is more upfront thinking than committing to one stack and iterating.
-- The +1.5d fallback budget eats into Phase 6's slack if taken. If both this fallback *and* unrelated 6B issues hit, schedule pressure is real.
+- The +1.5d fallback budget eats into Phase 6's slack if taken. If both this fallback _and_ unrelated 6B issues hit, schedule pressure is real.
 
 ## Reconsider when
 

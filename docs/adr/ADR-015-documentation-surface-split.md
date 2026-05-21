@@ -11,18 +11,19 @@
 
 Three documentation surfaces currently exist for ContentGrid navigator work:
 
-| Surface | Audience | Current content |
-|---|---|---|
-| In-repo `docs/` (this ADR set, analysis, roadmap) | Developers, architects | Architecture decisions, migration plan |
-| Public docs site (planned for Phase 9D) | End users | How to use the navigator — deferred |
-| Confluence | Operators, internal team | Operational runbooks, deployment ops, internal notes, some design documentation |
-| Obsidian (author's PARA vault) | Author (Nick) | Current home for in-flight planning docs (analysis, roadmap, ADR set) during pre-Phase-1 planning; transitional only |
+| Surface                                           | Audience                 | Current content                                                                                                      |
+| ------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| In-repo `docs/` (this ADR set, analysis, roadmap) | Developers, architects   | Architecture decisions, migration plan                                                                               |
+| Public docs site (planned for Phase 9D)           | End users                | How to use the navigator — deferred                                                                                  |
+| Confluence                                        | Operators, internal team | Operational runbooks, deployment ops, internal notes, some design documentation                                      |
+| Obsidian (author's PARA vault)                    | Author (Nick)            | Current home for in-flight planning docs (analysis, roadmap, ADR set) during pre-Phase-1 planning; transitional only |
 
 Note: Today (pre-Phase 1) these planning docs live in the author's local Obsidian vault under the PARA structure (`01_Projects/ContentGrid/`), not yet in any git-tracked code repository. This is appropriate for the pre-Phase-1 planning phase. When Phase 1 scaffolds the monorepo, these docs migrate to the in-repo `docs/` directory.
 
 No clear ownership rules have been documented. Design documentation is scattered — some in Confluence, some in ad-hoc files. Thijs flagged this on 2026-05-08: "we have documentation on Confluence, we have some website, we have some design documentation — I think we need to review clearly what goes where." A dedicated alignment meeting was proposed.
 
 Without an explicit split, the risk is:
+
 - ADRs and architecture decisions get written in Confluence (where they are disconnected from the code change that motivated them).
 - User-facing content gets written in-repo before the app is stable enough to document.
 - Operational runbooks get written in-repo where they're harder to discover for non-developer operators.
@@ -52,26 +53,29 @@ Without an explicit split, the risk is:
 
 ## Alternatives considered
 
-| Option | Why rejected |
-|---|---|
-| **Everything in Confluence** | ADRs divorced from the code that implements them; no PR-review linkage; non-searchable from the IDE; breaks OSS consumers who have no Confluence access. |
-| **Everything in-repo** | Operational runbooks in-repo make the repo harder to navigate for non-developer operators; they don't belong in OSS scope; they change on deployment-ops cadence, not code cadence. |
-| **Everything in a public docs site** | User-facing docs are premature until the app is stable; architecture docs need version-controlled history that a CMS cannot provide. |
+| Option                               | Why rejected                                                                                                                                                                        |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Everything in Confluence**         | ADRs divorced from the code that implements them; no PR-review linkage; non-searchable from the IDE; breaks OSS consumers who have no Confluence access.                            |
+| **Everything in-repo**               | Operational runbooks in-repo make the repo harder to navigate for non-developer operators; they don't belong in OSS scope; they change on deployment-ops cadence, not code cadence. |
+| **Everything in a public docs site** | User-facing docs are premature until the app is stable; architecture docs need version-controlled history that a CMS cannot provide.                                                |
 
 ## Consequences
 
 **Positive:**
+
 - ADR and architecture doc history is in git — bisectable, linkable from PRs, reviewable alongside code changes.
 - OSS contributors get the architecture context in the repo they're already reading.
 - Operational runbooks stay in Confluence where operators already look for them.
 - User-facing docs are deferred until the app justifies a committed docs surface — no premature documentation overhead.
 
 **Negative / accepted:**
+
 - Three surfaces to keep in sync when a topic spans more than one (e.g. a deployment change that requires both an ADR update and a Confluence runbook update). Accepted — the overlap should be rare if the ownership lines are respected.
 - Confluence design documentation migration is an action item that must happen before Phase 1; it adds a small discovery and migration cost.
 - OSS contributors cannot see operational runbooks. This is intentional — operational details are internal.
 
 **Transitional state (Phases 0–0.5):**
+
 - Until Phase 1: docs are not version-controlled with the code; they live in the author's Obsidian vault. Review happens by sharing the markdown files (or rendered exports) directly. This is appropriate for the pre-Phase-1 planning phase but not a long-term home.
 - After Phase 1: docs live in-repo and follow the same PR-review flow as code changes. The migration from Obsidian to `docs/` is a one-way move bundled with Phase 1.1 (monorepo bootstrap).
 

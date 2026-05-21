@@ -51,27 +51,34 @@ Why: wrapper CLIs go stale on shadcn upstream bumps; conventions belong in lint
 and code review, not in a vendor-intercepting tool.
 
 **To add an upstream shadcn primitive:**
+
 ```
 pnpm --filter @contentgrid/ui shadcn add button
 ```
+
 Then follow the post-add checklist (see below).
 
 **To add a ContentGrid pattern from the CG registry:**
+
 ```
 pnpm shadcn add @contentgrid/entity-card
 ```
+
 Same command, different registry source. No extra scaffolding needed for
 registry entries.
 
 **To write a new pattern locally** (not from registry):
+
 ```
 # write packages/ui/src/patterns/<kebab-case-name>.tsx
 # write packages/ui/src/patterns/<kebab-case-name>.stories.tsx
 # add export to packages/ui/src/index.ts
 ```
+
 No CLI involved.
 
 **Post-add checklist for primitives:**
+
 - File name: `kebab-case.tsx` in `src/primitives/`.
 - Export name: `PascalCase`, re-exported from `src/index.ts`.
 - Story: `<name>.stories.tsx` alongside the component (ADR-009).

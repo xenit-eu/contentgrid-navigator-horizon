@@ -27,17 +27,17 @@ We need to decide: keep JSONForms, port it as-is, or commit fully to a shadcn-na
 - **Pinned-exact dependency** (`3.6.0`) means we're stuck on a release line. Upgrade is its own project.
 - **Ajv + JSON Schema** runtime is heavy and only partially leveraged — we use a fraction of its validation surface.
 - **Custom renderers** in JSONForms are awkward to write against modern React: imperative tester functions, ranks, and the `dispatch` model don't compose well with hooks-first code.
-- **Styling integration** — JSONForms' MUI bridge is what we're migrating *away* from. The vanilla bridge requires re-skinning every renderer anyway.
+- **Styling integration** — JSONForms' MUI bridge is what we're migrating _away_ from. The vanilla bridge requires re-skinning every renderer anyway.
 - **HAL-Forms ≠ JSON Schema.** `_templates` is the actual server contract. Round-tripping it through JSON Schema loses information (e.g. relation link semantics) and adds translation layers.
 - **`@contentgrid/hal-forms` already exists.** The parsing problem is solved. JSONForms would be a second parsing layer we don't need.
 
 ## Why custom renderers (vs. another forms library)
 
 - **TanStack Form** was considered (Phase 5A spike). Solid, headless, type-safe — but it's a forms-state library, not a renderer set. We'd still write every shadcn-native field component. Adoption adds API surface without solving our actual problem.
-- **React Hook Form** — similar story. Good for app-level form ergonomics, but we need *server-driven* fields, not user-defined schemas.
+- **React Hook Form** — similar story. Good for app-level form ergonomics, but we need _server-driven_ fields, not user-defined schemas.
 - **Hand-rolled with `useFormFields`** (current prototype direction) — already on this path, just incomplete. Closing the gap is cheaper than introducing another library.
 
-We can adopt TanStack Form *inside* a renderer later if we hit a state-management ceiling. Not as a starting point.
+We can adopt TanStack Form _inside_ a renderer later if we hit a state-management ceiling. Not as a starting point.
 
 ## Scope of the renderer set
 
@@ -69,6 +69,7 @@ The deep-dive in analysis §3A catalogues five specific capabilities that JSONFo
 This option was explicitly examined: write a `@contentgrid/jsonforms-shadcn-renderers` package, register it in place of `@jsonforms/material-renderers`, keep the JSON-Schema translation layer.
 
 Why it does not pay off:
+
 - **You still write a complete renderer set.** Every primitive (text, select, checkbox, date, file, HAL-link picker, array, oneOf) needs a shadcn-native renderer with a tester. That is the same effort as the `FieldDescriptor` switch — minus the type safety, plus the framework boilerplate.
 - **You still carry JSONForms' weight.** The bundle keeps `@jsonforms/core` + `@jsonforms/react` + Ajv + redux-bridging code, all of which exist purely to dispatch into renderers we wrote. ~80–100 KB gzipped of pure overhead.
 - **You inherit the version-coupling risk.** JSONForms v3 → v4 forces a renderer rewrite anyway (the `tester` API changes between majors); an ongoing upgrade obligation in exchange for a layer we no longer need.
@@ -90,6 +91,7 @@ If a customer's HAL-Forms `_templates` evolves post-cutover and introduces a sha
 ## Consequences
 
 **Positive:**
+
 - Forms are driven by the actual server contract (`_templates`), not by profile metadata.
 - Bundle drops by ~135 KB gzipped (JSONForms core + Ajv + MUI renderers removed; react-hook-form + Zod already required).
 - Renderers compose with shadcn primitives, so style consistency is automatic.
@@ -98,6 +100,7 @@ If a customer's HAL-Forms `_templates` evolves post-cutover and introduces a sha
 - AI-friendliness: a new field type is a code change in three files (type, renderer case, story). JSONForms requires understanding tester ranking, `JsonFormsRendererRegistryEntry` shape, and redux-style state plumbing.
 
 **Negative / accepted:**
+
 - We own the renderer set forever. Mitigated by keeping the surface narrow and tested.
 - HAL-Forms shapes that JSONForms handled "for free" need explicit support. The Phase 0.5 audit exists to catch these early.
 - Round-trip parity test (5A.6) becomes mandatory — if the renderer set diverges from the original's behaviour on a known entity, that's a regression we ship into customer hands.
@@ -105,7 +108,7 @@ If a customer's HAL-Forms `_templates` evolves post-cutover and introduces a sha
 
 ## Reconsider when
 
-- HAL-Forms grows shapes we can't render with a small custom set (e.g. recursive nested objects, deeply conditional fields). Then evaluate TanStack Form *or* a focused new renderer.
+- HAL-Forms grows shapes we can't render with a small custom set (e.g. recursive nested objects, deeply conditional fields). Then evaluate TanStack Form _or_ a focused new renderer.
 - Phase 0.5 audit reveals heavy `oneOf` / `anyOf` or `rule.effect` usage that Phase 5A cannot absorb cleanly. Then options (a), (b), or (c) from the gating clause above apply.
 - A customer requires a forms-builder UX (end-users defining their own forms). That's a different problem domain.
 

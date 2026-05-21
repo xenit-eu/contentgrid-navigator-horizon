@@ -3,6 +3,7 @@
 This file is loaded automatically by Claude Code in every session for this repo. It captures the core principles, conventions, and architectural rules for both the ContentGrid platform and this specific implementation. All implementation MUST follow these principles.
 
 This is a **pnpm monorepo** (`pnpm-workspace.yaml`) with:
+
 - `apps/navigator` — main Navigator app
 - `apps/navigator-experimental` — experimental features
 - `packages/features`, `packages/navigator-data`, `packages/ui`, `packages/eslint-config`, `packages/tsconfig` — shared packages
@@ -56,22 +57,26 @@ React 19 + TypeScript + Vite | TanStack Router (file-based) + Query + Table | sh
 ## Core Platform Concepts & Vocabulary
 
 ### Organizational Hierarchy
+
 - **Organization**: Top-level container; manages Projects, Applications, and IAM Realms.
 - **Project**: Belongs to an Organization; holds the Blueprint, Releases, and deployed Applications.
 - **Members**: Project/Org administrators — distinct from end-users (Users).
 
 ### Design Artifacts
+
 - **Blueprint**: The design-time application model — defines Data Model, Permissions, and Automations. Contains no user/application data. Not deployable itself.
 - **Release**: An immutable, versioned snapshot of a Blueprint (e.g., `v1.2.3`). Once created, a Release never changes. Deployable to Applications.
 - **Deployment**: The rollout of a specific Release to an Application.
 
 ### Data Model Primitives
+
 - **Entity**: A typed object representing a real-world concept (e.g., `invoice`, `supplier`). Maps to a PostgreSQL table and a REST collection endpoint.
 - **Attribute**: A single typed field on an Entity. Types: `string`, `long`, `double`, `boolean`, `date`, `datetime`, `object`, or `content` (file/binary).
 - **Relation**: A named link between Entities. Cardinalities: one-to-one, one-to-many, many-to-one, many-to-many.
 - **Content attribute**: A special attribute holding binary file data; stored in S3, referenced by the database.
 
 ### Runtime Concepts
+
 - **Application**: A running instance of a Project deployed to a Zone; linked to exactly one IAM Realm.
 - **Zone**: A deployment target mapping to a cloud provider region (e.g., Scaleway Paris).
 - **IAM Realm**: A Keycloak realm holding Users, Groups, Service Accounts, and their attributes.
@@ -107,6 +112,7 @@ React 19 + TypeScript + Vite | TanStack Router (file-based) + Query + Table | sh
 ### Entity Profile Schema
 
 Embedded in HAL-FORMS profile response:
+
 - `blueprint:attribute` → `{name, title, type, readOnly, required, constraints:[...], searchParams:{exact-match, prefix-match}}`
 - `blueprint:relation` → `{name, title, many_source_per_target, many_target_per_source, required}`; link `blueprint:target-entity` → target profile href
 - `blueprint:constraint` → type: `allowed-values` (enum), `required`, `unique`, system-managed (audit timestamps: `created-date`, `created-by`, `modified-date`, `modified-by`)
@@ -135,13 +141,14 @@ Embedded in HAL-FORMS profile response:
 
 ### Link Relations
 
-| CURIE | Full URI | Usage |
-|---|---|---|
-| `cg:entity` | `https://contentgrid.cloud/rels/contentgrid/entity` | Entity ref from root/profile-root; `name` = entity name (singular) |
-| `cg:relation` | `https://contentgrid.cloud/rels/contentgrid/relation` | Relation link on entity-item; `name` = relation name |
-| `cg:content` | `https://contentgrid.cloud/rels/contentgrid/content` | Binary content link; `name` = attribute name |
+| CURIE         | Full URI                                              | Usage                                                              |
+| ------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
+| `cg:entity`   | `https://contentgrid.cloud/rels/contentgrid/entity`   | Entity ref from root/profile-root; `name` = entity name (singular) |
+| `cg:relation` | `https://contentgrid.cloud/rels/contentgrid/relation` | Relation link on entity-item; `name` = relation name               |
+| `cg:content`  | `https://contentgrid.cloud/rels/contentgrid/content`  | Binary content link; `name` = attribute name                       |
 
 Blueprint profile CURIEs (`blueprint:` → `https://contentgrid.cloud/rels/blueprint/{rel}`):
+
 - `blueprint:attribute`, `blueprint:relation`, `blueprint:constraint`, `blueprint:search-param`, `blueprint:target-entity`
 
 CURIE expansion: expand before comparing relation types. Unknown CURIE prefixes cause the link to be ignored.
@@ -153,6 +160,7 @@ Standard template keys on entity-items: `default` (update), `delete`, `set-<rela
 Standard template keys on entity-profiles: `create-form`, `search`
 
 HAL-FORMS extensions:
+
 - Property names in `application/json` templates use dot-notation paths (e.g., `document.filename`) for nested objects
 - `text/uri-list` templates: one URL per line for multi-valued; single URL for to-one
 - Remote options (`options.link`): platform retrieves enumerated values from a remote resource; `application/hal+json` uses embedded `item` resources
@@ -179,15 +187,18 @@ HAL-FORMS extensions:
 ## Architecture Principles
 
 ### API-First
+
 - The REST API is the ONLY interaction point — for users, frontends, and external automations.
 - All responses use HAL (`application/hal+json`) for hypermedia linking.
 
 ### Model-First
+
 - APIs are generated directly from the data model — never hand-crafted.
 - The data API does NOT expose model abstractions — those live in the profile API (`/profile`, `/profile/{entity}`).
 - The profile/model API is the correct integration point for generic tooling that needs to adapt to any model.
 
 ### Small Core & Extensibility
+
 - Extensions authenticate via OIDC tokens and receive at most user-level privileges — never elevated access.
 - Extensions interact exclusively through the standard REST API.
 
@@ -225,39 +236,45 @@ All error responses: `Content-Type: application/problem+json`; fields: `type` (U
 Key problem types from `https://contentgrid.cloud/problems/`:
 
 **Validation (400):**
+
 - `input/validation` — `errors[]` array with per-field issues: `required`, `type`, `duplicate`, `allowed-values`, `no-content`, `pattern`, `missing-relation-target`
 - `input/validation/duplicate` — check `conflicting_item` URL
 - `input/validation/allowed-values` — check `allowed_values[]`
 - `input/validation/missing-relation-target` — check `missing_item`
 
 **Query params:**
+
 - `invalid-query-parameter/filter/format`, `invalid-query-parameter/sort/format`, `invalid-query-parameter/pagination`
 
 **Request:**
+
 - `invalid-request/body/single-link` (400) — to-one relation PUT must contain exactly one URI
 - `invalid-request/required-header`, `invalid-request/forbidden-header`
 
 **Versioning:**
+
 - `unsatisfied-version` (412) — ETag mismatch; re-fetch, re-apply, retry
 
 **Not found:**
+
 - `not-found/endpoint` (404) — URL/ID not found
 - `not-found/entity-item` (404) — entity ID does not exist or access denied (ABAC)
 - `not-found/relation-item` (404)
 
 **Integrity:**
+
 - `integrity/blind-relation-overwrite` (409) — unlink existing relation first (`existing_relation`), then set new one
 - `integrity/required-relation` (409) — cannot delete entity referenced by a required relation; delete or re-link the referencing entity first
 
-| Code | Meaning |
-|---|---|
-| 400 | Malformed request body or invalid parameters |
-| 401 | Missing or invalid Bearer token |
-| 403 | Authenticated but forbidden |
-| 404 | Resource not found OR access denied to a specific entity (ABAC) |
-| 409 | Unique constraint violation or referential integrity conflict |
-| 412 | ETag mismatch (optimistic locking failure) |
-| 415 | Unsupported Content-Type |
+| Code | Meaning                                                         |
+| ---- | --------------------------------------------------------------- |
+| 400  | Malformed request body or invalid parameters                    |
+| 401  | Missing or invalid Bearer token                                 |
+| 403  | Authenticated but forbidden                                     |
+| 404  | Resource not found OR access denied to a specific entity (ABAC) |
+| 409  | Unique constraint violation or referential integrity conflict   |
+| 412  | ETag mismatch (optimistic locking failure)                      |
+| 415  | Unsupported Content-Type                                        |
 
 ---
 
@@ -270,6 +287,7 @@ Key problem types from `https://contentgrid.cloud/problems/`:
 Supported preview formats: PDF, JPEG, PNG, DOC/DOCX, PPT/PPTX, XLS/XLSX, ODT, ODS, ODP.
 
 Entity creation conventions:
+
 - Mandatory fields indicated with `*` in the create form.
 - Content fields support drag-and-drop upload.
 - Relation fields use a popover search to find and link existing entities.
@@ -299,18 +317,18 @@ Signature verification: RS256; public keys at `GET ${CONTENTGRID_URL}/.well-know
 
 ## Runtime Platform Components
 
-| Component | Role |
-|---|---|
-| **Gateway** | Entry point; domain routing, JWT validation, CORS, OPA query, residual encoding |
-| **Keycloak** | OIDC provider; issues JWTs with embedded user attributes |
-| **OPA** | Centralized ABAC policy engine; partial evaluation → SQL residuals |
-| **Solon** | Collects Rego policies from all applications; maintains OPA policy bundle |
-| **Navigator** | Generic React frontend; adapts to any model via HAL/HAL-FORMS discovery |
-| **Liaison** | Delivers Navigator config (OIDC client ID, issuer) per application domain |
-| **Pathfinder** | Auto-creates Kubernetes Ingress + TLS for applications |
-| **RabbitMQ** | Message broker for entity lifecycle events |
-| **Slingshot** | Webhook delivery; RS256-signed payloads; dead-letter on exhausted retries |
-| **TokenMonger** | Token exchange for extensions |
+| Component              | Role                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| **Gateway**            | Entry point; domain routing, JWT validation, CORS, OPA query, residual encoding          |
+| **Keycloak**           | OIDC provider; issues JWTs with embedded user attributes                                 |
+| **OPA**                | Centralized ABAC policy engine; partial evaluation → SQL residuals                       |
+| **Solon**              | Collects Rego policies from all applications; maintains OPA policy bundle                |
+| **Navigator**          | Generic React frontend; adapts to any model via HAL/HAL-FORMS discovery                  |
+| **Liaison**            | Delivers Navigator config (OIDC client ID, issuer) per application domain                |
+| **Pathfinder**         | Auto-creates Kubernetes Ingress + TLS for applications                                   |
+| **RabbitMQ**           | Message broker for entity lifecycle events                                               |
+| **Slingshot**          | Webhook delivery; RS256-signed payloads; dead-letter on exhausted retries                |
+| **TokenMonger**        | Token exchange for extensions                                                            |
 | **Application Server** | Configuration-driven; single image serves all apps; REST layer generated from model JSON |
 
 ---

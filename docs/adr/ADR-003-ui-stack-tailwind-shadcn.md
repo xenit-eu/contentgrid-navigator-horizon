@@ -38,23 +38,25 @@ Apps consume `packages/ui` via workspace protocol. No app imports Radix directly
 
 ## Alternatives considered
 
-| Option | Why rejected |
-|---|---|
-| **MUI v6 (status quo, port architecture)** | Bundle, theming friction, tss-react dead-end. Doesn't help OSS release ergonomics either. |
-| **Mantine** | Capable, but a full library — we'd own the version-bump pain without the ownership benefits of shadcn's copy-in model. |
-| **Headless UI + Tailwind** | Smaller a11y surface than Radix; we'd reinvent more. |
-| **Park UI / Ark UI** | Too new. Switching costs are high once primitives are in. |
-| **Plain CSS modules + a small primitive library** | Reasonable, but loses the Tailwind productivity boost and the agent-friendliness of utility classes. |
+| Option                                            | Why rejected                                                                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **MUI v6 (status quo, port architecture)**        | Bundle, theming friction, tss-react dead-end. Doesn't help OSS release ergonomics either.                              |
+| **Mantine**                                       | Capable, but a full library — we'd own the version-bump pain without the ownership benefits of shadcn's copy-in model. |
+| **Headless UI + Tailwind**                        | Smaller a11y surface than Radix; we'd reinvent more.                                                                   |
+| **Park UI / Ark UI**                              | Too new. Switching costs are high once primitives are in.                                                              |
+| **Plain CSS modules + a small primitive library** | Reasonable, but loses the Tailwind productivity boost and the agent-friendliness of utility classes.                   |
 
 ## Consequences
 
 **Positive:**
+
 - Clear separation: `packages/ui` is the only place Radix appears.
 - Bundle is dramatically smaller than the MUI baseline.
 - Shadcn primitives are well-documented externally — agents and human contributors share the same reference material.
 - OSS consumers can swap our copies for theirs with no library version-pin negotiation.
 
 **Negative / accepted:**
+
 - Owning the primitives means owning their bug fixes. Mitigated by `pnpm shadcn add` to re-pull when upstream improves a component.
 - One-time migration cost to convert any remaining MUI usage in the prototype.
 - A11y is on us — we can't blame a vendor. The Phase 3 axe-core audit per primitive is the mitigation.

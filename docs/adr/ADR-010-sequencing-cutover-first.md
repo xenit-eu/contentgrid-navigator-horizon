@@ -19,8 +19,9 @@ Plus an incidental fourth: **publishing `@contentgrid/navigator-data`** as a sem
 Each is a project. Together, they share critical-path nodes (e.g. the OSS org decision blocks CI image-push wiring blocks cutover). Doing them concurrently raises concurrent-failure risk and makes the calendar fragile.
 
 Separately: the team has confirmed that:
+
 - The OSS release vision is real but not date-locked.
-- The custom-track *strategy* is real (one generic UI cannot fit all customers) but the *scaffolding work* has no first concrete trigger yet — the existing customer UI is not being revisited.
+- The custom-track _strategy_ is real (one generic UI cannot fit all customers) but the _scaffolding work_ has no first concrete trigger yet — the existing customer UI is not being revisited.
 - The `/scaffold-ui` Claude skill is something Nick may build personally; the team does not need it.
 
 ## Decision
@@ -29,24 +30,25 @@ Separately: the team has confirmed that:
 
 ### In scope for the cutover-first plan (Phases 0–7, 10)
 
-| Phase | Title | In/out |
-|---|---|---|
-| 0 | Alignment & decisions | ✅ in |
-| 0.5 | Entity-profile audit | ✅ in |
-| 1 | Monorepo + tooling foundation | ✅ in |
-| 2 | Test scaffolding | ✅ in |
-| 3 | Component library hardening | ✅ in |
-| 4 | `@contentgrid/navigator-data` extraction | ✅ in (workspace-only; publish deferred) |
-| 5 | Feature parity & correctness | ✅ in |
-| 6 | PDF preview & AI extraction | ✅ in |
-| 7 | Production hardening | ✅ in |
-| 8 | Custom track scaffolding | ❌ deferred — triggered by first new customer customisation |
-| 9 | Apache-2.0 OSS release | ❌ deferred — re-plan post-cutover |
-| 10 | Cutover | ✅ in |
+| Phase | Title                                    | In/out                                                      |
+| ----- | ---------------------------------------- | ----------------------------------------------------------- |
+| 0     | Alignment & decisions                    | ✅ in                                                       |
+| 0.5   | Entity-profile audit                     | ✅ in                                                       |
+| 1     | Monorepo + tooling foundation            | ✅ in                                                       |
+| 2     | Test scaffolding                         | ✅ in                                                       |
+| 3     | Component library hardening              | ✅ in                                                       |
+| 4     | `@contentgrid/navigator-data` extraction | ✅ in (workspace-only; publish deferred)                    |
+| 5     | Feature parity & correctness             | ✅ in                                                       |
+| 6     | PDF preview & AI extraction              | ✅ in                                                       |
+| 7     | Production hardening                     | ✅ in                                                       |
+| 8     | Custom track scaffolding                 | ❌ deferred — triggered by first new customer customisation |
+| 9     | Apache-2.0 OSS release                   | ❌ deferred — re-plan post-cutover                          |
+| 10    | Cutover                                  | ✅ in                                                       |
 
 ### Deferred work and triggers
 
 **Phase 8 — Custom track scaffolding.**
+
 - Trigger: first new customer customisation is committed.
 - Drop entirely: `/scaffold-ui` Claude skill (out of team scope).
 - Build at trigger time: `apps/_template/` skeleton, `customer.config.ts` Zod schema, per-package CLAUDE.md docs.
@@ -55,23 +57,26 @@ Separately: the team has confirmed that:
 - During the cutover, `packages/ui` and `packages/navigator-data` stay scaffolding-friendly so trigger-time work is assembly, not redesign.
 
 **Phase 9 — Apache-2.0 OSS release.**
+
 - Trigger: post-cutover re-plan. Vision is real, no date is locked.
 - Until then: repo hygiene tasks (LICENSE, NOTICE, SPDX headers) can land opportunistically without committing to the full Phase 9 scope.
 - Secrets-history scan (9B.1) should be run as a Phase 0 pre-flight regardless — finding a secret in a 6-month-old branch has months of latent runway to deal with rather than blocking publication day-of.
 
 **`@contentgrid/navigator-data` publish (was Phase 4.8–4.10).**
+
 - Trigger: first out-of-tree consumer (custom-track app moves out of monorepo, the ContentGrid console adopts it, or OSS release).
 - Build at trigger time: changesets + `npm publish` workflow + compat matrix + version-pin CI check (~1.5d).
 - Until then: `packages/navigator-data` is consumed via `pnpm workspace:*`. Surface stays publish-ready (peerDeps declared, barrel exports clean) so the trigger-time work is mechanical.
 
 **`@contentgrid/ui` publish (ADR-008).**
+
 - Trigger: console (or another out-of-tree consumer) is ready to adopt the new design system.
 - Until then: workspace-only, exactly as designed in Phase 1.
 
 ## Why cutover first
 
 - **Single-front discipline.** Three concurrent products share critical-path nodes; one slipped decision cascades into all three. Sequencing them is a 0-day cost that meaningfully lowers concurrent-failure risk.
-- **Honest demand alignment.** OSS release and custom scaffolding are pulled by *vision*; cutover is pulled by *current customer commitments*. Real demand wins on sequencing.
+- **Honest demand alignment.** OSS release and custom scaffolding are pulled by _vision_; cutover is pulled by _current customer commitments_. Real demand wins on sequencing.
 - **Scope clarity for OSS.** Once cutover is shipped, the OSS release has a stable target to package — code that's been stress-tested in production for some time, not code that's still moving.
 - **Estimate honesty.** Compressing 65d of net work into a single window with 45% buffer is achievable. Compressing 75d (with deferred work folded back in) into the same window stops being honest.
 
@@ -93,11 +98,13 @@ Separately: the team has confirmed that:
 ## Consequences
 
 **Positive:**
+
 - One front, one calendar, one risk surface during the riskiest part of the project.
 - Vision items are not abandoned — they have explicit triggers and known scope.
 - Cutover scope tightens to "modernise the navigator and ship it." Easier to defend, plan, and review.
 
 **Negative / accepted:**
+
 - OSS release timing is now "after cutover" rather than "in parallel." Stakeholders who want a date for that need to wait for the post-cutover re-plan.
 - Custom-track scaffolding doesn't exist as a built artefact when the first new customer asks. Realistic risk; mitigated by keeping `packages/*` scaffolding-friendly.
 - The publish ceremony for `@contentgrid/*` packages is no longer "indefinitely deferred" — it fires simultaneously with the first-customer trigger. This is an accepted cost: the ceremony is scoped and ready (~2.5d combined), not a surprise at trigger time.

@@ -20,11 +20,11 @@ Naive options — env-toggled feature flags, long-lived branches, separate forks
 
 **Three apps in one monorepo, gated by a per-feature stability flag.**
 
-| Track | App path | Deployment | Stability tier consumed |
-|---|---|---|---|
-| Generic | `apps/navigator` | public production | `stable` only |
-| Experimental | `apps/navigator-experimental` | internal-only (auth-gated preview env, never a public URL) | `stable` + `candidate` + `experimental` |
-| Custom | `apps/<customer>/` | per-customer (private repo per ADR-013) | declared per-app via `customer.config.ts` |
+| Track        | App path                      | Deployment                                                 | Stability tier consumed                   |
+| ------------ | ----------------------------- | ---------------------------------------------------------- | ----------------------------------------- |
+| Generic      | `apps/navigator`              | public production                                          | `stable` only                             |
+| Experimental | `apps/navigator-experimental` | internal-only (auth-gated preview env, never a public URL) | `stable` + `candidate` + `experimental`   |
+| Custom       | `apps/<customer>/`            | per-customer (private repo per ADR-013)                    | declared per-app via `customer.config.ts` |
 
 **Features live in `packages/features/<name>/` and carry a `x-stability` flag in their `package.json`:**
 
@@ -40,12 +40,12 @@ experimental → candidate → stable
 
 ## Why this shape
 
-- **Demos run on an internal, auth-gated preview environment — never a public URL.** Prospects see in-flight UX in a controlled setting; nothing half-built is exposed publicly. The OSS release ships the experimental *source* (so contributors can build it themselves), but no `experimental.contentgrid.*` artifact is hosted.
+- **Demos run on an internal, auth-gated preview environment — never a public URL.** Prospects see in-flight UX in a controlled setting; nothing half-built is exposed publicly. The OSS release ships the experimental _source_ (so contributors can build it themselves), but no `experimental.contentgrid.*` artifact is hosted.
 - **Promotion is a code review, not a port.** Features written in experimental are usable in generic the next day if they pass review. No rewrite tax.
 - **One CI pipeline, two deploy lanes.** No duplicate maintenance of pattern code across forks.
 - **Custom apps consume `packages/*` only.** They benefit from generic improvements automatically. Customer code lives in `apps/<customer>/` and a thin `customer.config.ts`.
 
-## What this is *not*
+## What this is _not_
 
 - **Not feature flags in production.** No env-toggled experimental code runs in the generic bundle. The boundary is a build-time exclusion enforced by lint + bundle audit.
 - **Not a long-lived branch model.** Everything is on `main`. Gating is at the package layer, not the VCS layer.
@@ -62,12 +62,14 @@ The existing customer UI (already in flight) is **not revisited** as part of thi
 ## Consequences
 
 **Positive:**
+
 - Customers get tailored UIs without the team forking three codebases.
 - Demo work doesn't pollute production. Sales and engineering work in parallel without colliding.
 - Promotion path is mechanical and reviewable.
 - OSS release ships only `stable` features — no half-built work leaks.
 
 **Negative / accepted:**
+
 - Stability flag is one more thing every contributor must remember when adding a feature. Mitigated by Phase 1.9 lint enforcement and per-package CLAUDE.md.
 - Generic bundle audit must be wired correctly or the boundary leaks silently. CI gate is the mitigation.
 - Custom track scaffolding investment (Phase 8) is a real future cost. Deferred but not free.

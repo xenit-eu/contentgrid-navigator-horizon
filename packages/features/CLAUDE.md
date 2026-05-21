@@ -48,6 +48,7 @@ experimental → candidate → stable
 ```
 
 Rules:
+
 - A new feature starts at `"experimental"`.
 - The field must be present. Omitting it is a lint error (HZN-1.9, not yet wired).
 - Do NOT use any value other than the three listed above.
@@ -65,6 +66,7 @@ Rules:
 [migration roadmap](../../docs/contentgrid-navigator-migration-roadmap.md))
 
 Promotion = a PR that:
+
 1. Flips `x-stability` in the feature's `package.json`
    (e.g. `"experimental"` → `"candidate"`, or `"candidate"` → `"stable"`).
 2. For promotion to `stable`: adds the feature to `apps/navigator`'s import

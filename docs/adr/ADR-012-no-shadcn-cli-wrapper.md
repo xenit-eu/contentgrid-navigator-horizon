@@ -28,22 +28,24 @@ These are different decisions and warrant separate answers.
 ## Why a registry, but not a wrapper
 
 **Registry — high leverage, low maintenance.**
+
 - shadcn already supports custom registries. We're using the tool as designed, not extending it.
 - Versioned independently from `packages/ui` if we want.
 - Same `shadcn add` command works for upstream primitives and our patterns. One mental model.
 - Agents and humans use the same command they'd use in any shadcn project. No project-specific CLI knowledge needed to onboard.
 
 **Wrapper CLI — low leverage, ongoing maintenance.**
+
 - We'd own a tool that has to keep pace with shadcn upstream. shadcn iterates quickly; wrappers go stale on minor bumps.
 - Most of what a wrapper would enforce has a cheaper home:
 
-| Concern | Wrapper would do | Where it actually belongs |
-|---|---|---|
-| Stability flag set on new feature | inject into generated `package.json` | ESLint rule (Phase 1.9) — runs on every PR, not only at scaffold time |
-| Mandatory story per component | scaffold `*.stories.tsx` alongside | `eslint-plugin-storybook` + custom rule that flags exports without a story |
-| SPDX header on every source file | inject on add | Pre-commit script (`lint-staged`) — covers files added by any path, not just shadcn |
-| Correct folder placement | resolve target dir | per-package `CLAUDE.md` for agents + reviewer catches the rest |
-| Re-export from `index.ts` | edit barrel file | per-package `CLAUDE.md` + lint rule that flags un-exported public modules |
+| Concern                           | Wrapper would do                     | Where it actually belongs                                                           |
+| --------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------- |
+| Stability flag set on new feature | inject into generated `package.json` | ESLint rule (Phase 1.9) — runs on every PR, not only at scaffold time               |
+| Mandatory story per component     | scaffold `*.stories.tsx` alongside   | `eslint-plugin-storybook` + custom rule that flags exports without a story          |
+| SPDX header on every source file  | inject on add                        | Pre-commit script (`lint-staged`) — covers files added by any path, not just shadcn |
+| Correct folder placement          | resolve target dir                   | per-package `CLAUDE.md` for agents + reviewer catches the rest                      |
+| Re-export from `index.ts`         | edit barrel file                     | per-package `CLAUDE.md` + lint rule that flags un-exported public modules           |
 
 - Wrapping the vendor CLI hides shadcn from contributors. When something breaks, the first debug step becomes "what did the wrapper actually run?" — friction every contributor pays.
 - Conventions belong in lint and code review. Lint rules survive shadcn version bumps; wrappers don't.
@@ -51,40 +53,48 @@ These are different decisions and warrant separate answers.
 ## What this means in practice
 
 **For adding a primitive (upstream shadcn component):**
+
 ```
 pnpm --filter @contentgrid/ui shadcn add button
 ```
+
 Then follow the `CLAUDE.md` checklist: kebab-case file, story, re-export from `index.ts`. Lint catches the rest in CI.
 
 **For adding a ContentGrid pattern (consumed from the CG registry):**
+
 ```
 pnpm shadcn add @contentgrid/entity-card
 ```
+
 Same command, pulls from the CG registry. Story comes with the registry entry; no scaffolding needed.
 
 **For composing a new pattern locally:**
+
 ```
 # write packages/ui/src/patterns/relation-section.tsx
 # write packages/ui/src/patterns/relation-section.stories.tsx
 # add to packages/ui/src/index.ts
 ```
+
 No CLI involved. Reviewer + lint enforce conventions.
 
 ## Counter-pattern to avoid
 
 Don't confuse "no wrapper CLI" with "no automation." Specific repetitive post-steps can earn a small script — the test is "does this need its own help text and version?" If yes, it's a wrapper and we're not building it. If no, it's a recipe in `package.json` and that's fine.
 
-Also: don't grow the registry into a place for one-off project glue. If a "pattern" is only used in one feature, it lives in `packages/features/<feature>/` — not in the registry. The registry is for *reusable* patterns across generic + experimental + custom apps.
+Also: don't grow the registry into a place for one-off project glue. If a "pattern" is only used in one feature, it lives in `packages/features/<feature>/` — not in the registry. The registry is for _reusable_ patterns across generic + experimental + custom apps.
 
 ## Consequences
 
 **Positive:**
+
 - Zero wrapper to maintain. shadcn upstream changes don't break our tooling.
 - Contributors learn shadcn, not a project-specific CLI. Onboarding to other shadcn projects is transferable.
 - Conventions are enforced where they're stronger (lint runs on every PR; the wrapper would only run at scaffold time).
 - The CG registry becomes a real asset — versioned, reusable, OSS-publishable when the OSS release lands.
 
 **Negative / accepted:**
+
 - The CG registry is itself something to maintain. Mitigated by keeping its surface tight: only patterns that are reused across tracks; nothing one-off.
 - Contributors must remember conventions instead of having them auto-applied. Mitigated by lint coverage + reviewer catch + per-package `CLAUDE.md`.
 - New convention enforcement (e.g. SPDX headers) requires writing a lint rule or pre-commit script, not editing one CLI. Slightly more setup work, but it covers all paths into the repo, not just shadcn.

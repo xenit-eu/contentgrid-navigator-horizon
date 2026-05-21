@@ -37,22 +37,24 @@ The `pnpm workspace:*` consumers inside the monorepo (`apps/navigator`, `apps/na
 
 ## Alternatives considered
 
-| Option | Why rejected |
-|---|---|
-| **Customer apps inside the OSS monorepo** | Rejected explicitly — prospect/customer names and NDA-bound logic cannot appear in a public Apache-2.0 repo. Confirmed by Thijs on 2026-05-08. |
-| **Customer-specific branches on the OSS monorepo** | Rejected — does not solve the naming/NDA exposure problem; creates merge-hell between customer branches and main; diverges from the OSS release. |
+| Option                                                   | Why rejected                                                                                                                                                                                    |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Customer apps inside the OSS monorepo**                | Rejected explicitly — prospect/customer names and NDA-bound logic cannot appear in a public Apache-2.0 repo. Confirmed by Thijs on 2026-05-08.                                                  |
+| **Customer-specific branches on the OSS monorepo**       | Rejected — does not solve the naming/NDA exposure problem; creates merge-hell between customer branches and main; diverges from the OSS release.                                                |
 | **Private fork of the entire OSS monorepo per customer** | Rejected — customers would carry the full generic + experimental codebase; forked copies diverge from upstream improvements and create a maintenance burden that dwarfs a thin private overlay. |
-| **Feature-flag-in-production model** | Already rejected by ADR-006 — env-toggled experimental code in the generic build is explicitly not the model. |
+| **Feature-flag-in-production model**                     | Already rejected by ADR-006 — env-toggled experimental code in the generic build is explicitly not the model.                                                                                   |
 
 ## Consequences
 
 **Positive:**
+
 - The OSS monorepo stays clean: no customer names, no NDA content, no private logic.
 - Private repos are small: a thin `customer.config.ts`, minimal `apps/<customer>/` overlay, consuming packages that carry the heavy lifting. The existing scaffolding-friendliness of `packages/*` (maintained during the cutover scope) makes this assembly, not redesign.
 - The publish ceremony produces packages that multiple consumers (console, custom-track apps, OSS ecosystem) can all use — the cost is paid once.
 - Customer repos can adopt new `@contentgrid/ui` / `@contentgrid/navigator-data` versions on their own cadence, gated by semver.
 
 **Negative / accepted:**
+
 - Publish ceremony (~2.5d combined) must run before the first customer app, not after. This is a pull-forward of deferred work, not new work.
 - Version skew becomes possible: a private customer repo may pin an older `@contentgrid/ui` release while the OSS monorepo moves forward. Mitigated by semver discipline and avoiding gratuitous breaking changes in published packages.
 - Two repos to keep in sync per customer (monorepo improvements + private overlay). Accepted — this is the OSS model.
