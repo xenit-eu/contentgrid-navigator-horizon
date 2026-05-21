@@ -9,6 +9,38 @@ This is a **pnpm monorepo** (`pnpm-workspace.yaml`) with:
 
 ---
 
+## Onboarding reading order for AI agents
+
+Read in this order before writing any code:
+
+1. **This file** — platform concepts, HAL API structure, auth, error handling, naming conventions.
+2. **Per-package/per-app `CLAUDE.md` files** — package-specific rules and forbidden imports:
+   - [`packages/ui/CLAUDE.md`](packages/ui/CLAUDE.md) — shadcn-CLI usage, primitive vs. pattern boundary, forbidden imports.
+   - [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md) — HAL hook conventions, ETag pattern, peerDep policy.
+   - [`packages/features/CLAUDE.md`](packages/features/CLAUDE.md) — `x-stability` flag mechanism and promotion workflow.
+   - [`apps/navigator/CLAUDE.md`](apps/navigator/CLAUDE.md) — generic track rules (stable features only).
+   - [`apps/navigator-experimental/CLAUDE.md`](apps/navigator-experimental/CLAUDE.md) — experimental track rules.
+3. **Architecture Decision Records** in [`docs/adr/`](docs/adr/README.md):
+   - [ADR-001](docs/adr/ADR-001-state-management-zustand-tanstack-query.md) — State management: Zustand (client) + TanStack Query (server).
+   - [ADR-002](docs/adr/ADR-002-monorepo-tooling-pnpm.md) — Monorepo tooling: pnpm workspaces only.
+   - [ADR-003](docs/adr/ADR-003-ui-stack-tailwind-shadcn.md) — UI stack: Tailwind v4 + shadcn/ui; primitive vs. pattern boundary.
+   - [ADR-004](docs/adr/ADR-004-drop-jsonforms-halforms-renderer.md) — Forms: drop JSONForms; HAL-Forms → shadcn renderer.
+   - [ADR-005](docs/adr/ADR-005-router-tanstack-router.md) — Router: TanStack Router (file-based, type-safe).
+   - [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md) — Three-track delivery model: generic / experimental / custom.
+   - [ADR-007](docs/adr/ADR-007-two-layer-dependency-model.md) — Two-layer dependency model: peerDeps + composition layer.
+   - [ADR-008](docs/adr/ADR-008-console-scope-ui-publish-trigger.md) — Console scope; `@contentgrid/ui` publish trigger.
+   - [ADR-009](docs/adr/ADR-009-visual-regression-playwright-snapshots.md) — Visual regression: Playwright story snapshots.
+   - [ADR-010](docs/adr/ADR-010-sequencing-cutover-first.md) — Sequencing: cutover first; OSS and custom scaffolding deferred.
+   - [ADR-011](docs/adr/ADR-011-pdf-stack-embedpdf-fallback.md) — PDF stack: `@embedpdf` with pdfjs v5 fallback.
+   - [ADR-012](docs/adr/ADR-012-no-shadcn-cli-wrapper.md) — No custom shadcn CLI wrapper; use registry + lint + conventions.
+   - [ADR-013](docs/adr/ADR-013-custom-track-private-repo-model.md) — Custom-track delivery: private per-customer repos.
+   - [ADR-014](docs/adr/ADR-014-hal-contract-tests-msw.md) — HAL contract tests with MSW.
+   - [ADR-015](docs/adr/ADR-015-documentation-surface-split.md) — Documentation surface split.
+4. **[`docs/contentgrid-navigator-migration-analysis.md`](docs/contentgrid-navigator-migration-analysis.md)** — feature gap, architectural verdict, delivery model detail.
+5. **[`docs/contentgrid-navigator-migration-roadmap.md`](docs/contentgrid-navigator-migration-roadmap.md)** — phase plan, estimates, three-track delivery detail, promotion workflow.
+
+---
+
 ## Project Overview
 
 Frontend for [ContentGrid](https://contentgrid.com/) — a cloud Content Services Platform by Xenit/Amexio. Renders a dynamic CRUD interface from a HAL-based REST API. No hardcoded entity names or attributes; everything discovered at runtime via the profile API.
