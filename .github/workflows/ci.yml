@@ -10,6 +10,11 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
 env:
   GHCR_PREFIX: ghcr.io/xenit-eu/contentgrid-navigator-horizon
 
@@ -33,14 +38,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Cache Vite build cache
-        uses: actions/cache@v4
-        with:
-          path: apps/${{ matrix.app }}/node_modules/.vite
-          key: vite-${{ matrix.app }}-${{ hashFiles('pnpm-lock.yaml', 'apps/${{ matrix.app }}/src/**') }}
-          restore-keys: |
-            vite-${{ matrix.app }}-
-
       - name: Typecheck
         run: pnpm typecheck
 
@@ -48,10 +45,10 @@ jobs:
         run: pnpm lint
 
       - name: Test
-        run: pnpm test
+        run: pnpm --filter ${{ matrix.app }}... run --if-present test
 
       - name: Visual tests
-        run: pnpm test:visual
+        run: pnpm --filter ${{ matrix.app }}... run --if-present test:visual
 
       - name: Build ${{ matrix.app }}
         run: pnpm --filter ${{ matrix.app }} build
@@ -125,8 +122,7 @@ jobs:
       - name: PR Preview - Kubectl install
         uses: azure/setup-kubectl@v4
         with:
-          version: 'latest'
-        id: install
+          version: 'v1.30.5'
 
       - name: PR Preview - Kubernetes context
         uses: azure/k8s-set-context@v4
@@ -140,20 +136,24 @@ jobs:
           PR_NAME="preview-pr-${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
           PR_HOST="${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}.preview.contentgrid.app"
           PR_IMAGE="${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}:pr-${{ github.event.number }}"
+          mkdir -p .preview-rendered
+          cp .github/pr-previews/*.yml .preview-rendered/
+          sed -i "s|{PR_NUMBER_PLACEHOLDER}|${PR_NAME}|g" .preview-rendered/*
+          sed -i "s|{PR_HOST_PLACEHOLDER}|${PR_HOST}|g" .preview-rendered/*
+          sed -i "s|{PR_ENV_NGINX_SERVICE_NAME}|configjs-nginx|g" .preview-rendered/*
+          sed -i "s|{IMAGE_PLACEHOLDER}|${PR_IMAGE}|g" .preview-rendered/*
           echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
-          sed -i "s|{PR_NUMBER_PLACEHOLDER}|${PR_NAME}|g" .github/pr-previews/*
-          sed -i "s|{PR_HOST_PLACEHOLDER}|${PR_HOST}|g" .github/pr-previews/*
-          sed -i "s|{PR_ENV_NGINX_SERVICE_NAME}|configjs-nginx|g" .github/pr-previews/*
-          sed -i "s|{IMAGE_PLACEHOLDER}|${PR_IMAGE}|g" .github/pr-previews/*
 
       - name: PR Preview - Kubernetes deploy
         uses: azure/k8s-deploy@v5
         with:
           namespace: 'frontend-pr'
-          manifests: '.github/pr-previews'
+          manifests: '.preview-rendered'
 
-      - name: Restore manifests
-        run: git restore .github/pr-previews/*
+      - name: Wait for rollout
+        run: |
+          DEPLOY="preview-pr-${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          kubectl -n frontend-pr rollout status deployment/"$DEPLOY" --timeout=120s
 
   preview-comment:
     name: PR Preview Comment
