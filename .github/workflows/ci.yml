@@ -2,8 +2,16 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GHCR_PREFIX: ghcr.io/xenit-eu/contentgrid-navigator-horizon
 
 jobs:
   lint-test-build:
@@ -12,16 +20,6 @@ jobs:
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
-        include:
-          - app: navigator
-            image: ghcr.io/xenit-eu/contentgrid-navigator-horizon-navigator
-            host_subdomain: navigator
-          - app: navigator-experimental
-            image: ghcr.io/xenit-eu/contentgrid-navigator-horizon-experimental
-            host_subdomain: experimental
-    outputs:
-      tags-navigator: ${{ steps.meta-navigator.outputs.tags }}
-      tags-navigator-experimental: ${{ steps.meta-navigator-experimental.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,16 +70,6 @@ jobs:
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
-        include:
-          - app: navigator
-            image: ghcr.io/xenit-eu/contentgrid-navigator-horizon-navigator
-            host_subdomain: navigator
-          - app: navigator-experimental
-            image: ghcr.io/xenit-eu/contentgrid-navigator-horizon-experimental
-            host_subdomain: experimental
-    outputs:
-      tags-navigator: ${{ steps.output-navigator.outputs.tags }}
-      tags-navigator-experimental: ${{ steps.output-navigator-experimental.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -103,7 +91,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ${{ matrix.image }}
+            ${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -122,16 +110,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Export tags (navigator)
-        id: output-navigator
-        if: ${{ matrix.app == 'navigator' }}
-        run: echo "tags=${{ steps.meta.outputs.tags }}" >> "$GITHUB_OUTPUT"
-
-      - name: Export tags (navigator-experimental)
-        id: output-navigator-experimental
-        if: ${{ matrix.app == 'navigator-experimental' }}
-        run: echo "tags=${{ steps.meta.outputs.tags }}" >> "$GITHUB_OUTPUT"
-
   preview:
     name: Deploy Preview (${{ matrix.app }})
     needs: docker
@@ -141,13 +119,6 @@ jobs:
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
-        include:
-          - app: navigator
-            image: ghcr.io/xenit-eu/contentgrid-navigator-horizon-navigator
-            host_subdomain: navigator
-          - app: navigator-experimental
-            image: ghcr.io/xenit-eu/contentgrid-navigator-horizon-experimental
-            host_subdomain: experimental
     steps:
       - uses: actions/checkout@v4
 
@@ -166,9 +137,9 @@ jobs:
       - name: PR Preview - Prepare manifests
         id: name-prep
         run: |
-          PR_NAME="preview-pr-${{ github.event.number }}-${{ matrix.host_subdomain }}"
-          PR_HOST="${{ github.event.number }}-${{ matrix.host_subdomain }}.preview.contentgrid.app"
-          PR_IMAGE="${{ matrix.image }}:pr-${{ github.event.number }}"
+          PR_NAME="preview-pr-${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          PR_HOST="${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}.preview.contentgrid.app"
+          PR_IMAGE="${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}:pr-${{ github.event.number }}"
           echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
           sed -i "s|{PR_NUMBER_PLACEHOLDER}|${PR_NAME}|g" .github/pr-previews/*
           sed -i "s|{PR_HOST_PLACEHOLDER}|${PR_HOST}|g" .github/pr-previews/*
