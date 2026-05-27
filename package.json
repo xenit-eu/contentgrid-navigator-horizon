@@ -11,6 +11,7 @@
   "scripts": {
     "dev:navigator": "pnpm --filter navigator dev",
     "dev:navigator-experimental": "pnpm --filter navigator-experimental dev",
+    "storybook": "pnpm --filter storybook dev",
     "build": "pnpm -r run --if-present build",
     "typecheck": "pnpm -r run --if-present typecheck",
     "lint": "pnpm -r run --if-present lint",
