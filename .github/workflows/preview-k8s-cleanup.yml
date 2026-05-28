@@ -32,12 +32,12 @@ jobs:
 
     - name: PR Preview - Cleanup navigator
       run: |
-        kubectl delete -n frontend-pr deployment "preview-pr-${{ github.event.number }}-navigator" --ignore-not-found=true
-        kubectl delete -n frontend-pr service "preview-pr-${{ github.event.number }}-navigator" --ignore-not-found=true
-        kubectl delete -n frontend-pr ingress "preview-pr-${{ github.event.number }}-navigator" --ignore-not-found=true
+        kubectl delete -n frontend-pr deployment "preview-pr-${{ github.event.number }}-hz-navigator" --ignore-not-found=true
+        kubectl delete -n frontend-pr service "preview-pr-${{ github.event.number }}-hz-navigator" --ignore-not-found=true
+        kubectl delete -n frontend-pr ingress "preview-pr-${{ github.event.number }}-hz-navigator" --ignore-not-found=true
 
     - name: PR Preview - Cleanup navigator-experimental
       run: |
-        kubectl delete -n frontend-pr deployment "preview-pr-${{ github.event.number }}-experimental" --ignore-not-found=true
-        kubectl delete -n frontend-pr service "preview-pr-${{ github.event.number }}-experimental" --ignore-not-found=true
-        kubectl delete -n frontend-pr ingress "preview-pr-${{ github.event.number }}-experimental" --ignore-not-found=true
+        kubectl delete -n frontend-pr deployment "preview-pr-${{ github.event.number }}-hz-experimental" --ignore-not-found=true
+        kubectl delete -n frontend-pr service "preview-pr-${{ github.event.number }}-hz-experimental" --ignore-not-found=true
+        kubectl delete -n frontend-pr ingress "preview-pr-${{ github.event.number }}-hz-experimental" --ignore-not-found=true

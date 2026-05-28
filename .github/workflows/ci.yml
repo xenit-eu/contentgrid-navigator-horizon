@@ -133,8 +133,8 @@ jobs:
       - name: PR Preview - Prepare manifests
         id: name-prep
         run: |
-          PR_NAME="preview-pr-${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
-          PR_HOST="${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}.preview.contentgrid.app"
+          PR_NAME="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          PR_HOST="${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}.preview.contentgrid.app"
           PR_IMAGE="${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}:pr-${{ github.event.number }}"
           mkdir -p .preview-rendered
           cp .github/pr-previews/*.yml .preview-rendered/
@@ -152,7 +152,7 @@ jobs:
 
       - name: Wait for rollout
         run: |
-          DEPLOY="preview-pr-${{ github.event.number }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          DEPLOY="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
           kubectl -n frontend-pr rollout status deployment/"$DEPLOY" --timeout=120s
 
   preview-comment:
@@ -168,8 +168,8 @@ jobs:
             const prNumber = ${{ github.event.number }};
             const date = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-            const navigatorUrl = `https://${prNumber}-navigator.preview.contentgrid.app/`;
-            const experimentalUrl = `https://${prNumber}-experimental.preview.contentgrid.app/`;
+            const navigatorUrl = `https://${prNumber}-hz-navigator.preview.contentgrid.app/`;
+            const experimentalUrl = `https://${prNumber}-hz-experimental.preview.contentgrid.app/`;
 
             const commentBody = [
               `Preview builds for this pull request have been deployed. Last updated at ${date} UTC.`,
