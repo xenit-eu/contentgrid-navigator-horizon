@@ -22,11 +22,16 @@
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "eslint": "^9.0.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
     "prettier": "^3.0.0"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,css,md}": "prettier --write"
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": "prettier --write"
   }
 }
