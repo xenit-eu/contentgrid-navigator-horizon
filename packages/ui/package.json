@@ -2,7 +2,9 @@
   "name": "@contentgrid/ui",
   "version": "0.0.0",
   "type": "module",
-  "sideEffects": ["**/*.css"],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     ".": {
       "import": "./src/index.ts",
