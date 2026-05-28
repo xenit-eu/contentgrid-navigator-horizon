@@ -17,9 +17,16 @@
     "lint": "pnpm -r run --if-present lint",
     "clean": "pnpm -r run --if-present clean",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
     "prettier": "^3.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md}": "prettier --write"
   }
 }
