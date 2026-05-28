@@ -1,0 +1,33 @@
+{
+  "name": "storybook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006",
+    "build": "storybook build",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf storybook-static node_modules/.cache"
+  },
+  "dependencies": {
+    "@contentgrid/features": "workspace:*",
+    "@contentgrid/ui": "workspace:*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@contentgrid/eslint-config": "workspace:*",
+    "@contentgrid/tsconfig": "workspace:*",
+    "@storybook/addon-themes": "^9.0.0",
+    "@storybook/react-vite": "^9.0.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.0.0",
+    "storybook": "^9.0.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
