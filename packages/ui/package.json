@@ -36,6 +36,7 @@
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@storybook/react": "^9.1.20",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "eslint": "^9.0.0",
