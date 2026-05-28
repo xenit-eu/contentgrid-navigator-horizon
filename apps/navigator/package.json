@@ -20,11 +20,13 @@
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "^4.1.18",
     "@tanstack/router-plugin": "^1.114.0",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.0.0",
+    "tailwindcss": "^4.1.18",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   }

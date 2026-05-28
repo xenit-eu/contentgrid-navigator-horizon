@@ -1,31 +1,31 @@
 {
-  "name": "navigator-experimental",
+  "name": "storybook",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5174",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "storybook dev -p 6006",
+    "build": "storybook build",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    "clean": "rm -rf storybook-static node_modules/.cache"
   },
   "dependencies": {
+    "@contentgrid/features": "workspace:*",
     "@contentgrid/ui": "workspace:*",
-    "@tanstack/react-router": "^1.114.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@storybook/addon-themes": "^9.0.0",
+    "@storybook/react-vite": "^9.0.0",
     "@tailwindcss/vite": "^4.1.18",
-    "@tanstack/router-plugin": "^1.114.0",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.0.0",
+    "storybook": "^9.0.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
