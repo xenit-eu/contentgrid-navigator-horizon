@@ -1,18 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { Badge } from "./badge"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Badge } from "./badge";
 
 const meta = {
   title: "Primitives/Badge",
   component: Badge,
-} satisfies Meta<typeof Badge>
+} satisfies Meta<typeof Badge>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => <Badge>Active</Badge>,
-}
+};
 
 export const Variants: Story = {
   render: () => (
@@ -24,7 +23,7 @@ export const Variants: Story = {
       <Badge variant="ghost">Ghost</Badge>
     </div>
   ),
-}
+};
 
 export const Statuses: Story = {
   render: () => (
@@ -35,4 +34,4 @@ export const Statuses: Story = {
       <Badge variant="destructive">Failed</Badge>
     </div>
   ),
-}
+};

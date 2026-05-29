@@ -1,17 +1,16 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { ScrollArea, ScrollBar } from "./scroll-area"
-import { Separator } from "./separator"
+import type { Meta, StoryObj } from "@storybook/react";
+import { ScrollArea, ScrollBar } from "./scroll-area";
+import { Separator } from "./separator";
 
 const meta = {
   title: "Primitives/ScrollArea",
   component: ScrollArea,
-} satisfies Meta<typeof ScrollArea>
+} satisfies Meta<typeof ScrollArea>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-const items = Array.from({ length: 30 }, (_, i) => `Item ${i + 1}`)
+const items = Array.from({ length: 30 }, (_, i) => `Item ${i + 1}`);
 
 export const Default: Story = {
   render: () => (
@@ -27,7 +26,7 @@ export const Default: Story = {
       </div>
     </ScrollArea>
   ),
-}
+};
 
 export const Horizontal: Story = {
   render: () => (
@@ -45,4 +44,4 @@ export const Horizontal: Story = {
       <ScrollBar orientation="horizontal" />
     </ScrollArea>
   ),
-}
+};

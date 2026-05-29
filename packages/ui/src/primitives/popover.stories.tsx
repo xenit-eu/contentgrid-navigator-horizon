@@ -1,5 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "./button";
+import { Input } from "./input";
+import { Label } from "./label";
 import {
   Popover,
   PopoverContent,
@@ -7,18 +9,15 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "./popover"
-import { Button } from "./button"
-import { Input } from "./input"
-import { Label } from "./label"
+} from "./popover";
 
 const meta = {
   title: "Primitives/Popover",
   component: Popover,
-} satisfies Meta<typeof Popover>
+} satisfies Meta<typeof Popover>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -38,7 +37,7 @@ export const Default: Story = {
       </PopoverContent>
     </Popover>
   ),
-}
+};
 
 export const Simple: Story = {
   render: () => (
@@ -50,10 +49,10 @@ export const Simple: Story = {
       </PopoverTrigger>
       <PopoverContent className="w-64">
         <p className="text-sm">
-          Use keyboard shortcut <kbd className="rounded bg-muted px-1">⌘K</kbd>{" "}
-          to open the command palette.
+          Use keyboard shortcut <kbd className="rounded bg-muted px-1">⌘K</kbd> to open the command
+          palette.
         </p>
       </PopoverContent>
     </Popover>
   ),
-}
+};

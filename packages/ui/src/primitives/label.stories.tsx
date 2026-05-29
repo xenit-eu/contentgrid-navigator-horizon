@@ -1,19 +1,18 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { Label } from "./label"
-import { Input } from "./input"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Input } from "./input";
+import { Label } from "./label";
 
 const meta = {
   title: "Primitives/Label",
   component: Label,
-} satisfies Meta<typeof Label>
+} satisfies Meta<typeof Label>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => <Label>Email address</Label>,
-}
+};
 
 export const WithInput: Story = {
   render: () => (
@@ -22,7 +21,7 @@ export const WithInput: Story = {
       <Input id="label-email" type="email" placeholder="you@example.com" />
     </div>
   ),
-}
+};
 
 export const Required: Story = {
   render: () => (
@@ -33,7 +32,7 @@ export const Required: Story = {
       <Input id="label-name" placeholder="Jane Smith" />
     </div>
   ),
-}
+};
 
 export const Disabled: Story = {
   render: () => (
@@ -42,4 +41,4 @@ export const Disabled: Story = {
       <Input id="label-disabled" disabled value="jane_smith" readOnly />
     </div>
   ),
-}
+};

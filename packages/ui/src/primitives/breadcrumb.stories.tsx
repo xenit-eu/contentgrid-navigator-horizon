@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
 import {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -8,15 +7,15 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "./breadcrumb"
+} from "./breadcrumb";
 
 const meta = {
   title: "Primitives/Breadcrumb",
   component: Breadcrumb,
-} satisfies Meta<typeof Breadcrumb>
+} satisfies Meta<typeof Breadcrumb>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -36,7 +35,7 @@ export const Default: Story = {
       </BreadcrumbList>
     </Breadcrumb>
   ),
-}
+};
 
 export const WithEllipsis: Story = {
   render: () => (
@@ -60,7 +59,7 @@ export const WithEllipsis: Story = {
       </BreadcrumbList>
     </Breadcrumb>
   ),
-}
+};
 
 export const SingleLevel: Story = {
   render: () => (
@@ -76,4 +75,4 @@ export const SingleLevel: Story = {
       </BreadcrumbList>
     </Breadcrumb>
   ),
-}
+};

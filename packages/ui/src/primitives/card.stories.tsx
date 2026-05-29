@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "./button";
 import {
   Card,
   CardAction,
@@ -8,16 +8,15 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "./card"
-import { Button } from "./button"
+} from "./card";
 
 const meta = {
   title: "Primitives/Card",
   component: Card,
-} satisfies Meta<typeof Card>
+} satisfies Meta<typeof Card>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -36,7 +35,7 @@ export const Default: Story = {
       </CardFooter>
     </Card>
   ),
-}
+};
 
 export const WithAction: Story = {
   render: () => (
@@ -51,13 +50,11 @@ export const WithAction: Story = {
         </CardAction>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">
-          3 members currently active.
-        </p>
+        <p className="text-sm text-muted-foreground">3 members currently active.</p>
       </CardContent>
     </Card>
   ),
-}
+};
 
 export const Simple: Story = {
   render: () => (
@@ -71,4 +68,4 @@ export const Simple: Story = {
       </CardContent>
     </Card>
   ),
-}
+};

@@ -10,6 +10,10 @@ const config = {
   bracketSpacing: true,
   arrowParens: "always",
   endOfLine: "lf",
+  plugins: ["@trivago/prettier-plugin-sort-imports"],
+  importOrder: ["^react$", "^react-dom", "<THIRD_PARTY_MODULES>", "^@contentgrid/(.*)$", "^[./]"],
+  importOrderSeparation: false,
+  importOrderSortSpecifiers: true,
 };
 
 export default config;

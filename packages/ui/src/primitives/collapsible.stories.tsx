@@ -1,16 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { ChevronsUpDown } from "lucide-react"
-
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible"
-import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react";
+import { ChevronsUpDown } from "lucide-react";
+import { Button } from "./button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 
 const meta = {
   title: "Primitives/Collapsible",
   component: Collapsible,
-} satisfies Meta<typeof Collapsible>
+} satisfies Meta<typeof Collapsible>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -31,7 +30,7 @@ export const Default: Story = {
       </CollapsibleContent>
     </Collapsible>
   ),
-}
+};
 
 export const OpenByDefault: Story = {
   render: () => (
@@ -51,4 +50,4 @@ export const OpenByDefault: Story = {
       </CollapsibleContent>
     </Collapsible>
   ),
-}
+};

@@ -1,14 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 
 const meta = {
   title: "Primitives/Tabs",
   component: Tabs,
-} satisfies Meta<typeof Tabs>
+} satisfies Meta<typeof Tabs>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -35,7 +34,7 @@ export const Default: Story = {
       </TabsContent>
     </Tabs>
   ),
-}
+};
 
 export const LineVariant: Story = {
   render: () => (
@@ -56,7 +55,7 @@ export const LineVariant: Story = {
       </TabsContent>
     </Tabs>
   ),
-}
+};
 
 export const Vertical: Story = {
   render: () => (
@@ -77,4 +76,4 @@ export const Vertical: Story = {
       </TabsContent>
     </Tabs>
   ),
-}
+};

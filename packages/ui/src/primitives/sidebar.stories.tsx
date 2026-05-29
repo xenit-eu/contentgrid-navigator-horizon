@@ -1,6 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { LayoutDashboard, Settings, Users } from "lucide-react"
-
+import type { Meta, StoryObj } from "@storybook/react";
+import { LayoutDashboard, Settings, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,16 +11,16 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-} from "./sidebar"
+} from "./sidebar";
 
 const meta = {
   title: "Primitives/Sidebar",
   component: Sidebar,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof Sidebar>
+} satisfies Meta<typeof Sidebar>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const NavItems = () => (
   <SidebarGroup>
@@ -49,7 +48,7 @@ const NavItems = () => (
       </SidebarMenu>
     </SidebarGroupContent>
   </SidebarGroup>
-)
+);
 
 export const Default: Story = {
   render: () => (
@@ -65,7 +64,7 @@ export const Default: Story = {
       </main>
     </SidebarProvider>
   ),
-}
+};
 
 export const Collapsed: Story = {
   render: () => (
@@ -81,4 +80,4 @@ export const Collapsed: Story = {
       </main>
     </SidebarProvider>
   ),
-}
+};

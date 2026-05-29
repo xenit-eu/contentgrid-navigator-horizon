@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,15 +9,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "./alert-dialog"
+} from "./alert-dialog";
 
 const meta = {
   title: "Primitives/AlertDialog",
   component: AlertDialog,
-} satisfies Meta<typeof AlertDialog>
+} satisfies Meta<typeof AlertDialog>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -28,8 +27,7 @@ export const Default: Story = {
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. Your account will be permanently
-            deleted.
+            This action cannot be undone. Your account will be permanently deleted.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -39,7 +37,7 @@ export const Default: Story = {
       </AlertDialogContent>
     </AlertDialog>
   ),
-}
+};
 
 export const Destructive: Story = {
   render: () => (
@@ -49,8 +47,7 @@ export const Destructive: Story = {
         <AlertDialogHeader>
           <AlertDialogTitle>Remove team member?</AlertDialogTitle>
           <AlertDialogDescription>
-            Jane Smith will lose access immediately. You can re-invite them
-            later.
+            Jane Smith will lose access immediately. You can re-invite them later.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -60,7 +57,7 @@ export const Destructive: Story = {
       </AlertDialogContent>
     </AlertDialog>
   ),
-}
+};
 
 export const SmallSize: Story = {
   render: () => (
@@ -69,9 +66,7 @@ export const SmallSize: Story = {
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm logout</AlertDialogTitle>
-          <AlertDialogDescription>
-            You will be signed out of all devices.
-          </AlertDialogDescription>
+          <AlertDialogDescription>You will be signed out of all devices.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -80,4 +75,4 @@ export const SmallSize: Story = {
       </AlertDialogContent>
     </AlertDialog>
   ),
-}
+};

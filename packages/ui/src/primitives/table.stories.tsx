@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
+import { Badge } from "./badge";
 import {
   Table,
   TableBody,
@@ -9,22 +9,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "./table"
-import { Badge } from "./badge"
+} from "./table";
 
 const meta = {
   title: "Primitives/Table",
   component: Table,
-} satisfies Meta<typeof Table>
+} satisfies Meta<typeof Table>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const users = [
   { name: "Jane Smith", email: "jane@example.com", role: "Admin", status: "Active" },
   { name: "John Doe", email: "john@example.com", role: "Editor", status: "Active" },
   { name: "Alice Brown", email: "alice@example.com", role: "Viewer", status: "Inactive" },
-]
+];
 
 export const Default: Story = {
   render: () => (
@@ -45,9 +44,7 @@ export const Default: Story = {
             <TableCell>{user.email}</TableCell>
             <TableCell>{user.role}</TableCell>
             <TableCell>
-              <Badge
-                variant={user.status === "Active" ? "default" : "secondary"}
-              >
+              <Badge variant={user.status === "Active" ? "default" : "secondary"}>
                 {user.status}
               </Badge>
             </TableCell>
@@ -56,7 +53,7 @@ export const Default: Story = {
       </TableBody>
     </Table>
   ),
-}
+};
 
 export const WithFooter: Story = {
   render: () => (
@@ -89,4 +86,4 @@ export const WithFooter: Story = {
       </TableFooter>
     </Table>
   ),
-}
+};

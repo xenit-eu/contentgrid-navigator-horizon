@@ -1,14 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { Separator } from "./separator"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Separator } from "./separator";
 
 const meta = {
   title: "Primitives/Separator",
   component: Separator,
-} satisfies Meta<typeof Separator>
+} satisfies Meta<typeof Separator>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -20,7 +19,7 @@ export const Default: Story = {
       <p className="text-sm font-medium">Security</p>
     </div>
   ),
-}
+};
 
 export const Vertical: Story = {
   render: () => (
@@ -32,4 +31,4 @@ export const Vertical: Story = {
       <span>Help</span>
     </div>
   ),
-}
+};
