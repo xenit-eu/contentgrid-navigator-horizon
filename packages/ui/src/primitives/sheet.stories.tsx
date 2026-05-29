@@ -1,5 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "./button";
+import { Input } from "./input";
+import { Label } from "./label";
 import {
   Sheet,
   SheetContent,
@@ -8,18 +10,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "./sheet"
-import { Button } from "./button"
-import { Input } from "./input"
-import { Label } from "./label"
+} from "./sheet";
 
 const meta = {
   title: "Primitives/Sheet",
   component: Sheet,
-} satisfies Meta<typeof Sheet>
+} satisfies Meta<typeof Sheet>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -50,7 +49,7 @@ export const Default: Story = {
       </SheetContent>
     </Sheet>
   ),
-}
+};
 
 export const LeftSide: Story = {
   render: () => (
@@ -76,7 +75,7 @@ export const LeftSide: Story = {
       </SheetContent>
     </Sheet>
   ),
-}
+};
 
 export const BottomSheet: Story = {
   render: () => (
@@ -96,4 +95,4 @@ export const BottomSheet: Story = {
       </SheetContent>
     </Sheet>
   ),
-}
+};

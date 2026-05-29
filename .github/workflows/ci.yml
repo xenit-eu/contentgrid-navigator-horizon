@@ -125,13 +125,13 @@ jobs:
       - name: PR Preview - Kubectl install
         uses: azure/setup-kubectl@v4
         with:
-          version: 'v1.30.5'
+          version: "v1.30.5"
 
       - name: PR Preview - Kubernetes context
         uses: azure/k8s-set-context@v4
         with:
           method: kubeconfig
-          kubeconfig: '${{ secrets.PREVIEW_KUBECONFIG }}'
+          kubeconfig: "${{ secrets.PREVIEW_KUBECONFIG }}"
 
       - name: PR Preview - Prepare manifests
         id: name-prep
@@ -150,8 +150,8 @@ jobs:
       - name: PR Preview - Kubernetes deploy
         uses: azure/k8s-deploy@v5
         with:
-          namespace: 'frontend-pr'
-          manifests: '.preview-rendered'
+          namespace: "frontend-pr"
+          manifests: ".preview-rendered"
 
       - name: Wait for rollout
         run: |

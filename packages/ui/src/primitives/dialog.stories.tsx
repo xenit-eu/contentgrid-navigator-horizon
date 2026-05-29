@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "./button";
 import {
   Dialog,
   DialogContent,
@@ -8,18 +8,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./dialog"
-import { Button } from "./button"
-import { Input } from "./input"
-import { Label } from "./label"
+} from "./dialog";
+import { Input } from "./input";
+import { Label } from "./label";
 
 const meta = {
   title: "Primitives/Dialog",
   component: Dialog,
-} satisfies Meta<typeof Dialog>
+} satisfies Meta<typeof Dialog>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -30,9 +29,7 @@ export const Default: Story = {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit profile</DialogTitle>
-          <DialogDescription>
-            Update your display name and email address.
-          </DialogDescription>
+          <DialogDescription>Update your display name and email address.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
@@ -50,7 +47,7 @@ export const Default: Story = {
       </DialogContent>
     </Dialog>
   ),
-}
+};
 
 export const Simple: Story = {
   render: () => (
@@ -71,4 +68,4 @@ export const Simple: Story = {
       </DialogContent>
     </Dialog>
   ),
-}
+};

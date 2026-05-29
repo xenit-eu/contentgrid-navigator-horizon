@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
 import {
   Pagination,
   PaginationContent,
@@ -8,15 +7,15 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "./pagination"
+} from "./pagination";
 
 const meta = {
   title: "Primitives/Pagination",
   component: Pagination,
-} satisfies Meta<typeof Pagination>
+} satisfies Meta<typeof Pagination>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -42,7 +41,7 @@ export const Default: Story = {
       </PaginationContent>
     </Pagination>
   ),
-}
+};
 
 export const WithEllipsis: Story = {
   render: () => (
@@ -74,7 +73,7 @@ export const WithEllipsis: Story = {
       </PaginationContent>
     </Pagination>
   ),
-}
+};
 
 export const FirstPage: Story = {
   render: () => (
@@ -100,4 +99,4 @@ export const FirstPage: Story = {
       </PaginationContent>
     </Pagination>
   ),
-}
+};

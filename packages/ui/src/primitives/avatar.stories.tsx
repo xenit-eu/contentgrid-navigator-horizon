@@ -1,20 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroup,
-  AvatarGroupCount,
-  AvatarImage,
-} from "./avatar"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from "./avatar";
 
 const meta = {
   title: "Primitives/Avatar",
   component: Avatar,
-} satisfies Meta<typeof Avatar>
+} satisfies Meta<typeof Avatar>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -23,7 +16,7 @@ export const Default: Story = {
       <AvatarFallback>SC</AvatarFallback>
     </Avatar>
   ),
-}
+};
 
 export const Sizes: Story = {
   render: () => (
@@ -39,7 +32,7 @@ export const Sizes: Story = {
       </Avatar>
     </div>
   ),
-}
+};
 
 export const Fallback: Story = {
   render: () => (
@@ -48,7 +41,7 @@ export const Fallback: Story = {
       <AvatarFallback>JD</AvatarFallback>
     </Avatar>
   ),
-}
+};
 
 export const Group: Story = {
   render: () => (
@@ -65,4 +58,4 @@ export const Group: Story = {
       <AvatarGroupCount>+4</AvatarGroupCount>
     </AvatarGroup>
   ),
-}
+};

@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
+import type { Meta, StoryObj } from "@storybook/react";
 import {
   Select,
   SelectContent,
@@ -9,15 +8,15 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from "./select"
+} from "./select";
 
 const meta = {
   title: "Primitives/Select",
   component: Select,
-} satisfies Meta<typeof Select>
+} satisfies Meta<typeof Select>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -32,7 +31,7 @@ export const Default: Story = {
       </SelectContent>
     </Select>
   ),
-}
+};
 
 export const WithGroups: Story = {
   render: () => (
@@ -57,7 +56,7 @@ export const WithGroups: Story = {
       </SelectContent>
     </Select>
   ),
-}
+};
 
 export const Disabled: Story = {
   render: () => (
@@ -70,7 +69,7 @@ export const Disabled: Story = {
       </SelectContent>
     </Select>
   ),
-}
+};
 
 export const SmallSize: Story = {
   render: () => (
@@ -85,4 +84,4 @@ export const SmallSize: Story = {
       </SelectContent>
     </Select>
   ),
-}
+};

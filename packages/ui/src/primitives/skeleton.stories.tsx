@@ -1,18 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { Skeleton } from "./skeleton"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Skeleton } from "./skeleton";
 
 const meta = {
   title: "Primitives/Skeleton",
   component: Skeleton,
-} satisfies Meta<typeof Skeleton>
+} satisfies Meta<typeof Skeleton>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => <Skeleton className="h-4 w-48" />,
-}
+};
 
 export const Card: Story = {
   render: () => (
@@ -31,7 +30,7 @@ export const Card: Story = {
       </div>
     </div>
   ),
-}
+};
 
 export const List: Story = {
   render: () => (
@@ -47,4 +46,4 @@ export const List: Story = {
       ))}
     </div>
   ),
-}
+};

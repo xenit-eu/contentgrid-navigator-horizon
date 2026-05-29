@@ -1,21 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react"
-import { InfoIcon } from "lucide-react"
-
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./tooltip"
-import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react";
+import { InfoIcon } from "lucide-react";
+import { Button } from "./button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 
 const meta = {
   title: "Primitives/Tooltip",
   component: Tooltip,
-} satisfies Meta<typeof Tooltip>
+} satisfies Meta<typeof Tooltip>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
@@ -30,7 +24,7 @@ export const Default: Story = {
       </Tooltip>
     </TooltipProvider>
   ),
-}
+};
 
 export const OnText: Story = {
   render: () => (
@@ -47,7 +41,7 @@ export const OnText: Story = {
       </Tooltip>
     </TooltipProvider>
   ),
-}
+};
 
 export const Sides: Story = {
   render: () => (
@@ -66,4 +60,4 @@ export const Sides: Story = {
       </div>
     </TooltipProvider>
   ),
-}
+};

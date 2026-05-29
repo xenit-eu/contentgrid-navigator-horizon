@@ -1,19 +1,18 @@
-import type { Meta, StoryObj } from "@storybook/react"
-
-import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "./button";
 
 const meta = {
   title: "Primitives/Button",
   component: Button,
   tags: ["autodocs"],
-} satisfies Meta<typeof Button>
+} satisfies Meta<typeof Button>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => <Button>Sign in</Button>,
-}
+};
 
 export const Variants: Story = {
   render: () => (
@@ -26,7 +25,7 @@ export const Variants: Story = {
       <Button variant="link">Learn more</Button>
     </div>
   ),
-}
+};
 
 export const Sizes: Story = {
   render: () => (
@@ -36,7 +35,7 @@ export const Sizes: Story = {
       <Button size="lg">Large</Button>
     </div>
   ),
-}
+};
 
 export const Disabled: Story = {
   render: () => (
@@ -47,4 +46,4 @@ export const Disabled: Story = {
       </Button>
     </div>
   ),
-}
+};

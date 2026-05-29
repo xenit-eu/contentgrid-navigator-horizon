@@ -5,77 +5,77 @@ metadata:
     app.kubernetes.io/component: appfrontend-preview
     app.kubernetes.io/managed-by: GHA
     app.kubernetes.io/name: webapp
-  name: '{PR_NUMBER_PLACEHOLDER}'
+  name: "{PR_NUMBER_PLACEHOLDER}"
   namespace: frontend-pr
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/component: '{PR_NUMBER_PLACEHOLDER}'
+      app.kubernetes.io/component: "{PR_NUMBER_PLACEHOLDER}"
       app.kubernetes.io/name: webapp
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: '{PR_NUMBER_PLACEHOLDER}'
+        app.kubernetes.io/component: "{PR_NUMBER_PLACEHOLDER}"
         app.kubernetes.io/managed-by: GHA
         app.kubernetes.io/name: webapp
     spec:
       containers:
-      - image: '{IMAGE_PLACEHOLDER}'
-        imagePullPolicy: Always
-        name: '{PR_NUMBER_PLACEHOLDER}'
-        ports:
-        - containerPort: 8080
-          name: http
-          protocol: TCP
+        - image: "{IMAGE_PLACEHOLDER}"
+          imagePullPolicy: Always
+          name: "{PR_NUMBER_PLACEHOLDER}"
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/component: '{PR_NUMBER_PLACEHOLDER}'
+    app.kubernetes.io/component: "{PR_NUMBER_PLACEHOLDER}"
     app.kubernetes.io/managed-by: GHA
     app.kubernetes.io/name: webapp
-  name: '{PR_NUMBER_PLACEHOLDER}'
+  name: "{PR_NUMBER_PLACEHOLDER}"
   namespace: frontend-pr
 spec:
   selector:
-    app.kubernetes.io/component: '{PR_NUMBER_PLACEHOLDER}'
+    app.kubernetes.io/component: "{PR_NUMBER_PLACEHOLDER}"
     app.kubernetes.io/name: webapp
   type: ClusterIP
   ports:
-  - appProtocol: http
-    name: http
-    port: 80
-    protocol: TCP
-    targetPort: http
+    - appProtocol: http
+      name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: '{PR_NUMBER_PLACEHOLDER}'
+  name: "{PR_NUMBER_PLACEHOLDER}"
   namespace: frontend-pr
 spec:
   ingressClassName: haproxy
   rules:
-  - host: '{PR_HOST_PLACEHOLDER}'
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: '{PR_NUMBER_PLACEHOLDER}'
-            port:
-              name: http
-      - path: /config.js
-        pathType: Exact
-        backend:
-          service:
-            name: '{PR_ENV_NGINX_SERVICE_NAME}'
-            port:
-              name: http
+    - host: "{PR_HOST_PLACEHOLDER}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: "{PR_NUMBER_PLACEHOLDER}"
+                port:
+                  name: http
+          - path: /config.js
+            pathType: Exact
+            backend:
+              service:
+                name: "{PR_ENV_NGINX_SERVICE_NAME}"
+                port:
+                  name: http
   tls:
-  - hosts:
-    - '*.preview.contentgrid.app'
-    secretName: wildcard-preview-tls
+    - hosts:
+        - "*.preview.contentgrid.app"
+      secretName: wildcard-preview-tls
