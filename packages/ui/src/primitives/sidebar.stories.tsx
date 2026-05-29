@@ -51,7 +51,7 @@ const NavItems = () => (
   </SidebarGroup>
 )
 
-export const Expanded: Story = {
+export const Default: Story = {
   render: () => (
     <SidebarProvider defaultOpen>
       <Sidebar>

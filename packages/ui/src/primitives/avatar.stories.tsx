@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   render: () => (
     <Avatar>
-      <AvatarImage src="https://github.com/shadcn.png" alt="shadcn" />
+      <AvatarImage src="/avatar-placeholder.png" alt="placeholder" />
       <AvatarFallback>SC</AvatarFallback>
     </Avatar>
   ),
