@@ -111,7 +111,7 @@ jobs:
     name: Deploy Preview (${{ matrix.app }})
     needs: docker
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
     strategy:
       matrix:
@@ -156,7 +156,7 @@ jobs:
           kubectl -n frontend-pr rollout status deployment/"$DEPLOY" --timeout=120s
 
       - name: Diagnose failed rollout
-        if: failure()
+        if: ${{ failure() || cancelled() }}
         run: |
           DEPLOY="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
           SELECTOR="app.kubernetes.io/component=${DEPLOY}"
