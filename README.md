@@ -10,7 +10,8 @@ Monorepo for the modernised ContentGrid Navigator front-end. The navigator is a 
 contentgrid-navigator-horizon/
 ├── apps/
 │   ├── navigator/              Generic track — production build, stable features only
-│   └── navigator-experimental/ Experimental track — internal preview, all stability tiers
+│   ├── navigator-experimental/ Experimental track — internal preview, all stability tiers
+│   └── storybook/              Storybook host + Playwright visual-regression harness (ADR-009)
 │
 ├── packages/
 │   ├── features/               Feature modules with per-feature stability flags (ADR-006)
@@ -88,6 +89,15 @@ pnpm build
 
 # Type-check all packages and apps (no emit)
 pnpm typecheck
+
+# Lint all packages and apps (ESLint)
+pnpm lint
+
+# Check formatting (Prettier)
+pnpm format:check
+
+# Run Storybook (component workbench, port 6006)
+pnpm storybook
 ```
 
 To work on a specific app directly:
@@ -103,7 +113,25 @@ pnpm --filter navigator preview
 pnpm --filter navigator-experimental preview
 ```
 
-There are no `test` or `lint` scripts in any `package.json` yet; those will be added as the migration progresses.
+ESLint (`lint`) and Prettier (`format` / `format:check`) scripts exist in every package and run in CI, and visual-regression tests exist for `packages/ui` (see [Testing](#testing)). There are no unit or integration `test` scripts yet — the root `pnpm test` and `pnpm test:e2e` are `--if-present` pass-throughs that currently match nothing; those land as the migration progresses.
+
+---
+
+## Testing
+
+### Visual regression (`packages/ui`)
+
+Playwright captures one full-page screenshot per Storybook story and diffs it against a committed baseline (ADR-009).
+
+```bash
+# Build Storybook and run the snapshot suite
+pnpm test:visual
+
+# Re-generate baselines after an intentional UI change
+pnpm test:visual:update
+```
+
+Baselines live in `apps/storybook/tests/__snapshots__/` and **must only be (re)generated inside the pinned Playwright Docker image** (`mcr.microsoft.com/playwright:v1.60.0-noble`), never on macOS — local font rendering differs and produces spurious diffs. CI runs the same suite in that image via the `visual` job in `.github/workflows/ci.yml`. See ADR-009 for the determinism rules and threshold rationale.
 
 ---
 
@@ -133,5 +161,5 @@ This is the internal preview track. It runs on a separate port and is deployed t
 
 - **Stability enforcement not yet active.** The ESLint rule and CI bundle audit that enforce the `stable`-only boundary in `apps/navigator` are planned (HZN-1.9) but not yet implemented. The apps are structurally separate but the import boundary is not machine-enforced today.
 - **`packages/features/` is empty.** No features have been added yet. The package exists as a scaffold; its shape (per-feature subdirectory, `x-stability` in `package.json`) is described in ADR-006 but not yet built out.
-- **No test or lint scripts.** Neither root nor app `package.json` files define `test` or `lint` scripts yet. These will appear as the migration phases proceed.
+- **No unit/integration tests yet.** Lint, formatting, and visual-regression (`packages/ui`) checks run in CI, but no unit or integration `test` scripts are implemented — `pnpm test` and `pnpm test:e2e` are `--if-present` pass-throughs that currently match nothing. These land as the migration phases proceed.
 - **Custom track not scaffolded.** `apps/<customer>/` directories do not exist yet. Custom-track scaffolding is deferred to Phase 8 (ADR-010, ADR-013).
