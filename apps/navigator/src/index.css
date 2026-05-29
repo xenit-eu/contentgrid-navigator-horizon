@@ -1,2 +1,6 @@
 @import "tailwindcss";
 @import "@contentgrid/ui/styles/preset.css";
+/* Keep packages/ui story-only utilities out of the app bundle (they are
+   needed only by Storybook, which imports the same preset). */
+@source not "../../../packages/ui/src/**/*.stories.tsx";
+@source not "../../../packages/ui/src/**/*.stories.ts";
