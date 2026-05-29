@@ -9,8 +9,8 @@ configjs_envsubst() {
     configjs_target=${CC_CONFIGJS_TARGET:-/usr/share/nginx/html/config.js}
 
     if [ ! -f "$configjs_template" ]; then
-        echo >&2 "$ME: ERROR: No template found at $configjs_template"
-        exit 1
+        echo >&2 "$ME: INFO: No template at $configjs_template, skipping (config.js served externally)"
+        exit 0
     fi
     if [ -f "$configjs_target" ] && [ ! -w "$configjs_target" ]; then
         echo >&2 "$ME: ERROR: Can't write to $configjs_target"
