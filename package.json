@@ -16,6 +16,9 @@
     "typecheck": "pnpm -r run --if-present typecheck",
     "lint": "pnpm -r run --if-present lint",
     "clean": "pnpm -r run --if-present clean",
+    "test": "pnpm -r run --if-present test",
+    "test:e2e": "pnpm -r run --if-present test:e2e",
+    "test:visual": "pnpm -r run --if-present test:visual",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
