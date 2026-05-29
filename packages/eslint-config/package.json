@@ -5,13 +5,26 @@
   "type": "module",
   "main": "./index.js",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./rules/no-unstable-features": "./dist/rules/no-unstable-features.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "eslint": "^9.0.0"
   },
   "dependencies": {
     "@eslint/js": "^9.0.0",
+    "@typescript-eslint/utils": "^8.60.0",
     "typescript-eslint": "^8.0.0"
+  },
+  "devDependencies": {
+    "@contentgrid/tsconfig": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/rule-tester": "^8.60.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.0"
   }
 }

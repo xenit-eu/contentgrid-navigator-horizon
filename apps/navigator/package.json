@@ -12,6 +12,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
+    "@contentgrid/features": "workspace:*",
     "@contentgrid/ui": "workspace:*",
     "@tanstack/react-router": "^1.114.0",
     "react": "^19.1.0",
