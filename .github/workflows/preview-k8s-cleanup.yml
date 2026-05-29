@@ -1,0 +1,43 @@
+name: cleanup
+
+on:
+  # DANGER: pull_request_target also runs from forks, don't checkout the code!
+  # We need pull_request_target instead of pull_request, since it also needs to run for closed PRs with merge conflicts.
+  pull_request_target:
+    types:
+    - closed
+
+concurrency:
+  group: cleanup-${{ github.event.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup-preview:
+    name: Clean up Preview
+    runs-on: ubuntu-latest
+    steps:
+    - name: PR Preview - Kubectl install
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.30.5'
+
+    - name: PR Preview - Kubernetes context
+      uses: azure/k8s-set-context@v4
+      with:
+        method: kubeconfig
+        kubeconfig: '${{ secrets.PREVIEW_KUBECONFIG }}'
+
+    - name: PR Preview - Cleanup navigator
+      run: |
+        kubectl delete -n frontend-pr deployment "preview-pr-${{ github.event.number }}-hz-navigator" --ignore-not-found=true
+        kubectl delete -n frontend-pr service "preview-pr-${{ github.event.number }}-hz-navigator" --ignore-not-found=true
+        kubectl delete -n frontend-pr ingress "preview-pr-${{ github.event.number }}-hz-navigator" --ignore-not-found=true
+
+    - name: PR Preview - Cleanup navigator-experimental
+      run: |
+        kubectl delete -n frontend-pr deployment "preview-pr-${{ github.event.number }}-hz-experimental" --ignore-not-found=true
+        kubectl delete -n frontend-pr service "preview-pr-${{ github.event.number }}-hz-experimental" --ignore-not-found=true
+        kubectl delete -n frontend-pr ingress "preview-pr-${{ github.event.number }}-hz-experimental" --ignore-not-found=true
