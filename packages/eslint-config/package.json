@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "pretest": "pnpm build",
     "test": "vitest run"
   },
   "peerDependencies": {
@@ -18,7 +19,7 @@
   "dependencies": {
     "@eslint/js": "^9.0.0",
     "@typescript-eslint/utils": "^8.60.0",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.60.0"
   },
   "devDependencies": {
     "@contentgrid/tsconfig": "workspace:*",
