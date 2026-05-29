@@ -21,7 +21,8 @@
     "test:visual": "pnpm -r run --if-present test:visual",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:visual:update": "pnpm -r run --if-present test:visual:update"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
