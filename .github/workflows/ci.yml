@@ -155,6 +155,27 @@ jobs:
           DEPLOY="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
           kubectl -n frontend-pr rollout status deployment/"$DEPLOY" --timeout=120s
 
+      - name: Diagnose failed rollout
+        if: failure()
+        run: |
+          DEPLOY="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          SELECTOR="app.kubernetes.io/component=${DEPLOY}"
+          echo "::group::Pods"
+          kubectl get pods -n frontend-pr -l "$SELECTOR" -o wide || true
+          echo "::endgroup::"
+          echo "::group::Recent events (namespace frontend-pr)"
+          kubectl get events -n frontend-pr --sort-by=.lastTimestamp | tail -40 || true
+          echo "::endgroup::"
+          echo "::group::Pod describe"
+          kubectl describe pod -n frontend-pr -l "$SELECTOR" || true
+          echo "::endgroup::"
+          echo "::group::Container logs (current)"
+          kubectl logs -n frontend-pr -l "$SELECTOR" --tail=200 --all-containers=true --prefix=true || true
+          echo "::endgroup::"
+          echo "::group::Container logs (previous, if crashlooped)"
+          kubectl logs -n frontend-pr -l "$SELECTOR" --tail=200 --all-containers=true --prefix=true --previous || true
+          echo "::endgroup::"
+
   preview-comment:
     name: PR Preview Comment
     needs: preview
