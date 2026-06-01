@@ -12,8 +12,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
-  pull-requests: write
 
 env:
   GHCR_PREFIX: ghcr.io/xenit-eu/contentgrid-navigator-horizon
@@ -21,16 +19,20 @@ env:
 jobs:
   lint-test-build:
     name: Lint, Test & Build (${{ matrix.app }})
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: pnpm
@@ -57,7 +59,7 @@ jobs:
         run: pnpm --filter ${{ matrix.app }} build
 
       - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dist-${{ matrix.app }}
           path: apps/${{ matrix.app }}/dist
@@ -66,21 +68,24 @@ jobs:
   docker:
     name: Docker (${{ matrix.app }})
     needs: lint-test-build
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-latest
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Download dist artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: dist-${{ matrix.app }}
           path: apps/${{ matrix.app }}/dist
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -88,7 +93,7 @@ jobs:
 
       - name: Calculate docker tags
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6
         with:
           images: |
             ${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}
@@ -102,7 +107,7 @@ jobs:
             type=sha
 
       - name: Build and push docker image
-        uses: docker/build-push-action@v7.1.0
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           context: apps/${{ matrix.app }}
@@ -113,6 +118,8 @@ jobs:
   preview:
     name: Deploy Preview (${{ matrix.app }})
     needs: docker
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
@@ -120,15 +127,15 @@ jobs:
       matrix:
         app: [navigator, navigator-experimental]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: PR Preview - Kubectl install
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
         with:
           version: "v1.30.5"
 
       - name: PR Preview - Kubernetes context
-        uses: azure/k8s-set-context@v4
+        uses: azure/k8s-set-context@ae59a723ba9abe7a9655538854a025448dbab4aa # v4
         with:
           method: kubeconfig
           kubeconfig: "${{ secrets.PREVIEW_KUBECONFIG }}"
@@ -148,7 +155,7 @@ jobs:
           echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
 
       - name: PR Preview - Kubernetes deploy
-        uses: azure/k8s-deploy@v5
+        uses: azure/k8s-deploy@c8cfec839dc09896b3b8cc40cd13d04792680771 # v5
         with:
           namespace: "frontend-pr"
           manifests: ".preview-rendered"
@@ -182,11 +189,14 @@ jobs:
   preview-comment:
     name: PR Preview Comment
     needs: preview
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
     steps:
       - name: Post or update preview comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const prNumber = ${{ github.event.number }};

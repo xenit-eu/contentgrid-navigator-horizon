@@ -10,6 +10,20 @@ This is a **pnpm monorepo** (`pnpm-workspace.yaml`) with:
 
 ---
 
+## Dependency Management
+
+- **NEVER install the `latest` version of an npm package.** Do not run `pnpm add <pkg>@latest` or `pnpm add <pkg>` without a version, and never use `"latest"`/`"*"` as a version range in `package.json`. Always pin to an explicit, known version (e.g. `pnpm add <pkg>@1.2.3`). Unpinned/`latest` installs make builds non-reproducible and pull in unvetted releases.
+- **Always respect the `minimumReleaseAge` set in `pnpm-workspace.yaml`** (currently `10080` minutes = 7 days). Never install a package version that was published more recently than this window, and never lower or bypass the setting (e.g. via `--config.minimumReleaseAge=0` or per-package overrides) to pull in a newer release. This guards against compromised/just-published versions. If a needed version is too new, wait until it ages past the window or pick an older one.
+- **Do not disable `blockExoticSubdeps`** (currently `true`), which blocks non-registry (git/tarball/etc.) transitive dependencies.
+- **Lifecycle/build scripts are blocked by default** via `approve-builds=false` in `.npmrc` plus an explicit empty `onlyBuiltDependencies: []` allowlist in `pnpm-workspace.yaml`. Never set `dangerouslyAllowAllBuilds`. Never add a package to `onlyBuiltDependencies` without understanding why it needs a build script and getting review — this is a common supply-chain attack vector.
+- **The committed `pnpm-lock.yaml` is the source of truth for all dependencies.** CI installs with `--frozen-lockfile`. Never delete or casually regenerate the lockfile, and never use `--no-frozen-lockfile` in CI — doing so would allow silent dependency substitution.
+- **GitHub Actions are pinned to full 40-character commit SHAs** (not mutable tags) in `.github/workflows/`. `.github/dependabot.yml` keeps those pins up to date automatically (GitHub Actions ecosystem only). Any new or changed action MUST be SHA-pinned with a human-readable version tag in a trailing comment (e.g. `uses: actions/checkout@<sha> # v4`).
+- **CI's `GITHUB_TOKEN` defaults to `permissions: contents: read`** (least privilege) at the top-level workflow scope. Broaden permissions only at the individual job level, only when strictly required, and document why.
+- **The exact pnpm version is pinned via `packageManager` in the root `package.json`** (enforced by Corepack). Keep it pinned to a specific version; never use a range or omit it — version drift in the package manager itself can introduce subtle behavior changes.
+- **Security-critical files are CODEOWNERS-protected and require review before merging:** `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, and `.github/workflows/**`. Do not bypass review for changes to these files.
+
+---
+
 ## Onboarding reading order for AI agents
 
 Read in this order before writing any code:

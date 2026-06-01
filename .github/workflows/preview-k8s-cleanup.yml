@@ -20,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: PR Preview - Kubectl install
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
         with:
           version: "v1.30.5"
 
       - name: PR Preview - Kubernetes context
-        uses: azure/k8s-set-context@v4
+        uses: azure/k8s-set-context@ae59a723ba9abe7a9655538854a025448dbab4aa # v4
         with:
           method: kubeconfig
           kubeconfig: "${{ secrets.PREVIEW_KUBECONFIG }}"
