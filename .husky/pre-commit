@@ -1,1 +1,2 @@
+pnpm --filter @contentgrid/eslint-config build
 pnpm lint-staged
