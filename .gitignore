@@ -10,3 +10,10 @@ storybook-static/
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# Playwright artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.pnpm-store/

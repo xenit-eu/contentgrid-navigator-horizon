@@ -19,7 +19,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test:visual": "pnpm --filter storybook run visual",
+    "test:visual:update": "pnpm --filter storybook run visual:update"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

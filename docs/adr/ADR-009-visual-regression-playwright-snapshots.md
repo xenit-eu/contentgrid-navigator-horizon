@@ -4,6 +4,7 @@
 **Status:** Accepted
 **Amendment 2026-05-12:** Added story-tooling decision (Storybook 10 adopted, Ladle rejected).
 **Amendment 2026-05-12:** Narrowed VR scope to `packages/ui` only; page-level VR deferred.
+**Amendment 2026-05-30:** Replaced the default `maxDiffPixelRatio: 0.01` with an absolute `maxDiffPixels: 100`; full-page capture explicitly retained over per-element (see Flake mitigation).
 **Phase:** 0 — Alignment & decisions
 
 ---
@@ -82,7 +83,11 @@ Prior attempts at visual regression testing failed because trivial rendering dif
 
 **Stub all non-determinism at the story level.** No `new Date()` in render paths — stories pass fixed dates. Seed any RNG. No real network calls — MSW handlers return fixed responses. No `Math.random()` for IDs; use a deterministic counter in stories instead.
 
-**Set sensible thresholds, but treat them as a safety net.** Default: `maxDiffPixelRatio: 0.01` (1% of pixels can differ) with `threshold: 0.2` per-pixel. Stories that need stricter — icons, dense data tables — override down to `maxDiffPixelRatio: 0.001`. Stories that need looser — charts, gradients — override up explicitly with a comment explaining why.
+**Freeze the page clock before navigation.** The harness calls `await page.clock.setFixedTime(new Date("2025-01-15T12:00:00Z"))` before each `page.goto(...)`. This pins `Date` at the browser level so date-dependent components (e.g. Calendar, which renders the current month and today highlight via react-day-picker) are deterministic regardless of the CI run date. `setFixedTime` pins the clock without pausing timers, so `document.fonts.ready` still resolves normally.
+
+**Set sensible thresholds, but treat them as a safety net.** Default: `maxDiffPixels: 100` (an absolute count) with `threshold: 0.2` per-pixel — superseding the original `maxDiffPixelRatio: 0.01`. The ratio was the wrong default for this setup: snapshots are full-page (1280×720 ≈ 921k px) but most stories are a single small centered component, so 1% (~9,200 px) is larger than an entire button — a small component could lose all of its styling and still pass, which is exactly the "VR that catches nothing" failure this ADR exists to prevent. Because baselines and CI render in the _same_ pinned Docker image, an unchanged component diffs at ~0 px; a tight absolute cap is therefore both sensitive (any real regression shifts far more than 100 px) and flake-safe. Stories that need stricter — icons — override down (e.g. `maxDiffPixels: 20`); stories that need looser — charts, gradients — override up explicitly with a comment explaining why.
+
+**Capture stays full-page, not per-element.** Per-element screenshots (`#storybook-root`) were considered — they would make the threshold component-relative — but rejected: Radix/shadcn overlays (Dialog, AlertDialog, Sheet, Popover, DropdownMenu, Tooltip, Select content) render through portals to `document.body`, _outside_ the story root, so an element screenshot captures only the trigger and misses the overlay entirely. Full-page capture covers both inline and portaled content; the absolute pixel cap above is what restores small-component sensitivity, so we keep full-page and tighten the threshold rather than narrowing the frame.
 
 **Mask known-dynamic regions** with Playwright's `mask:` option rather than trying to make them deterministic when stubbing isn't practical (e.g. live status indicators in a Phase 6 PDF preview).
 
