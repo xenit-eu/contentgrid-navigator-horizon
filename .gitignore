@@ -1,4 +1,5 @@
 node_modules/
+!packages/eslint-config/rules/__fixtures__/node_modules/
 dist/
 storybook-static/
 .turbo/

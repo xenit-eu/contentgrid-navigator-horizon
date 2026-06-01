@@ -14,6 +14,7 @@
     "storybook": "pnpm --filter storybook dev",
     "build": "pnpm -r run --if-present build",
     "typecheck": "pnpm -r run --if-present typecheck",
+    "prelint": "pnpm --filter @contentgrid/eslint-config build",
     "lint": "pnpm -r run --if-present lint",
     "clean": "pnpm -r run --if-present clean",
     "test": "pnpm -r run --if-present test",
@@ -33,7 +34,7 @@
     "prettier": "^3.0.0"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
+    "!(packages/eslint-config/rules/__fixtures__/**).{ts,tsx,js,jsx}": [
       "eslint --fix --max-warnings=0",
       "prettier --write"
     ],
