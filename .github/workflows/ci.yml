@@ -105,6 +105,7 @@ jobs:
             type=semver,pattern={{major}}
             type=edge,branch=main
             type=sha
+            type=raw,value=commit-${{ github.event.pull_request.head.sha }},enable=${{ github.event_name == 'pull_request' }}
 
       - name: Build and push docker image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
@@ -145,7 +146,8 @@ jobs:
         run: |
           PR_NAME="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
           PR_HOST="${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}.preview.contentgrid.app"
-          PR_IMAGE="${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}:pr-${{ github.event.number }}"
+          # Deploy an immutable per-commit tag so every push changes the Deployment pod spec and triggers a real rollout. A mutable :pr-N tag is byte-identical each commit, so K8s never rolls the pods and the preview goes stale.
+          PR_IMAGE="${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}:commit-${{ github.event.pull_request.head.sha }}"
           mkdir -p .preview-rendered
           cp .github/pr-previews/*.yml .preview-rendered/
           sed -i "s|{PR_NUMBER_PLACEHOLDER}|${PR_NAME}|g" .preview-rendered/*
