@@ -53,14 +53,9 @@ export default defineConfig({
           setupFiles: ["./test-setup.ts"],
         },
       },
-      {
-        test: {
-          name: "eslint-config",
-          root: "./packages/eslint-config",
-          environment: "node",
-        },
-      },
+      "./packages/eslint-config",
     ],
+    passWithNoTests: true,
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
