@@ -1,7 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
-minimumReleaseAge: 10080
+minimumReleaseAge: 20160
 blockExoticSubdeps: true
 # No package may run lifecycle (install/build) scripts unless explicitly listed here.
 # Packages whose build scripts are currently blocked (intentionally left unbuilt):
