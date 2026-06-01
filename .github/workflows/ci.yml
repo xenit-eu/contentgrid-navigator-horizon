@@ -160,7 +160,7 @@ jobs:
           echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
 
       - name: PR Preview - Kubernetes deploy
-        uses: azure/k8s-deploy@c8cfec839dc09896b3b8cc40cd13d04792680771 # v5
+        uses: azure/k8s-deploy@c7ebd0d5f39477a23f1b5dea0f52e6db04adf28e # v6.0.0
         with:
           namespace: "frontend-pr"
           manifests: ".preview-rendered"
