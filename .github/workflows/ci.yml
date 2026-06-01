@@ -88,6 +88,9 @@ jobs:
           path: apps/${{ matrix.app }}/dist
 
       - name: Login to GitHub Container Registry
+        # Only needed to push. Dependabot's read-only token can't push, and the
+        # nginx base image is public, so the build itself needs no registry auth.
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ghcr.io
@@ -112,10 +115,11 @@ jobs:
 
       - name: Build and push docker image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           context: apps/${{ matrix.app }}
-          push: true
+          # Build on every PR (validates the Dockerfile + dist packaging), but push
+          # only for non-dependabot runs — dependabot PRs get a read-only token.
+          push: ${{ github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
