@@ -2,16 +2,32 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+env:
+  GHCR_PREFIX: ghcr.io/xenit-eu/contentgrid-navigator-horizon
 
 permissions:
   contents: read
 
 jobs:
-  ci:
+  lint-test-build:
+    name: Lint, Test & Build (${{ matrix.app }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [navigator, navigator-experimental]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -27,11 +43,194 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Format check
+        run: pnpm format:check
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Lint
         run: pnpm lint
 
-      - name: Build
-        run: pnpm build
+      - name: Test
+        run: pnpm --filter ${{ matrix.app }}... run --if-present test
+
+      - name: Visual tests
+        run: pnpm --filter ${{ matrix.app }}... run --if-present test:visual
+
+      - name: Build ${{ matrix.app }}
+        run: pnpm --filter ${{ matrix.app }} build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/dist
+          retention-days: 1
+
+  docker:
+    name: Docker (${{ matrix.app }})
+    needs: lint-test-build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [navigator, navigator-experimental]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/dist
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate docker tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=edge,branch=main
+            type=sha
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v7.1.0
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        with:
+          context: apps/${{ matrix.app }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  preview:
+    name: Deploy Preview (${{ matrix.app }})
+    needs: docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
+    strategy:
+      matrix:
+        app: [navigator, navigator-experimental]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PR Preview - Kubectl install
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.30.5"
+
+      - name: PR Preview - Kubernetes context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: "${{ secrets.PREVIEW_KUBECONFIG }}"
+
+      - name: PR Preview - Prepare manifests
+        id: name-prep
+        run: |
+          PR_NAME="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          PR_HOST="${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}.preview.contentgrid.app"
+          PR_IMAGE="${{ env.GHCR_PREFIX }}-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}:pr-${{ github.event.number }}"
+          mkdir -p .preview-rendered
+          cp .github/pr-previews/*.yml .preview-rendered/
+          sed -i "s|{PR_NUMBER_PLACEHOLDER}|${PR_NAME}|g" .preview-rendered/*
+          sed -i "s|{PR_HOST_PLACEHOLDER}|${PR_HOST}|g" .preview-rendered/*
+          sed -i "s|{PR_ENV_NGINX_SERVICE_NAME}|configjs-nginx|g" .preview-rendered/*
+          sed -i "s|{IMAGE_PLACEHOLDER}|${PR_IMAGE}|g" .preview-rendered/*
+          echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
+
+      - name: PR Preview - Kubernetes deploy
+        uses: azure/k8s-deploy@v5
+        with:
+          namespace: "frontend-pr"
+          manifests: ".preview-rendered"
+
+      - name: Wait for rollout
+        run: |
+          DEPLOY="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          kubectl -n frontend-pr rollout status deployment/"$DEPLOY" --timeout=120s
+
+      - name: Diagnose failed rollout
+        if: ${{ failure() || cancelled() }}
+        run: |
+          DEPLOY="preview-pr-${{ github.event.number }}-hz-${{ matrix.app == 'navigator-experimental' && 'experimental' || 'navigator' }}"
+          SELECTOR="app.kubernetes.io/component=${DEPLOY}"
+          echo "::group::Pods"
+          kubectl get pods -n frontend-pr -l "$SELECTOR" -o wide || true
+          echo "::endgroup::"
+          echo "::group::Recent events (namespace frontend-pr)"
+          kubectl get events -n frontend-pr --sort-by=.lastTimestamp | tail -40 || true
+          echo "::endgroup::"
+          echo "::group::Pod describe"
+          kubectl describe pod -n frontend-pr -l "$SELECTOR" || true
+          echo "::endgroup::"
+          echo "::group::Container logs (current)"
+          kubectl logs -n frontend-pr -l "$SELECTOR" --tail=200 --all-containers=true --prefix=true || true
+          echo "::endgroup::"
+          echo "::group::Container logs (previous, if crashlooped)"
+          kubectl logs -n frontend-pr -l "$SELECTOR" --tail=200 --all-containers=true --prefix=true --previous || true
+          echo "::endgroup::"
+
+  preview-comment:
+    name: PR Preview Comment
+    needs: preview
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
+    steps:
+      - name: Post or update preview comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ github.event.number }};
+            const date = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+            const navigatorUrl = `https://${prNumber}-hz-navigator.preview.contentgrid.app/`;
+            const experimentalUrl = `https://${prNumber}-hz-experimental.preview.contentgrid.app/`;
+
+            const commentBody = [
+              `Preview builds for this pull request have been deployed. Last updated at ${date} UTC.`,
+              ``,
+              `| App | URL |`,
+              `| --- | --- |`,
+              `| navigator | [${navigatorUrl}](${navigatorUrl}) |`,
+              `| navigator-experimental | [${experimentalUrl}](${experimentalUrl}) |`,
+              ``,
+              `<!-- pr-preview-comment -->`
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+
+            const existing = comments.find(c => c.body.endsWith('<!-- pr-preview-comment -->'));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+            }
