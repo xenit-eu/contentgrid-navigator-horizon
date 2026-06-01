@@ -1,3 +1,11 @@
 packages:
   - "apps/*"
   - "packages/*"
+minimumReleaseAge: 10080
+blockExoticSubdeps: true
+# No package may run lifecycle (install/build) scripts unless explicitly listed here.
+# Packages whose build scripts are currently blocked (intentionally left unbuilt):
+#   - esbuild@0.25.12: ships pre-built via optional platform deps (@esbuild/darwin-arm64 etc.);
+#     its build script is only a fallback for unusual environments. Binary confirmed present.
+# If any of these break at runtime on a CI platform, add the package here only after review.
+onlyBuiltDependencies: []
