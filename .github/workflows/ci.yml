@@ -112,7 +112,7 @@ jobs:
 
       - name: Build and push docker image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: ${{ github.actor != 'renovate[bot]' }}
         with:
           context: apps/${{ matrix.app }}
           push: true
@@ -126,7 +126,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
+    if: ${{ github.event_name == 'pull_request' && github.actor != 'renovate[bot]' }}
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
@@ -198,7 +198,7 @@ jobs:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' }}
+    if: ${{ github.event_name == 'pull_request' && github.actor != 'renovate[bot]' }}
     steps:
       - name: Post or update preview comment
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
