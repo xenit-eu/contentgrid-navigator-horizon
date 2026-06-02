@@ -9,6 +9,3 @@ blockExoticSubdeps: true
 #     its build script is only a fallback for unusual environments. Binary confirmed present.
 # If any of these break at runtime on a CI platform, add the package here only after review.
 onlyBuiltDependencies: []
-minimumReleaseAgeExclude:
-  # Renovate security update: vitest@4.1.0
-  - vitest@4.1.0
