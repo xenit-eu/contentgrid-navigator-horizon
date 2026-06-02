@@ -7,6 +7,14 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./entity-list": {
+      "import": "./src/entity-list/index.tsx",
+      "types": "./src/entity-list/index.tsx"
+    },
+    "./_experimental-placeholder": {
+      "import": "./src/_experimental-placeholder/index.tsx",
+      "types": "./src/_experimental-placeholder/index.tsx"
     }
   },
   "scripts": {
@@ -21,6 +29,8 @@
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
     "eslint": "^9.0.0",
     "typescript": "^5.8.3"
   }
