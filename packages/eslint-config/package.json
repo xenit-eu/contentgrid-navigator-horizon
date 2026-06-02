@@ -26,6 +26,6 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/rule-tester": "^8.59.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.0.0"
+    "vitest": "^4.0.0"
   }
 }

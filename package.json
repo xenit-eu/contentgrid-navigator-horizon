@@ -42,7 +42,7 @@
     "lint-staged": "^15.0.0",
     "msw": "2.14.6",
     "prettier": "^3.0.0",
-    "vitest": "3.2.4"
+    "vitest": "4.1.0"
   },
   "lint-staged": {
     "!(packages/eslint-config/rules/__fixtures__/**).{ts,tsx,js,jsx}": [
