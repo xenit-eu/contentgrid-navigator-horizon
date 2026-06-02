@@ -88,9 +88,6 @@ jobs:
           path: apps/${{ matrix.app }}/dist
 
       - name: Login to GitHub Container Registry
-        # Only needed to push. Renovate's read-only token can't push, and the
-        # nginx base image is public, so the build itself needs no registry auth.
-        if: ${{ github.actor != 'renovate[bot]' }}
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ghcr.io
@@ -117,9 +114,7 @@ jobs:
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: apps/${{ matrix.app }}
-          # Build on every PR (validates the Dockerfile + dist packaging), but push
-          # only for non-Renovate runs — Renovate PRs get a read-only token.
-          push: ${{ github.actor != 'renovate[bot]' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -130,7 +125,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ github.event_name == 'pull_request' && github.actor != 'renovate[bot]' }}
+    if: ${{ github.event_name == 'pull_request' }}
     strategy:
       matrix:
         app: [navigator, navigator-experimental]
@@ -202,7 +197,7 @@ jobs:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' && github.actor != 'renovate[bot]' }}
+    if: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Post or update preview comment
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
