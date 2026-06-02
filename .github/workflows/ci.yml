@@ -61,31 +61,6 @@ jobs:
       - name: Build ${{ matrix.app }}
         run: pnpm --filter ${{ matrix.app }} build
 
-      # Belt-and-suspenders: catches experimental features via chunk name; primary enforcement is the no-unstable-features ESLint rule.
-      - name: Bundle audit — no experimental features in navigator
-        if: ${{ matrix.app == 'navigator' }}
-        run: |
-          PATTERN=$(node -e "
-            const fs = require('fs'), path = require('path');
-            const src = 'packages/features/src';
-            const unstable = fs.readdirSync(src, { withFileTypes: true })
-              .filter(d => d.isDirectory())
-              .filter(d => {
-                try {
-                  const pkg = JSON.parse(fs.readFileSync(path.join(src, d.name, 'package.json'), 'utf8'));
-                  return pkg['x-stability'] !== 'stable';
-                } catch { return false; }
-              })
-              .map(d => d.name);
-            process.stdout.write(unstable.join('|'));
-          ")
-          if [ -z "$PATTERN" ]; then exit 0; fi
-          MATCHES=$(find apps/navigator/dist -name "*.js" | xargs -r grep -lE "$PATTERN" 2>/dev/null || true)
-          if [ -n "$MATCHES" ]; then
-            echo "::error::Non-stable feature found in navigator bundle: $MATCHES"
-            exit 1
-          fi
-
       - name: Upload dist artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
