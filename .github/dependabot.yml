@@ -1,9 +1,0 @@
-version: 2
-updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "ci"
-    # Dependabot updates the pinned SHA and keeps the version comment in sync.
