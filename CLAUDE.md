@@ -21,6 +21,7 @@ This is a **pnpm monorepo** (`pnpm-workspace.yaml`) with:
 - **CI's `GITHUB_TOKEN` defaults to `permissions: contents: read`** (least privilege) at the top-level workflow scope. Broaden permissions only at the individual job level, only when strictly required, and document why.
 - **The exact pnpm version is pinned via `packageManager` in the root `package.json`** (enforced by Corepack). Keep it pinned to a specific version; never use a range or omit it — version drift in the package manager itself can introduce subtle behavior changes.
 - **Security-critical files are CODEOWNERS-protected and require review before merging:** `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, and `.github/workflows/**`. Do not bypass review for changes to these files.
+  - **Documented exception — Renovate auto-merge:** the Renovate GitHub App is a bypass actor on the main ruleset so its own dependency PRs (minor/patch per the shared preset) can auto-merge once all required checks pass, without human code-owner review. The supply-chain gate for these updates is the 14-day `minimumReleaseAge` window plus green CI, not manual review. This bypass applies ONLY to the Renovate app; humans (and Claude) must never use or extend it, and major updates still require human review.
 
 ---
 
