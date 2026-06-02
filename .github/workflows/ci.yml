@@ -26,7 +26,7 @@ jobs:
       matrix:
         app: [navigator, navigator-experimental]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -79,7 +79,7 @@ jobs:
       matrix:
         app: [navigator, navigator-experimental]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Download dist artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -130,7 +130,7 @@ jobs:
       matrix:
         app: [navigator, navigator-experimental]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: PR Preview - Kubectl install
         uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
@@ -249,7 +249,7 @@ jobs:
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.60.0-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Enable pnpm via corepack
         # Version comes from the root package.json "packageManager" field.
