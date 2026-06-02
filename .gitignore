@@ -1,6 +1,7 @@
 node_modules/
 !packages/eslint-config/rules/__fixtures__/node_modules/
 dist/
+coverage/
 storybook-static/
 .turbo/
 .tanstack/
