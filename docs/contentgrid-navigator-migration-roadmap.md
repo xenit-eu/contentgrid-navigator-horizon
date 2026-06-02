@@ -209,13 +209,37 @@ This phase establishes the **three-track topology** in code: generic + experimen
 | #   | Task                                                                                                                                                                                                                                                                                                                                                                                                   | Estimate | Confidence |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ---------- |
 | 2.1 | Install Vitest + Testing Library + `@vitest/coverage-v8` + MSW                                                                                                                                                                                                                                                                                                                                         | 0.25d    | H          |
-| 2.2 | Configure coverage thresholds (start 40%, ratchet up) and Codecov                                                                                                                                                                                                                                                                                                                                      | 0.25d    | H          |
+| 2.2 | Configure Vitest coverage thresholds (start at 40%, ratchet up over phases) and integrate SonarQube Cloud (sonarcloud.io) for static analysis and coverage reporting in CI. `coverage.exclude` ignores `*.stories.tsx`, `*.config.ts`, generated files                                                                                                                                                 | 0.25d    | H          |
 | 2.3 | Write first 20 unit tests (Zustand reducers, URL encoders, schema converters, config validation) — agent-driven                                                                                                                                                                                                                                                                                        | 0.75d    | H          |
 | 2.4 | MSW handler stubs for `@contentgrid/*` HAL responses (reusable across all data tests)                                                                                                                                                                                                                                                                                                                  | 0.5d     | M          |
 | 2.5 | Adopt Playwright config from original repo into `apps/navigator/tests/`                                                                                                                                                                                                                                                                                                                                | 0.25d    | H          |
 | 2.6 | **Contract test layer at the HAL boundary** — extend MSW fixtures from 2.4 to assert response shapes; catches breaking changes in upstream `@contentgrid/*` packages or platform before they reach the running app. Addresses the cross-repo integration testing gap (Thijs: "we still experience that we ship some broken combinations to production"). Reuse entity-profile fixtures from Phase 0.5. | 0.5d     | M          |
 
-**Exit criteria:** `pnpm test` and `pnpm test:e2e` green; coverage report published in CI; HAL contract test layer catches at least one simulated upstream shape change.
+**Exit criteria:** `pnpm test` and `pnpm test:e2e` green; SonarQube Cloud scan runs on every PR with quality gate passing; coverage thresholds enforced at 40% (ratcheted up over phases); HAL contract test layer catches at least one simulated upstream shape change.
+
+#### HZN-2.2 — Detailed scope
+
+**Depends on:** HZN-2.1
+
+**Prerequisite:** SonarCloud GitHub App must be installed on `xenit-eu/contentgrid-navigator-horizon` — install at `https://github.com/marketplace/sonarcloud` (Org owner access required). Without this, the `sonar` CI job cannot authenticate and PR decoration will not appear.
+
+**Description:**
+Configure Vitest coverage thresholds (start at 40%, ratchet up over phases) and integrate SonarQube Cloud (sonarcloud.io) for static analysis and coverage reporting in CI.
+
+**Acceptance criteria:**
+
+- `vitest.config.ts` coverage thresholds set to 40% (lines, branches, functions, statements)
+- SonarQube Cloud action (`SonarSource/sonarqube-scan-action`) installed and configured with `SONAR_TOKEN`
+- SonarQube scan runs on every PR via CI
+- PR comments show quality gate status and coverage results (SonarQube PR decoration) — **blocked until SonarCloud GitHub App is installed**
+
+**Implementation context:**
+
+- Per-package thresholds will be ratcheted later: `packages/ui` → 85%, `packages/navigator-data` → 80%.
+- SonarQube action: `SonarSource/sonarqube-scan-action@v5` with `SONAR_TOKEN` env var; project key `xenit-eu_contentgrid-navigator-horizon`, org `xenit-eu`.
+- `coverage.exclude` ignores `*.stories.tsx`, `*.config.ts`, generated files.
+- `sonar-project.properties` at repo root duplicates some action args — should be removed to avoid conflict.
+- CI config: `.github/workflows/ci.yml` — `sonar` job (uncommitted) runs after `lint-test-build`, passes `SONAR_TOKEN` from repo secrets.
 
 ---
 
