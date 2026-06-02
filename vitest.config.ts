@@ -1,10 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// Vitest 3.2 `test.projects` replaces the deprecated vitest.workspace.ts file.
-// Each project is a workspace package; jsdom for component/hook tests, node for
-// pure-logic tests. Per-package vitest.config.ts files are allowed but we keep
-// the project definitions centralised here for now.
+// Centralised Vitest 3.2 `test.projects` config (replaces deprecated vitest.workspace.ts); jsdom for component/hook tests, node for pure logic.
 export default defineConfig({
   test: {
     projects: [
