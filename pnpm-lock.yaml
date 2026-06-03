@@ -72,6 +72,9 @@ importers:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../../packages/navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -124,6 +127,9 @@ importers:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../../packages/navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
