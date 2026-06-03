@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
+    "@contentgrid/navigator-data": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/router-plugin": "^1.114.0",
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.0.0",
+    "msw": "2.14.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"

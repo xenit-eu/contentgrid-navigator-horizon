@@ -72,6 +72,9 @@ importers:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../../packages/navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -93,6 +96,9 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.4(jiti@2.7.0)
+      msw:
+        specifier: 2.14.6
+        version: 2.14.6(@types/node@24.12.4)(typescript@5.9.3)
       tailwindcss:
         specifier: ^4.1.18
         version: 4.3.0
@@ -124,6 +130,9 @@ importers:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../../packages/navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -145,6 +154,9 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.4(jiti@2.7.0)
+      msw:
+        specifier: 2.14.6
+        version: 2.14.6(@types/node@24.12.4)(typescript@5.9.3)
       tailwindcss:
         specifier: ^4.1.18
         version: 4.3.0
@@ -320,6 +332,9 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.4(jiti@2.7.0)
+      msw:
+        specifier: 2.14.6
+        version: 2.14.6(@types/node@24.12.4)(typescript@5.9.3)
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
