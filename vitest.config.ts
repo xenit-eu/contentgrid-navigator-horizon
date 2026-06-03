@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // Centralised Vitest 3.2 `test.projects` config (replaces deprecated vitest.workspace.ts); jsdom for component/hook tests, node for pure logic.
 export default defineConfig({
@@ -39,6 +39,7 @@ export default defineConfig({
           root: "./apps/navigator",
           environment: "jsdom",
           setupFiles: ["./test-setup.ts"],
+          exclude: [...configDefaults.exclude, "tests/**"],
         },
       },
       {
