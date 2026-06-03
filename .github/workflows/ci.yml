@@ -105,6 +105,7 @@ jobs:
             -Dsonar.organization=xenit-eu
             -Dsonar.sources=apps,packages
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.*,**/test-setup.*
+            -Dsonar.coverage.exclusions=**/*.stories.tsx,**/tests/**,**/playwright*.config.ts
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.typescript.tsconfigPath=tsconfig.json
         env:
