@@ -72,29 +72,31 @@ export const Simple: Story = {
   ),
 };
 
+const CardWithInteractionDemo = () => {
+  const [saved, setSaved] = React.useState(false);
+  return (
+    <Card className="w-72">
+      <CardHeader>
+        <CardTitle>Profile</CardTitle>
+        <CardDescription>Update your details.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          {saved ? "Changes saved!" : "Make your changes below."}
+        </p>
+      </CardContent>
+      <CardFooter>
+        <Button size="sm" onClick={() => setSaved(true)}>
+          Save changes
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
-  render: () => {
-    const [saved, setSaved] = React.useState(false);
-    return (
-      <Card className="w-72">
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your details.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {saved ? "Changes saved!" : "Make your changes below."}
-          </p>
-        </CardContent>
-        <CardFooter>
-          <Button size="sm" onClick={() => setSaved(true)}>
-            Save changes
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  },
+  render: () => <CardWithInteractionDemo />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/make your changes below/i)).toBeInTheDocument();
