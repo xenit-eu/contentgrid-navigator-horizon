@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   invoiceProfileBody,
   invoiceProfileTemplates,
+  invoiceUpdateTemplate,
   sampleInvoice,
   sampleInvoiceItems,
 } from "../hal/fixtures";
@@ -35,7 +36,7 @@ describe("createEntityHandler", () => {
       createEntityHandler({
         url: "https://test-application.eu-west-1.contentgrid.app/invoices/1",
         body: sampleInvoice,
-        templates: { default: invoiceProfileTemplates["create-form"] },
+        templates: { default: invoiceUpdateTemplate },
       }),
     );
 
@@ -43,7 +44,7 @@ describe("createEntityHandler", () => {
     const body = await res.json();
 
     expect(body._templates).toBeDefined();
-    expect(body._templates.default.method).toBe("POST");
+    expect(body._templates.default.method).toBe("PATCH");
   });
 });
 
