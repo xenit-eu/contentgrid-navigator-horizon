@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from "./avatar";
 
 const meta = {
@@ -58,4 +59,20 @@ export const Group: Story = {
       <AvatarGroupCount>+4</AvatarGroupCount>
     </AvatarGroup>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Avatar>
+      <AvatarImage src="/broken-image.png" alt="Jane Smith" />
+      <AvatarFallback>JS</AvatarFallback>
+    </Avatar>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // When image fails to load, the fallback text is visible
+    const fallback = canvas.getByText("JS");
+    await expect(fallback).toBeInTheDocument();
+  },
 };

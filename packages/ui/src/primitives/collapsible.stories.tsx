@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ChevronsUpDown } from "lucide-react";
+import { expect, userEvent, within } from "storybook/test";
 import { Button } from "./button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 
@@ -50,4 +51,36 @@ export const OpenByDefault: Story = {
       </CollapsibleContent>
     </Collapsible>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Collapsible className="w-64 space-y-2">
+      <div className="flex items-center justify-between px-4">
+        <span className="text-sm font-semibold">Filters</span>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label="Toggle filters">
+            <ChevronsUpDown className="size-4" />
+          </Button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent className="space-y-1 px-4">
+        <p className="text-sm">Status filter</p>
+        <p className="text-sm">Date range</p>
+      </CollapsibleContent>
+    </Collapsible>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const toggle = canvas.getByRole("button", { name: /toggle filters/i });
+    // Content should not be visible initially
+    await expect(canvas.queryByText(/status filter/i)).not.toBeInTheDocument();
+    // Open
+    await userEvent.click(toggle);
+    await expect(canvas.getByText(/status filter/i)).toBeVisible();
+    // Close
+    await userEvent.click(toggle);
+    await expect(canvas.queryByText(/status filter/i)).not.toBeInTheDocument();
+  },
 };

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { Input } from "./input";
 import { Label } from "./label";
 
@@ -41,4 +42,23 @@ export const Disabled: Story = {
       <Input id="label-disabled" disabled value="jane_smith" readOnly />
     </div>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <div className="grid w-64 gap-2">
+      <Label htmlFor="ia-label-input">Full name</Label>
+      <Input id="ia-label-input" placeholder="Jane Smith" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const label = canvas.getByText(/full name/i);
+    await expect(label).toBeInTheDocument();
+    // Clicking the label focuses its associated input
+    await userEvent.click(label);
+    const input = canvas.getByRole("textbox");
+    await expect(input).toHaveFocus();
+  },
 };

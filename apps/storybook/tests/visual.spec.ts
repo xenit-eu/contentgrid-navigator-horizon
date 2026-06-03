@@ -11,6 +11,7 @@ interface StoryEntry {
   type: string;
   name: string;
   title: string;
+  tags?: string[];
 }
 
 interface StorybookIndex {
@@ -28,7 +29,9 @@ function loadStories(): StoryEntry[] {
     );
   }
   const index = JSON.parse(raw) as StorybookIndex;
-  return Object.values(index.entries).filter((entry) => entry.type === "story");
+  return Object.values(index.entries).filter(
+    (entry) => entry.type === "story" && !entry.tags?.includes("no-visual-test"),
+  );
 }
 
 const stories = loadStories();

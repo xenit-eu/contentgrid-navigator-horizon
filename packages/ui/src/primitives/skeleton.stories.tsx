@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { Skeleton } from "./skeleton";
 
 const meta = {
@@ -46,4 +47,23 @@ export const List: Story = {
       ))}
     </div>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <div className="flex w-64 flex-col gap-2" data-testid="skeleton-list">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-1/2" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const container = canvas.getByTestId("skeleton-list");
+    await expect(container).toBeInTheDocument();
+    // All skeleton divs should be present
+    const skeletons = container.querySelectorAll("[data-slot='skeleton']");
+    await expect(skeletons.length).toBe(3);
+  },
 };

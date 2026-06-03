@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { Badge } from "./badge";
 import {
   Table,
@@ -86,4 +87,37 @@ export const WithFooter: Story = {
       </TableFooter>
     </Table>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Table>
+      <TableCaption>User list</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Role</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map((user) => (
+          <TableRow key={user.email}>
+            <TableCell className="font-medium">{user.name}</TableCell>
+            <TableCell>{user.role}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const table = canvas.getByRole("table");
+    await expect(table).toBeInTheDocument();
+    const rows = canvas.getAllByRole("row");
+    // 1 header row + 3 data rows
+    await expect(rows.length).toBe(4);
+    await expect(canvas.getByText("Jane Smith")).toBeInTheDocument();
+    await expect(canvas.getByText("Admin")).toBeInTheDocument();
+  },
 };

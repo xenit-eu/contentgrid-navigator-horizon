@@ -22,6 +22,7 @@
     "test:watch": "vitest",
     "test:coverage": "pnpm --filter @contentgrid/eslint-config build && vitest run --coverage",
     "test:e2e": "pnpm -r run --if-present test:e2e",
+    "test:storybook": "pnpm --filter storybook test:storybook",
     "test:visual": "pnpm -r run --if-present test:visual",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

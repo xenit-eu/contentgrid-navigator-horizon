@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
@@ -55,4 +56,41 @@ export const Simple: Story = {
       </PopoverContent>
     </Popover>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline">Filter</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64">
+        <PopoverHeader>
+          <PopoverTitle>Quick filter</PopoverTitle>
+          <PopoverDescription>Narrow down results.</PopoverDescription>
+        </PopoverHeader>
+        <div className="mt-3 grid gap-2">
+          <Label htmlFor="ia-popover-search">Search</Label>
+          <Input id="ia-popover-search" placeholder="Type to search…" />
+        </div>
+      </PopoverContent>
+    </Popover>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", { name: /filter/i });
+    await userEvent.click(trigger);
+    // Wait for the portal to mount and the popover to become visible
+    let popover: HTMLElement;
+    await waitFor(() => {
+      popover = within(document.body).getByRole("dialog");
+      expect(popover).toBeVisible();
+    });
+    await expect(within(document.body).getByText(/quick filter/i)).toBeInTheDocument();
+    await expect(within(document.body).getByText(/narrow down results/i)).toBeInTheDocument();
+    // Input must be rendered inside the popover portal
+    const searchInput = within(document.body).getByRole("textbox", { name: /search/i });
+    await expect(searchInput).toBeInTheDocument();
+  },
 };

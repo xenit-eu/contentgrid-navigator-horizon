@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { ScrollArea, ScrollBar } from "./scroll-area";
 import { Separator } from "./separator";
 
@@ -44,4 +45,27 @@ export const Horizontal: Story = {
       <ScrollBar orientation="horizontal" />
     </ScrollArea>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <ScrollArea className="h-40 w-48 rounded-md border">
+      <div className="p-4">
+        <h4 className="mb-2 text-sm font-medium">Items</h4>
+        {items.map((item) => (
+          <p key={item} className="text-sm">
+            {item}
+          </p>
+        ))}
+      </div>
+    </ScrollArea>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The scroll area container should be in the DOM
+    await expect(canvas.getByText("Item 1")).toBeInTheDocument();
+    // Last item is in the DOM even if not visible (scroll area renders all children)
+    await expect(canvas.getByText("Item 30")).toBeInTheDocument();
+  },
 };

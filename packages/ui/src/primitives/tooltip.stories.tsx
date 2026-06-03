@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { InfoIcon } from "lucide-react";
+import { expect, userEvent, within } from "storybook/test";
 import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 
@@ -60,4 +61,29 @@ export const Sides: Story = {
       </div>
     </TooltipProvider>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" aria-label="Info">
+            <InfoIcon />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>More information</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", { name: /info/i });
+    await userEvent.hover(trigger);
+    // Tooltip content appears in a portal outside canvasElement
+    const tooltip = await within(document.body).findByRole("tooltip");
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toHaveTextContent(/more information/i);
+  },
 };

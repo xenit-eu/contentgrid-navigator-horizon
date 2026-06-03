@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { Badge } from "./badge";
 
 const meta = {
@@ -34,4 +35,21 @@ export const Statuses: Story = {
       <Badge variant="destructive">Failed</Badge>
     </div>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <div className="flex gap-2">
+      <Badge variant="default">Published</Badge>
+      <Badge variant="destructive">Error</Badge>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const published = canvas.getByText("Published");
+    const error = canvas.getByText("Error");
+    await expect(published).toBeInTheDocument();
+    await expect(error).toBeInTheDocument();
+  },
 };
