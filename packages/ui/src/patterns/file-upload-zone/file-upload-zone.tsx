@@ -37,7 +37,7 @@ export interface FileUploadZoneProps {
 // Main export
 // ---------------------------------------------------------------------------
 
-export function FileUploadZone({ file, onFileChange, accept }: FileUploadZoneProps) {
+export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUploadZoneProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function FileUploadZone({ file, onFileChange, accept }: FileUploadZonePro
 
   // Image preview URL lifecycle
   useEffect(() => {
-    if (!file || !file.type.startsWith("image/")) {
+    if (!file?.type.startsWith("image/")) {
       setPreviewUrl(null);
       return;
     }
@@ -56,7 +56,7 @@ export function FileUploadZone({ file, onFileChange, accept }: FileUploadZonePro
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setIsDragActive(true);
   }, []);
@@ -66,7 +66,7 @@ export function FileUploadZone({ file, onFileChange, accept }: FileUploadZonePro
   }, []);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
+    (e: React.DragEvent<HTMLButtonElement>) => {
       e.preventDefault();
       setIsDragActive(false);
       const dropped = e.dataTransfer.files[0];
@@ -121,26 +121,7 @@ export function FileUploadZone({ file, onFileChange, accept }: FileUploadZonePro
   // Drop-zone view
   // -------------------------------------------------------------------------
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          inputRef.current?.click();
-        }
-      }}
-      className={cn(
-        "flex cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-8 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        isDragActive
-          ? "border-primary bg-primary/5"
-          : "border-muted-foreground/25 hover:border-primary/50",
-      )}
-    >
+    <>
       <input
         ref={inputRef}
         type="file"
@@ -149,10 +130,24 @@ export function FileUploadZone({ file, onFileChange, accept }: FileUploadZonePro
         onChange={handleInputChange}
         tabIndex={-1}
       />
-      <Upload className="h-8 w-8 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">
-        {isDragActive ? "Drop the file here" : "Drag & drop a file, or click to select"}
-      </p>
-    </div>
+      <button
+        type="button"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-8 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          isDragActive
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-primary/50",
+        )}
+      >
+        <Upload className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          {isDragActive ? "Drop the file here" : "Drag & drop a file, or click to select"}
+        </p>
+      </button>
+    </>
   );
 }

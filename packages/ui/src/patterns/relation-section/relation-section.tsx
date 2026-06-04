@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ExternalLink, LinkIcon, Plus, Unlink } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn, formatCellValue } from "../../lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,7 +91,7 @@ function resolveColumnKeys(items: RelationItem[], columns?: RelationColumn[]): s
 function getColumnTitle(key: string, columns?: RelationColumn[]): string {
   const col = columns?.find((c) => c.key === key);
   if (col) return col.title;
-  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ export function RelationSection({
   onUnlink,
   onLink,
   onViewItem,
-}: RelationSectionProps) {
+}: Readonly<RelationSectionProps>) {
   const [unlinkTarget, setUnlinkTarget] = useState<{ id: string; label: string } | null>(null);
 
   const hasItems = !isLoading && !error && items && items.length > 0;
@@ -345,9 +345,7 @@ export function RelationSection({
                             onClick={onViewItem ? () => onViewItem(item.id) : undefined}
                           >
                             {columnKeys.map((key) => (
-                              <TableCell key={key}>
-                                {item.data[key] != null ? String(item.data[key]) : "—"}
-                              </TableCell>
+                              <TableCell key={key}>{formatCellValue(item.data[key])}</TableCell>
                             ))}
                             <TableCell>
                               {onUnlink && (

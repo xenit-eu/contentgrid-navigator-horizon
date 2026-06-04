@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { Check, Search } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn, formatCellValue } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import {
   Dialog,
@@ -106,6 +106,9 @@ function titleCase(value: string): string {
   return value.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Stable keys for the loading-state skeleton rows. */
+const SKELETON_ROWS = ["s1", "s2", "s3"];
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -126,7 +129,7 @@ export function EntityPicker({
   onNextPage,
   multiSelect = false,
   onSelect,
-}: EntityPickerProps) {
+}: Readonly<EntityPickerProps>) {
   // Single-select state
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = useState<string>("");
@@ -171,11 +174,84 @@ export function EntityPicker({
     onOpenChange(false);
   }
 
-  const selectionCount = multiSelect ? selectedItems.size : selectedHref ? 1 : 0;
+  let selectionCount: number;
+  if (multiSelect) {
+    selectionCount = selectedItems.size;
+  } else {
+    selectionCount = selectedHref ? 1 : 0;
+  }
   const hasSelection = selectionCount > 0;
+
+  let confirmLabel: string;
+  if (multiSelect && selectionCount > 1) {
+    confirmLabel = `Link ${selectionCount} items`;
+  } else if (multiSelect) {
+    confirmLabel = "Link";
+  } else {
+    confirmLabel = "Select";
+  }
 
   const columnKeys = resolveColumnKeys(options, columns);
   const columnHeaders = resolveColumnHeaders(columnKeys, columns);
+
+  let resultsBody: ReactNode;
+  if (isLoading) {
+    resultsBody = (
+      <div className="space-y-2 p-4">
+        {SKELETON_ROWS.map((rowKey) => (
+          <Skeleton key={rowKey} className="h-8 w-full" />
+        ))}
+      </div>
+    );
+  } else if (options.length === 0) {
+    resultsBody = <p className="text-muted-foreground p-6 text-center text-sm">No items found.</p>;
+  } else {
+    resultsBody = (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10" />
+            {columnHeaders.map((header, i) => (
+              <TableHead key={columnKeys[i]}>{header}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {options.map((item) => {
+            const isSelected = multiSelect
+              ? selectedItems.has(item.href)
+              : selectedHref === item.href;
+            return (
+              <TableRow
+                key={item.id}
+                className={cn(
+                  "cursor-pointer transition-colors",
+                  isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/50",
+                )}
+                onClick={() => {
+                  if (multiSelect) {
+                    toggleItem(item.href, getItemLabel(item));
+                  } else {
+                    setSelectedHref(item.href);
+                    setSelectedLabel(getItemLabel(item));
+                  }
+                }}
+              >
+                <TableCell className="w-10 pr-0">
+                  {isSelected && <Check className="text-primary size-4" />}
+                </TableCell>
+                {columnKeys.map((key) => (
+                  <TableCell key={key} className={cn(isSelected && "font-medium")}>
+                    {formatCellValue(item.data[key])}
+                  </TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -206,63 +282,7 @@ export function EntityPicker({
           />
         </div>
 
-        <div className="max-h-80 overflow-auto rounded-md border">
-          {isLoading ? (
-            <div className="space-y-2 p-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-8 w-full" />
-              ))}
-            </div>
-          ) : !options.length ? (
-            <p className="text-muted-foreground p-6 text-center text-sm">No items found.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10" />
-                  {columnHeaders.map((header, i) => (
-                    <TableHead key={columnKeys[i]}>{header}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {options.map((item) => {
-                  const isSelected = multiSelect
-                    ? selectedItems.has(item.href)
-                    : selectedHref === item.href;
-                  return (
-                    <TableRow
-                      key={item.id}
-                      className={cn(
-                        "cursor-pointer transition-colors",
-                        isSelected
-                          ? "bg-primary/10 border-l-2 border-l-primary"
-                          : "hover:bg-muted/50",
-                      )}
-                      onClick={() => {
-                        if (multiSelect) {
-                          toggleItem(item.href, getItemLabel(item));
-                        } else {
-                          setSelectedHref(item.href);
-                          setSelectedLabel(getItemLabel(item));
-                        }
-                      }}
-                    >
-                      <TableCell className="w-10 pr-0">
-                        {isSelected && <Check className="text-primary size-4" />}
-                      </TableCell>
-                      {columnKeys.map((key) => (
-                        <TableCell key={key} className={cn(isSelected && "font-medium")}>
-                          {item.data[key] != null ? String(item.data[key]) : "—"}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </div>
+        <div className="max-h-80 overflow-auto rounded-md border">{resultsBody}</div>
 
         {(hasPreviousPage || hasNextPage) && (
           <div className="flex items-center justify-between">
@@ -285,11 +305,7 @@ export function EntityPicker({
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!hasSelection}>
-            {multiSelect && selectionCount > 1
-              ? `Link ${selectionCount} items`
-              : multiSelect
-                ? "Link"
-                : "Select"}
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

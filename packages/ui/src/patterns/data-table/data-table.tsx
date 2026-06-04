@@ -103,7 +103,7 @@ export function DataTable({
   onDelete,
   isDeleting,
   onRowClick,
-}: DataTableProps) {
+}: Readonly<DataTableProps>) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   function getSortIcon(key: string) {
@@ -118,7 +118,14 @@ export function DataTable({
     if (!sortOptions) return undefined;
     const isAsc = currentSort === `${key},asc`;
     const isDesc = currentSort === `${key},desc`;
-    const nextSort = isAsc ? `${key},desc` : isDesc ? undefined : `${key},asc`;
+    let nextSort: string | undefined;
+    if (isAsc) {
+      nextSort = `${key},desc`;
+    } else if (isDesc) {
+      nextSort = undefined;
+    } else {
+      nextSort = `${key},asc`;
+    }
     const nextPrompt = nextSort
       ? sortOptions.find((o) => o.property === key && o.value === nextSort)?.prompt
       : undefined;
@@ -176,7 +183,7 @@ export function DataTable({
                   >
                     {columns.map((col, i) => (
                       <TableCell key={col.key} className={cn(i === 0 && "pl-4")}>
-                        {row.data[col.key] != null ? String(row.data[col.key]) : "—"}
+                        {row.data[col.key] == null ? "—" : String(row.data[col.key])}
                       </TableCell>
                     ))}
                     {hasActions && (

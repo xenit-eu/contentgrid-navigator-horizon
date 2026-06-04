@@ -52,6 +52,15 @@ describe("RelationSection — many-to-many layout (default)", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
   });
 
+  it("renders object cell values as JSON rather than [object Object]", () => {
+    renderRelation({
+      items: [{ id: "1", data: { name: "Alpha", code: { x: 1 } } }],
+      columns: COLUMNS,
+    });
+    expect(screen.getByText('{"x":1}')).toBeInTheDocument();
+    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  });
+
   it("renders empty state when items is empty", () => {
     renderRelation({ items: [] });
     expect(screen.getByText("No invoices linked")).toBeInTheDocument();

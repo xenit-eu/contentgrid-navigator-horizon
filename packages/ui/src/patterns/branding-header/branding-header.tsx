@@ -38,7 +38,7 @@ export function BrandingHeader({
   logoAlt,
   actions,
   className,
-}: BrandingHeaderProps) {
+}: Readonly<BrandingHeaderProps>) {
   return (
     <header className={cn("flex h-14 items-center gap-3 border-b bg-background px-4", className)}>
       {/* Logo */}
