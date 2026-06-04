@@ -13,6 +13,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  // axe-no-contrast: the tooltip content (dark bg-foreground surface) overlaps the
+  // trigger/background; axe composites the underlying layer into its background calc,
+  // reporting the dark surface as mid-grey. On its real surface the tooltip text
+  // (text-background on bg-foreground) passes WCAG AA (14.75:1).
+  tags: ["axe-no-contrast"],
   render: () => (
     <TooltipProvider>
       <Tooltip defaultOpen>
@@ -28,6 +33,9 @@ export const Default: Story = {
 };
 
 export const OnText: Story = {
+  // axe-no-contrast: tooltip content overlaps other layers; axe composites them into its
+  // background calc (intermittent false positive). Real text passes WCAG AA (14.75:1).
+  tags: ["axe-no-contrast"],
   render: () => (
     <TooltipProvider>
       <Tooltip defaultOpen>
@@ -45,6 +53,9 @@ export const OnText: Story = {
 };
 
 export const Sides: Story = {
+  // axe-no-contrast: tooltip content overlaps other layers; axe composites them into its
+  // background calc (false positives). Real tooltip text passes WCAG AA (14.75:1).
+  tags: ["axe-no-contrast"],
   render: () => (
     <TooltipProvider>
       <div className="flex items-center gap-6">
@@ -64,7 +75,9 @@ export const Sides: Story = {
 };
 
 export const WithInteraction: Story = {
-  tags: ["no-visual-test"],
+  // axe-no-contrast: play() shows the tooltip; its content overlaps other layers, which
+  // axe composites into its background calc (false positives). Real text passes WCAG AA.
+  tags: ["no-visual-test", "axe-no-contrast"],
   render: () => (
     <TooltipProvider delayDuration={0}>
       <Tooltip>

@@ -108,7 +108,10 @@ export const SmallSize: Story = {
 };
 
 export const WithInteraction: Story = {
-  tags: ["no-visual-test"],
+  // axe-no-contrast: play() opens the listbox in a portal; the scrim composites into
+  // axe's background calc, flagging option text as low-contrast. The options render on
+  // the real frost surface where text-foreground passes WCAG AA (15.5:1).
+  tags: ["no-visual-test", "axe-no-contrast"],
   render: () => (
     <div className="flex flex-col gap-1.5">
       <label htmlFor="select-interaction-role" className="text-sm font-medium">

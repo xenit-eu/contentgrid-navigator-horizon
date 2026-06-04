@@ -65,24 +65,53 @@ test.describe("Storybook accessibility audit (axe-core)", () => {
       await page.waitForSelector("#storybook-root", { state: "attached" });
       // Wait for web fonts so text-rendering is stable before axe runs.
       await page.evaluate(() => document.fonts.ready);
+      // Wait for any in-flight CSS animations/transitions (overlay scrim fades, toast
+      // slide-ins) to finish before axe samples computed colours. Without this, axe can
+      // read a mid-animation scrim opacity, which shifts the composited background colour
+      // and makes the (tagged) overlay scrim false-positives flap between pass/fail across
+      // runs. We poll getAnimations() rather than disabling animations outright, because
+      // some components (e.g. Sonner toasts) only reach their final, accessible state once
+      // their entrance animation has actually played.
+      await page
+        .waitForFunction(
+          () => document.getAnimations().every((a) => a.playState !== "running"),
+          undefined,
+          { timeout: 5_000 },
+        )
+        .catch(() => {
+          // Best-effort: if animations never settle (e.g. an infinite loader), proceed
+          // anyway — axe will still run and any genuine violation will be reported.
+        });
+
+      // aria-hidden-focus is disabled globally: Storybook sets aria-hidden="true" on
+      // #storybook-root when a portal (Dialog, DropdownMenu, Sheet) is open. Portal content
+      // renders OUTSIDE #storybook-root and can still receive focus, which the rule flags.
+      // This is a test-harness limitation, not a component defect — the same components are
+      // accessible in production. The rule only fires when an open-portal subtree exists, so
+      // disabling it is a harmless no-op for the ~80 non-portal stories.
+      const disabledRules = ["aria-hidden-focus"];
+
+      // color-contrast is disabled ONLY for stories explicitly tagged "axe-no-contrast".
+      // Those are open-portal stories (Dialog, AlertDialog, DropdownMenu, Popover, Tooltip,
+      // Select listbox) where a semi-transparent scrim/backdrop sits behind the portal.
+      // Axe computes background colour by compositing ALL ancestor/sibling backgrounds, so
+      // the scrim blends in and the portal surface appears as a mid-grey (~#cbcdcf) instead
+      // of its real white/frost surface (#fafdff). That yields false-positive contrast
+      // failures (reported ≤ 4.3:1) for text that genuinely passes WCAG AA on its real
+      // surface (verified ≥ 5.2:1, most ≥ 15:1). Each tagged story's violations were
+      // individually confirmed to be scrim composites before tagging.
+      //
+      // IMPORTANT: contrast IS enforced on every NON-tagged story. A new story is
+      // contrast-checked by default (fail-safe) — the exemption must be opted into per story
+      // in its source, keeping the rationale visible and preventing silent regressions of
+      // the --text-muted (#4f6f87) and Tabs trigger (text-foreground/65) contrast fixes.
+      if (story.tags?.includes("axe-no-contrast")) {
+        disabledRules.push("color-contrast");
+      }
 
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        // aria-hidden-focus: Storybook sets aria-hidden="true" on #storybook-root when a
-        // portal (Dialog, DropdownMenu, Sheet) is open — portal content renders outside
-        // #storybook-root and can still receive focus. This is a test-harness limitation,
-        // not a defect in our components; the same components are accessible in production.
-        //
-        // color-contrast: Overlay stories (Dialog, AlertDialog, Sheet, DropdownMenu, Popover)
-        // render a semi-transparent scrim next to the portal container. Axe computes
-        // background colour by traversing ALL ancestor/sibling backgrounds and compositing
-        // them; the scrim blends into the result, making the dialog background appear as a
-        // mid-grey (~#d5d8db) rather than the actual white/frost popover surface (#fafdff).
-        // This produces false-positive contrast failures for correctly-styled text inside
-        // overlays (real contrast ≥ 5.0:1 on the popover; reported ≤ 3.0:1 after compositing).
-        // Design-token contrast is verified separately by ensuring --text-muted (#4f6f87)
-        // passes WCAG AA (≥ 4.5:1) on both --mist (#f4f7fa) and --frost (#fafdff).
-        .disableRules(["aria-hidden-focus", "color-contrast"])
+        .disableRules(disabledRules)
         .analyze();
 
       if (results.violations.length > 0) {
