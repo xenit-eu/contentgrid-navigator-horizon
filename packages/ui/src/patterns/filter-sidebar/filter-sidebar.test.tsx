@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { FilterSidebar, SearchProperty } from "./filter-sidebar";
+import { FilterSidebar } from "./filter-sidebar";
+import type { SearchProperty } from "./filter-sidebar";
 
 const TEXT_PROP: SearchProperty = { name: "title", type: "string" };
 const ENUM_PROP: SearchProperty = {
