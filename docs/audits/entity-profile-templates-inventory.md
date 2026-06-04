@@ -702,7 +702,39 @@ No shape requires a custom parser or an extension to `@contentgrid/hal-forms`.
 
 ---
 
-## 10. Hand-off Note
+## 10. Cross-check Against Official Documentation
+
+The findings in this document were verified against the official ContentGrid documentation at [docs.contentgrid.com](https://docs.contentgrid.com/) (read June 2026). **No finding is contradicted by the docs.** Where the docs are silent, this audit is empirical — it was crawled from a live application, and the docs explicitly delegate per-application specifics (notably the full filter set) to each app's `/openapi.yaml`.
+
+### 10.1 Confirmed by the docs
+
+| Finding                                                                                                                             | Source page                                                                                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Profile templates `create-form` + `search`; item `default` = update, plus `delete`, `set-/add-/clear-<relation>`                    | [HAL usage](https://docs.contentgrid.com/guides/09_app_api/03_hal_usage/index.html), [entity-profile HAL](https://docs.contentgrid.com/reference/app-api/entity-profile-hal/index.html)                    |
+| `create-form` is POST; uses `multipart/form-data` when content attributes are present                                               | [entity-profile HAL](https://docs.contentgrid.com/reference/app-api/entity-profile-hal/index.html)                                                                                                         |
+| Relations = `type:"url"` + `options.link` + `valueField:/_links/self/href`                                                          | [entity-profile HAL](https://docs.contentgrid.com/reference/app-api/entity-profile-hal/index.html), [HAL-FORMS extensions](https://docs.contentgrid.com/reference/app-api/hal-forms-extensions/index.html) |
+| `_sort=<attr>,asc\|desc`, repeatable; different filters AND, repeated filter ORs; opaque cursor pagination via `next`/`prev`        | [API usage](https://docs.contentgrid.com/guides/09_app_api/02_api_usage/index.html)                                                                                                                        |
+| Content attributes appear as `type:"object"` with nested sub-attributes (e.g. `content.filename`) alongside the `file` upload field | [entity-profile HAL](https://docs.contentgrid.com/reference/app-api/entity-profile-hal/index.html), [Concepts](https://docs.contentgrid.com/concepts/index.html)                                           |
+
+### 10.2 One divergence to note
+
+The docs state entity profiles carry **two** templates (`search` + `create-form`). The crawl observed **three**: every profile also exposes a `default` template with `method: HEAD` and empty `properties` (Section 8.5). This is **not a contradiction** — a `HEAD` no-op probe does not conflict with the two meaningful templates — but it is undocumented. Either the crawled platform version adds an undocumented capability-probe template, or the docs are simplified. Treat the `HEAD` `default` as an empirically-observed artefact, not a doc-backed contract.
+
+### 10.3 Empirical-beyond-docs (correct from the live API, absent from public docs)
+
+These claims are **not denied** by the docs but are also not stated there; this audit is the authority for them:
+
+- **`checkbox` type** for boolean attributes — docs name only `text`/`number`/`datetime`/`url`/`file`.
+- **`long`/`double` → `type:"number"`** mapping — not stated in the docs.
+- **`maxItems` absent ⇒ to-many** (Section 7.1) — docs show only the `maxItems:1` to-one case; the absence rule is a sound inference, not a documented contract.
+- **Search `~suffix` set** (Section 5.1) — docs name only `~after` and delegate the full list to each app's `/openapi.yaml`; the `~prefix`/`~gt`/`~gte`/`~lt`/`~lte`/`~before` suffixes are empirical and match the documented operator _concepts_ (prefix-match, greater-than, …).
+- **`options.inline` for allowed-value enums** (Shapes 3/17) — docs use `options.inline` only for `_sort`; this audit extends it to attribute enums.
+
+These are flagged so downstream consumers (HZN-5A.1 / 5D.7) know which contract surfaces are doc-backed versus derived from this specific application's profile dump.
+
+---
+
+## 11. Hand-off Note
 
 This document feeds directly into two downstream tickets:
 
