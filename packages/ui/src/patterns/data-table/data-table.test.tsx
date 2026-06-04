@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { DataTable, DataTableColumn, DataTableRow, SortOption } from "./data-table";
+import { DataTable } from "./data-table";
+import type { DataTableColumn, DataTableRow, SortOption } from "./data-table";
 
 const COLUMNS: DataTableColumn[] = [
   { key: "name", header: "Name", sortable: true },

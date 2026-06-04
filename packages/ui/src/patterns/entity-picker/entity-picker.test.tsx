@@ -3,7 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EntityPicker, EntityPickerColumn, EntityPickerOption } from "./entity-picker";
+import { EntityPicker } from "./entity-picker";
+import type { EntityPickerColumn, EntityPickerOption, EntityPickerProps } from "./entity-picker";
 
 const OPTIONS: EntityPickerOption[] = [
   { id: "1", href: "/invoices/1", data: { number: "INV-001", amount: 100 } },
@@ -26,7 +27,7 @@ const BASE_PROPS = {
   onSelect: vi.fn(),
 };
 
-function renderPicker(overrides: Partial<typeof BASE_PROPS> = {}) {
+function renderPicker(overrides: Partial<EntityPickerProps> = {}) {
   return render(<EntityPicker {...BASE_PROPS} {...overrides} />);
 }
 

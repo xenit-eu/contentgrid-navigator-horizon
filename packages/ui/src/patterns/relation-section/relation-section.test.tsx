@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { RelationColumn, RelationItem, RelationSection } from "./relation-section";
+import { RelationSection } from "./relation-section";
+import type { RelationColumn, RelationItem } from "./relation-section";
 
 const ITEMS: RelationItem[] = [
   { id: "1", data: { name: "Alpha", code: "A1" } },
