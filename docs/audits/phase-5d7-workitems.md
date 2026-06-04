@@ -54,10 +54,10 @@ Full anonymised dump (all 15 entities in one file, host rewritten to `api.exampl
 
 ## Inputs
 
-| Audit     | File                                                                                         | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| --------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HZN-0.5.2 | [`docs/audits/entity-profile-templates-inventory.md`](entity-profile-templates-inventory.md) | Production HAL-Forms shapes: 15 entities, templates `default`/`search`/`create-form`, 6 of 13 `HalFormsPropertyType` observed (`text`, `number`, `datetime`, `checkbox`, `file`, `url`), enum = inline single-select string arrays, relations = `type:url` + `options.link` remote, search operators encoded as name suffix (`~prefix`, `~gt`, `~gte`, `~lt`, `~lte`, `~after`, `~before`). No `readOnly`, `regex`, `minLength`, `maxLength`, `value` or multi-select enum in the **profile-level** `create-form`/`search` templates crawled. Item-level update templates (the `default` template on entity-item resources) were not crawled; `readOnly` and pre-filled `value` requirements for WI-20 were derived from the original-navigator source code instead (see below). |
-| HZN-0.5.3 | [`docs/audits/jsonforms-behaviours-to-port.md`](jsonforms-behaviours-to-port.md)             | JSONForms port decision: one genuine renderer extension needed (search range-pair grouping). FieldDescriptor extensions: enum options, file type, `isOverRelation` flag, HAL-property passthrough, flat dot-notation names, `multiValue`, search operator field, exact/prefix suppression, kind-based dispatch. Out of scope: Ajv plumbing, JSONForms HOC/rank/visible-guard, `materialRenderers`. Absent from production: UISchema rules/conditionals, `Categorization`, `anyOf`, `$ref`.                                                                                                                                                                                                                                                                                       |
+| Audit     | File                                                                                         | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HZN-0.5.2 | [`docs/audits/entity-profile-templates-inventory.md`](entity-profile-templates-inventory.md) | Production HAL-Forms shapes: 15 entities, templates `default`/`search`/`create-form`, 6 of 13 `HalFormsPropertyType` observed (`text`, `number`, `datetime`, `checkbox`, `file`, `url`), enum = inline single-select string arrays, relations = `type:url` + `options.link` remote, search operators encoded as name suffix (`~prefix`, `~gt`, `~gte`, `~lt`, `~lte`, `~after`, `~before`). No `readOnly`, `regex`, `minLength`, `maxLength`, `value` or multi-select enum in any template. Item-level update templates (the `default` PUT template on entity-item resources) were **crawled** for 4 representative entities (all-attribute, order, employee, customer); confirmed: **no `readOnly` and no template-level `value`** on any update template either. Edit-form prefill is client-side from the entity-item body's current values. Content attributes have a dual representation: `file`-typed on create-form (multipart), dot-notation `<attr>.filename`/`<attr>.mimetype` `text` fields on the item `default` (json). Relation-mutation templates confirmed: `set-<rel>` = PUT uri-list + maxItems:1; `add-<rel>` = POST uri-list; `clear-<rel>` = DELETE. Fixtures at `packages/navigator-data/test-fixtures/halforms/items/`. |
+| HZN-0.5.3 | [`docs/audits/jsonforms-behaviours-to-port.md`](jsonforms-behaviours-to-port.md)             | JSONForms port decision: one genuine renderer extension needed (search range-pair grouping). FieldDescriptor extensions: enum options, file type, `isOverRelation` flag, HAL-property passthrough, flat dot-notation names, `multiValue`, search operator field, exact/prefix suppression, kind-based dispatch. Out of scope: Ajv plumbing, JSONForms HOC/rank/visible-guard, `materialRenderers`. Absent from production: UISchema rules/conditionals, `Categorization`, `anyOf`, `$ref`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ---
 
@@ -65,28 +65,28 @@ Full anonymised dump (all 15 entities in one file, host rewritten to `api.exampl
 
 ### Master table
 
-| ID    | Title                                                                            | Verdict           | Estimate     | Source refs                                  |
-| ----- | -------------------------------------------------------------------------------- | ----------------- | ------------ | -------------------------------------------- |
-| WI-1  | FieldDescriptor discriminated union                                              | IN SCOPE          | S/M (~4–8 h) | 0.5.2 all shapes · 0.5.3 JF-1,2,4,5,6,7,9,11 |
-| WI-2  | HAL-Forms → FieldDescriptor resolver                                             | IN SCOPE          | M (~6 h)     | 0.5.3 JF-9,10,11                             |
-| WI-3  | TextField renderer                                                               | IN SCOPE          | S (~2 h)     | 0.5.2 `text`                                 |
-| WI-4  | NumberField renderer                                                             | IN SCOPE          | S (~2 h)     | 0.5.2 `number`                               |
-| WI-5  | DateTimeField renderer                                                           | IN SCOPE          | S (~2 h)     | 0.5.2 `datetime`                             |
-| WI-6  | BooleanField renderer                                                            | IN SCOPE          | S (~2 h)     | 0.5.2 `checkbox`                             |
-| WI-7  | FileField renderer + multipart switching                                         | IN SCOPE          | M (~6 h)     | 0.5.2 `file` + contentType finding           |
-| WI-8  | EnumField (single-select, inline options)                                        | IN SCOPE          | S (~3 h)     | 0.5.2 `constrained_text` · 0.5.3 JF-1        |
-| WI-9  | RelationField (to-one + to-many, `options.link`)                                 | IN SCOPE          | L (~12 h)    | 0.5.2 relations · 0.5.3 JF-5                 |
-| WI-10 | SortField (multi-valued object-enum) + sort UX                                   | IN SCOPE          | S/M (~4 h)   | 0.5.2 `_sort`                                |
-| WI-11 | Search operator handling + range-pair group renderer                             | IN SCOPE          | M (~6 h)     | 0.5.3 JF-8,10                                |
-| WI-12 | Round-trip parity test suite (HZN-5A.6)                                          | IN SCOPE          | M (~6 h)     | all halforms/ fixtures · HZN-2.4             |
-| WI-13 | oneOf/anyOf schema generation                                                    | OUT OF SCOPE      | —            | 0.5.3 JF-3                                   |
-| WI-14 | Ajv validation stack                                                             | OUT OF SCOPE      | —            | 0.5.3 JF-2,4                                 |
-| WI-15 | JSONForms runtime plumbing                                                       | OUT OF SCOPE      | —            | 0.5.3 JF-6,7,11                              |
-| WI-16 | UISchema rules / conditional show-hide / Categorization                          | OUT OF SCOPE      | —            | 0.5.3 JF-N/A                                 |
-| WI-17 | Multi-select string enum (inline `maxItems > 1`)                                 | DEFERRED-RESERVED | —            | 0.5.2 enum shape                             |
-| WI-18 | Extra `HalFormsPropertyType` renderers (email, date, time, range, radio, hidden) | DEFERRED-RESERVED | —            | 0.5.2 unused types                           |
-| WI-19 | Constraint surfacing (regex, minLength, maxLength)                               | DEFERRED-RESERVED | —            | 0.5.2 absent; original translator JF-2,4     |
-| WI-20 | Update-form support: readOnly fields + instance value prefill                    | IN SCOPE          | S (~3 h)     | original navigator jsonforms.ts:197,118      |
+| ID    | Title                                                                                                                                                     | Verdict           | Estimate     | Source refs                                                       |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ------------ | ----------------------------------------------------------------- |
+| WI-1  | FieldDescriptor discriminated union                                                                                                                       | IN SCOPE          | S/M (~4–8 h) | 0.5.2 all shapes · 0.5.3 JF-1,2,4,5,6,7,9,11                      |
+| WI-2  | HAL-Forms → FieldDescriptor resolver                                                                                                                      | IN SCOPE          | M (~6 h)     | 0.5.3 JF-9,10,11                                                  |
+| WI-3  | TextField renderer                                                                                                                                        | IN SCOPE          | S (~2 h)     | 0.5.2 `text`                                                      |
+| WI-4  | NumberField renderer                                                                                                                                      | IN SCOPE          | S (~2 h)     | 0.5.2 `number`                                                    |
+| WI-5  | DateTimeField renderer                                                                                                                                    | IN SCOPE          | S (~2 h)     | 0.5.2 `datetime`                                                  |
+| WI-6  | BooleanField renderer                                                                                                                                     | IN SCOPE          | S (~2 h)     | 0.5.2 `checkbox`                                                  |
+| WI-7  | FileField renderer + multipart switching                                                                                                                  | IN SCOPE          | M (~6 h)     | 0.5.2 `file` + contentType finding                                |
+| WI-8  | EnumField (single-select, inline options)                                                                                                                 | IN SCOPE          | S (~3 h)     | 0.5.2 `constrained_text` · 0.5.3 JF-1                             |
+| WI-9  | RelationField (to-one + to-many, `options.link`) + relation-mutation templates                                                                            | IN SCOPE          | L (~13 h)    | 0.5.2 relations · 0.5.3 JF-5 · item crawl                         |
+| WI-10 | SortField (multi-valued object-enum) + sort UX                                                                                                            | IN SCOPE          | S/M (~4 h)   | 0.5.2 `_sort`                                                     |
+| WI-11 | Search operator handling + range-pair group renderer                                                                                                      | IN SCOPE          | M (~6 h)     | 0.5.3 JF-8,10                                                     |
+| WI-12 | Round-trip parity test suite (HZN-5A.6)                                                                                                                   | IN SCOPE          | M (~6 h)     | all halforms/ fixtures · HZN-2.4                                  |
+| WI-13 | oneOf/anyOf schema generation                                                                                                                             | OUT OF SCOPE      | —            | 0.5.3 JF-3                                                        |
+| WI-14 | Ajv validation stack                                                                                                                                      | OUT OF SCOPE      | —            | 0.5.3 JF-2,4                                                      |
+| WI-15 | JSONForms runtime plumbing                                                                                                                                | OUT OF SCOPE      | —            | 0.5.3 JF-6,7,11                                                   |
+| WI-16 | UISchema rules / conditional show-hide / Categorization                                                                                                   | OUT OF SCOPE      | —            | 0.5.3 JF-N/A                                                      |
+| WI-17 | Multi-select string enum (inline `maxItems > 1`)                                                                                                          | DEFERRED-RESERVED | —            | 0.5.2 enum shape                                                  |
+| WI-18 | Extra `HalFormsPropertyType` renderers (email, date, time, range, radio, hidden)                                                                          | DEFERRED-RESERVED | —            | 0.5.2 unused types                                                |
+| WI-19 | Constraint surfacing (regex, minLength, maxLength) + readOnly field-support                                                                               | DEFERRED-RESERVED | —            | 0.5.2 absent; item crawl confirms also absent on update templates |
+| WI-20 | Update-form support: PUT `default` template (application/json) + edit-form prefill from entity-item body + content-attribute dot-notation metadata fields | IN SCOPE          | M (~5–6 h)   | item crawl · items/ fixtures                                      |
 
 ---
 
@@ -206,20 +206,24 @@ Full anonymised dump (all 15 entities in one file, host rewritten to `api.exampl
 
 ---
 
-#### WI-9 — RelationField (to-one + to-many, `options.link` remote)
+#### WI-9 — RelationField (to-one + to-many, `options.link` remote) + relation-mutation templates
 
 **Artefact:** `<RelationField>` for kind `relation`
 
 **Scope:**
 
-- **To-one** (`multiValue: false`): popover single-select; searches the `options.link.href` collection; selected value submitted as `text/uri-list` (single URI)
-- **To-many** (`multiValue: true`): multi-add; submitted as `text/uri-list` (one URI per line)
+- **To-one** (`multiValue: false`): popover single-select; searches the `options.link.href` collection; selected value submitted via `set-<rel>` template (PUT `text/uri-list`, single URI)
+- **To-many** (`multiValue: true`): multi-add; submitted via `add-<rel>` template (POST `text/uri-list`, one URI per line)
 - `valueField` always `/_links/self/href`; display label resolved from entity item embedded title or `self` href fallback
 - Inline "create in new tab" affordance (per ContentGrid entity creation convention)
+- Relation clearing: `clear-<rel>` template (DELETE, no body)
+- **Relation-mutation template conventions confirmed by the live item crawl:** `set-<rel>` = PUT uri-list + `maxItems: 1` (to-one); `add-<rel>` = POST uri-list + no `maxItems` (to-many); `clear-<rel>` = DELETE. This PUT-vs-POST-per-cardinality convention is **not documented** in the public docs; the item crawl (fixtures at `packages/navigator-data/test-fixtures/halforms/items/`) is the authoritative source.
 
-**Justification:** Relations are the most structurally complex field type; to-one and to-many differ in UX and submission format; large estimate reflects popover search UX and `text/uri-list` wiring.
+**Estimate revised to:** L (~13 h) — adds relation-mutation submission wiring on top of the popover UX.
 
-**Source:** 0.5.2 relations; 0.5.3 JF-5
+**Justification:** Relations are the most structurally complex field type; to-one and to-many differ in UX, template name, and HTTP method; large estimate reflects popover search UX, `text/uri-list` wiring, and mutation template dispatch.
+
+**Source:** 0.5.2 relations; 0.5.3 JF-5; live item crawl
 
 ---
 
@@ -344,37 +348,38 @@ These items are not exercised by current production data. No build cost now; des
 
 ---
 
-#### WI-19 — Constraint surfacing (regex, minLength, maxLength)
+#### WI-19 — Constraint surfacing (regex, minLength, maxLength) + readOnly field-support
 
 **Verdict:** DEFERRED-RESERVED
 
-**Trigger condition:** A production profile populates `regex`, `minLength`, or `maxLength` on a property
+**Trigger condition:** A production template populates `regex`, `minLength`, `maxLength`, or `readOnly` on a property
 
-**Reserved by:** `FieldDescriptor` carries these fields (WI-1); renderers honour them when non-null — they map naturally to HTML `<input>` native constraint attributes when the time comes
+**Reserved by:** `FieldDescriptor` carries all these fields (WI-1); renderers honour them when non-null. `regex`/`minLength`/`maxLength` map naturally to HTML `<input>` native constraint attributes; `readOnly` maps to disabled/read-only UI.
 
-**Note:** Neither the profile-level dump nor the original translator (`jsonforms.ts`) handles `regex`/`minLength`/`maxLength` — these are genuinely absent, not merely unobserved. `readOnly` and prefilled `value` have been moved to the in-scope WI-20.
+**Note on `readOnly`:** The live item crawl confirmed that **no production template** (create-form or item `default`) sets `readOnly` on any property. The original navigator's `jsonforms.ts:197` `readOnly: property.readOnly` passthrough is defensive and unused in practice. `FieldDescriptor.readOnly` is reserved and will be honoured if a future template ever sets it, but there is no current implementation cost. Audit fields (`created_by`/`created_date`/`last_modified_by`/`last_modified_date`) live in the entity-item body under `audit_metadata` and are omitted from all templates entirely.
 
-**Source:** 0.5.2 (absent from profile-level dump); original translator (not handled)
+**Source:** 0.5.2 (absent from profile-level dump); item crawl (absent from update templates too); original translator (not handled in practice)
 
 ---
 
-#### WI-20 — Update-form support: readOnly fields + instance value prefill
+#### WI-20 — Update-form support: PUT `default` template (application/json) + edit-form prefill from entity-item body + content-attribute dot-notation metadata fields
 
 **Verdict:** IN SCOPE
 
-**Estimate:** S (~3 h)
+**Estimate:** M (~5–6 h)
 
-**Artefact:** Renderer and resolver support for `readOnly: true` properties and pre-filled `value` fields on entity-item update templates
+**Artefact:** Resolver and renderer support for rendering the item-level `default` PUT update form with edit-form prefill and content-attribute dual representation
 
 **Scope:**
 
-- Renderers must honour `FieldDescriptor.readOnly` (already reserved on WI-1) by rendering fields as disabled/read-only UI
-- The resolver (WI-2) must propagate `property.readOnly` and `property.value` from `HalFormsProperty` to the descriptor when building descriptors from an item-level `default` template
-- Edit form initial state is populated from `property.value` (current instance values supplied by the server)
+- Render the entity-item `default` template (method PUT, `contentType: application/json`) as an edit form
+- Prefill the form from the **entity-item body's current attribute values** — there is no `property.value` prefill in the template; the client reads the current values directly from the item body (same approach as the original navigator's `jsonforms.ts:118`, which reads item-body values)
+- Content/file attributes appear as dot-notation `<attr>.filename` and `<attr>.mimetype` `text` fields on the item `default` template (vs. a single `file`-typed property on `create-form`). The resolver (WI-2) and FileField renderer (WI-7) must handle both representations of the same content attribute depending on which template is being rendered.
+- **`readOnly` is NOT in scope here** — no production update template sets `readOnly` on any property. `readOnly` support is deferred to WI-19.
 
-**Justification:** The original navigator's edit form reads `entityInstance.defaultTemplate` — the `default` template on the entity-item resource (`/{plural}/{id}`), not the profile. The translator emits `readOnly` on every schema node (`jsonforms.ts:197`, `readOnly: property.readOnly`) and prefills values via `values.value(property.name).value` (`jsonforms.ts:118`). These shapes were simply unobserved in the HZN-0.5.2 audit (which did not crawl any item resource); they are not unused by the platform.
+**Justification:** The item crawl (4 entities: all-attribute, order, employee, customer) confirmed the exact update-template shape. The content attribute dual representation (`file` on create vs. dot-notation `text` fields on update) is the main new complexity. Fixtures are at `packages/navigator-data/test-fixtures/halforms/items/`.
 
-**Source:** original navigator `src/modules/EntityInstance/components/Metadata/components/MetadataEditEntityInstance.tsx:42`; `src/components/form/jsonforms.ts:197` (readOnly), `jsonforms.ts:118` (prefill)
+**Source:** live item crawl; `packages/navigator-data/test-fixtures/halforms/items/`; original navigator `src/modules/EntityInstance/components/Metadata/components/MetadataEditEntityInstance.tsx:42`; `src/components/form/jsonforms.ts:118` (item-body value prefill)
 
 ---
 
@@ -386,12 +391,14 @@ These items are not exercised by current production data. No build cost now; des
 | ------------------------------- | ----------------------------------- | ------------ |
 | FieldDescriptor core (HZN-5A.1) | WI-1, WI-2                          | ~10–14 h     |
 | Simple field renderers          | WI-3, WI-4, WI-5, WI-6, WI-8, WI-10 | ~15 h        |
-| Complex field renderers         | WI-7, WI-9, WI-11                   | ~24 h        |
-| Update-form support             | WI-20                               | ~3 h         |
+| Complex field renderers         | WI-7, WI-9, WI-11                   | ~25 h        |
+| Update-form support             | WI-20                               | ~5–6 h       |
 | Parity test suite (HZN-5A.6)    | WI-12                               | ~6 h         |
-| **Total in scope**              | **13 items**                        | **~58–62 h** |
+| **Total in scope**              | **13 items**                        | **~61–66 h** |
 
 Size legend: S = ~2–3 h · M = ~5–7 h · L = ~10–13 h
+
+WI-9 revised from L/~12 h to L/~13 h (adds relation-mutation template dispatch). WI-20 revised from S/~3 h to M/~5–6 h (adds content-attribute dual-representation handling; `readOnly` moved to deferred WI-19).
 
 Out-of-scope (WI-13–16) and deferred-reserved (WI-17–19) carry **zero current cost**.
 
@@ -399,10 +406,10 @@ Out-of-scope (WI-13–16) and deferred-reserved (WI-17–19) carry **zero curren
 
 ## Hand-off
 
-| Work item(s)                                          | Assigned ticket                           | Notes                                                                                                                                                                                                               |
-| ----------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WI-1, WI-2                                            | **HZN-5A.1** — FieldDescriptor + resolver | Must land before any renderer work; exported from `packages/navigator-data` or a new `packages/features` module                                                                                                     |
-| WI-12                                                 | **HZN-5A.6** — Round-trip parity tests    | Depends on WI-2 + HZN-2.4 MSW handlers; consumes `test-fixtures/halforms/` directly                                                                                                                                 |
-| WI-3–WI-11                                            | **HZN-5D.7** — Renderer audit and port    | Each WI maps to one renderer; WI-9 (RelationField) and WI-11 (RangePairGroup) are the most complex; WI-7 (FileField) touches form submission path                                                                   |
-| WI-20                                                 | **HZN-5D.7** — Renderer audit and port    | Depends on WI-1 (readOnly field on descriptor) and WI-2 (resolver propagating readOnly + value from item templates); requires an entity-item fixture to be added to `test-fixtures/halforms/` for integration tests |
-| MSW handler stubs consuming `test-fixtures/halforms/` | **HZN-2.4**                               | Already partially done per PR #54; WI-12 depends on these handlers being complete                                                                                                                                   |
+| Work item(s)                                          | Assigned ticket                           | Notes                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WI-1, WI-2                                            | **HZN-5A.1** — FieldDescriptor + resolver | Must land before any renderer work; exported from `packages/navigator-data` or a new `packages/features` module                                                                                                                                                     |
+| WI-12                                                 | **HZN-5A.6** — Round-trip parity tests    | Depends on WI-2 + HZN-2.4 MSW handlers; consumes `test-fixtures/halforms/` directly                                                                                                                                                                                 |
+| WI-3–WI-11                                            | **HZN-5D.7** — Renderer audit and port    | Each WI maps to one renderer; WI-9 (RelationField) and WI-11 (RangePairGroup) are the most complex; WI-7 (FileField) touches form submission path                                                                                                                   |
+| WI-20                                                 | **HZN-5D.7** — Renderer audit and port    | Depends on WI-1 (FieldDescriptor) and WI-2 (resolver handling item `default` template + dot-notation content fields); entity-item fixtures are now committed at `packages/navigator-data/test-fixtures/halforms/items/`; no `readOnly` in scope (deferred to WI-19) |
+| MSW handler stubs consuming `test-fixtures/halforms/` | **HZN-2.4**                               | Already partially done per PR #54; WI-12 depends on these handlers being complete                                                                                                                                                                                   |

@@ -1,0 +1,102 @@
+{
+  "id": "019be634-6c81-7ae7-82f9-f2758757b434",
+  "text": "Test string",
+  "long": 0,
+  "double": 0,
+  "boolean": false,
+  "datetime": "2024-01-01T00:00:00Z",
+  "content": {
+    "filename": "Bob.pdf",
+    "length": 330098,
+    "mimetype": "application/pdf"
+  },
+  "audit_metadata": {
+    "created_by": "Agent LLM",
+    "created_date": "2026-01-22T14:55:53.983034Z",
+    "last_modified_by": "Agent LLM",
+    "last_modified_date": "2026-01-22T14:55:53.983043Z"
+  },
+  "constrained_text": "Constraint A",
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/all-attributes/019be634-6c81-7ae7-82f9-f2758757b434",
+      "title": "All attribute"
+    },
+    "cg:content": [
+      {
+        "href": "https://api.example.contentgrid.com/all-attributes/019be634-6c81-7ae7-82f9-f2758757b434/content",
+        "title": "Content",
+        "name": "content"
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "PUT",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "text",
+          "prompt": "Text",
+          "type": "text"
+        },
+        {
+          "name": "long",
+          "prompt": "Long",
+          "type": "number"
+        },
+        {
+          "name": "double",
+          "prompt": "Double",
+          "type": "number"
+        },
+        {
+          "name": "boolean",
+          "prompt": "Boolean",
+          "type": "checkbox"
+        },
+        {
+          "name": "datetime",
+          "prompt": "Datetime",
+          "type": "datetime"
+        },
+        {
+          "name": "content.filename",
+          "prompt": "Content: Filename",
+          "type": "text"
+        },
+        {
+          "name": "content.mimetype",
+          "prompt": "Content: Mimetype",
+          "type": "text"
+        },
+        {
+          "name": "constrained_text",
+          "prompt": "Constrained text",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "maxItems": 1,
+            "inline": ["Constraint A", "Constraint B", "Constraint C"]
+          }
+        }
+      ]
+    },
+    "delete": {
+      "method": "DELETE",
+      "properties": []
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "id": "4a75e73b-fd97-437e-9901-2356673c58fb",
+  "name": "John Doe",
+  "position": "Order Manager",
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb",
+      "title": "Employee"
+    },
+    "cg:relation": [
+      {
+        "href": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/colleague",
+        "title": "Colleague",
+        "name": "colleague"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/boss",
+        "title": "Boss",
+        "name": "boss"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/managed-orders",
+        "title": "Managed orders",
+        "name": "managed_orders"
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "add-colleague": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/colleague",
+      "contentType": "text/uri-list",
+      "properties": [
+        {
+          "name": "colleague",
+          "prompt": "Colleague",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/employees",
+              "title": "Employees"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    },
+    "clear-colleague": {
+      "method": "DELETE",
+      "target": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/colleague",
+      "properties": []
+    },
+    "set-boss": {
+      "method": "PUT",
+      "target": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/boss",
+      "contentType": "text/uri-list",
+      "properties": [
+        {
+          "name": "boss",
+          "prompt": "Boss",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/employees",
+              "title": "Employees"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    },
+    "clear-boss": {
+      "method": "DELETE",
+      "target": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/boss",
+      "properties": []
+    },
+    "add-managed_orders": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/managed-orders",
+      "contentType": "text/uri-list",
+      "properties": [
+        {
+          "name": "managed_orders",
+          "prompt": "Managed orders",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/orders",
+              "title": "Orders"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    },
+    "clear-managed_orders": {
+      "method": "DELETE",
+      "target": "https://api.example.contentgrid.com/employees/4a75e73b-fd97-437e-9901-2356673c58fb/managed-orders",
+      "properties": []
+    },
+    "default": {
+      "method": "PUT",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "position",
+          "prompt": "Position",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "maxItems": 1,
+            "inline": ["Administration", "Boss", "Order Manager"]
+          }
+        }
+      ]
+    },
+    "delete": {
+      "method": "DELETE",
+      "properties": []
+    }
+  }
+}

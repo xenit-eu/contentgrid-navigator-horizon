@@ -1,0 +1,156 @@
+{
+  "id": "9835aae0-b5cf-4b74-98fd-e024769f6d5b",
+  "order_number": "123456",
+  "order_date": "2023-05-10T22:00:00Z",
+  "total_amount": 1000,
+  "document": {
+    "filename": "order_typeB.pdf",
+    "length": 110906,
+    "mimetype": "application/pdf"
+  },
+  "receipt": {
+    "filename": "metadata.png",
+    "length": 4081,
+    "mimetype": "image/png"
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b",
+      "title": "Order"
+    },
+    "cg:relation": [
+      {
+        "href": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/products",
+        "title": "Products",
+        "name": "products"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/customer",
+        "title": "Customer",
+        "name": "customer"
+      }
+    ],
+    "cg:content": [
+      {
+        "href": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/document",
+        "title": "Document",
+        "name": "document"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/receipt",
+        "title": "Receipt",
+        "name": "receipt"
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "add-products": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/products",
+      "contentType": "text/uri-list",
+      "properties": [
+        {
+          "name": "products",
+          "prompt": "Products",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/products",
+              "title": "Products"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    },
+    "clear-products": {
+      "method": "DELETE",
+      "target": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/products",
+      "properties": []
+    },
+    "set-customer": {
+      "method": "PUT",
+      "target": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/customer",
+      "contentType": "text/uri-list",
+      "properties": [
+        {
+          "name": "customer",
+          "prompt": "Customer",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/customers",
+              "title": "Customers"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    },
+    "clear-customer": {
+      "method": "DELETE",
+      "target": "https://api.example.contentgrid.com/orders/9835aae0-b5cf-4b74-98fd-e024769f6d5b/customer",
+      "properties": []
+    },
+    "default": {
+      "method": "PUT",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "order_number",
+          "prompt": "Order number",
+          "type": "text"
+        },
+        {
+          "name": "order_date",
+          "prompt": "Order date",
+          "type": "datetime"
+        },
+        {
+          "name": "total_amount",
+          "prompt": "Total amount",
+          "type": "number"
+        },
+        {
+          "name": "document.filename",
+          "prompt": "Document: Filename",
+          "type": "text"
+        },
+        {
+          "name": "document.mimetype",
+          "prompt": "Document: Mimetype",
+          "type": "text"
+        },
+        {
+          "name": "receipt.filename",
+          "prompt": "Receipt: Filename",
+          "type": "text"
+        },
+        {
+          "name": "receipt.mimetype",
+          "prompt": "Receipt: Mimetype",
+          "type": "text"
+        }
+      ]
+    },
+    "delete": {
+      "method": "DELETE",
+      "properties": []
+    }
+  }
+}
