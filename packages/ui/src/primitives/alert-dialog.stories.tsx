@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,4 +76,40 @@ export const SmallSize: Story = {
       </AlertDialogContent>
     </AlertDialog>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button>Delete item</button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this item?</AlertDialogTitle>
+          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction>Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", { name: /delete item/i });
+    await userEvent.click(trigger);
+    // Wait for the portal to mount and the alert dialog to become visible
+    let dialog: HTMLElement;
+    await waitFor(() => {
+      dialog = within(document.body).getByRole("alertdialog");
+      expect(dialog).toBeVisible();
+    });
+    await expect(within(dialog!).getByText(/delete this item/i)).toBeInTheDocument();
+    // Both action buttons must be present
+    await expect(within(dialog!).getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+    await expect(within(dialog!).getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+  },
 };

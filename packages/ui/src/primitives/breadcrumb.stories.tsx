@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -75,4 +76,37 @@ export const SingleLevel: Story = {
       </BreadcrumbList>
     </Breadcrumb>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink href="#">Home</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink href="#">Documents</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>Report.pdf</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const nav = canvas.getByRole("navigation");
+    await expect(nav).toBeInTheDocument();
+    const homeLink = canvas.getByRole("link", { name: /home/i });
+    await expect(homeLink).toBeInTheDocument();
+    const currentPage = canvas.getByText(/report\.pdf/i);
+    await expect(currentPage).toBeInTheDocument();
+    // Tab to the first link
+    await userEvent.tab();
+    await expect(homeLink).toHaveFocus();
+  },
 };

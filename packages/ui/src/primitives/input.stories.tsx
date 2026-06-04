@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { Input } from "./input";
 import { Label } from "./label";
 
@@ -40,4 +41,23 @@ export const Invalid: Story = {
       <p className="text-sm text-destructive">Please enter a valid email.</p>
     </div>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <div className="grid w-64 gap-2">
+      <Label htmlFor="interaction-input">Name</Label>
+      <Input id="interaction-input" placeholder="Type here…" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox");
+    await userEvent.click(input);
+    await userEvent.type(input, "Hello");
+    await expect(input).toHaveValue("Hello");
+    await userEvent.clear(input);
+    await expect(input).toHaveValue("");
+  },
 };

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { LogOut, Mail, Settings, User } from "lucide-react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import {
   DropdownMenu,
@@ -72,4 +73,54 @@ export const WithCheckboxes: Story = {
       </DropdownMenuContent>
     </DropdownMenu>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline">Options</Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-40">
+        <DropdownMenuItem>
+          <User />
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Settings />
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive">
+          <LogOut />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", { name: /options/i });
+    await expect(trigger).toBeInTheDocument();
+    await userEvent.click(trigger);
+    // Wait for the portal to mount and the menu to become visible
+    let menu: HTMLElement;
+    await waitFor(() => {
+      menu = within(document.body).getByRole("menu");
+      expect(menu).toBeVisible();
+    });
+    // All three menu items must be present
+    const items = within(document.body).getAllByRole("menuitem");
+    await expect(items.length).toBe(3);
+    await expect(
+      within(document.body).getByRole("menuitem", { name: /profile/i }),
+    ).toBeInTheDocument();
+    await expect(
+      within(document.body).getByRole("menuitem", { name: /settings/i }),
+    ).toBeInTheDocument();
+    await expect(
+      within(document.body).getByRole("menuitem", { name: /sign out/i }),
+    ).toBeInTheDocument();
+  },
 };

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   Select,
   SelectContent,
@@ -84,4 +85,35 @@ export const SmallSize: Story = {
       </SelectContent>
     </Select>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Select>
+      <SelectTrigger className="w-48">
+        <SelectValue placeholder="Pick a role" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="admin">Admin</SelectItem>
+        <SelectItem value="editor">Editor</SelectItem>
+        <SelectItem value="viewer">Viewer</SelectItem>
+      </SelectContent>
+    </Select>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("combobox");
+    await expect(trigger).toBeInTheDocument();
+    await userEvent.click(trigger);
+    // Wait for the portal to mount and the listbox to become visible
+    let listbox: HTMLElement;
+    await waitFor(() => {
+      listbox = within(document.body).getByRole("listbox");
+      expect(listbox).toBeVisible();
+    });
+    const adminOption = within(listbox!).getByRole("option", { name: /admin/i });
+    await userEvent.click(adminOption);
+    await expect(trigger).toHaveTextContent(/admin/i);
+  },
 };

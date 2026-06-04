@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { Button } from "./button";
 
 const meta = {
@@ -46,4 +47,24 @@ export const Disabled: Story = {
       </Button>
     </div>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => {
+    return (
+      <Button
+        onClick={() => document.getElementById("result")?.setAttribute("data-clicked", "true")}
+      >
+        Click me
+      </Button>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole("button", { name: /click me/i });
+    await expect(button).toBeInTheDocument();
+    await userEvent.click(button);
+    await expect(button).toBeEnabled();
+  },
 };

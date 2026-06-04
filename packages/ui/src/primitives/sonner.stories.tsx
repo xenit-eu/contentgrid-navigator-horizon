@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { toast } from "sonner";
+import { expect, userEvent, within } from "storybook/test";
 import { Button } from "./button";
 import { Toaster } from "./sonner";
 
@@ -44,4 +45,22 @@ export const Variants: Story = {
       </div>
     </>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <>
+      <Toaster richColors />
+      <Button onClick={() => toast.success("File uploaded successfully.")}>Upload file</Button>
+    </>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole("button", { name: /upload file/i });
+    await userEvent.click(button);
+    // Sonner renders toasts into a portal (outside canvasElement)
+    const toastEl = await within(document.body).findByText(/file uploaded successfully/i);
+    await expect(toastEl).toBeInTheDocument();
+  },
 };

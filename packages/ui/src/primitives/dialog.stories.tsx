@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import {
   Dialog,
@@ -68,4 +69,43 @@ export const Simple: Story = {
       </DialogContent>
     </Dialog>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">Open dialog</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm action</DialogTitle>
+          <DialogDescription>This will apply your changes.</DialogDescription>
+        </DialogHeader>
+        <DialogFooter showCloseButton>
+          <Button>Confirm</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", { name: /open dialog/i });
+    await expect(trigger).toBeInTheDocument();
+    await userEvent.click(trigger);
+    // Wait for the portal to mount and the dialog to become visible
+    let dialog: HTMLElement;
+    await waitFor(() => {
+      dialog = within(document.body).getByRole("dialog");
+      expect(dialog).toBeVisible();
+    });
+    await expect(within(dialog!).getByText(/confirm action/i)).toBeInTheDocument();
+    // Confirm button must be present inside the dialog
+    await expect(within(dialog!).getByRole("button", { name: /confirm/i })).toBeInTheDocument();
+    // Title heading must be present
+    await expect(
+      within(dialog!).getByRole("heading", { name: /confirm action/i }),
+    ).toBeInTheDocument();
+  },
 };

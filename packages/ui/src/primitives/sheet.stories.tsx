@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
@@ -95,4 +96,45 @@ export const BottomSheet: Story = {
       </SheetContent>
     </Sheet>
   ),
+};
+
+export const WithInteraction: Story = {
+  tags: ["no-visual-test"],
+  render: () => (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline">Open sheet</Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Settings</SheetTitle>
+          <SheetDescription>Adjust your preferences.</SheetDescription>
+        </SheetHeader>
+        <div className="grid gap-4 px-4">
+          <Label htmlFor="ia-sheet-input">Name</Label>
+          <Input id="ia-sheet-input" placeholder="Your name" />
+        </div>
+        <SheetFooter>
+          <Button>Save</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", { name: /open sheet/i });
+    await userEvent.click(trigger);
+    // Wait for the portal to mount and the sheet to become visible
+    let dialog: HTMLElement;
+    await waitFor(() => {
+      dialog = within(document.body).getByRole("dialog");
+      expect(dialog).toBeVisible();
+    });
+    await expect(within(dialog!).getByText(/settings/i)).toBeInTheDocument();
+    // Name input should be accessible inside the sheet
+    const input = within(dialog!).getByRole("textbox");
+    await expect(input).toBeInTheDocument();
+    await userEvent.type(input, "Jane");
+    await expect(input).toHaveValue("Jane");
+  },
 };
