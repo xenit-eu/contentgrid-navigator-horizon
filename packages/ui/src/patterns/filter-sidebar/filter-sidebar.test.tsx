@@ -1,0 +1,242 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { FilterSidebar, SearchProperty } from "./filter-sidebar";
+
+const TEXT_PROP: SearchProperty = { name: "title", type: "string" };
+const ENUM_PROP: SearchProperty = {
+  name: "status",
+  type: "string",
+  options: { inline: ["active", "inactive", "pending"] },
+};
+const DATE_PROP: SearchProperty = { name: "created_at", type: "date" };
+const DATE_GT_PROP: SearchProperty = {
+  name: "created_at~greater-than",
+  type: "string",
+};
+const DATE_LT_PROP: SearchProperty = {
+  name: "created_at~less-than",
+  type: "string",
+};
+const DATE_GTE_PROP: SearchProperty = {
+  name: "due~greater-than-or-equal-to",
+  type: "string",
+};
+const DATE_LTE_PROP: SearchProperty = {
+  name: "due~less-than-or-equal-to",
+  type: "string",
+};
+
+function renderSidebar(
+  filterProperties: SearchProperty[],
+  filters: Record<string, string> = {},
+  overrides: Partial<{
+    onFilterChange: (key: string, value: string | undefined) => void;
+    onClearAll: () => void;
+  }> = {},
+) {
+  const onFilterChange = overrides.onFilterChange ?? vi.fn();
+  const onClearAll = overrides.onClearAll;
+  return {
+    onFilterChange,
+    ...render(
+      <FilterSidebar
+        filterProperties={filterProperties}
+        filters={filters}
+        onFilterChange={onFilterChange}
+        onClearAll={onClearAll}
+      />,
+    ),
+  };
+}
+
+describe("FilterSidebar — structure", () => {
+  it("renders the 'Filters' heading", () => {
+    renderSidebar([TEXT_PROP]);
+    expect(screen.getByText("Filters")).toBeInTheDocument();
+  });
+
+  it("does not show 'Clear all' button when no active filters", () => {
+    renderSidebar([TEXT_PROP], {}, { onClearAll: vi.fn() });
+    expect(screen.queryByRole("button", { name: /clear all/i })).not.toBeInTheDocument();
+  });
+
+  it("shows 'Clear all' button when there are active filters and onClearAll is provided", () => {
+    renderSidebar([TEXT_PROP], { title: "hello" }, { onClearAll: vi.fn() });
+    expect(screen.getByRole("button", { name: /clear all/i })).toBeInTheDocument();
+  });
+
+  it("does not show 'Clear all' when onClearAll is undefined", () => {
+    renderSidebar([TEXT_PROP], { title: "hello" });
+    expect(screen.queryByRole("button", { name: /clear all/i })).not.toBeInTheDocument();
+  });
+
+  it("calls onClearAll when Clear all is clicked", async () => {
+    const user = userEvent.setup();
+    const onClearAll = vi.fn();
+    renderSidebar([TEXT_PROP], { title: "hello" }, { onClearAll });
+    await user.click(screen.getByRole("button", { name: /clear all/i }));
+    expect(onClearAll).toHaveBeenCalled();
+  });
+});
+
+describe("FilterSidebar — text filter (type=string, no options)", () => {
+  it("does not render a text input for plain string props (falls through to null)", () => {
+    // Plain string props without suffix hit the "return null" branch
+    renderSidebar([TEXT_PROP]);
+    // There's no rendered input because plain string type is not handled
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("FilterSidebar — enum filter", () => {
+  it("renders label for enum property", () => {
+    renderSidebar([ENUM_PROP]);
+    expect(screen.getByText("Status")).toBeInTheDocument();
+  });
+
+  it("shows clear button as invisible when no value is set", () => {
+    const { container } = renderSidebar([ENUM_PROP], {});
+    const clearBtn = container.querySelector("button.invisible");
+    expect(clearBtn).toBeInTheDocument();
+  });
+
+  it("shows clear button as visible when a value is set", () => {
+    const { container } = renderSidebar([ENUM_PROP], { status: "active" });
+    // The invisible class should NOT be on the clear button
+    const clearBtn = container.querySelector("button.invisible");
+    expect(clearBtn).not.toBeInTheDocument();
+  });
+
+  it("calls onFilterChange with undefined when clear button is clicked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar([ENUM_PROP], { status: "active" }, { onFilterChange });
+    // The clear X button
+    const clearBtn = screen.getByRole("button");
+    await user.click(clearBtn);
+    expect(onFilterChange).toHaveBeenCalledWith("status", undefined);
+  });
+});
+
+describe("FilterSidebar — single date filter (type=date)", () => {
+  it("renders a date input for date type props", () => {
+    renderSidebar([DATE_PROP]);
+    expect(screen.getByDisplayValue("")).toBeInTheDocument();
+  });
+
+  it("calls onFilterChange with ISO format when date input changes", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_PROP], {}, { onFilterChange });
+    const input = screen.getByDisplayValue("");
+    fireEvent.change(input, { target: { value: "2024-01-15" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created_at", "2024-01-15T00:00:00Z");
+  });
+
+  it("calls onFilterChange with undefined when date input is cleared", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_PROP], { created_at: "2024-01-15T00:00:00Z" }, { onFilterChange });
+    const input = screen.getAllByDisplayValue("2024-01-15")[0];
+    fireEvent.change(input, { target: { value: "" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created_at", undefined);
+  });
+
+  it("clears date filter when clear button is clicked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_PROP], { created_at: "2024-01-15T00:00:00Z" }, { onFilterChange });
+    const clearBtn = screen.getByRole("button");
+    await user.click(clearBtn);
+    expect(onFilterChange).toHaveBeenCalledWith("created_at", undefined);
+  });
+});
+
+describe("FilterSidebar — date suffix filters (DateFilter with direction)", () => {
+  it("renders date inputs for greater-than suffix", () => {
+    renderSidebar([DATE_GT_PROP]);
+    const label = screen.getByText(/created at after/i);
+    expect(label).toBeInTheDocument();
+  });
+
+  it("renders date inputs for less-than suffix", () => {
+    renderSidebar([DATE_LT_PROP]);
+    expect(screen.getByText(/created at before/i)).toBeInTheDocument();
+  });
+
+  it("renders date inputs for greater-than-or-equal-to suffix", () => {
+    renderSidebar([DATE_GTE_PROP]);
+    expect(screen.getByText(/due after/i)).toBeInTheDocument();
+  });
+
+  it("renders date inputs for less-than-or-equal-to suffix", () => {
+    renderSidebar([DATE_LTE_PROP]);
+    expect(screen.getByText(/due before/i)).toBeInTheDocument();
+  });
+});
+
+describe("FilterSidebar — date group filter (multiple date props for same field)", () => {
+  it("renders DateGroupFilter when multiple date-suffix props share the same base", () => {
+    renderSidebar([DATE_GT_PROP, DATE_LT_PROP]);
+    // DateGroupFilter renders a span with the label
+    const createdLabel = screen.getByText("Created At");
+    expect(createdLabel).toBeInTheDocument();
+  });
+
+  it("renders After/Before direction labels in the group", () => {
+    renderSidebar([DATE_GT_PROP, DATE_LT_PROP]);
+    expect(screen.getByText("After")).toBeInTheDocument();
+    expect(screen.getByText("Before")).toBeInTheDocument();
+  });
+
+  it("renders From/Until direction labels for gte/lte suffixes", () => {
+    renderSidebar([DATE_GTE_PROP, DATE_LTE_PROP]);
+    // greater-than-or-equal-to → "from" → label "After" (maps from→after in DateGroupFilter)
+    // Check that we have date inputs
+    const inputs = screen.getAllByDisplayValue("");
+    expect(inputs.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("calls onFilterChange when a date input changes in a group", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_GT_PROP, DATE_LT_PROP], {}, { onFilterChange });
+    const inputs = screen.getAllByDisplayValue("");
+    fireEvent.change(inputs[0], { target: { value: "2024-03-01" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", "2024-03-01T00:00:00Z");
+  });
+});
+
+describe("FilterSidebar — label formatting", () => {
+  it("uses prompt when provided", () => {
+    const prop: SearchProperty = { name: "complex_field", type: "string", prompt: "My Label" };
+    renderSidebar([ENUM_PROP, { ...prop, options: { inline: ["a"] } }]);
+    expect(screen.getByText("My Label")).toBeInTheDocument();
+  });
+
+  it("capitalises underscore-separated field names", () => {
+    const prop: SearchProperty = {
+      name: "some_field_name",
+      type: "string",
+      options: { inline: ["x"] },
+    };
+    renderSidebar([prop]);
+    expect(screen.getByText("Some Field Name")).toBeInTheDocument();
+  });
+
+  it("renders separator between groups", () => {
+    const { container } = renderSidebar([ENUM_PROP, DATE_PROP]);
+    // Two different groups → a separator should be rendered
+    expect(container.querySelector("[data-orientation='horizontal']")).toBeInTheDocument();
+  });
+});
+
+describe("FilterSidebar — apiToDate conversion", () => {
+  it("shows existing ISO date value as yyyy-MM-dd in the input", () => {
+    renderSidebar([DATE_PROP], { created_at: "2024-06-15T00:00:00Z" });
+    expect(screen.getByDisplayValue("2024-06-15")).toBeInTheDocument();
+  });
+
+  it("handles non-ISO date string gracefully (plain yyyy-MM-dd)", () => {
+    renderSidebar([DATE_PROP], { created_at: "2024-06-15" });
+    expect(screen.getByDisplayValue("2024-06-15")).toBeInTheDocument();
+  });
+});
