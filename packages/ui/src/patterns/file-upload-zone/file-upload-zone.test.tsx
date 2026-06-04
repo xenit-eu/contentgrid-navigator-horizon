@@ -65,31 +65,33 @@ describe("FileUploadZone — drop-zone view (no file)", () => {
     expect(onFileChange).not.toHaveBeenCalled();
   });
 
-  it("calls inputRef click when Enter is pressed on zone", () => {
+  it("opens the file input when the drop-zone button is clicked", async () => {
+    const user = userEvent.setup();
     render(<FileUploadZone file={null} onFileChange={vi.fn()} />);
-    const zone = screen.getByRole("button");
-    const input = zone.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, "click");
-    fireEvent.keyDown(zone, { key: "Enter" });
+    await user.click(screen.getByRole("button"));
     expect(clickSpy).toHaveBeenCalled();
   });
 
-  it("calls inputRef click when Space is pressed on zone", () => {
+  it("activates the file input via native Enter key on the focused button", async () => {
+    const user = userEvent.setup();
     render(<FileUploadZone file={null} onFileChange={vi.fn()} />);
-    const zone = screen.getByRole("button");
-    const input = zone.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, "click");
-    fireEvent.keyDown(zone, { key: " " });
+    screen.getByRole("button").focus();
+    await user.keyboard("{Enter}");
     expect(clickSpy).toHaveBeenCalled();
   });
 
-  it("does not respond to unrelated keydown (e.g. Escape)", () => {
+  it("activates the file input via native Space key on the focused button", async () => {
+    const user = userEvent.setup();
     render(<FileUploadZone file={null} onFileChange={vi.fn()} />);
-    const zone = screen.getByRole("button");
-    const input = zone.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, "click");
-    fireEvent.keyDown(zone, { key: "Escape" });
-    expect(clickSpy).not.toHaveBeenCalled();
+    screen.getByRole("button").focus();
+    await user.keyboard(" ");
+    expect(clickSpy).toHaveBeenCalled();
   });
 
   it("passes accept string to the hidden input", () => {

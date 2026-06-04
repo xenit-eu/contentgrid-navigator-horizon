@@ -27,7 +27,7 @@ export function EntityCard({
   hasContent,
   onCreateClick,
   onTitleClick,
-}: EntityCardProps) {
+}: Readonly<EntityCardProps>) {
   return (
     <Card className="group relative transition-colors hover:border-primary/50">
       <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -65,7 +65,7 @@ export function EntityCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{count != null ? count : "—"}</div>
+        <div className="text-2xl font-bold">{count ?? "—"}</div>
         <p className="text-xs text-muted-foreground">items</p>
       </CardContent>
     </Card>

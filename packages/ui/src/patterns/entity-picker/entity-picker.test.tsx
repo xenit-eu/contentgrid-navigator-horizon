@@ -242,6 +242,23 @@ describe("EntityPicker — column fallback (no columns prop)", () => {
     expect(screen.getByText("Alpha")).toBeInTheDocument();
   });
 
+  it("renders object cell values as JSON rather than [object Object]", () => {
+    render(
+      <EntityPicker
+        open={true}
+        onOpenChange={vi.fn()}
+        relationTitle="item"
+        columns={[{ key: "meta", header: "Meta" }]}
+        options={[{ id: "1", href: "/items/1", data: { meta: { nested: "value" } } }]}
+        searchQuery=""
+        onSearch={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('{"nested":"value"}')).toBeInTheDocument();
+    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  });
+
   it("returns empty columns when options array is empty and no columns prop", () => {
     render(
       <EntityPicker

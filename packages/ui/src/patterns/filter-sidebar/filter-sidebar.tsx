@@ -104,6 +104,13 @@ function getInputType(prop: SearchProperty): InputType {
   return "text";
 }
 
+/** Map a search-type label to a capitalised direction word, or null. */
+function getDirectionLabel(searchType: string): "After" | "Before" | null {
+  if (searchType === "after" || searchType === "from") return "After";
+  if (searchType === "before" || searchType === "until") return "Before";
+  return null;
+}
+
 /** Convert a date string from <input type="date"> (yyyy-MM-dd) to ISO 8601 for the API */
 function dateToApi(dateStr: string): string {
   return `${dateStr}T00:00:00Z`;
@@ -113,12 +120,12 @@ function dateToApi(dateStr: string): string {
 function apiToDate(apiStr: string): string {
   if (apiStr.includes("T")) {
     const date = new Date(apiStr);
-    if (!isNaN(date.getTime())) {
+    if (!Number.isNaN(date.getTime())) {
       return format(date, "yyyy-MM-dd");
     }
   }
   const parsed = parse(apiStr, "yyyy-MM-dd", new Date());
-  if (!isNaN(parsed.getTime())) return apiStr;
+  if (!Number.isNaN(parsed.getTime())) return apiStr;
   return apiStr;
 }
 
@@ -147,7 +154,10 @@ function groupFilterProperties(props: SearchProperty[]): FilterGroup[] {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function ClearButton({ onClick, visible = true }: { onClick: () => void; visible?: boolean }) {
+function ClearButton({
+  onClick,
+  visible = true,
+}: Readonly<{ onClick: () => void; visible?: boolean }>) {
   return (
     <Button
       type="button"
@@ -166,24 +176,19 @@ function DateGroupFilter({
   items,
   filters,
   onFilterChange,
-}: {
+}: Readonly<{
   label: string;
   items: SearchProperty[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string | undefined) => void;
-}) {
+}>) {
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       {items.map((prop) => {
         const searchType = getSearchType(prop);
         const value = filters[prop.name] ?? "";
-        const direction =
-          searchType === "after" || searchType === "from"
-            ? "After"
-            : searchType === "before" || searchType === "until"
-              ? "Before"
-              : null;
+        const direction = getDirectionLabel(searchType);
 
         return (
           <div key={prop.name} className="space-y-1">
@@ -216,12 +221,12 @@ function EnumFilter({
   options,
   value,
   onChange,
-}: {
+}: Readonly<{
   label: string;
   options: string[];
   value: string;
   onChange: (value: string | undefined) => void;
-}) {
+}>) {
   return (
     <div className="space-y-1.5">
       <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
@@ -251,20 +256,14 @@ function DateFilter({
   searchType,
   value,
   onChange,
-}: {
+}: Readonly<{
   label: string;
   searchType: string;
   value: string;
   onChange: (value: string | undefined) => void;
-}) {
-  const direction =
-    searchType === "before" || searchType === "until"
-      ? "before"
-      : searchType === "after" || searchType === "from"
-        ? "after"
-        : null;
-
-  const displayLabel = direction ? `${label} ${direction}` : label;
+}>) {
+  const direction = getDirectionLabel(searchType);
+  const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
 
   return (
     <div className="space-y-1.5">
@@ -293,7 +292,7 @@ export function FilterSidebar({
   filters,
   onFilterChange,
   onClearAll,
-}: FilterSidebarProps) {
+}: Readonly<FilterSidebarProps>) {
   const hasActiveFilters = Object.values(filters).some((v) => !!v);
   const groups = groupFilterProperties(filterProperties);
 
