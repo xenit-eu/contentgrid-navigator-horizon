@@ -11,6 +11,8 @@
       "types": "./src/index.ts"
     },
     "./styles/preset.css": "./src/styles/preset.css",
+    "./tokens": "./tokens/index.css",
+    "./tokens/index.css": "./tokens/index.css",
     "./tailwind-preset": "./tailwind-preset.ts"
   },
   "peerDependencies": {
