@@ -1,4 +1,5 @@
 @import "tw-animate-css";
+@import "../../tokens/index.css";
 @source "../";
 
 @custom-variant dark (&:is(.dark *));
@@ -45,32 +46,38 @@
 }
 
 :root {
-  --ocean: #084772;
-  --ocean-700: #0a3d62;
-  --sky: #019be3;
-  --sky-50: #eef7fc;
-  --steel: #557891;
-  --midnight: #021826;
-  --mist: #f4f7fa;
-  --frost: #fafdff;
-  --line: #ebeef2;
-  --line-soft: #f1f4f7;
-  --text: #0e2436;
-  --text-dim: #405b6d;
-  --text-muted: #4f6f87;
-  --header-dim: #b1cfe7;
-  --link-text: #064c79;
-  --amber: #b85b1f;
-  --amber-light: #7a3d14;
-  --danger: #b3261e;
-  --green: #2f7a55;
-  --card-border: #7899b0;
-  --sky-extract: rgba(1, 155, 227, 0.16);
-  --sky-extract-ring: rgba(1, 155, 227, 0.55);
-  --shadow-lg: 0 30px 70px -40px rgba(8, 29, 48, 0.22);
+  /* Backward-compatible aliases: components in this repo reference these
+   * unprefixed names directly (e.g. var(--ocean), var(--sky-extract)).
+   * They delegate to the canonical --cg-* tokens so that a single source
+   * of truth exists for raw values. */
+  --ocean: var(--cg-color-ocean);
+  --ocean-700: var(--cg-color-ocean-700);
+  --sky: var(--cg-color-sky);
+  --sky-50: var(--cg-color-sky-50);
+  --steel: var(--cg-color-steel);
+  --midnight: var(--cg-color-midnight);
+  --mist: var(--cg-color-mist);
+  --frost: var(--cg-color-frost);
+  --line: var(--cg-color-line);
+  --line-soft: var(--cg-color-line-soft);
+  --text: var(--cg-color-text);
+  --text-dim: var(--cg-color-text-dim);
+  --text-muted: var(--cg-color-text-muted);
+  --header-dim: var(--cg-color-header-dim);
+  --link-text: var(--cg-color-link-text);
+  --amber: var(--cg-color-amber);
+  --amber-light: var(--cg-color-amber-light);
+  --danger: var(--cg-color-danger);
+  --green: var(--cg-color-green);
+  --card-border: var(--cg-color-card-border);
+  --sky-extract: var(--cg-color-sky-extract);
+  --sky-extract-ring: var(--cg-color-sky-extract-ring);
+  --shadow-lg: var(--cg-shadow-lg);
 
-  --radius: 0.625rem;
+  --radius: var(--cg-radius);
 
+  /* shadcn semantic layer — references the unprefixed aliases above so that
+   * the @theme inline block (which reads var(--primary) etc.) is unchanged. */
   --background: var(--mist);
   --foreground: var(--text);
   --card: var(--frost);
@@ -105,7 +112,7 @@
   --sidebar-ring: var(--sky);
 }
 
-/* TODO HZN-3.2: dark theme tokens */
+/* Dark theme tokens are out of scope for HZN-3.2 and will be addressed separately. */
 
 @layer base {
   * {

@@ -1,0 +1,3327 @@
+{
+  "_meta": {
+    "source": "https://api.example.contentgrid.com",
+    "fetchedFromApp": true,
+    "entityCount": 15,
+    "anonymised": true
+  },
+  "profileRoot": {
+    "_links": {
+      "self": {
+        "href": "https://api.example.contentgrid.com/profile"
+      },
+      "cg:entity": [
+        {
+          "href": "https://api.example.contentgrid.com/profile/customers",
+          "title": "Customer",
+          "name": "customer"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/create-alloweds",
+          "title": "Create allowed",
+          "name": "create-allowed"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/orders",
+          "title": "Order",
+          "name": "order"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/suppliers",
+          "title": "Supplier",
+          "name": "supplier"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/all-attributes",
+          "title": "All attribute",
+          "name": "all-attribute"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/read-alloweds",
+          "title": "Read allowed",
+          "name": "read-allowed"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/all-requireds",
+          "title": "All required",
+          "name": "all-required"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/related-items",
+          "title": "Related item",
+          "name": "related-item"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/many-relations",
+          "title": "Many relation",
+          "name": "many-relation"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/employees",
+          "title": "Employee",
+          "name": "employee"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/empties",
+          "title": "Empty",
+          "name": "empty"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/partially-alloweds",
+          "title": "Partially allowed",
+          "name": "partially-allowed"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/products",
+          "title": "Product",
+          "name": "product"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/not-alloweds",
+          "title": "Not allowed",
+          "name": "not-allowed"
+        },
+        {
+          "href": "https://api.example.contentgrid.com/profile/update-alloweds",
+          "title": "Update allowed",
+          "name": "update-allowed"
+        }
+      ],
+      "curies": [
+        {
+          "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+          "name": "cg",
+          "templated": true
+        },
+        {
+          "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+          "name": "blueprint",
+          "templated": true
+        }
+      ]
+    },
+    "_templates": {}
+  },
+  "profiles": {
+    "customer": {
+      "name": "customer",
+      "title": "Customer",
+      "description": "Represents a customer with contact details who makes orders.",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": "The name of the customer.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "name~prefix",
+                  "title": "Name",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "email",
+            "title": "Email",
+            "type": "string",
+            "description": "The email address of the customer, which must be unique.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "email",
+                  "title": "Email",
+                  "type": "exact-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "phone_number",
+            "title": "Phone number",
+            "type": "string",
+            "description": "The phone number of the customer.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "address",
+            "title": "Address",
+            "type": "string",
+            "description": "The physical address of the customer.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "orders",
+            "title": "Orders",
+            "description": "Represents the orders placed by a customer.",
+            "many_source_per_target": false,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/orders",
+                "title": "Order"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/customers",
+          "title": "Customer"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/customers",
+            "title": "Customers",
+            "profile": "https://api.example.contentgrid.com/profile/customers",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/customers/{id}",
+            "title": "Customer",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/customers",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/customers",
+          "properties": [
+            {
+              "name": "name~prefix",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "email",
+              "prompt": "Email",
+              "type": "text"
+            },
+            {
+              "name": "_sort",
+              "prompt": "Sort",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "promptField": "prompt",
+                "valueField": "value",
+                "inline": [
+                  {
+                    "property": "email",
+                    "direction": "asc",
+                    "prompt": "Email A→Z",
+                    "value": "email,asc"
+                  },
+                  {
+                    "property": "email",
+                    "direction": "desc",
+                    "prompt": "Email Z→A",
+                    "value": "email,desc"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/customers",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "email",
+              "prompt": "Email",
+              "type": "text"
+            },
+            {
+              "name": "phone_number",
+              "prompt": "Phone number",
+              "type": "text"
+            },
+            {
+              "name": "address",
+              "prompt": "Address",
+              "type": "text"
+            },
+            {
+              "name": "orders",
+              "prompt": "Orders",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/orders",
+                  "title": "Orders"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "create-allowed": {
+      "name": "create-allowed",
+      "title": "Create allowed",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/create-alloweds",
+          "title": "Create allowed"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/create-alloweds",
+            "title": "Create alloweds",
+            "profile": "https://api.example.contentgrid.com/profile/create-alloweds",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/create-alloweds/{id}",
+            "title": "Create allowed",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/create-alloweds",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/create-alloweds",
+          "properties": []
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/create-alloweds",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            }
+          ]
+        }
+      }
+    },
+    "order": {
+      "name": "order",
+      "title": "Order",
+      "description": "Represents an order placed by a customer, consisting of various products.",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "order_number",
+            "title": "Order number",
+            "type": "string",
+            "description": "The unique order number assigned to this order.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "type": "unique"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "order_date",
+            "title": "Order date",
+            "type": "datetime",
+            "description": "The date and time when the order was placed.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "total_amount",
+            "title": "Total amount",
+            "type": "double",
+            "description": "The total amount for the order.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "document",
+            "title": "Document",
+            "type": "object",
+            "description": "A file attachment representing the document associated with the order.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  "name": "filename",
+                  "title": "Filename",
+                  "type": "string",
+                  "description": null,
+                  "readOnly": false,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "mimetype",
+                  "title": "Mimetype",
+                  "type": "string",
+                  "description": "Technical indicator of the type of the file",
+                  "readOnly": false,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "length",
+                  "title": "Size",
+                  "type": "long",
+                  "description": "File size in bytes",
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                }
+              ]
+            },
+            "_links": {}
+          },
+          {
+            "name": "receipt",
+            "title": "Receipt",
+            "type": "object",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  "name": "filename",
+                  "title": "Filename",
+                  "type": "string",
+                  "description": null,
+                  "readOnly": false,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "mimetype",
+                  "title": "Mimetype",
+                  "type": "string",
+                  "description": "Technical indicator of the type of the file",
+                  "readOnly": false,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "length",
+                  "title": "Size",
+                  "type": "long",
+                  "description": "File size in bytes",
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                }
+              ]
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "products",
+            "title": "Products",
+            "description": "Represents the products included in an order.",
+            "many_source_per_target": true,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/products",
+                "title": "Product"
+              }
+            }
+          },
+          {
+            "name": "customer",
+            "title": "Customer",
+            "description": null,
+            "many_source_per_target": true,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/customers",
+                "title": "Customer"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/orders",
+          "title": "Order"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/orders",
+            "title": "Orders",
+            "profile": "https://api.example.contentgrid.com/profile/orders",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/orders/{id}",
+            "title": "Order",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/orders",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/orders",
+          "properties": [
+            {
+              "name": "products.product_name~prefix",
+              "prompt": "Products: Product name",
+              "type": "text"
+            },
+            {
+              "name": "customer.name~prefix",
+              "prompt": "Customer: Name",
+              "type": "text"
+            },
+            {
+              "name": "customer.email",
+              "prompt": "Customer: Email",
+              "type": "text"
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/orders",
+          "contentType": "multipart/form-data",
+          "properties": [
+            {
+              "name": "order_number",
+              "prompt": "Order number",
+              "type": "text"
+            },
+            {
+              "name": "order_date",
+              "prompt": "Order date",
+              "type": "datetime"
+            },
+            {
+              "name": "total_amount",
+              "prompt": "Total amount",
+              "type": "number"
+            },
+            {
+              "name": "document",
+              "prompt": "Document",
+              "type": "file"
+            },
+            {
+              "name": "receipt",
+              "prompt": "Receipt",
+              "type": "file"
+            },
+            {
+              "name": "products",
+              "prompt": "Products",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/products",
+                  "title": "Products"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "customer",
+              "prompt": "Customer",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/customers",
+                  "title": "Customers"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "supplier": {
+      "name": "supplier",
+      "title": "Supplier",
+      "description": "Represents a supplier who provides products.",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": "The name of the supplier.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "name~prefix",
+                  "title": "Name",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "contact_email",
+            "title": "Contact email",
+            "type": "string",
+            "description": "The contact email address of the supplier.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "phone_number",
+            "title": "Phone number",
+            "type": "string",
+            "description": "The phone number of the supplier.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "products",
+            "title": "Products",
+            "description": "Represents the products supplied by a supplier.",
+            "many_source_per_target": false,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/products",
+                "title": "Product"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/suppliers",
+          "title": "Supplier"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/suppliers",
+            "title": "Suppliers",
+            "profile": "https://api.example.contentgrid.com/profile/suppliers",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/suppliers/{id}",
+            "title": "Supplier",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/suppliers",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/suppliers",
+          "properties": [
+            {
+              "name": "name~prefix",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "products.product_name~prefix",
+              "prompt": "Products: Product name",
+              "type": "text"
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/suppliers",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "contact_email",
+              "prompt": "Contact email",
+              "type": "text"
+            },
+            {
+              "name": "phone_number",
+              "prompt": "Phone number",
+              "type": "text"
+            },
+            {
+              "name": "products",
+              "prompt": "Products",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/products",
+                  "title": "Products"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "all-attribute": {
+      "name": "all-attribute",
+      "title": "All attribute",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "text",
+            "title": "Text",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "text",
+                  "title": "Text",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "text~prefix",
+                  "title": "Text",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "long",
+            "title": "Long",
+            "type": "long",
+            "description": "A long integer attribute",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "long",
+                  "title": "Long",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "long~gt",
+                  "title": "Long: Greater than",
+                  "type": "greater-than"
+                },
+                {
+                  "name": "long~gte",
+                  "title": "Long: Min",
+                  "type": "greater-than-or-equal"
+                },
+                {
+                  "name": "long~lt",
+                  "title": "Long: Less than",
+                  "type": "less-than"
+                },
+                {
+                  "name": "long~lte",
+                  "title": "Long: Max",
+                  "type": "less-than-or-equal"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "double",
+            "title": "Double",
+            "type": "double",
+            "description": "A double precision floating-point attribute",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "double",
+                  "title": "Double",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "double~gt",
+                  "title": "Double: Greater than",
+                  "type": "greater-than"
+                },
+                {
+                  "name": "double~gte",
+                  "title": "Double: Min",
+                  "type": "greater-than-or-equal"
+                },
+                {
+                  "name": "double~lt",
+                  "title": "Double: Less than",
+                  "type": "less-than"
+                },
+                {
+                  "name": "double~lte",
+                  "title": "Double: Max",
+                  "type": "less-than-or-equal"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "boolean",
+            "title": "Boolean",
+            "type": "boolean",
+            "description": "A boolean attribute",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "boolean",
+                  "title": "Boolean",
+                  "type": "exact-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "datetime",
+            "title": "Datetime",
+            "type": "datetime",
+            "description": "A datetime attribute",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "datetime",
+                  "title": "Datetime",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "datetime~after",
+                  "title": "Datetime: After",
+                  "type": "greater-than"
+                },
+                {
+                  "name": "datetime~before",
+                  "title": "Datetime: Before",
+                  "type": "less-than"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "content",
+            "title": "Content",
+            "type": "object",
+            "description": "A content attribute representing documents",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  "name": "filename",
+                  "title": "Filename",
+                  "type": "string",
+                  "description": null,
+                  "readOnly": false,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "mimetype",
+                  "title": "Mimetype",
+                  "type": "string",
+                  "description": "Technical indicator of the type of the file",
+                  "readOnly": false,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "length",
+                  "title": "Size",
+                  "type": "long",
+                  "description": "File size in bytes",
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                }
+              ]
+            },
+            "_links": {}
+          },
+          {
+            "name": "audit_metadata",
+            "title": "Audit metadata",
+            "type": "object",
+            "description": "An audit metadata attribute for tracking entity changes",
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  "name": "created_by",
+                  "title": "created_by",
+                  "type": "string",
+                  "description": null,
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "created_date",
+                  "title": "created_date",
+                  "type": "datetime",
+                  "description": null,
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "last_modified_by",
+                  "title": "last_modified_by",
+                  "type": "string",
+                  "description": null,
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                },
+                {
+                  "name": "last_modified_date",
+                  "title": "last_modified_date",
+                  "type": "datetime",
+                  "description": null,
+                  "readOnly": true,
+                  "required": false,
+                  "_embedded": {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": []
+                  },
+                  "_links": {}
+                }
+              ]
+            },
+            "_links": {}
+          },
+          {
+            "name": "constrained_text",
+            "title": "Constrained text",
+            "type": "string",
+            "description": "A constrained string attribute",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "values": ["Constraint A", "Constraint B", "Constraint C"],
+                  "type": "allowed-values"
+                }
+              ],
+              "blueprint:search-param": [
+                {
+                  "name": "constrained_text",
+                  "title": "Constrained text",
+                  "type": "exact-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/all-attributes",
+          "title": "All attribute"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/all-attributes",
+            "title": "All attributes",
+            "profile": "https://api.example.contentgrid.com/profile/all-attributes",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/all-attributes/{id}",
+            "title": "All attribute",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/all-attributes",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/all-attributes",
+          "properties": [
+            {
+              "name": "text",
+              "prompt": "Text",
+              "type": "text"
+            },
+            {
+              "name": "text~prefix",
+              "prompt": "Text",
+              "type": "text"
+            },
+            {
+              "name": "long",
+              "prompt": "Long",
+              "type": "number"
+            },
+            {
+              "name": "long~gt",
+              "prompt": "Long: Greater than",
+              "type": "number"
+            },
+            {
+              "name": "long~gte",
+              "prompt": "Long: Min",
+              "type": "number"
+            },
+            {
+              "name": "long~lt",
+              "prompt": "Long: Less than",
+              "type": "number"
+            },
+            {
+              "name": "long~lte",
+              "prompt": "Long: Max",
+              "type": "number"
+            },
+            {
+              "name": "double",
+              "prompt": "Double",
+              "type": "number"
+            },
+            {
+              "name": "double~gt",
+              "prompt": "Double: Greater than",
+              "type": "number"
+            },
+            {
+              "name": "double~gte",
+              "prompt": "Double: Min",
+              "type": "number"
+            },
+            {
+              "name": "double~lt",
+              "prompt": "Double: Less than",
+              "type": "number"
+            },
+            {
+              "name": "double~lte",
+              "prompt": "Double: Max",
+              "type": "number"
+            },
+            {
+              "name": "boolean",
+              "prompt": "Boolean",
+              "type": "checkbox"
+            },
+            {
+              "name": "datetime",
+              "prompt": "Datetime",
+              "type": "datetime"
+            },
+            {
+              "name": "datetime~after",
+              "prompt": "Datetime: After",
+              "type": "datetime"
+            },
+            {
+              "name": "datetime~before",
+              "prompt": "Datetime: Before",
+              "type": "datetime"
+            },
+            {
+              "name": "constrained_text",
+              "prompt": "Constrained text",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "maxItems": 1,
+                "inline": ["Constraint A", "Constraint B", "Constraint C"]
+              }
+            },
+            {
+              "name": "_sort",
+              "prompt": "Sort",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "promptField": "prompt",
+                "valueField": "value",
+                "inline": [
+                  {
+                    "property": "text",
+                    "direction": "asc",
+                    "prompt": "Text A→Z",
+                    "value": "text,asc"
+                  },
+                  {
+                    "property": "text",
+                    "direction": "desc",
+                    "prompt": "Text Z→A",
+                    "value": "text,desc"
+                  },
+                  {
+                    "property": "long",
+                    "direction": "asc",
+                    "prompt": "Long 0→9",
+                    "value": "long,asc"
+                  },
+                  {
+                    "property": "long",
+                    "direction": "desc",
+                    "prompt": "Long 9→0",
+                    "value": "long,desc"
+                  },
+                  {
+                    "property": "double",
+                    "direction": "asc",
+                    "prompt": "Double 0→9",
+                    "value": "double,asc"
+                  },
+                  {
+                    "property": "double",
+                    "direction": "desc",
+                    "prompt": "Double 9→0",
+                    "value": "double,desc"
+                  },
+                  {
+                    "property": "boolean",
+                    "direction": "asc",
+                    "prompt": "Boolean ascending",
+                    "value": "boolean,asc"
+                  },
+                  {
+                    "property": "boolean",
+                    "direction": "desc",
+                    "prompt": "Boolean descending",
+                    "value": "boolean,desc"
+                  },
+                  {
+                    "property": "datetime",
+                    "direction": "asc",
+                    "prompt": "Datetime oldest first",
+                    "value": "datetime,asc"
+                  },
+                  {
+                    "property": "datetime",
+                    "direction": "desc",
+                    "prompt": "Datetime newest first",
+                    "value": "datetime,desc"
+                  },
+                  {
+                    "property": "constrained_text",
+                    "direction": "asc",
+                    "prompt": "Constrained text A→Z",
+                    "value": "constrained_text,asc"
+                  },
+                  {
+                    "property": "constrained_text",
+                    "direction": "desc",
+                    "prompt": "Constrained text Z→A",
+                    "value": "constrained_text,desc"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/all-attributes",
+          "contentType": "multipart/form-data",
+          "properties": [
+            {
+              "name": "text",
+              "prompt": "Text",
+              "type": "text"
+            },
+            {
+              "name": "long",
+              "prompt": "Long",
+              "type": "number"
+            },
+            {
+              "name": "double",
+              "prompt": "Double",
+              "type": "number"
+            },
+            {
+              "name": "boolean",
+              "prompt": "Boolean",
+              "type": "checkbox"
+            },
+            {
+              "name": "datetime",
+              "prompt": "Datetime",
+              "type": "datetime"
+            },
+            {
+              "name": "content",
+              "prompt": "Content",
+              "type": "file"
+            },
+            {
+              "name": "constrained_text",
+              "prompt": "Constrained text",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "maxItems": 1,
+                "inline": ["Constraint A", "Constraint B", "Constraint C"]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "read-allowed": {
+      "name": "read-allowed",
+      "title": "Read allowed",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "long_text",
+            "title": "Long text",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/read-alloweds",
+          "title": "Read allowed"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/read-alloweds",
+            "title": "Read alloweds",
+            "profile": "https://api.example.contentgrid.com/profile/read-alloweds",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/read-alloweds/{id}",
+            "title": "Read allowed",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/read-alloweds",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/read-alloweds",
+          "properties": []
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/read-alloweds",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "long_text",
+              "prompt": "Long text",
+              "type": "text"
+            }
+          ]
+        }
+      }
+    },
+    "all-required": {
+      "name": "all-required",
+      "title": "All required",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "reqtest",
+            "title": "Reqtest",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": true,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "type": "required"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "req_int",
+            "title": "Req int",
+            "type": "long",
+            "description": null,
+            "readOnly": false,
+            "required": true,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "type": "required"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "req_datum",
+            "title": "Req datum",
+            "type": "datetime",
+            "description": null,
+            "readOnly": false,
+            "required": true,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "type": "required"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "req_bool",
+            "title": "Req bool",
+            "type": "boolean",
+            "description": null,
+            "readOnly": false,
+            "required": true,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "type": "required"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/all-requireds",
+          "title": "All required"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/all-requireds",
+            "title": "All requireds",
+            "profile": "https://api.example.contentgrid.com/profile/all-requireds",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/all-requireds/{id}",
+            "title": "All required",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/all-requireds",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/all-requireds",
+          "properties": []
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/all-requireds",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "reqtest",
+              "prompt": "Reqtest",
+              "required": true,
+              "type": "text"
+            },
+            {
+              "name": "req_int",
+              "prompt": "Req int",
+              "required": true,
+              "type": "number"
+            },
+            {
+              "name": "req_datum",
+              "prompt": "Req datum",
+              "required": true,
+              "type": "datetime"
+            },
+            {
+              "name": "req_bool",
+              "prompt": "Req bool",
+              "required": true,
+              "type": "checkbox"
+            }
+          ]
+        }
+      }
+    },
+    "related-item": {
+      "name": "related-item",
+      "title": "Related item",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "name",
+                  "title": "Name",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "name~prefix",
+                  "title": "Name",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "receiver_many_related_items",
+            "title": "Receiver many related items",
+            "description": null,
+            "many_source_per_target": true,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/many-relations",
+                "title": "Many relation"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/related-items",
+          "title": "Related item"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/related-items",
+            "title": "Related items",
+            "profile": "https://api.example.contentgrid.com/profile/related-items",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/related-items/{id}",
+            "title": "Related item",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/related-items",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/related-items",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "name~prefix",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "receiver_many_related_items.name",
+              "prompt": "Receiver many related items: Name",
+              "type": "text"
+            },
+            {
+              "name": "receiver_many_related_items.name~prefix",
+              "prompt": "Receiver many related items: Name",
+              "type": "text"
+            },
+            {
+              "name": "_sort",
+              "prompt": "Sort",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "promptField": "prompt",
+                "valueField": "value",
+                "inline": [
+                  {
+                    "property": "name",
+                    "direction": "asc",
+                    "prompt": "Name A→Z",
+                    "value": "name,asc"
+                  },
+                  {
+                    "property": "name",
+                    "direction": "desc",
+                    "prompt": "Name Z→A",
+                    "value": "name,desc"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/related-items",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "receiver_many_related_items",
+              "prompt": "Receiver many related items",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/many-relations",
+                  "title": "Many relations"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "many-relation": {
+      "name": "many-relation",
+      "title": "Many relation",
+      "description": "An entity with many related items",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "name",
+                  "title": "Name",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "name~prefix",
+                  "title": "Name",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "related_item_optional",
+            "title": "Related item optional",
+            "description": null,
+            "many_source_per_target": false,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/related-items",
+                "title": "Related item"
+              }
+            }
+          },
+          {
+            "name": "many_related_items",
+            "title": "Many related items",
+            "description": null,
+            "many_source_per_target": false,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/related-items",
+                "title": "Related item"
+              }
+            }
+          },
+          {
+            "name": "one_relation",
+            "title": "One relation",
+            "description": null,
+            "many_source_per_target": false,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/many-relations",
+                "title": "Many relation"
+              }
+            }
+          },
+          {
+            "name": "received_relation",
+            "title": "Received relation",
+            "description": null,
+            "many_source_per_target": false,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/many-relations",
+                "title": "Many relation"
+              }
+            }
+          },
+          {
+            "name": "many_self_relations",
+            "title": "Many self relations",
+            "description": null,
+            "many_source_per_target": false,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/many-relations",
+                "title": "Many relation"
+              }
+            }
+          },
+          {
+            "name": "many_self_relations_inverse",
+            "title": "Many self relations inverse",
+            "description": null,
+            "many_source_per_target": false,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/many-relations",
+                "title": "Many relation"
+              }
+            }
+          },
+          {
+            "name": "many_to_one_items",
+            "title": "Many to one items",
+            "description": null,
+            "many_source_per_target": true,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/related-items",
+                "title": "Related item"
+              }
+            }
+          },
+          {
+            "name": "many_not_allowed",
+            "title": "Many not allowed",
+            "description": null,
+            "many_source_per_target": true,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/not-alloweds",
+                "title": "Not allowed"
+              }
+            }
+          },
+          {
+            "name": "many_partially_allowed",
+            "title": "Many partially allowed",
+            "description": null,
+            "many_source_per_target": true,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/partially-alloweds",
+                "title": "Partially allowed"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/many-relations",
+          "title": "Many relation"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/many-relations",
+            "title": "Many relations",
+            "profile": "https://api.example.contentgrid.com/profile/many-relations",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/many-relations/{id}",
+            "title": "Many relation",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/many-relations",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/many-relations",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "name~prefix",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "related_item_optional.name",
+              "prompt": "Related item optional: Name",
+              "type": "text"
+            },
+            {
+              "name": "related_item_optional.name~prefix",
+              "prompt": "Related item optional: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_self_relations.name",
+              "prompt": "Many self relations: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_self_relations.name~prefix",
+              "prompt": "Many self relations: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_self_relations_inverse.name",
+              "prompt": "Many self relations inverse: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_self_relations_inverse.name~prefix",
+              "prompt": "Many self relations inverse: Name",
+              "type": "text"
+            },
+            {
+              "name": "one_relation.name",
+              "prompt": "One relation: Name",
+              "type": "text"
+            },
+            {
+              "name": "one_relation.name~prefix",
+              "prompt": "One relation: Name",
+              "type": "text"
+            },
+            {
+              "name": "received_relation.name",
+              "prompt": "Received relation: Name",
+              "type": "text"
+            },
+            {
+              "name": "received_relation.name~prefix",
+              "prompt": "Received relation: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_related_items.name",
+              "prompt": "Many related items: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_related_items.name~prefix",
+              "prompt": "Many related items: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_partially_allowed.number",
+              "prompt": "Many partially allowed: Number",
+              "type": "number"
+            },
+            {
+              "name": "many_partially_allowed.number~gt",
+              "prompt": "Many partially allowed: Number: Greater than",
+              "type": "number"
+            },
+            {
+              "name": "many_partially_allowed.number~gte",
+              "prompt": "Many partially allowed: Number: Min",
+              "type": "number"
+            },
+            {
+              "name": "many_partially_allowed.number~lt",
+              "prompt": "Many partially allowed: Number: Less than",
+              "type": "number"
+            },
+            {
+              "name": "many_partially_allowed.number~lte",
+              "prompt": "Many partially allowed: Number: Max",
+              "type": "number"
+            },
+            {
+              "name": "many_to_one_items.name",
+              "prompt": "Many to one items: Name",
+              "type": "text"
+            },
+            {
+              "name": "many_to_one_items.name~prefix",
+              "prompt": "Many to one items: Name",
+              "type": "text"
+            },
+            {
+              "name": "_sort",
+              "prompt": "Sort",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "promptField": "prompt",
+                "valueField": "value",
+                "inline": [
+                  {
+                    "property": "name",
+                    "direction": "asc",
+                    "prompt": "Name A→Z",
+                    "value": "name,asc"
+                  },
+                  {
+                    "property": "name",
+                    "direction": "desc",
+                    "prompt": "Name Z→A",
+                    "value": "name,desc"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/many-relations",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "related_item_optional",
+              "prompt": "Related item optional",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/related-items",
+                  "title": "Related items"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "many_related_items",
+              "prompt": "Many related items",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/related-items",
+                  "title": "Related items"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "one_relation",
+              "prompt": "One relation",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/many-relations",
+                  "title": "Many relations"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "received_relation",
+              "prompt": "Received relation",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/many-relations",
+                  "title": "Many relations"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "many_self_relations",
+              "prompt": "Many self relations",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/many-relations",
+                  "title": "Many relations"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "many_self_relations_inverse",
+              "prompt": "Many self relations inverse",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/many-relations",
+                  "title": "Many relations"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "many_to_one_items",
+              "prompt": "Many to one items",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/related-items",
+                  "title": "Related items"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "many_not_allowed",
+              "prompt": "Many not allowed",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/not-alloweds",
+                  "title": "Not alloweds"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "many_partially_allowed",
+              "prompt": "Many partially allowed",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/partially-alloweds",
+                  "title": "Partially alloweds"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "employee": {
+      "name": "employee",
+      "title": "Employee",
+      "description": "Represents an employee who manages orders.",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": "The name of the employee.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "name~prefix",
+                  "title": "Name",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "position",
+            "title": "Position",
+            "type": "string",
+            "description": "The position or job title of the employee.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "values": ["Administration", "Boss", "Order Manager"],
+                  "type": "allowed-values"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "colleague",
+            "title": "Colleague",
+            "description": "The colleagues of this employee",
+            "many_source_per_target": true,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/employees",
+                "title": "Employee"
+              }
+            }
+          },
+          {
+            "name": "boss",
+            "title": "Boss",
+            "description": "The boss of this employee",
+            "many_source_per_target": true,
+            "many_target_per_source": false,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/employees",
+                "title": "Employee"
+              }
+            }
+          },
+          {
+            "name": "managed_orders",
+            "title": "Managed orders",
+            "description": "Represents the orders managed by an employee.",
+            "many_source_per_target": false,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/orders",
+                "title": "Order"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/employees",
+          "title": "Employee"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/employees",
+            "title": "Employees",
+            "profile": "https://api.example.contentgrid.com/profile/employees",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/employees/{id}",
+            "title": "Employee",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/employees",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/employees",
+          "properties": [
+            {
+              "name": "name~prefix",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "colleague.name~prefix",
+              "prompt": "Colleague: Name",
+              "type": "text"
+            },
+            {
+              "name": "boss.name~prefix",
+              "prompt": "Boss: Name",
+              "type": "text"
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/employees",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            },
+            {
+              "name": "position",
+              "prompt": "Position",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "maxItems": 1,
+                "inline": ["Administration", "Boss", "Order Manager"]
+              }
+            },
+            {
+              "name": "colleague",
+              "prompt": "Colleague",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/employees",
+                  "title": "Employees"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "boss",
+              "prompt": "Boss",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/employees",
+                  "title": "Employees"
+                },
+                "minItems": 0,
+                "maxItems": 1,
+                "valueField": "/_links/self/href"
+              }
+            },
+            {
+              "name": "managed_orders",
+              "prompt": "Managed orders",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/orders",
+                  "title": "Orders"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "empty": {
+      "name": "empty",
+      "title": "Empty",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/empties",
+          "title": "Empty"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/empties",
+            "title": "Empties",
+            "profile": "https://api.example.contentgrid.com/profile/empties",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/empties/{id}",
+            "title": "Empty",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/empties",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/empties",
+          "properties": []
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/empties",
+          "contentType": "application/json",
+          "properties": []
+        }
+      }
+    },
+    "partially-allowed": {
+      "name": "partially-allowed",
+      "title": "Partially allowed",
+      "description": "Only allowed if number is lesser than 10",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "number",
+            "title": "Number",
+            "type": "double",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "number",
+                  "title": "Number",
+                  "type": "exact-match"
+                },
+                {
+                  "name": "number~gt",
+                  "title": "Number: Greater than",
+                  "type": "greater-than"
+                },
+                {
+                  "name": "number~gte",
+                  "title": "Number: Min",
+                  "type": "greater-than-or-equal"
+                },
+                {
+                  "name": "number~lt",
+                  "title": "Number: Less than",
+                  "type": "less-than"
+                },
+                {
+                  "name": "number~lte",
+                  "title": "Number: Max",
+                  "type": "less-than-or-equal"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "allowed",
+            "title": "Allowed",
+            "type": "boolean",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": [
+          {
+            "name": "relations",
+            "title": "Relations",
+            "description": null,
+            "many_source_per_target": true,
+            "many_target_per_source": true,
+            "required": false,
+            "_links": {
+              "blueprint:target-entity": {
+                "href": "https://api.example.contentgrid.com/profile/many-relations",
+                "title": "Many relation"
+              }
+            }
+          }
+        ]
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/partially-alloweds",
+          "title": "Partially allowed"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/partially-alloweds",
+            "title": "Partially alloweds",
+            "profile": "https://api.example.contentgrid.com/profile/partially-alloweds",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/partially-alloweds/{id}",
+            "title": "Partially allowed",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/partially-alloweds",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/partially-alloweds",
+          "properties": [
+            {
+              "name": "number",
+              "prompt": "Number",
+              "type": "number"
+            },
+            {
+              "name": "number~gt",
+              "prompt": "Number: Greater than",
+              "type": "number"
+            },
+            {
+              "name": "number~gte",
+              "prompt": "Number: Min",
+              "type": "number"
+            },
+            {
+              "name": "number~lt",
+              "prompt": "Number: Less than",
+              "type": "number"
+            },
+            {
+              "name": "number~lte",
+              "prompt": "Number: Max",
+              "type": "number"
+            },
+            {
+              "name": "relations.name",
+              "prompt": "Relations: Name",
+              "type": "text"
+            },
+            {
+              "name": "relations.name~prefix",
+              "prompt": "Relations: Name",
+              "type": "text"
+            },
+            {
+              "name": "_sort",
+              "prompt": "Sort",
+              "type": "text",
+              "options": {
+                "minItems": 0,
+                "promptField": "prompt",
+                "valueField": "value",
+                "inline": [
+                  {
+                    "property": "number",
+                    "direction": "asc",
+                    "prompt": "Number 0→9",
+                    "value": "number,asc"
+                  },
+                  {
+                    "property": "number",
+                    "direction": "desc",
+                    "prompt": "Number 9→0",
+                    "value": "number,desc"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/partially-alloweds",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "number",
+              "prompt": "Number",
+              "type": "number"
+            },
+            {
+              "name": "allowed",
+              "prompt": "Allowed",
+              "type": "checkbox"
+            },
+            {
+              "name": "relations",
+              "prompt": "Relations",
+              "type": "url",
+              "options": {
+                "link": {
+                  "href": "https://api.example.contentgrid.com/many-relations",
+                  "title": "Many relations"
+                },
+                "minItems": 0,
+                "valueField": "/_links/self/href"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "product": {
+      "name": "product",
+      "title": "Product",
+      "description": "Represents a product that can be ordered by customers.",
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "product_name",
+            "title": "Product name",
+            "type": "string",
+            "description": "The name of the product.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                {
+                  "name": "product_name~prefix",
+                  "title": "Product name",
+                  "type": "prefix-match"
+                }
+              ],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "product_code",
+            "title": "Product code",
+            "type": "string",
+            "description": "The unique code assigned to the product.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [
+                {
+                  "type": "unique"
+                }
+              ],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "price",
+            "title": "Price",
+            "type": "double",
+            "description": "The price of the product.",
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/products",
+          "title": "Product"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/products",
+            "title": "Products",
+            "profile": "https://api.example.contentgrid.com/profile/products",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/products/{id}",
+            "title": "Product",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/products",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/products",
+          "properties": [
+            {
+              "name": "product_name~prefix",
+              "prompt": "Product name",
+              "type": "text"
+            }
+          ]
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/products",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "product_name",
+              "prompt": "Product name",
+              "type": "text"
+            },
+            {
+              "name": "product_code",
+              "prompt": "Product code",
+              "type": "text"
+            },
+            {
+              "name": "price",
+              "prompt": "Price",
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    "not-allowed": {
+      "name": "not-allowed",
+      "title": "Not allowed",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/not-alloweds",
+          "title": "Not allowed"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/not-alloweds",
+            "title": "Not alloweds",
+            "profile": "https://api.example.contentgrid.com/profile/not-alloweds",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/not-alloweds/{id}",
+            "title": "Not allowed",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/not-alloweds",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/not-alloweds",
+          "properties": []
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/not-alloweds",
+          "contentType": "application/json",
+          "properties": []
+        }
+      }
+    },
+    "update-allowed": {
+      "name": "update-allowed",
+      "title": "Update allowed",
+      "description": null,
+      "_embedded": {
+        "blueprint:attribute": [
+          {
+            "name": "id",
+            "title": "id",
+            "type": "string",
+            "description": null,
+            "readOnly": true,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          },
+          {
+            "name": "name",
+            "title": "Name",
+            "type": "string",
+            "description": null,
+            "readOnly": false,
+            "required": false,
+            "_embedded": {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": []
+            },
+            "_links": {}
+          }
+        ],
+        "blueprint:relation": []
+      },
+      "_links": {
+        "self": {
+          "href": "https://api.example.contentgrid.com/profile/update-alloweds",
+          "title": "Update allowed"
+        },
+        "describes": [
+          {
+            "href": "https://api.example.contentgrid.com/update-alloweds",
+            "title": "Update alloweds",
+            "profile": "https://api.example.contentgrid.com/profile/update-alloweds",
+            "name": "collection"
+          },
+          {
+            "href": "https://api.example.contentgrid.com/update-alloweds/{id}",
+            "title": "Update allowed",
+            "name": "item",
+            "templated": true
+          }
+        ],
+        "curies": [
+          {
+            "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            "name": "cg",
+            "templated": true
+          },
+          {
+            "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+            "name": "blueprint",
+            "templated": true
+          }
+        ]
+      },
+      "_templates": {
+        "default": {
+          "method": "HEAD",
+          "target": "https://api.example.contentgrid.com/update-alloweds",
+          "properties": []
+        },
+        "search": {
+          "method": "GET",
+          "target": "https://api.example.contentgrid.com/update-alloweds",
+          "properties": []
+        },
+        "create-form": {
+          "method": "POST",
+          "target": "https://api.example.contentgrid.com/update-alloweds",
+          "contentType": "application/json",
+          "properties": [
+            {
+              "name": "name",
+              "prompt": "Name",
+              "type": "text"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

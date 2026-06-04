@@ -1,0 +1,109 @@
+/*
+ * ContentGrid design tokens
+ *
+ * Naming convention: --cg-<category>-<name>
+ *
+ * The `--cg-` prefix is intentional: it avoids collision with the shadcn/ui
+ * semantic layer (--background, --primary, etc.) and with Tailwind's own
+ * CSS variable namespace. All raw values live here; the preset.css semantic
+ * layer references these tokens, and the Tailwind @theme block references the
+ * semantic layer. Consumers get everything transitively via the preset import.
+ *
+ * Categories:
+ *   --cg-color-*         Raw colour palette
+ *   --cg-space-*         Spacing scale
+ *   --cg-radius-*        Border-radius scale
+ *   --cg-font-size-*     Typography — font sizes
+ *   --cg-line-height-*   Typography — line heights (paired with font sizes)
+ *   --cg-shadow-*        Elevation / box-shadow
+ */
+
+:root {
+  /* -------------------------------------------------------------------------
+   * Raw colour palette
+   * ------------------------------------------------------------------------- */
+
+  /* Blues */
+  --cg-color-ocean: #084772;
+  --cg-color-ocean-700: #0a3d62;
+  --cg-color-sky: #019be3;
+  --cg-color-sky-50: #eef7fc;
+  --cg-color-steel: #557891;
+  --cg-color-midnight: #021826;
+
+  /* Greys / neutrals */
+  --cg-color-mist: #f4f7fa;
+  --cg-color-frost: #fafdff;
+  --cg-color-line: #ebeef2;
+  --cg-color-line-soft: #f1f4f7;
+
+  /* Text */
+  --cg-color-text: #0e2436;
+  --cg-color-text-dim: #405b6d;
+  --cg-color-text-muted: #4f6f87;
+  --cg-color-header-dim: #b1cfe7;
+  --cg-color-link-text: #064c79;
+
+  /* Accent / status */
+  --cg-color-amber: #b85b1f;
+  --cg-color-amber-light: #7a3d14;
+  --cg-color-danger: #b3261e;
+  --cg-color-green: #2f7a55;
+
+  /* UI chrome */
+  --cg-color-card-border: #7899b0;
+  --cg-color-sky-extract: rgba(1, 155, 227, 0.16);
+  --cg-color-sky-extract-ring: rgba(1, 155, 227, 0.55);
+
+  /* -------------------------------------------------------------------------
+   * Spacing scale
+   * ------------------------------------------------------------------------- */
+
+  --cg-space-1: 0.25rem; /* 4px */
+  --cg-space-2: 0.5rem; /* 8px */
+  --cg-space-4: 1rem; /* 16px */
+  --cg-space-6: 1.5rem; /* 24px */
+  --cg-space-8: 2rem; /* 32px */
+  --cg-space-16: 4rem; /* 64px */
+
+  /* -------------------------------------------------------------------------
+   * Border-radius scale
+   * ------------------------------------------------------------------------- */
+
+  --cg-radius: 0.625rem;
+  --cg-radius-sm: calc(var(--cg-radius) - 4px);
+  --cg-radius-md: calc(var(--cg-radius) - 2px);
+  --cg-radius-lg: var(--cg-radius);
+
+  /* -------------------------------------------------------------------------
+   * Typography scale
+   * Paired font-size + line-height tokens; use together (e.g. font-size:
+   * var(--cg-font-size-base); line-height: var(--cg-line-height-base)).
+   * These are net-new and not yet consumed; adding them does not change any
+   * rendered output.
+   * ------------------------------------------------------------------------- */
+
+  --cg-font-size-xs: 0.75rem; /* 12px */
+  --cg-line-height-xs: 1rem; /* 16px */
+
+  --cg-font-size-sm: 0.875rem; /* 14px */
+  --cg-line-height-sm: 1.25rem; /* 20px */
+
+  --cg-font-size-base: 1rem; /* 16px */
+  --cg-line-height-base: 1.5rem; /* 24px */
+
+  --cg-font-size-lg: 1.125rem; /* 18px */
+  --cg-line-height-lg: 1.75rem; /* 28px */
+
+  --cg-font-size-xl: 1.25rem; /* 20px */
+  --cg-line-height-xl: 1.75rem; /* 28px */
+
+  --cg-font-size-2xl: 1.5rem; /* 24px */
+  --cg-line-height-2xl: 2rem; /* 32px */
+
+  /* -------------------------------------------------------------------------
+   * Elevation
+   * ------------------------------------------------------------------------- */
+
+  --cg-shadow-lg: 0 30px 70px -40px rgba(8, 29, 48, 0.22);
+}

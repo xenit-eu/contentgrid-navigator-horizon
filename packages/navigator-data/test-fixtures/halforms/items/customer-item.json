@@ -1,0 +1,89 @@
+{
+  "id": "a4d67647-18a2-4cbc-bfae-ddb348018b8b",
+  "name": null,
+  "email": null,
+  "phone_number": null,
+  "address": null,
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/customers/a4d67647-18a2-4cbc-bfae-ddb348018b8b",
+      "title": "Customer"
+    },
+    "cg:relation": [
+      {
+        "href": "https://api.example.contentgrid.com/customers/a4d67647-18a2-4cbc-bfae-ddb348018b8b/orders",
+        "title": "Orders",
+        "name": "orders"
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "add-orders": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/customers/a4d67647-18a2-4cbc-bfae-ddb348018b8b/orders",
+      "contentType": "text/uri-list",
+      "properties": [
+        {
+          "name": "orders",
+          "prompt": "Orders",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/orders",
+              "title": "Orders"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    },
+    "clear-orders": {
+      "method": "DELETE",
+      "target": "https://api.example.contentgrid.com/customers/a4d67647-18a2-4cbc-bfae-ddb348018b8b/orders",
+      "properties": []
+    },
+    "default": {
+      "method": "PUT",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "prompt": "Email",
+          "type": "text"
+        },
+        {
+          "name": "phone_number",
+          "prompt": "Phone number",
+          "type": "text"
+        },
+        {
+          "name": "address",
+          "prompt": "Address",
+          "type": "text"
+        }
+      ]
+    },
+    "delete": {
+      "method": "DELETE",
+      "properties": []
+    }
+  }
+}

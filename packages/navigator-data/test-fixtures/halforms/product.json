@@ -1,0 +1,148 @@
+{
+  "name": "product",
+  "title": "Product",
+  "description": "Represents a product that can be ordered by customers.",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "product_name",
+        "title": "Product name",
+        "type": "string",
+        "description": "The name of the product.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "product_name~prefix",
+              "title": "Product name",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "product_code",
+        "title": "Product code",
+        "type": "string",
+        "description": "The unique code assigned to the product.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "type": "unique"
+            }
+          ],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "price",
+        "title": "Price",
+        "type": "double",
+        "description": "The price of the product.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": []
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/products",
+      "title": "Product"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/products",
+        "title": "Products",
+        "profile": "https://api.example.contentgrid.com/profile/products",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/products/{id}",
+        "title": "Product",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/products",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/products",
+      "properties": [
+        {
+          "name": "product_name~prefix",
+          "prompt": "Product name",
+          "type": "text"
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/products",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "product_name",
+          "prompt": "Product name",
+          "type": "text"
+        },
+        {
+          "name": "product_code",
+          "prompt": "Product code",
+          "type": "text"
+        },
+        {
+          "name": "price",
+          "prompt": "Price",
+          "type": "number"
+        }
+      ]
+    }
+  }
+}
