@@ -1,0 +1,171 @@
+{
+  "name": "all-required",
+  "title": "All required",
+  "description": null,
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "reqtest",
+        "title": "Reqtest",
+        "type": "string",
+        "description": null,
+        "readOnly": false,
+        "required": true,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "type": "required"
+            }
+          ],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "req_int",
+        "title": "Req int",
+        "type": "long",
+        "description": null,
+        "readOnly": false,
+        "required": true,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "type": "required"
+            }
+          ],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "req_datum",
+        "title": "Req datum",
+        "type": "datetime",
+        "description": null,
+        "readOnly": false,
+        "required": true,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "type": "required"
+            }
+          ],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "req_bool",
+        "title": "Req bool",
+        "type": "boolean",
+        "description": null,
+        "readOnly": false,
+        "required": true,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "type": "required"
+            }
+          ],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": []
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/all-requireds",
+      "title": "All required"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/all-requireds",
+        "title": "All requireds",
+        "profile": "https://api.example.contentgrid.com/profile/all-requireds",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/all-requireds/{id}",
+        "title": "All required",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/all-requireds",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/all-requireds",
+      "properties": []
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/all-requireds",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "reqtest",
+          "prompt": "Reqtest",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "name": "req_int",
+          "prompt": "Req int",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "name": "req_datum",
+          "prompt": "Req datum",
+          "required": true,
+          "type": "datetime"
+        },
+        {
+          "name": "req_bool",
+          "prompt": "Req bool",
+          "required": true,
+          "type": "checkbox"
+        }
+      ]
+    }
+  }
+}

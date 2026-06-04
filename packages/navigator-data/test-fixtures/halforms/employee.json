@@ -1,0 +1,228 @@
+{
+  "name": "employee",
+  "title": "Employee",
+  "description": "Represents an employee who manages orders.",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "name",
+        "title": "Name",
+        "type": "string",
+        "description": "The name of the employee.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "name~prefix",
+              "title": "Name",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "position",
+        "title": "Position",
+        "type": "string",
+        "description": "The position or job title of the employee.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "values": ["Administration", "Boss", "Order Manager"],
+              "type": "allowed-values"
+            }
+          ],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": [
+      {
+        "name": "colleague",
+        "title": "Colleague",
+        "description": "The colleagues of this employee",
+        "many_source_per_target": true,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/employees",
+            "title": "Employee"
+          }
+        }
+      },
+      {
+        "name": "boss",
+        "title": "Boss",
+        "description": "The boss of this employee",
+        "many_source_per_target": true,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/employees",
+            "title": "Employee"
+          }
+        }
+      },
+      {
+        "name": "managed_orders",
+        "title": "Managed orders",
+        "description": "Represents the orders managed by an employee.",
+        "many_source_per_target": false,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/orders",
+            "title": "Order"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/employees",
+      "title": "Employee"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/employees",
+        "title": "Employees",
+        "profile": "https://api.example.contentgrid.com/profile/employees",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/employees/{id}",
+        "title": "Employee",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/employees",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/employees",
+      "properties": [
+        {
+          "name": "name~prefix",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "colleague.name~prefix",
+          "prompt": "Colleague: Name",
+          "type": "text"
+        },
+        {
+          "name": "boss.name~prefix",
+          "prompt": "Boss: Name",
+          "type": "text"
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/employees",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "position",
+          "prompt": "Position",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "maxItems": 1,
+            "inline": ["Administration", "Boss", "Order Manager"]
+          }
+        },
+        {
+          "name": "colleague",
+          "prompt": "Colleague",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/employees",
+              "title": "Employees"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "boss",
+          "prompt": "Boss",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/employees",
+              "title": "Employees"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "managed_orders",
+          "prompt": "Managed orders",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/orders",
+              "title": "Orders"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    }
+  }
+}

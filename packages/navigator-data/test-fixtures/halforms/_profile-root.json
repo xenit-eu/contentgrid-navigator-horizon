@@ -1,0 +1,97 @@
+{
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile"
+    },
+    "cg:entity": [
+      {
+        "href": "https://api.example.contentgrid.com/profile/customers",
+        "title": "Customer",
+        "name": "customer"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/create-alloweds",
+        "title": "Create allowed",
+        "name": "create-allowed"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/orders",
+        "title": "Order",
+        "name": "order"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/suppliers",
+        "title": "Supplier",
+        "name": "supplier"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/all-attributes",
+        "title": "All attribute",
+        "name": "all-attribute"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/read-alloweds",
+        "title": "Read allowed",
+        "name": "read-allowed"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/all-requireds",
+        "title": "All required",
+        "name": "all-required"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/related-items",
+        "title": "Related item",
+        "name": "related-item"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/many-relations",
+        "title": "Many relation",
+        "name": "many-relation"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/employees",
+        "title": "Employee",
+        "name": "employee"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/empties",
+        "title": "Empty",
+        "name": "empty"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/partially-alloweds",
+        "title": "Partially allowed",
+        "name": "partially-allowed"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/products",
+        "title": "Product",
+        "name": "product"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/not-alloweds",
+        "title": "Not allowed",
+        "name": "not-allowed"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/profile/update-alloweds",
+        "title": "Update allowed",
+        "name": "update-allowed"
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {}
+}
