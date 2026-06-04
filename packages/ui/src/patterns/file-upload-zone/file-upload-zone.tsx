@@ -18,68 +18,6 @@ function formatFileSize(bytes: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// PDF thumbnail (optional preview for PDF files)
-// ---------------------------------------------------------------------------
-
-/**
- * Renders a canvas preview of the first page of a PDF using pdfjs-dist.
- * Silently omits the thumbnail if pdfjs-dist is unavailable.
- */
-function PdfThumbnail({ file }: { file: File }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function render() {
-      try {
-        // pdfjs-dist is an optional peer — not declared as a dep here;
-        // the dynamic import will succeed only if the consumer has it installed.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pdfjs: any = await import(/* @vite-ignore */ "pdfjs-dist" as string);
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.mjs",
-          import.meta.url,
-        ).toString();
-
-        const data = new Uint8Array(await file.arrayBuffer());
-        const doc = await pdfjs.getDocument({ data }).promise;
-        const page = await doc.getPage(1);
-
-        const canvas = canvasRef.current;
-        if (!canvas || cancelled) return;
-
-        const unscaledViewport = page.getViewport({ scale: 1 });
-        const scale = 160 / unscaledViewport.width;
-        const viewport = page.getViewport({ scale });
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        const ctx = canvas.getContext("2d")!;
-        await page.render({ canvas, canvasContext: ctx, viewport }).promise;
-        if (!cancelled) setReady(true);
-      } catch {
-        // Silently fail — thumbnail just won't show
-      }
-    }
-
-    render();
-    return () => {
-      cancelled = true;
-    };
-  }, [file]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className={cn("h-20 w-20 shrink-0 rounded border object-contain", !ready && "hidden")}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
@@ -152,14 +90,11 @@ export function FileUploadZone({ file, onFileChange, accept }: FileUploadZonePro
   // -------------------------------------------------------------------------
   if (file) {
     const isImage = file.type.startsWith("image/");
-    const isPdf = file.type === "application/pdf";
 
     return (
       <div className="flex items-center gap-3 rounded-md border p-3">
         {previewUrl && isImage ? (
           <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
-        ) : isPdf ? (
-          <PdfThumbnail file={file} />
         ) : (
           <Upload className="h-5 w-5 text-muted-foreground" />
         )}
