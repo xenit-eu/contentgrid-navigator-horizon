@@ -1,0 +1,226 @@
+{
+  "name": "customer",
+  "title": "Customer",
+  "description": "Represents a customer with contact details who makes orders.",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "name",
+        "title": "Name",
+        "type": "string",
+        "description": "The name of the customer.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "name~prefix",
+              "title": "Name",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "email",
+        "title": "Email",
+        "type": "string",
+        "description": "The email address of the customer, which must be unique.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "email",
+              "title": "Email",
+              "type": "exact-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "phone_number",
+        "title": "Phone number",
+        "type": "string",
+        "description": "The phone number of the customer.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "address",
+        "title": "Address",
+        "type": "string",
+        "description": "The physical address of the customer.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": [
+      {
+        "name": "orders",
+        "title": "Orders",
+        "description": "Represents the orders placed by a customer.",
+        "many_source_per_target": false,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/orders",
+            "title": "Order"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/customers",
+      "title": "Customer"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/customers",
+        "title": "Customers",
+        "profile": "https://api.example.contentgrid.com/profile/customers",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/customers/{id}",
+        "title": "Customer",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/customers",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/customers",
+      "properties": [
+        {
+          "name": "name~prefix",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "prompt": "Email",
+          "type": "text"
+        },
+        {
+          "name": "_sort",
+          "prompt": "Sort",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "promptField": "prompt",
+            "valueField": "value",
+            "inline": [
+              {
+                "property": "email",
+                "direction": "asc",
+                "prompt": "Email A→Z",
+                "value": "email,asc"
+              },
+              {
+                "property": "email",
+                "direction": "desc",
+                "prompt": "Email Z→A",
+                "value": "email,desc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/customers",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "prompt": "Email",
+          "type": "text"
+        },
+        {
+          "name": "phone_number",
+          "prompt": "Phone number",
+          "type": "text"
+        },
+        {
+          "name": "address",
+          "prompt": "Address",
+          "type": "text"
+        },
+        {
+          "name": "orders",
+          "prompt": "Orders",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/orders",
+              "title": "Orders"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    }
+  }
+}

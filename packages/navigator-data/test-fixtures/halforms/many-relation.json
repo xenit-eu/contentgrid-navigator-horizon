@@ -1,0 +1,485 @@
+{
+  "name": "many-relation",
+  "title": "Many relation",
+  "description": "An entity with many related items",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "name",
+        "title": "Name",
+        "type": "string",
+        "description": null,
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "name",
+              "title": "Name",
+              "type": "exact-match"
+            },
+            {
+              "name": "name~prefix",
+              "title": "Name",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": [
+      {
+        "name": "related_item_optional",
+        "title": "Related item optional",
+        "description": null,
+        "many_source_per_target": false,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/related-items",
+            "title": "Related item"
+          }
+        }
+      },
+      {
+        "name": "many_related_items",
+        "title": "Many related items",
+        "description": null,
+        "many_source_per_target": false,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/related-items",
+            "title": "Related item"
+          }
+        }
+      },
+      {
+        "name": "one_relation",
+        "title": "One relation",
+        "description": null,
+        "many_source_per_target": false,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/many-relations",
+            "title": "Many relation"
+          }
+        }
+      },
+      {
+        "name": "received_relation",
+        "title": "Received relation",
+        "description": null,
+        "many_source_per_target": false,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/many-relations",
+            "title": "Many relation"
+          }
+        }
+      },
+      {
+        "name": "many_self_relations",
+        "title": "Many self relations",
+        "description": null,
+        "many_source_per_target": false,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/many-relations",
+            "title": "Many relation"
+          }
+        }
+      },
+      {
+        "name": "many_self_relations_inverse",
+        "title": "Many self relations inverse",
+        "description": null,
+        "many_source_per_target": false,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/many-relations",
+            "title": "Many relation"
+          }
+        }
+      },
+      {
+        "name": "many_to_one_items",
+        "title": "Many to one items",
+        "description": null,
+        "many_source_per_target": true,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/related-items",
+            "title": "Related item"
+          }
+        }
+      },
+      {
+        "name": "many_not_allowed",
+        "title": "Many not allowed",
+        "description": null,
+        "many_source_per_target": true,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/not-alloweds",
+            "title": "Not allowed"
+          }
+        }
+      },
+      {
+        "name": "many_partially_allowed",
+        "title": "Many partially allowed",
+        "description": null,
+        "many_source_per_target": true,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/partially-alloweds",
+            "title": "Partially allowed"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/many-relations",
+      "title": "Many relation"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/many-relations",
+        "title": "Many relations",
+        "profile": "https://api.example.contentgrid.com/profile/many-relations",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/many-relations/{id}",
+        "title": "Many relation",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/many-relations",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/many-relations",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "name~prefix",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "related_item_optional.name",
+          "prompt": "Related item optional: Name",
+          "type": "text"
+        },
+        {
+          "name": "related_item_optional.name~prefix",
+          "prompt": "Related item optional: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_self_relations.name",
+          "prompt": "Many self relations: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_self_relations.name~prefix",
+          "prompt": "Many self relations: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_self_relations_inverse.name",
+          "prompt": "Many self relations inverse: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_self_relations_inverse.name~prefix",
+          "prompt": "Many self relations inverse: Name",
+          "type": "text"
+        },
+        {
+          "name": "one_relation.name",
+          "prompt": "One relation: Name",
+          "type": "text"
+        },
+        {
+          "name": "one_relation.name~prefix",
+          "prompt": "One relation: Name",
+          "type": "text"
+        },
+        {
+          "name": "received_relation.name",
+          "prompt": "Received relation: Name",
+          "type": "text"
+        },
+        {
+          "name": "received_relation.name~prefix",
+          "prompt": "Received relation: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_related_items.name",
+          "prompt": "Many related items: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_related_items.name~prefix",
+          "prompt": "Many related items: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_partially_allowed.number",
+          "prompt": "Many partially allowed: Number",
+          "type": "number"
+        },
+        {
+          "name": "many_partially_allowed.number~gt",
+          "prompt": "Many partially allowed: Number: Greater than",
+          "type": "number"
+        },
+        {
+          "name": "many_partially_allowed.number~gte",
+          "prompt": "Many partially allowed: Number: Min",
+          "type": "number"
+        },
+        {
+          "name": "many_partially_allowed.number~lt",
+          "prompt": "Many partially allowed: Number: Less than",
+          "type": "number"
+        },
+        {
+          "name": "many_partially_allowed.number~lte",
+          "prompt": "Many partially allowed: Number: Max",
+          "type": "number"
+        },
+        {
+          "name": "many_to_one_items.name",
+          "prompt": "Many to one items: Name",
+          "type": "text"
+        },
+        {
+          "name": "many_to_one_items.name~prefix",
+          "prompt": "Many to one items: Name",
+          "type": "text"
+        },
+        {
+          "name": "_sort",
+          "prompt": "Sort",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "promptField": "prompt",
+            "valueField": "value",
+            "inline": [
+              {
+                "property": "name",
+                "direction": "asc",
+                "prompt": "Name A→Z",
+                "value": "name,asc"
+              },
+              {
+                "property": "name",
+                "direction": "desc",
+                "prompt": "Name Z→A",
+                "value": "name,desc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/many-relations",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "related_item_optional",
+          "prompt": "Related item optional",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/related-items",
+              "title": "Related items"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "many_related_items",
+          "prompt": "Many related items",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/related-items",
+              "title": "Related items"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "one_relation",
+          "prompt": "One relation",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/many-relations",
+              "title": "Many relations"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "received_relation",
+          "prompt": "Received relation",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/many-relations",
+              "title": "Many relations"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "many_self_relations",
+          "prompt": "Many self relations",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/many-relations",
+              "title": "Many relations"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "many_self_relations_inverse",
+          "prompt": "Many self relations inverse",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/many-relations",
+              "title": "Many relations"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "many_to_one_items",
+          "prompt": "Many to one items",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/related-items",
+              "title": "Related items"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "many_not_allowed",
+          "prompt": "Many not allowed",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/not-alloweds",
+              "title": "Not alloweds"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        },
+        {
+          "name": "many_partially_allowed",
+          "prompt": "Many partially allowed",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/partially-alloweds",
+              "title": "Partially alloweds"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    }
+  }
+}
