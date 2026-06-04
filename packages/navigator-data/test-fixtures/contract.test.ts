@@ -10,11 +10,8 @@
  * schema and the test will fail in CI — surfacing the breakage before it ships.
  *
  * Scope: covers HalObject (links + embedded), HalSlice (pagination + embedded
- * items), HAL-Forms create template (create-form), and HAL-Forms update/default
- * template (default).
- *
- * TODO(ACC-2847): swap in Phase 0.5 halforms/ entity-profile fixtures as
- * additional contract inputs once HZN-0.5.4 lands.
+ * items), HAL-Forms create template (create-form), HAL-Forms update/default
+ * template (default), and Phase 0.5 entity-profile fixtures (halforms/*.json).
  */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -24,6 +21,23 @@ import {
   sampleInvoice,
   sampleInvoiceList,
 } from "./hal/fixtures";
+import profileRootFixture from "./halforms/_profile-root.json";
+// Phase 0.5 halforms entity-profile fixtures (ACC-2865 AC#4)
+import allAttributeFixture from "./halforms/all-attribute.json";
+import allRequiredFixture from "./halforms/all-required.json";
+import createAllowedFixture from "./halforms/create-allowed.json";
+import customerFixture from "./halforms/customer.json";
+import employeeFixture from "./halforms/employee.json";
+import emptyFixture from "./halforms/empty.json";
+import manyRelationFixture from "./halforms/many-relation.json";
+import notAllowedFixture from "./halforms/not-allowed.json";
+import orderFixture from "./halforms/order.json";
+import partiallyAllowedFixture from "./halforms/partially-allowed.json";
+import productFixture from "./halforms/product.json";
+import readAllowedFixture from "./halforms/read-allowed.json";
+import relatedItemFixture from "./halforms/related-item.json";
+import supplierFixture from "./halforms/supplier.json";
+import updateAllowedFixture from "./halforms/update-allowed.json";
 
 // ---------------------------------------------------------------------------
 // Minimal Zod schemas — assert ONLY the fields we depend on.
@@ -79,14 +93,34 @@ const HalSliceSchema = z.object({
 });
 
 /**
- * Mirror of HalFormsPropertyShape: name is mandatory; type, required, readOnly
- * are the fields we render/apply in forms.
+ * Mirror of HalFormsPropertyShape: name is mandatory; type, required, readOnly,
+ * prompt are the fields we render/apply in forms. options covers relation fields
+ * (options.link) and allowed-values constraints (options.inline).
  */
 const HalFormsPropertySchema = z.object({
   name: z.string(),
   type: z.string().optional(),
   required: z.boolean().optional(),
   readOnly: z.boolean().optional(),
+  // Real fixtures use "prompt" as the display label (not "title")
+  prompt: z.string().optional(),
+  title: z.string().optional(),
+  // options covers relation link fields and allowed-values constraints
+  options: z
+    .object({
+      link: z
+        .object({
+          href: z.string(),
+          title: z.string().optional(),
+        })
+        .optional(),
+      inline: z.array(z.unknown()).optional(),
+      minItems: z.number().optional(),
+      maxItems: z.number().optional(),
+      promptField: z.string().optional(),
+      valueField: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -99,6 +133,53 @@ const HalFormsTemplateSchema = z.object({
   contentType: z.string().optional(),
   title: z.string().optional(),
   properties: z.array(HalFormsPropertySchema),
+});
+
+/**
+ * Shape of a HAL-FORMS entity-profile response (GET /profile/<entity>).
+ * Asserts the fields the navigator depends on: name, _links.self,
+ * _links.describes (collection + item URLs), and _templates map.
+ * _embedded is passthrough — we verify presence but not internal structure.
+ */
+const EntityProfileSchema = z.object({
+  name: z.string(),
+  title: z.string().optional(),
+  _links: z.object({
+    self: LinkSchema,
+    // describes must contain at least collection and item URL entries
+    describes: z.array(
+      z.object({
+        href: z.string(),
+        name: z.string(),
+        templated: z.boolean().optional(),
+        title: z.string().optional(),
+        profile: z.string().optional(),
+      }),
+    ),
+  }),
+  // _templates is a record of template key → template; standard keys include
+  // "default", "create-form", "search", "delete"
+  _templates: z.record(z.string(), HalFormsTemplateSchema),
+  // _embedded present on all real fixtures; internal structure tested separately
+  _embedded: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
+ * Shape of the HAL-FORMS profile-root response (GET /profile).
+ * Asserts _links.self and the cg:entity array driving entity discovery.
+ */
+const ProfileRootSchema = z.object({
+  _links: z.object({
+    self: LinkSchema,
+    "cg:entity": z.array(
+      z.object({
+        href: z.string(),
+        name: z.string(),
+        title: z.string().optional(),
+      }),
+    ),
+  }),
+  _templates: z.record(z.string(), z.unknown()),
 });
 
 // ---------------------------------------------------------------------------
@@ -182,6 +263,114 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Phase 0.5 entity-profile fixtures — table-driven positive contract tests
+  // -------------------------------------------------------------------------
+
+  describe("Phase 0.5 entity-profile fixtures (ADR-014 AC#4)", () => {
+    it("_profile-root.json matches ProfileRootSchema", () => {
+      const result = ProfileRootSchema.safeParse(profileRootFixture);
+      expect(
+        result.success,
+        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+      ).toBe(true);
+    });
+
+    it("_profile-root.json has non-empty cg:entity list", () => {
+      const result = ProfileRootSchema.safeParse(profileRootFixture);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data._links["cg:entity"].length).toBeGreaterThan(0);
+      }
+    });
+
+    // Table-driven: one row per entity fixture file (15 fixtures)
+    const entityFixtures: Array<[string, unknown]> = [
+      ["all-attribute.json", allAttributeFixture],
+      ["all-required.json", allRequiredFixture],
+      ["create-allowed.json", createAllowedFixture],
+      ["customer.json", customerFixture],
+      ["employee.json", employeeFixture],
+      ["empty.json", emptyFixture],
+      ["many-relation.json", manyRelationFixture],
+      ["not-allowed.json", notAllowedFixture],
+      ["order.json", orderFixture],
+      ["partially-allowed.json", partiallyAllowedFixture],
+      ["product.json", productFixture],
+      ["read-allowed.json", readAllowedFixture],
+      ["related-item.json", relatedItemFixture],
+      ["supplier.json", supplierFixture],
+      ["update-allowed.json", updateAllowedFixture],
+    ];
+
+    it.each(entityFixtures)("%s matches EntityProfileSchema", (name, fixture) => {
+      const result = EntityProfileSchema.safeParse(fixture);
+      expect(
+        result.success,
+        `${name} parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+      ).toBe(true);
+    });
+
+    it.each(entityFixtures)(
+      "%s: _links.describes has collection and item entries",
+      (name, fixture) => {
+        const result = EntityProfileSchema.safeParse(fixture);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          const describes = result.data._links.describes;
+          const collection = describes.find((d) => d.name === "collection");
+          const item = describes.find((d) => d.name === "item");
+          expect(collection, `${name}: missing collection describes link`).toBeDefined();
+          expect(item, `${name}: missing item describes link`).toBeDefined();
+        }
+      },
+    );
+
+    it.each(entityFixtures)("%s: _templates.default exists with method HEAD", (name, fixture) => {
+      const result = EntityProfileSchema.safeParse(fixture);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const defaultTemplate = result.data._templates["default"];
+        expect(defaultTemplate, `${name}: missing _templates.default`).toBeDefined();
+        expect(defaultTemplate?.method, `${name}: default template method`).toBe("HEAD");
+      }
+    });
+
+    // Spot-check: relation field (type=url + options.link) parses in customer.json
+    it("customer.json create-form has relation field with options.link", () => {
+      const result = EntityProfileSchema.safeParse(customerFixture);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const createForm = result.data._templates["create-form"];
+        expect(createForm).toBeDefined();
+        if (createForm) {
+          const relationProp = createForm.properties.find(
+            (p) => p.type === "url" && p.options?.link !== undefined,
+          );
+          expect(
+            relationProp,
+            "customer create-form: missing url field with options.link",
+          ).toBeDefined();
+          expect(relationProp?.options?.link?.href).toEqual(expect.any(String));
+        }
+      }
+    });
+
+    // Spot-check: content/file field present in all-attribute.json create-form
+    it("all-attribute.json create-form has content/file field", () => {
+      const result = EntityProfileSchema.safeParse(allAttributeFixture);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const createForm = result.data._templates["create-form"];
+        expect(createForm).toBeDefined();
+        if (createForm) {
+          const fileProp = createForm.properties.find((p) => p.type === "file");
+          expect(fileProp, "all-attribute create-form: missing file field").toBeDefined();
+        }
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Negative tests — simulate upstream breaking shape changes; parse MUST fail.
   // These prove the contract layer would catch a real upstream regression.
   // -------------------------------------------------------------------------
@@ -237,6 +426,21 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
       });
 
       const result = strictSliceSchema.safeParse(brokenList);
+      expect(result.success).toBe(false);
+    });
+
+    it("EntityProfile: removing _links.describes breaks the profile contract", () => {
+      // Simulate a hypothetical upstream change where describes links are removed,
+      // which would break collection/item URL discovery.
+      const brokenProfile = {
+        ...customerFixture,
+        _links: {
+          ...customerFixture._links,
+          describes: undefined, // upstream removes describes links
+        },
+      };
+
+      const result = EntityProfileSchema.safeParse(brokenProfile);
       expect(result.success).toBe(false);
     });
   });
