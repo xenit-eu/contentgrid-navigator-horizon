@@ -1,0 +1,227 @@
+{
+  "name": "partially-allowed",
+  "title": "Partially allowed",
+  "description": "Only allowed if number is lesser than 10",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "number",
+        "title": "Number",
+        "type": "double",
+        "description": null,
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "number",
+              "title": "Number",
+              "type": "exact-match"
+            },
+            {
+              "name": "number~gt",
+              "title": "Number: Greater than",
+              "type": "greater-than"
+            },
+            {
+              "name": "number~gte",
+              "title": "Number: Min",
+              "type": "greater-than-or-equal"
+            },
+            {
+              "name": "number~lt",
+              "title": "Number: Less than",
+              "type": "less-than"
+            },
+            {
+              "name": "number~lte",
+              "title": "Number: Max",
+              "type": "less-than-or-equal"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "allowed",
+        "title": "Allowed",
+        "type": "boolean",
+        "description": null,
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": [
+      {
+        "name": "relations",
+        "title": "Relations",
+        "description": null,
+        "many_source_per_target": true,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/many-relations",
+            "title": "Many relation"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/partially-alloweds",
+      "title": "Partially allowed"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/partially-alloweds",
+        "title": "Partially alloweds",
+        "profile": "https://api.example.contentgrid.com/profile/partially-alloweds",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/partially-alloweds/{id}",
+        "title": "Partially allowed",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/partially-alloweds",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/partially-alloweds",
+      "properties": [
+        {
+          "name": "number",
+          "prompt": "Number",
+          "type": "number"
+        },
+        {
+          "name": "number~gt",
+          "prompt": "Number: Greater than",
+          "type": "number"
+        },
+        {
+          "name": "number~gte",
+          "prompt": "Number: Min",
+          "type": "number"
+        },
+        {
+          "name": "number~lt",
+          "prompt": "Number: Less than",
+          "type": "number"
+        },
+        {
+          "name": "number~lte",
+          "prompt": "Number: Max",
+          "type": "number"
+        },
+        {
+          "name": "relations.name",
+          "prompt": "Relations: Name",
+          "type": "text"
+        },
+        {
+          "name": "relations.name~prefix",
+          "prompt": "Relations: Name",
+          "type": "text"
+        },
+        {
+          "name": "_sort",
+          "prompt": "Sort",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "promptField": "prompt",
+            "valueField": "value",
+            "inline": [
+              {
+                "property": "number",
+                "direction": "asc",
+                "prompt": "Number 0→9",
+                "value": "number,asc"
+              },
+              {
+                "property": "number",
+                "direction": "desc",
+                "prompt": "Number 9→0",
+                "value": "number,desc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/partially-alloweds",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "number",
+          "prompt": "Number",
+          "type": "number"
+        },
+        {
+          "name": "allowed",
+          "prompt": "Allowed",
+          "type": "checkbox"
+        },
+        {
+          "name": "relations",
+          "prompt": "Relations",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/many-relations",
+              "title": "Many relations"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    }
+  }
+}

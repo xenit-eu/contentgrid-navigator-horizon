@@ -1,0 +1,179 @@
+{
+  "name": "related-item",
+  "title": "Related item",
+  "description": null,
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "name",
+        "title": "Name",
+        "type": "string",
+        "description": null,
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "name",
+              "title": "Name",
+              "type": "exact-match"
+            },
+            {
+              "name": "name~prefix",
+              "title": "Name",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": [
+      {
+        "name": "receiver_many_related_items",
+        "title": "Receiver many related items",
+        "description": null,
+        "many_source_per_target": true,
+        "many_target_per_source": false,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/many-relations",
+            "title": "Many relation"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/related-items",
+      "title": "Related item"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/related-items",
+        "title": "Related items",
+        "profile": "https://api.example.contentgrid.com/profile/related-items",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/related-items/{id}",
+        "title": "Related item",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/related-items",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/related-items",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "name~prefix",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "receiver_many_related_items.name",
+          "prompt": "Receiver many related items: Name",
+          "type": "text"
+        },
+        {
+          "name": "receiver_many_related_items.name~prefix",
+          "prompt": "Receiver many related items: Name",
+          "type": "text"
+        },
+        {
+          "name": "_sort",
+          "prompt": "Sort",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "promptField": "prompt",
+            "valueField": "value",
+            "inline": [
+              {
+                "property": "name",
+                "direction": "asc",
+                "prompt": "Name A→Z",
+                "value": "name,asc"
+              },
+              {
+                "property": "name",
+                "direction": "desc",
+                "prompt": "Name Z→A",
+                "value": "name,desc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/related-items",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "receiver_many_related_items",
+          "prompt": "Receiver many related items",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/many-relations",
+              "title": "Many relations"
+            },
+            "minItems": 0,
+            "maxItems": 1,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    }
+  }
+}
