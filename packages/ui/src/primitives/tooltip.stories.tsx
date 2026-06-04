@@ -17,7 +17,7 @@ export const Default: Story = {
     <TooltipProvider>
       <Tooltip defaultOpen>
         <TooltipTrigger asChild>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" aria-label="Info">
             <InfoIcon />
           </Button>
         </TooltipTrigger>

@@ -27,6 +27,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
+    "test:a11y": "pnpm --filter storybook test:a11y",
     "test:visual:update": "pnpm -r run --if-present test:visual:update"
   },
   "devDependencies": {
