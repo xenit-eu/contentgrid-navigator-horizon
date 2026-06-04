@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@contentgrid/features": "workspace:*",
@@ -22,6 +23,7 @@
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/navigator-data": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@playwright/test": "1.60.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/router-plugin": "^1.114.0",
     "@types/react": "^19.1.5",
