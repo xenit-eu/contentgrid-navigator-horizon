@@ -1,0 +1,74 @@
+{
+  "name": "not-allowed",
+  "title": "Not allowed",
+  "description": null,
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": []
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/not-alloweds",
+      "title": "Not allowed"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/not-alloweds",
+        "title": "Not alloweds",
+        "profile": "https://api.example.contentgrid.com/profile/not-alloweds",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/not-alloweds/{id}",
+        "title": "Not allowed",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/not-alloweds",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/not-alloweds",
+      "properties": []
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/not-alloweds",
+      "contentType": "application/json",
+      "properties": []
+    }
+  }
+}

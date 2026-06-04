@@ -1,0 +1,177 @@
+{
+  "name": "supplier",
+  "title": "Supplier",
+  "description": "Represents a supplier who provides products.",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "name",
+        "title": "Name",
+        "type": "string",
+        "description": "The name of the supplier.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "name~prefix",
+              "title": "Name",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "contact_email",
+        "title": "Contact email",
+        "type": "string",
+        "description": "The contact email address of the supplier.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "phone_number",
+        "title": "Phone number",
+        "type": "string",
+        "description": "The phone number of the supplier.",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": [
+      {
+        "name": "products",
+        "title": "Products",
+        "description": "Represents the products supplied by a supplier.",
+        "many_source_per_target": false,
+        "many_target_per_source": true,
+        "required": false,
+        "_links": {
+          "blueprint:target-entity": {
+            "href": "https://api.example.contentgrid.com/profile/products",
+            "title": "Product"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/suppliers",
+      "title": "Supplier"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/suppliers",
+        "title": "Suppliers",
+        "profile": "https://api.example.contentgrid.com/profile/suppliers",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/suppliers/{id}",
+        "title": "Supplier",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/suppliers",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/suppliers",
+      "properties": [
+        {
+          "name": "name~prefix",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "products.product_name~prefix",
+          "prompt": "Products: Product name",
+          "type": "text"
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/suppliers",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "name",
+          "prompt": "Name",
+          "type": "text"
+        },
+        {
+          "name": "contact_email",
+          "prompt": "Contact email",
+          "type": "text"
+        },
+        {
+          "name": "phone_number",
+          "prompt": "Phone number",
+          "type": "text"
+        },
+        {
+          "name": "products",
+          "prompt": "Products",
+          "type": "url",
+          "options": {
+            "link": {
+              "href": "https://api.example.contentgrid.com/products",
+              "title": "Products"
+            },
+            "minItems": 0,
+            "valueField": "/_links/self/href"
+          }
+        }
+      ]
+    }
+  }
+}

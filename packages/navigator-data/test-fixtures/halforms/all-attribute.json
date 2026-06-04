@@ -1,0 +1,598 @@
+{
+  "name": "all-attribute",
+  "title": "All attribute",
+  "description": null,
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "text",
+        "title": "Text",
+        "type": "string",
+        "description": null,
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "text",
+              "title": "Text",
+              "type": "exact-match"
+            },
+            {
+              "name": "text~prefix",
+              "title": "Text",
+              "type": "prefix-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "long",
+        "title": "Long",
+        "type": "long",
+        "description": "A long integer attribute",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "long",
+              "title": "Long",
+              "type": "exact-match"
+            },
+            {
+              "name": "long~gt",
+              "title": "Long: Greater than",
+              "type": "greater-than"
+            },
+            {
+              "name": "long~gte",
+              "title": "Long: Min",
+              "type": "greater-than-or-equal"
+            },
+            {
+              "name": "long~lt",
+              "title": "Long: Less than",
+              "type": "less-than"
+            },
+            {
+              "name": "long~lte",
+              "title": "Long: Max",
+              "type": "less-than-or-equal"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "double",
+        "title": "Double",
+        "type": "double",
+        "description": "A double precision floating-point attribute",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "double",
+              "title": "Double",
+              "type": "exact-match"
+            },
+            {
+              "name": "double~gt",
+              "title": "Double: Greater than",
+              "type": "greater-than"
+            },
+            {
+              "name": "double~gte",
+              "title": "Double: Min",
+              "type": "greater-than-or-equal"
+            },
+            {
+              "name": "double~lt",
+              "title": "Double: Less than",
+              "type": "less-than"
+            },
+            {
+              "name": "double~lte",
+              "title": "Double: Max",
+              "type": "less-than-or-equal"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "boolean",
+        "title": "Boolean",
+        "type": "boolean",
+        "description": "A boolean attribute",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "boolean",
+              "title": "Boolean",
+              "type": "exact-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "datetime",
+        "title": "Datetime",
+        "type": "datetime",
+        "description": "A datetime attribute",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            {
+              "name": "datetime",
+              "title": "Datetime",
+              "type": "exact-match"
+            },
+            {
+              "name": "datetime~after",
+              "title": "Datetime: After",
+              "type": "greater-than"
+            },
+            {
+              "name": "datetime~before",
+              "title": "Datetime: Before",
+              "type": "less-than"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "content",
+        "title": "Content",
+        "type": "object",
+        "description": "A content attribute representing documents",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": [
+            {
+              "name": "filename",
+              "title": "Filename",
+              "type": "string",
+              "description": null,
+              "readOnly": false,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "mimetype",
+              "title": "Mimetype",
+              "type": "string",
+              "description": "Technical indicator of the type of the file",
+              "readOnly": false,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "length",
+              "title": "Size",
+              "type": "long",
+              "description": "File size in bytes",
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            }
+          ]
+        },
+        "_links": {}
+      },
+      {
+        "name": "audit_metadata",
+        "title": "Audit metadata",
+        "type": "object",
+        "description": "An audit metadata attribute for tracking entity changes",
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": [
+            {
+              "name": "created_by",
+              "title": "created_by",
+              "type": "string",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "created_date",
+              "title": "created_date",
+              "type": "datetime",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "last_modified_by",
+              "title": "last_modified_by",
+              "type": "string",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "last_modified_date",
+              "title": "last_modified_date",
+              "type": "datetime",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            }
+          ]
+        },
+        "_links": {}
+      },
+      {
+        "name": "constrained_text",
+        "title": "Constrained text",
+        "type": "string",
+        "description": "A constrained string attribute",
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [
+            {
+              "values": ["Constraint A", "Constraint B", "Constraint C"],
+              "type": "allowed-values"
+            }
+          ],
+          "blueprint:search-param": [
+            {
+              "name": "constrained_text",
+              "title": "Constrained text",
+              "type": "exact-match"
+            }
+          ],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": []
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/all-attributes",
+      "title": "All attribute"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/all-attributes",
+        "title": "All attributes",
+        "profile": "https://api.example.contentgrid.com/profile/all-attributes",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/all-attributes/{id}",
+        "title": "All attribute",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/all-attributes",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/all-attributes",
+      "properties": [
+        {
+          "name": "text",
+          "prompt": "Text",
+          "type": "text"
+        },
+        {
+          "name": "text~prefix",
+          "prompt": "Text",
+          "type": "text"
+        },
+        {
+          "name": "long",
+          "prompt": "Long",
+          "type": "number"
+        },
+        {
+          "name": "long~gt",
+          "prompt": "Long: Greater than",
+          "type": "number"
+        },
+        {
+          "name": "long~gte",
+          "prompt": "Long: Min",
+          "type": "number"
+        },
+        {
+          "name": "long~lt",
+          "prompt": "Long: Less than",
+          "type": "number"
+        },
+        {
+          "name": "long~lte",
+          "prompt": "Long: Max",
+          "type": "number"
+        },
+        {
+          "name": "double",
+          "prompt": "Double",
+          "type": "number"
+        },
+        {
+          "name": "double~gt",
+          "prompt": "Double: Greater than",
+          "type": "number"
+        },
+        {
+          "name": "double~gte",
+          "prompt": "Double: Min",
+          "type": "number"
+        },
+        {
+          "name": "double~lt",
+          "prompt": "Double: Less than",
+          "type": "number"
+        },
+        {
+          "name": "double~lte",
+          "prompt": "Double: Max",
+          "type": "number"
+        },
+        {
+          "name": "boolean",
+          "prompt": "Boolean",
+          "type": "checkbox"
+        },
+        {
+          "name": "datetime",
+          "prompt": "Datetime",
+          "type": "datetime"
+        },
+        {
+          "name": "datetime~after",
+          "prompt": "Datetime: After",
+          "type": "datetime"
+        },
+        {
+          "name": "datetime~before",
+          "prompt": "Datetime: Before",
+          "type": "datetime"
+        },
+        {
+          "name": "constrained_text",
+          "prompt": "Constrained text",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "maxItems": 1,
+            "inline": ["Constraint A", "Constraint B", "Constraint C"]
+          }
+        },
+        {
+          "name": "_sort",
+          "prompt": "Sort",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "promptField": "prompt",
+            "valueField": "value",
+            "inline": [
+              {
+                "property": "text",
+                "direction": "asc",
+                "prompt": "Text A→Z",
+                "value": "text,asc"
+              },
+              {
+                "property": "text",
+                "direction": "desc",
+                "prompt": "Text Z→A",
+                "value": "text,desc"
+              },
+              {
+                "property": "long",
+                "direction": "asc",
+                "prompt": "Long 0→9",
+                "value": "long,asc"
+              },
+              {
+                "property": "long",
+                "direction": "desc",
+                "prompt": "Long 9→0",
+                "value": "long,desc"
+              },
+              {
+                "property": "double",
+                "direction": "asc",
+                "prompt": "Double 0→9",
+                "value": "double,asc"
+              },
+              {
+                "property": "double",
+                "direction": "desc",
+                "prompt": "Double 9→0",
+                "value": "double,desc"
+              },
+              {
+                "property": "boolean",
+                "direction": "asc",
+                "prompt": "Boolean ascending",
+                "value": "boolean,asc"
+              },
+              {
+                "property": "boolean",
+                "direction": "desc",
+                "prompt": "Boolean descending",
+                "value": "boolean,desc"
+              },
+              {
+                "property": "datetime",
+                "direction": "asc",
+                "prompt": "Datetime oldest first",
+                "value": "datetime,asc"
+              },
+              {
+                "property": "datetime",
+                "direction": "desc",
+                "prompt": "Datetime newest first",
+                "value": "datetime,desc"
+              },
+              {
+                "property": "constrained_text",
+                "direction": "asc",
+                "prompt": "Constrained text A→Z",
+                "value": "constrained_text,asc"
+              },
+              {
+                "property": "constrained_text",
+                "direction": "desc",
+                "prompt": "Constrained text Z→A",
+                "value": "constrained_text,desc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/all-attributes",
+      "contentType": "multipart/form-data",
+      "properties": [
+        {
+          "name": "text",
+          "prompt": "Text",
+          "type": "text"
+        },
+        {
+          "name": "long",
+          "prompt": "Long",
+          "type": "number"
+        },
+        {
+          "name": "double",
+          "prompt": "Double",
+          "type": "number"
+        },
+        {
+          "name": "boolean",
+          "prompt": "Boolean",
+          "type": "checkbox"
+        },
+        {
+          "name": "datetime",
+          "prompt": "Datetime",
+          "type": "datetime"
+        },
+        {
+          "name": "content",
+          "prompt": "Content",
+          "type": "file"
+        },
+        {
+          "name": "constrained_text",
+          "prompt": "Constrained text",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "maxItems": 1,
+            "inline": ["Constraint A", "Constraint B", "Constraint C"]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "name": "empty",
+  "title": "Empty",
+  "description": null,
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": []
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/empties",
+      "title": "Empty"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/empties",
+        "title": "Empties",
+        "profile": "https://api.example.contentgrid.com/profile/empties",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/empties/{id}",
+        "title": "Empty",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/empties",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/empties",
+      "properties": []
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/empties",
+      "contentType": "application/json",
+      "properties": []
+    }
+  }
+}
