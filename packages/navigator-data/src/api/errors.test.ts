@@ -15,18 +15,32 @@ describe("extractFieldErrors", () => {
   });
 
   it("extracts field errors from a validation problem detail", () => {
+    // Shape per ContentGrid platform: each sub-error extends ProblemDetail
+    // and carries property (attribute name) + invalid_value.
     const pd = {
       status: 400,
       title: "Validation failed",
       errors: [
-        { field: "name", message: "is required" },
-        { field: "email", message: "is invalid" },
+        { status: 422, title: "required", property: "name", invalid_value: null },
+        {
+          status: 422,
+          title: "duplicate",
+          detail: "must be unique",
+          property: "email",
+          invalid_value: "user@example.com",
+        },
       ],
     };
     const result = extractFieldErrors(new ProblemDetailError(pd));
     expect(result).toEqual([
-      { field: "name", message: "is required" },
-      { field: "email", message: "is invalid" },
+      { status: 422, title: "required", property: "name", invalid_value: null },
+      {
+        status: 422,
+        title: "duplicate",
+        detail: "must be unique",
+        property: "email",
+        invalid_value: "user@example.com",
+      },
     ]);
   });
 });

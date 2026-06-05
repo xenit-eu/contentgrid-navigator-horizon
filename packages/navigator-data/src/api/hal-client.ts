@@ -5,18 +5,35 @@ import type { TypedFetch } from "./client";
 
 export { resolveTemplate, resolveTemplateRequired } from "@contentgrid/hal-forms";
 
+/**
+ * Result of a single-resource HAL fetch.
+ * The ETag is returned verbatim (including surrounding quotes) and must be
+ * passed as If-Match on any subsequent PUT/PATCH to the same URL.
+ * See packages/navigator-data/CLAUDE.md — ETag / conditional-request pattern.
+ */
+export interface HalFetchResult<T> {
+  object: HalObject<T>;
+  /** ETag response header value, or null when the server did not send one. */
+  etag: string | null;
+}
+
 export async function fetchHal<T = Record<string, unknown>>(
   apiFetch: TypedFetch,
   url: string,
-): Promise<HalObject<T>> {
+): Promise<HalFetchResult<T>> {
   const response = await apiFetch(createRequest({ method: "GET", url }, {}));
+  const etag = response.headers.get("ETag");
   const json = await response.json();
-  return new HalObject<T>(json as unknown as HalObjectShape<T>);
+  return {
+    object: new HalObject<T>(json as unknown as HalObjectShape<T>),
+    etag,
+  };
 }
 
 export async function fetchHalSlice<T = Record<string, unknown>>(
   apiFetch: TypedFetch,
   url: string,
 ): Promise<HalSlice<T>> {
-  return HalSlice.from<T>(await fetchHal(apiFetch, url));
+  const { object } = await fetchHal(apiFetch, url);
+  return HalSlice.from<T>(object);
 }

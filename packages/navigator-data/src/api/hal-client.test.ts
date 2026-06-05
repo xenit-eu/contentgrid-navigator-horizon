@@ -27,11 +27,40 @@ describe("fetchHal", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    const result = await fetchHal(apiFetch, TEST_URL);
+    const { object } = await fetchHal(apiFetch, TEST_URL);
 
-    expect(result).toBeInstanceOf(HalObject);
-    expect((result.data as Record<string, unknown>).id).toBe("1");
-    expect((result.data as Record<string, unknown>).name).toBe("Test Entity");
+    expect(object).toBeInstanceOf(HalObject);
+    expect((object.data as Record<string, unknown>).id).toBe("1");
+    expect((object.data as Record<string, unknown>).name).toBe("Test Entity");
+  });
+
+  it("captures the ETag response header", async () => {
+    server.use(
+      http.get(TEST_URL, () =>
+        HttpResponse.json(
+          { id: "1", _links: { self: { href: TEST_URL } } },
+          { headers: { ETag: '"abc123"' } },
+        ),
+      ),
+    );
+
+    const apiFetch = createApiClient(noopSupplier);
+    const { etag } = await fetchHal(apiFetch, TEST_URL);
+
+    expect(etag).toBe('"abc123"');
+  });
+
+  it("returns null etag when the server sends no ETag header", async () => {
+    server.use(
+      http.get(TEST_URL, () =>
+        HttpResponse.json({ id: "1", _links: { self: { href: TEST_URL } } }),
+      ),
+    );
+
+    const apiFetch = createApiClient(noopSupplier);
+    const { etag } = await fetchHal(apiFetch, TEST_URL);
+
+    expect(etag).toBeNull();
   });
 
   it("throws ProblemDetailError on a 4xx problem detail response", async () => {
