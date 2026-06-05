@@ -39,7 +39,7 @@ export const OpenByDefault: Story = {
       <div className="flex items-center justify-between px-4">
         <span className="text-sm font-semibold">Advanced options</span>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" aria-label="Toggle advanced options">
             <ChevronsUpDown className="size-4" />
           </Button>
         </CollapsibleTrigger>
