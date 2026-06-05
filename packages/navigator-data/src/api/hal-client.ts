@@ -25,7 +25,7 @@ export async function fetchHal<T = Record<string, unknown>>(
   const etag = response.headers.get("ETag");
   const json = await response.json();
   return {
-    object: new HalObject<T>(json as unknown as HalObjectShape<T>),
+    object: new HalObject<T>(json as HalObjectShape<T>),
     etag,
   };
 }
