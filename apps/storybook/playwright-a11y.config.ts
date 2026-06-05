@@ -1,4 +1,4 @@
-import { makeStorybookPlaywrightConfig } from "./playwright.shared";
+import { makeStorybookPlaywrightConfig } from "./tests/playwright.shared";
 
 // `pnpm test:a11y` builds Storybook first, then runs this config.
 //

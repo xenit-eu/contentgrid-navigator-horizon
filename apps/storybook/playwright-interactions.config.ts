@@ -1,4 +1,4 @@
-import { makeStorybookPlaywrightConfig } from "./playwright.shared";
+import { makeStorybookPlaywrightConfig } from "./tests/playwright.shared";
 
 // `pnpm test:storybook` builds Storybook first, then runs this config.
 export default makeStorybookPlaywrightConfig({
