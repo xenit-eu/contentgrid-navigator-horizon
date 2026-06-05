@@ -1,10 +1,7 @@
-import {
-  type ProblemDetail,
-  ProblemDetailError,
-  checkResponse,
-} from "@contentgrid/problem-details";
+import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
 
-export { checkResponse, ProblemDetailError };
+export { checkResponse } from "@contentgrid/problem-details";
+export { ProblemDetailError };
 export type { ProblemDetail };
 
 export interface FieldError {

@@ -1,10 +1,9 @@
 import { HalObject, HalSlice } from "@contentgrid/hal";
-import { resolveTemplate, resolveTemplateRequired } from "@contentgrid/hal-forms";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { createRequest } from "@contentgrid/typed-fetch";
 import type { TypedFetch } from "./client";
 
-export { resolveTemplate, resolveTemplateRequired };
+export { resolveTemplate, resolveTemplateRequired } from "@contentgrid/hal-forms";
 
 export async function fetchHal<T = Record<string, unknown>>(
   apiFetch: TypedFetch,
