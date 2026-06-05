@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import type { EntityInfo, EntitySchema } from "../types/entity";
+import { convertToString } from "../utils/format";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import { fetchEntityList } from "./use-entity-list";
@@ -133,7 +134,7 @@ export function useCrossEntitySearch(query: string, options?: { size?: number })
               return [
                 {
                   label: attr.title,
-                  value: typeof val === "object" ? JSON.stringify(val) : String(val),
+                  value: convertToString(val),
                 },
               ];
             }),

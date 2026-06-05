@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import type { EntitySchema } from "../types/entity";
 import { findNameAttribute } from "../utils/entity-display-name";
+import { convertToString } from "../utils/format";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import { type EntityListResult, fetchEntityList } from "./use-entity-list";
@@ -20,8 +21,7 @@ function buildDetails(
   return attrs.slice(0, 3).flatMap((attr) => {
     const val = data[attr.name];
     if (val == null || val === "") return [];
-    if (typeof val === "object") return [{ label: attr.title, value: JSON.stringify(val) }];
-    return [{ label: attr.title, value: String(val) }];
+    return [{ label: attr.title, value: convertToString(val) }];
   });
 }
 

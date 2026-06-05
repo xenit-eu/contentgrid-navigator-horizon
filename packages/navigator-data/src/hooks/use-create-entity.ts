@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
 import { CONTENT_TYPE_JSON } from "../api/content-types";
 import type { EntityInfo } from "../types/entity";
+import { convertToString } from "../utils/format";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
@@ -26,11 +27,7 @@ export function useCreateEntity() {
         formData.append("content", params.file);
         for (const [key, value] of Object.entries(params.data)) {
           if (value == null) continue;
-          if (typeof value === "object") {
-            formData.append(key, JSON.stringify(value));
-          } else {
-            formData.append(key, String(value));
-          }
+          formData.append(key, convertToString(value));
         }
         const response = await apiFetch(
           createRequest(
