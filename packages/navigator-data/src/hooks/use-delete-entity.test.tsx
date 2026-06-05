@@ -104,7 +104,7 @@ describe("useDeleteEntity", () => {
       wrapper: makeWrapper(queryClient),
     });
 
-    act(() => {
+    await act(async () => {
       result.current.mutate({ entityName: "unknown-entity", entityId: "x-1" });
     });
 
