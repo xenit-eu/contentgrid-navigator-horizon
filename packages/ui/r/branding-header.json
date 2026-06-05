@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "branding-header",
+  "title": "Branding Header",
+  "description": "Full-width header bar with logo/branding slot and optional action area.",
+  "registryDependencies": ["separator", "utils"],
+  "files": [
+    {
+      "path": "src/patterns/branding-header/branding-header.tsx",
+      "content": "import * as React from \"react\";\nimport { cn } from \"../../lib/utils\";\nimport { Separator } from \"../../primitives/separator\";\n\n// ---------------------------------------------------------------------------\n// Public types\n// ---------------------------------------------------------------------------\n\nexport interface BrandingHeaderProps {\n  /** Application / tenant name shown as the primary heading */\n  title: string;\n  /** Optional tagline or secondary line below the title */\n  subtitle?: string;\n  /**\n   * URL of the logo image. When provided the image is displayed to the left\n   * of the title. When omitted the title is shown without an icon.\n   */\n  logoUrl?: string;\n  /** Alt text for the logo image; defaults to `\"${title} logo\"` */\n  logoAlt?: string;\n  /**\n   * Optional slot for actions rendered at the trailing end of the header\n   * (e.g. a user-menu button, theme toggle, or notification icon).\n   */\n  actions?: React.ReactNode;\n  /** Extra class names applied to the root <header> element */\n  className?: string;\n}\n\n// ---------------------------------------------------------------------------\n// Main export\n// ---------------------------------------------------------------------------\n\nexport function BrandingHeader({\n  title,\n  subtitle,\n  logoUrl,\n  logoAlt,\n  actions,\n  className,\n}: Readonly<BrandingHeaderProps>) {\n  return (\n    <header className={cn(\"flex h-14 items-center gap-3 border-b bg-background px-4\", className)}>\n      {/* Logo */}\n      {logoUrl && (\n        <>\n          <img\n            src={logoUrl}\n            alt={logoAlt ?? `${title} logo`}\n            className=\"h-8 w-8 shrink-0 rounded object-contain\"\n          />\n          <Separator orientation=\"vertical\" className=\"h-6\" />\n        </>\n      )}\n\n      {/* Brand text */}\n      <div className=\"flex min-w-0 flex-col\">\n        <span className=\"truncate text-sm font-semibold leading-none\">{title}</span>\n        {subtitle && (\n          <span className=\"truncate text-xs text-muted-foreground leading-none mt-0.5\">\n            {subtitle}\n          </span>\n        )}\n      </div>\n\n      {/* Spacer */}\n      <div className=\"flex-1\" />\n\n      {/* Trailing actions slot */}\n      {actions && <div className=\"flex shrink-0 items-center gap-2\">{actions}</div>}\n    </header>\n  );\n}\n",
+      "type": "registry:ui"
+    },
+    {
+      "path": "src/patterns/branding-header/index.ts",
+      "content": "export { BrandingHeader } from \"./branding-header\";\nexport type { BrandingHeaderProps } from \"./branding-header\";\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}
