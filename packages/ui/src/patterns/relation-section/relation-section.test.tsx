@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { RelationSection } from "./relation-section";
@@ -131,7 +131,7 @@ describe("RelationSection — many-to-many layout (default)", () => {
 
   it("confirms unlink and calls onUnlink with item id", async () => {
     const user = userEvent.setup();
-    const onUnlink = vi.fn();
+    const onUnlink = vi.fn().mockResolvedValue(undefined);
     renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink });
     const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
     await user.click(firstUnlink);
@@ -155,6 +155,31 @@ describe("RelationSection — many-to-many layout (default)", () => {
     const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
     await user.click(firstUnlink);
     expect(screen.getByRole("button", { name: "Unlinking..." })).toBeDisabled();
+  });
+
+  it("keeps dialog open and shows 'Unlinking...' while async onUnlink is pending", async () => {
+    const user = userEvent.setup();
+    let resolveUnlink!: () => void;
+    const onUnlink = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUnlink = resolve;
+        }),
+    );
+    renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink });
+    const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
+    await user.click(firstUnlink);
+    // Click the confirm button — onUnlink is now pending
+    await user.click(screen.getByRole("button", { name: "Unlink" }));
+    // Dialog should still be open with the disabled/loading state
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Unlinking..." })).toBeDisabled();
+    });
+    // Now resolve the promise — dialog should close
+    resolveUnlink();
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Unlinking..." })).not.toBeInTheDocument();
+    });
   });
 
   it("auto-resolves column keys from data when no columns prop provided", () => {
@@ -244,7 +269,7 @@ describe("RelationSection — many-to-one layout (isManyToOne=true)", () => {
 
   it("confirms unlink in compact card and calls onUnlink", async () => {
     const user = userEvent.setup();
-    const onUnlink = vi.fn();
+    const onUnlink = vi.fn().mockResolvedValue(undefined);
     renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS, onUnlink });
     await user.click(screen.getAllByRole("button", { name: /unlink/i })[0]);
     await user.click(screen.getByRole("button", { name: "Unlink" }));

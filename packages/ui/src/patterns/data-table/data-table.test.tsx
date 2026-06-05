@@ -96,6 +96,14 @@ describe("DataTable — row rendering", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
   });
 
+  it("renders object cell values as JSON rather than [object Object]", () => {
+    renderTable({
+      rows: [{ id: "1", data: { name: { first: "Alice", last: "Smith" }, status: "active" } }],
+    });
+    expect(screen.getByText('{"first":"Alice","last":"Smith"}')).toBeInTheDocument();
+    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  });
+
   it("calls onRowClick with row id when row is clicked", async () => {
     const user = userEvent.setup();
     const onRowClick = vi.fn();

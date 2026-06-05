@@ -9,7 +9,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn, formatCellValue } from "../../lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -183,7 +183,7 @@ export function DataTable({
                   >
                     {columns.map((col, i) => (
                       <TableCell key={col.key} className={cn(i === 0 && "pl-4")}>
-                        {row.data[col.key] == null ? "—" : String(row.data[col.key])}
+                        {formatCellValue(row.data[col.key])}
                       </TableCell>
                     ))}
                     {hasActions && (

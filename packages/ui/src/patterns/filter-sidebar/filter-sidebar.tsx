@@ -283,6 +283,33 @@ function DateFilter({
   );
 }
 
+function TextFilter({
+  label,
+  value,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: string;
+  onChange: (value: string | undefined) => void;
+}>) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <Input
+            type="text"
+            className="h-8 text-sm"
+            value={value}
+            onChange={(e) => onChange(e.target.value || undefined)}
+          />
+        </div>
+        <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -358,7 +385,14 @@ export function FilterSidebar({
                       );
                     }
 
-                    return null;
+                    return (
+                      <TextFilter
+                        key={prop.name}
+                        label={label}
+                        value={value}
+                        onChange={(v) => onFilterChange(prop.name, v)}
+                      />
+                    );
                   })
                 )}
               </div>

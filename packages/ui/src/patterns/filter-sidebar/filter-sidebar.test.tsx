@@ -82,11 +82,42 @@ describe("FilterSidebar — structure", () => {
 });
 
 describe("FilterSidebar — text filter (type=string, no options)", () => {
-  it("does not render a text input for plain string props (falls through to null)", () => {
-    // Plain string props without suffix hit the "return null" branch
+  it("renders a text input for plain string props", () => {
     renderSidebar([TEXT_PROP]);
-    // There's no rendered input because plain string type is not handled
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("renders the label for a plain string prop", () => {
+    renderSidebar([TEXT_PROP]);
+    expect(screen.getByText("Title")).toBeInTheDocument();
+  });
+
+  it("pre-fills the text input with the current filter value", () => {
+    renderSidebar([TEXT_PROP], { title: "hello" });
+    expect(screen.getByDisplayValue("hello")).toBeInTheDocument();
+  });
+
+  it("calls onFilterChange with the typed value on input change", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([TEXT_PROP], {}, { onFilterChange });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "world" } });
+    expect(onFilterChange).toHaveBeenCalledWith("title", "world");
+  });
+
+  it("calls onFilterChange with undefined when the text input is cleared", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([TEXT_PROP], { title: "hello" }, { onFilterChange });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
+    expect(onFilterChange).toHaveBeenCalledWith("title", undefined);
+  });
+
+  it("clears the text filter when the clear button is clicked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar([TEXT_PROP], { title: "hello" }, { onFilterChange });
+    const clearBtn = screen.getByRole("button");
+    await user.click(clearBtn);
+    expect(onFilterChange).toHaveBeenCalledWith("title", undefined);
   });
 });
 

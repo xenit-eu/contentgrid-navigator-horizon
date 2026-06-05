@@ -3,7 +3,6 @@ import { ChevronDown, ExternalLink, LinkIcon, Plus, Unlink } from "lucide-react"
 import { cn, formatCellValue } from "../../lib/utils";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -111,20 +110,28 @@ export function RelationSection({
   onViewItem,
 }: Readonly<RelationSectionProps>) {
   const [unlinkTarget, setUnlinkTarget] = useState<{ id: string; label: string } | null>(null);
+  const [isUnlinkingLocal, setIsUnlinkingLocal] = useState(false);
 
   const hasItems = !isLoading && !error && items && items.length > 0;
   const columnKeys = hasItems ? resolveColumnKeys(items, columns) : [];
 
-  function handleUnlink() {
-    if (!unlinkTarget) return;
-    onUnlink?.(unlinkTarget.id);
-    setUnlinkTarget(null);
+  const unlinkInFlight = isUnlinking ?? isUnlinkingLocal;
+
+  async function handleUnlink() {
+    if (!unlinkTarget || !onUnlink) return;
+    setIsUnlinkingLocal(true);
+    try {
+      await onUnlink(unlinkTarget.id);
+      setUnlinkTarget(null);
+    } finally {
+      setIsUnlinkingLocal(false);
+    }
   }
 
   const unlinkDialog = onUnlink ? (
     <AlertDialog
       open={unlinkTarget !== null}
-      onOpenChange={(open) => !open && setUnlinkTarget(null)}
+      onOpenChange={(open) => !open && !unlinkInFlight && setUnlinkTarget(null)}
     >
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
@@ -135,10 +142,10 @@ export function RelationSection({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={handleUnlink} disabled={isUnlinking}>
-            {isUnlinking ? "Unlinking..." : "Unlink"}
-          </AlertDialogAction>
+          <AlertDialogCancel disabled={unlinkInFlight}>Cancel</AlertDialogCancel>
+          <Button variant="destructive" onClick={handleUnlink} disabled={unlinkInFlight}>
+            {unlinkInFlight ? "Unlinking..." : "Unlink"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
