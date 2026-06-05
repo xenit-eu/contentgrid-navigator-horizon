@@ -33,6 +33,7 @@
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@types/react": "^19.1.5",
     "eslint": "^10.0.0",
     "typescript": "^5.8.3",
     "msw": "2.14.6",

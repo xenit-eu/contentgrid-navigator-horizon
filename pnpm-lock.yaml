@@ -341,6 +341,9 @@ importers:
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@types/react':
+        specifier: ^19.1.5
+        version: 19.2.14
       eslint:
         specifier: ^10.0.0
         version: 10.4.0(jiti@2.7.0)

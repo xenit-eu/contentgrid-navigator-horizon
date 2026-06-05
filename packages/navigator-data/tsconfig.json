@@ -1,6 +1,7 @@
 {
   "extends": "@contentgrid/tsconfig/tsconfig.base.json",
   "compilerOptions": {
+    "jsx": "react-jsx",
     "noEmit": true
   },
   "include": ["src", "test-fixtures"]
