@@ -13,6 +13,18 @@ export interface RecentActivityDetail {
   value: string;
 }
 
+function buildDetails(
+  attrs: EntitySchema["attributes"],
+  data: Record<string, unknown>,
+): RecentActivityDetail[] {
+  return attrs.slice(0, 3).flatMap((attr) => {
+    const val = data[attr.name];
+    if (val == null || val === "") return [];
+    const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+    return [{ label: attr.title, value: strVal }];
+  });
+}
+
 export interface RecentActivityItem {
   entityName: string;
   entityTitle: string;
@@ -119,12 +131,9 @@ export function useRecentActivity() {
             ? "modified"
             : "created";
 
-        const displayName = nameAttr ? String(item.data[nameAttr.name] ?? item.id) : item.id;
-        const details: RecentActivityDetail[] = detailAttrs.slice(0, 3).flatMap((attr) => {
-          const val = item.data[attr.name];
-          if (val == null || val === "") return [];
-          return [{ label: attr.title, value: String(val) }];
-        });
+        const nameVal = nameAttr ? item.data[nameAttr.name] : undefined;
+        const displayName = typeof nameVal === "string" && nameVal ? nameVal : item.id;
+        const details: RecentActivityDetail[] = buildDetails(detailAttrs, item.data);
 
         allItems.push({
           entityName: entity.name,

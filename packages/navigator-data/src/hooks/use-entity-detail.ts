@@ -26,7 +26,7 @@ async function fetchEntityDetail(
   const selfLink = object.links.findLink(ianaRelations.self);
 
   return {
-    data: { ...object.data } as Record<string, unknown>,
+    data: { ...object.data },
     selfHref: selfLink?.href ?? "",
     links: (object.data._links as Record<string, unknown>) ?? {},
     etag,
@@ -43,7 +43,7 @@ export function useEntityDetail(entityName: string, entityId: string) {
 
   return useQuery({
     queryKey: queryKeys.entityDetail(entityName, entityId),
-    queryFn: () => fetchEntityDetail(apiFetch, collectionHref!, entityId),
+    queryFn: () => fetchEntityDetail(apiFetch, collectionHref as string, entityId),
     enabled: !!entityName && !!entityId && !!collectionHref,
   });
 }

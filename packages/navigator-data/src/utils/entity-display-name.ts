@@ -5,6 +5,10 @@ function isTextLike(type: string): boolean {
   return t === "text" || t === "string";
 }
 
+function asString(val: unknown): string | undefined {
+  return typeof val === "string" && val.length > 0 ? val : undefined;
+}
+
 export function findNameAttribute(
   attributes: EntityAttribute[],
   configuredAttribute?: string | null,
@@ -29,16 +33,17 @@ export function resolveDisplayName(
 ): string {
   const nameAttr = findNameAttribute(attributes, configuredAttribute);
   if (nameAttr) {
-    const val = data[nameAttr.name];
-    if (typeof val === "string" && val.length > 0) return val;
+    const val = asString(data[nameAttr.name]);
+    if (val) return val;
   }
-  if (typeof data.title === "string" && data.title.length > 0) return data.title;
-  if (typeof data.name === "string" && data.name.length > 0) return data.name;
+  const titleVal = asString(data.title);
+  if (titleVal) return titleVal;
+  const nameVal = asString(data.name);
+  if (nameVal) return nameVal;
   for (const attr of attributes) {
-    if (attr.name === "id") continue;
-    if (!isTextLike(attr.type)) continue;
-    const val = data[attr.name];
-    if (typeof val === "string" && val.length > 0) return val;
+    if (attr.name === "id" || !isTextLike(attr.type)) continue;
+    const val = asString(data[attr.name]);
+    if (val) return val;
   }
   return `${itemId.substring(0, 8)}...`;
 }

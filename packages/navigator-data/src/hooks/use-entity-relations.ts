@@ -27,7 +27,7 @@ async function fetchEntityRelations(
         const selfLink = item.links.findLink(ianaRelations.self);
         const selfHref = selfLink?.href ?? "";
         return {
-          data: { ...item.data } as Record<string, unknown>,
+          data: { ...item.data },
           selfHref,
           id: selfHref.split("/").pop() ?? "",
         };
@@ -40,7 +40,7 @@ async function fetchEntityRelations(
     if (Object.keys(object.data).length === 0 && !selfLink) return [];
     return [
       {
-        data: { ...object.data } as Record<string, unknown>,
+        data: { ...object.data },
         selfHref,
         id: selfHref.split("/").pop() ?? "",
       },

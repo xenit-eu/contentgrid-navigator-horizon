@@ -28,30 +28,27 @@ export interface EntityListResult {
   prevHref?: string;
 }
 
+function buildCollectionUrl(collectionHref: string, params: EntityListParams): string {
+  if (params.cursor) return params.cursor;
+  const searchParams = new URLSearchParams();
+  if (params.size != null) searchParams.set("size", String(params.size));
+  if (params.sort) searchParams.set("_sort", params.sort);
+  if (params.search && params.searchField) searchParams.set(params.searchField, params.search);
+  if (params.filters) {
+    for (const [key, value] of Object.entries(params.filters)) {
+      if (value) searchParams.set(key, value);
+    }
+  }
+  const qs = searchParams.toString();
+  return qs ? `${collectionHref}?${qs}` : collectionHref;
+}
+
 export async function fetchEntityList(
   apiFetch: Parameters<typeof fetchHalSlice>[0],
   collectionHref: string,
   params: EntityListParams,
 ): Promise<EntityListResult> {
-  let url: string;
-  if (params.cursor) {
-    url = params.cursor;
-  } else {
-    const searchParams = new URLSearchParams();
-    if (params.size != null) searchParams.set("size", String(params.size));
-    if (params.sort) searchParams.set("_sort", params.sort);
-    if (params.search && params.searchField) {
-      searchParams.set(params.searchField, params.search);
-    }
-    if (params.filters) {
-      for (const [key, value] of Object.entries(params.filters)) {
-        if (value) searchParams.set(key, value);
-      }
-    }
-    const qs = searchParams.toString();
-    url = `${collectionHref}${qs ? `?${qs}` : ""}`;
-  }
-
+  const url = buildCollectionUrl(collectionHref, params);
   const slice = await fetchHalSlice<Record<string, unknown>>(apiFetch, url);
 
   const items = slice.items.map((item) => {
@@ -60,7 +57,7 @@ export async function fetchEntityList(
     const id = selfHref.split("/").pop() ?? "";
     const rawData = item.data as Record<string, unknown>;
     const links = (rawData._links as Record<string, unknown>) ?? {};
-    return { data: { ...rawData } as Record<string, unknown>, selfHref, id, links };
+    return { data: { ...rawData }, selfHref, id, links };
   });
 
   // page lives in slice.data (the raw JSON payload), not as a direct property on HalSlice
@@ -87,8 +84,8 @@ export function useEntityList(entityName: string, params: EntityListParams) {
   const collectionHref = entity?.collectionHref;
 
   return useQuery({
-    queryKey: queryKeys.entityList(entityName, params as unknown as Record<string, unknown>),
-    queryFn: () => fetchEntityList(apiFetch, collectionHref!, params),
+    queryKey: queryKeys.entityList(entityName, params as Record<string, unknown>),
+    queryFn: () => fetchEntityList(apiFetch, collectionHref as string, params),
     enabled: !!entityName && !!collectionHref,
   });
 }

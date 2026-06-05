@@ -104,11 +104,11 @@ describe("useDeleteEntity", () => {
       wrapper: makeWrapper(queryClient),
     });
 
-    await act(async () => {
-      await result.current.mutate({ entityName: "unknown-entity", entityId: "x-1" });
+    act(() => {
+      result.current.mutate({ entityName: "unknown-entity", entityId: "x-1" });
     });
 
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as Error).message).toMatch(/Unknown entity/);
   });
 });

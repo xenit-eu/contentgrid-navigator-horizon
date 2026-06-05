@@ -115,8 +115,8 @@ export async function fetchEntitySchema(
       prompt: p.prompt,
       type: p.type,
       options:
-        Array.isArray(p.options?.inline) && p.options!.inline.every((v) => typeof v === "string")
-          ? { inline: p.options!.inline as string[] }
+        Array.isArray(p.options?.inline) && p.options?.inline.every((v) => typeof v === "string")
+          ? { inline: p.options.inline }
           : undefined,
     }));
 
@@ -141,7 +141,7 @@ export async function fetchEntitySchema(
     .filter((p) => p.type === "url" && p.options?.link?.href)
     .map((p) => {
       const linkHref = p.options!.link!.href;
-      const targetEntityName = linkHref.split("/").filter(Boolean).pop() ?? p.name;
+      const targetEntityName = linkHref.split("/").at(-1) || p.name;
       const schemaRelation = relations.find((r) => r.name === p.name);
       return {
         name: p.name,

@@ -1,4 +1,4 @@
-import { type ReactNode, createContext, useContext } from "react";
+import { type ReactNode, createContext, useContext, useMemo } from "react";
 import type { TypedFetch } from "../api/client";
 
 export interface NavigatorDataContextValue {
@@ -20,11 +20,8 @@ export function NavigatorDataProvider({
   profileUrl,
   children,
 }: NavigatorDataContextValue & { children: ReactNode }) {
-  return (
-    <NavigatorDataContext.Provider value={{ apiFetch, profileUrl }}>
-      {children}
-    </NavigatorDataContext.Provider>
-  );
+  const value = useMemo(() => ({ apiFetch, profileUrl }), [apiFetch, profileUrl]);
+  return <NavigatorDataContext.Provider value={value}>{children}</NavigatorDataContext.Provider>;
 }
 
 export function useNavigatorData(): NavigatorDataContextValue {
