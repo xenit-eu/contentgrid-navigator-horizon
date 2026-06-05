@@ -18,40 +18,9 @@
  */
 import { AxeBuilder } from "@axe-core/playwright";
 import { test } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { loadStories } from "./story-index";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const indexPath = resolve(here, "../storybook-static/index.json");
-
-interface StoryEntry {
-  id: string;
-  type: string;
-  name: string;
-  title: string;
-  tags?: string[];
-}
-
-interface StorybookIndex {
-  entries: Record<string, StoryEntry>;
-}
-
-function loadStories(): StoryEntry[] {
-  let raw: string;
-  try {
-    raw = readFileSync(indexPath, "utf8");
-  } catch {
-    throw new Error(
-      `Storybook index not found at ${indexPath}. ` +
-        "Run `pnpm test:a11y` (which builds Storybook first) rather than invoking playwright directly.",
-    );
-  }
-  const index = JSON.parse(raw) as StorybookIndex;
-  return Object.values(index.entries).filter((entry) => entry.type === "story");
-}
-
-const stories = loadStories();
+const stories = loadStories(undefined, "test:a11y");
 
 test.describe("Storybook accessibility audit (axe-core)", () => {
   if (stories.length === 0) {

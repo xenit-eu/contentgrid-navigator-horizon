@@ -1,40 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { loadStories } from "./story-index";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const indexPath = resolve(here, "../storybook-static/index.json");
-
-interface StoryEntry {
-  id: string;
-  type: string;
-  name: string;
-  title: string;
-  tags?: string[];
-}
-
-interface StorybookIndex {
-  entries: Record<string, StoryEntry>;
-}
-
-function loadStories(): StoryEntry[] {
-  let raw: string;
-  try {
-    raw = readFileSync(indexPath, "utf8");
-  } catch {
-    throw new Error(
-      `Storybook index not found at ${indexPath}. ` +
-        "Run `pnpm test:visual` (which builds Storybook first) rather than `playwright test` directly.",
-    );
-  }
-  const index = JSON.parse(raw) as StorybookIndex;
-  return Object.values(index.entries).filter(
-    (entry) => entry.type === "story" && !entry.tags?.includes("no-visual-test"),
-  );
-}
-
-const stories = loadStories();
+const stories = loadStories((entry) => !entry.tags?.includes("no-visual-test"), "test:visual");
 
 test.describe("Storybook visual regression", () => {
   if (stories.length === 0) {
