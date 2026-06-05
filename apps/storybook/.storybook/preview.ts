@@ -3,6 +3,14 @@ import type { Preview } from "@storybook/react-vite";
 import "../src/storybook.css";
 
 const preview: Preview = {
+  initialGlobals: {
+    // Disable the addon's automatic in-browser scan via the Storybook 9 globals API.
+    // The accessibility.spec.ts runs axe externally via @axe-core/playwright which is
+    // the authoritative CI gate. Having both auto-scan simultaneously throws
+    // "Axe is already running". The panel remains available for manual on-demand
+    // inspection in the browser (click the Accessibility tab and press Run).
+    a11y: { manual: true },
+  },
   parameters: {
     layout: "centered",
     a11y: {

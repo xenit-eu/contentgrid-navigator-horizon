@@ -20,12 +20,12 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { test } from "@playwright/test";
 import { loadStories } from "./story-index";
 
-// Exclude "With Interaction" stories (tagged "no-visual-test"): their play()
-// function triggers the a11y addon's automatic axe scan, which races with the
-// external AxeBuilder.analyze() call and throws "Axe is already running".
-// Interaction-story accessibility is validated separately via the interaction
-// spec + manual audit rather than this automated batch scan.
-const stories = loadStories((entry) => !entry.tags?.includes("no-visual-test"), "test:a11y");
+// All stories are included. @storybook/addon-a11y has been removed from main.ts
+// to eliminate the "Axe is already running" race condition — the addon auto-scanned
+// every story on load, conflicting with this spec's AxeBuilder.analyze() call on
+// stories that render open-state portals or run play() functions (e.g. Sheet/Left
+// Side, Badge/WithInteraction). This spec is the sole axe authority in CI.
+const stories = loadStories(undefined, "test:a11y");
 
 test.describe("Storybook accessibility audit (axe-core)", () => {
   if (stories.length === 0) {
