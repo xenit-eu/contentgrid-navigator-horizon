@@ -24,42 +24,9 @@
  *   bundled into the built Storybook and executed by the browser automatically.
  */
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { loadStories } from "./story-index";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const indexPath = resolve(here, "../storybook-static/index.json");
-
-interface StoryEntry {
-  id: string;
-  type: string;
-  name: string;
-  title: string;
-  tags?: string[];
-}
-
-interface StorybookIndex {
-  entries: Record<string, StoryEntry>;
-}
-
-function loadInteractionStories(): StoryEntry[] {
-  let raw: string;
-  try {
-    raw = readFileSync(indexPath, "utf8");
-  } catch {
-    throw new Error(
-      `Storybook index not found at ${indexPath}. ` +
-        "Run `pnpm test:storybook` (which builds Storybook first) rather than invoking playwright directly.",
-    );
-  }
-  const index = JSON.parse(raw) as StorybookIndex;
-  return Object.values(index.entries).filter(
-    (entry) => entry.type === "story" && entry.name === "With Interaction",
-  );
-}
-
-const stories = loadInteractionStories();
+const stories = loadStories((entry) => entry.name === "With Interaction", "test:storybook");
 
 const PLAY_TIMEOUT_MS = 15_000;
 

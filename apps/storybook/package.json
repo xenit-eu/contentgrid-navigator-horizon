@@ -10,6 +10,7 @@
     "clean": "rm -rf storybook-static node_modules/.cache",
     "visual": "playwright install chromium && storybook build --quiet && playwright test",
     "visual:update": "playwright install chromium && storybook build --quiet && playwright test --update-snapshots",
+    "test:a11y": "playwright install chromium && storybook build --quiet && playwright test --config=playwright-a11y.config.ts",
     "test:storybook": "playwright install chromium && storybook build --quiet && playwright test --config=playwright-interactions.config.ts"
   },
   "dependencies": {
@@ -19,9 +20,11 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.3",
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@playwright/test": "^1.60.0",
+    "@storybook/addon-a11y": "9.1.20",
     "@storybook/addon-themes": "^9.0.0",
     "@storybook/react-vite": "^9.0.0",
     "@tailwindcss/vite": "^4.1.18",

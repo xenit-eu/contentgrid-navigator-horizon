@@ -615,21 +615,21 @@ These shapes are absent from this application's data but the HAL-Forms taxonomy 
 
 `hidden`, `email`, `date`, `time`, `datetime-local`, `range`, `radio` are not present in any property in the dump. The platform currently maps blueprint types to only 6 HAL-Forms types (see Section 3). This may change as the platform evolves.
 
-### 8.2 Absent property-level constraints in profile-level templates
+### 8.2 Absent property-level constraints — now confirmed across both profile and item-level templates
 
-The following `HalFormsPropertyShape` fields are defined by the spec but not set on any property in this dump. **Scope caveat: this table covers only the profile-level `create-form` and `search` templates.** Item-level update templates (the `default` template on entity-item resources, `/{plural}/{id}`) were not crawled in this audit; see the scope limitation note at the end of this section.
+The following `HalFormsPropertyShape` fields are defined by the spec but not set on any property in this dump. This table now covers **both** the profile-level `create-form`/`search` templates **and** entity-item update templates (the `default` PUT template on `/{plural}/{id}`), which were crawled for 4 representative entities (all-attribute, order, employee, customer) — see §8.6 below and the committed fixtures at `packages/navigator-data/test-fixtures/halforms/items/`.
 
-| Field       | Observed in profile-level templates? | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readOnly`  | NO (profile-level only)              | Audit fields (`id`, `created_*`, `modified_*`) are **omitted** from `create-form` at the profile level rather than included as `readOnly: true`. However, `readOnly` **is** expected on item-level update templates: the original navigator's edit form reads `entityInstance.defaultTemplate` from the item resource, and the translator emits `readOnly` on every schema node (`jsonforms.ts:197`). This audit did not crawl any item resource, so `readOnly` shapes are simply **unobserved**, not proven absent. |
-| `regex`     | NO                                   | No pattern constraints expressed in any template. Not handled by the original translator either — genuinely absent.                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `minLength` | NO                                   | Genuinely absent (not handled by the original translator).                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `maxLength` | NO                                   | Genuinely absent (not handled by the original translator).                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `value`     | NO (profile-level only)              | No pre-filled `value` on any `create-form` or `search` property. Item-level update templates are expected to carry pre-filled current instance values: the original translator reads `values.value(property.name).value` (`jsonforms.ts:118`) to prefill the edit form. As with `readOnly`, this is **unobserved** (item resources were not crawled), not proven absent.                                                                                                                                             |
+| Field       | Observed in any template (profile or item)? | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readOnly`  | **NO — confirmed absent on all templates**  | Audit fields (`created_by`, `created_date`, `last_modified_by`, `last_modified_date`) are **omitted** from all `_templates` entirely. They live in the entity-item body under a nested `audit_metadata` object and are read-only data, not template properties. The item-level `default` (PUT) template was crawled for 4 entities and carries **no `readOnly` properties**. The original navigator's `jsonforms.ts:197` `readOnly: property.readOnly` passthrough is defensive dead code in practice — no production template ever sets it. |
+| `regex`     | NO                                          | No pattern constraints in any template. Not handled by the original translator either — genuinely absent.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `minLength` | NO                                          | Genuinely absent (not handled by the original translator).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `maxLength` | NO                                          | Genuinely absent (not handled by the original translator).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `value`     | **NO — confirmed absent on all templates**  | No pre-filled `value` on any `create-form`, `search`, or item-level `default` (update) template property. Edit-form prefill is **client-side**: the client reads the current attribute values from the entity-item body and populates the form from those — the template itself carries no `value` field. The original navigator's `jsonforms.ts:118` `values.value(property.name).value` reads the item-body values, not a template `value` field.                                                                                          |
 
 The `FieldDescriptor` base type must carry slots for all these fields to remain forward-compatible.
 
-**Audit scope limitation.** This audit covers profile-level `create-form` and `search` templates (and the empty `HEAD` `default` probe that also appears on profile resources). Item-level update templates — the `default` template on entity-item resources (`/{plural}/{id}`) — were not crawled; capturing one entity-item response is recommended follow-up to enumerate the `readOnly` and pre-filled-value shapes that appear on update forms.
+**Item-level crawl note.** Item-level update templates (`default` PUT/json) and relation-mutation templates were crawled for 4 representative entities (all-attribute, order, employee, customer) and are committed as fixtures at `packages/navigator-data/test-fixtures/halforms/items/`. The conclusion "no `readOnly`, no template-level `value`" now holds empirically across **both** create-form and update templates.
 
 ### 8.3 No true multi-select string enum
 
@@ -641,7 +641,132 @@ The ticket's "conditionals" acceptance criterion resolves to: **no conditional p
 
 ### 8.5 `default` template is not an update form at profile scope
 
-The `default` template on profile resources carries `method: HEAD` and `properties: []`. The actual update `default` template (method PUT/PATCH, with properties) lives on individual entity-item resources (`GET /{plural}/{id}`), which are outside the scope of this profile dump. Any renderer working from item-level templates will see different shapes.
+The `default` template on profile resources carries `method: HEAD` and `properties: []`. The actual update `default` template (method PUT, `application/json`, with properties) lives on individual entity-item resources (`GET /{plural}/{id}`). See §8.6 for the full empirical inventory of item-level template shapes.
+
+### 8.6 Entity-item (update) template shapes — empirical inventory
+
+Item-level templates were crawled from 4 representative entity-item resources. Fixtures at `packages/navigator-data/test-fixtures/halforms/items/`.
+
+#### `default` — update form (PUT, `application/json`)
+
+Present on all entity-item resources. Method is always PUT; `contentType` is always `application/json` — even for entities with content/file attributes (e.g. `order`, `all-attribute`), because the update form edits scalar metadata only, not the binary content.
+
+Properties are the writable scalar attributes. **No `readOnly` and no template-level `value`** on any property (confirmed for all 4 crawled entities). Relations are excluded from `default`.
+
+Content/file attributes have a **dual representation**:
+
+- On `create-form` (profile level): a single `file`-typed property (e.g. `"name": "document"`, `"type": "file"`), which flips the template to `multipart/form-data`.
+- On `default` (item level): two `text`-typed dot-notation properties — `<attr>.filename` and `<attr>.mimetype` — for editing the content metadata. The binary is not re-uploaded via the update form.
+
+Example (`order` entity — `default` properties, content attributes as dot-notation):
+
+```json
+{
+  "name": "document.filename",
+  "prompt": "Document filename",
+  "type": "text"
+},
+{
+  "name": "document.mimetype",
+  "prompt": "Document mimetype",
+  "type": "text"
+},
+{
+  "name": "receipt.filename",
+  "prompt": "Receipt filename",
+  "type": "text"
+},
+{
+  "name": "receipt.mimetype",
+  "prompt": "Receipt mimetype",
+  "type": "text"
+}
+```
+
+The resolver/renderer must handle both representations for the same content attribute depending on which template is being rendered.
+
+#### `delete` — entity deletion
+
+Method DELETE, `contentType` absent, `properties: []`. Present on all entity-item resources.
+
+#### `set-<rel>` — to-one relation assignment
+
+Method PUT, `contentType: text/uri-list`. One `url`-typed property with `options.link` → target collection href and `maxItems: 1`. Named `set-<relation-name>` (e.g. `set-customer`, `set-boss`).
+
+```json
+{
+  "name": "set-customer",
+  "method": "PUT",
+  "contentType": "text/uri-list",
+  "properties": [
+    {
+      "name": "customer",
+      "prompt": "Customer",
+      "type": "url",
+      "options": {
+        "link": { "href": "https://api.example.contentgrid.com/customers", "title": "Customers" },
+        "minItems": 0,
+        "maxItems": 1,
+        "valueField": "/_links/self/href"
+      }
+    }
+  ]
+}
+```
+
+#### `add-<rel>` — to-many relation member addition
+
+Method POST, `contentType: text/uri-list`. One `url`-typed property with `options.link` → target collection href, **no `maxItems`**. Named `add-<relation-name>` (e.g. `add-products`, `add-colleague`, `add-managed_orders`, `add-orders`).
+
+```json
+{
+  "name": "add-products",
+  "method": "POST",
+  "contentType": "text/uri-list",
+  "properties": [
+    {
+      "name": "products",
+      "prompt": "Products",
+      "type": "url",
+      "options": {
+        "link": { "href": "https://api.example.contentgrid.com/products", "title": "Products" },
+        "minItems": 0,
+        "valueField": "/_links/self/href"
+      }
+    }
+  ]
+}
+```
+
+#### `clear-<rel>` — relation removal
+
+Method DELETE, `contentType` absent, `properties: []`. Present for both to-one and to-many relations.
+
+#### Audit fields — body-only, never in templates
+
+`created_by`, `created_date`, `last_modified_by`, `last_modified_date` appear as a nested `audit_metadata` object in the entity-item body:
+
+```json
+{
+  "audit_metadata": {
+    "created_by": "user@example.com",
+    "created_date": "2025-01-15T10:00:00Z",
+    "last_modified_by": "user@example.com",
+    "last_modified_date": "2025-03-20T14:30:00Z"
+  }
+}
+```
+
+These fields are completely absent from all `_templates`. They are display-only data; no form ever submits them.
+
+#### Summary of item-level template keys observed
+
+| Entity          | Template keys                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `all-attribute` | `default`, `delete`                                                                                                             |
+| `order`         | `default`, `delete`, `add-products`, `clear-products`, `set-customer`, `clear-customer`                                         |
+| `employee`      | `default`, `delete`, `add-colleague`, `clear-colleague`, `set-boss`, `clear-boss`, `add-managed_orders`, `clear-managed_orders` |
+| `customer`      | `default`, `delete`, `add-orders`, `clear-orders`                                                                               |
 
 ---
 
@@ -729,6 +854,8 @@ These claims are **not denied** by the docs but are also not stated there; this 
 - **`maxItems` absent ⇒ to-many** (Section 7.1) — docs show only the `maxItems:1` to-one case; the absence rule is a sound inference, not a documented contract.
 - **Search `~suffix` set** (Section 5.1) — docs name only `~after` and delegate the full list to each app's `/openapi.yaml`; the `~prefix`/`~gt`/`~gte`/`~lt`/`~lte`/`~before` suffixes are empirical and match the documented operator _concepts_ (prefix-match, greater-than, …).
 - **`options.inline` for allowed-value enums** (Shapes 3/17) — docs use `options.inline` only for `_sort`; this audit extends it to attribute enums.
+- **`set-<rel>` uses PUT; `add-<rel>` uses POST — both `text/uri-list`** — the docs confirm that to-one relations are set via PUT `text/uri-list` and to-many members are added via POST `text/uri-list`, but do not state the `set-` vs `add-` template-name convention or the PUT-vs-POST-per-cardinality rule explicitly. The live item crawl (§8.6) **empirically confirms** both: `set-<rel>` always carries `method: PUT` with `maxItems: 1`; `add-<rel>` always carries `method: POST` with no `maxItems`. This audit is now the authoritative source for this convention.
+- **No `readOnly` or template-level `value` on any template** — the docs are silent on whether update templates carry `readOnly` or prefilled `value` properties. The item crawl confirms neither appears on any production template (create-form or item `default`). See §8.2 and §8.6.
 
 These are flagged so downstream consumers (HZN-5A.1 / 5D.7) know which contract surfaces are doc-backed versus derived from this specific application's profile dump.
 

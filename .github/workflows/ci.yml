@@ -342,3 +342,30 @@ jobs:
           name: playwright-report
           path: apps/storybook/playwright-report
           retention-days: 7
+
+  accessibility:
+    name: Accessibility audit (axe-core)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.60.0-noble
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Enable pnpm via corepack
+        # Version comes from the root package.json "packageManager" field.
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Accessibility audit
+        run: pnpm test:a11y
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-a11y-report
+          path: apps/storybook/playwright-report
+          retention-days: 7
