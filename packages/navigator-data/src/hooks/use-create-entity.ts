@@ -26,7 +26,12 @@ export function useCreateEntity() {
         formData.append("content", params.file);
         for (const [key, value] of Object.entries(params.data)) {
           if (value != null)
-            formData.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+            formData.append(
+              key,
+              typeof value === "object"
+                ? JSON.stringify(value)
+                : String(value as string | number | boolean | bigint),
+            );
         }
         const response = await apiFetch(
           createRequest(

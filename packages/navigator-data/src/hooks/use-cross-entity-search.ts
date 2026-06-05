@@ -130,7 +130,12 @@ export function useCrossEntitySearch(query: string, options?: { size?: number })
             displayFields: textAttrs.slice(0, 3).flatMap((attr) => {
               const val = item.data[attr.name];
               if (val == null || val === "") return [];
-              return [{ label: attr.title, value: String(val) }];
+              return [
+                {
+                  label: attr.title,
+                  value: typeof val === "object" ? JSON.stringify(val) : String(val),
+                },
+              ];
             }),
             matchedVia: config.isRelation ? config.relationLabel : undefined,
           });

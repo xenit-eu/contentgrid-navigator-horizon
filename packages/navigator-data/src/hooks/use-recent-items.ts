@@ -84,7 +84,8 @@ export function useRecentlyCreated() {
           : undefined;
 
         const createdDate = auditData?.created_date;
-        const displayName = nameAttr ? String(item.data[nameAttr.name] ?? item.id) : item.id;
+        const nameVal = nameAttr ? item.data[nameAttr.name] : undefined;
+        const displayName = typeof nameVal === "string" && nameVal ? nameVal : item.id;
         const entry: RecentlyCreatedItem = {
           entityName: entity.name,
           entityTitle: entity.title,
