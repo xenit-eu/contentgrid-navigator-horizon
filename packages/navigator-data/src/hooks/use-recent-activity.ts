@@ -20,8 +20,8 @@ function buildDetails(
   return attrs.slice(0, 3).flatMap((attr) => {
     const val = data[attr.name];
     if (val == null || val === "") return [];
-    const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
-    return [{ label: attr.title, value: strVal }];
+    if (typeof val === "object") return [{ label: attr.title, value: JSON.stringify(val) }];
+    return [{ label: attr.title, value: String(val) }];
   });
 }
 
