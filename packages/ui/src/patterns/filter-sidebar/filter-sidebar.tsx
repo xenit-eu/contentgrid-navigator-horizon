@@ -334,6 +334,7 @@ export function FilterSidebar({
                     const label = formatFieldLabel(prop);
                     const searchType = getSearchType(prop);
 
+                    // 1. Handle Select/Enum types
                     if (type === "select" && prop.options?.inline) {
                       return (
                         <EnumFilter
@@ -346,6 +347,7 @@ export function FilterSidebar({
                       );
                     }
 
+                    // 2. Handle Date types
                     if (type === "date") {
                       return (
                         <DateFilter
@@ -354,6 +356,21 @@ export function FilterSidebar({
                           searchType={searchType}
                           value={value}
                           onChange={(v) => onFilterChange(prop.name, v)}
+                        />
+                      );
+                    }
+
+                    // 3. Handle Text type
+                    if (type === "text") {
+                      return (
+                        <Input
+                          key={prop.name}
+                          type="text" // Explicitly render a text input
+                          className="h-8 text-sm"
+                          value={value}
+                          onChange={(e) =>
+                            onFilterChange(prop.name, e.target.value ? e.target.value : undefined)
+                          }
                         />
                       );
                     }

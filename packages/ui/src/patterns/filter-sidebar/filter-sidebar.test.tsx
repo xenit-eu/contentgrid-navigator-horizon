@@ -82,11 +82,9 @@ describe("FilterSidebar — structure", () => {
 });
 
 describe("FilterSidebar — text filter (type=string, no options)", () => {
-  it("does not render a text input for plain string props (falls through to null)", () => {
-    // Plain string props without suffix hit the "return null" branch
+  it("renders a text input for plain string props", () => {
     renderSidebar([TEXT_PROP]);
-    // There's no rendered input because plain string type is not handled
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 });
 
@@ -197,7 +195,7 @@ describe("FilterSidebar — date group filter (multiple date props for same fiel
     expect(inputs.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("calls onFilterChange when a date input changes in a group", () => {
+  it("calls onFilterChange when a date input changes in a group", async () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_GT_PROP, DATE_LT_PROP], {}, { onFilterChange });
     const inputs = screen.getAllByDisplayValue("");
