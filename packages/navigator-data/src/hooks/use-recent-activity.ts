@@ -107,7 +107,7 @@ export function useRecentActivity() {
       const nameAttr = findNameAttribute(schema.attributes);
       const detailAttrs = schema.attributes.filter((a) => {
         if (a.name === "id" || a.name === nameAttr?.name) return false;
-        if (["audit_metadata", "content", "primary key"].includes(a.type)) return false;
+        if (["audit_metadata", "content"].includes(a.type)) return false;
         return isDisplayableScalar(a.type);
       });
 

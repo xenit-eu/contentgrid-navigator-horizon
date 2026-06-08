@@ -149,4 +149,133 @@ describe("useEntitySchema", () => {
     });
     expect(result.current.fetchStatus).toBe("idle");
   });
+
+  it("detects content attribute when object sub-attrs include filename, mimetype, length", async () => {
+    const contentFixture = {
+      ...profileFixture,
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "document",
+            title: "Document",
+            type: "object",
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  name: "filename",
+                  type: "string",
+                  _embedded: {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+                {
+                  name: "mimetype",
+                  type: "string",
+                  _embedded: {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+                {
+                  name: "length",
+                  type: "long",
+                  _embedded: {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+              ],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(contentFixture)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data!.attributes.find((a) => a.name === "document")?.type).toBe(
+      "content",
+    );
+  });
+
+  it("includes inline options on a search property when they are all strings", async () => {
+    const withInlineOptions = {
+      ...profileFixture,
+      _templates: {
+        ...profileFixture._templates,
+        search: {
+          method: "GET",
+          target: `${BASE}/invoices`,
+          properties: [
+            {
+              name: "status",
+              prompt: "Status",
+              type: "text",
+              options: { inline: ["draft", "sent", "paid"] },
+            },
+          ],
+        },
+      },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withInlineOptions)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const statusProp = result.current.data!.searchProperties.find((p) => p.name === "status");
+    expect(statusProp?.options?.inline).toEqual(["draft", "sent", "paid"]);
+  });
+
+  it("parses sort options given as plain strings (value,asc format)", async () => {
+    const withStringSortOptions = {
+      ...profileFixture,
+      _templates: {
+        ...profileFixture._templates,
+        search: {
+          method: "GET",
+          target: `${BASE}/invoices`,
+          properties: [
+            {
+              name: "_sort",
+              type: "text",
+              options: { inline: ["number,asc", "number,desc"] },
+            },
+          ],
+        },
+      },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withStringSortOptions)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data!.sortOptions).toHaveLength(2);
+    expect(result.current.data!.sortOptions[0].property).toBe("number");
+    expect(result.current.data!.sortOptions[0].value).toBe("number,asc");
+  });
 });

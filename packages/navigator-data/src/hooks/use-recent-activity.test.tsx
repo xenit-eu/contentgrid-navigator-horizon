@@ -188,4 +188,80 @@ describe("useRecentActivity", () => {
       new Date(result.current.activities[1].modifiedDate).getTime(),
     );
   });
+
+  it("populates details from displayable scalar attributes, excluding audit/content types", async () => {
+    // Schema includes a displayable scalar ("amount") so buildDetails and isDisplayableScalar are exercised.
+    const schemaWithDetails = {
+      ...schemaWithAudit,
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "number",
+            title: "Number",
+            type: "string",
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+          {
+            name: "amount",
+            title: "Amount",
+            type: "long",
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+          // audit_metadata excluded from details by the type check (line 110)
+          schemaWithAudit._embedded["blueprint:attribute"][1],
+        ],
+        "blueprint:relation": [],
+      },
+    };
+
+    const listWithAmount = {
+      _links: { self: { href: COLLECTION_URL } },
+      _embedded: {
+        item: [
+          {
+            id: "inv-3",
+            number: "INV-003",
+            amount: 999,
+            audit_metadata: {
+              created_by: "carol",
+              created_date: "2024-02-01T10:00:00Z",
+              last_modified_by: "carol",
+              last_modified_date: "2024-02-01T10:00:00Z",
+            },
+            _links: { self: { href: `${COLLECTION_URL}/inv-3` } },
+          },
+        ],
+      },
+    };
+
+    server.use(
+      http.get(SCHEMA_URL, () => HttpResponse.json(schemaWithDetails)),
+      http.get(COLLECTION_URL, () => HttpResponse.json(listWithAmount)),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+
+    const { result } = renderHook(() => useRecentActivity(), { wrapper: makeWrapper(qc) });
+
+    await waitFor(() => expect(result.current.activities.length).toBeGreaterThan(0), {
+      timeout: 5000,
+    });
+
+    const item = result.current.activities.find((a) => a.itemId === "inv-3");
+    expect(item).toBeDefined();
+    // "amount" is a displayable scalar; its detail should appear (buildDetails ran)
+    expect(item!.details.some((d) => d.label === "Amount")).toBe(true);
+    expect(item!.details.find((d) => d.label === "Amount")?.value).toBe("999");
+  });
 });

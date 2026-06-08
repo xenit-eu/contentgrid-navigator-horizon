@@ -47,8 +47,8 @@ function writeSearches(searches: SavedSearch[]) {
 }
 
 export function useSavedSearches() {
-  const raw = useSyncExternalStore(subscribe, getSnapshot);
-  const searches = JSON.parse(raw) as SavedSearch[];
+  useSyncExternalStore(subscribe, getSnapshot);
+  const searches = readSearches();
 
   const save = useCallback((search: Omit<SavedSearch, "id" | "order">) => {
     const current = readSearches();

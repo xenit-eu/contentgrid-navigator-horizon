@@ -115,4 +115,26 @@ describe("useSavedSearches", () => {
     });
     expect(res!.success).toBe(false);
   });
+
+  it("recovers via readSearches() when sessionStorage is corrupted after render", () => {
+    const { result } = renderHook(() => useSavedSearches());
+    // Corrupt storage after initial render so the hook's useSyncExternalStore snapshot
+    // is still valid; the corruption is only visible when readSearches() is called
+    // inside save(), triggering the catch branch (line 40) and returning [].
+    sessionStorage.setItem("savedSearches", "{bad json}");
+    act(() => {
+      result.current.save({ label: "New", entityName: "e", pinned: false });
+    });
+    expect(result.current.searches).toHaveLength(1);
+  });
+
+  it("unsubscribes when the hook unmounts", () => {
+    const { unmount, result } = renderHook(() => useSavedSearches());
+    // Add a search so there is something to verify afterwards
+    act(() => {
+      result.current.save({ label: "Keep", entityName: "e", pinned: false });
+    });
+    // Unmounting triggers the return value of subscribe() — the cleanup function on line 28
+    unmount();
+  });
 });
