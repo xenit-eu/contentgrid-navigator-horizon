@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { AppConfigProvider } from "@contentgrid/navigator-data";
+import { AppConfigProvider, AuthProvider, loadAppConfig } from "@contentgrid/navigator-data";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -16,10 +16,14 @@ declare module "@tanstack/react-router" {
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element not found");
 
-createRoot(rootEl).render(
-  <StrictMode>
-    <AppConfigProvider>
-      <RouterProvider router={router} />
-    </AppConfigProvider>
-  </StrictMode>,
-);
+loadAppConfig().then(() => {
+  createRoot(rootEl).render(
+    <StrictMode>
+      <AppConfigProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </AppConfigProvider>
+    </StrictMode>,
+  );
+});
