@@ -167,6 +167,7 @@ function ClearButton({
       onClick={onClick}
     >
       <X className="h-3 w-3" />
+      <span className="sr-only">Clear</span>
     </Button>
   );
 }
@@ -197,6 +198,7 @@ function DateGroupFilter({
               <div className="min-w-0 flex-1">
                 <Input
                   type="date"
+                  aria-label={direction ? `${label} ${direction.toLowerCase()}` : label}
                   className="h-8 text-sm"
                   value={value ? apiToDate(value) : ""}
                   onChange={(e) =>
@@ -233,7 +235,7 @@ function EnumFilter({
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
           <Select key={value || "empty"} value={value || undefined} onValueChange={onChange}>
-            <SelectTrigger className="h-8 w-full text-sm">
+            <SelectTrigger aria-label={label} className="h-8 w-full text-sm">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -264,17 +266,53 @@ function DateFilter({
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
+  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-muted-foreground">{displayLabel}</Label>
+      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
+        {displayLabel}
+      </Label>
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
           <Input
+            id={inputId}
             type="date"
             className="h-8 text-sm"
             value={value ? apiToDate(value) : ""}
             onChange={(e) => onChange(e.target.value ? dateToApi(e.target.value) : undefined)}
+          />
+        </div>
+        <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
+      </div>
+    </div>
+  );
+}
+
+function TextFilter({
+  label,
+  value,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: string;
+  onChange: (value: string | undefined) => void;
+}>) {
+  const inputId = `filter-${label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
+        {label}
+      </Label>
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <Input
+            id={inputId}
+            type="text"
+            className="h-8 text-sm"
+            value={value}
+            onChange={(e) => onChange(e.target.value || undefined)}
           />
         </div>
         <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
@@ -363,14 +401,11 @@ export function FilterSidebar({
                     // 3. Handle Text types
                     if (type === "text") {
                       return (
-                        <Input
+                        <TextFilter
                           key={prop.name}
-                          type="text" // Explicitly render a text input
-                          className="h-8 text-sm"
+                          label={label}
                           value={value}
-                          onChange={(e) =>
-                            onFilterChange(prop.name, e.target.value ? e.target.value : undefined)
-                          }
+                          onChange={(v) => onFilterChange(prop.name, v)}
                         />
                       );
                     }

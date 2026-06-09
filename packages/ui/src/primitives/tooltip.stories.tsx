@@ -94,9 +94,12 @@ export const WithInteraction: Story = {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole("button", { name: /info/i });
     await userEvent.hover(trigger);
-    // Tooltip content appears in a portal outside canvasElement
-    const tooltip = await within(document.body).findByRole("tooltip");
+    // Tooltip content appears in a portal outside canvasElement.
+    // Radix tooltip@1.1+ also renders a permanently-present sr-only <span role="tooltip">
+    // for keyboard accessibility; query by name to match only the visible popup.
+    const tooltip = await within(document.body).findByRole("tooltip", {
+      name: /more information/i,
+    });
     await expect(tooltip).toBeVisible();
-    await expect(tooltip).toHaveTextContent(/more information/i);
   },
 };

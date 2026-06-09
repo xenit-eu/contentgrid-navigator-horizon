@@ -129,6 +129,7 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
         accept={acceptString}
         onChange={handleInputChange}
         tabIndex={-1}
+        aria-hidden="true"
       />
       <button
         type="button"
