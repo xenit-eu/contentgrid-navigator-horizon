@@ -6,7 +6,7 @@ export function createOidcTokenSupplier(
 ): AuthenticationTokenSupplier {
   return async () => {
     const user = await getUser();
-    if (!user?.access_token) {
+    if (!user?.access_token || user.expired) {
       return null;
     }
     return {

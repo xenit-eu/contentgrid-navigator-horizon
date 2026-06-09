@@ -1,20 +1,29 @@
 import { WebStorageStateStore } from "oidc-client-ts";
 import type { AuthProviderProps } from "react-oidc-context";
+import { z } from "zod";
 import { isDevTokenMode } from "./dev-token";
 
-interface ContentGridConfig {
-  v1: {
-    apiBaseUrl: string;
-    oidc: {
-      authority: string;
-      client_id: string;
-    };
-  };
-}
+const isNotTemplate = (s: string) => !s.includes("${");
+
+const ContentGridConfigSchema = z.object({
+  v1: z.object({
+    apiBaseUrl: z.string().min(1).refine(isNotTemplate, "Contains unreplaced template placeholder"),
+    oidc: z.object({
+      authority: z
+        .string()
+        .min(1)
+        .refine(isNotTemplate, "Contains unreplaced template placeholder"),
+      client_id: z
+        .string()
+        .min(1)
+        .refine(isNotTemplate, "Contains unreplaced template placeholder"),
+    }),
+  }),
+});
 
 declare global {
   interface Window {
-    contentGridConfig?: ContentGridConfig;
+    contentGridConfig?: unknown;
   }
 }
 
@@ -26,31 +35,34 @@ export interface AppConfig {
 
 let cachedConfig: AppConfig | null = null;
 
-async function fetchConfigJs(): Promise<ContentGridConfig> {
-  const response = await fetch(`${window.location.origin}/config.js`);
-  const text = await response.text();
-  // config.js sets window.contentGridConfig = { ... }; eval-style load for runtime injection
-  const fn = new Function(text + "\nreturn window.contentGridConfig;");
-  return fn() as ContentGridConfig;
-}
+async function fetchConfigJs(): Promise<unknown> {
+  // config.js may already be present on window if loaded as a <script> tag in index.html.
+  if (window.contentGridConfig) {
+    return window.contentGridConfig;
+  }
 
-function isValidConfigJs(config: ContentGridConfig): boolean {
-  const { apiBaseUrl, oidc } = config.v1;
-  return (
-    !apiBaseUrl.includes("${") && !oidc.authority.includes("${") && !oidc.client_id.includes("${")
-  );
+  const response = await fetch(`${window.location.origin}/config.js`);
+  if (!response.ok) {
+    throw new Error(`Failed to load config.js: HTTP ${response.status}`);
+  }
+  const text = await response.text();
+  // Execute config.js which sets window.contentGridConfig. Requires 'unsafe-eval' in CSP.
+  // In strict-CSP deployments, include config.js as a <script> tag in index.html instead.
+  const fn = new Function(text + "\nreturn window.contentGridConfig;");
+  return fn();
 }
 
 export async function loadAppConfig(): Promise<AppConfig> {
   if (cachedConfig) return cachedConfig;
 
   try {
-    const config = await fetchConfigJs();
-    if (isValidConfigJs(config)) {
+    const raw = await fetchConfigJs();
+    const parsed = ContentGridConfigSchema.safeParse(raw);
+    if (parsed.success) {
       cachedConfig = {
-        authority: config.v1.oidc.authority,
-        clientId: config.v1.oidc.client_id,
-        apiBaseUrl: config.v1.apiBaseUrl,
+        authority: parsed.data.v1.oidc.authority,
+        clientId: parsed.data.v1.oidc.client_id,
+        apiBaseUrl: parsed.data.v1.apiBaseUrl,
       };
       return cachedConfig;
     }
