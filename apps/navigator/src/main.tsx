@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { AppConfigProvider } from "@contentgrid/navigator-data";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -17,6 +18,8 @@ if (!rootEl) throw new Error("Root element not found");
 
 createRoot(rootEl).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AppConfigProvider>
+      <RouterProvider router={router} />
+    </AppConfigProvider>
   </StrictMode>,
 );
