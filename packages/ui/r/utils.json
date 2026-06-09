@@ -1,0 +1,14 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "utils",
+  "title": "Utilities",
+  "description": "Shared cn() and formatCellValue() helpers used by all ContentGrid patterns.",
+  "files": [
+    {
+      "path": "src/lib/utils.ts",
+      "content": "import { type ClassValue, clsx } from \"clsx\";\nimport { twMerge } from \"tailwind-merge\";\n\nexport function cn(...inputs: ClassValue[]) {\n  return twMerge(clsx(inputs));\n}\n\n/**\n * Render an arbitrary cell value as display text.\n *\n * - `null` / `undefined` → an em dash placeholder.\n * - primitives → their string form.\n * - objects/arrays → a JSON representation rather than the useless\n *   `[object Object]` that `String(value)` would produce.\n */\nexport function formatCellValue(value: unknown, placeholder = \"—\"): string {\n  if (value == null) return placeholder;\n  if (typeof value === \"object\") {\n    try {\n      return JSON.stringify(value);\n    } catch {\n      return placeholder;\n    }\n  }\n  return String(value);\n}\n",
+      "type": "registry:lib"
+    }
+  ],
+  "type": "registry:lib"
+}

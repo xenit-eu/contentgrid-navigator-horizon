@@ -283,33 +283,6 @@ function DateFilter({
   );
 }
 
-function TextFilter({
-  label,
-  value,
-  onChange,
-}: Readonly<{
-  label: string;
-  value: string;
-  onChange: (value: string | undefined) => void;
-}>) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
-      <div className="flex items-center gap-1">
-        <div className="min-w-0 flex-1">
-          <Input
-            type="text"
-            className="h-8 text-sm"
-            value={value}
-            onChange={(e) => onChange(e.target.value || undefined)}
-          />
-        </div>
-        <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
-      </div>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -361,6 +334,7 @@ export function FilterSidebar({
                     const label = formatFieldLabel(prop);
                     const searchType = getSearchType(prop);
 
+                    // 1. Handle Select/Enum types
                     if (type === "select" && prop.options?.inline) {
                       return (
                         <EnumFilter
@@ -373,6 +347,7 @@ export function FilterSidebar({
                       );
                     }
 
+                    // 2. Handle Date types
                     if (type === "date") {
                       return (
                         <DateFilter
@@ -385,14 +360,22 @@ export function FilterSidebar({
                       );
                     }
 
-                    return (
-                      <TextFilter
-                        key={prop.name}
-                        label={label}
-                        value={value}
-                        onChange={(v) => onFilterChange(prop.name, v)}
-                      />
-                    );
+                    // 3. Handle Text types
+                    if (type === "text") {
+                      return (
+                        <Input
+                          key={prop.name}
+                          type="text" // Explicitly render a text input
+                          className="h-8 text-sm"
+                          value={value}
+                          onChange={(e) =>
+                            onFilterChange(prop.name, e.target.value ? e.target.value : undefined)
+                          }
+                        />
+                      );
+                    }
+
+                    return null;
                   })
                 )}
               </div>

@@ -1,0 +1,212 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "@contentgrid",
+  "homepage": "https://ui.contentgrid.com",
+  "items": [
+    {
+      "name": "utils",
+      "type": "registry:lib",
+      "title": "Utilities",
+      "description": "Shared cn() and formatCellValue() helpers used by all ContentGrid patterns.",
+      "files": [{ "path": "src/lib/utils.ts", "type": "registry:lib" }]
+    },
+    {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "title": "Alert Dialog",
+      "description": "ContentGrid copy of the shadcn/ui Alert Dialog primitive.",
+      "files": [{ "path": "src/primitives/alert-dialog.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "title": "Badge",
+      "description": "ContentGrid copy of the shadcn/ui Badge primitive.",
+      "files": [{ "path": "src/primitives/badge.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "ContentGrid copy of the shadcn/ui Button primitive.",
+      "files": [{ "path": "src/primitives/button.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Card",
+      "description": "ContentGrid copy of the shadcn/ui Card primitive.",
+      "files": [{ "path": "src/primitives/card.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "collapsible",
+      "type": "registry:ui",
+      "title": "Collapsible",
+      "description": "ContentGrid copy of the shadcn/ui Collapsible primitive.",
+      "files": [{ "path": "src/primitives/collapsible.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "ContentGrid copy of the shadcn/ui Dialog primitive.",
+      "files": [{ "path": "src/primitives/dialog.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "title": "Dropdown Menu",
+      "description": "ContentGrid copy of the shadcn/ui Dropdown Menu primitive.",
+      "files": [{ "path": "src/primitives/dropdown-menu.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "description": "ContentGrid copy of the shadcn/ui Input primitive.",
+      "files": [{ "path": "src/primitives/input.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "title": "Label",
+      "description": "ContentGrid copy of the shadcn/ui Label primitive.",
+      "files": [{ "path": "src/primitives/label.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "ContentGrid copy of the shadcn/ui Select primitive.",
+      "files": [{ "path": "src/primitives/select.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "title": "Separator",
+      "description": "ContentGrid copy of the shadcn/ui Separator primitive.",
+      "files": [{ "path": "src/primitives/separator.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "title": "Skeleton",
+      "description": "ContentGrid copy of the shadcn/ui Skeleton primitive.",
+      "files": [{ "path": "src/primitives/skeleton.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Table",
+      "description": "ContentGrid copy of the shadcn/ui Table primitive.",
+      "files": [{ "path": "src/primitives/table.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "title": "Tooltip",
+      "description": "ContentGrid copy of the shadcn/ui Tooltip primitive.",
+      "files": [{ "path": "src/primitives/tooltip.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "branding-header",
+      "type": "registry:ui",
+      "title": "Branding Header",
+      "description": "Full-width header bar with logo/branding slot and optional action area.",
+      "registryDependencies": ["separator", "utils"],
+      "files": [
+        { "path": "src/patterns/branding-header/branding-header.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/branding-header/index.ts", "type": "registry:ui" }
+      ]
+    },
+    {
+      "name": "data-table",
+      "type": "registry:ui",
+      "title": "Data Table",
+      "description": "Sortable, filterable data table with row actions, built on TanStack Table.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "alert-dialog",
+        "button",
+        "dropdown-menu",
+        "table",
+        "tooltip",
+        "utils"
+      ],
+      "files": [
+        { "path": "src/patterns/data-table/data-table.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/data-table/index.ts", "type": "registry:ui" }
+      ]
+    },
+    {
+      "name": "entity-card",
+      "type": "registry:ui",
+      "title": "Entity Card",
+      "description": "Card displaying a ContentGrid entity with item count and create action.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["button", "card"],
+      "files": [
+        { "path": "src/patterns/entity-card/entity-card.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/entity-card/index.ts", "type": "registry:ui" }
+      ]
+    },
+    {
+      "name": "entity-picker",
+      "type": "registry:ui",
+      "title": "Entity Picker",
+      "description": "Dialog-based picker for selecting a ContentGrid entity item from a HAL collection.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["button", "dialog", "input", "skeleton", "table", "utils"],
+      "files": [
+        { "path": "src/patterns/entity-picker/entity-picker.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/entity-picker/index.ts", "type": "registry:ui" }
+      ]
+    },
+    {
+      "name": "file-upload-zone",
+      "type": "registry:ui",
+      "title": "File Upload Zone",
+      "description": "Drag-and-drop file upload zone with file list and remove actions.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["badge", "button", "utils"],
+      "files": [
+        { "path": "src/patterns/file-upload-zone/file-upload-zone.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/file-upload-zone/index.ts", "type": "registry:ui" }
+      ]
+    },
+    {
+      "name": "filter-sidebar",
+      "type": "registry:ui",
+      "title": "Filter Sidebar",
+      "description": "Collapsible sidebar for filtering a ContentGrid entity collection.",
+      "dependencies": ["lucide-react", "date-fns"],
+      "registryDependencies": ["button", "input", "label", "select", "separator"],
+      "files": [
+        { "path": "src/patterns/filter-sidebar/filter-sidebar.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/filter-sidebar/index.ts", "type": "registry:ui" }
+      ]
+    },
+    {
+      "name": "relation-section",
+      "type": "registry:ui",
+      "title": "Relation Section",
+      "description": "Collapsible section for displaying and managing ContentGrid entity relations.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "alert-dialog",
+        "badge",
+        "button",
+        "card",
+        "collapsible",
+        "skeleton",
+        "table",
+        "tooltip",
+        "utils"
+      ],
+      "files": [
+        { "path": "src/patterns/relation-section/relation-section.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/relation-section/index.ts", "type": "registry:ui" }
+      ]
+    }
+  ]
+}

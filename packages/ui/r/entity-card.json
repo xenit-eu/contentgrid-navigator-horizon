@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "entity-card",
+  "title": "Entity Card",
+  "description": "Card displaying a ContentGrid entity with item count and create action.",
+  "dependencies": ["lucide-react"],
+  "registryDependencies": ["button", "card"],
+  "files": [
+    {
+      "path": "src/patterns/entity-card/entity-card.tsx",
+      "content": "import { Database, FileText, Plus } from \"lucide-react\";\nimport { Button } from \"../../primitives/button\";\nimport { Card, CardContent, CardHeader, CardTitle } from \"../../primitives/card\";\n\nexport interface EntityCardProps {\n  /** Unique identifier / URL-safe name for this entity (used in callback) */\n  name: string;\n  /** Human-readable title */\n  title: string;\n  /** Total item count; shown as \"—\" when undefined */\n  count?: number;\n  /** Optional description shown below the title */\n  description?: string;\n  /** When true a FileText icon is shown, otherwise a Database icon */\n  hasContent?: boolean;\n  /** Called when the user clicks the create-action button */\n  onCreateClick?: (entityName: string) => void;\n  /** Called when the user clicks the card title / entity link */\n  onTitleClick?: (entityName: string) => void;\n}\n\nexport function EntityCard({\n  name,\n  title,\n  count,\n  description,\n  hasContent,\n  onCreateClick,\n  onTitleClick,\n}: Readonly<EntityCardProps>) {\n  return (\n    <Card className=\"group relative transition-colors hover:border-primary/50\">\n      <CardHeader className=\"flex flex-row items-start justify-between pb-2\">\n        <div>\n          <CardTitle className=\"text-lg\">\n            <button\n              type=\"button\"\n              className=\"flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md text-left after:absolute after:inset-0 after:content-['']\"\n              onClick={() => onTitleClick?.(name)}\n            >\n              {hasContent ? (\n                <FileText className=\"h-5 w-5 text-muted-foreground\" />\n              ) : (\n                <Database className=\"h-5 w-5 text-muted-foreground\" />\n              )}\n              {title}\n            </button>\n          </CardTitle>\n          {description && (\n            <p className=\"mt-1 text-xs text-muted-foreground line-clamp-2\">{description}</p>\n          )}\n        </div>\n        <div className=\"relative z-10\">\n          <Button\n            variant=\"ghost\"\n            size=\"icon\"\n            onClick={(e) => {\n              e.stopPropagation();\n              onCreateClick?.(name);\n            }}\n          >\n            <Plus className=\"h-4 w-4\" />\n            <span className=\"sr-only\">Create {title}</span>\n          </Button>\n        </div>\n      </CardHeader>\n      <CardContent>\n        <div className=\"text-2xl font-bold\">{count ?? \"—\"}</div>\n        <p className=\"text-xs text-muted-foreground\">items</p>\n      </CardContent>\n    </Card>\n  );\n}\n",
+      "type": "registry:ui"
+    },
+    {
+      "path": "src/patterns/entity-card/index.ts",
+      "content": "export { EntityCard } from \"./entity-card\";\nexport type { EntityCardProps } from \"./entity-card\";\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}
