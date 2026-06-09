@@ -6,10 +6,6 @@ const preview: Preview = {
   parameters: {
     layout: "centered",
     a11y: {
-      // Do not auto-run axe when a story loads: the dedicated accessibility.spec.ts
-      // runs AxeBuilder.analyze() as the sole axe runner. Auto-run races with
-      // AxeBuilder on the same iframe frame and causes "Axe is already running" errors.
-      manual: true,
       // Mirror the CI axe ruleset: WCAG 2.x A/AA + 2.1 A/AA.
       config: {
         runOnly: {
