@@ -64,7 +64,7 @@ export default defineConfig({
         functions: 40,
         statements: 40,
       },
-      exclude: ["**/*.stories.tsx", "**/*.config.ts", "**/generated/**"],
+      exclude: ["**/*.stories.tsx", "**/*.config.ts", "**/generated/**", "**/test-fixtures/**"],
     },
   },
 });

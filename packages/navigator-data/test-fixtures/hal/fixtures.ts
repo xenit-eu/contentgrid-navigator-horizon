@@ -49,7 +49,6 @@ export const invoiceUpdateTemplate = {
 export const invoiceSearchTemplate = {
   method: "GET",
   target: "/invoices{?number,status}",
-  contentType: "application/x-www-form-urlencoded",
   title: "Search invoices",
   properties: [
     { name: "number", type: "text" },
