@@ -21,8 +21,20 @@ export function useDeleteEntity() {
       const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionHref;
       if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
 
+      const cached = queryClient.getQueryData(
+        queryKeys.entityDetail(params.entityName, params.entityId),
+      ) as { etag: string | null } | undefined;
+      if (!cached?.etag) {
+        throw new Error(
+          `No ETag cached for ${params.entityName}/${params.entityId} — fetch the item before deleting`,
+        );
+      }
+
       await apiFetch(
-        createRequest({ url: `${collectionHref}/${params.entityId}`, method: "DELETE" }, {}),
+        createRequest(
+          { url: `${collectionHref}/${params.entityId}`, method: "DELETE" },
+          { headers: { "If-Match": cached.etag } },
+        ),
       );
     },
     onSuccess: (_data, variables) => {

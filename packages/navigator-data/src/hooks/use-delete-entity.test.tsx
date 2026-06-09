@@ -1,68 +1,40 @@
-import { type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "../../test-setup";
-import { type AuthenticationTokenSupplier, createApiClient } from "../api/client";
-import type { EntityInfo } from "../types/entity";
-import { NavigatorDataProvider } from "./context";
 import { queryKeys } from "./query-keys";
+import { BASE, makeQueryClient, makeWrapper, seedProfile } from "./test-utils";
 import { useDeleteEntity } from "./use-delete-entity";
 
-const BASE = "https://api.example.com";
-const PROFILE_URL = `${BASE}/profile`;
-const COLLECTION_URL = `${BASE}/invoices`;
-const ITEM_URL = `${COLLECTION_URL}/inv-1`;
+const ITEM_URL = `${BASE}/invoices/inv-1`;
 
-const PROFILE_DATA: EntityInfo[] = [
-  {
-    name: "invoice",
-    title: "Invoice",
-    href: `${BASE}/profile/invoices`,
-    collectionHref: COLLECTION_URL,
-  },
-];
-
-const noopSupplier: AuthenticationTokenSupplier = async () => ({
-  token: "test-token",
-  expiresAt: null,
-});
-
-function makeWrapper(queryClient: QueryClient) {
-  const apiFetch = createApiClient(noopSupplier);
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
-          {children}
-        </NavigatorDataProvider>
-      </QueryClientProvider>
-    );
-  };
+/** Seed a minimal entity detail cache entry so the ETag is available. */
+function seedEntityDetail(qc: ReturnType<typeof makeQueryClient>, etag = '"etag-abc"') {
+  qc.setQueryData(queryKeys.entityDetail("invoice", "inv-1"), {
+    data: { number: "INV-001" },
+    selfHref: ITEM_URL,
+    links: {},
+    etag,
+  });
 }
 
 describe("useDeleteEntity", () => {
-  it("sends DELETE to collectionHref/entityId even when entity-detail cache is cold", async () => {
-    // Regression: previously threw 'Entity not found in cache' when detail was never loaded.
-    // The hook now derives the URL from the profile cache (staleTime: Infinity).
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    // Pre-seed the profile so the mutation can resolve collectionHref
-    queryClient.setQueryData(queryKeys.profile(), PROFILE_DATA);
-
+  it("sends DELETE with If-Match to the item URL", async () => {
     let deletedUrl: string | undefined;
+    let capturedIfMatch: string | null = null;
     server.use(
       http.delete(ITEM_URL, ({ request }) => {
         deletedUrl = request.url;
+        capturedIfMatch = request.headers.get("If-Match");
         return new HttpResponse(null, { status: 204 });
       }),
     );
 
-    const { result } = renderHook(() => useDeleteEntity(), {
-      wrapper: makeWrapper(queryClient),
-    });
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntityDetail(qc);
+
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
 
     await act(async () => {
       await result.current.mutateAsync({ entityName: "invoice", entityId: "inv-1" });
@@ -70,20 +42,18 @@ describe("useDeleteEntity", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(deletedUrl).toBe(ITEM_URL);
+    expect(capturedIfMatch).toBe('"etag-abc"');
   });
 
   it("invalidates list and count queries on success", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    queryClient.setQueryData(queryKeys.profile(), PROFILE_DATA);
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntityDetail(qc);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
 
     server.use(http.delete(ITEM_URL, () => new HttpResponse(null, { status: 204 })));
 
-    const { result } = renderHook(() => useDeleteEntity(), {
-      wrapper: makeWrapper(queryClient),
-    });
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
 
     await act(async () => {
       await result.current.mutateAsync({ entityName: "invoice", entityId: "inv-1" });
@@ -95,14 +65,10 @@ describe("useDeleteEntity", () => {
   });
 
   it("throws when the entity name is unknown (not in profile)", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    queryClient.setQueryData(queryKeys.profile(), PROFILE_DATA);
+    const qc = makeQueryClient();
+    seedProfile(qc);
 
-    const { result } = renderHook(() => useDeleteEntity(), {
-      wrapper: makeWrapper(queryClient),
-    });
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
 
     await act(async () => {
       result.current.mutate({ entityName: "unknown-entity", entityId: "x-1" });
@@ -110,5 +76,20 @@ describe("useDeleteEntity", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as Error).message).toMatch(/Unknown entity/);
+  });
+
+  it("throws when no ETag is cached for the entity", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Intentionally do NOT seed entity detail — no ETag available.
+
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.mutate({ entityName: "invoice", entityId: "inv-1" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/No ETag cached/);
   });
 });

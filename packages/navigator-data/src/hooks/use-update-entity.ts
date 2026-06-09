@@ -25,11 +25,20 @@ export function useUpdateEntity() {
 
       const itemUrl = `${collectionHref}/${params.entityId}`;
 
+      const cached = queryClient.getQueryData(
+        queryKeys.entityDetail(params.entityName, params.entityId),
+      ) as { etag: string | null } | undefined;
+      if (!cached?.etag) {
+        throw new Error(
+          `No ETag cached for ${params.entityName}/${params.entityId} — fetch the item before mutating`,
+        );
+      }
+
       await apiFetch(
         createRequest(
-          { url: itemUrl, method: "PUT" },
+          { url: itemUrl, method: "PATCH" },
           {
-            headers: { "Content-Type": CONTENT_TYPE_JSON },
+            headers: { "Content-Type": CONTENT_TYPE_JSON, "If-Match": cached.etag },
             body: Representation.json(params.data),
           },
         ),
