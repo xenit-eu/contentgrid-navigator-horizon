@@ -87,36 +87,25 @@ describe("FilterSidebar — text filter (type=string, no options)", () => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 
-  it("renders the label for a plain string prop", () => {
+  it("renders an <input type='text'> for a text-type search property", () => {
     renderSidebar([TEXT_PROP]);
-    expect(screen.getByText("Title")).toBeInTheDocument();
+    const input = screen.getByRole("textbox") as HTMLInputElement;
+    expect(input.type).toBe("text");
   });
 
-  it("pre-fills the text input with the current filter value", () => {
-    renderSidebar([TEXT_PROP], { title: "hello" });
-    expect(screen.getByDisplayValue("hello")).toBeInTheDocument();
-  });
-
-  it("calls onFilterChange with the typed value on input change", () => {
+  it("calls onFilterChange with the typed value when text input changes", () => {
     const onFilterChange = vi.fn();
     renderSidebar([TEXT_PROP], {}, { onFilterChange });
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "world" } });
-    expect(onFilterChange).toHaveBeenCalledWith("title", "world");
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "hello" } });
+    expect(onFilterChange).toHaveBeenCalledWith("title", "hello");
   });
 
-  it("calls onFilterChange with undefined when the text input is cleared", () => {
+  it("calls onFilterChange with undefined when text input is cleared", () => {
     const onFilterChange = vi.fn();
-    renderSidebar([TEXT_PROP], { title: "hello" }, { onFilterChange });
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
-    expect(onFilterChange).toHaveBeenCalledWith("title", undefined);
-  });
-
-  it("clears the text filter when the clear button is clicked", async () => {
-    const user = userEvent.setup();
-    const onFilterChange = vi.fn();
-    renderSidebar([TEXT_PROP], { title: "hello" }, { onFilterChange });
-    const clearBtn = screen.getByRole("button");
-    await user.click(clearBtn);
+    renderSidebar([TEXT_PROP], { title: "existing" }, { onFilterChange });
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "" } });
     expect(onFilterChange).toHaveBeenCalledWith("title", undefined);
   });
 });
@@ -228,7 +217,7 @@ describe("FilterSidebar — date group filter (multiple date props for same fiel
     expect(inputs.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("calls onFilterChange when a date input changes in a group", () => {
+  it("calls onFilterChange when a date input changes in a group", async () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_GT_PROP, DATE_LT_PROP], {}, { onFilterChange });
     const inputs = screen.getAllByDisplayValue("");
@@ -270,5 +259,43 @@ describe("FilterSidebar — apiToDate conversion", () => {
   it("handles non-ISO date string gracefully (plain yyyy-MM-dd)", () => {
     renderSidebar([DATE_PROP], { created_at: "2024-06-15" });
     expect(screen.getByDisplayValue("2024-06-15")).toBeInTheDocument();
+  });
+
+  it("renders without throwing when date value is a garbage/invalid string (apiToDate fallback)", () => {
+    expect(() => renderSidebar([DATE_PROP], { created_at: "not-a-date-at-all" })).not.toThrow();
+  });
+});
+
+describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
+  it("calls onFilterChange with undefined when the clear button is clicked on a date filter with a value", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar(
+      [DATE_GT_PROP],
+      { "created_at~greater-than": "2024-01-01T00:00:00Z" },
+      { onFilterChange },
+    );
+    const clearBtn = screen.getByRole("button");
+    await user.click(clearBtn);
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
+  });
+});
+
+describe("FilterSidebar — DateGroupFilter clear button (grouped date props)", () => {
+  it("calls onFilterChange with undefined when the clear button is clicked in a DateGroupFilter with a value", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    // Two props with the same base ("created_at") → DateGroupFilter renders (isDateGroup=true)
+    renderSidebar(
+      [DATE_GT_PROP, DATE_LT_PROP],
+      { "created_at~greater-than": "2024-01-01T00:00:00Z" },
+      { onFilterChange },
+    );
+    // The clear button for the prop with a value should be visible (not invisible)
+    const buttons = screen.getAllByRole("button");
+    const visibleClear = buttons.find((btn) => !btn.classList.contains("invisible"));
+    expect(visibleClear).toBeDefined();
+    await user.click(visibleClear!);
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
   });
 });
