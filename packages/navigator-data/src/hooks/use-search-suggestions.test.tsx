@@ -125,4 +125,63 @@ describe("useSearchSuggestions", () => {
     );
     expect(result.current.suggestions).toEqual([]);
   });
+
+  it("surfaces an error state when the prefix fetch endpoint returns 500", async () => {
+    server.use(
+      http.get(COLLECTION_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const { result } = renderHook(
+      () =>
+        useSearchSuggestions({
+          entityName: "invoice",
+          collectionHref: COLLECTION_URL,
+          searchProperties: [prefixProp],
+          activeField: "number~prefix",
+          query: "INV",
+        }),
+      { wrapper: makeWrapper() },
+    );
+
+    // isLoading starts true for prefix queries; after error it becomes false
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 });
+    expect(result.current.suggestions).toEqual([]);
+  });
+
+  it("returns empty suggestions when the active field is not found in searchProperties", () => {
+    const { result } = renderHook(
+      () =>
+        useSearchSuggestions({
+          entityName: "invoice",
+          collectionHref: COLLECTION_URL,
+          searchProperties: [prefixProp],
+          activeField: "nonexistent-field",
+          query: "INV",
+        }),
+      { wrapper: makeWrapper() },
+    );
+    expect(result.current.suggestions).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("returns empty for prefix queries shorter than 2 chars (needsPrefixCall=false)", () => {
+    const { result } = renderHook(
+      () =>
+        useSearchSuggestions({
+          entityName: "invoice",
+          collectionHref: COLLECTION_URL,
+          searchProperties: [prefixProp],
+          activeField: "number~prefix",
+          query: "I",
+        }),
+      { wrapper: makeWrapper() },
+    );
+    expect(result.current.suggestions).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+  });
 });
