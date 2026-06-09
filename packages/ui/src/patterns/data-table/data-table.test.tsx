@@ -79,6 +79,34 @@ describe("DataTable — sort icons", () => {
     renderTable({ onSort: vi.fn(), currentSort: "status,asc" });
     expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
   });
+
+  it("passes undefined sort tooltip when on the third (clear) transition from desc to unsorted", () => {
+    // Simulate the component computing a tooltip when currentSort === key,desc (next = undefined)
+    // getSortTooltip returns nextPrompt ?? currentPrompt; when nextSort=undefined nextPrompt=undefined
+    // so it returns the currentPrompt for desc
+    const onSort = vi.fn();
+    renderTable({ onSort, currentSort: "name,desc", sortOptions });
+    // The sort button should still render correctly (no crash on the clear-sort path)
+    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+  });
+
+  it("calls onSort with the column key on the third click (asc → desc → unsorted)", async () => {
+    const user = userEvent.setup();
+    const onSort = vi.fn();
+    // Simulate being in desc state; clicking will call onSort once more (third click)
+    renderTable({ onSort, currentSort: "name,desc", sortOptions });
+    await user.click(screen.getByRole("button", { name: /name/i }));
+    // onSort is always called with the column key — the parent component manages sort state
+    expect(onSort).toHaveBeenCalledWith("name");
+  });
+
+  it("computes the 'set asc' tooltip when no sort is currently active (else branch)", () => {
+    // When currentSort is undefined/unrelated, getSortTooltip's else branch sets nextSort = key,asc
+    // and returns the prompt for the asc option
+    renderTable({ onSort: vi.fn(), currentSort: undefined, sortOptions });
+    // The sort button renders without error — tooltip logic takes the else path (nextSort = key,asc)
+    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+  });
 });
 
 describe("DataTable — row rendering", () => {

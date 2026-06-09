@@ -284,3 +284,22 @@ describe("RelationSection — column title resolution", () => {
     expect(screen.queryByText("Should Not Show")).not.toBeInTheDocument();
   });
 });
+
+describe("RelationSection — getItemLabel fallback", () => {
+  it("uses item.id as label when all displayable data fields are null", () => {
+    const itemWithNullFields: RelationItem = {
+      id: "id-only-123",
+      data: { name: null, code: null },
+    };
+    renderRelation({ isManyToOne: true, items: [itemWithNullFields], columns: COLUMNS });
+    // The compact card renders the label as the primary text
+    expect(screen.getByText("id-only-123")).toBeInTheDocument();
+  });
+});
+
+describe("RelationSection — resolveColumnKeys empty items early return", () => {
+  it("renders empty state without crashing when items is empty and no columns prop is given", () => {
+    expect(() => renderRelation({ items: [] })).not.toThrow();
+    expect(screen.getByText("No invoices linked")).toBeInTheDocument();
+  });
+});

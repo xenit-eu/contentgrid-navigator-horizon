@@ -360,7 +360,7 @@ export function FilterSidebar({
                       );
                     }
 
-                    // 3. Handle Text type
+                    // 3. Handle Text types
                     if (type === "text") {
                       return (
                         <Input
