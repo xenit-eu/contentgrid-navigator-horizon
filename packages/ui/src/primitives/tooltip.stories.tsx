@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { InfoIcon } from "lucide-react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 
@@ -94,12 +94,17 @@ export const WithInteraction: Story = {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole("button", { name: /info/i });
     await userEvent.hover(trigger);
-    // Tooltip content appears in a portal outside canvasElement.
-    // Radix tooltip@1.1+ also renders a permanently-present sr-only <span role="tooltip">
-    // for keyboard accessibility; query by name to match only the visible popup.
-    const tooltip = await within(document.body).findByRole("tooltip", {
-      name: /more information/i,
+    trigger.focus();
+    // Radix briefly renders the tooltip content as a hidden, un-positioned node
+    // (also role="tooltip") before revealing the popper. Poll for the visible
+    // tooltip carrying the text rather than grabbing the first role="tooltip" match.
+    await waitFor(() => {
+      const tips = within(document.body).getAllByRole("tooltip");
+      const visible = tips.find(
+        (t) => /more information/i.test(t.textContent ?? "") && t.checkVisibility?.() !== false,
+      );
+      expect(visible).toBeTruthy();
+      expect(visible!).toBeVisible();
     });
-    await expect(tooltip).toBeVisible();
   },
 };
