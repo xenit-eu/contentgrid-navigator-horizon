@@ -1,6 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
-import { useAuth } from "react-oidc-context";
+import {
+  NavigatorDataProvider,
+  createApiClient,
+  createOidcTokenSupplier,
+  getAppConfig,
+  useAuth,
+} from "@contentgrid/navigator-data";
 import { ExperimentalBanner } from "../components/experimental-banner";
 
 export const Route = createRootRoute({
@@ -9,6 +15,17 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const auth = useAuth();
+
+  // Keep a ref so the token supplier always reads the latest user without recreating apiFetch.
+  const authRef = useRef(auth);
+  authRef.current = auth;
+
+  const apiFetch = useMemo(() => {
+    const supplier = createOidcTokenSupplier(async () => authRef.current.user ?? null);
+    return createApiClient(supplier);
+  }, []); // created once; token is read via ref on each request
+
+  const { apiBaseUrl } = getAppConfig();
 
   useEffect(() => {
     if (!auth.isLoading && !auth.error && auth.user?.expired) {
@@ -35,9 +52,11 @@ function RootComponent() {
   }
 
   return (
-    <>
-      <ExperimentalBanner />
-      <Outlet />
-    </>
+    <NavigatorDataProvider apiFetch={apiFetch} profileUrl={`${apiBaseUrl}/profile`}>
+      <>
+        <ExperimentalBanner />
+        <Outlet />
+      </>
+    </NavigatorDataProvider>
   );
 }
