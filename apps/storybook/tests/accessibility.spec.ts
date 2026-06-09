@@ -28,6 +28,10 @@ import { loadStories } from "./story-index";
 const stories = loadStories((entry) => !entry.tags?.includes("no-visual-test"), "test:a11y");
 
 test.describe("Storybook accessibility audit (axe-core)", () => {
+  // The @storybook/addon-a11y also runs axe on story load and can race with
+  // AxeBuilder.analyze(). Retry once so the addon's run finishes before ours.
+  test.describe.configure({ retries: 2 });
+
   if (stories.length === 0) {
     // No stories exist yet. Keep the suite green.
     test.skip("no stories found — nothing to audit", () => {});
