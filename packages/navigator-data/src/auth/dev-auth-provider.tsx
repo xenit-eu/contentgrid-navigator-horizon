@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { User, UserManagerEvents, UserManagerSettings } from "oidc-client-ts";
 import { AuthContext } from "react-oidc-context";
 import type { AuthContextProps } from "react-oidc-context";
@@ -56,33 +57,39 @@ function createMockUser(token: string): User {
     session_state: null,
     state: undefined,
     toStorageString: () => "",
-  } as unknown as User;
+  } as User;
 }
 
-export function DevAuthProvider({ token, children }: { token: string; children: React.ReactNode }) {
-  const mockAuthContext: AuthContextProps = {
-    user: createMockUser(token),
-    isLoading: false,
-    isAuthenticated: true,
-    activeNavigator: undefined,
-    error: undefined,
-    settings: {} as UserManagerSettings,
-    events: mockEvents,
-    clearStaleState: asyncNoop,
-    removeUser: asyncNoop,
-    signinPopup: asyncNoop as unknown as AuthContextProps["signinPopup"],
-    signinSilent: asyncNoop as unknown as AuthContextProps["signinSilent"],
-    signinRedirect: asyncNoop,
-    signinResourceOwnerCredentials:
-      asyncNoop as unknown as AuthContextProps["signinResourceOwnerCredentials"],
-    signoutRedirect: asyncNoop,
-    signoutPopup: asyncNoop,
-    signoutSilent: asyncNoop,
-    querySessionStatus: asyncNoop as unknown as AuthContextProps["querySessionStatus"],
-    revokeTokens: asyncNoop,
-    startSilentRenew: noop,
-    stopSilentRenew: noop,
-  };
+export function DevAuthProvider({
+  token,
+  children,
+}: Readonly<{ token: string; children: React.ReactNode }>) {
+  const mockAuthContext = useMemo<AuthContextProps>(
+    () => ({
+      user: createMockUser(token),
+      isLoading: false,
+      isAuthenticated: true,
+      activeNavigator: undefined,
+      error: undefined,
+      settings: {} as UserManagerSettings,
+      events: mockEvents,
+      clearStaleState: asyncNoop,
+      removeUser: asyncNoop,
+      signinPopup: asyncNoop as unknown as AuthContextProps["signinPopup"],
+      signinSilent: asyncNoop as unknown as AuthContextProps["signinSilent"],
+      signinRedirect: asyncNoop,
+      signinResourceOwnerCredentials:
+        asyncNoop as unknown as AuthContextProps["signinResourceOwnerCredentials"],
+      signoutRedirect: asyncNoop,
+      signoutPopup: asyncNoop,
+      signoutSilent: asyncNoop,
+      querySessionStatus: asyncNoop as unknown as AuthContextProps["querySessionStatus"],
+      revokeTokens: asyncNoop,
+      startSilentRenew: noop,
+      stopSilentRenew: noop,
+    }),
+    [token],
+  );
 
   return <AuthContext.Provider value={mockAuthContext}>{children}</AuthContext.Provider>;
 }

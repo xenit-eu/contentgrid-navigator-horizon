@@ -5,3 +5,4 @@ export * from "./relation-section";
 export * from "./entity-picker";
 export * from "./file-upload-zone";
 export * from "./branding-header";
+export * from "./sign-in-gate";
