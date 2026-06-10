@@ -16,10 +16,8 @@ import {
   useEntitySchema,
   useProfile,
 } from "@contentgrid/navigator-data";
-import type { EntityAttribute } from "@contentgrid/navigator-data";
 import { resolveDisplayName } from "@contentgrid/navigator-data/utils/entity-display-name";
 import {
-  Badge,
   Button,
   Skeleton,
   Table,
@@ -29,92 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@contentgrid/ui";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Types that are not useful as visible columns in the list view. */
-const EXCLUDED_TYPES = new Set(["content", "audit_metadata"]);
-
-/** Names of system-managed read-only attributes we skip in the column list. */
-const SYSTEM_FIELDS = new Set([
-  "id",
-  "created_at",
-  "created_by",
-  "created_date",
-  "modified_at",
-  "modified_by",
-  "modified_date",
-  "updated_at",
-  "updated_by",
-]);
-
-const MAX_COLUMNS = 6;
-
-function pickDisplayAttributes(attributes: EntityAttribute[]): EntityAttribute[] {
-  return attributes
-    .filter((a) => !EXCLUDED_TYPES.has(a.type) && !(a.readOnly && SYSTEM_FIELDS.has(a.name)))
-    .slice(0, MAX_COLUMNS);
-}
-
-function formatCellValue(value: unknown, type: string): React.ReactNode {
-  if (value === null || value === undefined || value === "") {
-    return <span className="text-muted-foreground">—</span>;
-  }
-
-  if (type === "boolean") {
-    const boolVal = Boolean(value);
-    return (
-      <Badge
-        variant="outline"
-        className={
-          boolVal
-            ? "border-transparent bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-            : "border-transparent bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-        }
-      >
-        {boolVal ? "Yes" : "No"}
-      </Badge>
-    );
-  }
-
-  if (type === "date" || type === "datetime") {
-    const dateStr = typeof value === "string" ? value : String(value);
-    try {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) {
-        if (type === "date") {
-          return d.toLocaleDateString(undefined, {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          });
-        }
-        return d.toLocaleString(undefined, {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
-    } catch {
-      // fall through to string display
-    }
-    return dateStr;
-  }
-
-  if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return "";
-    }
-  }
-
-  return String(value);
-}
+import { formatAttributeValue, pickDisplayAttributes } from "../attribute-format";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -123,7 +36,8 @@ function formatCellValue(value: unknown, type: string): React.ReactNode {
 function PageToolbar({
   entityTitle,
   onBack,
-}: Readonly<{ entityTitle: string; onBack: () => void }>) {
+  onHome,
+}: Readonly<{ entityTitle: string; onBack: () => void; onHome: () => void }>) {
   return (
     <div className="flex shrink-0 items-center gap-2.5 border-b border-border bg-card px-6 py-2.5">
       <button
@@ -139,7 +53,13 @@ function PageToolbar({
         aria-label="Breadcrumb"
         className="flex items-center gap-1.5 text-xs text-muted-foreground"
       >
-        <span>Home</span>
+        <button
+          type="button"
+          onClick={onHome}
+          className="cursor-pointer border-0 bg-transparent text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Home
+        </button>
         <ChevronRightIcon className="size-2.5" />
         <span className="font-medium text-foreground">{entityTitle}</span>
       </nav>
@@ -191,12 +111,14 @@ function PageHead({
   );
 }
 
+const SKELETON_ROW_KEYS = ["sk-r0", "sk-r1", "sk-r2", "sk-r3", "sk-r4", "sk-r5"] as const;
+const SKELETON_CELL_KEYS = ["sk-c0", "sk-c1", "sk-c2", "sk-c3", "sk-c4", "sk-c5"] as const;
+
 function SkeletonRows({ colCount }: Readonly<{ colCount: number }>) {
   return (
     <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: stable positional skeleton rows
-        <TableRow key={i} className="cursor-default">
+      {SKELETON_ROW_KEYS.map((rowKey) => (
+        <TableRow key={rowKey} className="cursor-default">
           <TableCell className="py-3.5 pl-0">
             <div className="flex items-center gap-3">
               <Skeleton className="size-[30px] shrink-0 rounded-md" />
@@ -206,9 +128,8 @@ function SkeletonRows({ colCount }: Readonly<{ colCount: number }>) {
               </div>
             </div>
           </TableCell>
-          {Array.from({ length: Math.max(0, colCount - 1) }).map((__, j) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: stable positional skeleton cells
-            <TableCell key={j} className="py-3.5">
+          {SKELETON_CELL_KEYS.slice(0, Math.max(0, colCount - 1)).map((cellKey) => (
+            <TableCell key={cellKey} className="py-3.5">
               <Skeleton className="h-[13px] w-20" />
             </TableCell>
           ))}
@@ -412,7 +333,7 @@ export function CollectionListView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <PageToolbar entityTitle={entityTitle} onBack={goHome} />
+      <PageToolbar entityTitle={entityTitle} onBack={goHome} onHome={goHome} />
 
       <PageHead
         entityTitle={entityTitle}
@@ -432,9 +353,8 @@ export function CollectionListView({
                 <TableRow>
                   {isPending ? (
                     // Skeleton placeholder header cells
-                    Array.from({ length: colCount }).map((_, i) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: stable positional skeleton
-                      <TableHead key={i} className={i === 0 ? "w-[36%] pl-0" : ""}>
+                    SKELETON_CELL_KEYS.slice(0, colCount).map((key, i) => (
+                      <TableHead key={key} className={i === 0 ? "w-[36%] pl-0" : ""}>
                         <Skeleton className="h-3 w-20" />
                       </TableHead>
                     ))
@@ -461,32 +381,48 @@ export function CollectionListView({
                 {isPending ? (
                   <SkeletonRows colCount={colCount + 1} />
                 ) : (
-                  listResult.data?.items.map((item) => (
-                    <TableRow
-                      key={item.id}
-                      className="cursor-pointer border-b border-border/60 hover:bg-muted/50"
-                      onClick={() => goToItem(item.id)}
-                    >
-                      {hasFallback ? (
-                        <TableCell className="py-3.5 pl-0 text-[13px] font-medium text-foreground">
-                          {resolveDisplayName(item.data, item.id, schema.data?.attributes ?? [])}
-                        </TableCell>
-                      ) : (
-                        displayAttributes.map((attr, i) => (
-                          <TableCell
-                            key={attr.name}
-                            className={`py-3.5 text-[13px] text-foreground ${i === 0 ? "pl-0 font-medium" : ""}`}
-                          >
-                            {formatCellValue(item.data[attr.name], attr.type)}
+                  listResult.data?.items.map((item) => {
+                    const displayName = resolveDisplayName(
+                      item.data,
+                      item.id,
+                      schema.data?.attributes ?? [],
+                    );
+                    return (
+                      <TableRow
+                        key={item.id}
+                        className="cursor-pointer border-b border-border/60 hover:bg-muted/50"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View ${displayName}`}
+                        onClick={() => goToItem(item.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            goToItem(item.id);
+                          }
+                        }}
+                      >
+                        {hasFallback ? (
+                          <TableCell className="py-3.5 pl-0 text-[13px] font-medium text-foreground">
+                            {displayName}
                           </TableCell>
-                        ))
-                      )}
-                      {/* TODO(SLICE-4): row actions (edit, delete, RBAC visibility) */}
-                      <TableCell className="pr-0 text-right">
-                        <ChevronRightIcon className="inline size-4 text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        ) : (
+                          displayAttributes.map((attr, i) => (
+                            <TableCell
+                              key={attr.name}
+                              className={`py-3.5 text-[13px] text-foreground ${i === 0 ? "pl-0 font-medium" : ""}`}
+                            >
+                              {formatAttributeValue(item.data[attr.name], attr.type)}
+                            </TableCell>
+                          ))
+                        )}
+                        {/* TODO(SLICE-4): row actions (edit, delete, RBAC visibility) */}
+                        <TableCell className="pr-0 text-right">
+                          <ChevronRightIcon className="inline size-4 text-muted-foreground" />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

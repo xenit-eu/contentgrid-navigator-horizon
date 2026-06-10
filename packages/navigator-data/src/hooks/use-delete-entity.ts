@@ -40,6 +40,7 @@ export function useDeleteEntity() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList(variables.entityName) });
       queryClient.invalidateQueries({ queryKey: queryKeys.entityCount(variables.entityName) });
+      queryClient.invalidateQueries({ queryKey: ["entity-relations"] });
       queryClient.removeQueries({
         queryKey: queryKeys.entityDetail(variables.entityName, variables.entityId),
       });

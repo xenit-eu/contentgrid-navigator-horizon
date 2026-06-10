@@ -20,7 +20,6 @@ import {
 import type { EntityAttribute, EntityRelation } from "@contentgrid/navigator-data";
 import { resolveDisplayName } from "@contentgrid/navigator-data/utils/entity-display-name";
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -35,23 +34,11 @@ import {
   Separator,
   Skeleton,
 } from "@contentgrid/ui";
+import { SYSTEM_FIELDS, formatAttributeValue, formatRelationValue } from "../attribute-format";
 
 // ---------------------------------------------------------------------------
-// Shared attribute filter (mirrors pickDisplayAttributes in collection-list-view
-// but INCLUDES content attrs in the detail view — we just skip system fields)
+// Attribute filter helpers (detail-view specific — includes content attrs)
 // ---------------------------------------------------------------------------
-
-const SYSTEM_FIELDS = new Set([
-  "id",
-  "created_at",
-  "created_by",
-  "created_date",
-  "modified_at",
-  "modified_by",
-  "modified_date",
-  "updated_at",
-  "updated_by",
-]);
 
 function isSystemField(attr: EntityAttribute): boolean {
   return attr.readOnly && SYSTEM_FIELDS.has(attr.name);
@@ -70,68 +57,6 @@ function pickDetailAttributes(attributes: EntityAttribute[]): EntityAttribute[] 
 }
 
 // ---------------------------------------------------------------------------
-// Value formatter (use convertToString from navigator-data where possible)
-// ---------------------------------------------------------------------------
-
-function formatValue(value: unknown, type: string): React.ReactNode {
-  if (value === null || value === undefined || value === "") {
-    return <span className="text-muted-foreground italic">—</span>;
-  }
-
-  if (type === "boolean") {
-    const boolVal = Boolean(value);
-    return (
-      <Badge
-        variant="outline"
-        className={
-          boolVal
-            ? "border-transparent bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-            : "border-transparent bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-        }
-      >
-        {boolVal ? "Yes" : "No"}
-      </Badge>
-    );
-  }
-
-  if (type === "date" || type === "datetime") {
-    const str = typeof value === "string" ? value : String(value);
-    try {
-      const d = new Date(str);
-      if (!isNaN(d.getTime())) {
-        if (type === "date") {
-          return d.toLocaleDateString(undefined, {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          });
-        }
-        return d.toLocaleString(undefined, {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
-    } catch {
-      // fall through
-    }
-    return str;
-  }
-
-  if (typeof value === "object") {
-    try {
-      return <span className="font-mono text-[12px]">{JSON.stringify(value)}</span>;
-    } catch {
-      return "";
-    }
-  }
-
-  return String(value);
-}
-
-// ---------------------------------------------------------------------------
 // RelationCard — wraps RelationSection for a single relation
 // ---------------------------------------------------------------------------
 
@@ -142,13 +67,24 @@ interface RelationCardProps {
   onNavigate: (collection: string, id: string) => void;
 }
 
+/** HAL envelope keys that must not appear as relation-table columns. */
+const HAL_ENVELOPE_KEYS = new Set(["_links", "_templates", "_embedded"]);
+
 function RelationCard({ entityName, entityId, relation, onNavigate }: Readonly<RelationCardProps>) {
   const result = useEntityRelations(entityName, entityId, relation.name);
 
+  // Pre-format relation cell values to display strings. RelationSection
+  // (in @contentgrid/ui) stringifies values with its own formatter that does
+  // NOT localise dates/numbers, so we format here for parity with the main
+  // collection table. Strings only — passing JSX would break RelationSection.
   const items =
     result.data?.map((ri) => ({
       id: ri.id,
-      data: ri.data,
+      data: Object.fromEntries(
+        Object.entries(ri.data)
+          .filter(([key]) => !HAL_ENVELOPE_KEYS.has(key))
+          .map(([key, value]) => [key, formatRelationValue(value)]),
+      ),
     })) ?? undefined;
 
   // Derive a target collection name from the targetEntityHref if available
@@ -181,7 +117,9 @@ function AttributeRow({
   return (
     <div className="flex min-h-[32px] items-start gap-3 py-1.5 text-[13px]">
       <dt className="w-[140px] shrink-0 pt-0.5 font-medium text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 flex-1 text-foreground">{formatValue(value, type)}</dd>
+      <dd className="min-w-0 flex-1 text-foreground">
+        {formatAttributeValue(value, type, { mono: true, italic: true })}
+      </dd>
     </div>
   );
 }
@@ -243,6 +181,8 @@ function DeleteDialog({
     } else {
       errorMessage = pd.detail ?? pd.title ?? "Failed to delete item.";
     }
+  } else if (deleteError instanceof Error && deleteError.message.startsWith("No ETag cached")) {
+    errorMessage = "Couldn't determine the item version. Please refresh and try again.";
   } else if (deleteError instanceof Error) {
     errorMessage = deleteError.message;
   }
@@ -308,6 +248,8 @@ interface BreadcrumbToolbarProps {
   entityTitle: string;
   displayName: string;
   onBack: () => void;
+  onHome: () => void;
+  onCollection: () => void;
   actions?: React.ReactNode;
 }
 
@@ -315,6 +257,8 @@ function BreadcrumbToolbar({
   entityTitle,
   displayName,
   onBack,
+  onHome,
+  onCollection,
   actions,
 }: Readonly<BreadcrumbToolbarProps>) {
   return (
@@ -332,9 +276,21 @@ function BreadcrumbToolbar({
         aria-label="Breadcrumb"
         className="flex items-center gap-1.5 text-xs text-muted-foreground"
       >
-        <span>Home</span>
+        <button
+          type="button"
+          onClick={onHome}
+          className="cursor-pointer border-0 bg-transparent text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Home
+        </button>
         <ChevronRightIcon className="size-2.5" />
-        <span>{entityTitle}</span>
+        <button
+          type="button"
+          onClick={onCollection}
+          className="cursor-pointer border-0 bg-transparent text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          {entityTitle}
+        </button>
         <ChevronRightIcon className="size-2.5" />
         <span className="font-medium text-foreground">{displayName}</span>
       </nav>
@@ -394,6 +350,8 @@ interface ContentFocusProps {
   relations: EntityRelation[];
   data: Record<string, unknown>;
   onBack: () => void;
+  onHome: () => void;
+  onCollection: () => void;
   onNavigate: (col: string, itemId: string) => void;
   onEditClick: () => void;
   onDeleteClick: () => void;
@@ -413,6 +371,8 @@ function ContentFocusView({
   relations,
   data,
   onBack,
+  onHome,
+  onCollection,
   onNavigate,
   onEditClick,
   onDeleteClick,
@@ -430,7 +390,13 @@ function ContentFocusView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <BreadcrumbToolbar entityTitle={entityTitle} displayName={displayName} onBack={onBack} />
+      <BreadcrumbToolbar
+        entityTitle={entityTitle}
+        displayName={displayName}
+        onBack={onBack}
+        onHome={onHome}
+        onCollection={onCollection}
+      />
 
       {/* Content-focus grid: viewer | side panel */}
       <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: "1fr 360px" }}>
@@ -545,6 +511,8 @@ interface AttributeFocusProps {
   relations: EntityRelation[];
   data: Record<string, unknown>;
   onBack: () => void;
+  onHome: () => void;
+  onCollection: () => void;
   onNavigate: (col: string, itemId: string) => void;
   onEditClick: () => void;
   onDeleteClick: () => void;
@@ -564,6 +532,8 @@ function AttributeFocusView({
   relations,
   data,
   onBack,
+  onHome,
+  onCollection,
   onNavigate,
   onEditClick,
   onDeleteClick,
@@ -612,6 +582,8 @@ function AttributeFocusView({
         entityTitle={entityTitle}
         displayName={displayName}
         onBack={onBack}
+        onHome={onHome}
+        onCollection={onCollection}
         actions={toolbarActions}
       />
 
@@ -688,9 +660,8 @@ function DetailSkeleton() {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-3 w-32" />
           <div className="mt-6 space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: stable positional skeleton
-              <Skeleton key={i} className="h-6 w-full" />
+            {["sk-a0", "sk-a1", "sk-a2", "sk-a3", "sk-a4"].map((key) => (
+              <Skeleton key={key} className="h-6 w-full" />
             ))}
           </div>
         </div>
@@ -745,6 +716,10 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
   const hasContentAttr = attributes.some(isContentAttr);
 
   // --- Navigation ---
+  function goHome() {
+    void router.navigate({ to: "/" as never });
+  }
+
   function goBack() {
     void router.navigate({
       to: "/$collection" as never,
@@ -797,6 +772,8 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
     relations,
     data,
     onBack: goBack,
+    onHome: goHome,
+    onCollection: goBack,
     onNavigate: goToItem,
     onEditClick: () => undefined, // TODO(HZN-5A): open create/edit form
     onDeleteClick: handleDeleteClick,

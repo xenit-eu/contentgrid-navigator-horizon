@@ -7,5 +7,5 @@ export const Route = createFileRoute("/$collection/$id")({
 
 function ItemDetailPage() {
   const { collection, id } = Route.useParams();
-  return <ItemDetailView collection={collection} id={id} />;
+  return <ItemDetailView key={`${collection}/${id}`} collection={collection} id={id} />;
 }
