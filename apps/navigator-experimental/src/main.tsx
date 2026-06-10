@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { AuthProvider, loadAppConfig } from "@contentgrid/navigator-data";
+import { AppConfigProvider, AuthProvider, loadAppConfig } from "@contentgrid/navigator-data";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -20,9 +20,11 @@ try {
   await loadAppConfig();
   createRoot(rootEl).render(
     <StrictMode>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <AppConfigProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </AppConfigProvider>
     </StrictMode>,
   );
 } catch (err: unknown) {

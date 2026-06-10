@@ -27,13 +27,13 @@ declare global {
   }
 }
 
-export interface AppConfig {
+export interface RuntimeAppConfig {
   authority: string;
   clientId: string;
   apiBaseUrl: string;
 }
 
-let cachedConfig: AppConfig | null = null;
+let cachedConfig: RuntimeAppConfig | null = null;
 
 async function fetchConfigJs(): Promise<unknown> {
   // config.js may already be present on window if loaded as a <script> tag in index.html.
@@ -52,7 +52,7 @@ async function fetchConfigJs(): Promise<unknown> {
   return fn();
 }
 
-export async function loadAppConfig(): Promise<AppConfig> {
+export async function loadAppConfig(): Promise<RuntimeAppConfig> {
   if (cachedConfig) return cachedConfig;
 
   try {
@@ -92,14 +92,14 @@ export async function loadAppConfig(): Promise<AppConfig> {
   return cachedConfig;
 }
 
-export function getAppConfig(): AppConfig {
+export function getAppConfig(): RuntimeAppConfig {
   if (!cachedConfig) {
     throw new Error("App config not loaded. Call loadAppConfig() first.");
   }
   return cachedConfig;
 }
 
-export function getOidcConfig(config: AppConfig): AuthProviderProps {
+export function getOidcConfig(config: RuntimeAppConfig): AuthProviderProps {
   return {
     authority: config.authority,
     client_id: config.clientId,

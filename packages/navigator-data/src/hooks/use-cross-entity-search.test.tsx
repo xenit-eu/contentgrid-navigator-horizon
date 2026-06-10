@@ -127,4 +127,50 @@ describe("useCrossEntitySearch", () => {
     expect(result.current.results).toHaveLength(0);
     expect(result.current.totalResults).toBe(0);
   });
+
+  it("returns empty results when schema endpoint errors (500)", async () => {
+    server.use(
+      http.get(SCHEMA_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+
+    const { result } = renderHook(() => useCrossEntitySearch("INV"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    // Schema fetch fails, so no search queries fire; isSearching eventually becomes false
+    await waitFor(() => expect(result.current.isSearching).toBe(false), { timeout: 5000 });
+    expect(result.current.results).toHaveLength(0);
+  });
+
+  it("returns empty results when the entity has no searchable schema properties", async () => {
+    const emptySchemaFixture = {
+      ...schemaFixture,
+      _templates: {
+        search: {
+          method: "GET",
+          target: COLLECTION_URL,
+          properties: [],
+        },
+      },
+    };
+    server.use(http.get(SCHEMA_URL, () => HttpResponse.json(emptySchemaFixture)));
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+
+    const { result } = renderHook(() => useCrossEntitySearch("INV"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await waitFor(() => expect(result.current.isSearching).toBe(false), { timeout: 5000 });
+    expect(result.current.results).toHaveLength(0);
+  });
 });

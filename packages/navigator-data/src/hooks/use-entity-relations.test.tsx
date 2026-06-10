@@ -165,4 +165,54 @@ describe("useEntityRelations", () => {
 
     expect(result.current.data).toEqual([]);
   });
+
+  it("surfaces an error (not empty array) when the relation endpoint returns a non-404 error", async () => {
+    mockProfile();
+    mockEntityDetail();
+    server.use(
+      http.get(RELATION_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityRelations("invoice", "inv-1", "customer"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeDefined();
+  });
+
+  it("is not enabled when the entity item has no matching relation link", async () => {
+    mockProfile();
+    // Respond with an entity detail that has no relation links
+    server.use(
+      http.get(ITEM_URL, () =>
+        HttpResponse.json({
+          id: "inv-1",
+          number: "INV-001",
+          _links: {
+            self: { href: ITEM_URL },
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityRelations("invoice", "inv-1", "nonexistent"), {
+      wrapper: makeWrapper(),
+    });
+
+    // No relation link → query stays idle (never fires)
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"), { timeout: 3000 });
+  });
 });

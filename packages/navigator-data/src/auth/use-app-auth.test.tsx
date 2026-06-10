@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
+import type { User } from "oidc-client-ts";
 import { AuthContext } from "react-oidc-context";
-import type { AuthContextProps, User } from "react-oidc-context";
+import type { AuthContextProps } from "react-oidc-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppAuth } from "./use-app-auth";
 
@@ -118,7 +119,7 @@ describe("useAppAuth", () => {
     const signinSilent = vi.fn();
     const ctx = makeAuthCtx({
       isLoading: false,
-      error: new Error("auth error"),
+      error: Object.assign(new Error("auth error"), { source: "unknown" as const }),
       user: { expired: true, access_token: "tok" } as unknown as User,
       signinSilent,
     });

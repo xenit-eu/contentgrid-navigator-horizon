@@ -5,7 +5,7 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "../../test-setup";
 import { type AuthenticationTokenSupplier, createApiClient } from "../api/client";
-import { NavigatorDataProvider } from "./context";
+import { NavigatorDataProvider, useNavigatorData } from "./context";
 import { useProfile } from "./use-profile";
 
 const PROFILE_URL = "https://api.example.com/profile";
@@ -91,5 +91,50 @@ describe("useProfile", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeDefined();
+  });
+
+  it("uses href-derived name when link.name is absent", async () => {
+    server.use(
+      http.get(PROFILE_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: PROFILE_URL },
+            // cg:entity link with NO name field — name should be derived from href
+            "cg:entity": [{ href: "https://api.example.com/profile/orders", title: "Order" }],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+          _templates: {},
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data).toHaveLength(1);
+    // Name should be derived from the last segment of the href
+    expect(result.current.data![0].name).toBe("orders");
+    expect(result.current.data![0].collectionHref).toBe("https://api.example.com/orders");
+  });
+});
+
+describe("useNavigatorData", () => {
+  it("throws when used outside NavigatorDataProvider", () => {
+    // Wrap in a QueryClient provider only — no NavigatorDataProvider
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    expect(() => renderHook(() => useNavigatorData(), { wrapper })).toThrow(
+      "useNavigatorData must be used within <NavigatorDataProvider>",
+    );
   });
 });
