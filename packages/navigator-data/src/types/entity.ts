@@ -55,4 +55,10 @@ export interface EntitySchema {
   sortableFields: string[];
   sortOptions: SortOption[];
   createFormRelations: CreateFormRelation[];
+  /**
+   * Whether the entity profile exposes a `create-form` HAL-FORMS template.
+   * Under ABAC the platform omits templates the current user is not allowed to
+   * use, so `false` means the user cannot create new items of this entity type.
+   */
+  canCreate: boolean;
 }

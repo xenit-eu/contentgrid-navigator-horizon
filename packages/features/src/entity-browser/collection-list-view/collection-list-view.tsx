@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import {
   ProblemDetailError,
+  useEntityCapabilities,
   useEntityList,
   useEntitySchema,
   useProfile,
@@ -218,7 +219,10 @@ function SkeletonRows({ colCount }: Readonly<{ colCount: number }>) {
   );
 }
 
-function EmptyState({ entityTitle }: Readonly<{ entityTitle: string }>) {
+function EmptyState({
+  entityTitle,
+  canCreate,
+}: Readonly<{ entityTitle: string; canCreate: boolean }>) {
   return (
     <div className="flex flex-1 items-center justify-center px-6 py-10">
       <div className="max-w-[360px] text-center">
@@ -229,14 +233,18 @@ function EmptyState({ entityTitle }: Readonly<{ entityTitle: string }>) {
           No {entityTitle.toLowerCase()} yet
         </div>
         <div className="mb-6 text-[13px] leading-relaxed text-foreground/60">
-          Create your first {entityTitle.toLowerCase()} to get started. It will appear here once
-          added.
+          {canCreate
+            ? `Create your first ${entityTitle.toLowerCase()} to get started. It will appear here once added.`
+            : `No ${entityTitle.toLowerCase()} items have been created yet.`}
         </div>
-        {/* TODO(HZN-5A): wire to create form when entity creation is implemented */}
-        <Button disabled className="gap-2 opacity-50" title="Create is coming in HZN-5A">
-          <PlusIcon className="size-4" />
-          Create {entityTitle}
-        </Button>
+        {/* RBAC hide-point: only show Create when the profile exposes create-form.
+            TODO(HZN-5A): wire to create form when entity creation is implemented */}
+        {canCreate && (
+          <Button disabled className="gap-2 opacity-50" title="Create is coming in HZN-5A">
+            <PlusIcon className="size-4" />
+            Create {entityTitle}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -352,6 +360,11 @@ export function CollectionListView({
   const entityTitle = entityInfo?.title ?? collection;
 
   const schema = useEntitySchema(collection);
+  // RBAC hook point: canCreate gates empty-state affordance.
+  // Fallback to true while schema is loading (permissive — see useEntityCapabilities).
+  const capabilities = useEntityCapabilities(collection);
+  const canCreate = capabilities.canCreate;
+
   const rawDisplayAttributes = schema.data ? pickDisplayAttributes(schema.data.attributes) : [];
   // When the schema has no listable attributes, fall back to a synthetic
   // primary column that shows the item's display name or id.
@@ -480,7 +493,7 @@ export function CollectionListView({
 
             {/* Empty state rendered below the table structure */}
             {!isPending && listResult.data?.items.length === 0 && (
-              <EmptyState entityTitle={entityTitle} />
+              <EmptyState entityTitle={entityTitle} canCreate={canCreate} />
             )}
           </div>
 

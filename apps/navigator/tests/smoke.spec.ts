@@ -19,8 +19,10 @@ test("boots and renders an entity list from the stubbed HAL endpoint", async ({ 
 
   await page.goto("/");
 
-  // Entity discovered at runtime from the profile root's cg:entity links
-  await expect(page.getByText("Invoice", { exact: true })).toBeVisible();
+  // Entity discovered at runtime from the profile root's cg:entity links.
+  // Scope to the AppShell sidebar (a <nav>) so the assertion is specific and
+  // doesn't collide with the home EntityList card that renders the same title.
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Invoice" })).toBeVisible();
 
   // Collection items rendered from the stubbed /invoices HAL collection
   await expect(page.getByText("3 item(s)")).toBeVisible();

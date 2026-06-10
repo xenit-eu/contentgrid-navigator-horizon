@@ -45,6 +45,54 @@ describe("useEntityDetail", () => {
     expect(result.current.data!.links).toHaveProperty("self");
   });
 
+  it("exposes availableTemplates from _templates keys on the item response", async () => {
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(ITEM_URL, () =>
+        HttpResponse.json({
+          id: "inv-1",
+          _links: { self: { href: ITEM_URL } },
+          _templates: {
+            default: { method: "PATCH", properties: [] },
+            delete: { method: "DELETE", properties: [] },
+            "set-customer": { method: "PUT", properties: [] },
+          },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityDetail("invoice", "inv-1"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const templates = result.current.data!.availableTemplates;
+    expect(templates.has("default")).toBe(true);
+    expect(templates.has("delete")).toBe(true);
+    expect(templates.has("set-customer")).toBe(true);
+    expect(templates.has("create-form")).toBe(false);
+  });
+
+  it("returns an empty availableTemplates set when _templates is absent", async () => {
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(ITEM_URL, () =>
+        HttpResponse.json({
+          id: "inv-1",
+          _links: { self: { href: ITEM_URL } },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityDetail("invoice", "inv-1"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(result.current.data!.availableTemplates.size).toBe(0);
+  });
+
   it("is not enabled when entityName is empty", () => {
     // Seed the profile so no HTTP request fires — the hook must not start
     // a profile fetch that would hit MSW with no registered handler.

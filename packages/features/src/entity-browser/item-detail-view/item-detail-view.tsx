@@ -11,6 +11,7 @@ import {
 import {
   ProblemDetailError,
   useDeleteEntity,
+  useEntityCapabilities,
   useEntityDetail,
   useEntityRelations,
   useEntitySchema,
@@ -396,6 +397,10 @@ interface ContentFocusProps {
   onNavigate: (col: string, itemId: string) => void;
   onEditClick: () => void;
   onDeleteClick: () => void;
+  /** RBAC hide-point: hide Edit button when false. Defaults to true (permissive). */
+  canEdit: boolean;
+  /** RBAC hide-point: hide Delete button when false. Defaults to true (permissive). */
+  canDelete: boolean;
 }
 
 function ContentFocusView({
@@ -411,6 +416,8 @@ function ContentFocusView({
   onNavigate,
   onEditClick,
   onDeleteClick,
+  canEdit,
+  canDelete,
 }: Readonly<ContentFocusProps>) {
   // Derive content attribute name from schema
   const contentAttr = attributes.find(isContentAttr);
@@ -463,24 +470,30 @@ function ContentFocusView({
               <div className="mt-0.5 text-[12px] text-muted-foreground">{selfPath}</div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              {/* TODO(HZN-5A): wire Edit form */}
-              <button
-                type="button"
-                disabled
-                title="Edit — coming in HZN-5A"
-                className="grid size-7 cursor-not-allowed place-items-center rounded-md text-muted-foreground opacity-50 hover:bg-muted"
-                onClick={onEditClick}
-              >
-                <PencilIcon className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                title="Delete"
-                className="grid size-7 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                onClick={onDeleteClick}
-              >
-                <TrashIcon className="size-3.5" />
-              </button>
+              {/* RBAC hide-point: Edit — hidden when canEdit is false (default template absent).
+                  TODO(HZN-5A): wire Edit form; TODO(HZN-7.4): remove disabled once implemented */}
+              {canEdit && (
+                <button
+                  type="button"
+                  disabled
+                  title="Edit — coming in HZN-5A"
+                  className="grid size-7 cursor-not-allowed place-items-center rounded-md text-muted-foreground opacity-50 hover:bg-muted"
+                  onClick={onEditClick}
+                >
+                  <PencilIcon className="size-3.5" />
+                </button>
+              )}
+              {/* RBAC hide-point: Delete — hidden when canDelete is false (delete template absent). */}
+              {canDelete && (
+                <button
+                  type="button"
+                  title="Delete"
+                  className="grid size-7 cursor-pointer place-items-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  onClick={onDeleteClick}
+                >
+                  <TrashIcon className="size-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -535,6 +548,10 @@ interface AttributeFocusProps {
   onNavigate: (col: string, itemId: string) => void;
   onEditClick: () => void;
   onDeleteClick: () => void;
+  /** RBAC hide-point: hide Edit button when false. Defaults to true (permissive). */
+  canEdit: boolean;
+  /** RBAC hide-point: hide Delete button when false. Defaults to true (permissive). */
+  canDelete: boolean;
 }
 
 function AttributeFocusView({
@@ -550,35 +567,44 @@ function AttributeFocusView({
   onNavigate,
   onEditClick,
   onDeleteClick,
+  canEdit,
+  canDelete,
 }: Readonly<AttributeFocusProps>) {
   const selfPath = selfHref
     ? new URL(selfHref, "http://localhost").pathname
     : `/${collection}/${id}`;
 
-  const toolbarActions = (
-    <>
-      {/* TODO(HZN-5A): wire Edit form */}
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        className="gap-2 opacity-50"
-        onClick={onEditClick}
-      >
-        <PencilIcon className="size-3.5" />
-        Edit
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-        onClick={onDeleteClick}
-      >
-        <TrashIcon className="size-3.5" />
-        Delete
-      </Button>
-    </>
-  );
+  const toolbarActions =
+    canEdit || canDelete ? (
+      <>
+        {/* RBAC hide-point: Edit — hidden when canEdit is false (default template absent).
+            TODO(HZN-5A): wire Edit form; TODO(HZN-7.4): remove disabled once implemented */}
+        {canEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="gap-2 opacity-50"
+            onClick={onEditClick}
+          >
+            <PencilIcon className="size-3.5" />
+            Edit
+          </Button>
+        )}
+        {/* RBAC hide-point: Delete — hidden when canDelete is false (delete template absent). */}
+        {canDelete && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={onDeleteClick}
+          >
+            <TrashIcon className="size-3.5" />
+            Delete
+          </Button>
+        )}
+      </>
+    ) : undefined;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -697,6 +723,11 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
   const schema = useEntitySchema(collection);
   const deleteMutation = useDeleteEntity();
 
+  // RBAC hook point — derives edit/delete caps from HAL-FORMS template presence.
+  // Fallback: true while loading (permissive — shows affordances until platform actively denies).
+  // HZN-7.4 will wire the full RBAC signal end-to-end.
+  const capabilities = useEntityCapabilities(collection, id);
+
   const isPending = detail.isPending || schema.isPending;
   const isError = detail.isError || schema.isError;
   const error = detail.error ?? schema.error;
@@ -769,6 +800,9 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
     onNavigate: goToItem,
     onEditClick: () => undefined, // TODO(HZN-5A): open create/edit form
     onDeleteClick: handleDeleteClick,
+    // RBAC capabilities — undefined means still loading, default to true (permissive).
+    canEdit: capabilities.canEdit ?? true,
+    canDelete: capabilities.canDelete ?? true,
   };
 
   return (

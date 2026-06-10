@@ -11,6 +11,16 @@ export interface EntityDetailResult {
   links: Record<string, unknown>;
   /** ETag from the GET response — will be used for If-Match in HZN-5B.1. */
   etag: string | null;
+  /**
+   * The set of HAL-FORMS template keys present on this item (e.g. "default",
+   * "delete", "set-supplier", "add-tags"). Under ABAC the platform omits
+   * templates the current user is not allowed to use — absence of a key means
+   * the corresponding operation is denied.
+   *
+   * Hook point for HZN-7.4: UI affordances (Edit, Delete, relation link/unlink)
+   * gate on membership in this set.
+   */
+  availableTemplates: ReadonlySet<string>;
 }
 
 async function fetchEntityDetail(
@@ -25,11 +35,15 @@ async function fetchEntityDetail(
 
   const selfLink = object.links.findLink(ianaRelations.self);
 
+  const rawTemplates = (object.data._templates as Record<string, unknown> | undefined) ?? {};
+  const availableTemplates: ReadonlySet<string> = new Set(Object.keys(rawTemplates));
+
   return {
     data: { ...object.data },
     selfHref: selfLink?.href ?? "",
     links: (object.data._links as Record<string, unknown>) ?? {},
     etag,
+    availableTemplates,
   };
 }
 

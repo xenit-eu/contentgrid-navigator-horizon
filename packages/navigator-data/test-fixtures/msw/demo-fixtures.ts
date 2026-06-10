@@ -33,6 +33,12 @@ export const supplierSup001 = {
     ],
     "cg:relation": [{ href: "/suppliers/sup-001/invoices", name: "invoices" }],
   },
+  // HAL-FORMS templates — present means the current user has permission.
+  // The platform (ABAC) omits templates for denied operations.
+  _templates: {
+    default: { method: "PATCH", contentType: "application/json", properties: [] },
+    delete: { method: "DELETE", properties: [] },
+  },
 };
 
 export const supplierSup002 = {
@@ -50,6 +56,10 @@ export const supplierSup002 = {
       { name: "cg", href: "https://contentgrid.cloud/rels/contentgrid/{rel}", templated: true },
     ],
     "cg:relation": [{ href: "/suppliers/sup-002/invoices", name: "invoices" }],
+  },
+  _templates: {
+    default: { method: "PATCH", contentType: "application/json", properties: [] },
+    delete: { method: "DELETE", properties: [] },
   },
 };
 
@@ -75,6 +85,12 @@ export const demoInvoiceInv001 = {
     "cg:content": [{ href: "/invoices/inv-001/document", name: "document" }],
     "cg:relation": [{ href: "/invoices/inv-001/supplier", name: "supplier" }],
   },
+  // HAL-FORMS templates — present means the current user has permission.
+  _templates: {
+    default: { method: "PATCH", contentType: "application/json", properties: [] },
+    delete: { method: "DELETE", properties: [] },
+    "set-supplier": { method: "PUT", contentType: "text/uri-list", properties: [] },
+  },
 };
 
 export const demoInvoiceInv002 = {
@@ -93,6 +109,11 @@ export const demoInvoiceInv002 = {
     "cg:content": [{ href: "/invoices/inv-002/document", name: "document" }],
     "cg:relation": [{ href: "/invoices/inv-002/supplier", name: "supplier" }],
   },
+  _templates: {
+    default: { method: "PATCH", contentType: "application/json", properties: [] },
+    delete: { method: "DELETE", properties: [] },
+    "set-supplier": { method: "PUT", contentType: "text/uri-list", properties: [] },
+  },
 };
 
 export const demoInvoiceInv003 = {
@@ -110,6 +131,11 @@ export const demoInvoiceInv003 = {
     ],
     "cg:content": [{ href: "/invoices/inv-003/document", name: "document" }],
     "cg:relation": [{ href: "/invoices/inv-003/supplier", name: "supplier" }],
+  },
+  _templates: {
+    default: { method: "PATCH", contentType: "application/json", properties: [] },
+    delete: { method: "DELETE", properties: [] },
+    "set-supplier": { method: "PUT", contentType: "text/uri-list", properties: [] },
   },
 };
 

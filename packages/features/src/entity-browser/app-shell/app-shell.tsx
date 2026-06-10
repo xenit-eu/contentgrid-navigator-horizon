@@ -160,7 +160,14 @@ function EntityNavItems() {
 function ShellSidebar() {
   return (
     <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-card px-3 py-[18px]">
-      {/* "Create" button — stays ocean */}
+      {/*
+        "Create" button — global sidebar affordance.
+        RBAC note: this button is always shown because it opens a context-picker
+        and there is no cheap global signal for whether ANY entity allows create.
+        Once the user selects an entity, the create form will gate on canCreate
+        from that entity's schema.  TODO(HZN-7.4): hide when no entity at all
+        exposes a create-form template.
+      */}
       <Button
         size="sm"
         className="mb-3.5 w-full justify-start gap-2.5 bg-primary font-medium text-primary-foreground hover:bg-primary/90"
