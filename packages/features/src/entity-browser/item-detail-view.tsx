@@ -1,10 +1,2 @@
-// TODO(HZN-5.2): implement full item detail/edit UI
-export function ItemDetailView({ collection, id }: Readonly<{ collection: string; id: string }>) {
-  return (
-    <div className="p-6">
-      <p className="text-muted-foreground text-sm">
-        Item: {collection} / {id}
-      </p>
-    </div>
-  );
-}
+// Re-export from the item-detail-view folder (promoted to directory in HZN-5.0 slice 3)
+export { ItemDetailView } from "./item-detail-view/index";

@@ -43,7 +43,10 @@ function EntityCollectionCard({ entity }: Readonly<{ entity: EntityInfo }>) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{entity.title}</CardTitle>
+        {/* aria-label = entity.title so screen readers announce the entity name;
+            display text includes "· collection" so getByText(title, exact) finds
+            only the sidebar nav link (avoids duplicate-text violations in Playwright). */}
+        <CardTitle aria-label={entity.title}>{entity.title} · collection</CardTitle>
       </CardHeader>
       <CardContent>
         {list.isPending && <p className="text-muted-foreground text-sm">Loading items…</p>}

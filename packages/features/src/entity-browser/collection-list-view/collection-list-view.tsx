@@ -16,6 +16,7 @@ import {
   useProfile,
 } from "@contentgrid/navigator-data";
 import type { EntityAttribute } from "@contentgrid/navigator-data";
+import { resolveDisplayName } from "@contentgrid/navigator-data/utils/entity-display-name";
 import {
   Badge,
   Button,
@@ -351,7 +352,11 @@ export function CollectionListView({
   const entityTitle = entityInfo?.title ?? collection;
 
   const schema = useEntitySchema(collection);
-  const displayAttributes = schema.data ? pickDisplayAttributes(schema.data.attributes) : [];
+  const rawDisplayAttributes = schema.data ? pickDisplayAttributes(schema.data.attributes) : [];
+  // When the schema has no listable attributes, fall back to a synthetic
+  // primary column that shows the item's display name or id.
+  const hasFallback = !schema.isPending && rawDisplayAttributes.length === 0;
+  const displayAttributes = rawDisplayAttributes;
 
   const listResult = useEntityList(collection, { cursor, sort });
 
@@ -390,7 +395,7 @@ export function CollectionListView({
   }
 
   // --- Derived column count for skeletons ---
-  const colCount = isPending ? 5 : displayAttributes.length;
+  const colCount = isPending ? 5 : hasFallback ? 1 : displayAttributes.length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -412,22 +417,28 @@ export function CollectionListView({
             <Table>
               <TableHeader>
                 <TableRow>
-                  {isPending
-                    ? // Skeleton placeholder header cells
-                      Array.from({ length: colCount }).map((_, i) => (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: stable positional skeleton
-                        <TableHead key={i} className={i === 0 ? "w-[36%] pl-0" : ""}>
-                          <Skeleton className="h-3 w-20" />
-                        </TableHead>
-                      ))
-                    : displayAttributes.map((attr, i) => (
-                        <TableHead
-                          key={attr.name}
-                          className={`text-[12px] font-medium text-foreground/60 ${i === 0 ? "w-[36%] pl-0" : ""}`}
-                        >
-                          {attr.title}
-                        </TableHead>
-                      ))}
+                  {isPending ? (
+                    // Skeleton placeholder header cells
+                    Array.from({ length: colCount }).map((_, i) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: stable positional skeleton
+                      <TableHead key={i} className={i === 0 ? "w-[36%] pl-0" : ""}>
+                        <Skeleton className="h-3 w-20" />
+                      </TableHead>
+                    ))
+                  ) : hasFallback ? (
+                    <TableHead className="w-[36%] pl-0 text-[12px] font-medium text-foreground/60">
+                      {entityTitle}
+                    </TableHead>
+                  ) : (
+                    displayAttributes.map((attr, i) => (
+                      <TableHead
+                        key={attr.name}
+                        className={`text-[12px] font-medium text-foreground/60 ${i === 0 ? "w-[36%] pl-0" : ""}`}
+                      >
+                        {attr.title}
+                      </TableHead>
+                    ))
+                  )}
                   {/* Trailing actions/chevron column */}
                   <TableHead className="pr-0 text-right" />
                 </TableRow>
@@ -443,14 +454,20 @@ export function CollectionListView({
                       className="cursor-pointer border-b border-border/60 hover:bg-muted/50"
                       onClick={() => goToItem(item.id)}
                     >
-                      {displayAttributes.map((attr, i) => (
-                        <TableCell
-                          key={attr.name}
-                          className={`py-3.5 text-[13px] text-foreground ${i === 0 ? "pl-0 font-medium" : ""}`}
-                        >
-                          {formatCellValue(item.data[attr.name], attr.type)}
+                      {hasFallback ? (
+                        <TableCell className="py-3.5 pl-0 text-[13px] font-medium text-foreground">
+                          {resolveDisplayName(item.data, item.id, schema.data?.attributes ?? [])}
                         </TableCell>
-                      ))}
+                      ) : (
+                        displayAttributes.map((attr, i) => (
+                          <TableCell
+                            key={attr.name}
+                            className={`py-3.5 text-[13px] text-foreground ${i === 0 ? "pl-0 font-medium" : ""}`}
+                          >
+                            {formatCellValue(item.data[attr.name], attr.type)}
+                          </TableCell>
+                        ))
+                      )}
                       {/* TODO(SLICE-4): row actions (edit, delete, RBAC visibility) */}
                       <TableCell className="pr-0 text-right">
                         <ChevronRightIcon className="inline size-4 text-muted-foreground" />
