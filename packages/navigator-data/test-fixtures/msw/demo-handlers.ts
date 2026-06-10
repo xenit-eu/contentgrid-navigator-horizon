@@ -7,9 +7,27 @@ import { createListHandler, createProfileHandler } from "./handlers";
  * Serves the profile root, one entity profile, and its collection so an app
  * can discover entities via cg:entity links and render an entity list
  * without a real backend. Used by both apps' dev-mode MSW workers.
+ *
+ * Resources require a Bearer token (any value), mirroring the platform's
+ * 401-on-missing-token behaviour — so the boot smoke test only passes when
+ * the auth layer actually attaches the dev token to API requests.
  */
 export function createDemoHandlers(baseUrl = "") {
+  const requireBearer = (url: string) =>
+    http.get(url, ({ request }) => {
+      if (!request.headers.get("authorization")?.startsWith("Bearer ")) {
+        return HttpResponse.json(
+          { type: "https://contentgrid.cloud/problems/unauthorized", status: 401 },
+          { status: 401, headers: { "Content-Type": "application/problem+json" } },
+        );
+      }
+      return undefined; // authorized — fall through to the resource handler below
+    });
+
   return [
+    requireBearer(`${baseUrl}/profile`),
+    requireBearer(`${baseUrl}/profile/invoices`),
+    requireBearer(`${baseUrl}/invoices`),
     http.get(`${baseUrl}/profile`, () =>
       HttpResponse.json({
         _links: {

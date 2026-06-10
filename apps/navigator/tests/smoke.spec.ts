@@ -2,8 +2,11 @@
  * Boot smoke test — ACC-2878 / HZN-4.7
  *
  * Verifies the app boots importing its data layer from
- * `@contentgrid/navigator-data` (workspace package) and renders an entity
- * list against the stubbed HAL endpoint (MSW), with no console errors.
+ * `@contentgrid/navigator-data` (workspace package), authenticates via
+ * dev-token mode (HZN-4.3), and renders an entity list against the stubbed
+ * HAL endpoint (MSW), with no console errors. The stub rejects requests
+ * without a Bearer token, so a passing run proves the auth-wired apiFetch
+ * path end to end.
  */
 import { expect, test } from "@playwright/test";
 
