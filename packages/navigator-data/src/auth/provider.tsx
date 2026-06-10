@@ -3,7 +3,7 @@ import { getAppConfig, getOidcConfig } from "./auth-config";
 import { DevAuthProvider } from "./dev-auth-provider";
 import { getDevToken, isDevTokenMode } from "./dev-token";
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   if (isDevTokenMode()) {
     return <DevAuthProvider token={getDevToken()!}>{children}</DevAuthProvider>;
   }
