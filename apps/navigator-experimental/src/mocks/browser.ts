@@ -1,4 +1,4 @@
 import { setupWorker } from "msw/browser";
-import { handlers } from "./handlers";
+import { createDemoHandlers } from "@contentgrid/navigator-data/test-fixtures/msw/demo-handlers";
 
-export const worker = setupWorker(...handlers);
+export const worker = setupWorker(...createDemoHandlers());
