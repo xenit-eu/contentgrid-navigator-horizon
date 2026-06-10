@@ -64,3 +64,119 @@ export function createProfileHandler(config: ProfileHandlerConfig): HttpHandler 
     } satisfies HalObjectWithTemplateShape<Record<string, unknown>, string, unknown, unknown>);
   });
 }
+
+// ---- Create handler (POST -> 201 + Location) ----
+
+export interface CreateHandlerConfig {
+  url: string;
+  /** Location header value returned on success. */
+  location: string;
+  /** HTTP status code. Defaults to 201. */
+  status?: number;
+}
+
+export function createCreateHandler(config: CreateHandlerConfig): HttpHandler {
+  const { url, location, status = 201 } = config;
+  return http.post(url, () => {
+    return new HttpResponse(null, {
+      status,
+      headers: { Location: location },
+    });
+  });
+}
+
+// ---- Update handler (PATCH -> configurable status) ----
+
+export interface UpdateHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+  /** Optional response body to return (as JSON). */
+  body?: HalObjectShape<Record<string, unknown>>;
+  /** Optional ETag to return in the response. */
+  etag?: string;
+}
+
+export function createUpdateHandler(config: UpdateHandlerConfig): HttpHandler {
+  const { url, status = 204, body, etag } = config;
+  return http.patch(url, () => {
+    const headers: Record<string, string> = {};
+    if (etag) headers["ETag"] = etag;
+    if (body) {
+      return HttpResponse.json(body, { status, headers });
+    }
+    return new HttpResponse(null, { status, headers });
+  });
+}
+
+// ---- Delete handler (DELETE -> 204 by default) ----
+
+export interface DeleteHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+}
+
+export function createDeleteHandler(config: DeleteHandlerConfig): HttpHandler {
+  const { url, status = 204 } = config;
+  return http.delete(url, () => {
+    return new HttpResponse(null, { status });
+  });
+}
+
+// ---- Relation link handler (PUT text/uri-list -> 204) ----
+
+export interface RelationLinkHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+}
+
+export function createRelationLinkHandler(config: RelationLinkHandlerConfig): HttpHandler {
+  const { url, status = 204 } = config;
+  return http.put(url, () => {
+    return new HttpResponse(null, { status });
+  });
+}
+
+// ---- Relation unlink handler (DELETE -> 204) ----
+
+export interface RelationUnlinkHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+}
+
+export function createRelationUnlinkHandler(config: RelationUnlinkHandlerConfig): HttpHandler {
+  const { url, status = 204 } = config;
+  return http.delete(url, () => {
+    return new HttpResponse(null, { status });
+  });
+}
+
+// ---- Problem handler (generic RFC 9457 error response) ----
+
+export interface ProblemHandlerConfig {
+  method: "get" | "post" | "patch" | "put" | "delete";
+  url: string;
+  status: number;
+  title?: string;
+  detail?: string;
+  type?: string;
+}
+
+export function createProblemHandler(config: ProblemHandlerConfig): HttpHandler {
+  const { method, url, status, title, detail, type } = config;
+  const body = {
+    status,
+    title: title ?? "Error",
+    ...(detail ? { detail } : {}),
+    ...(type ? { type } : {}),
+  };
+  return http[method](url, () => {
+    return HttpResponse.json(body, {
+      status,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+  });
+}

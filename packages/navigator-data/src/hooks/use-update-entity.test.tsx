@@ -1,9 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { server } from "../../test-setup";
 import { queryKeys } from "./query-keys";
-import { BASE, makeQueryClient, makeWrapper, seedProfile } from "./test-utils";
+import { BASE, makeQueryClient, makeWrapper, mockProfileResponse, seedProfile } from "./test-utils";
+import { useEntityDetail } from "./use-entity-detail";
 import { useUpdateEntity } from "./use-update-entity";
 
 const ITEM_URL = `${BASE}/invoices/inv-1`;
@@ -107,5 +108,79 @@ describe("useUpdateEntity", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as Error).message).toMatch(/No ETag cached/);
+  });
+
+  it("invalidates entityDetail and entityList queries on success", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntityDetail(qc);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    server.use(http.patch(ITEM_URL, () => new HttpResponse(null, { status: 204 })));
+
+    const { result } = renderHook(() => useUpdateEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({ entityName: "invoice", entityId: "inv-1", data: {} });
+    });
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(invalidatedKeys).toContainEqual(["entity-detail", "invoice", "inv-1"]);
+    expect(invalidatedKeys).toContainEqual(["entity-list", "invoice", {}]);
+  });
+
+  it("after useUpdateEntity succeeds, useEntityDetail refetches and reflects updated data", async () => {
+    const qc = makeQueryClient();
+
+    let getCallCount = 0;
+    // First GET returns v1, subsequent GETs (after invalidation) return v2
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(ITEM_URL, () => {
+        getCallCount++;
+        const number = getCallCount === 1 ? "INV-001-original" : "INV-001-updated";
+        return HttpResponse.json(
+          {
+            id: "inv-1",
+            number,
+            _links: { self: { href: ITEM_URL } },
+          },
+          { headers: { ETag: `"etag-v${getCallCount}"` } },
+        );
+      }),
+      http.patch(ITEM_URL, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    const wrapper = makeWrapper(qc);
+
+    // 1. Mount useEntityDetail and wait for v1 data
+    const detailHook = renderHook(() => useEntityDetail("invoice", "inv-1"), { wrapper });
+    await waitFor(() => expect(detailHook.result.current.data).toBeDefined());
+    expect((detailHook.result.current.data!.data as Record<string, unknown>).number).toBe(
+      "INV-001-original",
+    );
+
+    // 2. Mount useUpdateEntity and trigger a PATCH
+    const updateHook = renderHook(() => useUpdateEntity(), { wrapper });
+
+    await act(async () => {
+      await updateHook.result.current.mutateAsync({
+        entityName: "invoice",
+        entityId: "inv-1",
+        data: { number: "INV-001-updated" },
+      });
+    });
+
+    await waitFor(() => expect(updateHook.result.current.isSuccess).toBe(true));
+
+    // 3. After invalidation, useEntityDetail should have refetched and show v2
+    await waitFor(
+      () =>
+        expect((detailHook.result.current.data!.data as Record<string, unknown>).number).toBe(
+          "INV-001-updated",
+        ),
+      { timeout: 5000 },
+    );
+    expect(getCallCount).toBeGreaterThanOrEqual(2);
   });
 });

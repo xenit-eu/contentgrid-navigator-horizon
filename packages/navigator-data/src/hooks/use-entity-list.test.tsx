@@ -138,4 +138,23 @@ describe("useEntityList", () => {
     expect(result.current.data!.hasPrevious).toBe(false);
     expect(result.current.data!.nextHref).toBe(`${COLLECTION_URL}?_cursor=abc`);
   });
+
+  it("surfaces an error when the collection endpoint returns 500", async () => {
+    mockProfile();
+    server.use(
+      http.get(COLLECTION_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityList("invoice", {}), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeDefined();
+  });
 });
