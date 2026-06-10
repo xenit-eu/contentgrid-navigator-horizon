@@ -26,6 +26,7 @@ const schema: EntitySchema = {
   searchProperties: [],
   sortableFields: [],
   sortOptions: [],
+  canCreate: true,
   createFormRelations: [],
 };
 
