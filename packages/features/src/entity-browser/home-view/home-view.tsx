@@ -1,7 +1,8 @@
-import { useRouter } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import { PlusCircle } from "lucide-react";
 import type { EntityInfo } from "@contentgrid/navigator-data";
 import { useEntityCapabilities, useEntityList, useProfile } from "@contentgrid/navigator-data";
-import { EntityCard, Skeleton } from "@contentgrid/ui";
+import { Skeleton } from "@contentgrid/ui";
 
 // ---------------------------------------------------------------------------
 // Per-entity child component — fetches count + capabilities without
@@ -10,37 +11,52 @@ import { EntityCard, Skeleton } from "@contentgrid/ui";
 
 interface EntityCardWithCountProps {
   entity: EntityInfo;
-  onTitleClick: (entityName: string) => void;
 }
 
-function EntityCardWithCount({ entity, onTitleClick }: Readonly<EntityCardWithCountProps>) {
-  const router = useRouter();
+function EntityCardWithCount({ entity }: Readonly<EntityCardWithCountProps>) {
   const listResult = useEntityList(entity.name, { size: 1 });
   const capabilities = useEntityCapabilities(entity.name);
 
   const count = listResult.data?.totalItems;
 
-  function handleTitleClick(name: string) {
-    onTitleClick(name);
-  }
-
-  function handleCreateClick(name: string) {
-    // TODO(HZN-5A): wire to create form when entity creation is implemented
-    void router.navigate({
-      to: "/$collection" as never,
-      params: { collection: name } as never,
-      search: { cursor: undefined, sort: undefined } as never,
-    });
+  function handleCreateClick() {
+    // TODO(HZN-5A): wire to create form when entity creation is implemented.
+    // No-op until the create flow exists; the card itself is not clickable so
+    // stopPropagation is unnecessary.
   }
 
   return (
-    <EntityCard
-      name={entity.name}
-      title={entity.title}
-      count={count}
-      onTitleClick={handleTitleClick}
-      onCreateClick={capabilities.canCreate ? handleCreateClick : undefined}
-    />
+    // Plain (non-interactive) tile — only the title Link below navigates.
+    <div className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--cg-color-card-border)] bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="min-w-0">
+          {/* The ONLY navigable element in the tile. */}
+          <Link
+            to="/$collection"
+            params={{ collection: entity.name }}
+            search={{ cursor: undefined, sort: undefined }}
+            className="text-[13px] font-semibold text-foreground underline-offset-[3px] hover:text-primary hover:underline"
+          >
+            {entity.title}
+          </Link>
+          <div className="mt-0.5 text-[12px] text-muted-foreground">
+            {count !== undefined ? `${count.toLocaleString()} items` : "…"}
+          </div>
+        </div>
+
+        {capabilities.canCreate && (
+          <button
+            type="button"
+            title="Create"
+            onClick={handleCreateClick}
+            className="grid size-7 shrink-0 place-items-center rounded-md text-primary hover:bg-muted"
+          >
+            <PlusCircle className="size-[18px]" />
+            <span className="sr-only">Create {entity.title}</span>
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -50,16 +66,14 @@ function EntityCardWithCount({ entity, onTitleClick }: Readonly<EntityCardWithCo
 
 function EntityCardSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 flex items-start justify-between">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-20" />
+    <div className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--cg-color-card-border)] bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-3 w-16" />
         </div>
-        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-7 shrink-0 rounded-md" />
       </div>
-      <Skeleton className="h-8 w-12" />
-      <Skeleton className="mt-1 h-3 w-8" />
     </div>
   );
 }
@@ -69,16 +83,7 @@ function EntityCardSkeleton() {
 // ---------------------------------------------------------------------------
 
 export function HomeView() {
-  const router = useRouter();
   const profile = useProfile();
-
-  function handleTitleClick(entityName: string) {
-    void router.navigate({
-      to: "/$collection" as never,
-      params: { collection: entityName } as never,
-      search: { cursor: undefined, sort: undefined } as never,
-    });
-  }
 
   // Loading state — show skeleton grid while profile is loading
   if (profile.isPending) {
@@ -92,7 +97,7 @@ export function HomeView() {
           </span>
           <Skeleton className="h-4 w-40" />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {["s1", "s2", "s3", "s4"].map((k) => (
             <EntityCardSkeleton key={k} />
           ))}
@@ -137,13 +142,9 @@ export function HomeView() {
       {entities.length === 0 ? (
         <p className="text-[13px] text-muted-foreground">No entities found.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {entities.map((entity) => (
-            <EntityCardWithCount
-              key={entity.name}
-              entity={entity}
-              onTitleClick={handleTitleClick}
-            />
+            <EntityCardWithCount key={entity.name} entity={entity} />
           ))}
         </div>
       )}

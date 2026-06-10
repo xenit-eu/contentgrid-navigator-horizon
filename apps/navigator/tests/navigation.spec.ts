@@ -27,12 +27,15 @@ test("navigates root → collection → item → back with zero console errors",
   // ── Step 1: Root (/). App shell + entity nav items render.
   await page.goto("/");
 
-  // Sidebar shows discovered entity nav items from the profile root
-  await expect(page.getByRole("link", { name: "Invoice" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Supplier" })).toBeVisible();
+  // Sidebar shows discovered entity nav items from the profile root.
+  // Scope to the sidebar <nav> — the Home entity cards expose the same titles
+  // as links in <main>, so an unscoped query would be ambiguous.
+  const sidebar = page.getByRole("navigation");
+  await expect(sidebar.getByRole("link", { name: "Invoice" })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Supplier" })).toBeVisible();
 
-  // ── Step 2: Navigate to the Invoice collection.
-  await page.getByRole("link", { name: "Invoice" }).click();
+  // ── Step 2: Navigate to the Invoice collection (via the sidebar nav item).
+  await sidebar.getByRole("link", { name: "Invoice" }).click();
 
   // Collection table renders with real data from the stubbed /invoices endpoint.
   // The CollectionListView renders an h1 with the entity title.
