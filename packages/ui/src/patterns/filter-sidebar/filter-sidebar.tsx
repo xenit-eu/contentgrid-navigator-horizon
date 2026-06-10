@@ -18,7 +18,7 @@ import { Separator } from "../../primitives/separator";
 
 /** A single filterable search parameter, as returned from the HAL-Forms profile. */
 export interface SearchProperty {
-  /** Parameter name, may contain a "~<operator>" suffix, e.g. "created~greater-than" */
+  /** Parameter name; may use `field~op` (e.g. "created~greater-than") or `field.~op` (range-pair, e.g. "created.~from") format */
   name: string;
   /** Optional human-readable label */
   prompt?: string;
@@ -59,14 +59,36 @@ function formatWords(text: string): string {
     .join(" ");
 }
 
+/**
+ * Extract base field name and operator from `field~op` (legacy) or `field.~op` (range-pair) patterns.
+ * Legacy: op is the bare operator name, e.g. "greater-than".
+ * Range-pair: op includes the leading tilde, e.g. "~from" — SEARCH_TYPE_LABELS keys reflect this.
+ */
+function parseName(name: string): { base: string; op: string | null } {
+  const dotTildeIdx = name.indexOf(".~");
+  if (dotTildeIdx !== -1) {
+    return { base: name.slice(0, dotTildeIdx), op: name.slice(dotTildeIdx + 1) };
+  }
+  const tildeIdx = name.indexOf("~");
+  if (tildeIdx !== -1) {
+    return { base: name.slice(0, tildeIdx), op: name.slice(tildeIdx + 1) };
+  }
+  return { base: name, op: null };
+}
+
+/** True for range-pair operator names like "created.~from" (dot before the tilde). */
+function isRangePair(name: string): boolean {
+  return name.includes(".~");
+}
+
+/** Convert a raw date input value to an API value. Range-pair operators use plain yyyy-MM-dd; legacy operators use ISO 8601. */
+function encodeDateInputValue(rawValue: string, rangePair: boolean): string {
+  return rangePair ? rawValue : dateToApi(rawValue);
+}
+
 function formatFieldLabel(prop: SearchProperty): string {
   if (prop.prompt) return prop.prompt;
-  const name = prop.name;
-  if (name.includes("~")) {
-    const [field] = name.split("~");
-    return formatWords(field);
-  }
-  return formatWords(name);
+  return formatWords(parseName(prop.name).base);
 }
 
 const SEARCH_TYPE_LABELS: Record<string, string> = {
@@ -77,14 +99,17 @@ const SEARCH_TYPE_LABELS: Record<string, string> = {
   "greater-than-or-equal-to": "from",
   "less-than": "before",
   "less-than-or-equal-to": "until",
+  // Range-pair operators (dot-prefixed, used with `field.~op` key format)
+  "~from": "from",
+  "~until": "until",
+  "~gte": "gte",
+  "~lte": "lte",
 };
 
 function getSearchType(prop: SearchProperty): string {
-  if (prop.name.includes("~")) {
-    const [, type] = prop.name.split("~");
-    return SEARCH_TYPE_LABELS[type] ?? type;
-  }
-  return "exact";
+  const { op } = parseName(prop.name);
+  if (!op) return "exact";
+  return SEARCH_TYPE_LABELS[op] ?? op;
 }
 
 const DATE_FIELD_TYPES = new Set(["date", "datetime", "datetime-local", "time"]);
@@ -93,6 +118,8 @@ const DATE_SUFFIXES = [
   "~greater-than-or-equal-to",
   "~less-than",
   "~less-than-or-equal-to",
+  ".~from",
+  ".~until",
 ];
 
 type InputType = "text" | "select" | "date";
@@ -138,13 +165,10 @@ function groupFilterProperties(props: SearchProperty[]): FilterGroup[] {
   const groups: FilterGroup[] = [];
   const seen = new Set<string>();
   for (const prop of props) {
-    const base = prop.name.includes("~") ? prop.name.split("~")[0] : prop.name;
+    const base = parseName(prop.name).base;
     if (seen.has(base)) continue;
     seen.add(base);
-    const items = props.filter((p) => {
-      const pBase = p.name.includes("~") ? p.name.split("~")[0] : p.name;
-      return pBase === base;
-    });
+    const items = props.filter((p) => parseName(p.name).base === base);
     groups.push({ label: formatFieldLabel(items[0]), items });
   }
   return groups;
@@ -204,7 +228,9 @@ function DateGroupFilter({
                   onChange={(e) =>
                     onFilterChange(
                       prop.name,
-                      e.target.value ? dateToApi(e.target.value) : undefined,
+                      e.target.value
+                        ? encodeDateInputValue(e.target.value, isRangePair(prop.name))
+                        : undefined,
                     )
                   }
                 />
@@ -258,11 +284,13 @@ function DateFilter({
   searchType,
   value,
   onChange,
+  rawDate = false,
 }: Readonly<{
   label: string;
   searchType: string;
   value: string;
   onChange: (value: string | undefined) => void;
+  rawDate?: boolean;
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
@@ -280,7 +308,9 @@ function DateFilter({
             type="date"
             className="h-8 text-sm"
             value={value ? apiToDate(value) : ""}
-            onChange={(e) => onChange(e.target.value ? dateToApi(e.target.value) : undefined)}
+            onChange={(e) =>
+              onChange(e.target.value ? encodeDateInputValue(e.target.value, rawDate) : undefined)
+            }
           />
         </div>
         <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
@@ -393,6 +423,7 @@ export function FilterSidebar({
                           label={label}
                           searchType={searchType}
                           value={value}
+                          rawDate={isRangePair(prop.name)}
                           onChange={(v) => onFilterChange(prop.name, v)}
                         />
                       );

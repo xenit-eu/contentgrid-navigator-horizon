@@ -93,6 +93,28 @@ export const WithMixedFilters: Story = {
   },
 };
 
+export const WithRangePairFilter: Story = {
+  args: {
+    filterProperties: [
+      { name: "created.~from", type: "date" },
+      { name: "created.~until", type: "date" },
+    ],
+    filters: {},
+    onFilterChange: fn(),
+  },
+};
+
+export const WithRangePairNumericFilter: Story = {
+  args: {
+    filterProperties: [
+      { name: "amount.~gte", type: "string" },
+      { name: "amount.~lte", type: "string" },
+    ],
+    filters: {},
+    onFilterChange: fn(),
+  },
+};
+
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
