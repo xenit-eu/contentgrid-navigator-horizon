@@ -34,6 +34,26 @@ export const ManyToMany: Story = {
   },
 };
 
+export const ManyToManyWithViewAll: Story = {
+  args: {
+    title: "Invoices",
+    items: [
+      { id: "1", data: { name: "INV-2026-04812", paid: true } },
+      { id: "2", data: { name: "INV-2026-04811", paid: false } },
+      { id: "3", data: { name: "INV-2026-04790", paid: true } },
+    ],
+    columns: [
+      { key: "name", title: "Reference" },
+      { key: "paid", title: "Paid" },
+    ],
+    totalCount: 42,
+    onLink: fn(),
+    onUnlink: fn(),
+    onViewItem: fn(),
+    onViewAll: fn(),
+  },
+};
+
 export const ManyToManyLoading: Story = {
   args: {
     title: "Suppliers",

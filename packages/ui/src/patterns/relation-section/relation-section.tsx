@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { ChevronDown, ExternalLink, LinkIcon, Plus, Unlink } from "lucide-react";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  ChevronDown,
+  ExternalLink,
+  LinkIcon,
+  Plus,
+  Unlink,
+  XCircle,
+} from "lucide-react";
 import { cn, formatCellValue } from "../../lib/utils";
 import {
   AlertDialog,
@@ -67,6 +76,10 @@ export interface RelationSectionProps {
   onLink?: () => void;
   /** Called when the user clicks the detail / external-link icon for an item */
   onViewItem?: (id: string) => void;
+  /** When provided, renders a "View all N" affordance below the rows */
+  totalCount?: number;
+  /** Called when the user clicks the "View all" affordance */
+  onViewAll?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +107,24 @@ function getColumnTitle(key: string, columns?: RelationColumn[]): string {
   return key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Render a cell value: booleans become soft status pills, everything else is text. */
+function renderCellValue(value: unknown) {
+  if (typeof value === "boolean") {
+    return value ? (
+      <Badge variant="successSubtle">
+        <CheckCircle2 className="size-3" />
+        True
+      </Badge>
+    ) : (
+      <Badge variant="dangerSubtle">
+        <XCircle className="size-3" />
+        False
+      </Badge>
+    );
+  }
+  return formatCellValue(value);
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -109,6 +140,8 @@ export function RelationSection({
   onUnlink,
   onLink,
   onViewItem,
+  totalCount,
+  onViewAll,
 }: Readonly<RelationSectionProps>) {
   const [unlinkTarget, setUnlinkTarget] = useState<{ id: string; label: string } | null>(null);
 
@@ -153,7 +186,10 @@ export function RelationSection({
         <Card className="py-4 gap-3">
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{title}</h3>
+              <h3 className="text-[13px] font-medium text-[var(--cg-color-midnight)]">
+                {title}
+                <span className="text-muted-foreground ml-1.5 text-xs font-normal">· to-one</span>
+              </h3>
               {hasItems && onLink && (
                 <Button
                   variant="ghost"
@@ -197,10 +233,18 @@ export function RelationSection({
               items.map((item) => {
                 const label = getItemLabel(item);
                 return (
-                  <div key={item.id} className="flex items-center gap-4 rounded-lg border p-4">
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2.5 rounded-lg border bg-[var(--cg-color-mist)] p-3"
+                  >
+                    <div className="grid size-6 shrink-0 place-items-center rounded-[5px] border bg-[var(--cg-color-frost)] text-muted-foreground">
+                      <LinkIcon className="size-3" />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{label}</p>
-                      <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+                      <p className="truncate text-[13px] font-medium text-[var(--cg-color-midnight)]">
+                        {label}
+                      </p>
+                      <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
                         {columnKeys
                           .filter((k) => item.data[k] != null)
                           .slice(0, 3)
@@ -293,17 +337,20 @@ export function RelationSection({
         ) : (
           <Collapsible defaultOpen>
             <CardHeader className="pb-0">
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger className="flex items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&[data-state=open]>svg.chevron]:rotate-180">
-                  <h3 className="text-sm font-semibold">{title}</h3>
+              <div className="flex items-center gap-2.5">
+                <CollapsibleTrigger className="flex flex-1 items-center gap-2.5 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&[data-state=open]>svg.chevron]:rotate-180">
+                  <h3 className="flex-1 text-[13px] font-medium text-[var(--cg-color-midnight)]">
+                    {title}
+                    <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                      · to-many
+                    </span>
+                  </h3>
                   {!isLoading && !error && (
-                    <Badge variant="secondary" className="text-xs">
-                      {itemCount}
-                    </Badge>
+                    <span className="text-muted-foreground text-xs tabular-nums">{itemCount}</span>
                   )}
                   <ChevronDown
                     className={cn(
-                      "chevron text-muted-foreground size-4 transition-transform duration-200",
+                      "chevron text-muted-foreground size-3.5 transition-transform duration-150",
                     )}
                   />
                 </CollapsibleTrigger>
@@ -345,7 +392,7 @@ export function RelationSection({
                             onClick={onViewItem ? () => onViewItem(item.id) : undefined}
                           >
                             {columnKeys.map((key) => (
-                              <TableCell key={key}>{formatCellValue(item.data[key])}</TableCell>
+                              <TableCell key={key}>{renderCellValue(item.data[key])}</TableCell>
                             ))}
                             <TableCell>
                               {onUnlink && (
@@ -376,6 +423,16 @@ export function RelationSection({
                       </TableBody>
                     </Table>
                   </div>
+                )}
+                {hasItems && onViewAll && totalCount != null && totalCount > items.length && (
+                  <button
+                    type="button"
+                    onClick={onViewAll}
+                    className="mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-2 text-[13px] font-semibold text-[var(--cg-color-link-text)] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    View all {totalCount} {title.toLowerCase()}
+                    <ArrowUpRight className="size-3.5" />
+                  </button>
                 )}
               </CardContent>
             </CollapsibleContent>

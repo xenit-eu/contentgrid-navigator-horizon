@@ -38,7 +38,23 @@ function ShellHeader() {
       {/* Left: logo glyph + wordmark */}
       <div className="flex items-center gap-2.5">
         <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-white">
-          <span className="text-[9px] font-bold leading-none tracking-tight text-white">CG</span>
+          {/* ContentGrid logo mark (placeholder per mockup; matches the Home welcome glyph) */}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 32 32"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M6 6 L14 14 M18 14 L26 6 M6 26 L14 18 M18 18 L26 26 M14 14 L14 18 L18 18 L18 14 Z"
+              stroke="#fff"
+              strokeWidth="2.2"
+              strokeLinecap="square"
+              fill="none"
+            />
+          </svg>
         </div>
         <div className="flex flex-col leading-none">
           <span className="text-[15px] font-bold tracking-tight text-white">contentgrid</span>
@@ -75,10 +91,10 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-primary-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-primary-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
-          <Avatar size="sm">
-            <AvatarFallback className="bg-white/15 text-xs font-semibold text-primary-foreground">
+          <Avatar className="size-[30px]">
+            <AvatarFallback className="bg-white/12 text-[11px] font-semibold text-primary-foreground">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -141,7 +157,7 @@ function EntityNavItems() {
             to="/$collection"
             params={{ collection: entity.name }}
             search={{ cursor: undefined, sort: undefined }}
-            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] text-foreground hover:bg-muted ${
+            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] text-[var(--cg-color-midnight)] hover:bg-muted ${
               isActive ? "bg-muted font-medium shadow-[inset_2px_0_0_var(--cg-color-ocean)]" : ""
             }`}
           >
@@ -168,17 +184,14 @@ function ShellSidebar() {
         from that entity's schema.  TODO(HZN-7.4): hide when no entity at all
         exposes a create-form template.
       */}
-      <Button
-        size="sm"
-        className="mb-3.5 w-full justify-start gap-2.5 bg-primary font-medium text-primary-foreground hover:bg-primary/90"
-      >
-        <PlusIcon className="size-4 shrink-0" />
+      <Button className="mb-3.5 h-auto w-full justify-start gap-2.5 rounded-lg bg-primary px-3 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-[var(--cg-color-ocean-700)]">
+        <PlusIcon className="size-[17px] shrink-0" />
         Create
       </Button>
 
       {/* "Entities" section label */}
-      <div className="flex items-center gap-1.5 px-3 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        <LayersIcon className="size-3.5" />
+      <div className="flex items-center gap-2 px-3 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cg-color-text-dim)]">
+        <LayersIcon className="size-3.5 text-muted-foreground" />
         Entities
       </div>
 

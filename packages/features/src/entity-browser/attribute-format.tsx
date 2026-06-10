@@ -7,6 +7,7 @@
  *  - SYSTEM_FIELDS / EXCLUDED_TYPES — shared constants
  */
 import type { ReactNode } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import type { EntityAttribute } from "@contentgrid/navigator-data";
 import { Badge } from "@contentgrid/ui";
 
@@ -83,19 +84,17 @@ export function formatAttributeValue(
     return <span className={`text-muted-foreground${opts?.italic ? " italic" : ""}`}>—</span>;
   }
 
-  // Boolean — green/red pill
+  // Boolean — green/red status pill
   if (type === "boolean") {
-    const boolVal = Boolean(value);
-    return (
-      <Badge
-        variant="outline"
-        className={
-          boolVal
-            ? "border-transparent bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-            : "border-transparent bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-        }
-      >
-        {boolVal ? "Yes" : "No"}
+    return value ? (
+      <Badge variant="successSubtle">
+        <CheckCircle2 className="size-3.5" />
+        Yes
+      </Badge>
+    ) : (
+      <Badge variant="dangerSubtle">
+        <XCircle className="size-3.5" />
+        No
       </Badge>
     );
   }

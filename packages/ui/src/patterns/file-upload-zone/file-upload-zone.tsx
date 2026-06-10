@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { FileText, RotateCw, Upload, X } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
 
 // ---------------------------------------------------------------------------
@@ -92,27 +91,53 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
     const isImage = file.type.startsWith("image/");
 
     return (
-      <div className="flex items-center gap-3 rounded-md border p-3">
+      <div className="rounded-[10px] border-[1.5px] border-dashed border-[#cdd6df] bg-card p-[22px] text-center">
         {previewUrl && isImage ? (
-          <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
+          <img
+            src={previewUrl}
+            alt="Preview"
+            className="mx-auto h-20 w-20 rounded-md object-cover"
+          />
         ) : (
-          <Upload className="h-5 w-5 text-muted-foreground" />
+          <FileText className="mx-auto size-[22px] text-[var(--cg-color-steel)]" />
         )}
-        <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-medium">{file.name}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-            {file.type && (
-              <Badge variant="outline" className="text-xs shrink-0">
-                {file.type}
-              </Badge>
-            )}
-          </div>
+        <p className="mt-2 truncate text-[13px] font-medium text-[var(--cg-color-midnight)]">
+          {file.name}
+        </p>
+        <p className="mt-0.5 text-xs text-[var(--cg-color-text-dim)]">
+          {formatFileSize(file.size)} · ready to upload on save
+        </p>
+        <div className="mt-2.5 flex justify-center gap-2">
+          <Button
+            variant="ghost"
+            size="xs"
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-[var(--cg-color-text-dim)]"
+          >
+            <RotateCw />
+            Replace
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            type="button"
+            onClick={() => onFileChange(null)}
+            className="text-[var(--cg-color-danger)] hover:text-[var(--cg-color-danger)]"
+          >
+            <X />
+            Remove
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => onFileChange(null)} type="button">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Remove file</span>
-        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          className="sr-only"
+          accept={acceptString}
+          onChange={handleInputChange}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       </div>
     );
   }
@@ -138,16 +163,19 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         className={cn(
-          "flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-8 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isDragActive
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-primary/50",
+          "flex w-full cursor-pointer flex-col items-center rounded-[10px] border-[1.5px] border-dashed bg-card p-[22px] text-center transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          isDragActive ? "border-ring bg-[var(--cg-color-sky-50)]" : "border-[#cdd6df]",
         )}
       >
-        <Upload className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          {isDragActive ? "Drop the file here" : "Drag & drop a file, or click to select"}
-        </p>
+        <Upload className="size-[22px] text-[var(--cg-color-steel)]" />
+        <span className="mt-2 text-[13px] font-medium text-[var(--cg-color-midnight)]">
+          {isDragActive ? "Drop the file here" : "Drop a file here"}
+        </span>
+        <span className="mt-0.5 text-xs text-[var(--cg-color-text-dim)]">
+          or{" "}
+          <span className="font-semibold text-[var(--cg-color-link-text)] underline">browse</span> ·
+          PDF, DOCX, PNG up to 20 MB
+        </span>
       </button>
     </>
   );

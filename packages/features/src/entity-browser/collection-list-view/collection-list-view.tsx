@@ -4,6 +4,9 @@ import {
   ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  FileIcon,
+  FileImageIcon,
+  FileTextIcon,
   FilterIcon,
   InboxIcon,
   PlusIcon,
@@ -28,6 +31,89 @@ import {
   TableRow,
 } from "@contentgrid/ui";
 import { formatAttributeValue, pickDisplayAttributes } from "../attribute-format";
+
+// ---------------------------------------------------------------------------
+// Content-attribute helpers (file-type icon + meta line in the primary cell)
+// ---------------------------------------------------------------------------
+
+interface ContentMeta {
+  filename?: string;
+  mimetype?: string;
+  length?: number;
+}
+
+/** Extracts a content-object meta from an item's data for a given attribute. */
+function readContentMeta(value: unknown): ContentMeta | undefined {
+  if (value == null || typeof value !== "object") return undefined;
+  const v = value as Record<string, unknown>;
+  return {
+    filename: typeof v.filename === "string" ? v.filename : undefined,
+    mimetype: typeof v.mimetype === "string" ? v.mimetype : undefined,
+    length: typeof v.length === "number" ? v.length : undefined,
+  };
+}
+
+/** Picks a lucide icon matching the content's mimetype / filename extension. */
+function FileTypeIcon({ meta }: Readonly<{ meta: ContentMeta | undefined }>) {
+  const hint = `${meta?.mimetype ?? ""} ${meta?.filename ?? ""}`.toLowerCase();
+  if (/image|\.(png|jpe?g|gif|webp|svg|bmp|tiff?)$/.test(hint)) {
+    return <FileImageIcon className="size-3.5" />;
+  }
+  if (
+    /pdf|word|excel|sheet|presentation|document|text|\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|txt|csv)$/.test(
+      hint,
+    )
+  ) {
+    return <FileTextIcon className="size-3.5" />;
+  }
+  return <FileIcon className="size-3.5" />;
+}
+
+/** Human-readable byte size (mockup style: "412 KB", "1.4 MB"). */
+function formatBytes(bytes: number | undefined): string | undefined {
+  if (bytes == null || !Number.isFinite(bytes)) return undefined;
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = bytes / 1024;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  const rounded =
+    size >= 100 || Number.isInteger(size) ? Math.round(size) : Math.round(size * 10) / 10;
+  return `${rounded} ${units[unit]}`;
+}
+
+/**
+ * Primary cell that mirrors the mockup `.cell-primary`: a 30px file-type icon
+ * tile, the item display name, and a meta line ("document.pdf · 412 KB" or
+ * "no content"). Used when the entity has a content attribute.
+ */
+function PrimaryFileCell({
+  displayName,
+  meta,
+}: Readonly<{ displayName: string; meta: ContentMeta | undefined }>) {
+  const size = formatBytes(meta?.length);
+  const hasContent = Boolean(meta?.filename);
+  const metaLine = hasContent ? [meta?.filename, size].filter(Boolean).join(" · ") : "no content";
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="grid size-[30px] shrink-0 place-items-center rounded-md bg-muted text-[var(--cg-color-text-dim)]">
+        <FileTypeIcon meta={meta} />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate text-[13px] font-medium text-foreground">{displayName}</div>
+        <div
+          className={`mt-px truncate text-[12px] ${hasContent ? "text-muted-foreground" : "text-muted-foreground/70"}`}
+        >
+          {metaLine}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -94,13 +180,13 @@ function PageHead({
 }: Readonly<{ entityTitle: string; totalItems: number | undefined; isPending: boolean }>) {
   return (
     <div className="shrink-0 px-6 pt-7 pb-3">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/60">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cg-color-text-dim)]">
         Entity collection
       </div>
-      <h1 className="mt-1.5 mb-1 text-[26px] font-bold tracking-tight text-foreground">
+      <h1 className="mt-1.5 mb-1 text-[26px] font-bold tracking-[-0.02em] text-foreground">
         {entityTitle}
       </h1>
-      <div className="text-[13px] text-foreground/60">
+      <div className="text-[13px] text-[var(--cg-color-text-dim)]">
         {isPending
           ? "Loading…"
           : totalItems !== undefined
@@ -150,10 +236,10 @@ function EmptyState({
         <div className="mx-auto mb-5 grid size-[72px] place-items-center rounded-2xl border-[1.5px] border-dashed border-border bg-muted">
           <InboxIcon className="size-8 text-muted-foreground" />
         </div>
-        <div className="mb-2 text-[20px] font-bold tracking-tight text-foreground">
+        <div className="mb-2 text-[20px] font-bold tracking-[-0.01em] text-foreground">
           No {entityTitle.toLowerCase()} yet
         </div>
-        <div className="mb-6 text-[13px] leading-relaxed text-foreground/60">
+        <div className="mb-6 text-[13px] leading-[1.6] text-[var(--cg-color-text-dim)]">
           {canCreate
             ? `Create your first ${entityTitle.toLowerCase()} to get started. It will appear here once added.`
             : `No ${entityTitle.toLowerCase()} items have been created yet.`}
@@ -226,7 +312,7 @@ function PaginationFooter({
   const totalLabel = totalItems !== undefined ? `~${totalItems.toLocaleString()}` : "?";
 
   return (
-    <div className="flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 text-[13px] text-foreground/60">
+    <div className="flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 text-[13px] text-[var(--cg-color-text-dim)]">
       <div>
         Showing {itemCount} of {totalLabel}
       </div>
@@ -287,6 +373,9 @@ export function CollectionListView({
   const canCreate = capabilities.canCreate;
 
   const rawDisplayAttributes = schema.data ? pickDisplayAttributes(schema.data.attributes) : [];
+  // When the entity has a content attribute, the primary cell renders a
+  // file-type icon tile + filename/size meta line (mockup `.cell-primary`).
+  const contentAttribute = schema.data?.attributes.find((a) => a.type === "content");
   // When the schema has no listable attributes, fall back to a synthetic
   // primary column that shows the item's display name or id.
   const hasFallback = !schema.isPending && rawDisplayAttributes.length === 0;
@@ -359,15 +448,10 @@ export function CollectionListView({
                       </TableHead>
                     ))
                   ) : hasFallback ? (
-                    <TableHead className="w-[36%] pl-0 text-[12px] font-medium text-foreground/60">
-                      {entityTitle}
-                    </TableHead>
+                    <TableHead className="w-[36%] pl-0">{entityTitle}</TableHead>
                   ) : (
                     displayAttributes.map((attr, i) => (
-                      <TableHead
-                        key={attr.name}
-                        className={`text-[12px] font-medium text-foreground/60 ${i === 0 ? "w-[36%] pl-0" : ""}`}
-                      >
+                      <TableHead key={attr.name} className={i === 0 ? "w-[36%] pl-0" : ""}>
                         {attr.title}
                       </TableHead>
                     ))
@@ -404,7 +488,14 @@ export function CollectionListView({
                       >
                         {hasFallback ? (
                           <TableCell className="py-3.5 pl-0 text-[13px] font-medium text-foreground">
-                            {displayName}
+                            {contentAttribute ? (
+                              <PrimaryFileCell
+                                displayName={displayName}
+                                meta={readContentMeta(item.data[contentAttribute.name])}
+                              />
+                            ) : (
+                              displayName
+                            )}
                           </TableCell>
                         ) : (
                           displayAttributes.map((attr, i) => (
@@ -412,7 +503,14 @@ export function CollectionListView({
                               key={attr.name}
                               className={`py-3.5 text-[13px] text-foreground ${i === 0 ? "pl-0 font-medium" : ""}`}
                             >
-                              {formatAttributeValue(item.data[attr.name], attr.type)}
+                              {i === 0 && contentAttribute ? (
+                                <PrimaryFileCell
+                                  displayName={displayName}
+                                  meta={readContentMeta(item.data[contentAttribute.name])}
+                                />
+                              ) : (
+                                formatAttributeValue(item.data[attr.name], attr.type)
+                              )}
                             </TableCell>
                           ))
                         )}

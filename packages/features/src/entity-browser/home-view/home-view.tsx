@@ -90,7 +90,7 @@ export function HomeView() {
     return (
       <div className="px-8 py-9">
         <WelcomeHeader />
-        <div className="my-6 border-t border-border" />
+        <div className="mb-[26px] mt-[22px] border-t border-border" />
         <div className="mb-3.5 flex items-center justify-between">
           <span className="text-[13px] font-semibold tracking-[0.04em] text-foreground">
             Entities
@@ -126,14 +126,14 @@ export function HomeView() {
     <div className="px-8 py-9">
       <WelcomeHeader />
 
-      <div className="my-6 border-t border-border" />
+      <div className="mb-[26px] mt-[22px] border-t border-border" />
 
       {/* Section header */}
       <div className="mb-3.5 flex items-center justify-between">
         <span className="text-[13px] font-semibold tracking-[0.04em] text-foreground">
           Entities
         </span>
-        <span className="text-[12px] text-[var(--cg-color-ocean,#064C79)]">
+        <span className="text-[12px] text-[var(--cg-color-link-text,#064c79)]">
           {entityCount} entity {entityCount === 1 ? "type" : "types"} · derived from /profile
         </span>
       </div>
@@ -158,12 +158,25 @@ export function HomeView() {
 
 function WelcomeHeader() {
   return (
-    <div className="flex items-center gap-[18px]">
-      {/* CG circular logo glyph — ocean border on light background (per mockup) */}
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[var(--cg-color-ocean,#084772)]">
-        <span className="text-[11px] font-bold leading-none tracking-tight text-[var(--cg-color-ocean,#084772)]">
-          CG
-        </span>
+    <div className="mb-1.5 flex items-center gap-[18px]">
+      {/* CG circular logo glyph — ocean-outline chain mark on light background (per mockup) */}
+      <div className="grid size-12 shrink-0 place-items-center rounded-full border-[1.5px] border-[var(--cg-color-ocean,#084772)]">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 32 32"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M6 6 L14 14 M18 14 L26 6 M6 26 L14 18 M18 18 L26 26 M14 14 L14 18 L18 18 L18 14 Z"
+            stroke="var(--cg-color-ocean,#084772)"
+            strokeWidth="2.2"
+            strokeLinecap="square"
+            fill="none"
+          />
+        </svg>
       </div>
       <div>
         <h1 className="text-[26px] font-bold tracking-[-0.02em] text-foreground">

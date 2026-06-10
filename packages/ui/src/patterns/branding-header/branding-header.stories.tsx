@@ -67,6 +67,27 @@ export const WithLogoAndActions: Story = {
   },
 };
 
+export const Ocean: Story = {
+  args: {
+    variant: "ocean",
+    title: "contentgrid",
+    subtitle: "By Amexio",
+  },
+};
+
+export const OceanWithActions: Story = {
+  args: {
+    variant: "ocean",
+    title: "contentgrid",
+    subtitle: "By Amexio",
+    actions: (
+      <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-white/10">
+        Sign out
+      </Button>
+    ),
+  },
+};
+
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
   args: {

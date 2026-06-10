@@ -25,6 +25,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardTitleCount,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -109,17 +110,29 @@ function RelationCard({ entityName, entityId, relation, onNavigate }: Readonly<R
 // AttributeRow
 // ---------------------------------------------------------------------------
 
+/**
+ * AttributeRow renders one label/value pair.
+ *
+ * Two layout variants mirror the mockup:
+ *   - "side"  → `.attr-row` (content-focus side panel): two equal columns (1fr 1fr).
+ *   - "focus" → `.af-row`   (attribute-focus card): fixed 160px label column.
+ *
+ * Both: label is `text-[13px]` text-dim (NOT bold, NOT mono); value is
+ * `text-[13px]` midnight; empty values render a dimmed em-dash.
+ */
 function AttributeRow({
   label,
   value,
   type,
-}: Readonly<{ label: string; value: unknown; type: string }>) {
+  variant,
+}: Readonly<{ label: string; value: unknown; type: string; variant: "side" | "focus" }>) {
   return (
-    <div className="flex min-h-[32px] items-start gap-3 py-1.5 text-[13px]">
-      <dt className="w-[140px] shrink-0 pt-0.5 font-medium text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 flex-1 text-foreground">
-        {formatAttributeValue(value, type, { mono: true, italic: true })}
-      </dd>
+    <div
+      className="grid items-start gap-3 border-b border-border/50 py-3 text-[13px] last:border-b-0"
+      style={{ gridTemplateColumns: variant === "focus" ? "160px 1fr" : "1fr 1fr" }}
+    >
+      <dt className="min-w-0 text-[13px] text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-[13px] text-foreground">{formatAttributeValue(value, type)}</dd>
     </div>
   );
 }
@@ -131,7 +144,12 @@ function AttributeRow({
 function AttributeList({
   attributes,
   data,
-}: Readonly<{ attributes: EntityAttribute[]; data: Record<string, unknown> }>) {
+  variant,
+}: Readonly<{
+  attributes: EntityAttribute[];
+  data: Record<string, unknown>;
+  variant: "side" | "focus";
+}>) {
   const displayAttrs = pickDetailAttributes(attributes);
 
   if (displayAttrs.length === 0) {
@@ -139,9 +157,15 @@ function AttributeList({
   }
 
   return (
-    <dl className="divide-y divide-border/50">
+    <dl>
       {displayAttrs.map((attr) => (
-        <AttributeRow key={attr.name} label={attr.title} value={data[attr.name]} type={attr.type} />
+        <AttributeRow
+          key={attr.name}
+          label={attr.title}
+          value={data[attr.name]}
+          type={attr.type}
+          variant={variant}
+        />
       ))}
     </dl>
   );
@@ -464,17 +488,21 @@ function ContentFocusView({
           </div>
 
           {/* Side panel body: attributes + relations */}
-          <div className="flex-1 overflow-auto px-5 py-4">
-            <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Attributes
+          <div className="flex-1 overflow-auto px-5 py-3.5">
+            <div className="flex items-center justify-between pb-2 text-[12px] font-semibold tracking-[0.06em] text-muted-foreground">
+              <span>Attributes</span>
+              <span className="font-medium text-muted-foreground/70">
+                {pickDetailAttributes(attributes).length}
+              </span>
             </div>
-            <AttributeList attributes={attributes} data={data} />
+            <AttributeList attributes={attributes} data={data} variant="side" />
 
             {relations.length > 0 && (
               <>
                 <Separator className="my-4" />
-                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Relations
+                <div className="flex items-center justify-between pb-2 text-[12px] font-semibold tracking-[0.06em] text-muted-foreground">
+                  <span>Relations</span>
+                  <span className="font-medium text-muted-foreground/70">{relations.length}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {relations.map((rel) => (
@@ -590,7 +618,7 @@ function AttributeFocusView({
       {/* Two-column layout: attrs left | relations right */}
       <div
         className="min-h-0 flex-1 overflow-auto p-6"
-        style={{ display: "grid", gridTemplateColumns: "minmax(0,720px) 1fr", gap: "24px" }}
+        style={{ display: "grid", gridTemplateColumns: "minmax(0,720px) 1fr", gap: "48px" }}
       >
         {/* Left: eyebrow + h1 + meta + Attributes card */}
         <div>
@@ -606,10 +634,13 @@ function AttributeFocusView({
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Attributes</CardTitle>
+              <CardTitle>
+                Attributes
+                <CardTitleCount>{pickDetailAttributes(attributes).length}</CardTitleCount>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <AttributeList attributes={attributes} data={data} />
+              <AttributeList attributes={attributes} data={data} variant="focus" />
             </CardContent>
           </Card>
         </div>
@@ -619,7 +650,10 @@ function AttributeFocusView({
           <div>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Relations</CardTitle>
+                <CardTitle>
+                  Relations
+                  <CardTitleCount>{relations.length}</CardTitleCount>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-2">
