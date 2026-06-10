@@ -29,9 +29,12 @@
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "eslint": "^10.0.0",
+    "msw": "2.14.6",
+    "react-dom": "^19.1.0",
     "typescript": "^6.0.0"
   }
 }

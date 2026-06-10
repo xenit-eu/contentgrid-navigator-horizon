@@ -25,16 +25,21 @@ function bearerHook(tokenSupplier: AuthenticationTokenSupplier): FetchHook {
   });
 }
 
+// Resolve globalThis.fetch at call time — MSW (and tests) patch it after this
+// module loads — and invoke it on globalThis: browsers throw "Illegal invocation"
+// when fetch is called detached (Node does not, so unit tests won't catch it).
+const boundFetch: typeof fetch = (...args) => globalThis.fetch(...args);
+
 export function createApiClient(tokenSupplier: AuthenticationTokenSupplier): TypedFetch {
   const hookedFetch = compose(
     setHeader("Accept", ACCEPT_HAL),
     bearerHook(tokenSupplier),
     problemDetailsHook,
-  )(globalThis.fetch);
+  )(boundFetch);
   return createTypedFetch(hookedFetch);
 }
 
 export function createContentClient(tokenSupplier: AuthenticationTokenSupplier): TypedFetch {
-  const hookedFetch = compose(bearerHook(tokenSupplier), problemDetailsHook)(globalThis.fetch);
+  const hookedFetch = compose(bearerHook(tokenSupplier), problemDetailsHook)(boundFetch);
   return createTypedFetch(hookedFetch);
 }

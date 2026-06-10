@@ -62,9 +62,36 @@ importers:
       '@contentgrid/features':
         specifier: workspace:*
         version: link:../../packages/features
+      '@contentgrid/fetch-hook-authentication':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/fetch-hooks':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/hal':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/hal-forms':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../../packages/navigator-data
+      '@contentgrid/problem-details':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/typed-fetch':
+        specifier: ^0.4.0
+        version: 0.4.2
       '@contentgrid/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@contentgrid/uri-template':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.100.11(react@19.2.6)
       '@tanstack/react-router':
         specifier: ^1.114.0
         version: 1.170.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -80,13 +107,13 @@ importers:
       react-oidc-context:
         specifier: 3.3.1
         version: 3.3.1(oidc-client-ts@3.5.0)(react@19.2.6)
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
     devDependencies:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      '@contentgrid/navigator-data':
-        specifier: workspace:*
-        version: link:../../packages/navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -129,9 +156,36 @@ importers:
       '@contentgrid/features':
         specifier: workspace:*
         version: link:../../packages/features
+      '@contentgrid/fetch-hook-authentication':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/fetch-hooks':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/hal':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/hal-forms':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../../packages/navigator-data
+      '@contentgrid/problem-details':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@contentgrid/typed-fetch':
+        specifier: ^0.4.0
+        version: 0.4.2
       '@contentgrid/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@contentgrid/uri-template':
+        specifier: ^0.4.0
+        version: 0.4.2
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.100.11(react@19.2.6)
       '@tanstack/react-router':
         specifier: ^1.114.0
         version: 1.170.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -147,13 +201,13 @@ importers:
       react-oidc-context:
         specifier: 3.3.1
         version: 3.3.1(oidc-client-ts@3.5.0)(react@19.2.6)
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
     devDependencies:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      '@contentgrid/navigator-data':
-        specifier: workspace:*
-        version: link:../../packages/navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -304,6 +358,9 @@ importers:
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.100.11(react@19.2.6)
       '@types/react':
         specifier: ^19.1.5
         version: 19.2.15
@@ -313,6 +370,12 @@ importers:
       eslint:
         specifier: ^10.0.0
         version: 10.4.0(jiti@2.7.0)
+      msw:
+        specifier: 2.14.6
+        version: 2.14.6(@types/node@24.12.4)(typescript@6.0.3)
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.2.6(react@19.2.6)
       typescript:
         specifier: ^6.0.0
         version: 6.0.3

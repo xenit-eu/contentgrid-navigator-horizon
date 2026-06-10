@@ -14,16 +14,25 @@
   },
   "dependencies": {
     "@contentgrid/features": "workspace:*",
+    "@contentgrid/fetch-hook-authentication": "^0.4.0",
+    "@contentgrid/fetch-hooks": "^0.4.0",
+    "@contentgrid/hal": "^0.4.0",
+    "@contentgrid/hal-forms": "^0.4.0",
+    "@contentgrid/navigator-data": "workspace:*",
+    "@contentgrid/problem-details": "^0.4.0",
+    "@contentgrid/typed-fetch": "^0.4.0",
     "@contentgrid/ui": "workspace:*",
+    "@contentgrid/uri-template": "^0.4.0",
+    "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-router": "^1.114.0",
     "oidc-client-ts": "3.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-oidc-context": "3.3.1"
+    "react-oidc-context": "3.3.1",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
-    "@contentgrid/navigator-data": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@playwright/test": "1.60.0",
     "@tailwindcss/vite": "^4.1.18",
