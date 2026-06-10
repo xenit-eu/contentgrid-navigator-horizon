@@ -1,4 +1,5 @@
 import { DEFAULT_CONFIG } from "./defaults";
+import { validateConfig } from "./schema";
 import type { AppConfig } from "./types";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -35,10 +36,14 @@ export function loadConfig(storageKey: string): AppConfig {
   try {
     const raw = localStorage.getItem(storageKey);
     if (!raw) return DEFAULT_CONFIG;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(raw);
+    // Validate before merging: a stored shape like {"branding": null} would
+    // otherwise overwrite the default object and break consumers downstream.
+    const validated = validateConfig(parsed);
+    if (!validated.success) return DEFAULT_CONFIG;
     return deepMerge(
       DEFAULT_CONFIG as unknown as Record<string, unknown>,
-      parsed,
+      validated.data,
     ) as unknown as AppConfig;
   } catch {
     return DEFAULT_CONFIG;

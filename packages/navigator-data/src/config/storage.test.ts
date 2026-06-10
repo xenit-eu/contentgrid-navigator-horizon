@@ -29,6 +29,30 @@ describe("loadConfig", () => {
     const result = loadConfig("test-key");
     expect(result).toEqual(DEFAULT_CONFIG);
   });
+
+  it("returns DEFAULT_CONFIG when a stored section is null instead of an object", () => {
+    localStorage.setItem("test-key", JSON.stringify({ version: 1, branding: null }));
+    const result = loadConfig("test-key");
+    expect(result).toEqual(DEFAULT_CONFIG);
+    expect(result.branding.appName).toBe(DEFAULT_CONFIG.branding.appName);
+  });
+
+  it("returns DEFAULT_CONFIG when the stored config fails schema validation", () => {
+    localStorage.setItem("test-key", JSON.stringify({ branding: { appName: 42 } }));
+    const result = loadConfig("test-key");
+    expect(result).toEqual(DEFAULT_CONFIG);
+  });
+
+  it("merges a schema-valid partial config over the defaults", () => {
+    localStorage.setItem(
+      "test-key",
+      JSON.stringify({ version: 1, branding: { appName: "Partial App" } }),
+    );
+    const result = loadConfig("test-key");
+    expect(result.branding.appName).toBe("Partial App");
+    expect(result.branding.logoAlt).toBe(DEFAULT_CONFIG.branding.logoAlt);
+    expect(result.display).toEqual(DEFAULT_CONFIG.display);
+  });
 });
 
 describe("saveConfig + loadConfig round-trip", () => {
