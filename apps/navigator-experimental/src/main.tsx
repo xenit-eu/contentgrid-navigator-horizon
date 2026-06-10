@@ -25,7 +25,7 @@ const queryClient = new QueryClient();
 // Bridges auth → data layer: useAppAuth derives an OIDC-token-supplied
 // apiFetch and the profile URL from the runtime config, so it must render
 // inside <AuthProvider> and after loadAppConfig() resolved.
-function DataProviders({ children }: { children: ReactNode }) {
+function DataProviders({ children }: Readonly<{ children: ReactNode }>) {
   const { apiFetch, profileUrl } = useAppAuth();
   return (
     <QueryClientProvider client={queryClient}>

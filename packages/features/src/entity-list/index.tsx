@@ -24,7 +24,7 @@ export function EntityList() {
   );
 }
 
-function EntityListMessage({ children }: { children: ReactNode }) {
+function EntityListMessage({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <Card>
       <CardHeader>
@@ -37,7 +37,7 @@ function EntityListMessage({ children }: { children: ReactNode }) {
   );
 }
 
-function EntityCollectionCard({ entity }: { entity: EntityInfo }) {
+function EntityCollectionCard({ entity }: Readonly<{ entity: EntityInfo }>) {
   const list = useEntityList(entity.name, {});
 
   return (
