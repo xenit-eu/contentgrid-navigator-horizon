@@ -140,6 +140,7 @@ function EntityNavItems() {
             key={entity.name}
             to="/$collection"
             params={{ collection: entity.name }}
+            search={{ cursor: undefined, sort: undefined }}
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] text-foreground hover:bg-muted ${
               isActive ? "bg-muted font-medium shadow-[inset_2px_0_0_var(--cg-color-ocean)]" : ""
             }`}
