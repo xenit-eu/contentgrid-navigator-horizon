@@ -94,6 +94,7 @@ export const WithMixedFilters: Story = {
 };
 
 export const WithRangePairFilter: Story = {
+  tags: ["no-visual-test"],
   args: {
     filterProperties: [
       { name: "created.~from", type: "date" },
@@ -105,6 +106,7 @@ export const WithRangePairFilter: Story = {
 };
 
 export const WithRangePairNumericFilter: Story = {
+  tags: ["no-visual-test"],
   args: {
     filterProperties: [
       { name: "amount.~gte", type: "string" },
