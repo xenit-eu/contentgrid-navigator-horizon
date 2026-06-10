@@ -10,6 +10,9 @@ storybook-static/
 .env
 .env.*
 !.env.example
+# Committed dev-server defaults (MSW stub + dev-token auth) — no secrets.
+# Personal overrides belong in .env.development.local (still ignored).
+!.env.development
 *.tsbuildinfo
 
 # Playwright artifacts
