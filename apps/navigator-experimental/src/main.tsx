@@ -2,13 +2,7 @@ import { type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import {
-  AppConfigProvider,
-  AuthProvider,
-  NavigatorDataProvider,
-  loadAppConfig,
-  useAppAuth,
-} from "@contentgrid/navigator-data";
+import { AppConfigProvider, AuthProvider, loadAppConfig } from "@contentgrid/navigator-data";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -22,18 +16,10 @@ declare module "@tanstack/react-router" {
 
 const queryClient = new QueryClient();
 
-// Bridges auth → data layer: useAppAuth derives an OIDC-token-supplied
-// apiFetch and the profile URL from the runtime config, so it must render
-// inside <AuthProvider> and after loadAppConfig() resolved.
+// Provides the TanStack QueryClient to the entire app. The NavigatorDataProvider
+// is mounted in __root.tsx after auth resolves (it needs a live OIDC token).
 function DataProviders({ children }: Readonly<{ children: ReactNode }>) {
-  const { apiFetch, profileUrl } = useAppAuth();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
-        {children}
-      </NavigatorDataProvider>
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
 // Dev without a real backend: serve the stubbed HAL endpoint via MSW

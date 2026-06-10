@@ -9,38 +9,64 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as CollectionRouteImport } from './routes/$collection'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CollectionIdRouteImport } from './routes/$collection.$id'
 
+const CollectionRoute = CollectionRouteImport.update({
+  id: '/$collection',
+  path: '/$collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CollectionIdRoute = CollectionIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CollectionRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$collection': typeof CollectionRouteWithChildren
+  '/$collection/$id': typeof CollectionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$collection': typeof CollectionRouteWithChildren
+  '/$collection/$id': typeof CollectionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$collection': typeof CollectionRouteWithChildren
+  '/$collection/$id': typeof CollectionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/$collection' | '/$collection/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/$collection' | '/$collection/$id'
+  id: '__root__' | '/' | '/$collection' | '/$collection/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CollectionRoute: typeof CollectionRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/$collection': {
+      id: '/$collection'
+      path: '/$collection'
+      fullPath: '/$collection'
+      preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +74,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$collection/$id': {
+      id: '/$collection/$id'
+      path: '/$id'
+      fullPath: '/$collection/$id'
+      preLoaderRoute: typeof CollectionIdRouteImport
+      parentRoute: typeof CollectionRoute
+    }
   }
 }
 
+interface CollectionRouteChildren {
+  CollectionIdRoute: typeof CollectionIdRoute
+}
+
+const CollectionRouteChildren: CollectionRouteChildren = {
+  CollectionIdRoute: CollectionIdRoute,
+}
+
+const CollectionRouteWithChildren = CollectionRoute._addFileChildren(
+  CollectionRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CollectionRoute: CollectionRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

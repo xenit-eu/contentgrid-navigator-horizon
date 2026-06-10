@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { AppShell } from "@contentgrid/features/entity-browser";
 import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
 import { SignInGate } from "@contentgrid/ui";
 
@@ -19,7 +20,9 @@ function RootComponent() {
 
   return (
     <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
-      <Outlet />
+      <AppShell>
+        <Outlet />
+      </AppShell>
     </NavigatorDataProvider>
   );
 }

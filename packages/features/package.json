@@ -12,6 +12,10 @@
       "import": "./src/entity-list/index.tsx",
       "types": "./src/entity-list/index.tsx"
     },
+    "./entity-browser": {
+      "import": "./src/entity-browser/index.ts",
+      "types": "./src/entity-browser/index.ts"
+    },
     "./_experimental-placeholder": {
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
@@ -24,15 +28,19 @@
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "@contentgrid/ui": "workspace:*",
-    "@contentgrid/navigator-data": "workspace:*"
+    "@contentgrid/navigator-data": "workspace:*",
+    "@tanstack/react-router": "^1.0.0",
+    "lucide-react": ">=0.400.0"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-router": "^1.114.0",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "eslint": "^10.0.0",
+    "lucide-react": "^0.514.0",
     "msw": "2.14.6",
     "react-dom": "^19.1.0",
     "typescript": "^6.0.0"
