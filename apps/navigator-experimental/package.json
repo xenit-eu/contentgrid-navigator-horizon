@@ -15,8 +15,10 @@
     "@contentgrid/features": "workspace:*",
     "@contentgrid/ui": "workspace:*",
     "@tanstack/react-router": "^1.114.0",
+    "oidc-client-ts": "3.5.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-oidc-context": "3.3.1"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
