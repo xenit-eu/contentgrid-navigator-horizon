@@ -57,7 +57,7 @@ function createMockUser(token: string): User {
     session_state: null,
     state: undefined,
     toStorageString: () => "",
-  } as User;
+  } as User; // NOSONAR: object literal intentionally omits optional User fields; cast is required by TypeScript
 }
 
 export function DevAuthProvider({
