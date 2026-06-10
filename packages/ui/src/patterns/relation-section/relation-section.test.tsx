@@ -2,16 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { RelationSection } from "./relation-section";
-import type { RelationColumn, RelationItem } from "./relation-section";
+import type { RelationItem } from "./relation-section";
 
 const ITEMS: RelationItem[] = [
   { id: "1", data: { name: "Alpha", code: "A1" } },
   { id: "2", data: { name: "Beta", code: "B2" } },
-];
-
-const COLUMNS: RelationColumn[] = [
-  { key: "name", title: "Name" },
-  { key: "code", title: "Code" },
 ];
 
 function renderRelation(overrides: Partial<Parameters<typeof RelationSection>[0]> = {}) {
@@ -19,48 +14,99 @@ function renderRelation(overrides: Partial<Parameters<typeof RelationSection>[0]
 }
 
 // ---------------------------------------------------------------------------
-// Many-to-many layout (default)
+// Accordion shell (shared by both to-one and to-many)
 // ---------------------------------------------------------------------------
-describe("RelationSection — many-to-many layout (default)", () => {
-  it("renders the title", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS });
-    expect(screen.getAllByText("Invoices")[0]).toBeInTheDocument();
+describe("RelationSection — accordion shell", () => {
+  it("renders the relation title", () => {
+    renderRelation({ items: ITEMS });
+    expect(screen.getAllByText(/Invoices/i)[0]).toBeInTheDocument();
   });
 
-  it("renders item count badge", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS });
+  it("shows · to-many label for default (many) layout", () => {
+    renderRelation({ items: ITEMS });
+    expect(screen.getByText(/· to-many/i)).toBeInTheDocument();
+  });
+
+  it("shows · to-one label when isManyToOne=true", () => {
+    renderRelation({ isManyToOne: true, items: ITEMS });
+    expect(screen.getByText(/· to-one/i)).toBeInTheDocument();
+  });
+
+  it("renders item count in header", () => {
+    renderRelation({ items: ITEMS });
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it("renders column headers", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS });
-    expect(screen.getByText("Name")).toBeInTheDocument();
-    expect(screen.getByText("Code")).toBeInTheDocument();
+  it("renders totalCount in header when provided", () => {
+    renderRelation({ items: ITEMS, totalCount: 42 });
+    expect(screen.getByText("42")).toBeInTheDocument();
   });
 
-  it("renders row data", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS });
+  it("renders loading skeleton when isLoading is true", () => {
+    const { container } = renderRelation({ isLoading: true });
+    expect(container.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(0);
+  });
+
+  it("renders error message when error is set", () => {
+    renderRelation({ error: new Error("oops") });
+    expect(screen.getByText("Failed to load relation data.")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Item list layout
+// ---------------------------------------------------------------------------
+describe("RelationSection — item list", () => {
+  it("renders item primary labels", () => {
+    renderRelation({ items: ITEMS });
     expect(screen.getByText("Alpha")).toBeInTheDocument();
     expect(screen.getByText("Beta")).toBeInTheDocument();
   });
 
-  it("renders '—' for null data values", () => {
+  it("renders a secondary meta line for items with multiple fields", () => {
     renderRelation({
-      items: [{ id: "1", data: { name: null, code: undefined } }],
-      columns: COLUMNS,
+      items: [{ id: "1", data: { name: "Alpha", code: "A1" } }],
     });
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
+    // "A1" should appear as the meta (secondary field after name)
+    expect(screen.getByText("A1")).toBeInTheDocument();
   });
 
-  it("renders object cell values as JSON rather than [object Object]", () => {
+  it("falls back to item.id as label when all displayable fields are null", () => {
     renderRelation({
-      items: [{ id: "1", data: { name: "Alpha", code: { x: 1 } } }],
-      columns: COLUMNS,
+      items: [{ id: "id-only-123", data: { name: null, code: null } }],
     });
-    expect(screen.getByText('{"x":1}')).toBeInTheDocument();
-    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+    // id appears in both the name div and meta div (both fall back to id)
+    expect(screen.getAllByText("id-only-123").length).toBeGreaterThan(0);
   });
 
+  it("shows up to 5 items and hides the rest", () => {
+    const sixItems = Array.from({ length: 6 }, (_, i) => ({
+      id: String(i),
+      data: { name: `Item ${i}` },
+    }));
+    renderRelation({ items: sixItems, onViewAll: vi.fn() });
+    // Only 5 items rendered
+    expect(screen.getAllByText(/^Item \d$/).length).toBe(5);
+  });
+
+  it("does not render a table element", () => {
+    const { container } = renderRelation({ items: ITEMS });
+    expect(container.querySelector("table")).toBeNull();
+  });
+
+  it("calls onViewItem when a row is clicked", async () => {
+    const user = userEvent.setup();
+    const onViewItem = vi.fn();
+    renderRelation({ items: ITEMS, onViewItem });
+    await user.click(screen.getByText("Alpha"));
+    expect(onViewItem).toHaveBeenCalledWith("1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+describe("RelationSection — empty state", () => {
   it("renders empty state when items is empty", () => {
     renderRelation({ items: [] });
     expect(screen.getByText("No invoices linked")).toBeInTheDocument();
@@ -83,47 +129,84 @@ describe("RelationSection — many-to-many layout (default)", () => {
     renderRelation({ items: [] });
     expect(screen.queryByRole("button", { name: /link/i })).not.toBeInTheDocument();
   });
+});
 
-  it("renders loading skeleton when isLoading is true", () => {
-    const { container } = renderRelation({ isLoading: true });
-    // Skeletons are div elements with animate-pulse
-    expect(container.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(0);
+// ---------------------------------------------------------------------------
+// View all affordance
+// ---------------------------------------------------------------------------
+describe("RelationSection — view all", () => {
+  it("shows View all affordance when onViewAll is provided and items exist", () => {
+    renderRelation({ items: ITEMS, totalCount: 42, onViewAll: vi.fn() });
+    expect(screen.getByRole("button", { name: /view all/i })).toBeInTheDocument();
   });
 
-  it("renders error message when error is set", () => {
-    renderRelation({ error: new Error("oops") });
-    expect(screen.getByText("Failed to load relation data.")).toBeInTheDocument();
+  it("View all label includes totalCount and title", () => {
+    renderRelation({ items: ITEMS, totalCount: 42, onViewAll: vi.fn() });
+    expect(screen.getByRole("button", { name: /view all 42 invoices/i })).toBeInTheDocument();
   });
 
-  it("shows Link button in header when items are loaded and onLink is provided", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS, onLink: vi.fn() });
+  it("calls onViewAll when View all is clicked", async () => {
+    const user = userEvent.setup();
+    const onViewAll = vi.fn();
+    renderRelation({ items: ITEMS, totalCount: 42, onViewAll });
+    await user.click(screen.getByRole("button", { name: /view all/i }));
+    expect(onViewAll).toHaveBeenCalled();
+  });
+
+  it("does not show View all affordance when onViewAll is absent", () => {
+    renderRelation({ items: ITEMS, totalCount: 42 });
+    expect(screen.queryByRole("button", { name: /view all/i })).not.toBeInTheDocument();
+  });
+
+  it("does not show View all for to-one layout", () => {
+    renderRelation({ isManyToOne: true, items: ITEMS, totalCount: 42, onViewAll: vi.fn() });
+    expect(screen.queryByRole("button", { name: /view all/i })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Link / Change button (when items are loaded)
+// ---------------------------------------------------------------------------
+describe("RelationSection — link button with items", () => {
+  it("shows Link button in header area when items loaded and onLink provided (to-many)", () => {
+    renderRelation({ items: ITEMS, onLink: vi.fn() });
     expect(screen.getByRole("button", { name: /link invoices/i })).toBeInTheDocument();
   });
 
-  it("calls onLink when header Link button is clicked", async () => {
+  it("shows Change button for to-one when items loaded and onLink provided", () => {
+    renderRelation({ isManyToOne: true, items: [ITEMS[0]], onLink: vi.fn() });
+    expect(screen.getByRole("button", { name: /change/i })).toBeInTheDocument();
+  });
+
+  it("calls onLink when Link button is clicked", async () => {
     const user = userEvent.setup();
     const onLink = vi.fn();
-    renderRelation({ items: ITEMS, columns: COLUMNS, onLink });
+    renderRelation({ items: ITEMS, onLink });
     await user.click(screen.getByRole("button", { name: /link invoices/i }));
     expect(onLink).toHaveBeenCalled();
   });
 
-  it("calls onViewItem when a row is clicked", async () => {
+  it("calls onLink when Change button is clicked", async () => {
     const user = userEvent.setup();
-    const onViewItem = vi.fn();
-    renderRelation({ items: ITEMS, columns: COLUMNS, onViewItem });
-    await user.click(screen.getByText("Alpha"));
-    expect(onViewItem).toHaveBeenCalledWith("1");
+    const onLink = vi.fn();
+    renderRelation({ isManyToOne: true, items: [ITEMS[0]], onLink });
+    await user.click(screen.getByRole("button", { name: /change/i }));
+    expect(onLink).toHaveBeenCalled();
   });
+});
 
+// ---------------------------------------------------------------------------
+// Unlink flow
+// ---------------------------------------------------------------------------
+describe("RelationSection — unlink flow", () => {
   it("renders unlink buttons when onUnlink is provided", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink: vi.fn() });
+    renderRelation({ items: ITEMS, onUnlink: vi.fn() });
     expect(screen.getAllByRole("button", { name: /unlink/i }).length).toBeGreaterThanOrEqual(2);
   });
 
   it("clicking unlink button opens the confirmation dialog", async () => {
     const user = userEvent.setup();
-    renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink: vi.fn() });
+    renderRelation({ items: ITEMS, onUnlink: vi.fn() });
     const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
     await user.click(firstUnlink);
     expect(screen.getByText(/unlink invoices/i)).toBeInTheDocument();
@@ -132,7 +215,7 @@ describe("RelationSection — many-to-many layout (default)", () => {
   it("confirms unlink and calls onUnlink with item id", async () => {
     const user = userEvent.setup();
     const onUnlink = vi.fn();
-    renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink });
+    renderRelation({ items: ITEMS, onUnlink });
     const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
     await user.click(firstUnlink);
     await user.click(screen.getByRole("button", { name: "Unlink" }));
@@ -142,7 +225,7 @@ describe("RelationSection — many-to-many layout (default)", () => {
   it("cancels unlink dialog without calling onUnlink", async () => {
     const user = userEvent.setup();
     const onUnlink = vi.fn();
-    renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink });
+    renderRelation({ items: ITEMS, onUnlink });
     const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
     await user.click(firstUnlink);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -151,155 +234,32 @@ describe("RelationSection — many-to-many layout (default)", () => {
 
   it("shows 'Unlinking...' text when isUnlinking is true", async () => {
     const user = userEvent.setup();
-    renderRelation({ items: ITEMS, columns: COLUMNS, onUnlink: vi.fn(), isUnlinking: true });
+    renderRelation({ items: ITEMS, onUnlink: vi.fn(), isUnlinking: true });
     const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
     await user.click(firstUnlink);
     expect(screen.getByRole("button", { name: "Unlinking..." })).toBeDisabled();
   });
-
-  it("auto-resolves column keys from data when no columns prop provided", () => {
-    renderRelation({ items: ITEMS });
-    // Should render the data values even without explicit columns
-    expect(screen.getByText("Alpha")).toBeInTheDocument();
-  });
-
-  it("filters out keys starting with _ and 'id' in auto-resolved columns", () => {
-    renderRelation({
-      items: [{ id: "1", data: { _internal: "skip", id: "skip", name: "ShowMe" } }],
-    });
-    expect(screen.getByText("ShowMe")).toBeInTheDocument();
-    expect(screen.queryByText("skip")).not.toBeInTheDocument();
-  });
 });
 
 // ---------------------------------------------------------------------------
-// Many-to-one layout
+// Label derivation
 // ---------------------------------------------------------------------------
-describe("RelationSection — many-to-one layout (isManyToOne=true)", () => {
-  it("renders title in card header", () => {
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS });
-    expect(screen.getAllByText("Invoices")[0]).toBeInTheDocument();
-  });
-
-  it("renders item data in compact card layout", () => {
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS });
-    expect(screen.getByText("Alpha")).toBeInTheDocument();
-  });
-
-  it("renders empty state when no items", () => {
-    renderRelation({ isManyToOne: true, items: [] });
-    expect(screen.getByText("No invoices linked")).toBeInTheDocument();
-  });
-
-  it("shows Link button in empty state when onLink is provided", () => {
-    renderRelation({ isManyToOne: true, items: [], onLink: vi.fn() });
-    expect(screen.getByRole("button", { name: /link invoices/i })).toBeInTheDocument();
-  });
-
-  it("calls onLink from empty state", async () => {
-    const user = userEvent.setup();
-    const onLink = vi.fn();
-    renderRelation({ isManyToOne: true, items: [], onLink });
-    await user.click(screen.getByRole("button", { name: /link invoices/i }));
-    expect(onLink).toHaveBeenCalled();
-  });
-
-  it("shows Change button when items are loaded and onLink is provided", () => {
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS, onLink: vi.fn() });
-    expect(screen.getByRole("button", { name: /change/i })).toBeInTheDocument();
-  });
-
-  it("calls onLink when Change button is clicked", async () => {
-    const user = userEvent.setup();
-    const onLink = vi.fn();
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS, onLink });
-    await user.click(screen.getByRole("button", { name: /change/i }));
-    expect(onLink).toHaveBeenCalled();
-  });
-
-  it("renders loading skeleton when isLoading is true", () => {
-    const { container } = renderRelation({ isManyToOne: true, isLoading: true });
-    expect(container.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(0);
-  });
-
-  it("renders error message when error is set", () => {
-    renderRelation({ isManyToOne: true, error: new Error("fail") });
-    expect(screen.getByText("Failed to load relation data.")).toBeInTheDocument();
-  });
-
-  it("calls onViewItem when View details icon is clicked", async () => {
-    const user = userEvent.setup();
-    const onViewItem = vi.fn();
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS, onViewItem });
-    await user.click(screen.getAllByRole("button", { name: /view details/i })[0]);
-    expect(onViewItem).toHaveBeenCalledWith("1");
-  });
-
-  it("opens unlink confirmation dialog from compact card", async () => {
-    const user = userEvent.setup();
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS, onUnlink: vi.fn() });
-    await user.click(screen.getAllByRole("button", { name: /unlink/i })[0]);
-    expect(screen.getByText(/unlink invoices/i)).toBeInTheDocument();
-  });
-
-  it("confirms unlink in compact card and calls onUnlink", async () => {
-    const user = userEvent.setup();
-    const onUnlink = vi.fn();
-    renderRelation({ isManyToOne: true, items: ITEMS, columns: COLUMNS, onUnlink });
-    await user.click(screen.getAllByRole("button", { name: /unlink/i })[0]);
-    await user.click(screen.getByRole("button", { name: "Unlink" }));
-    expect(onUnlink).toHaveBeenCalledWith("1");
-  });
-
-  it("renders attribute details in compact card", () => {
-    renderRelation({
-      isManyToOne: true,
-      items: [{ id: "1", data: { name: "Alpha", code: "A1" } }],
-      columns: COLUMNS,
-    });
-    expect(screen.getByText(/Name: Alpha/)).toBeInTheDocument();
-    expect(screen.getByText(/Code: A1/)).toBeInTheDocument();
-  });
-});
-
-describe("RelationSection — column title resolution", () => {
-  it("resolves column titles from columns prop", () => {
-    renderRelation({ items: ITEMS, columns: COLUMNS });
-    expect(screen.getByText("Name")).toBeInTheDocument();
-  });
-
-  it("falls back to title-casing the key when columns is not provided", () => {
-    renderRelation({ items: [{ id: "1", data: { my_field: "value" } }] });
-    expect(screen.getByText("My Field")).toBeInTheDocument();
-  });
-
-  it("filters columns prop keys that are not in item data", () => {
-    renderRelation({
-      items: [{ id: "1", data: { name: "Alpha" } }],
-      columns: [
-        { key: "name", title: "Name" },
-        { key: "nonexistent", title: "Should Not Show" },
-      ],
-    });
-    expect(screen.queryByText("Should Not Show")).not.toBeInTheDocument();
-  });
-});
-
-describe("RelationSection — getItemLabel fallback", () => {
+describe("RelationSection — getItemLabel", () => {
   it("uses item.id as label when all displayable data fields are null", () => {
     const itemWithNullFields: RelationItem = {
       id: "id-only-123",
       data: { name: null, code: null },
     };
-    renderRelation({ isManyToOne: true, items: [itemWithNullFields], columns: COLUMNS });
-    // The compact card renders the label as the primary text
-    expect(screen.getByText("id-only-123")).toBeInTheDocument();
+    renderRelation({ items: [itemWithNullFields] });
+    // id appears in both the name and meta divs when all fields are null
+    expect(screen.getAllByText("id-only-123").length).toBeGreaterThan(0);
   });
-});
 
-describe("RelationSection — resolveColumnKeys empty items early return", () => {
-  it("renders empty state without crashing when items is empty and no columns prop is given", () => {
-    expect(() => renderRelation({ items: [] })).not.toThrow();
-    expect(screen.getByText("No invoices linked")).toBeInTheDocument();
+  it("skips fields starting with _ in label resolution", () => {
+    renderRelation({
+      items: [{ id: "1", data: { _internal: "skip", name: "ShowMe" } }],
+    });
+    expect(screen.getByText("ShowMe")).toBeInTheDocument();
+    expect(screen.queryByText("skip")).not.toBeInTheDocument();
   });
 });

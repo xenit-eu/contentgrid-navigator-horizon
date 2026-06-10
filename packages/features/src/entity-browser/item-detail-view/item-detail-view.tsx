@@ -66,12 +66,19 @@ interface RelationCardProps {
   entityId: string;
   relation: EntityRelation;
   onNavigate: (collection: string, id: string) => void;
+  onViewAll?: (collection: string) => void;
 }
 
 /** HAL envelope keys that must not appear as relation-table columns. */
 const HAL_ENVELOPE_KEYS = new Set(["_links", "_templates", "_embedded"]);
 
-function RelationCard({ entityName, entityId, relation, onNavigate }: Readonly<RelationCardProps>) {
+function RelationCard({
+  entityName,
+  entityId,
+  relation,
+  onNavigate,
+  onViewAll,
+}: Readonly<RelationCardProps>) {
   const result = useEntityRelations(entityName, entityId, relation.name);
 
   // Pre-format relation cell values to display strings. RelationSection
@@ -93,14 +100,18 @@ function RelationCard({ entityName, entityId, relation, onNavigate }: Readonly<R
     ? (relation.targetEntityHref.split("/").pop() ?? relation.name)
     : relation.name;
 
+  const isManyToOne = relation.manyToOne && !relation.manyToMany;
+
   return (
     <RelationSection
       title={relation.title}
-      isManyToOne={relation.manyToOne && !relation.manyToMany}
+      isManyToOne={isManyToOne}
       items={items}
       isLoading={result.isPending}
       error={result.isError ? result.error : undefined}
       onViewItem={(id) => onNavigate(targetCollection, id)}
+      // For to-many: wire "View all" to navigate to the target collection
+      onViewAll={!isManyToOne && onViewAll ? () => onViewAll(targetCollection) : undefined}
       // TODO(HZN-5A): onLink + onUnlink wired when entity-picker form is implemented
     />
   );
@@ -377,6 +388,8 @@ interface ContentFocusProps {
   onHome: () => void;
   onCollection: () => void;
   onNavigate: (col: string, itemId: string) => void;
+  /** Navigate to a related collection (used by "View all" in to-many relation accordions). */
+  onViewAll: (col: string) => void;
   onEditClick: () => void;
   onDeleteClick: () => void;
   /** RBAC hide-point: hide Edit button when false. Defaults to true (permissive). */
@@ -398,6 +411,7 @@ function ContentFocusView({
   onHome,
   onCollection,
   onNavigate,
+  onViewAll,
   onEditClick,
   onDeleteClick,
   canEdit,
@@ -512,6 +526,7 @@ function ContentFocusView({
                       entityId={id}
                       relation={rel}
                       onNavigate={onNavigate}
+                      onViewAll={onViewAll}
                     />
                   ))}
                 </div>
@@ -542,6 +557,8 @@ interface AttributeFocusProps {
   onHome: () => void;
   onCollection: () => void;
   onNavigate: (col: string, itemId: string) => void;
+  /** Navigate to a related collection (used by "View all" in to-many relation accordions). */
+  onViewAll: (col: string) => void;
   onEditClick: () => void;
   onDeleteClick: () => void;
   /** RBAC hide-point: hide Edit button when false. Defaults to true (permissive). */
@@ -563,6 +580,7 @@ function AttributeFocusView({
   onHome,
   onCollection,
   onNavigate,
+  onViewAll,
   onEditClick,
   onDeleteClick,
   canEdit,
@@ -664,6 +682,7 @@ function AttributeFocusView({
                       entityId={id}
                       relation={rel}
                       onNavigate={onNavigate}
+                      onViewAll={onViewAll}
                     />
                   ))}
                 </div>
@@ -769,6 +788,14 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
     });
   }
 
+  function goToCollection(targetCollection: string) {
+    void router.navigate({
+      to: "/$collection" as never,
+      params: { collection: targetCollection } as never,
+      search: {} as never,
+    });
+  }
+
   // --- Delete ---
   function handleDeleteConfirm() {
     setDeleteError(null);
@@ -809,6 +836,7 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
     onHome: goHome,
     onCollection: goBack,
     onNavigate: goToItem,
+    onViewAll: goToCollection,
     onEditClick: () => undefined, // TODO(HZN-5A): open create/edit form
     onDeleteClick: handleDeleteClick,
     // RBAC capabilities — undefined means still loading, default to true (permissive).
