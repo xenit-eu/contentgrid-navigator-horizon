@@ -239,7 +239,7 @@ function DeleteDialog({
           </p>
 
           {relations.length > 0 && (
-            <div className="rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-[12px] text-muted-foreground">
+            <div className="rounded-lg border border-border bg-[var(--cg-color-frost)] px-3 py-2.5 text-[13px] text-muted-foreground">
               <p className="mb-1 font-semibold text-foreground">
                 Linked relations will be cleared:
               </p>
@@ -439,7 +439,10 @@ function ContentFocusView({
       {/* Content-focus grid: viewer | side panel */}
       <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: "1fr 360px" }}>
         {/* File viewer pane — placeholder (real viewer is a later ticket) */}
-        <div className="flex min-h-0 flex-col border-r border-border bg-muted/30">
+        <div
+          className="flex min-h-0 flex-col border-r border-border"
+          style={{ background: "var(--cg-gradient-viewer)" }}
+        >
           <div className="flex min-h-0 flex-1 items-center justify-center p-8">
             <div className="flex flex-col items-center gap-4 text-center">
               <div className="grid size-20 place-items-center rounded-2xl border-[1.5px] border-dashed border-border bg-card">
@@ -465,7 +468,10 @@ function ContentFocusView({
           {/* Side panel head */}
           <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <div
+                className="text-[11px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: "var(--cg-color-eyebrow)" }}
+              >
                 {entityTitle}
               </div>
               <div className="mt-1 truncate text-[15px] font-semibold text-foreground">
@@ -641,7 +647,10 @@ function AttributeFocusView({
         {/* Left: eyebrow + h1 + meta + Attributes card */}
         <div>
           <div className="mb-5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div
+              className="text-[11px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: "var(--cg-color-eyebrow)" }}
+            >
               {entityTitle}
             </div>
             <h1 className="mt-1.5 text-[26px] font-bold tracking-tight text-foreground">

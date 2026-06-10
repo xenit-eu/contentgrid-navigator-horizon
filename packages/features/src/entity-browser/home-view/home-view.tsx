@@ -1,8 +1,8 @@
-import { Link } from "@tanstack/react-router";
-import { PlusCircle } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import type { EntityInfo } from "@contentgrid/navigator-data";
 import { useEntityCapabilities, useEntityList, useProfile } from "@contentgrid/navigator-data";
-import { Skeleton } from "@contentgrid/ui";
+import { EntityCard, LogomarkColor, Skeleton } from "@contentgrid/ui";
+import { getEntityVisuals } from "../entity-visuals";
 
 // ---------------------------------------------------------------------------
 // Per-entity child component — fetches count + capabilities without
@@ -16,47 +16,33 @@ interface EntityCardWithCountProps {
 function EntityCardWithCount({ entity }: Readonly<EntityCardWithCountProps>) {
   const listResult = useEntityList(entity.name, { size: 1 });
   const capabilities = useEntityCapabilities(entity.name);
+  const navigate = useNavigate();
 
   const count = listResult.data?.totalItems;
+  const { icon, accent } = getEntityVisuals(entity);
 
   function handleCreateClick() {
     // TODO(HZN-5A): wire to create form when entity creation is implemented.
-    // No-op until the create flow exists; the card itself is not clickable so
-    // stopPropagation is unnecessary.
+  }
+
+  function handleTitleClick(name: string) {
+    void navigate({
+      to: "/$collection",
+      params: { collection: name },
+      search: { cursor: undefined, sort: undefined },
+    });
   }
 
   return (
-    // Plain (non-interactive) tile — only the title Link below navigates.
-    <div className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--cg-color-card-border)] bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-2.5">
-        <div className="min-w-0">
-          {/* The ONLY navigable element in the tile. */}
-          <Link
-            to="/$collection"
-            params={{ collection: entity.name }}
-            search={{ cursor: undefined, sort: undefined }}
-            className="text-[13px] font-semibold text-foreground underline-offset-[3px] hover:text-primary hover:underline"
-          >
-            {entity.title}
-          </Link>
-          <div className="mt-0.5 text-[12px] text-muted-foreground">
-            {count !== undefined ? `${count.toLocaleString()} items` : "…"}
-          </div>
-        </div>
-
-        {capabilities.canCreate && (
-          <button
-            type="button"
-            title="Create"
-            onClick={handleCreateClick}
-            className="grid size-7 shrink-0 place-items-center rounded-md text-primary hover:bg-muted"
-          >
-            <PlusCircle className="size-[18px]" />
-            <span className="sr-only">Create {entity.title}</span>
-          </button>
-        )}
-      </div>
-    </div>
+    <EntityCard
+      name={entity.name}
+      title={entity.title}
+      count={count}
+      icon={icon}
+      tint={accent}
+      onCreateClick={capabilities.canCreate ? handleCreateClick : undefined}
+      onTitleClick={handleTitleClick}
+    />
   );
 }
 
@@ -68,7 +54,9 @@ function EntityCardSkeleton() {
   return (
     <div className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--cg-color-card-border)] bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2.5">
-        <div className="flex min-w-0 flex-col gap-1.5">
+        {/* Icon tile skeleton */}
+        <Skeleton className="size-9 shrink-0 rounded-[9px]" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Skeleton className="h-3.5 w-28" />
           <Skeleton className="h-3 w-16" />
         </div>
@@ -90,7 +78,7 @@ export function HomeView() {
     return (
       <div className="px-8 py-9">
         <WelcomeHeader />
-        <div className="mb-[26px] mt-[22px] border-t border-border" />
+        <HomeDivider />
         <div className="mb-3.5 flex items-center justify-between">
           <span className="text-[13px] font-semibold tracking-[0.04em] text-foreground">
             Entities
@@ -126,7 +114,7 @@ export function HomeView() {
     <div className="px-8 py-9">
       <WelcomeHeader />
 
-      <div className="mb-[26px] mt-[22px] border-t border-border" />
+      <HomeDivider />
 
       {/* Section header */}
       <div className="mb-3.5 flex items-center justify-between">
@@ -159,25 +147,7 @@ export function HomeView() {
 function WelcomeHeader() {
   return (
     <div className="mb-1.5 flex items-center gap-[18px]">
-      {/* CG circular logo glyph — ocean-outline chain mark on light background (per mockup) */}
-      <div className="grid size-12 shrink-0 place-items-center rounded-full border-[1.5px] border-[var(--cg-color-ocean,#084772)]">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 32 32"
-          fill="none"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path
-            d="M6 6 L14 14 M18 14 L26 6 M6 26 L14 18 M18 18 L26 26 M14 14 L14 18 L18 18 L18 14 Z"
-            stroke="var(--cg-color-ocean,#084772)"
-            strokeWidth="2.2"
-            strokeLinecap="square"
-            fill="none"
-          />
-        </svg>
-      </div>
+      <LogomarkColor size={48} />
       <div>
         <h1 className="text-[26px] font-bold tracking-[-0.02em] text-foreground">
           Welcome to ContentGrid Navigator
@@ -187,5 +157,21 @@ function WelcomeHeader() {
         </p>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Home divider — gradient bar separating welcome block from entity grid
+// ---------------------------------------------------------------------------
+
+function HomeDivider() {
+  return (
+    <div
+      className="mb-[26px] mt-[22px] h-0.5 rounded-sm"
+      style={{
+        background:
+          "linear-gradient(90deg, var(--cg-color-sky) 0%, var(--cg-color-breeze) 35%, var(--cg-color-line) 100%)",
+      }}
+    />
   );
 }

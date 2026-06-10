@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
   Skeleton,
 } from "@contentgrid/ui";
+import { LogomarkDiap } from "@contentgrid/ui";
+import { getEntityVisuals } from "../entity-visuals";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,31 +36,24 @@ function getInitials(name: string | undefined): string {
 
 function ShellHeader() {
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between bg-primary px-6 text-primary-foreground">
-      {/* Left: logo glyph + wordmark */}
+    <header
+      className="flex h-14 shrink-0 items-center justify-between px-6 text-primary-foreground shadow-[inset_0_-3px_0_var(--cg-color-sky)]"
+      style={{ background: "var(--cg-gradient-header)" }}
+    >
+      {/* Left: logomark + wordmark */}
       <div className="flex items-center gap-2.5">
-        <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-white">
-          {/* ContentGrid logo mark (placeholder per mockup; matches the Home welcome glyph) */}
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 32 32"
-            fill="none"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path
-              d="M6 6 L14 14 M18 14 L26 6 M6 26 L14 18 M18 18 L26 26 M14 14 L14 18 L18 18 L18 14 Z"
-              stroke="#fff"
-              strokeWidth="2.2"
-              strokeLinecap="square"
-              fill="none"
-            />
-          </svg>
-        </div>
+        <LogomarkDiap size={38} />
         <div className="flex flex-col leading-none">
-          <span className="text-[15px] font-bold tracking-tight text-white">contentgrid</span>
-          <span className="mt-0.5 text-[11px] font-medium tracking-[0.22em] text-[#B1CFE7]">
+          <span
+            className="text-[16px] font-bold leading-none tracking-[-0.01em]"
+            style={{ color: "#fff" }}
+          >
+            <span style={{ color: "#2FB9F0" }}>content</span>grid
+          </span>
+          <span
+            className="mt-[3px] block text-[9px] font-semibold"
+            style={{ letterSpacing: "0.26em", color: "var(--cg-color-header-dim)" }}
+          >
             BY AMEXIO
           </span>
         </div>
@@ -94,17 +89,30 @@ function UserMenu() {
           className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-primary-foreground hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <Avatar className="size-[30px]">
-            <AvatarFallback className="bg-white/12 text-[11px] font-semibold text-primary-foreground">
+            <AvatarFallback
+              className="text-[11px] font-semibold text-white"
+              style={{
+                background: "linear-gradient(135deg, var(--cg-color-sky), #026CA0)",
+              }}
+            >
               {initials}
             </AvatarFallback>
           </Avatar>
           <span className="hidden flex-col text-left sm:flex">
             <span className="text-[13px] font-medium leading-none">{name}</span>
             {email && (
-              <span className="mt-0.5 text-[11px] leading-none text-[#B1CFE7]">{email}</span>
+              <span
+                className="mt-0.5 text-[11px] leading-none"
+                style={{ color: "var(--cg-color-header-dim)" }}
+              >
+                {email}
+              </span>
             )}
           </span>
-          <ChevronDownIcon className="size-3.5 shrink-0 opacity-70" />
+          <ChevronDownIcon
+            className="size-3.5 shrink-0"
+            style={{ color: "var(--cg-color-header-dim)" }}
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
@@ -151,6 +159,11 @@ function EntityNavItems() {
           to: "/$collection",
           params: { collection: entity.name },
         });
+        const { icon: Icon, accent } = getEntityVisuals(entity);
+
+        // Map accent to icon color CSS variable
+        const iconColorVar = `var(--cg-ic-${accent === "breeze" ? "sky" : accent})`;
+
         return (
           <Link
             key={entity.name}
@@ -158,9 +171,17 @@ function EntityNavItems() {
             params={{ collection: entity.name }}
             search={{ cursor: undefined, sort: undefined }}
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] text-[var(--cg-color-midnight)] hover:bg-muted ${
-              isActive ? "bg-muted font-medium shadow-[inset_2px_0_0_var(--cg-color-ocean)]" : ""
+              isActive
+                ? "bg-[rgba(1,155,227,0.12)] font-medium text-[var(--cg-color-ocean)] shadow-[inset_2px_0_0_var(--cg-color-sky)]"
+                : ""
             }`}
           >
+            <Icon
+              size={15}
+              strokeWidth={1.8}
+              className="shrink-0"
+              style={{ color: isActive ? "var(--cg-color-ocean)" : iconColorVar }}
+            />
             <span className="min-w-0 flex-1 truncate">{entity.title}</span>
           </Link>
         );
@@ -184,7 +205,10 @@ function ShellSidebar() {
         from that entity's schema.  TODO(HZN-7.4): hide when no entity at all
         exposes a create-form template.
       */}
-      <Button className="mb-3.5 h-auto w-full justify-start gap-2.5 rounded-lg bg-primary px-3 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-[var(--cg-color-ocean-700)]">
+      <Button
+        className="mb-3.5 h-auto w-full justify-start gap-2.5 rounded-lg px-3 py-2.5 text-[13px] font-medium text-white shadow-[0_2px_6px_-2px_rgba(8,71,114,.4)] hover:brightness-110"
+        style={{ background: "var(--cg-gradient-create)" }}
+      >
         <PlusIcon className="size-[17px] shrink-0" />
         Create
       </Button>
@@ -214,7 +238,7 @@ export interface AppShellProps {
 export function AppShell({ children }: Readonly<AppShellProps>) {
   return (
     <div className="flex min-h-svh flex-col bg-background">
-      {/* Full-width ocean header across the very top */}
+      {/* Full-width gradient header across the very top */}
       <ShellHeader />
 
       {/* Below the header: sidebar | main content */}

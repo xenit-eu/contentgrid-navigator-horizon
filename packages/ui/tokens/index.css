@@ -32,26 +32,30 @@
   --cg-color-midnight: #021826;
 
   /* Greys / neutrals */
-  --cg-color-mist: #f4f7fa;
+  --cg-color-mist: #f2f7fb;
   --cg-color-frost: #fafdff;
   --cg-color-line: #ebeef2;
   --cg-color-line-soft: #f1f4f7;
+  --cg-color-breeze: #b3e8ff;
+  --cg-color-sand: #e8d5b7;
 
   /* Text */
   --cg-color-text: #0e2436;
   --cg-color-text-dim: #405b6d;
+  /* #557891 (brand Steel) is only 4.34:1 on mist — below WCAG AA for body text */
   --cg-color-text-muted: #4f6f87;
-  --cg-color-header-dim: #b1cfe7;
+  --cg-color-header-dim: #b3e8ff;
   --cg-color-link-text: #064c79;
 
   /* Accent / status */
-  --cg-color-amber: #b85b1f;
+  --cg-color-amber: #d4682a;
   --cg-color-amber-light: #7a3d14;
+  --cg-color-amber-text: #7a3d14;
   --cg-color-danger: #b3261e;
   --cg-color-green: #2f7a55;
 
   /* UI chrome */
-  --cg-color-card-border: #7899b0;
+  --cg-color-card-border: #c5d6e2;
   --cg-color-sky-extract: rgba(1, 155, 227, 0.16);
   --cg-color-sky-extract-ring: rgba(1, 155, 227, 0.55);
 
@@ -100,6 +104,49 @@
 
   --cg-font-size-2xl: 1.5rem; /* 24px */
   --cg-line-height-2xl: 2rem; /* 32px */
+
+  /* -------------------------------------------------------------------------
+   * Tint palette — entity icons, file-type tiles (.tint-* / .ic-* / .file-ic--)
+   * ------------------------------------------------------------------------- */
+
+  --cg-tint-sky-bg: #ddf3fe;
+  --cg-tint-sky-fg: #0173a8;
+  --cg-tint-ocean-bg: #dceaf5;
+  --cg-tint-ocean-fg: #084772;
+  --cg-tint-breeze-bg: #b3e8ff;
+  --cg-tint-breeze-fg: #075f8c;
+  --cg-tint-sand-bg: #f3e7d2;
+  --cg-tint-sand-fg: #8c5e1e;
+  --cg-tint-amber-bg: #f9e4d4;
+  --cg-tint-amber-fg: #ac4e14;
+  --cg-tint-steel-bg: #e3ebf1;
+  --cg-tint-steel-fg: #44637a;
+
+  /* Icon colours */
+  --cg-ic-sky: #028fce;
+  --cg-ic-ocean: #084772;
+  --cg-ic-steel: #557891;
+  --cg-ic-sand: #a3742c;
+  --cg-ic-amber: #c45617;
+
+  /* File-type tile colours */
+  --cg-color-pdf-bg: #fbe9dc;
+  --cg-color-pdf-fg: #c2541d;
+  --cg-color-img-bg: #b3e8ff;
+  --cg-color-img-fg: #0173a8;
+
+  /* Table / list interaction */
+  --cg-color-row-hover: #f4fafe;
+  --cg-color-row-selected: #eaf6fe;
+
+  /* Entity eyebrow / chip */
+  --cg-color-eyebrow: #0277b0;
+  --cg-color-chip-bg: #e2f3fd;
+  --cg-color-chip-border: #c4e6f9;
+
+  /* Skeleton / drop */
+  --cg-color-skeleton: #d6e9f5;
+  --cg-color-drop-border: #9ccfea;
 
   /* -------------------------------------------------------------------------
    * Elevation

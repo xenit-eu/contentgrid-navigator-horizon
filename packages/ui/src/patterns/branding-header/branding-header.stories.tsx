@@ -71,7 +71,7 @@ export const Ocean: Story = {
   args: {
     variant: "ocean",
     title: "contentgrid",
-    subtitle: "By Amexio",
+    subtitle: "BY AMEXIO",
   },
 };
 
@@ -79,12 +79,22 @@ export const OceanWithActions: Story = {
   args: {
     variant: "ocean",
     title: "contentgrid",
-    subtitle: "By Amexio",
+    subtitle: "BY AMEXIO",
     actions: (
       <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-white/10">
         Sign out
       </Button>
     ),
+  },
+};
+
+export const OceanWithLogo: Story = {
+  args: {
+    variant: "ocean",
+    title: "contentgrid",
+    subtitle: "BY AMEXIO",
+    logoUrl: LOGO_URI,
+    logoAlt: "ContentGrid logo",
   },
 };
 

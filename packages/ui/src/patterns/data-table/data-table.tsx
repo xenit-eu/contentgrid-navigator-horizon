@@ -147,8 +147,8 @@ export function DataTable({
           <Table>
             <TableHeader>
               <TableRow>
-                {columns.map((col, i) => (
-                  <TableHead key={col.key} className={cn(i === 0 && "pl-4")}>
+                {columns.map((col) => (
+                  <TableHead key={col.key}>
                     {col.sortable && onSort ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -196,8 +196,12 @@ export function DataTable({
                         <TableCell
                           key={col.key}
                           className={cn(
-                            i === 0 && "pl-4",
-                            i === 0 && isSelected && "shadow-[inset_2px_0_0_var(--cg-color-ocean)]",
+                            i === 0 &&
+                              isSelected && [
+                                "relative",
+                                "before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
+                                "before:bg-[var(--cg-color-sky)]",
+                              ],
                           )}
                         >
                           {row.data[col.key] == null ? "—" : String(row.data[col.key])}

@@ -192,10 +192,49 @@ interface RelationItemRowProps {
   onUnlinkRequest?: (id: string, label: string) => void;
 }
 
+/**
+ * Derive the icon tile tint for a relation item.
+ *
+ * Heuristic: items whose primary label looks like a document reference (ends in a
+ * common doc extension, or whose id path contains "pdf") get the amber/PDF tint;
+ * all others get the steel tint that matches the "building/org" mockup style.
+ * These are display-only — they carry no semantic meaning and will be revisited
+ * when the entity-type icon system is wired up.
+ */
+function getItemTintClass(item: RelationItem): {
+  bg: string;
+  borderColor: string;
+  color: string;
+} {
+  const label = getItemLabel(item);
+  const lowerLabel = label.toLowerCase();
+  const lowerId = item.id.toLowerCase();
+  const isPdfLike =
+    lowerLabel.endsWith(".pdf") ||
+    lowerId.includes(".pdf") ||
+    lowerLabel.endsWith(".doc") ||
+    lowerLabel.endsWith(".docx");
+
+  if (isPdfLike) {
+    return {
+      bg: "var(--cg-color-pdf-bg)",
+      borderColor: "#F2D6C2",
+      color: "var(--cg-color-pdf-fg)",
+    };
+  }
+  return {
+    bg: "var(--cg-tint-steel-bg)",
+    borderColor: "#D2DFE8",
+    color: "var(--cg-tint-steel-fg)",
+  };
+}
+
 function RelationItemRow({ item, isLast, onViewItem, onUnlinkRequest }: RelationItemRowProps) {
   const label = getItemLabel(item);
   const labelKey = getLabelKey(item);
   const meta = getItemMeta(item, labelKey);
+
+  const tint = getItemTintClass(item);
 
   // Decide which icon to use — FileText for items that look document-bearing, Box otherwise
   const Icon = FileTextIcon;
@@ -204,8 +243,11 @@ function RelationItemRow({ item, isLast, onViewItem, onUnlinkRequest }: Relation
   // (button) and the non-interactive (plain div) variants.
   const itemContent = (
     <>
-      {/* Item icon */}
-      <div className="grid size-6 shrink-0 place-items-center rounded-[5px] border border-border bg-card text-muted-foreground">
+      {/* Item icon — tinted tile per mockup .rel-item-ic / .ric-pdf / .ric-steel */}
+      <div
+        className="grid size-6 shrink-0 place-items-center rounded-[5px] border"
+        style={{ background: tint.bg, borderColor: tint.borderColor, color: tint.color }}
+      >
         <Icon className="size-3" />
       </div>
 
@@ -328,7 +370,7 @@ export function RelationSection({
             <span className="tabular-nums text-xs text-muted-foreground">0</span>
           </div>
           {/* Empty body */}
-          <div className="border-t border-border bg-muted/40 px-3 py-4">
+          <div className="border-t border-border bg-[var(--cg-color-mist)] px-3 py-4">
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="rounded-full bg-muted p-2.5">
                 <LinkIcon className="size-4 text-muted-foreground" />
@@ -368,7 +410,7 @@ export function RelationSection({
 
         {/* Accordion body */}
         <CollapsibleContent>
-          <div className="border-t border-border bg-muted/40 px-3 py-1.5">
+          <div className="border-t border-border bg-[var(--cg-color-mist)] px-3 py-1.5">
             {/* Loading state */}
             {isLoading && (
               <div className="space-y-2 py-1">
@@ -401,7 +443,7 @@ export function RelationSection({
               <button
                 type="button"
                 onClick={onViewAll}
-                className="mt-0.5 inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[var(--cg-color-link-text)] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="mt-0.5 inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[var(--cg-color-link-text)] transition-colors hover:bg-[var(--cg-color-mist)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 View all {totalCount != null ? totalCount : items?.length} {title.toLowerCase()}
                 <ArrowUpRight className="size-3.5" />

@@ -89,9 +89,16 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
   // -------------------------------------------------------------------------
   if (file) {
     const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
     return (
-      <div className="rounded-[10px] border-[1.5px] border-dashed border-[#cdd6df] bg-card p-[22px] text-center">
+      <div
+        className="rounded-[10px] border-[1.5px] border-dashed p-[22px] text-center"
+        style={{
+          borderColor: "var(--cg-color-drop-border)",
+          background: "linear-gradient(180deg,#F4FAFE,var(--cg-color-frost))",
+        }}
+      >
         {previewUrl && isImage ? (
           <img
             src={previewUrl}
@@ -99,7 +106,10 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
             className="mx-auto h-20 w-20 rounded-md object-cover"
           />
         ) : (
-          <FileText className="mx-auto size-[22px] text-[var(--cg-color-steel)]" />
+          <FileText
+            className="mx-auto size-[22px]"
+            style={{ color: isPdf ? "var(--cg-color-pdf-fg)" : "var(--cg-color-steel)" }}
+          />
         )}
         <p className="mt-2 truncate text-[13px] font-medium text-[var(--cg-color-midnight)]">
           {file.name}
@@ -163,11 +173,19 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         className={cn(
-          "flex w-full cursor-pointer flex-col items-center rounded-[10px] border-[1.5px] border-dashed bg-card p-[22px] text-center transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-          isDragActive ? "border-ring bg-[var(--cg-color-sky-50)]" : "border-[#cdd6df]",
+          "flex w-full cursor-pointer flex-col items-center rounded-[10px] border-[1.5px] border-dashed p-[22px] text-center transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          isDragActive && "border-ring bg-[var(--cg-color-sky-50)]",
         )}
+        style={
+          !isDragActive
+            ? {
+                borderColor: "var(--cg-color-drop-border)",
+                background: "linear-gradient(180deg,#F4FAFE,var(--cg-color-frost))",
+              }
+            : undefined
+        }
       >
-        <Upload className="size-[22px] text-[var(--cg-color-steel)]" />
+        <Upload className="size-[22px]" style={{ color: "#0283BD" }} />
         <span className="mt-2 text-[13px] font-medium text-[var(--cg-color-midnight)]">
           {isDragActive ? "Drop the file here" : "Drop a file here"}
         </span>

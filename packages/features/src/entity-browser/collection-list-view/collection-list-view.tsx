@@ -53,6 +53,23 @@ function readContentMeta(value: unknown): ContentMeta | undefined {
   };
 }
 
+type FileKind = "pdf" | "image" | "other";
+
+/** Classifies content meta into a file-kind used for icon tile styling. */
+function classifyFile(meta: ContentMeta | undefined): FileKind {
+  const hint = `${meta?.mimetype ?? ""} ${meta?.filename ?? ""}`.toLowerCase();
+  if (/image|\.(png|jpe?g|gif|webp|svg|bmp|tiff?)$/.test(hint)) return "image";
+  if (/pdf|\.(pdf)$/.test(hint)) return "pdf";
+  return "other";
+}
+
+/** Tile background/foreground classes by file kind (mockup .file-ic variants). */
+const FILE_KIND_TILE_STYLE: Record<FileKind, string> = {
+  pdf: "bg-[var(--cg-color-pdf-bg)] text-[var(--cg-color-pdf-fg)]",
+  image: "bg-[var(--cg-color-img-bg)] text-[var(--cg-color-img-fg)]",
+  other: "bg-[var(--cg-color-mist)] text-[var(--cg-color-text-dim)]",
+};
+
 /** Picks a lucide icon matching the content's mimetype / filename extension. */
 function FileTypeIcon({ meta }: Readonly<{ meta: ContentMeta | undefined }>) {
   const hint = `${meta?.mimetype ?? ""} ${meta?.filename ?? ""}`.toLowerCase();
@@ -98,9 +115,12 @@ function PrimaryFileCell({
   const hasContent = Boolean(meta?.filename);
   const metaLine = hasContent ? [meta?.filename, size].filter(Boolean).join(" · ") : "no content";
 
+  const kind = classifyFile(meta);
+  const tileStyle = FILE_KIND_TILE_STYLE[kind];
+
   return (
     <div className="flex items-center gap-3">
-      <div className="grid size-[30px] shrink-0 place-items-center rounded-md bg-muted text-[var(--cg-color-text-dim)]">
+      <div className={`grid size-[30px] shrink-0 place-items-center rounded-md ${tileStyle}`}>
         <FileTypeIcon meta={meta} />
       </div>
       <div className="min-w-0">
@@ -180,7 +200,7 @@ function PageHead({
 }: Readonly<{ entityTitle: string; totalItems: number | undefined; isPending: boolean }>) {
   return (
     <div className="shrink-0 px-6 pt-7 pb-3">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cg-color-text-dim)]">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cg-color-eyebrow)]">
         Entity collection
       </div>
       <h1 className="mt-1.5 mb-1 text-[26px] font-bold tracking-[-0.02em] text-foreground">
@@ -205,21 +225,21 @@ function SkeletonRows({ colCount }: Readonly<{ colCount: number }>) {
     <>
       {SKELETON_ROW_KEYS.map((rowKey) => (
         <TableRow key={rowKey} className="cursor-default">
-          <TableCell className="py-3.5 pl-0">
+          <TableCell>
             <div className="flex items-center gap-3">
-              <Skeleton className="size-[30px] shrink-0 rounded-md" />
+              <Skeleton className="size-[30px] shrink-0 rounded-md bg-[var(--cg-color-skeleton)]" />
               <div className="flex flex-col gap-1.5">
-                <Skeleton className="h-[13px] w-36" />
-                <Skeleton className="h-[11px] w-24" />
+                <Skeleton className="h-[13px] w-36 bg-[var(--cg-color-skeleton)]" />
+                <Skeleton className="h-[11px] w-24 bg-[var(--cg-color-skeleton)]" />
               </div>
             </div>
           </TableCell>
           {SKELETON_CELL_KEYS.slice(0, Math.max(0, colCount - 1)).map((cellKey) => (
-            <TableCell key={cellKey} className="py-3.5">
-              <Skeleton className="h-[13px] w-20" />
+            <TableCell key={cellKey}>
+              <Skeleton className="h-[13px] w-20 bg-[var(--cg-color-skeleton)]" />
             </TableCell>
           ))}
-          <TableCell className="py-3.5 pr-0" />
+          <TableCell />
         </TableRow>
       ))}
     </>
@@ -233,8 +253,14 @@ function EmptyState({
   return (
     <div className="flex flex-1 items-center justify-center px-6 py-10">
       <div className="max-w-[360px] text-center">
-        <div className="mx-auto mb-5 grid size-[72px] place-items-center rounded-2xl border-[1.5px] border-dashed border-border bg-muted">
-          <InboxIcon className="size-8 text-muted-foreground" />
+        <div
+          className="mx-auto mb-5 grid size-[72px] place-items-center rounded-2xl border-[1.5px] border-dashed"
+          style={{
+            background: "linear-gradient(135deg,#E0F4FF,var(--cg-color-mist))",
+            borderColor: "#8FD0F0",
+          }}
+        >
+          <InboxIcon className="size-8" style={{ color: "#0283BD" }} />
         </div>
         <div className="mb-2 text-[20px] font-bold tracking-[-0.01em] text-foreground">
           No {entityTitle.toLowerCase()} yet
@@ -443,21 +469,21 @@ export function CollectionListView({
                   {isPending ? (
                     // Skeleton placeholder header cells
                     SKELETON_CELL_KEYS.slice(0, colCount).map((key, i) => (
-                      <TableHead key={key} className={i === 0 ? "w-[36%] pl-0" : ""}>
+                      <TableHead key={key} className={i === 0 ? "w-[36%]" : ""}>
                         <Skeleton className="h-3 w-20" />
                       </TableHead>
                     ))
                   ) : hasFallback ? (
-                    <TableHead className="w-[36%] pl-0">{entityTitle}</TableHead>
+                    <TableHead className="w-[36%]">{entityTitle}</TableHead>
                   ) : (
                     displayAttributes.map((attr, i) => (
-                      <TableHead key={attr.name} className={i === 0 ? "w-[36%] pl-0" : ""}>
+                      <TableHead key={attr.name} className={i === 0 ? "w-[36%]" : ""}>
                         {attr.title}
                       </TableHead>
                     ))
                   )}
                   {/* Trailing actions/chevron column */}
-                  <TableHead className="pr-0 text-right" />
+                  <TableHead className="text-right" />
                 </TableRow>
               </TableHeader>
 
@@ -474,7 +500,7 @@ export function CollectionListView({
                     return (
                       <TableRow
                         key={item.id}
-                        className="cursor-pointer border-b border-border/60 hover:bg-muted/50"
+                        className="cursor-pointer"
                         role="button"
                         tabIndex={0}
                         aria-label={`View ${displayName}`}
@@ -487,7 +513,7 @@ export function CollectionListView({
                         }}
                       >
                         {hasFallback ? (
-                          <TableCell className="py-3.5 pl-0 text-[13px] font-medium text-foreground">
+                          <TableCell className="text-[13px] font-medium text-foreground">
                             {contentAttribute ? (
                               <PrimaryFileCell
                                 displayName={displayName}
@@ -501,7 +527,7 @@ export function CollectionListView({
                           displayAttributes.map((attr, i) => (
                             <TableCell
                               key={attr.name}
-                              className={`py-3.5 text-[13px] text-foreground ${i === 0 ? "pl-0 font-medium" : ""}`}
+                              className={`text-[13px] text-foreground ${i === 0 ? "font-medium" : ""}`}
                             >
                               {i === 0 && contentAttribute ? (
                                 <PrimaryFileCell
@@ -515,7 +541,7 @@ export function CollectionListView({
                           ))
                         )}
                         {/* TODO(SLICE-4): row actions (edit, delete, RBAC visibility) */}
-                        <TableCell className="pr-0 text-right">
+                        <TableCell className="text-right">
                           <ChevronRightIcon className="inline size-4 text-muted-foreground" />
                         </TableCell>
                       </TableRow>

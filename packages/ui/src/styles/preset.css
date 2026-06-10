@@ -74,6 +74,16 @@
   --sky-extract-ring: var(--cg-color-sky-extract-ring);
   --shadow-lg: var(--cg-shadow-lg);
 
+  /* Gradients */
+  --cg-gradient-header: linear-gradient(
+    100deg,
+    var(--cg-color-midnight) 0%,
+    var(--cg-color-ocean) 58%,
+    #0b5e97 100%
+  );
+  --cg-gradient-create: linear-gradient(135deg, var(--cg-color-ocean) 0%, #0879b8 100%);
+  --cg-gradient-viewer: linear-gradient(165deg, #deedf8 0%, #edf5fa 70%, var(--cg-color-mist) 100%);
+
   --radius: var(--cg-radius);
 
   /* shadcn semantic layer — references the unprefixed aliases above so that

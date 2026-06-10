@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Network } from "lucide-react";
+import { LogomarkDiap } from "../../brand/logomark";
 import { cn } from "../../lib/utils";
 import { Separator } from "../../primitives/separator";
 
@@ -12,9 +12,9 @@ import { Separator } from "../../primitives/separator";
  *
  * - `"light"` (default) — neutral `bg-background` bar with a bordered bottom
  *   edge. Backwards-compatible with the original BrandingHeader.
- * - `"ocean"` — the branded ContentGrid bar: 56px tall, ocean (`bg-primary`)
- *   background, white text, a circular logo glyph and the "contentgrid"
- *   wordmark with a "BY AMEXIO" byline.
+ * - `"ocean"` — the branded ContentGrid bar: 56px tall, gradient background
+ *   (--cg-gradient-header), white text, the LogomarkDiap glyph and the
+ *   "contentgrid" wordmark with a "BY AMEXIO" byline, and a 3px sky underline.
  */
 export type BrandingHeaderVariant = "light" | "ocean";
 
@@ -28,7 +28,7 @@ export interface BrandingHeaderProps {
    * of the title. When omitted the title is shown without an icon.
    *
    * In the `"ocean"` variant, when no `logoUrl` is supplied the built-in
-   * circular glyph is rendered instead.
+   * LogomarkDiap glyph is rendered instead.
    */
   logoUrl?: string;
   /** Alt text for the logo image; defaults to `"${title} logo"` */
@@ -59,9 +59,10 @@ function OceanBrandingHeader({
   return (
     <header
       className={cn(
-        "flex h-14 items-center justify-between gap-3 bg-primary px-6 text-primary-foreground",
+        "flex h-14 items-center justify-between gap-3 px-6 text-primary-foreground shadow-[inset_0_-3px_0_var(--cg-color-sky)]",
         className,
       )}
+      style={{ background: "var(--cg-gradient-header)" }}
     >
       {/* Brand cluster: glyph + wordmark */}
       <div className="flex min-w-0 items-center gap-2.5">
@@ -69,23 +70,20 @@ function OceanBrandingHeader({
           <img
             src={logoUrl}
             alt={logoAlt ?? `${title} logo`}
-            className="size-[30px] shrink-0 rounded-full object-contain"
+            className="size-[38px] shrink-0 rounded-full object-contain"
           />
         ) : (
-          <span
-            aria-hidden
-            className="grid size-[30px] shrink-0 place-items-center rounded-full border-[1.5px] border-white"
-          >
-            <Network className="size-4" strokeWidth={2.2} aria-hidden />
-          </span>
+          <LogomarkDiap size={38} />
         )}
 
         <div className="flex min-w-0 flex-col leading-none">
-          <span className="truncate text-[15px] font-bold tracking-[-0.01em]">{title}</span>
+          <span className="truncate text-[16px] font-bold leading-none tracking-[-0.01em] text-white">
+            {title}
+          </span>
           {subtitle && (
             <span
-              className="mt-0.5 truncate text-[11px] font-medium uppercase"
-              style={{ letterSpacing: "0.22em", color: "var(--cg-color-header-dim, #B1CFE7)" }}
+              className="mt-[3px] block truncate text-[9px] font-semibold"
+              style={{ letterSpacing: "0.26em", color: "var(--cg-color-header-dim)" }}
             >
               {subtitle}
             </span>

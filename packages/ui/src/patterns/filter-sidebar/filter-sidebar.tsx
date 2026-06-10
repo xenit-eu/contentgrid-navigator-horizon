@@ -269,8 +269,8 @@ function AvChip({
         "inline-flex items-center rounded-md border px-3 py-1.5 text-[13px] leading-none transition-colors",
         "focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]",
         selected
-          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-          : "border-border bg-card text-foreground hover:border-input hover:bg-muted",
+          ? "border-[var(--cg-color-ocean)] bg-[var(--cg-color-ocean)] text-white hover:bg-[var(--cg-color-ocean-700)] hover:border-[var(--cg-color-ocean-700)]"
+          : "border-border bg-[var(--cg-color-frost)] text-foreground hover:bg-[var(--cg-color-mist)] hover:border-input",
       )}
     >
       {children}
@@ -395,7 +395,9 @@ export function FilterSidebar({
   return (
     <div className="w-56 shrink-0 rounded-lg bg-muted/40 p-4">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-base font-semibold">Filters</span>
+        <span className="text-[13px] font-semibold" style={{ color: "var(--cg-color-ocean)" }}>
+          Filters
+        </span>
         {hasActiveFilters && onClearAll && (
           <Button
             variant="ghost"
