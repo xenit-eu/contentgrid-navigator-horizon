@@ -310,16 +310,16 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-03-01");
   });
 
-  it("renders text inputs for ~gte and ~lte numeric operators", () => {
+  it("renders ~gte and ~lte with distinct accessible labels (no duplicate ids)", () => {
     renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP]);
-    const textInputs = screen.getAllByRole("textbox");
-    expect(textInputs).toHaveLength(2);
+    expect(screen.getByLabelText(/amount after/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/amount before/i)).toBeInTheDocument();
   });
 
   it("encodes ~gte value in onFilterChange", () => {
     const onFilterChange = vi.fn();
     renderSidebar([NUM_GTE_PROP], {}, { onFilterChange });
-    const input = screen.getByRole("textbox");
+    const input = screen.getByLabelText(/amount after/i);
     fireEvent.change(input, { target: { value: "100" } });
     expect(onFilterChange).toHaveBeenCalledWith("amount.~gte", "100");
   });
@@ -327,7 +327,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
   it("encodes ~lte value in onFilterChange", () => {
     const onFilterChange = vi.fn();
     renderSidebar([NUM_LTE_PROP], {}, { onFilterChange });
-    const input = screen.getByRole("textbox");
+    const input = screen.getByLabelText(/amount before/i);
     fireEvent.change(input, { target: { value: "500" } });
     expect(onFilterChange).toHaveBeenCalledWith("amount.~lte", "500");
   });

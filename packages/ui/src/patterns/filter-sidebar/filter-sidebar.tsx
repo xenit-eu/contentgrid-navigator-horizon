@@ -102,8 +102,8 @@ const SEARCH_TYPE_LABELS: Record<string, string> = {
   // Range-pair operators (dot-prefixed, used with `field.~op` key format)
   "~from": "from",
   "~until": "until",
-  "~gte": "gte",
-  "~lte": "lte",
+  "~gte": "from",
+  "~lte": "until",
 };
 
 function getSearchType(prop: SearchProperty): string {
@@ -323,17 +323,21 @@ function TextFilter({
   label,
   value,
   onChange,
+  searchType = "exact",
 }: Readonly<{
   label: string;
   value: string;
   onChange: (value: string | undefined) => void;
+  searchType?: string;
 }>) {
-  const inputId = `filter-${label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const direction = getDirectionLabel(searchType);
+  const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
+  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
       <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
-        {label}
+        {displayLabel}
       </Label>
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
@@ -435,6 +439,7 @@ export function FilterSidebar({
                         <TextFilter
                           key={prop.name}
                           label={label}
+                          searchType={searchType}
                           value={value}
                           onChange={(v) => onFilterChange(prop.name, v)}
                         />
