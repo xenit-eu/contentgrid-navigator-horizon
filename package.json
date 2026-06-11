@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.33.4",
+  "packageManager": "pnpm@10.34.1",
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=10.0.0"
@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
-    "shadcn": "4.8.1",
+    "shadcn": "4.8.2",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",
