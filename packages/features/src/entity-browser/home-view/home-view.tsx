@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import type { EntityInfo } from "@contentgrid/navigator-data";
 import { useEntityCapabilities, useEntityList, useProfile } from "@contentgrid/navigator-data";
 import { EntityCard, LogomarkColor, Skeleton } from "@contentgrid/ui";
@@ -14,32 +14,36 @@ interface EntityCardWithCountProps {
 }
 
 function EntityCardWithCount({ entity }: Readonly<EntityCardWithCountProps>) {
+  const router = useRouter();
   const listResult = useEntityList(entity.name, { size: 1 });
   const capabilities = useEntityCapabilities(entity.name);
 
   const count = listResult.data?.totalItems;
   const { icon, accent } = getEntityVisuals(entity);
 
+  // Build the collection route href so EntityCard renders its title as a
+  // semantic <a> (wrapping the card in a Link would nest interactive
+  // elements: the card contains the create-action <button>).
+  const { href } = router.buildLocation({
+    to: "/$collection",
+    params: { collection: entity.name },
+    search: { cursor: undefined, sort: undefined },
+  });
+
   function handleCreateClick() {
     // TODO(HZN-5A): wire to create form when entity creation is implemented.
   }
 
   return (
-    <Link
-      to="/$collection"
-      params={{ collection: entity.name }}
-      search={{ cursor: undefined, sort: undefined }}
-      className="contents"
-    >
-      <EntityCard
-        name={entity.name}
-        title={entity.title}
-        count={count}
-        icon={icon}
-        tint={accent}
-        onCreateClick={capabilities.canCreate ? handleCreateClick : undefined}
-      />
-    </Link>
+    <EntityCard
+      name={entity.name}
+      title={entity.title}
+      count={count}
+      icon={icon}
+      tint={accent}
+      href={href}
+      onCreateClick={capabilities.canCreate ? handleCreateClick : undefined}
+    />
   );
 }
 

@@ -76,6 +76,19 @@ describe("EntityCard", () => {
     await user.click(screen.getByRole("button", { name: "Create Invoice" }));
   });
 
+  it("renders the title as a link when href is provided", () => {
+    render(<EntityCard {...baseProps} href="/invoice" />);
+    const link = screen.getByRole("link", { name: "Invoice" });
+    expect(link).toHaveAttribute("href", "/invoice");
+    expect(screen.queryByRole("button", { name: "Invoice" })).not.toBeInTheDocument();
+  });
+
+  it("renders the title as a button when href is omitted", () => {
+    render(<EntityCard {...baseProps} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Invoice" })).toBeInTheDocument();
+  });
+
   it("renders the 'items' label below the count", () => {
     render(<EntityCard {...baseProps} />);
     expect(screen.getByText("items")).toBeInTheDocument();
