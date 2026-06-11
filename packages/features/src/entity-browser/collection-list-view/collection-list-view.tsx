@@ -1,6 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
 import {
-  AlertCircleIcon,
   ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -13,7 +12,6 @@ import {
   SearchIcon,
 } from "lucide-react";
 import {
-  ProblemDetailError,
   useEntityCapabilities,
   useEntityList,
   useEntitySchema,
@@ -31,6 +29,7 @@ import {
   TableRow,
 } from "@contentgrid/ui";
 import { formatAttributeValue, pickDisplayAttributes } from "../attribute-format";
+import { EntityErrorState } from "../error-state";
 
 // ---------------------------------------------------------------------------
 // Content-attribute helpers (file-type icon + meta line in the primary cell)
@@ -55,11 +54,23 @@ function readContentMeta(value: unknown): ContentMeta | undefined {
 
 type FileKind = "pdf" | "image" | "other";
 
+// File-kind hint regexes — each alternative is explicitly grouped so the `$`
+// anchor binds only to the extension alternative (Sonar S5850).
+const IMAGE_HINT_RE = /(?:image)|(?:\.(?:png|jpe?g|gif|webp|svg|bmp|tiff?)$)/;
+const PDF_HINT_RE = /(?:pdf)|(?:\.pdf$)/;
+const DOCUMENT_HINT_RE =
+  /(?:pdf|word|excel|sheet|presentation|document|text)|(?:\.(?:pdf|docx?|xlsx?|pptx?|odt|ods|odp|txt|csv)$)/;
+
+/** Lower-cased "mimetype filename" hint string used for file-kind matching. */
+function fileHint(meta: ContentMeta | undefined): string {
+  return `${meta?.mimetype ?? ""} ${meta?.filename ?? ""}`.toLowerCase();
+}
+
 /** Classifies content meta into a file-kind used for icon tile styling. */
 function classifyFile(meta: ContentMeta | undefined): FileKind {
-  const hint = `${meta?.mimetype ?? ""} ${meta?.filename ?? ""}`.toLowerCase();
-  if (/image|\.(png|jpe?g|gif|webp|svg|bmp|tiff?)$/.test(hint)) return "image";
-  if (/pdf|\.(pdf)$/.test(hint)) return "pdf";
+  const hint = fileHint(meta);
+  if (IMAGE_HINT_RE.test(hint)) return "image";
+  if (PDF_HINT_RE.test(hint)) return "pdf";
   return "other";
 }
 
@@ -72,15 +83,11 @@ const FILE_KIND_TILE_STYLE: Record<FileKind, string> = {
 
 /** Picks a lucide icon matching the content's mimetype / filename extension. */
 function FileTypeIcon({ meta }: Readonly<{ meta: ContentMeta | undefined }>) {
-  const hint = `${meta?.mimetype ?? ""} ${meta?.filename ?? ""}`.toLowerCase();
-  if (/image|\.(png|jpe?g|gif|webp|svg|bmp|tiff?)$/.test(hint)) {
+  const hint = fileHint(meta);
+  if (IMAGE_HINT_RE.test(hint)) {
     return <FileImageIcon className="size-3.5" />;
   }
-  if (
-    /pdf|word|excel|sheet|presentation|document|text|\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|txt|csv)$/.test(
-      hint,
-    )
-  ) {
+  if (DOCUMENT_HINT_RE.test(hint)) {
     return <FileTextIcon className="size-3.5" />;
   }
   return <FileIcon className="size-3.5" />;
@@ -283,36 +290,13 @@ function EmptyState({
   );
 }
 
-function ErrorState({ error }: Readonly<{ error: unknown }>) {
-  let message = "An unexpected error occurred while loading this collection.";
-  let title = "Failed to load collection";
-
-  if (error instanceof ProblemDetailError) {
-    const status = error.problemDetail.status;
-    if (status === 403) {
-      title = "Access denied";
-      message = "You don't have access to this collection.";
-    } else if (status === 404) {
-      title = "Collection not found";
-      message = "This collection doesn't exist or is not accessible.";
-    } else {
-      title = error.problemDetail.title ?? title;
-      message = error.problemDetail.detail ?? message;
-    }
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
-  return (
-    <div className="flex flex-1 items-center justify-center px-6 py-10">
-      <div className="max-w-[400px] rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-        <AlertCircleIcon className="mx-auto mb-3 size-8 text-destructive" />
-        <div className="mb-1 text-[15px] font-semibold text-destructive">{title}</div>
-        <div className="text-[13px] leading-relaxed text-foreground/70">{message}</div>
-      </div>
-    </div>
-  );
-}
+const COLLECTION_ERROR_LABELS = {
+  defaultTitle: "Failed to load collection",
+  defaultMessage: "An unexpected error occurred while loading this collection.",
+  forbiddenMessage: "You don't have access to this collection.",
+  notFoundTitle: "Collection not found",
+  notFoundMessage: "This collection doesn't exist or is not accessible.",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Pagination footer
@@ -458,7 +442,7 @@ export function CollectionListView({
 
       {/* Error state */}
       {listResult.isError ? (
-        <ErrorState error={listResult.error} />
+        <EntityErrorState error={listResult.error} labels={COLLECTION_ERROR_LABELS} />
       ) : (
         <>
           {/* Table area */}

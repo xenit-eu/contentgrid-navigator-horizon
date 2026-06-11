@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import {
-  AlertCircleIcon,
-  ArrowLeftIcon,
-  ChevronRightIcon,
-  FileIcon,
-  PencilIcon,
-  TrashIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, ChevronRightIcon, FileIcon, PencilIcon, TrashIcon } from "lucide-react";
 import {
   ProblemDetailError,
   useDeleteEntity,
@@ -35,7 +28,8 @@ import {
   Separator,
   Skeleton,
 } from "@contentgrid/ui";
-import { SYSTEM_FIELDS, formatAttributeValue, formatRelationValue } from "../attribute-format";
+import { SYSTEM_FIELDS, formatAttributeValue } from "../attribute-format";
+import { EntityErrorState } from "../error-state";
 
 // ---------------------------------------------------------------------------
 // Attribute filter helpers (detail-view specific — includes content attrs)
@@ -69,9 +63,6 @@ interface RelationCardProps {
   onViewAll?: (collection: string) => void;
 }
 
-/** HAL envelope keys that must not appear as relation-table columns. */
-const HAL_ENVELOPE_KEYS = new Set(["_links", "_templates", "_embedded"]);
-
 function RelationCard({
   entityName,
   entityId,
@@ -81,19 +72,10 @@ function RelationCard({
 }: Readonly<RelationCardProps>) {
   const result = useEntityRelations(entityName, entityId, relation.name);
 
-  // Pre-format relation cell values to display strings. RelationSection
-  // (in @contentgrid/ui) stringifies values with its own formatter that does
-  // NOT localise dates/numbers, so we format here for parity with the main
-  // collection table. Strings only — passing JSX would break RelationSection.
-  const items =
-    result.data?.map((ri) => ({
-      id: ri.id,
-      data: Object.fromEntries(
-        Object.entries(ri.data)
-          .filter(([key]) => !HAL_ENVELOPE_KEYS.has(key))
-          .map(([key, value]) => [key, formatRelationValue(value)]),
-      ),
-    })) ?? undefined;
+  // Raw relation items are passed straight through: RelationSection (in
+  // @contentgrid/ui) skips HAL envelope keys itself and localises
+  // dates/numbers with the same rules as the main collection table.
+  const items = result.data ?? undefined;
 
   // Derive a target collection name from the targetEntityHref if available
   const targetCollection = relation.targetEntityHref
@@ -339,43 +321,19 @@ function BreadcrumbToolbar({
 // Error state
 // ---------------------------------------------------------------------------
 
-function DetailErrorState({ error }: Readonly<{ error: unknown }>) {
-  let title = "Failed to load item";
-  let message = "An unexpected error occurred while loading this item.";
-
-  if (error instanceof ProblemDetailError) {
-    const status = error.problemDetail.status;
-    if (status === 403) {
-      title = "Access denied";
-      message = "You don't have permission to view this item.";
-    } else if (status === 404) {
-      title = "Not found";
-      message = "This item doesn't exist or is not accessible.";
-    } else {
-      title = error.problemDetail.title ?? title;
-      message = error.problemDetail.detail ?? message;
-    }
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
-  return (
-    <div className="flex flex-1 items-center justify-center px-6 py-10">
-      <div className="max-w-[400px] rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-        <AlertCircleIcon className="mx-auto mb-3 size-8 text-destructive" />
-        <div className="mb-1 text-[15px] font-semibold text-destructive">{title}</div>
-        <div className="text-[13px] leading-relaxed text-foreground/70">{message}</div>
-      </div>
-    </div>
-  );
-}
+const DETAIL_ERROR_LABELS = {
+  defaultTitle: "Failed to load item",
+  defaultMessage: "An unexpected error occurred while loading this item.",
+  forbiddenMessage: "You don't have permission to view this item.",
+  notFoundTitle: "Not found",
+  notFoundMessage: "This item doesn't exist or is not accessible.",
+} as const;
 
 // ---------------------------------------------------------------------------
-// Content-focus variant (PAGE 03)
-// Invoice-style: 1fr + 360px right panel
+// Shared layout props for the two detail variants
 // ---------------------------------------------------------------------------
 
-interface ContentFocusProps {
+interface DetailLayoutProps {
   collection: string;
   id: string;
   entityTitle: string;
@@ -398,6 +356,11 @@ interface ContentFocusProps {
   canDelete: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Content-focus variant (PAGE 03)
+// Invoice-style: 1fr + 360px right panel
+// ---------------------------------------------------------------------------
+
 function ContentFocusView({
   collection,
   id,
@@ -416,7 +379,7 @@ function ContentFocusView({
   onDeleteClick,
   canEdit,
   canDelete,
-}: Readonly<ContentFocusProps>) {
+}: Readonly<DetailLayoutProps>) {
   // Derive content attribute name from schema
   const contentAttr = attributes.find(isContentAttr);
   const contentAttrName = contentAttr?.title ?? contentAttr?.name ?? "document";
@@ -550,29 +513,6 @@ function ContentFocusView({
 // Supplier-style: two-column (attrs left | relations right)
 // ---------------------------------------------------------------------------
 
-interface AttributeFocusProps {
-  collection: string;
-  id: string;
-  entityTitle: string;
-  displayName: string;
-  selfHref: string;
-  attributes: EntityAttribute[];
-  relations: EntityRelation[];
-  data: Record<string, unknown>;
-  onBack: () => void;
-  onHome: () => void;
-  onCollection: () => void;
-  onNavigate: (col: string, itemId: string) => void;
-  /** Navigate to a related collection (used by "View all" in to-many relation accordions). */
-  onViewAll: (col: string) => void;
-  onEditClick: () => void;
-  onDeleteClick: () => void;
-  /** RBAC hide-point: hide Edit button when false. Defaults to true (permissive). */
-  canEdit: boolean;
-  /** RBAC hide-point: hide Delete button when false. Defaults to true (permissive). */
-  canDelete: boolean;
-}
-
 function AttributeFocusView({
   collection,
   id,
@@ -591,7 +531,7 @@ function AttributeFocusView({
   onDeleteClick,
   canEdit,
   canDelete,
-}: Readonly<AttributeFocusProps>) {
+}: Readonly<DetailLayoutProps>) {
   const selfPath = selfHref
     ? new URL(selfHref, "http://localhost").pathname
     : `/${collection}/${id}`;
@@ -830,7 +770,7 @@ export function ItemDetailView({ collection, id }: Readonly<{ collection: string
 
   // --- States ---
   if (isPending) return <DetailSkeleton />;
-  if (isError) return <DetailErrorState error={error} />;
+  if (isError) return <EntityErrorState error={error} labels={DETAIL_ERROR_LABELS} />;
 
   const sharedProps = {
     collection,

@@ -107,7 +107,7 @@ export function formatAttributeValue(
   // Numbers — thousands-separated (no currency — Navigator is schema-driven)
   if (type === "long" || type === "double" || type === "number") {
     const num = Number(value);
-    if (!isNaN(num)) return num.toLocaleString();
+    if (!Number.isNaN(num)) return num.toLocaleString();
     return String(value);
   }
 
@@ -131,48 +131,6 @@ export function formatAttributeValue(
   return String(value);
 }
 
-/**
- * Format a single relation-table cell value to a plain STRING.
- *
- * RelationSection (in @contentgrid/ui) stringifies cell values with its own
- * internal formatter that does not localise dates/numbers, so we pre-format
- * here. Returns a string (never JSX) to stay compatible with that renderer.
- *
- * Value-based (not schema-based): detects numbers and ISO-date-looking strings
- * so the relation table matches the main collection table without an extra
- * per-relation schema fetch.
- */
-export function formatRelationValue(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "";
-
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-
-  if (typeof value === "number") return value.toLocaleString();
-
-  if (typeof value === "string") {
-    // Numeric string (e.g. "24800") — format with thousands separators.
-    // Guard against empty/space-only strings which Number() coerces to 0.
-    if (value.trim() !== "" && !isNaN(Number(value))) {
-      return Number(value).toLocaleString();
-    }
-    // ISO-date-looking string — localise the same way as the main table.
-    if (ISO_DATE_RE.test(value)) {
-      return String(formatDateValue(value, value.includes("T") ? "datetime" : "date"));
-    }
-    return value;
-  }
-
-  if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return "";
-    }
-  }
-
-  return String(value);
-}
-
 // ---------------------------------------------------------------------------
 // Internal helper
 // ---------------------------------------------------------------------------
@@ -181,7 +139,7 @@ function formatDateValue(value: unknown, type: "date" | "datetime"): ReactNode {
   const str = typeof value === "string" ? value : String(value);
   try {
     const d = new Date(str);
-    if (!isNaN(d.getTime())) {
+    if (!Number.isNaN(d.getTime())) {
       if (type === "date") {
         return d.toLocaleDateString(undefined, {
           day: "2-digit",

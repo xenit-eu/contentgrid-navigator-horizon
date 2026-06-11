@@ -111,12 +111,12 @@ function formatFieldValue(value: unknown): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") return value.toLocaleString();
   if (typeof value === "string") {
-    if (value.trim() !== "" && !isNaN(Number(value))) return Number(value).toLocaleString();
+    if (value.trim() !== "" && !Number.isNaN(Number(value))) return Number(value).toLocaleString();
     if (ISO_DATE_RE.test(value)) {
       const hasTime = value.includes("T");
       try {
         const d = new Date(value);
-        if (!isNaN(d.getTime())) {
+        if (!Number.isNaN(d.getTime())) {
           if (hasTime) {
             return d.toLocaleString(undefined, {
               day: "2-digit",
