@@ -68,7 +68,7 @@ export const RemoveFileInteraction: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    const removeBtn = canvas.getByRole("button", { name: /remove file/i });
+    const removeBtn = canvas.getByRole("button", { name: /remove/i });
     await expect(removeBtn).toBeInTheDocument();
     await expect(removeBtn).toBeVisible();
     // Clicking remove passes null to onFileChange

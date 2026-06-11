@@ -154,6 +154,8 @@ export async function fetchEntitySchema(
 
   const description = (object.data as Record<string, unknown>).description as string | undefined;
 
+  const canCreate = "create-form" in (templates ?? {});
+
   return {
     description,
     attributes,
@@ -162,6 +164,7 @@ export async function fetchEntitySchema(
     sortableFields,
     sortOptions,
     createFormRelations,
+    canCreate,
   };
 }
 

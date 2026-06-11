@@ -48,9 +48,9 @@ describe("EntityPicker — single-select mode (default)", () => {
     vi.clearAllMocks();
   });
 
-  it("shows 'Select Invoice' as dialog title", () => {
+  it("shows 'Link Invoice' as dialog title", () => {
     renderPicker();
-    expect(screen.getByText("Select Invoice")).toBeInTheDocument();
+    expect(screen.getByText("Link Invoice")).toBeInTheDocument();
   });
 
   it("renders option rows", () => {

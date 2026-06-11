@@ -11,100 +11,148 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const ITEMS = [
-  { id: "1", data: { name: "Acme Corp", city: "Amsterdam" } },
-  { id: "2", data: { name: "Globex Inc", city: "Rotterdam" } },
+const SUPPLIER_ITEMS = [{ id: "4a1b", data: { name: "Northwind Logistics", country: "Belgium" } }];
+
+const INVOICE_ITEMS = [
+  { id: "inv-1", data: { reference: "INV-2026-04812", amount: "24800", issue_date: "2026-05-14" } },
+  {
+    id: "inv-2",
+    data: { reference: "INV-2026-04811", amount: "9412.5", issue_date: "2026-05-09" },
+  },
+  { id: "inv-3", data: { reference: "INV-2026-04790", amount: "18200", issue_date: "2026-05-02" } },
 ];
 
-const COLUMNS = [
-  { key: "name", title: "Name" },
-  { key: "city", title: "City" },
-];
+// ---------------------------------------------------------------------------
+// To-one (isManyToOne)
+// ---------------------------------------------------------------------------
 
-// Many-to-many (collapsible table) layout
-
-export const ManyToMany: Story = {
+/** To-one relation — single item in accordion (PAGE 03 side-panel style). */
+export const ToOne: Story = {
   args: {
-    title: "Suppliers",
-    items: ITEMS,
-    columns: COLUMNS,
-    onLink: fn(),
-    onUnlink: fn(),
+    title: "Supplier",
+    isManyToOne: true,
+    items: SUPPLIER_ITEMS,
     onViewItem: fn(),
+    onUnlink: fn(),
   },
 };
 
-export const ManyToManyLoading: Story = {
+export const ToOneEmpty: Story = {
   args: {
-    title: "Suppliers",
-    isLoading: true,
-    columns: COLUMNS,
-  },
-};
-
-export const ManyToManyEmpty: Story = {
-  args: {
-    title: "Suppliers",
+    title: "Supplier",
+    isManyToOne: true,
     items: [],
-    columns: COLUMNS,
     onLink: fn(),
   },
 };
 
-export const ManyToManyError: Story = {
+export const ToOneLoading: Story = {
   args: {
-    title: "Suppliers",
-    items: undefined,
+    title: "Supplier",
+    isManyToOne: true,
+    isLoading: true,
+  },
+};
+
+export const ToOneError: Story = {
+  args: {
+    title: "Supplier",
+    isManyToOne: true,
     error: new Error("Network error"),
-    columns: COLUMNS,
   },
 };
 
-// Many-to-one (compact card) layout
+// ---------------------------------------------------------------------------
+// To-many (default)
+// ---------------------------------------------------------------------------
 
-export const ManyToOne: Story = {
+/** To-many relation — item list with "View all" affordance (PAGE 04 style). */
+export const ToMany: Story = {
   args: {
-    title: "Supplier",
-    isManyToOne: true,
-    items: [ITEMS[0]],
-    columns: COLUMNS,
-    onLink: fn(),
+    title: "Invoices",
+    items: INVOICE_ITEMS,
+    totalCount: 42,
+    onViewItem: fn(),
+    onViewAll: fn(),
     onUnlink: fn(),
+  },
+};
+
+/** To-many without a "View all" handler — no affordance rendered. */
+export const ToManyNoViewAll: Story = {
+  args: {
+    title: "Contracts",
+    items: [
+      { id: "c1", data: { reference: "CTR-2026-001", status: "active" } },
+      { id: "c2", data: { reference: "CTR-2026-002", status: "active" } },
+    ],
     onViewItem: fn(),
   },
 };
 
-export const ManyToOneEmpty: Story = {
+export const ToManyEmpty: Story = {
   args: {
-    title: "Supplier",
-    isManyToOne: true,
+    title: "Invoices",
     items: [],
-    columns: COLUMNS,
     onLink: fn(),
   },
 };
 
-export const ManyToOneLoading: Story = {
+export const ToManyLoading: Story = {
   args: {
-    title: "Supplier",
-    isManyToOne: true,
+    title: "Invoices",
     isLoading: true,
-    columns: COLUMNS,
   },
 };
 
+export const ToManyError: Story = {
+  args: {
+    title: "Invoices",
+    error: new Error("Network error"),
+  },
+};
+
+/** Five or more items — all shown up to MAX_VISIBLE_ITEMS (5). */
+export const ToManyManyItems: Story = {
+  args: {
+    title: "Line items",
+    items: [
+      { id: "li-1", data: { product: "Widget A", qty: 10 } },
+      { id: "li-2", data: { product: "Widget B", qty: 5 } },
+      { id: "li-3", data: { product: "Gadget C", qty: 2 } },
+      { id: "li-4", data: { product: "Part D", qty: 20 } },
+      { id: "li-5", data: { product: "Component E", qty: 1 } },
+    ],
+    totalCount: 12,
+    onViewItem: fn(),
+    onViewAll: fn(),
+  },
+};
+
+/** Boolean field rendered as badge in meta line. */
+export const WithBooleanField: Story = {
+  args: {
+    title: "Suppliers",
+    items: [
+      { id: "s1", data: { name: "Apex Components", active: true } },
+      { id: "s2", data: { name: "Lumen & Co.", active: false } },
+    ],
+    onViewItem: fn(),
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Interaction tests
+// ---------------------------------------------------------------------------
 
 export const UnlinkInteraction: Story = {
   // axe-no-contrast: confirmation dialog portal composites into axe background calc.
   tags: ["no-visual-test", "axe-no-contrast"],
   args: {
-    title: "Suppliers",
-    items: ITEMS,
-    columns: COLUMNS,
-    onLink: fn(),
-    onUnlink: fn(),
+    title: "Invoices",
+    items: INVOICE_ITEMS,
     onViewItem: fn(),
+    onUnlink: fn(),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -121,20 +169,18 @@ export const UnlinkInteraction: Story = {
 
     const confirmBtn = within(dialog!).getByRole("button", { name: /^unlink$/i });
     await userEvent.click(confirmBtn);
-    await expect(args.onUnlink).toHaveBeenCalledWith("1");
+    await expect(args.onUnlink).toHaveBeenCalledWith("inv-1");
   },
 };
 
-export const ManyToOneUnlinkInteraction: Story = {
+export const ToOneUnlinkInteraction: Story = {
   tags: ["no-visual-test", "axe-no-contrast"],
   args: {
     title: "Supplier",
     isManyToOne: true,
-    items: [ITEMS[0]],
-    columns: COLUMNS,
-    onLink: fn(),
-    onUnlink: fn(),
+    items: SUPPLIER_ITEMS,
     onViewItem: fn(),
+    onUnlink: fn(),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
@@ -150,6 +196,23 @@ export const ManyToOneUnlinkInteraction: Story = {
 
     const confirmBtn = within(dialog!).getByRole("button", { name: /^unlink$/i });
     await userEvent.click(confirmBtn);
-    await expect(args.onUnlink).toHaveBeenCalledWith("1");
+    await expect(args.onUnlink).toHaveBeenCalledWith("4a1b");
+  },
+};
+
+export const ViewAllInteraction: Story = {
+  tags: ["no-visual-test"],
+  args: {
+    title: "Invoices",
+    items: INVOICE_ITEMS,
+    totalCount: 42,
+    onViewItem: fn(),
+    onViewAll: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const viewAllBtn = canvas.getByRole("button", { name: /view all/i });
+    await userEvent.click(viewAllBtn);
+    await expect(args.onViewAll).toHaveBeenCalled();
   },
 };

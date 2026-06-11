@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
   ArrowDown,
+  ArrowDownUp,
   ArrowUp,
-  ArrowUpDown,
   Eye,
   Inbox,
-  MoreHorizontal,
+  MoreVertical,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -87,6 +87,8 @@ export interface DataTableProps {
   isDeleting?: boolean;
   /** Called when the user clicks the row itself (outside the action menu) */
   onRowClick?: (id: string) => void;
+  /** Id of the currently selected row; renders the inset ocean accent bar + muted background */
+  selectedId?: string;
 }
 
 export function DataTable({
@@ -103,15 +105,16 @@ export function DataTable({
   onDelete,
   isDeleting,
   onRowClick,
+  selectedId,
 }: Readonly<DataTableProps>) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   function getSortIcon(key: string) {
     const isAsc = currentSort === `${key},asc`;
     const isDesc = currentSort === `${key},desc`;
-    if (isAsc) return <ArrowUp className="ml-1 size-3.5" />;
-    if (isDesc) return <ArrowDown className="ml-1 size-3.5" />;
-    return <ArrowUpDown className="ml-1 size-3.5 text-muted-foreground/50" />;
+    if (isAsc) return <ArrowUp className="ml-1.5 size-3.5" />;
+    if (isDesc) return <ArrowDown className="ml-1.5 size-3.5" />;
+    return <ArrowDownUp className="ml-1.5 size-3 opacity-35" />;
   }
 
   function getSortTooltip(key: string): string | undefined {
@@ -144,20 +147,25 @@ export function DataTable({
           <Table>
             <TableHeader>
               <TableRow>
-                {columns.map((col, i) => (
-                  <TableHead key={col.key} className={cn(i === 0 && "pl-4")}>
+                {columns.map((col) => (
+                  <TableHead key={col.key}>
                     {col.sortable && onSort ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="-ml-3 h-8"
+                          <button
+                            type="button"
+                            className={cn(
+                              "-ml-1 inline-flex items-center rounded-sm px-1 py-0.5",
+                              "text-[12px] font-medium text-[var(--cg-color-text-dim)]",
+                              "transition-colors hover:text-[var(--cg-color-midnight)]",
+                              "focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]",
+                              "cursor-pointer",
+                            )}
                             onClick={() => onSort(col.key)}
                           >
                             {col.header}
                             {getSortIcon(col.key)}
-                          </Button>
+                          </button>
                         </TooltipTrigger>
                         {getSortTooltip(col.key) && (
                           <TooltipContent side="bottom" className="max-w-xs">
@@ -175,75 +183,89 @@ export function DataTable({
             </TableHeader>
             <TableBody>
               {rows.length > 0 ? (
-                rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className={cn(onRowClick && "cursor-pointer hover:bg-muted/50")}
-                    onClick={() => onRowClick?.(row.id)}
-                  >
-                    {columns.map((col, i) => (
-                      <TableCell key={col.key} className={cn(i === 0 && "pl-4")}>
-                        {row.data[col.key] == null ? "—" : String(row.data[col.key])}
-                      </TableCell>
-                    ))}
-                    {hasActions && (
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {onViewDetails && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onViewDetails(row.id);
-                                }}
+                rows.map((row) => {
+                  const isSelected = selectedId != null && row.id === selectedId;
+                  return (
+                    <TableRow
+                      key={row.id}
+                      data-state={isSelected ? "selected" : undefined}
+                      className={cn(onRowClick && "cursor-pointer")}
+                      onClick={() => onRowClick?.(row.id)}
+                    >
+                      {columns.map((col, i) => (
+                        <TableCell
+                          key={col.key}
+                          className={cn(
+                            i === 0 &&
+                              isSelected && [
+                                "relative",
+                                "before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
+                                "before:bg-[var(--cg-color-sky)]",
+                              ],
+                          )}
+                        >
+                          {row.data[col.key] == null ? "—" : String(row.data[col.key])}
+                        </TableCell>
+                      ))}
+                      {hasActions && (
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 rounded-md text-[var(--cg-color-text-dim)] hover:bg-[var(--cg-color-frost)] hover:text-[var(--cg-color-midnight)] hover:shadow-[inset_0_0_0_1px_var(--cg-color-line)]"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View details
-                              </DropdownMenuItem>
-                            )}
-                            {onEdit && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEdit(row.id);
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                              <>
-                                <DropdownMenuSeparator />
+                                <MoreVertical className="size-4" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {onViewDetails && (
                                 <DropdownMenuItem
-                                  variant="destructive"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setDeleteId(row.id);
+                                    onViewDetails(row.id);
                                   }}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View details
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
+                              )}
+                              {onEdit && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(row.id);
+                                  }}
+                                >
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
+                              {onDelete && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteId(row.id);
+                                    }}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="h-48">

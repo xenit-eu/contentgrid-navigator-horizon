@@ -64,7 +64,14 @@ export default defineConfig({
         functions: 40,
         statements: 40,
       },
-      exclude: ["**/*.stories.tsx", "**/*.config.ts", "**/generated/**", "**/test-fixtures/**"],
+      exclude: [
+        "**/*.stories.tsx",
+        "**/*.config.ts",
+        "**/generated/**",
+        "**/test-fixtures/**",
+        "**/test-utils.*",
+        "**/routeTree.gen.ts",
+      ],
     },
   },
 });

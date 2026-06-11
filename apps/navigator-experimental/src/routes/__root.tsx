@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { AppShell } from "@contentgrid/features/entity-browser";
 import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
 import { SignInGate } from "@contentgrid/ui";
 import { ExperimentalBanner } from "../components/experimental-banner";
@@ -20,10 +21,10 @@ function RootComponent() {
 
   return (
     <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
-      <>
+      <AppShell>
         <ExperimentalBanner />
         <Outlet />
-      </>
+      </AppShell>
     </NavigatorDataProvider>
   );
 }

@@ -23,7 +23,8 @@ function makeFile(name: string, type: string, size = 1024): File {
 describe("FileUploadZone — drop-zone view (no file)", () => {
   it("renders the drop-zone prompt text", () => {
     render(<FileUploadZone file={null} onFileChange={vi.fn()} />);
-    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop a file here/i)).toBeInTheDocument();
+    expect(screen.getByText(/browse/i)).toBeInTheDocument();
   });
 
   it("renders a role=button for the drop zone", () => {
@@ -43,7 +44,7 @@ describe("FileUploadZone — drop-zone view (no file)", () => {
     const zone = screen.getByRole("button");
     fireEvent.dragOver(zone);
     fireEvent.dragLeave(zone);
-    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop a file here/i)).toBeInTheDocument();
   });
 
   it("calls onFileChange when a file is dropped", () => {
@@ -131,16 +132,10 @@ describe("FileUploadZone — file selected view", () => {
     expect(screen.getByText("report.pdf")).toBeInTheDocument();
   });
 
-  it("renders formatted file size", () => {
+  it("renders formatted file size with the upload hint", () => {
     const file = makeFile("report.pdf", "application/pdf", 2048);
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
-  });
-
-  it("renders the MIME type badge", () => {
-    const file = makeFile("report.pdf", "application/pdf");
-    render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("application/pdf")).toBeInTheDocument();
+    expect(screen.getByText(/2\.0 KB · ready to upload on save/i)).toBeInTheDocument();
   });
 
   it("renders a remove button and calls onFileChange(null) when clicked", async () => {
@@ -148,7 +143,7 @@ describe("FileUploadZone — file selected view", () => {
     const onFileChange = vi.fn();
     const file = makeFile("report.pdf", "application/pdf");
     render(<FileUploadZone file={file} onFileChange={onFileChange} />);
-    await user.click(screen.getByRole("button", { name: /remove file/i }));
+    await user.click(screen.getByRole("button", { name: /remove/i }));
     expect(onFileChange).toHaveBeenCalledWith(null);
   });
 
@@ -167,19 +162,19 @@ describe("FileUploadZone — file selected view", () => {
   it("renders '0 B' for a file with size 0", () => {
     const file = makeFile("empty.txt", "text/plain", 0);
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("0 B")).toBeInTheDocument();
+    expect(screen.getByText(/0 B · ready to upload on save/i)).toBeInTheDocument();
   });
 
   it("renders GB formatted size for large files", () => {
     const file = makeFile("big.bin", "application/octet-stream", 1);
     Object.defineProperty(file, "size", { value: 1024 * 1024 * 1024 });
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("1.0 GB")).toBeInTheDocument();
+    expect(screen.getByText(/1\.0 GB · ready to upload on save/i)).toBeInTheDocument();
   });
 
   it("renders MB formatted size", () => {
     const file = makeFile("medium.bin", "application/octet-stream", 1024 * 1024);
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("1.0 MB")).toBeInTheDocument();
+    expect(screen.getByText(/1\.0 MB · ready to upload on save/i)).toBeInTheDocument();
   });
 });

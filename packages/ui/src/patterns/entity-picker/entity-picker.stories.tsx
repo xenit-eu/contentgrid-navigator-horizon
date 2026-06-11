@@ -12,14 +12,33 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const OPTIONS = [
-  { id: "1", href: "/suppliers/1", data: { name: "Acme Corp", city: "Amsterdam" } },
-  { id: "2", href: "/suppliers/2", data: { name: "Globex Inc", city: "Rotterdam" } },
-  { id: "3", href: "/suppliers/3", data: { name: "Initech", city: "Utrecht" } },
+  {
+    id: "1",
+    href: "/suppliers/1",
+    data: { name: "Northwind Logistics", country: "Belgium", vat: "BE0123.456.789", active: true },
+  },
+  {
+    id: "2",
+    href: "/suppliers/2",
+    data: { name: "Apex Components", country: "Netherlands", vat: "NL8421.998.B01", active: true },
+  },
+  {
+    id: "3",
+    href: "/suppliers/3",
+    data: { name: "Helix Cloud BV", country: "Belgium", vat: "BE0789.123.456", active: true },
+  },
+  {
+    id: "4",
+    href: "/suppliers/4",
+    data: { name: "Vandermeer NV", country: "Belgium", vat: "BE0456.321.987", active: false },
+  },
 ];
 
 const COLUMNS = [
-  { key: "name", header: "Name" },
-  { key: "city", header: "City" },
+  { key: "name", header: "name" },
+  { key: "country", header: "country" },
+  { key: "vat", header: "vat_number" },
+  { key: "active", header: "active" },
 ];
 
 export const Default: Story = {
@@ -31,8 +50,16 @@ export const Default: Story = {
     relationTitle: "Supplier",
     options: OPTIONS,
     columns: COLUMNS,
+    searchPlaceholder: "Search suppliers by name, country…",
+    totalCount: 87,
     searchQuery: "",
     onSearch: fn(),
+    onOpenFilters: fn(),
+    onCreateNew: fn(),
+    hasPreviousPage: false,
+    hasNextPage: true,
+    onPreviousPage: fn(),
+    onNextPage: fn(),
     onSelect: fn(),
   },
 };
@@ -127,7 +154,7 @@ export const WithInteraction: Story = {
     const confirmBtn = within(dialog!).getByRole("button", { name: /^select$/i });
     await expect(confirmBtn).not.toBeDisabled();
     await userEvent.click(confirmBtn);
-    await expect(args.onSelect).toHaveBeenCalledWith("/suppliers/1", "Acme Corp");
+    await expect(args.onSelect).toHaveBeenCalledWith("/suppliers/1", "Northwind Logistics");
   },
 };
 

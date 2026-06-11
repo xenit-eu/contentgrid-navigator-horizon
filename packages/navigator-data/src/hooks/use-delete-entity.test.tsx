@@ -64,6 +64,24 @@ describe("useDeleteEntity", () => {
     expect(invalidatedKeys).toContainEqual(["entity-count", "invoice"]);
   });
 
+  it("invalidates entity-relations queries on success", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntityDetail(qc);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    server.use(http.delete(ITEM_URL, () => new HttpResponse(null, { status: 204 })));
+
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({ entityName: "invoice", entityId: "inv-1" });
+    });
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(invalidatedKeys).toContainEqual(["entity-relations"]);
+  });
+
   it("throws when the entity name is unknown (not in profile)", async () => {
     const qc = makeQueryClient();
     seedProfile(qc);

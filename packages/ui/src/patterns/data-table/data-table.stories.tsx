@@ -61,6 +61,20 @@ export const WithSort: Story = {
   },
 };
 
+export const Selected: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    rows: ROWS,
+    selectedId: "2",
+    onViewDetails: fn(),
+    onEdit: fn(),
+    onDelete: fn(),
+    onRowClick: fn(),
+  },
+};
+
 export const Empty: Story = {
   args: {
     entityName: "invoice",

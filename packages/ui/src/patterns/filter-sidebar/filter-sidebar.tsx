@@ -1,15 +1,10 @@
+import type { ReactNode } from "react";
 import { format, parse } from "date-fns";
 import { X } from "lucide-react";
+import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";
 import { Label } from "../../primitives/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../primitives/select";
 import { Separator } from "../../primitives/separator";
 
 // ---------------------------------------------------------------------------
@@ -163,12 +158,43 @@ function ClearButton({
       type="button"
       variant="ghost"
       size="icon"
-      className={`h-6 w-6 shrink-0${visible ? "" : " invisible"}`}
+      className={`h-8 w-8 shrink-0 text-muted-foreground${visible ? "" : " invisible"}`}
       onClick={onClick}
     >
-      <X className="h-3 w-3" />
+      <X className="h-3.5 w-3.5" />
       <span className="sr-only">Clear</span>
     </Button>
+  );
+}
+
+/**
+ * Field label styled to match the mockup `.field label` (12px, dim, weight 500),
+ * with an optional muted search-type suffix (e.g. "· prefix-match").
+ */
+function FieldLabel({
+  children,
+  suffix,
+  htmlFor,
+  asSpan = false,
+}: Readonly<{
+  children: ReactNode;
+  suffix?: string;
+  htmlFor?: string;
+  asSpan?: boolean;
+}>) {
+  const content = (
+    <>
+      {children}
+      {suffix ? <span className="ml-1 font-normal text-muted-foreground">· {suffix}</span> : null}
+    </>
+  );
+  if (asSpan) {
+    return <span className="text-xs font-medium text-muted-foreground">{content}</span>;
+  }
+  return (
+    <Label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground">
+      {content}
+    </Label>
   );
 }
 
@@ -185,7 +211,7 @@ function DateGroupFilter({
 }>) {
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <FieldLabel asSpan>{label}</FieldLabel>
       {items.map((prop) => {
         const searchType = getSearchType(prop);
         const value = filters[prop.name] ?? "";
@@ -199,7 +225,7 @@ function DateGroupFilter({
                 <Input
                   type="date"
                   aria-label={direction ? `${label} ${direction.toLowerCase()}` : label}
-                  className="h-8 text-sm"
+                  className="h-9"
                   value={value ? apiToDate(value) : ""}
                   onChange={(e) =>
                     onFilterChange(
@@ -218,36 +244,72 @@ function DateGroupFilter({
   );
 }
 
+/**
+ * Allowed-values / sort toggle chip matching the mockup `.av-chip`:
+ * frost bg + border when off, ocean fill + white text when on.
+ */
+function AvChip({
+  children,
+  selected,
+  onClick,
+  label,
+}: Readonly<{
+  children: ReactNode;
+  selected: boolean;
+  onClick: () => void;
+  label?: string;
+}>) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      aria-label={label}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center rounded-md border px-3 py-1.5 text-[13px] leading-none transition-colors",
+        "focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]",
+        selected
+          ? "border-[var(--cg-color-ocean)] bg-[var(--cg-color-ocean)] text-white hover:bg-[var(--cg-color-ocean-700)] hover:border-[var(--cg-color-ocean-700)]"
+          : "border-border bg-[var(--cg-color-frost)] text-foreground hover:bg-[var(--cg-color-mist)] hover:border-input",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function EnumFilter({
   label,
+  searchType,
   options,
   value,
   onChange,
 }: Readonly<{
   label: string;
+  searchType: string;
   options: string[];
   value: string;
   onChange: (value: string | undefined) => void;
 }>) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
-      <div className="flex items-center gap-1">
-        <div className="min-w-0 flex-1">
-          <Select key={value || "empty"} value={value || undefined} onValueChange={onChange}>
-            <SelectTrigger aria-label={label} className="h-8 w-full text-sm">
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt} value={opt}>
-                  {formatWords(opt)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
+      <FieldLabel asSpan suffix={searchType}>
+        {label}
+      </FieldLabel>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => {
+          const selected = value === opt;
+          return (
+            <AvChip
+              key={opt}
+              selected={selected}
+              label={`${label}: ${formatWords(opt)}`}
+              onClick={() => onChange(selected ? undefined : opt)}
+            >
+              {formatWords(opt)}
+            </AvChip>
+          );
+        })}
       </div>
     </div>
   );
@@ -270,15 +332,13 @@ function DateFilter({
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
-        {displayLabel}
-      </Label>
+      <FieldLabel htmlFor={inputId}>{displayLabel}</FieldLabel>
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
           <Input
             id={inputId}
             type="date"
-            className="h-8 text-sm"
+            className="h-9"
             value={value ? apiToDate(value) : ""}
             onChange={(e) => onChange(e.target.value ? dateToApi(e.target.value) : undefined)}
           />
@@ -302,15 +362,13 @@ function TextFilter({
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
-        {label}
-      </Label>
+      <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
           <Input
             id={inputId}
             type="text"
-            className="h-8 text-sm"
+            className="h-9"
             value={value}
             onChange={(e) => onChange(e.target.value || undefined)}
           />
@@ -337,7 +395,9 @@ export function FilterSidebar({
   return (
     <div className="w-56 shrink-0 rounded-lg bg-muted/40 p-4">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-base font-semibold">Filters</span>
+        <span className="text-[13px] font-semibold" style={{ color: "var(--cg-color-ocean)" }}>
+          Filters
+        </span>
         {hasActiveFilters && onClearAll && (
           <Button
             variant="ghost"
@@ -378,6 +438,7 @@ export function FilterSidebar({
                         <EnumFilter
                           key={prop.name}
                           label={label}
+                          searchType={searchType}
                           options={prop.options.inline}
                           value={value}
                           onChange={(v) => onFilterChange(prop.name, v)}

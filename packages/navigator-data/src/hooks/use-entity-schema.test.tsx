@@ -141,6 +141,24 @@ describe("useEntitySchema", () => {
     expect(schema.searchProperties.some((p) => p.name === "number~prefix")).toBe(true);
     expect(schema.sortOptions[0].property).toBe("number");
     expect(schema.createFormRelations[0].name).toBe("customer");
+    expect(schema.canCreate).toBe(true);
+  });
+
+  it("sets canCreate to false when create-form template is absent", async () => {
+    const noCreateForm = {
+      ...profileFixture,
+      _templates: { search: profileFixture._templates.search },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(noCreateForm)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(result.current.data!.canCreate).toBe(false);
+    expect(result.current.data!.createFormRelations).toHaveLength(0);
   });
 
   it("is not enabled when entity is not in profile", () => {

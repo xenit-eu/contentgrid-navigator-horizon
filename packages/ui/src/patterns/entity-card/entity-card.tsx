@@ -1,6 +1,10 @@
-import { Database, FileText, Plus } from "lucide-react";
-import { Button } from "../../primitives/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../primitives/card";
+import { type LucideIcon, PlusCircle } from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type EntityCardTint = "sky" | "ocean" | "breeze" | "sand" | "amber" | "steel";
 
 export interface EntityCardProps {
   /** Unique identifier / URL-safe name for this entity (used in callback) */
@@ -13,61 +17,119 @@ export interface EntityCardProps {
   description?: string;
   /** When true a FileText icon is shown, otherwise a Database icon */
   hasContent?: boolean;
+  /**
+   * Optional Lucide icon component to display in the icon tile.
+   * When provided alongside `tint`, renders a 36×36 rounded tile on the left.
+   */
+  icon?: LucideIcon;
+  /**
+   * Tint variant for the icon tile.
+   * Maps to `--cg-tint-<tint>-bg` (background) and `--cg-tint-<tint>-fg` (icon color).
+   * Only takes effect when `icon` is also provided.
+   */
+  tint?: EntityCardTint;
+  /** Optional href for semantic link rendering; when present, renders <a> instead of button */
+  href?: string;
   /** Called when the user clicks the create-action button */
   onCreateClick?: (entityName: string) => void;
   /** Called when the user clicks the card title / entity link */
   onTitleClick?: (entityName: string) => void;
 }
 
+// ---------------------------------------------------------------------------
+// Tint → CSS variable map (avoids arbitrary value JIT purging)
+// ---------------------------------------------------------------------------
+
+const TINT_BG: Record<EntityCardTint, string> = {
+  sky: "var(--cg-tint-sky-bg)",
+  ocean: "var(--cg-tint-ocean-bg)",
+  breeze: "var(--cg-tint-breeze-bg)",
+  sand: "var(--cg-tint-sand-bg)",
+  amber: "var(--cg-tint-amber-bg)",
+  steel: "var(--cg-tint-steel-bg)",
+};
+
+const TINT_FG: Record<EntityCardTint, string> = {
+  sky: "var(--cg-tint-sky-fg)",
+  ocean: "var(--cg-tint-ocean-fg)",
+  breeze: "var(--cg-tint-breeze-fg)",
+  sand: "var(--cg-tint-sand-fg)",
+  amber: "var(--cg-tint-amber-fg)",
+  steel: "var(--cg-tint-steel-fg)",
+};
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function EntityCard({
   name,
   title,
   count,
   description,
-  hasContent,
+  icon: Icon,
+  tint,
+  href,
   onCreateClick,
   onTitleClick,
 }: Readonly<EntityCardProps>) {
   return (
-    <Card className="group relative transition-colors hover:border-primary/50">
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div>
-          <CardTitle className="text-lg">
+    <div
+      data-slot="entity-card"
+      className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--cg-color-card-border)] bg-card p-4 shadow-[0_1px_2px_rgba(8,29,48,0.05)] transition-[border-color,box-shadow] hover:border-[var(--cg-color-sky)] hover:shadow-[0_6px_18px_-8px_rgba(1,155,227,.35)]"
+    >
+      <div className="flex items-center justify-between gap-2.5">
+        {/* Icon tile — only rendered when both icon and tint are supplied */}
+        {Icon && tint && (
+          <div
+            className="grid size-9 shrink-0 place-items-center rounded-[9px]"
+            style={{ background: TINT_BG[tint], color: TINT_FG[tint] }}
+            aria-hidden
+          >
+            <Icon size={18} strokeWidth={1.8} />
+          </div>
+        )}
+
+        {/* Title + count block */}
+        <div className="min-w-0 flex-1">
+          {href ? (
+            <a
+              href={href}
+              className="inline-block max-w-full truncate rounded-[2px] text-left text-[13px] font-semibold text-[var(--cg-color-midnight)] hover:text-primary hover:underline hover:underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[3px]"
+            >
+              {title}
+            </a>
+          ) : (
             <button
               type="button"
-              className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md text-left after:absolute after:inset-0 after:content-['']"
+              className="inline-block max-w-full truncate rounded-[2px] text-left text-[13px] font-semibold text-[var(--cg-color-midnight)] hover:text-primary hover:underline hover:underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[3px]"
               onClick={() => onTitleClick?.(name)}
             >
-              {hasContent ? (
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <Database className="h-5 w-5 text-muted-foreground" />
-              )}
               {title}
             </button>
-          </CardTitle>
+          )}
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            <span>{count ?? "—"}</span> <span>items</span>
+          </div>
           {description && (
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{description}</p>
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
           )}
         </div>
-        <div className="relative z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateClick?.(name);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">Create {title}</span>
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{count ?? "—"}</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </CardContent>
-    </Card>
+
+        {/* Create (+) action */}
+        <button
+          type="button"
+          title={`Create ${title}`}
+          className="grid size-7 shrink-0 place-items-center rounded-md text-primary transition-colors hover:bg-[#E2F3FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCreateClick?.(name);
+          }}
+        >
+          <PlusCircle className="size-[18px]" />
+          <span className="sr-only">Create {title}</span>
+        </button>
+      </div>
+    </div>
   );
 }

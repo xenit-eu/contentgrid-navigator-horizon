@@ -1,11 +1,20 @@
 import { type ReactNode, useCallback, useState } from "react";
-import { Check, Search } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Link2,
+  ListFilter,
+  Plus,
+  Search,
+  XCircle,
+} from "lucide-react";
 import { cn, formatCellValue } from "../../lib/utils";
+import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -71,6 +80,12 @@ export interface EntityPickerProps {
   onNextPage?: () => void;
   /** Allow selecting multiple items at once */
   multiSelect?: boolean;
+  /** Total number of matching items, shown in the pagination summary ("Showing N of total") */
+  totalCount?: number;
+  /** When provided, renders a "Filters" button in the toolbar */
+  onOpenFilters?: () => void;
+  /** When provided, renders a "Create new" button in the toolbar */
+  onCreateNew?: () => void;
   /** Called with the selected href(s) and display label(s) when the user confirms */
   onSelect: (href: string, displayLabel: string) => void;
 }
@@ -109,6 +124,27 @@ function titleCase(value: string): string {
 /** Stable keys for the loading-state skeleton rows. */
 const SKELETON_ROWS = ["s1", "s2", "s3"];
 
+/**
+ * Renders a single table cell value. Booleans become soft status pills
+ * (matching the design mockup's bool-pill); everything else is formatted text.
+ */
+function renderCellValue(value: unknown): ReactNode {
+  if (typeof value === "boolean") {
+    return value ? (
+      <Badge variant="successSubtle">
+        <CheckCircle2 />
+        Active
+      </Badge>
+    ) : (
+      <Badge variant="dangerSubtle">
+        <XCircle />
+        Inactive
+      </Badge>
+    );
+  }
+  return formatCellValue(value);
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -128,6 +164,9 @@ export function EntityPicker({
   onPreviousPage,
   onNextPage,
   multiSelect = false,
+  totalCount,
+  onOpenFilters,
+  onCreateNew,
   onSelect,
 }: Readonly<EntityPickerProps>) {
   // Single-select state
@@ -210,7 +249,7 @@ export function EntityPicker({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10" />
+            <TableHead className="w-[34px]" />
             {columnHeaders.map((header, i) => (
               <TableHead key={columnKeys[i]}>{header}</TableHead>
             ))}
@@ -221,28 +260,38 @@ export function EntityPicker({
             const isSelected = multiSelect
               ? selectedItems.has(item.href)
               : selectedHref === item.href;
+            const select = () => {
+              if (multiSelect) {
+                toggleItem(item.href, getItemLabel(item));
+              } else {
+                setSelectedHref(item.href);
+                setSelectedLabel(getItemLabel(item));
+              }
+            };
             return (
               <TableRow
                 key={item.id}
+                data-state={isSelected ? "selected" : undefined}
                 className={cn(
                   "cursor-pointer transition-colors",
-                  isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/50",
+                  isSelected ? "bg-primary/[0.06]" : "hover:bg-muted/50",
                 )}
-                onClick={() => {
-                  if (multiSelect) {
-                    toggleItem(item.href, getItemLabel(item));
-                  } else {
-                    setSelectedHref(item.href);
-                    setSelectedLabel(getItemLabel(item));
-                  }
-                }}
+                onClick={select}
               >
-                <TableCell className="w-10 pr-0">
-                  {isSelected && <Check className="text-primary size-4" />}
+                <TableCell className="w-[34px] pr-0">
+                  <input
+                    type={multiSelect ? "checkbox" : "radio"}
+                    name="entity-picker-selection"
+                    checked={isSelected}
+                    onChange={select}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Select ${getItemLabel(item)}`}
+                    className="accent-primary size-4 cursor-pointer align-middle"
+                  />
                 </TableCell>
-                {columnKeys.map((key) => (
-                  <TableCell key={key} className={cn(isSelected && "font-medium")}>
-                    {formatCellValue(item.data[key])}
+                {columnKeys.map((key, i) => (
+                  <TableCell key={key} className={cn(i === 0 && isSelected && "font-semibold")}>
+                    {renderCellValue(item.data[key])}
                   </TableCell>
                 ))}
               </TableRow>
@@ -255,56 +304,75 @@ export function EntityPicker({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {multiSelect
-              ? `Link ${titleCase(relationTitle)}`
-              : `Select ${titleCase(relationTitle)}`}
-          </DialogTitle>
-          <DialogDescription>
-            {multiSelect
-              ? `Select one or more ${relationTitle.toLowerCase()} to link.`
-              : `Choose a ${relationTitle.toLowerCase()} to link.`}
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[780px]" aria-describedby={undefined}>
+        <DialogHeader className="flex-row items-center gap-2.5">
+          <Link2 className="text-primary size-[18px] shrink-0" />
+          <DialogTitle className="flex-1">{`Link ${titleCase(relationTitle)}`}</DialogTitle>
+          <span className="text-muted-foreground text-xs">
+            {`${multiSelect ? "to-many" : "to-one"} · ${titleCase(relationTitle)}`}
+          </span>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="text-muted-foreground absolute top-2.5 left-3 size-4" />
-          <Input
-            placeholder={searchPlaceholder ?? "Search..."}
-            value={searchQuery}
-            onChange={(e) => {
-              onSearch(e.target.value);
-              if (!multiSelect) setSelectedHref(null);
-            }}
-            className="pl-9"
-          />
+        <div className="mb-3 flex items-center gap-2.5">
+          <div className="relative flex-1">
+            <Search className="text-muted-foreground absolute top-2.5 left-3 size-4" />
+            <Input
+              placeholder={searchPlaceholder ?? "Search..."}
+              value={searchQuery}
+              onChange={(e) => {
+                onSearch(e.target.value);
+                if (!multiSelect) setSelectedHref(null);
+              }}
+              className="pl-9"
+            />
+          </div>
+          {onOpenFilters && (
+            <Button variant="outline" onClick={onOpenFilters}>
+              <ListFilter className="size-4" />
+              Filters
+            </Button>
+          )}
+          {onCreateNew && (
+            <Button onClick={onCreateNew}>
+              <Plus className="size-4" />
+              Create new
+            </Button>
+          )}
         </div>
 
-        <div className="max-h-80 overflow-auto rounded-md border">{resultsBody}</div>
+        <div className="border-border overflow-hidden rounded-lg border">{resultsBody}</div>
 
         {(hasPreviousPage || hasNextPage) && (
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!hasPreviousPage}
-              onClick={onPreviousPage}
-            >
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={!hasNextPage} onClick={onNextPage}>
-              Next
-            </Button>
+          <div className="text-muted-foreground mt-3 flex items-center justify-between text-[13px]">
+            <span>
+              {totalCount != null
+                ? `Showing ${options.length} of ${totalCount}`
+                : `Showing ${options.length}`}
+            </span>
+            <div className="flex gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!hasPreviousPage}
+                onClick={onPreviousPage}
+              >
+                <ChevronLeft className="size-4" />
+                Previous
+              </Button>
+              <Button variant="outline" size="sm" disabled={!hasNextPage} onClick={onNextPage}>
+                Next
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="ghost" data-dialog-ghost onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!hasSelection}>
+            <Link2 className="size-4" />
             {confirmLabel}
           </Button>
         </DialogFooter>

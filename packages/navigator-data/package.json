@@ -11,6 +11,10 @@
       "import": "./src/config/index.ts",
       "types": "./src/config/index.ts"
     },
+    "./utils/entity-display-name": {
+      "import": "./src/utils/entity-display-name.ts",
+      "types": "./src/utils/entity-display-name.ts"
+    },
     "./test-fixtures/*": {
       "import": "./test-fixtures/*.ts",
       "types": "./test-fixtures/*.ts"

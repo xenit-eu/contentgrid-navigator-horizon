@@ -110,32 +110,52 @@ describe("FilterSidebar — text filter (type=string, no options)", () => {
   });
 });
 
-describe("FilterSidebar — enum filter", () => {
+describe("FilterSidebar — enum filter (allowed-values chips)", () => {
   it("renders label for enum property", () => {
     renderSidebar([ENUM_PROP]);
     expect(screen.getByText("Status")).toBeInTheDocument();
   });
 
-  it("shows clear button as invisible when no value is set", () => {
-    const { container } = renderSidebar([ENUM_PROP], {});
-    const clearBtn = container.querySelector("button.invisible");
-    expect(clearBtn).toBeInTheDocument();
+  it("renders a toggle chip for each allowed value", () => {
+    renderSidebar([ENUM_PROP]);
+    expect(screen.getByRole("button", { name: /Status: Active/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Status: Inactive/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Status: Pending/i })).toBeInTheDocument();
   });
 
-  it("shows clear button as visible when a value is set", () => {
-    const { container } = renderSidebar([ENUM_PROP], { status: "active" });
-    // The invisible class should NOT be on the clear button
-    const clearBtn = container.querySelector("button.invisible");
-    expect(clearBtn).not.toBeInTheDocument();
+  it("marks no chip as pressed when no value is set", () => {
+    renderSidebar([ENUM_PROP], {});
+    const pressed = screen
+      .getAllByRole("button")
+      .filter((btn) => btn.getAttribute("aria-pressed") === "true");
+    expect(pressed).toHaveLength(0);
   });
 
-  it("calls onFilterChange with undefined when clear button is clicked", async () => {
+  it("marks the active value's chip as pressed", () => {
+    renderSidebar([ENUM_PROP], { status: "active" });
+    expect(screen.getByRole("button", { name: /Status: Active/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /Status: Pending/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("calls onFilterChange with the value when an unselected chip is clicked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar([ENUM_PROP], {}, { onFilterChange });
+    await user.click(screen.getByRole("button", { name: /Status: Active/i }));
+    expect(onFilterChange).toHaveBeenCalledWith("status", "active");
+  });
+
+  it("calls onFilterChange with undefined when the active chip is clicked (toggle off)", async () => {
     const user = userEvent.setup();
     const onFilterChange = vi.fn();
     renderSidebar([ENUM_PROP], { status: "active" }, { onFilterChange });
-    // The clear X button
-    const clearBtn = screen.getByRole("button");
-    await user.click(clearBtn);
+    await user.click(screen.getByRole("button", { name: /Status: Active/i }));
     expect(onFilterChange).toHaveBeenCalledWith("status", undefined);
   });
 });
