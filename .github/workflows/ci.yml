@@ -104,8 +104,9 @@ jobs:
             -Dsonar.projectKey=xenit-eu_contentgrid-navigator-horizon
             -Dsonar.organization=xenit-eu
             -Dsonar.sources=apps,packages
-            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.*,**/test-setup.*
-            -Dsonar.coverage.exclusions=**/*.stories.tsx,**/tests/**,**/playwright*.config.ts,**/test-fixtures/**
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.*,**/test-setup.*,**/public/mockServiceWorker.js
+            -Dsonar.coverage.exclusions=**/*.stories.tsx,**/tests/**,**/playwright*.config.ts,**/test-fixtures/**,**/src/mocks/**,**/main.tsx
+            -Dsonar.cpd.exclusions=apps/*/src/main.tsx,apps/*/src/mocks/**,apps/*/src/vite-env.d.ts
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.typescript.tsconfigPath=tsconfig.json
         env:
@@ -309,6 +310,11 @@ jobs:
 
       - name: E2E tests
         run: pnpm test:e2e
+        env:
+          # Firefox refuses to launch when $HOME (/github/home) is not owned
+          # by the current user in the Playwright container:
+          # https://playwright.dev/docs/ci#github-actions-via-containers
+          HOME: /root
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
