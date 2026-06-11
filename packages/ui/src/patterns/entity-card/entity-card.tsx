@@ -28,6 +28,8 @@ export interface EntityCardProps {
    * Only takes effect when `icon` is also provided.
    */
   tint?: EntityCardTint;
+  /** Optional href for semantic link rendering; when present, renders <a> instead of button */
+  href?: string;
   /** Called when the user clicks the create-action button */
   onCreateClick?: (entityName: string) => void;
   /** Called when the user clicks the card title / entity link */
@@ -67,6 +69,7 @@ export function EntityCard({
   description,
   icon: Icon,
   tint,
+  href,
   onCreateClick,
   onTitleClick,
 }: Readonly<EntityCardProps>) {
@@ -89,13 +92,22 @@ export function EntityCard({
 
         {/* Title + count block */}
         <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            className="inline-block max-w-full truncate rounded-[2px] text-left text-[13px] font-semibold text-[var(--cg-color-midnight)] hover:text-primary hover:underline hover:underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[3px]"
-            onClick={() => onTitleClick?.(name)}
-          >
-            {title}
-          </button>
+          {href ? (
+            <a
+              href={href}
+              className="inline-block max-w-full truncate rounded-[2px] text-left text-[13px] font-semibold text-[var(--cg-color-midnight)] hover:text-primary hover:underline hover:underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[3px]"
+            >
+              {title}
+            </a>
+          ) : (
+            <button
+              type="button"
+              className="inline-block max-w-full truncate rounded-[2px] text-left text-[13px] font-semibold text-[var(--cg-color-midnight)] hover:text-primary hover:underline hover:underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[3px]"
+              onClick={() => onTitleClick?.(name)}
+            >
+              {title}
+            </button>
+          )}
           <div className="mt-0.5 text-xs text-muted-foreground">
             <span>{count ?? "—"}</span> <span>items</span>
           </div>
