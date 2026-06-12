@@ -156,6 +156,8 @@ describe("useEntitySchema", () => {
     expect(schema.searchTemplate).not.toBeNull();
     expect(schema.searchTemplate!.request.method).toBe("GET");
     expect(schema.searchTemplate!.properties.map((p) => p.name)).toContain("number~prefix");
+    // The item URL template is read from the describes item link (rule 3)
+    expect(schema.itemTemplateHref).toBe(`${BASE}/invoices/{id}`);
   });
 
   it("is not enabled when entity is not in profile", () => {

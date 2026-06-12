@@ -96,9 +96,10 @@ describe("useProfile", () => {
       href: "https://api.example.com/profile/invoices",
       // collectionHref must come from the root resource link, not a string replacement
       collectionHref: "https://api.example.com/invoices",
-      // itemTemplateHref must be the RFC 6570 template for a single item
-      itemTemplateHref: "https://api.example.com/invoices/{id}",
     });
+    // The per-item URL template is NOT part of EntityInfo — it lives on the
+    // entity profile (describes item link) and is surfaced by useEntitySchema.
+    expect(result.current.data![0]).not.toHaveProperty("itemTemplateHref");
   });
 
   it("surfaces ProblemDetailError when the profile endpoint returns an error", async () => {
@@ -118,16 +119,15 @@ describe("useProfile", () => {
     expect(result.current.error).toBeDefined();
   });
 
-  it("uses link name when present; falls back to href path segment when absent", async () => {
-    // Root resource provides a matching link by name for one entity,
-    // but no matching link for the nameless one (edge case).
+  it("derives the name from the profile href when the link has no name, joining the root link", async () => {
     server.use(
       http.get(ROOT_URL, () =>
         HttpResponse.json({
           _links: {
             self: { href: ROOT_URL },
-            // No cg:entity link for "orders" — triggers collectionHref fallback
-            "cg:entity": [],
+            // Root resource DOES expose the orders collection, matched by the
+            // name derived from the profile href's last path segment.
+            "cg:entity": [{ href: "https://api.example.com/order-items", name: "orders" }],
             curies: [
               {
                 href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
@@ -164,9 +164,55 @@ describe("useProfile", () => {
     expect(result.current.data).toHaveLength(1);
     // Name should be derived from the last segment of the profile href
     expect(result.current.data![0].name).toBe("orders");
-    // collectionHref falls back to string replacement when root has no matching link
-    expect(result.current.data![0].collectionHref).toBe("https://api.example.com/orders");
-    expect(result.current.data![0].itemTemplateHref).toBe("https://api.example.com/orders/{id}");
+    // collectionHref comes from the matching root link — note the href differs
+    // from any string transform of the profile href, proving the link is used
+    expect(result.current.data![0].collectionHref).toBe("https://api.example.com/order-items");
+  });
+
+  it("skips entities whose collection link is absent from the root resource", async () => {
+    server.use(
+      http.get(ROOT_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: ROOT_URL },
+            // No cg:entity link for "orders" — the collection is not accessible,
+            // so the entity must be skipped (never a derived URL).
+            "cg:entity": [],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+        }),
+      ),
+      http.get(PROFILE_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: PROFILE_URL },
+            "cg:entity": [
+              { href: "https://api.example.com/profile/orders", name: "orders", title: "Order" },
+            ],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+          _templates: {},
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data).toEqual([]);
   });
 
   it("ignores root cg:entity links without a name and titleCases the entity name when title is absent", async () => {

@@ -9,17 +9,20 @@ import { queryKeys } from "./query-keys";
 /**
  * Fetches the profile root and the entities root in parallel, then joins them
  * so that collectionHref comes from a real cg:entity link on the root resource
- * (not a string replacement of "/profile/" → "/").
+ * (never a string transform of the profile href — affordance rule 3).
  *
  * The entities root (GET /) has cg:entity links whose href points directly at
  * the collection (e.g. /invoices) and whose name equals the singular entity name.
  * The profile root (GET /profile) has cg:entity links whose href points at the
  * HAL-FORMS profile (e.g. /profile/invoices).
  *
- * itemTemplateHref is built from collectionHref as "{collectionHref}/{id}".
- * This matches the describes.item templated link the server exposes on each
- * entity profile — deriving it here avoids N extra profile fetches at discovery
- * time while still using collectionHref from a real hypermedia link.
+ * Entities whose collection link is absent from the root resource are skipped:
+ * link absence means the collection is not accessible for this user
+ * (affordance rule 2) — a collection URL is never derived for them.
+ *
+ * The per-item URL template is NOT exposed here; it comes from the entity
+ * profile's _links.describes item link, surfaced as EntitySchema.itemTemplateHref
+ * by useEntitySchema.
  */
 async function fetchProfile(
   apiFetch: Parameters<typeof fetchHal>[0],
@@ -46,26 +49,24 @@ async function fetchProfile(
     }
   }
 
-  return profileEntityLinks.map((link) => {
+  return profileEntityLinks.flatMap((link) => {
     // Use link.name when present; fall back to last path segment of the profile href
     const name = link.name ?? link.href.split("/").pop() ?? "";
-    const title = titleCase(link.title ?? name);
 
-    // Prefer collection href from root resource cg:entity link (matched by name).
-    // Fall back to last-segment strip of the profile href only if the root resource
-    // did not include a matching link (e.g. in test environments with partial fixtures).
-    const collectionHref = collectionByName.get(name) ?? link.href.replace(/\/profile\//, "/");
+    // Collection href must come from the root resource cg:entity link (matched by
+    // name). No matching link means the collection is not accessible — skip the
+    // entity instead of deriving a URL (rules 2 and 3).
+    const collectionHref = collectionByName.get(name);
+    if (collectionHref === undefined) return [];
 
-    // RFC 6570 URI template for a single item, matching the server's describes.item link.
-    const itemTemplateHref = `${collectionHref}/{id}`;
-
-    return {
-      name,
-      title,
-      href: link.href,
-      collectionHref,
-      itemTemplateHref,
-    };
+    return [
+      {
+        name,
+        title: titleCase(link.title ?? name),
+        href: link.href,
+        collectionHref,
+      },
+    ];
   });
 }
 

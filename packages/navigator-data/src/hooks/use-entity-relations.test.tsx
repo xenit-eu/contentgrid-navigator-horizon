@@ -39,8 +39,9 @@ function makeWrapper() {
 }
 
 /**
- * Register both root resource and profile handlers.
- * Root resource cg:entity links provide collection hrefs; profile root provides profile hrefs.
+ * Register root resource, profile root and entity profile handlers.
+ * Root resource cg:entity links provide collection hrefs; the entity profile
+ * provides the describes item link useEntityDetail expands for the item URL.
  */
 function mockProfile() {
   server.use(
@@ -70,6 +71,20 @@ function mockProfile() {
               name: "cg",
               templated: true,
             },
+          ],
+        },
+        _templates: {},
+      }),
+    ),
+    http.get(`${BASE}/profile/invoices`, () =>
+      HttpResponse.json({
+        name: "invoice",
+        title: "Invoice",
+        _links: {
+          self: { href: `${BASE}/profile/invoices` },
+          describes: [
+            { href: COLLECTION_URL, name: "collection" },
+            { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
           ],
         },
         _templates: {},

@@ -6,11 +6,9 @@ import { PreconditionFailedError } from "../api/errors";
 import { queryKeys } from "./query-keys";
 import {
   BASE,
-  ROOT_URL,
   makeQueryClient,
   makeWrapper,
-  mockProfileResponse,
-  mockRootResponse,
+  registerProfileHandlers,
   seedProfile,
 } from "./test-utils";
 import { useEntityDetail } from "./use-entity-detail";
@@ -171,9 +169,8 @@ describe("useUpdateEntity", () => {
 
     let getCallCount = 0;
     // First GET returns v1, subsequent GETs (after invalidation) return v2
+    registerProfileHandlers(server);
     server.use(
-      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
-      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(ITEM_URL, () => {
         getCallCount++;
         const number = getCallCount === 1 ? "INV-001-original" : "INV-001-updated";

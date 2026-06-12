@@ -28,6 +28,7 @@ const schema: EntitySchema = {
   sortOptions: [],
   createFormRelations: [],
   searchTemplate: null,
+  itemTemplateHref: null,
 };
 
 describe("useEntityStatusBreakdown", () => {

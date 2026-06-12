@@ -4,7 +4,7 @@ import UriTemplate from "@contentgrid/uri-template";
 import { fetchHal } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
-import { useProfile } from "./use-profile";
+import { useEntitySchema } from "./use-entity-schema";
 
 export interface EntityDetailResult {
   data: Record<string, unknown>;
@@ -37,12 +37,12 @@ async function fetchEntityDetail(
 
 export function useEntityDetail(entityName: string, entityId: string) {
   const { apiFetch } = useNavigatorData();
-  const { data: entities } = useProfile();
-  // Match by link name (singular entity name from the profile root cg:entity link).
-  // No longer falls back to last path segment of href — name is always present on
-  // well-formed ContentGrid profile roots.
-  const entity = entities?.find((e) => e.name === entityName);
-  const itemTemplateHref = entity?.itemTemplateHref;
+  // The item URL template is read from the entity profile's _links.describes
+  // item link, surfaced by useEntitySchema (cache-amortized via the shared
+  // TanStack Query key, staleTime Infinity). When the link is absent the query
+  // stays disabled — item access is not available (affordance rule 2).
+  const { data: schema } = useEntitySchema(entityName);
+  const itemTemplateHref = schema?.itemTemplateHref;
 
   return useQuery({
     queryKey: queryKeys.entityDetail(entityName, entityId),

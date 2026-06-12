@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
+import { ianaRelations } from "@contentgrid/hal/rels";
 import { blueprintRels } from "../api/contentgrid-rels";
 import { fetchHal, resolveTemplate } from "../api/hal-client";
 import type {
@@ -171,6 +172,12 @@ export async function fetchEntitySchema(
   // search is then not permitted for this entity/user (affordance rule 2).
   const searchTemplate = resolveTemplate(object.data as ProfileTemplatesShape, "search");
 
+  // The per-item URL template comes from the profile's _links.describes item
+  // link (name: "item", templated) — never constructed from the collection URL
+  // (affordance rule 3). Null when absent: item access is then not available.
+  const itemLink = object.links.findLink(ianaRelations.describes, "item");
+  const itemTemplateHref = itemLink?.href ?? null;
+
   return {
     description,
     attributes,
@@ -180,6 +187,7 @@ export async function fetchEntitySchema(
     sortOptions,
     createFormRelations,
     searchTemplate,
+    itemTemplateHref,
   };
 }
 
