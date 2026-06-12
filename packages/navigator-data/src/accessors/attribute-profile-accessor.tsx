@@ -1,0 +1,144 @@
+import type { HalObject } from "@contentgrid/hal";
+import { blueprintRelations } from "../relations";
+import type {
+  ProfileAttributeConstraint,
+  ProfileAttributeSearchParam,
+  ProfileAttributeShape,
+} from "../shapes";
+
+enum ProfileAttributeConstraintType {
+  unique = "unique",
+  createdDate = "created-date",
+  createdBy = "created-by",
+  modifiedDate = "modified-date",
+  modifiedBy = "modified-by",
+  required = "required",
+  allowedValues = "allowed-values",
+}
+
+enum ProfileAttributeSearchType {
+  exactMatch = "exact-match",
+  prefixMatch = "prefix-match",
+  greaterThan = "greater-than",
+  greaterThanOrEqual = "greater-than-or-equal",
+  lessThan = "less-than",
+  lessThanOrEqual = "less-than-or-equal",
+  fullText = "full-text",
+}
+
+export enum ProfileAttributeType {
+  string = "string",
+  long = "long",
+  double = "double",
+  boolean = "boolean",
+  date = "date",
+  datetime = "datetime",
+  object = "object",
+}
+
+export class ProfileAttribute {
+  constructor(private readonly hal: HalObject<ProfileAttributeShape>) {}
+
+  private get attributeProfileData(): ProfileAttributeShape {
+    return this.hal.data as ProfileAttributeShape;
+  }
+
+  get name() {
+    return this.attributeProfileData.name;
+  }
+
+  get type() {
+    return this.attributeProfileData.type as ProfileAttributeType;
+  }
+
+  get title() {
+    return this.attributeProfileData.title;
+  }
+
+  get description() {
+    return this.attributeProfileData.description;
+  }
+
+  get isReadOnly() {
+    return this.attributeProfileData.readonly;
+  }
+
+  get isRequired() {
+    return this.attributeProfileData.required;
+  }
+
+  get constraints(): ProfileAttributeConstraint[] {
+    return this.hal.embedded
+      .findEmbeddeds(blueprintRelations.constraint)
+      .map((hal) => hal.data as ProfileAttributeConstraint);
+  }
+
+  get isUnique() {
+    return !!this.constraints.find(
+      (constr) => constr.type === ProfileAttributeConstraintType.unique,
+    );
+  }
+
+  get isCreatedDate() {
+    return !!this.constraints.find(
+      (constr) => constr.type === ProfileAttributeConstraintType.createdDate,
+    );
+  }
+
+  get isCreatedBy() {
+    return !!this.constraints.find(
+      (constr) => constr.type === ProfileAttributeConstraintType.createdBy,
+    );
+  }
+
+  get isModifiedDate() {
+    return !!this.constraints.find(
+      (constr) => constr.type === ProfileAttributeConstraintType.modifiedDate,
+    );
+  }
+
+  get isModifiedBy() {
+    return !!this.constraints.find(
+      (constr) => constr.type === ProfileAttributeConstraintType.modifiedBy,
+    );
+  }
+
+  get allowedValues(): string[] | undefined {
+    return this.constraints.find(
+      (constr) => constr.type === ProfileAttributeConstraintType.allowedValues,
+    )?.values;
+  }
+
+  get searchParams(): ProfileAttributeSearchParam[] {
+    return this.hal.embedded
+      .findEmbeddeds(blueprintRelations["search-param"])
+      .map((hal) => hal.data as ProfileAttributeSearchParam);
+  }
+
+  get availableSearchTypes(): ProfileAttributeSearchType[] {
+    return this.searchParams.map((param) => param.type as ProfileAttributeSearchType);
+  }
+
+  hasSearchType(searchType: ProfileAttributeSearchType): boolean {
+    return this.searchParams.some((param) => param.type === searchType);
+  }
+
+  get hasExactSearch(): boolean {
+    return this.hasSearchType(ProfileAttributeSearchType.exactMatch);
+  }
+
+  get hasPrefixSearch(): boolean {
+    return this.hasSearchType(ProfileAttributeSearchType.prefixMatch);
+  }
+
+  get hasFullTextSearch(): boolean {
+    return this.hasSearchType(ProfileAttributeSearchType.fullText);
+  }
+
+  get isContent(): boolean {
+    return (
+      this.type == ProfileAttributeType.object &&
+      this.hal.embedded.findEmbeddeds(blueprintRelations.attribute).length > 0
+    );
+  }
+}
