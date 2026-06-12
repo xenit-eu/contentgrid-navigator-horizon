@@ -250,6 +250,89 @@ describe("FilterSidebar — label formatting", () => {
   });
 });
 
+describe("FilterSidebar — range-pair operators (field.~op)", () => {
+  const DATE_FROM_PROP: SearchProperty = { name: "created.~from", type: "date" };
+  const DATE_UNTIL_PROP: SearchProperty = { name: "created.~until", type: "date" };
+  const NUM_GTE_PROP: SearchProperty = { name: "amount.~gte", type: "string" };
+  const NUM_LTE_PROP: SearchProperty = { name: "amount.~lte", type: "string" };
+
+  it("renders date inputs for ~from and ~until operators", () => {
+    renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP]);
+    const inputs = screen.getAllByDisplayValue("");
+    expect(inputs).toHaveLength(2);
+  });
+
+  it("groups ~from and ~until under the same base field label", () => {
+    renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP]);
+    expect(screen.getByText("Created")).toBeInTheDocument();
+  });
+
+  it("renders After/Before direction labels for grouped ~from/~until", () => {
+    renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP]);
+    expect(screen.getByText("After")).toBeInTheDocument();
+    expect(screen.getByText("Before")).toBeInTheDocument();
+  });
+
+  it("encodes ~from value as plain yyyy-MM-dd (no ISO time suffix)", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_FROM_PROP], {}, { onFilterChange });
+    const input = screen.getByDisplayValue("");
+    fireEvent.change(input, { target: { value: "2026-01-01" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-01-01");
+  });
+
+  it("encodes ~until value as plain yyyy-MM-dd (no ISO time suffix)", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_UNTIL_PROP], {}, { onFilterChange });
+    const input = screen.getByDisplayValue("");
+    fireEvent.change(input, { target: { value: "2026-12-31" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created.~until", "2026-12-31");
+  });
+
+  it("decodes plain yyyy-MM-dd value back into the date input (lossless round-trip)", () => {
+    renderSidebar([DATE_FROM_PROP], { "created.~from": "2026-06-15" });
+    expect(screen.getByDisplayValue("2026-06-15")).toBeInTheDocument();
+  });
+
+  it("calls onFilterChange with undefined when ~from input is cleared", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_FROM_PROP], { "created.~from": "2026-01-01" }, { onFilterChange });
+    const input = screen.getByDisplayValue("2026-01-01");
+    fireEvent.change(input, { target: { value: "" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created.~from", undefined);
+  });
+
+  it("encodes grouped ~from value as plain date (no ISO) in DateGroupFilter", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP], {}, { onFilterChange });
+    const inputs = screen.getAllByDisplayValue("");
+    fireEvent.change(inputs[0], { target: { value: "2026-03-01" } });
+    expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-03-01");
+  });
+
+  it("renders ~gte and ~lte with distinct accessible labels (no duplicate ids)", () => {
+    renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP]);
+    expect(screen.getByLabelText(/amount after/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/amount before/i)).toBeInTheDocument();
+  });
+
+  it("encodes ~gte value in onFilterChange", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([NUM_GTE_PROP], {}, { onFilterChange });
+    const input = screen.getByLabelText(/amount after/i);
+    fireEvent.change(input, { target: { value: "100" } });
+    expect(onFilterChange).toHaveBeenCalledWith("amount.~gte", "100");
+  });
+
+  it("encodes ~lte value in onFilterChange", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([NUM_LTE_PROP], {}, { onFilterChange });
+    const input = screen.getByLabelText(/amount before/i);
+    fireEvent.change(input, { target: { value: "500" } });
+    expect(onFilterChange).toHaveBeenCalledWith("amount.~lte", "500");
+  });
+});
+
 describe("FilterSidebar — apiToDate conversion", () => {
   it("shows existing ISO date value as yyyy-MM-dd in the input", () => {
     renderSidebar([DATE_PROP], { created_at: "2024-06-15T00:00:00Z" });
