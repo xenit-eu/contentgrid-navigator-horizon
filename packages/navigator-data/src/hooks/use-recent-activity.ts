@@ -130,22 +130,22 @@ export function useRecentActivity() {
 
         // Prefer the modified-date; fall back to created-date if only one is available.
         const modifiedDate =
-          (modifiedDateField != null
-            ? (auditData?.[modifiedDateField] as string | undefined)
-            : undefined) ??
-          (createdDateField != null
-            ? (auditData?.[createdDateField] as string | undefined)
-            : undefined);
+          (modifiedDateField == null
+            ? undefined
+            : (auditData?.[modifiedDateField] as string | undefined)) ??
+          (createdDateField == null
+            ? undefined
+            : (auditData?.[createdDateField] as string | undefined));
         if (!modifiedDate) return;
 
         const createdDateVal =
-          createdDateField != null
-            ? (auditData?.[createdDateField] as string | undefined)
-            : undefined;
+          createdDateField == null
+            ? undefined
+            : (auditData?.[createdDateField] as string | undefined);
         const modifiedDateVal =
-          modifiedDateField != null
-            ? (auditData?.[modifiedDateField] as string | undefined)
-            : undefined;
+          modifiedDateField == null
+            ? undefined
+            : (auditData?.[modifiedDateField] as string | undefined);
 
         const action: "created" | "modified" =
           createdDateVal && modifiedDateVal && createdDateVal !== modifiedDateVal
@@ -157,11 +157,11 @@ export function useRecentActivity() {
         const details: RecentActivityDetail[] = buildDetails(detailAttrs, item.data);
 
         const modifiedByVal =
-          modifiedByField != null
-            ? (auditData?.[modifiedByField] as string | undefined)
-            : undefined;
+          modifiedByField == null
+            ? undefined
+            : (auditData?.[modifiedByField] as string | undefined);
         const createdByVal =
-          createdByField != null ? (auditData?.[createdByField] as string | undefined) : undefined;
+          createdByField == null ? undefined : (auditData?.[createdByField] as string | undefined);
 
         allItems.push({
           entityName: entity.name,

@@ -88,9 +88,9 @@ export function useRecentlyCreated() {
       data.items.forEach((item) => {
         // Read the audit object from entity data using the discovered attribute name.
         const auditData =
-          auditAttrName != null
-            ? (item.data[auditAttrName] as Record<string, unknown> | undefined)
-            : undefined;
+          auditAttrName == null
+            ? undefined
+            : (item.data[auditAttrName] as Record<string, unknown> | undefined);
 
         // Use the profile-discovered sub-attribute names rather than hardcoded
         // literals (e.g. "created_date", "created_by").  auditRoles is the
@@ -98,9 +98,9 @@ export function useRecentlyCreated() {
         const createdDateField = auditRoles?.["created-date"];
         const createdByField = auditRoles?.["created-by"];
         const createdDate =
-          createdDateField != null
-            ? (auditData?.[createdDateField] as string | undefined)
-            : undefined;
+          createdDateField == null
+            ? undefined
+            : (auditData?.[createdDateField] as string | undefined);
         const nameVal = nameAttr ? item.data[nameAttr.name] : undefined;
         const displayName = typeof nameVal === "string" && nameVal ? nameVal : item.id;
         const entry: RecentlyCreatedItem = {
@@ -110,9 +110,9 @@ export function useRecentlyCreated() {
           displayName,
           createdDate,
           createdBy:
-            createdByField != null
-              ? (auditData?.[createdByField] as string | undefined)
-              : undefined,
+            createdByField == null
+              ? undefined
+              : (auditData?.[createdByField] as string | undefined),
         };
 
         if (createdDate) withDate.push(entry);
