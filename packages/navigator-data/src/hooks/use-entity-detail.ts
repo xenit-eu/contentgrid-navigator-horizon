@@ -95,9 +95,7 @@ async function fetchEntityDetail(
   );
 
   const selfLink = object.links.findLink(ianaRelations.self);
-  const templates = resolveTemplates(
-    object.data as HalObjectWithTemplateShape<object, string, unknown, unknown>,
-  );
+  const templates = resolveTemplates(object.data);
 
   // Build a map of content attribute name → upload URL from cg:content links.
   const contentLinks: Record<string, string> = {};

@@ -77,9 +77,7 @@ export function useLinkRelation() {
           linkTemplate = {
             method: tpl.request.method,
             target:
-              typeof rawTplData?.[tplKey]?.target === "string"
-                ? (rawTplData[tplKey].target as string)
-                : null,
+              typeof rawTplData?.[tplKey]?.target === "string" ? rawTplData[tplKey].target : null,
             contentType: tpl.contentType ?? null,
           };
         }
