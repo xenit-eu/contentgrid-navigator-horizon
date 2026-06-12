@@ -97,6 +97,66 @@ The companion code fixes live in the `halforms/*` PRs.
   in a mutation hook. The platform can change affordances per item/user; the
   template is the contract.
 
+  -  templates should be resolved by `resolveTemplate`  using import { resolveTemplate } from "@contentgrid/hal-forms";
+   When the template is present, a HalFormsTemplate<TypedRequestSpec<void, HalShape>> is returned.
+   When the template is not present, null is returned.
+   
+   If a template was found. it can be executed by constructing the values using : 
+   `import { createValues } from "@contentgrid/hal-forms/values";`
+
+  // Importing HAL Forms values utilities
+  import { createValues, HalFormValues } from "@contentgrid/hal-forms/values";
+  
+  // Initializing form values from a template
+  const [formValues, setFormValues] = useState(() => createValues(createTemplate!));
+  
+  // Updating form values
+  const handleChange = (newFormData: HalFormValues<TypedRequestSpec<EntityInstanceForUpdate, EntityInstanceShape>>) => {
+      // Form value manipulation
+      setFormValues(newFormData);
+  };
+  
+  // Modifying specific form values
+  const handleUpload = (spec: ExactContentPropertyReference, file: File | null) => {
+      setFormValues((prevFormValues) => {
+          if (file) {
+              return prevFormValues.withValue(spec.name, file);
+          } else {
+              return prevFormValues.withoutValue(spec.name);
+          }
+      });
+  };
+
+
+HAL Form codecs are used to encode form values into proper API requests:
+
+
+// Import codecs from HAL Forms
+import halFormCodecs from "@contentgrid/hal-forms/codecs";
+
+// Creating a mutation for API interaction
+const mutation = useMutation({
+    mutationFn: async (request: TypedRequest<EntityInstanceForUpdate, EntityInstanceShape>) => 
+        await fetchJsonAndCheck(request),
+});
+
+// Using codecs to encode form values into a request
+const onCreate = useCallback(async () => {
+    const codec = halFormCodecs.requireCodecFor(createTemplate!);
+    const request = codec.encode(formValues);
+
+    const data = await mutation.mutateAsync(request);
+    navigate(getDetailsUrlPath(profile, data.id));
+}, [navigate, createTemplate, formValues, profile, mutation]);
+
+
+### Form State Management Workflow
+
+1. Initialize form values using `createValues()` from a HAL Forms template
+2. Update values using immutable methods like `withValue()` and `withoutValue()`
+3. Encode form values to a request using HAL Form codecs
+4. Submit the encoded request to the API
+5. Process the response as a HAL resource
 **2. Gate every operation on template/link presence — expose capability flags.**
 
 - Absence of `_templates.delete` means delete is not permitted for this
