@@ -151,8 +151,8 @@ export async function fetchEntitySchema(
         type: p.type,
         options: hasOptions
           ? {
-              ...(inlineEntries !== undefined ? { inline: inlineEntries } : {}),
-              ...(linkHref !== undefined ? { link: { href: linkHref } } : {}),
+              ...(inlineEntries === undefined ? {} : { inline: inlineEntries }),
+              ...(linkHref === undefined ? {} : { link: { href: linkHref } }),
             }
           : undefined,
         required: p.required,
@@ -218,9 +218,9 @@ export async function fetchEntitySchema(
         type: p.type,
         required: p.required ?? false,
         readOnly: p.readOnly ?? false,
-        ...(inlineEntries !== undefined ? { allowedValues: inlineEntries } : {}),
-        ...(optionsLinkHref !== undefined ? { optionsLink: { href: optionsLinkHref } } : {}),
-        ...(p.pattern !== undefined ? { pattern: p.pattern } : {}),
+        ...(inlineEntries === undefined ? {} : { allowedValues: inlineEntries }),
+        ...(optionsLinkHref === undefined ? {} : { optionsLink: { href: optionsLinkHref } }),
+        ...(p.pattern === undefined ? {} : { pattern: p.pattern }),
       };
     });
 
