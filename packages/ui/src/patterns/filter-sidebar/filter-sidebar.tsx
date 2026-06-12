@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { format, parse } from "date-fns";
 import { X } from "lucide-react";
 import { Button } from "../../primitives/button";
@@ -16,6 +17,12 @@ import { Separator } from "../../primitives/separator";
 // Public types
 // ---------------------------------------------------------------------------
 
+/** A normalised option entry — value sent to the API, prompt shown to the user. */
+export interface OptionEntry {
+  value: string;
+  prompt: string;
+}
+
 /** A single filterable search parameter, as returned from the HAL-Forms profile. */
 export interface SearchProperty {
   /** Parameter name; may use `field~op` (e.g. "created~greater-than") or `field.~op` (range-pair, e.g. "created.~from") format */
@@ -24,8 +31,22 @@ export interface SearchProperty {
   prompt?: string;
   /** Data type, e.g. "string", "date", "datetime" */
   type: string;
-  /** Available values for enum-like fields */
-  options?: { inline?: string[] };
+  /**
+   * Available values for enum-like fields.
+   *
+   * - `inline`: statically known values (normalised to { value, prompt } pairs).
+   * - `link`: remote options resource — pass a `loadRemoteOptions` callback to
+   *   FilterSidebarProps to resolve these into selectable options; without the
+   *   callback the field degrades to a free-text input.
+   */
+  options?: {
+    inline?: OptionEntry[];
+    link?: { href: string };
+  };
+  /** Whether this field is required (from the template property). */
+  required?: boolean;
+  /** Whether this field is read-only (from the template property). */
+  readOnly?: boolean;
 }
 
 export interface FilterSidebarProps {
@@ -37,6 +58,16 @@ export interface FilterSidebarProps {
   onFilterChange: (key: string, value: string | undefined) => void;
   /** Called when the user wants to clear all filters */
   onClearAll?: () => void;
+  /**
+   * Optional async resolver for remote option resources (`options.link`).
+   * When provided, filters with a remote options link are rendered as select
+   * inputs instead of free-text inputs.
+   *
+   * The callback receives the options link href and must return normalised
+   * { value, prompt }[] pairs. Wire this to `useRemoteOptions` from
+   * `@contentgrid/navigator-data` in the consuming app or feature.
+   */
+  loadRemoteOptions?: (href: string) => Promise<OptionEntry[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,10 +153,11 @@ const DATE_SUFFIXES = [
   ".~until",
 ];
 
-type InputType = "text" | "select" | "date";
+type InputType = "text" | "select" | "remote-select" | "date";
 
-function getInputType(prop: SearchProperty): InputType {
+function getInputType(prop: SearchProperty, hasRemoteOptionsLoader: boolean): InputType {
   if (prop.options?.inline?.length) return "select";
+  if (prop.options?.link && hasRemoteOptionsLoader) return "remote-select";
   if (DATE_FIELD_TYPES.has(prop.type)) return "date";
   if (DATE_SUFFIXES.some((s) => prop.name.endsWith(s))) return "date";
   return "text";
@@ -249,25 +281,32 @@ function EnumFilter({
   options,
   value,
   onChange,
+  isLoading = false,
 }: Readonly<{
   label: string;
-  options: string[];
+  options: OptionEntry[];
   value: string;
   onChange: (value: string | undefined) => void;
+  isLoading?: boolean;
 }>) {
   return (
     <div className="space-y-1.5">
       <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
-          <Select key={value || "empty"} value={value || undefined} onValueChange={onChange}>
+          <Select
+            key={value || "empty"}
+            value={value || undefined}
+            onValueChange={onChange}
+            disabled={isLoading}
+          >
             <SelectTrigger aria-label={label} className="h-8 w-full text-sm">
-              <SelectValue placeholder="All" />
+              <SelectValue placeholder={isLoading ? "Loading…" : "All"} />
             </SelectTrigger>
             <SelectContent>
               {options.map((opt) => (
-                <SelectItem key={opt} value={opt}>
-                  {formatWords(opt)}
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.prompt}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -276,6 +315,56 @@ function EnumFilter({
         <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
       </div>
     </div>
+  );
+}
+
+/**
+ * An EnumFilter backed by a remote options link.
+ * Calls `loadRemoteOptions(href)` once on mount (and when href changes) and
+ * renders the resolved options as a select. Shows "Loading…" until resolved.
+ */
+function RemoteEnumFilter({
+  label,
+  href,
+  value,
+  onChange,
+  loadRemoteOptions,
+}: Readonly<{
+  label: string;
+  href: string;
+  value: string;
+  onChange: (value: string | undefined) => void;
+  loadRemoteOptions: (href: string) => Promise<OptionEntry[]>;
+}>) {
+  const [options, setOptions] = useState<OptionEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    loadRemoteOptions(href)
+      .then((entries) => {
+        if (!cancelled) {
+          setOptions(entries);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [href, loadRemoteOptions]);
+
+  return (
+    <EnumFilter
+      label={label}
+      options={options}
+      value={value}
+      onChange={onChange}
+      isLoading={isLoading}
+    />
   );
 }
 
@@ -364,6 +453,7 @@ export function FilterSidebar({
   filters,
   onFilterChange,
   onClearAll,
+  loadRemoteOptions,
 }: Readonly<FilterSidebarProps>) {
   const hasActiveFilters = Object.values(filters).some((v) => !!v);
   const groups = groupFilterProperties(filterProperties);
@@ -386,7 +476,8 @@ export function FilterSidebar({
       <div className="space-y-4">
         {groups.map((group, index) => {
           const isDateGroup =
-            group.items.length > 1 && group.items.every((p) => getInputType(p) === "date");
+            group.items.length > 1 &&
+            group.items.every((p) => getInputType(p, !!loadRemoteOptions) === "date");
 
           return (
             <div key={group.label}>
@@ -401,12 +492,12 @@ export function FilterSidebar({
                   />
                 ) : (
                   group.items.map((prop) => {
-                    const type = getInputType(prop);
+                    const type = getInputType(prop, !!loadRemoteOptions);
                     const value = filters[prop.name] ?? "";
                     const label = formatFieldLabel(prop);
                     const searchType = getSearchType(prop);
 
-                    // 1. Handle Select/Enum types
+                    // 1. Handle inline Select/Enum types
                     if (type === "select" && prop.options?.inline) {
                       return (
                         <EnumFilter
@@ -419,7 +510,21 @@ export function FilterSidebar({
                       );
                     }
 
-                    // 2. Handle Date types
+                    // 2. Handle remote Select/Enum types (requires loadRemoteOptions callback)
+                    if (type === "remote-select" && prop.options?.link && loadRemoteOptions) {
+                      return (
+                        <RemoteEnumFilter
+                          key={prop.name}
+                          label={label}
+                          href={prop.options.link.href}
+                          value={value}
+                          onChange={(v) => onFilterChange(prop.name, v)}
+                          loadRemoteOptions={loadRemoteOptions}
+                        />
+                      );
+                    }
+
+                    // 3. Handle Date types
                     if (type === "date") {
                       return (
                         <DateFilter
@@ -433,20 +538,16 @@ export function FilterSidebar({
                       );
                     }
 
-                    // 3. Handle Text types
-                    if (type === "text") {
-                      return (
-                        <TextFilter
-                          key={prop.name}
-                          label={label}
-                          searchType={searchType}
-                          value={value}
-                          onChange={(v) => onFilterChange(prop.name, v)}
-                        />
-                      );
-                    }
-
-                    return null;
+                    // 4. Handle Text types (fallback, including remote options without a loader)
+                    return (
+                      <TextFilter
+                        key={prop.name}
+                        label={label}
+                        searchType={searchType}
+                        value={value}
+                        onChange={(v) => onFilterChange(prop.name, v)}
+                      />
+                    );
                   })
                 )}
               </div>

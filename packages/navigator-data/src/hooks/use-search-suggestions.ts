@@ -18,7 +18,7 @@ const DATE_FIELD_TYPES = new Set(["date", "datetime", "datetime-local", "time"])
 const DATE_SUFFIXES = ["~before", "~after"];
 
 type SuggestionStrategy =
-  | { type: "inline"; values: string[] }
+  | { type: "inline"; values: string[] } // values extracted from OptionEntry[]
   | { type: "prefix"; fieldParam: string; valueField: string }
   | { type: "exact"; valueField: string }
   | { type: "none" };
@@ -36,7 +36,8 @@ function getSuggestionStrategy(
   if (!activeProp) return { type: "none" };
   if (isDateField(activeProp)) return { type: "none" };
   if (activeProp.options?.inline?.length) {
-    return { type: "inline", values: activeProp.options.inline };
+    // OptionEntry[] — extract the value strings for suggestion matching
+    return { type: "inline", values: activeProp.options.inline.map((e) => e.value) };
   }
   if (activeField.includes("~prefix")) {
     const baseField = activeField.split("~")[0];

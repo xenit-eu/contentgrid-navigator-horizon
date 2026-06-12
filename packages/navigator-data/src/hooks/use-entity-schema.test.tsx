@@ -215,7 +215,7 @@ describe("useEntitySchema", () => {
     );
   });
 
-  it("includes inline options on a search property when they are all strings", async () => {
+  it("normalises inline string options to { value, prompt } pairs on a search property", async () => {
     const withInlineOptions = {
       ...profileFixture,
       _templates: {
@@ -244,7 +244,63 @@ describe("useEntitySchema", () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const statusProp = result.current.data!.searchProperties.find((p) => p.name === "status");
-    expect(statusProp?.options?.inline).toEqual(["draft", "sent", "paid"]);
+    expect(statusProp?.options?.inline).toEqual([
+      { value: "draft", prompt: "draft" },
+      { value: "sent", prompt: "sent" },
+      { value: "paid", prompt: "paid" },
+    ]);
+  });
+
+  it("carries options.link on a search property when the template has a remote link", async () => {
+    const withRemoteOptions = {
+      ...profileFixture,
+      _templates: {
+        ...profileFixture._templates,
+        search: {
+          method: "GET",
+          target: `${BASE}/invoices`,
+          properties: [
+            {
+              name: "category",
+              prompt: "Category",
+              type: "text",
+              options: { link: { href: `${BASE}/categories` } },
+            },
+          ],
+        },
+      },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withRemoteOptions)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const categoryProp = result.current.data!.searchProperties.find((p) => p.name === "category");
+    expect(categoryProp?.options?.link).toEqual({ href: `${BASE}/categories` });
+    expect(categoryProp?.options?.inline).toBeUndefined();
+  });
+
+  it("carries createFormFields with required/readOnly from the create-form template", async () => {
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(profileFixture)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const fields = result.current.data!.createFormFields;
+    // "number" is in the create-form template as type "text", required true
+    const numberField = fields.find((f) => f.name === "number");
+    expect(numberField).toBeDefined();
+    expect(numberField?.required).toBe(true);
+    expect(numberField?.type).toBe("text");
+    // "customer" is type "url" → goes into createFormRelations, not createFormFields
+    expect(fields.find((f) => f.name === "customer")).toBeUndefined();
   });
 
   it("parses sort options given as plain strings (value,asc format)", async () => {

@@ -8,7 +8,13 @@ const TEXT_PROP: SearchProperty = { name: "title", type: "string" };
 const ENUM_PROP: SearchProperty = {
   name: "status",
   type: "string",
-  options: { inline: ["active", "inactive", "pending"] },
+  options: {
+    inline: [
+      { value: "active", prompt: "active" },
+      { value: "inactive", prompt: "inactive" },
+      { value: "pending", prompt: "pending" },
+    ],
+  },
 };
 const DATE_PROP: SearchProperty = { name: "created_at", type: "date" };
 const DATE_GT_PROP: SearchProperty = {
@@ -229,7 +235,7 @@ describe("FilterSidebar — date group filter (multiple date props for same fiel
 describe("FilterSidebar — label formatting", () => {
   it("uses prompt when provided", () => {
     const prop: SearchProperty = { name: "complex_field", type: "string", prompt: "My Label" };
-    renderSidebar([ENUM_PROP, { ...prop, options: { inline: ["a"] } }]);
+    renderSidebar([ENUM_PROP, { ...prop, options: { inline: [{ value: "a", prompt: "a" }] } }]);
     expect(screen.getByText("My Label")).toBeInTheDocument();
   });
 
@@ -237,7 +243,7 @@ describe("FilterSidebar — label formatting", () => {
     const prop: SearchProperty = {
       name: "some_field_name",
       type: "string",
-      options: { inline: ["x"] },
+      options: { inline: [{ value: "x", prompt: "x" }] },
     };
     renderSidebar([prop]);
     expect(screen.getByText("Some Field Name")).toBeInTheDocument();
@@ -380,5 +386,69 @@ describe("FilterSidebar — DateGroupFilter clear button (grouped date props)", 
     expect(visibleClear).toBeDefined();
     await user.click(visibleClear!);
     expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
+  });
+});
+
+describe("FilterSidebar — remote options (options.link)", () => {
+  const REMOTE_PROP: SearchProperty = {
+    name: "category",
+    prompt: "Category",
+    type: "string",
+    options: { link: { href: "https://api.example.com/categories" } },
+  };
+
+  const resolvedOptions = [
+    { value: "https://api.example.com/categories/electronics", prompt: "Electronics" },
+    { value: "https://api.example.com/categories/clothing", prompt: "Clothing" },
+  ];
+
+  it("renders a text input when no loadRemoteOptions callback is provided (graceful degradation)", () => {
+    renderSidebar([REMOTE_PROP]);
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("renders a select input when loadRemoteOptions is provided and resolves options", async () => {
+    const loadRemoteOptions = vi.fn().mockResolvedValue(resolvedOptions);
+    const onFilterChange = vi.fn();
+    render(
+      <FilterSidebar
+        filterProperties={[REMOTE_PROP]}
+        filters={{}}
+        onFilterChange={onFilterChange}
+        loadRemoteOptions={loadRemoteOptions}
+      />,
+    );
+
+    // Shows loading state initially
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+
+    // Waits for options to load
+    await screen.findByRole("combobox");
+    expect(loadRemoteOptions).toHaveBeenCalledWith("https://api.example.com/categories");
+  });
+
+  it("calls onFilterChange with the selected remote option value", async () => {
+    const user = userEvent.setup();
+    const loadRemoteOptions = vi.fn().mockResolvedValue(resolvedOptions);
+    const onFilterChange = vi.fn();
+    render(
+      <FilterSidebar
+        filterProperties={[REMOTE_PROP]}
+        filters={{}}
+        onFilterChange={onFilterChange}
+        loadRemoteOptions={loadRemoteOptions}
+      />,
+    );
+
+    // Wait for options to load
+    await screen.findByRole("combobox");
+    // Open the select
+    await user.click(screen.getByRole("combobox"));
+    // Click the first option
+    await user.click(await screen.findByText("Electronics"));
+    expect(onFilterChange).toHaveBeenCalledWith(
+      "category",
+      "https://api.example.com/categories/electronics",
+    );
   });
 });

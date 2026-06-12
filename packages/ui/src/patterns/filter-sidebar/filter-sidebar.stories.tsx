@@ -11,10 +11,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Note: FilterSidebar renders inputs only for "select" (inline options) and "date" / date-suffix
-// type properties. Plain string properties without options fall through to null in the component
-// — confirmed by filter-sidebar.test.tsx. Text-based searching is typically handled elsewhere
-// (e.g. a top-level search bar).
+// Note: FilterSidebar renders inputs for "select" (inline options), "remote-select"
+// (remote link options, requires loadRemoteOptions callback), and "date" / date-suffix type
+// properties. Plain string properties without options fall through to a text input.
 
 export const Default: Story = {
   args: {
@@ -23,7 +22,14 @@ export const Default: Story = {
         name: "status",
         prompt: "Status",
         type: "string",
-        options: { inline: ["draft", "pending", "paid", "cancelled"] },
+        options: {
+          inline: [
+            { value: "draft", prompt: "draft" },
+            { value: "pending", prompt: "pending" },
+            { value: "paid", prompt: "paid" },
+            { value: "cancelled", prompt: "cancelled" },
+          ],
+        },
       },
       { name: "issued_date~greater-than", type: "string" },
     ],
@@ -39,7 +45,13 @@ export const WithActiveFilters: Story = {
         name: "status",
         prompt: "Status",
         type: "string",
-        options: { inline: ["draft", "pending", "paid"] },
+        options: {
+          inline: [
+            { value: "draft", prompt: "draft" },
+            { value: "pending", prompt: "pending" },
+            { value: "paid", prompt: "paid" },
+          ],
+        },
       },
       { name: "issued_date~greater-than", type: "string" },
     ],
@@ -56,7 +68,14 @@ export const WithEnumFilter: Story = {
         name: "status",
         prompt: "Status",
         type: "string",
-        options: { inline: ["draft", "pending", "paid", "cancelled"] },
+        options: {
+          inline: [
+            { value: "draft", prompt: "draft" },
+            { value: "pending", prompt: "pending" },
+            { value: "paid", prompt: "paid" },
+            { value: "cancelled", prompt: "cancelled" },
+          ],
+        },
       },
     ],
     filters: {},
@@ -82,7 +101,13 @@ export const WithMixedFilters: Story = {
         name: "status",
         prompt: "Status",
         type: "string",
-        options: { inline: ["draft", "pending", "paid"] },
+        options: {
+          inline: [
+            { value: "draft", prompt: "draft" },
+            { value: "pending", prompt: "pending" },
+            { value: "paid", prompt: "paid" },
+          ],
+        },
       },
       { name: "issued_date~greater-than", type: "string" },
       { name: "issued_date~less-than", type: "string" },
@@ -141,7 +166,13 @@ export const ClearAllInteraction: Story = {
         name: "status",
         prompt: "Status",
         type: "string",
-        options: { inline: ["draft", "pending", "paid"] },
+        options: {
+          inline: [
+            { value: "draft", prompt: "draft" },
+            { value: "pending", prompt: "pending" },
+            { value: "paid", prompt: "paid" },
+          ],
+        },
       },
     ],
     filters: { status: "paid" },

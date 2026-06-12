@@ -25,3 +25,4 @@ export { useSavedSearches } from "./use-saved-searches";
 export type { SavedSearch } from "./use-saved-searches";
 export { useSearchSuggestions } from "./use-search-suggestions";
 export type { UseSearchSuggestionsOptions } from "./use-search-suggestions";
+export { useRemoteOptions } from "./use-remote-options";

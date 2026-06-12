@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { blueprintRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import type {
+  CreateFormField,
   CreateFormRelation,
   EntityAttribute,
   EntityRelation,
   EntitySchema,
+  OptionEntry,
   SearchProperty,
   SortOption,
 } from "../types/entity";
@@ -29,6 +31,40 @@ interface RawRelation {
   title?: string;
   many_source_per_target: boolean;
   many_target_per_source: boolean;
+}
+
+/** Raw HAL-FORMS template property shape (superset — carries all optional fields). */
+interface RawTemplateProperty {
+  name: string;
+  prompt?: string;
+  type: string;
+  required?: boolean;
+  readOnly?: boolean;
+  pattern?: string;
+  maxItems?: number;
+  options?: {
+    inline?: Array<string | { value?: string; prompt?: string; property?: string }>;
+    link?: { href: string };
+  };
+}
+
+/**
+ * Normalise inline option entries to { value, prompt } pairs.
+ * Accepts plain strings (value === prompt) and objects with value/prompt fields.
+ * Entries that are objects without a resolvable value are silently dropped.
+ */
+function normaliseInlineOptions(
+  raw: Array<string | { value?: string; prompt?: string; property?: string }>,
+): OptionEntry[] {
+  return raw.flatMap((entry) => {
+    if (typeof entry === "string") {
+      return [{ value: entry, prompt: entry }];
+    }
+    if (entry.value) {
+      return [{ value: entry.value, prompt: entry.prompt ?? entry.value }];
+    }
+    return [];
+  });
 }
 
 export async function fetchEntitySchema(
@@ -89,36 +125,44 @@ export async function fetchEntitySchema(
   });
 
   const templates = (object.data as Record<string, unknown>)._templates as
-    | Record<
-        string,
-        {
-          properties?: Array<{
-            name: string;
-            prompt?: string;
-            type: string;
-            required?: boolean;
-            maxItems?: number;
-            options?: {
-              inline?: Array<string | { property: string }>;
-              link?: { href: string };
-            };
-          }>;
-        }
-      >
+    | Record<string, { properties?: RawTemplateProperty[] }>
     | undefined;
+
+  // ---------------------------------------------------------------------------
+  // Search properties — carry both inline (normalised) and remote link options
+  // plus basic constraint fields (required, readOnly) from the template.
+  // ---------------------------------------------------------------------------
 
   const searchProps = templates?.search?.properties ?? [];
   const searchProperties: SearchProperty[] = searchProps
     .filter((p) => p.name !== "_sort")
-    .map((p) => ({
-      name: p.name,
-      prompt: p.prompt,
-      type: p.type,
-      options:
-        Array.isArray(p.options?.inline) && p.options?.inline.every((v) => typeof v === "string")
-          ? { inline: p.options.inline }
+    .map((p): SearchProperty => {
+      const inlineRaw = p.options?.inline;
+      const inlineEntries =
+        Array.isArray(inlineRaw) && inlineRaw.length > 0
+          ? normaliseInlineOptions(inlineRaw)
+          : undefined;
+      const linkHref = p.options?.link?.href;
+      const hasOptions = inlineEntries !== undefined || linkHref !== undefined;
+
+      return {
+        name: p.name,
+        prompt: p.prompt,
+        type: p.type,
+        options: hasOptions
+          ? {
+              ...(inlineEntries !== undefined ? { inline: inlineEntries } : {}),
+              ...(linkHref !== undefined ? { link: { href: linkHref } } : {}),
+            }
           : undefined,
-    }));
+        required: p.required,
+        readOnly: p.readOnly,
+      };
+    });
+
+  // ---------------------------------------------------------------------------
+  // Sort options
+  // ---------------------------------------------------------------------------
 
   const sortProp = searchProps.find((p) => p.name === "_sort");
   const sortInline = sortProp?.options?.inline ?? [];
@@ -136,7 +180,13 @@ export async function fetchEntitySchema(
 
   const sortableFields = [...new Set(sortOptions.map((o) => o.property))];
 
+  // ---------------------------------------------------------------------------
+  // Create-form properties — split into relation fields and regular fields,
+  // both carrying full constraint metadata from the template.
+  // ---------------------------------------------------------------------------
+
   const createFormProps = templates?.["create-form"]?.properties ?? [];
+
   const createFormRelations: CreateFormRelation[] = createFormProps
     .filter((p) => p.type === "url" && p.options?.link?.href)
     .map((p) => {
@@ -152,6 +202,28 @@ export async function fetchEntitySchema(
       };
     });
 
+  const createFormFields: CreateFormField[] = createFormProps
+    .filter((p) => p.type !== "url")
+    .map((p): CreateFormField => {
+      const inlineRaw = p.options?.inline;
+      const inlineEntries =
+        Array.isArray(inlineRaw) && inlineRaw.length > 0
+          ? normaliseInlineOptions(inlineRaw)
+          : undefined;
+      const optionsLinkHref = p.options?.link?.href;
+
+      return {
+        name: p.name,
+        prompt: p.prompt,
+        type: p.type,
+        required: p.required ?? false,
+        readOnly: p.readOnly ?? false,
+        ...(inlineEntries !== undefined ? { allowedValues: inlineEntries } : {}),
+        ...(optionsLinkHref !== undefined ? { optionsLink: { href: optionsLinkHref } } : {}),
+        ...(p.pattern !== undefined ? { pattern: p.pattern } : {}),
+      };
+    });
+
   const description = (object.data as Record<string, unknown>).description as string | undefined;
 
   return {
@@ -162,6 +234,7 @@ export async function fetchEntitySchema(
     sortableFields,
     sortOptions,
     createFormRelations,
+    createFormFields,
   };
 }
 

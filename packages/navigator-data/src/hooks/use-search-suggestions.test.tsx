@@ -12,7 +12,13 @@ const prefixProp: SearchProperty = { name: "number~prefix", type: "text" };
 const enumProp: SearchProperty = {
   name: "status",
   type: "text",
-  options: { inline: ["draft", "sent", "paid"] },
+  options: {
+    inline: [
+      { value: "draft", prompt: "draft" },
+      { value: "sent", prompt: "sent" },
+      { value: "paid", prompt: "paid" },
+    ],
+  },
 };
 const exactProp: SearchProperty = { name: "ref", type: "text" };
 

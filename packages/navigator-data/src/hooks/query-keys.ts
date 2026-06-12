@@ -10,4 +10,5 @@ export const queryKeys = {
   entityCount: (entityName: string) => ["entity-count", entityName] as const,
   searchSuggestions: (entityName: string, field: string, query: string) =>
     ["search-suggestions", entityName, field, query] as const,
+  remoteOptions: (href: string) => ["remote-options", href] as const,
 };
