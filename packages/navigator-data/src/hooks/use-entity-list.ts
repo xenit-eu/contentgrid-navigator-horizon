@@ -91,12 +91,11 @@ function encodeSearchUrl(
 }
 
 /**
- * Legacy first-page URL construction via a hand-built query string.
- *
- * @deprecated Violates HAL-FORMS affordance rule 7 — retained only for callers
- * that do not resolve the profile's search template yet (use-cross-entity-search,
- * use-recent-items, use-recent-activity). Migrate those to pass a resolved
- * search template to {@link fetchEntityList} and then remove this.
+ * Legacy first-page URL construction via a hand-built query string — only for
+ * fetchEntityList callers not yet migrated to the search template
+ * (use-cross-entity-search, use-recent-items, use-recent-activity,
+ * use-entity-status-breakdown). Migrate those to pass a resolved search
+ * template to {@link fetchEntityList} and remove this (affordance rule 7).
  */
 function buildLegacyCollectionUrl(collectionHref: string, params: EntityListParams): string {
   const searchParams = new URLSearchParams();
