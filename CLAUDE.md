@@ -384,4 +384,6 @@ Signature verification: RS256; public keys at `GET ${CONTENTGRID_URL}/.well-know
 - **Never derive URLs from path conventions**: collection URLs come from `cg:entity` links; item URLs from expanding the profile's templated `describes` link; relation/content URLs from `cg:relation`/`cg:content` links on the entity item. Do NOT string-build or regex-replace any URL.
 - **IDs from the `id` field only**: never parse an entity ID out of a self href.
 - **No hardcoded attribute names**: detect content attributes via `blueprint:attribute type: "content"`; discover audit-role fields via `blueprint:constraint` system-managed types (`created-date`, `created-by`, `modified-date`, `modified-by`). Attribute names are customer-defined and not stable.
+- ** Search operations ** should be executed trough the `search` template that is present on collectionUrl or the entity profile.   
+
 - For the full data-layer rules see [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
