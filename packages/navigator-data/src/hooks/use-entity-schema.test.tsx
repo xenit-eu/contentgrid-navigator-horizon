@@ -6,9 +6,11 @@ import {
   BASE,
   INVOICE_ENTITY,
   ROOT_URL,
+  makeQueryClient,
   makeWrapper,
   mockProfileResponse,
   mockRootResponse,
+  seedProfile,
 } from "./test-utils";
 import { useEntitySchema } from "./use-entity-schema";
 
@@ -149,6 +151,11 @@ describe("useEntitySchema", () => {
     expect(schema.searchProperties.some((p) => p.name === "number~prefix")).toBe(true);
     expect(schema.sortOptions[0].property).toBe("number");
     expect(schema.createFormRelations[0].name).toBe("customer");
+    // The raw search template is resolved via @contentgrid/hal-forms so list
+    // queries can encode search params through it (affordance rule 7)
+    expect(schema.searchTemplate).not.toBeNull();
+    expect(schema.searchTemplate!.request.method).toBe("GET");
+    expect(schema.searchTemplate!.properties.map((p) => p.name)).toContain("number~prefix");
   });
 
   it("is not enabled when entity is not in profile", () => {
@@ -369,5 +376,25 @@ describe("useEntitySchema", () => {
     expect(result.current.data!.relations).toEqual([]);
     expect(result.current.data!.searchProperties).toEqual([]);
     expect(result.current.data!.createFormRelations).toEqual([]);
+    // No _templates.search → search is not permitted (affordance rule 2)
+    expect(result.current.data!.searchTemplate).toBeNull();
+  });
+
+  it("does not fetch the entity profile when the enabled option is false", async () => {
+    // Profile is seeded so useProfile resolves without HTTP; no handler is
+    // registered for PROFILE_HREF — an attempted fetch would fail the
+    // unhandled-request check in test-setup.
+    const queryClient = makeQueryClient();
+    seedProfile(queryClient);
+
+    const { result } = renderHook(() => useEntitySchema("invoice", { enabled: false }), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    // Give the query a tick to (incorrectly) start fetching if enabled were ignored
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 });

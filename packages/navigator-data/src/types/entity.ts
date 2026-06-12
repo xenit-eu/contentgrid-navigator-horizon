@@ -1,3 +1,15 @@
+import type { HalFormsTemplate } from "@contentgrid/hal-forms";
+import type { TypedRequestSpec } from "@contentgrid/typed-fetch";
+
+/**
+ * HAL-FORMS `search` template resolved from the entity profile (`_templates.search`).
+ * Searches are executed by encoding values through this template via the
+ * hal-forms codecs — never by hand-building query URLs (affordance rule 7).
+ * Null when the profile exposes no search template, which means search is not
+ * permitted for this entity/user (affordance rule 2).
+ */
+export type SearchTemplate = HalFormsTemplate<TypedRequestSpec<unknown, unknown>>;
+
 export interface EntityInfo {
   name: string;
   title: string;
@@ -63,4 +75,6 @@ export interface EntitySchema {
   sortableFields: string[];
   sortOptions: SortOption[];
   createFormRelations: CreateFormRelation[];
+  /** Resolved `_templates.search` template, or null when the profile has none. */
+  searchTemplate: SearchTemplate | null;
 }

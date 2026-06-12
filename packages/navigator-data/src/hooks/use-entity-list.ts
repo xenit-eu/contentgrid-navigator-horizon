@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import halFormCodecs from "@contentgrid/hal-forms/codecs";
+import { createValues } from "@contentgrid/hal-forms/values";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { fetchHalSlice } from "../api/hal-client";
+import type { SearchTemplate } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
+import { useEntitySchema } from "./use-entity-schema";
 import { useProfile } from "./use-profile";
 
 export interface EntityListParams {
@@ -28,27 +32,100 @@ export interface EntityListResult {
   prevHref?: string;
 }
 
-function buildCollectionUrl(collectionHref: string, params: EntityListParams): string {
-  if (params.cursor) return params.cursor;
+/**
+ * Collects the search-affecting params as [property, value] entries in the
+ * shape of the profile's `search` template properties (`_sort`, search params,
+ * exact-match filters). Empty values are skipped.
+ */
+function activeSearchEntries(params: EntityListParams): Array<[string, string]> {
+  const entries: Array<[string, string]> = [];
+  if (params.sort) entries.push(["_sort", params.sort]);
+  if (params.search && params.searchField) entries.push([params.searchField, params.search]);
+  for (const [key, value] of Object.entries(params.filters ?? {})) {
+    if (value) entries.push([key, value]);
+  }
+  return entries;
+}
+
+/**
+ * Appends the first-page `size` param. The platform documents `size` as a
+ * pagination query param on the first page, distinct from the search form,
+ * so it is set on the final URL rather than through the search template.
+ */
+function withSizeParam(url: string, size?: number): string {
+  if (size == null) return url;
+  const sized = new URL(url);
+  sized.searchParams.set("size", String(size));
+  return sized.href;
+}
+
+/**
+ * Encodes the active search params through the profile's `search` template
+ * (HAL-FORMS GET form) using the hal-forms codecs — never by hand-building
+ * query strings (affordance rule 7). Params that are not properties of the
+ * template are skipped: the template is the contract for what is searchable.
+ * When the profile exposes no search template, search is not permitted
+ * (affordance rule 2) and the plain collection URL is used.
+ */
+function encodeSearchUrl(
+  collectionHref: string,
+  params: EntityListParams,
+  searchTemplate: SearchTemplate | null,
+): string {
+  const entries = activeSearchEntries(params);
+  if (entries.length === 0 || searchTemplate === null) {
+    return withSizeParam(collectionHref, params.size);
+  }
+
+  const supported = new Set(searchTemplate.properties.map((p) => p.name));
+  let values = createValues(searchTemplate);
+  for (const [name, value] of entries) {
+    if (supported.has(name)) {
+      values = values.withValue(name, value);
+    }
+  }
+
+  // The codec encodes GET form values onto the template target's query string.
+  const request = halFormCodecs.requireCodecFor(searchTemplate).encode(values);
+  return withSizeParam(request.url, params.size);
+}
+
+/**
+ * Legacy first-page URL construction via a hand-built query string.
+ *
+ * @deprecated Violates HAL-FORMS affordance rule 7 — retained only for callers
+ * that do not resolve the profile's search template yet (use-cross-entity-search,
+ * use-recent-items, use-recent-activity). Migrate those to pass a resolved
+ * search template to {@link fetchEntityList} and then remove this.
+ */
+function buildLegacyCollectionUrl(collectionHref: string, params: EntityListParams): string {
   const searchParams = new URLSearchParams();
   if (params.size != null) searchParams.set("size", String(params.size));
-  if (params.sort) searchParams.set("_sort", params.sort);
-  if (params.search && params.searchField) searchParams.set(params.searchField, params.search);
-  if (params.filters) {
-    for (const [key, value] of Object.entries(params.filters)) {
-      if (value) searchParams.set(key, value);
-    }
+  for (const [key, value] of activeSearchEntries(params)) {
+    searchParams.set(key, value);
   }
   const qs = searchParams.toString();
   return qs ? `${collectionHref}?${qs}` : collectionHref;
+}
+
+function buildCollectionUrl(
+  collectionHref: string,
+  params: EntityListParams,
+  searchTemplate?: SearchTemplate | null,
+): string {
+  // Cursor params are full hrefs from HAL next/prev links — follow them verbatim.
+  if (params.cursor) return params.cursor;
+  if (searchTemplate === undefined) return buildLegacyCollectionUrl(collectionHref, params);
+  return encodeSearchUrl(collectionHref, params, searchTemplate);
 }
 
 export async function fetchEntityList(
   apiFetch: Parameters<typeof fetchHalSlice>[0],
   collectionHref: string,
   params: EntityListParams,
+  searchTemplate?: SearchTemplate | null,
 ): Promise<EntityListResult> {
-  const url = buildCollectionUrl(collectionHref, params);
+  const url = buildCollectionUrl(collectionHref, params, searchTemplate);
   const slice = await fetchHalSlice<Record<string, unknown>>(apiFetch, url);
 
   const items = slice.items.map((item) => {
@@ -90,9 +167,18 @@ export function useEntityList(entityName: string, params: EntityListParams) {
   const entity = entities?.find((e) => e.name === entityName);
   const collectionHref = entity?.collectionHref;
 
+  // The search template is only needed for first-page requests with active
+  // search params; cursor pages follow the HAL next/prev href verbatim.
+  const needsSearchTemplate = !params.cursor && activeSearchEntries(params).length > 0;
+  const schemaQuery = useEntitySchema(entityName, { enabled: needsSearchTemplate });
+  const searchTemplate = schemaQuery.data?.searchTemplate ?? null;
+  // Wait for the template before a search request; when the schema fetch
+  // errored, degrade to an unfiltered list rather than blocking forever.
+  const searchTemplateReady = needsSearchTemplate ? schemaQuery.isFetched : true;
+
   return useQuery({
     queryKey: queryKeys.entityList(entityName, params as Record<string, unknown>),
-    queryFn: () => fetchEntityList(apiFetch, collectionHref as string, params),
-    enabled: !!entityName && !!collectionHref,
+    queryFn: () => fetchEntityList(apiFetch, collectionHref as string, params, searchTemplate),
+    enabled: !!entityName && !!collectionHref && searchTemplateReady,
   });
 }

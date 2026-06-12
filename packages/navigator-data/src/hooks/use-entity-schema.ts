@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
 import { blueprintRels } from "../api/contentgrid-rels";
-import { fetchHal } from "../api/hal-client";
+import { fetchHal, resolveTemplate } from "../api/hal-client";
 import type {
   CreateFormRelation,
   EntityAttribute,
@@ -30,6 +31,14 @@ interface RawRelation {
   many_source_per_target: boolean;
   many_target_per_source: boolean;
 }
+
+/** Raw profile shape narrowed to what resolveTemplate needs to find `_templates.search`. */
+type ProfileTemplatesShape = HalObjectWithTemplateShape<
+  Record<string, unknown>,
+  "search",
+  unknown,
+  unknown
+>;
 
 export async function fetchEntitySchema(
   apiFetch: Parameters<typeof fetchHal>[0],
@@ -158,6 +167,10 @@ export async function fetchEntitySchema(
 
   const description = (object.data as Record<string, unknown>).description as string | undefined;
 
+  // Resolve the search template via @contentgrid/hal-forms. Null when absent —
+  // search is then not permitted for this entity/user (affordance rule 2).
+  const searchTemplate = resolveTemplate(object.data as ProfileTemplatesShape, "search");
+
   return {
     description,
     attributes,
@@ -166,10 +179,11 @@ export async function fetchEntitySchema(
     sortableFields,
     sortOptions,
     createFormRelations,
+    searchTemplate,
   };
 }
 
-export function useEntitySchema(entityName: string) {
+export function useEntitySchema(entityName: string, options?: { enabled?: boolean }) {
   const { apiFetch } = useNavigatorData();
   const { data: entities } = useProfile();
   // Match by link name (singular entity name from the profile root cg:entity link).
@@ -181,6 +195,6 @@ export function useEntitySchema(entityName: string) {
     queryKey: queryKeys.entitySchema(entityName),
     queryFn: () => fetchEntitySchema(apiFetch, entity!.href),
     staleTime: Infinity,
-    enabled: !!entityName && !!entity,
+    enabled: (options?.enabled ?? true) && !!entityName && !!entity,
   });
 }

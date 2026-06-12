@@ -6,12 +6,29 @@ import { describe, expect, it } from "vitest";
 import { server } from "../../test-setup";
 import { type AuthenticationTokenSupplier, createApiClient } from "../api/client";
 import { NavigatorDataProvider } from "./context";
-import { useEntityList } from "./use-entity-list";
+import { fetchEntityList, useEntityList } from "./use-entity-list";
 
 const BASE = "https://api.example.com";
 const PROFILE_URL = `${BASE}/profile`;
 const ROOT_URL = `${BASE}/`;
 const COLLECTION_URL = `${BASE}/invoices`;
+const ENTITY_PROFILE_URL = `${BASE}/profile/invoices`;
+
+/**
+ * Search template as exposed by the platform on the entity profile
+ * (_templates.search). Target is the collection URL; properties define the
+ * contract for what is searchable. `customer` is deliberately NOT a property —
+ * unsupported params must be skipped by the encoder.
+ */
+const SEARCH_TEMPLATE = {
+  method: "GET",
+  target: COLLECTION_URL,
+  properties: [
+    { name: "_sort", type: "text" },
+    { name: "number~prefix", type: "text" },
+    { name: "status", type: "text" },
+  ],
+};
 
 const noopSupplier: AuthenticationTokenSupplier = async () => ({
   token: "test-token",
@@ -70,6 +87,24 @@ function mockProfile() {
           ],
         },
         _templates: {},
+      }),
+    ),
+  );
+}
+
+/**
+ * Registers the entity profile handler (GET /profile/invoices).
+ * Pass a search template to expose _templates.search; omit it to model an
+ * entity profile where search is not permitted (no search template).
+ */
+function mockEntityProfile(searchTemplate?: Record<string, unknown>) {
+  server.use(
+    http.get(ENTITY_PROFILE_URL, () =>
+      HttpResponse.json({
+        name: "invoice",
+        title: "Invoice",
+        _links: { self: { href: ENTITY_PROFILE_URL } },
+        _templates: searchTemplate ? { search: searchTemplate } : {},
       }),
     ),
   );
@@ -162,8 +197,9 @@ describe("useEntityList", () => {
     expect(result.current.data!.nextHref).toBe(`${COLLECTION_URL}?_cursor=abc`);
   });
 
-  it("builds the collection URL from size, sort, search and filters params", async () => {
+  it("encodes sort, search and filters through the profile's search template", async () => {
     mockProfile();
+    mockEntityProfile(SEARCH_TEMPLATE);
     let requestedUrl = "";
     server.use(
       http.get(COLLECTION_URL, ({ request }) => {
@@ -183,7 +219,8 @@ describe("useEntityList", () => {
           sort: "number,asc",
           search: "INV",
           searchField: "number~prefix",
-          // One truthy filter (must be set) and one empty filter (must be skipped)
+          // One truthy filter (set via the template), one empty filter (skipped)
+          // and one filter that is not a property of the search template (skipped).
           filters: { status: "draft", customer: "" },
         }),
       { wrapper: makeWrapper() },
@@ -192,11 +229,138 @@ describe("useEntityList", () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const url = new URL(requestedUrl);
+    // size is a first-page pagination param, appended outside the search form
     expect(url.searchParams.get("size")).toBe("5");
     expect(url.searchParams.get("_sort")).toBe("number,asc");
     expect(url.searchParams.get("number~prefix")).toBe("INV");
     expect(url.searchParams.get("status")).toBe("draft");
     // Empty filter values are skipped
+    expect(url.searchParams.has("customer")).toBe(false);
+  });
+
+  it("skips params that are not properties of the search template", async () => {
+    mockProfile();
+    mockEntityProfile(SEARCH_TEMPLATE);
+    let requestedUrl = "";
+    server.use(
+      http.get(COLLECTION_URL, ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json({
+          _links: { self: { href: COLLECTION_URL } },
+          _embedded: { item: [] },
+          page: { size: 20, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    const { result } = renderHook(
+      // "bogus" is not a property of the search template — the template is the
+      // contract for what is searchable, so the param must not be sent.
+      () => useEntityList("invoice", { filters: { status: "draft", bogus: "x" } }),
+      { wrapper: makeWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const url = new URL(requestedUrl);
+    expect(url.searchParams.get("status")).toBe("draft");
+    expect(url.searchParams.has("bogus")).toBe(false);
+  });
+
+  it("omits all search params when the profile exposes no search template", async () => {
+    mockProfile();
+    // Entity profile without _templates.search — search is not permitted
+    mockEntityProfile();
+    let requestedUrl = "";
+    server.use(
+      http.get(COLLECTION_URL, ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json({
+          _links: { self: { href: COLLECTION_URL } },
+          _embedded: { item: [] },
+          page: { size: 5, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    const { result } = renderHook(
+      () => useEntityList("invoice", { size: 5, sort: "number,asc", filters: { status: "x" } }),
+      { wrapper: makeWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const url = new URL(requestedUrl);
+    // Only the pagination param survives; search affordance is absent
+    expect(url.searchParams.get("size")).toBe("5");
+    expect(url.searchParams.has("_sort")).toBe(false);
+    expect(url.searchParams.has("status")).toBe(false);
+  });
+
+  it("degrades to an unfiltered list when the entity profile request fails", async () => {
+    mockProfile();
+    server.use(
+      http.get(ENTITY_PROFILE_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    let requestedUrl = "";
+    server.use(
+      http.get(COLLECTION_URL, ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json({
+          _links: { self: { href: COLLECTION_URL } },
+          _embedded: { item: [] },
+          page: { size: 20, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    const { result } = renderHook(
+      () => useEntityList("invoice", { filters: { status: "draft" } }),
+      { wrapper: makeWrapper() },
+    );
+
+    // The list still loads (unfiltered) instead of blocking forever
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const url = new URL(requestedUrl);
+    expect(url.searchParams.has("status")).toBe(false);
+  });
+
+  it("keeps legacy manual query construction when fetchEntityList is called without a template", async () => {
+    // Direct callers that have not migrated to the search template yet
+    // (use-cross-entity-search, use-recent-items, use-recent-activity)
+    // omit the searchTemplate argument and keep their existing behavior.
+    let requestedUrl = "";
+    server.use(
+      http.get(COLLECTION_URL, ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json({
+          _links: { self: { href: COLLECTION_URL } },
+          _embedded: { item: [] },
+          page: { size: 5, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    const apiFetch = createApiClient(noopSupplier);
+    await fetchEntityList(apiFetch, COLLECTION_URL, {
+      size: 5,
+      sort: "number,asc",
+      search: "INV",
+      searchField: "number~prefix",
+      filters: { status: "draft", customer: "" },
+    });
+
+    const url = new URL(requestedUrl);
+    expect(url.searchParams.get("size")).toBe("5");
+    expect(url.searchParams.get("_sort")).toBe("number,asc");
+    expect(url.searchParams.get("number~prefix")).toBe("INV");
+    expect(url.searchParams.get("status")).toBe("draft");
     expect(url.searchParams.has("customer")).toBe(false);
   });
 
