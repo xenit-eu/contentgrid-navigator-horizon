@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
-import type { EntitySchema } from "../types/entity";
+import type { AuditRoles, EntitySchema } from "../types/entity";
 import { findNameAttribute } from "../utils/entity-display-name";
 import { convertToString } from "../utils/format";
 import { useNavigatorData } from "./context";
@@ -71,13 +71,20 @@ export function useRecentActivity() {
         if (!schema) return null;
         const auditAttr = schema.attributes.find((a) => a.type === "audit_metadata");
         if (!auditAttr) return null;
-        const auditSortField = schema.sortableFields.find((f) => f.includes("last_modified_date"));
+        const auditRoles = auditAttr.auditRoles ?? {};
+        // Sort by the profile-discovered modified-date sub-attribute name, not a
+        // hardcoded "last_modified_date" string.
+        const modifiedDateField = auditRoles["modified-date"];
+        const auditSortField = modifiedDateField
+          ? schema.sortableFields.find((f) => f.includes(modifiedDateField))
+          : undefined;
         const sortField = auditSortField ?? schema.sortableFields[0];
-        return { entity, auditAttrName: auditAttr.name, sortField, schema };
+        return { entity, auditAttrName: auditAttr.name, auditRoles, sortField, schema };
       })
       .filter(Boolean) as Array<{
       entity: { name: string; title: string; collectionHref: string };
       auditAttrName: string;
+      auditRoles: AuditRoles;
       sortField: string | undefined;
       schema: EntitySchema;
     }>;
@@ -100,7 +107,7 @@ export function useRecentActivity() {
   const activities: RecentActivityItem[] = useMemo(() => {
     const allItems: RecentActivityItem[] = [];
 
-    auditEntities.forEach(({ entity, auditAttrName, schema }, i) => {
+    auditEntities.forEach(({ entity, auditAttrName, auditRoles, schema }, i) => {
       const data = activityQueries[i]?.data;
       if (!data) return;
 
@@ -111,23 +118,37 @@ export function useRecentActivity() {
         return isDisplayableScalar(a.type);
       });
 
-      data.items.forEach((item: EntityListResult["items"][number]) => {
-        const auditData = item.data[auditAttrName] as
-          | {
-              last_modified_by?: string;
-              last_modified_date?: string;
-              created_by?: string;
-              created_date?: string;
-            }
-          | undefined;
+      // Resolve the actual sub-attribute names from the profile-discovered audit
+      // roles instead of assuming literal field names.
+      const createdDateField = auditRoles["created-date"];
+      const createdByField = auditRoles["created-by"];
+      const modifiedDateField = auditRoles["modified-date"];
+      const modifiedByField = auditRoles["modified-by"];
 
-        const modifiedDate = auditData?.last_modified_date ?? auditData?.created_date;
+      data.items.forEach((item: EntityListResult["items"][number]) => {
+        const auditData = item.data[auditAttrName] as Record<string, unknown> | undefined;
+
+        // Prefer the modified-date; fall back to created-date if only one is available.
+        const modifiedDate =
+          (modifiedDateField != null
+            ? (auditData?.[modifiedDateField] as string | undefined)
+            : undefined) ??
+          (createdDateField != null
+            ? (auditData?.[createdDateField] as string | undefined)
+            : undefined);
         if (!modifiedDate) return;
 
+        const createdDateVal =
+          createdDateField != null
+            ? (auditData?.[createdDateField] as string | undefined)
+            : undefined;
+        const modifiedDateVal =
+          modifiedDateField != null
+            ? (auditData?.[modifiedDateField] as string | undefined)
+            : undefined;
+
         const action: "created" | "modified" =
-          auditData?.created_date &&
-          auditData?.last_modified_date &&
-          auditData.created_date !== auditData.last_modified_date
+          createdDateVal && modifiedDateVal && createdDateVal !== modifiedDateVal
             ? "modified"
             : "created";
 
@@ -135,13 +156,20 @@ export function useRecentActivity() {
         const displayName = typeof nameVal === "string" && nameVal ? nameVal : item.id;
         const details: RecentActivityDetail[] = buildDetails(detailAttrs, item.data);
 
+        const modifiedByVal =
+          modifiedByField != null
+            ? (auditData?.[modifiedByField] as string | undefined)
+            : undefined;
+        const createdByVal =
+          createdByField != null ? (auditData?.[createdByField] as string | undefined) : undefined;
+
         allItems.push({
           entityName: entity.name,
           entityTitle: entity.title,
           itemId: item.id,
           displayName,
           action,
-          modifiedBy: auditData?.last_modified_by ?? auditData?.created_by,
+          modifiedBy: modifiedByVal ?? createdByVal,
           modifiedDate,
           details,
         });

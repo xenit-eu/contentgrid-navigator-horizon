@@ -249,7 +249,7 @@
               "readOnly": true,
               "required": false,
               "_embedded": {
-                "blueprint:constraint": [],
+                "blueprint:constraint": [{ "type": "created-by" }],
                 "blueprint:search-param": [],
                 "blueprint:attribute": []
               },
@@ -263,7 +263,7 @@
               "readOnly": true,
               "required": false,
               "_embedded": {
-                "blueprint:constraint": [],
+                "blueprint:constraint": [{ "type": "created-date" }],
                 "blueprint:search-param": [],
                 "blueprint:attribute": []
               },
@@ -277,7 +277,7 @@
               "readOnly": true,
               "required": false,
               "_embedded": {
-                "blueprint:constraint": [],
+                "blueprint:constraint": [{ "type": "modified-by" }],
                 "blueprint:search-param": [],
                 "blueprint:attribute": []
               },
@@ -291,7 +291,7 @@
               "readOnly": true,
               "required": false,
               "_embedded": {
-                "blueprint:constraint": [],
+                "blueprint:constraint": [{ "type": "modified-date" }],
                 "blueprint:search-param": [],
                 "blueprint:attribute": []
               },

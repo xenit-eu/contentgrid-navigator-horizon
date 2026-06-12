@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
-import type { EntitySchema } from "../types/entity";
+import type { AuditRoles, EntitySchema } from "../types/entity";
 import { findNameAttribute } from "../utils/entity-display-name";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
@@ -36,19 +36,26 @@ export function useRecentlyCreated() {
         const schema = schemaQueries[i]?.data as EntitySchema | undefined;
         if (!schema) return null;
         const auditAttr = schema.attributes.find((a) => a.type === "audit_metadata");
+        const auditRoles = auditAttr?.auditRoles;
         let sortField: string | undefined;
         if (auditAttr) {
+          // Prefer sorting by the modified-date role if available; fall back to
+          // any known sortable field.  We search sortableFields by the discovered
+          // modified-date sub-attribute name (not a hardcoded string).
+          const modifiedDateField = auditRoles?.["modified-date"];
           sortField =
-            schema.sortableFields.find((f) => f.includes("last_modified_date")) ??
-            schema.sortableFields[0];
+            (modifiedDateField
+              ? schema.sortableFields.find((f) => f.includes(modifiedDateField))
+              : undefined) ?? schema.sortableFields[0];
         } else {
           sortField = schema.sortableFields[0];
         }
-        return { entity, auditAttrName: auditAttr?.name, sortField, schema };
+        return { entity, auditAttrName: auditAttr?.name, auditRoles, sortField, schema };
       })
       .filter(Boolean) as Array<{
       entity: { name: string; title: string; collectionHref: string };
       auditAttrName: string | undefined;
+      auditRoles: AuditRoles | undefined;
       sortField: string | undefined;
       schema: EntitySchema;
     }>;
@@ -72,18 +79,28 @@ export function useRecentlyCreated() {
     const withDate: RecentlyCreatedItem[] = [];
     const withoutDate: RecentlyCreatedItem[] = [];
 
-    allEntities.forEach(({ entity, auditAttrName, schema }, i) => {
+    allEntities.forEach(({ entity, auditAttrName, auditRoles, schema }, i) => {
       const data = createdQueries[i]?.data;
       if (!data) return;
 
       const nameAttr = findNameAttribute(schema.attributes);
 
       data.items.forEach((item) => {
-        const auditData = auditAttrName
-          ? (item.data[auditAttrName] as { created_date?: string; created_by?: string } | undefined)
-          : undefined;
+        // Read the audit object from entity data using the discovered attribute name.
+        const auditData =
+          auditAttrName != null
+            ? (item.data[auditAttrName] as Record<string, unknown> | undefined)
+            : undefined;
 
-        const createdDate = auditData?.created_date;
+        // Use the profile-discovered sub-attribute names rather than hardcoded
+        // literals (e.g. "created_date", "created_by").  auditRoles is the
+        // canonical source; gracefully absent when no audit attribute exists.
+        const createdDateField = auditRoles?.["created-date"];
+        const createdByField = auditRoles?.["created-by"];
+        const createdDate =
+          createdDateField != null
+            ? (auditData?.[createdDateField] as string | undefined)
+            : undefined;
         const nameVal = nameAttr ? item.data[nameAttr.name] : undefined;
         const displayName = typeof nameVal === "string" && nameVal ? nameVal : item.id;
         const entry: RecentlyCreatedItem = {
@@ -92,7 +109,10 @@ export function useRecentlyCreated() {
           itemId: item.id,
           displayName,
           createdDate,
-          createdBy: auditData?.created_by,
+          createdBy:
+            createdByField != null
+              ? (auditData?.[createdByField] as string | undefined)
+              : undefined,
         };
 
         if (createdDate) withDate.push(entry);

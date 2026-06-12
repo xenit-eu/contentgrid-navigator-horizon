@@ -1,0 +1,189 @@
+{
+  "name": "audit-custom-names",
+  "title": "Audit Custom Names",
+  "description": "An entity whose audit sub-attributes have non-default names. Used to verify that detection is driven by system-managed constraints, not hardcoded field names.",
+  "_embedded": {
+    "blueprint:attribute": [
+      {
+        "name": "id",
+        "title": "id",
+        "type": "string",
+        "description": null,
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "label",
+        "title": "Label",
+        "type": "string",
+        "description": null,
+        "readOnly": false,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": []
+        },
+        "_links": {}
+      },
+      {
+        "name": "tracking",
+        "title": "Tracking",
+        "type": "object",
+        "description": "Audit object with non-default sub-attribute names.",
+        "readOnly": true,
+        "required": false,
+        "_embedded": {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": [
+            {
+              "name": "author",
+              "title": "Author",
+              "type": "string",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [{ "type": "created-by" }],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "created_at",
+              "title": "Created at",
+              "type": "datetime",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [{ "type": "created-date" }],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "editor",
+              "title": "Editor",
+              "type": "string",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [{ "type": "modified-by" }],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            },
+            {
+              "name": "updated_at",
+              "title": "Updated at",
+              "type": "datetime",
+              "description": null,
+              "readOnly": true,
+              "required": false,
+              "_embedded": {
+                "blueprint:constraint": [{ "type": "modified-date" }],
+                "blueprint:search-param": [],
+                "blueprint:attribute": []
+              },
+              "_links": {}
+            }
+          ]
+        },
+        "_links": {}
+      }
+    ],
+    "blueprint:relation": []
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.example.contentgrid.com/profile/audit-custom-names",
+      "title": "Audit Custom Names"
+    },
+    "describes": [
+      {
+        "href": "https://api.example.contentgrid.com/audit-custom-names",
+        "title": "Audit Custom Names",
+        "profile": "https://api.example.contentgrid.com/profile/audit-custom-names",
+        "name": "collection"
+      },
+      {
+        "href": "https://api.example.contentgrid.com/audit-custom-names/{id}",
+        "title": "Audit Custom Names",
+        "name": "item",
+        "templated": true
+      }
+    ],
+    "curies": [
+      {
+        "href": "https://contentgrid.cloud/rels/contentgrid/{rel}",
+        "name": "cg",
+        "templated": true
+      },
+      {
+        "href": "https://contentgrid.cloud/rels/blueprint/{rel}",
+        "name": "blueprint",
+        "templated": true
+      }
+    ]
+  },
+  "_templates": {
+    "default": {
+      "method": "HEAD",
+      "target": "https://api.example.contentgrid.com/audit-custom-names",
+      "properties": []
+    },
+    "search": {
+      "method": "GET",
+      "target": "https://api.example.contentgrid.com/audit-custom-names",
+      "properties": [
+        {
+          "name": "label",
+          "prompt": "Label",
+          "type": "text"
+        },
+        {
+          "name": "_sort",
+          "prompt": "Sort",
+          "type": "text",
+          "options": {
+            "minItems": 0,
+            "promptField": "prompt",
+            "valueField": "value",
+            "inline": [
+              {
+                "property": "tracking.updated_at",
+                "direction": "desc",
+                "prompt": "Updated at newest first",
+                "value": "tracking.updated_at,desc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "create-form": {
+      "method": "POST",
+      "target": "https://api.example.contentgrid.com/audit-custom-names",
+      "contentType": "application/json",
+      "properties": [
+        {
+          "name": "label",
+          "prompt": "Label",
+          "type": "text"
+        }
+      ]
+    }
+  }
+}

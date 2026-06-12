@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { blueprintRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import type {
+  AuditRoles,
+  AuditSubAttributeRole,
   CreateFormRelation,
   EntityAttribute,
   EntityRelation,
@@ -31,6 +33,18 @@ interface RawRelation {
   many_target_per_source: boolean;
 }
 
+/**
+ * The four constraint types that the platform places on audit sub-attributes.
+ * These are the canonical discriminators — prefer them over probing sub-attribute
+ * names, which are implementation details that could differ across deployments.
+ */
+const AUDIT_CONSTRAINT_TYPES = new Set<string>([
+  "created-date",
+  "created-by",
+  "modified-date",
+  "modified-by",
+]);
+
 export async function fetchEntitySchema(
   apiFetch: Parameters<typeof fetchHal>[0],
   profileHref: string,
@@ -44,13 +58,57 @@ export async function fetchEntitySchema(
     const attr = halObj.data as unknown as RawAttribute;
 
     let type = attr.type;
+    let auditRoles: AuditRoles | undefined;
+
     if (type === "object") {
       const subAttrs = halObj.embedded?.findEmbeddeds(blueprintRels.attribute) ?? [];
-      const subNames = new Set(subAttrs.map((s) => (s.data as { name: string }).name));
-      if (subNames.has("filename") && subNames.has("mimetype") && subNames.has("length")) {
-        type = "content";
-      } else if (subNames.has("created_by") && subNames.has("created_date")) {
+
+      // --- Primary: constraint-driven detection ---
+      // Build the auditRoles map by scanning system-managed constraints on each
+      // sub-attribute.  A sub-attribute carries an audit role when it has a
+      // blueprint:constraint of type "created-date", "created-by",
+      // "modified-date", or "modified-by".
+      const discoveredRoles: AuditRoles = {};
+      for (const subAttr of subAttrs) {
+        const subName = (subAttr.data as { name: string }).name;
+        const subConstraints = subAttr.embedded?.findEmbeddeds(blueprintRels.constraint) ?? [];
+        for (const c of subConstraints) {
+          const constraintType = (c.data as { type: string }).type;
+          if (AUDIT_CONSTRAINT_TYPES.has(constraintType)) {
+            discoveredRoles[constraintType as AuditSubAttributeRole] = subName;
+          }
+        }
+      }
+
+      if (Object.keys(discoveredRoles).length > 0) {
+        // At least one audit constraint found — treat as audit_metadata.
         type = "audit_metadata";
+        auditRoles = discoveredRoles;
+      } else {
+        // No system-managed constraints found; fall back to sub-attribute name
+        // probing for backward compatibility with fixtures that predate constraint
+        // annotations.  This path handles the legacy `content` object shape
+        // (filename/mimetype/length) and legacy audit shapes (created_by/created_date).
+        const subNames = new Set(subAttrs.map((s) => (s.data as { name: string }).name));
+        if (subNames.has("filename") && subNames.has("mimetype") && subNames.has("length")) {
+          // content attribute: platform exposes sub-attributes with these exact names.
+          // The `cg:content` link on entity-items is the stronger signal, but this
+          // profile-level check lets us classify without fetching entity data.
+          type = "content";
+        } else if (subNames.has("created_by") && subNames.has("created_date")) {
+          // Fallback for profiles that carry audit sub-attributes but no system-managed
+          // constraints (e.g. older API versions or fixtures not yet updated).
+          type = "audit_metadata";
+          // Best-effort role map from well-known default names.
+          auditRoles = {
+            "created-by": "created_by",
+            "created-date": "created_date",
+            ...(subNames.has("last_modified_by") ? { "modified-by": "last_modified_by" } : {}),
+            ...(subNames.has("last_modified_date")
+              ? { "modified-date": "last_modified_date" }
+              : {}),
+          };
+        }
       }
     }
 
@@ -73,6 +131,7 @@ export async function fetchEntitySchema(
       searchable: attr.searchParams?.["exact-match"] ?? false,
       prefixSearchable: attr.searchParams?.["prefix-match"] ?? false,
       allowedValues,
+      ...(auditRoles !== undefined ? { auditRoles } : {}),
     };
   });
 
