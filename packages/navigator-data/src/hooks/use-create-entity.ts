@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
-import type { EntityInfo } from "../types/entity";
-import type { EntitySchema } from "../types/entity";
+import type { EntityInfo, EntitySchema } from "../types/entity";
 import { convertToString } from "../utils/format";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";

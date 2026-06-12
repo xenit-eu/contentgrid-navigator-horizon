@@ -7,6 +7,21 @@ import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import type { EntityDetailResult, ItemTemplate } from "./use-entity-detail";
 
+function parseRawTemplate(
+  rawTemplates:
+    | Record<string, { method?: string; target?: string; contentType?: string }>
+    | undefined,
+  key: string,
+): ItemTemplate | null {
+  const rawTpl = rawTemplates?.[key];
+  if (!rawTpl || typeof rawTpl.method !== "string") return null;
+  return {
+    method: rawTpl.method,
+    target: typeof rawTpl.target === "string" ? rawTpl.target : null,
+    contentType: typeof rawTpl.contentType === "string" ? rawTpl.contentType : null,
+  };
+}
+
 interface UnlinkRelationParams {
   entityName: string;
   entityId: string;
@@ -43,14 +58,7 @@ export function useUnlinkRelation() {
         const rawTemplates = (object.data as Record<string, unknown>)._templates as
           | Record<string, { method?: string; target?: string; contentType?: string }>
           | undefined;
-        const rawTpl = rawTemplates?.[`clear-${relationName}`];
-        if (rawTpl && typeof rawTpl.method === "string") {
-          clearTemplate = {
-            method: rawTpl.method,
-            target: typeof rawTpl.target === "string" ? rawTpl.target : null,
-            contentType: typeof rawTpl.contentType === "string" ? rawTpl.contentType : null,
-          };
-        }
+        clearTemplate = parseRawTemplate(rawTemplates, `clear-${relationName}`);
       }
 
       if (!clearTemplate) {
