@@ -146,8 +146,8 @@ The companion code fixes live in the `halforms/*` PRs.
 **6. No hardcoded attribute names — discover roles via profile constraints.**
 
 - Do NOT detect content attributes by probing for sub-attribute names like
-  `filename`, `mimetype`, or `length`. Use the `blueprint:attribute` `type:
-  "content"` field from the entity profile.
+  `filename`, `mimetype`, or `length`. Use the `blueprint:attribute`
+  `type: "content"` field from the entity profile.
 - Do NOT key audit-field logic to literal names (`created_date`, `created_by`,
   `last_modified_date`, `last_modified_by`). Discover audit-role fields via
   the `blueprint:constraint` system-managed types: `created-date`,
