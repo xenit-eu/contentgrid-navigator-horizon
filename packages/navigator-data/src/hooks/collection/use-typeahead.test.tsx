@@ -32,13 +32,13 @@ function mockCollection(items: Record<string, unknown>[] = [], onRequest?: (url:
   );
 }
 
-function makeHook(qc = makeQueryClient(), attributeName = "number") {
+function makeHook(qc = makeQueryClient(), filterParam = "number~prefix") {
   return renderHook(
     () =>
       useTypeahead({
         entityName: "invoice",
         collectionHref: COLLECTION_URL,
-        attributeName,
+        filterParam,
       }),
     { wrapper: makeWrapper(qc) },
   );
@@ -111,7 +111,7 @@ describe("useTypeahead", () => {
     await waitFor(() => expect(result.current.results).toEqual([]), { timeout: 3000 });
   });
 
-  it("sends the prefix param with the correct attribute name in the query string", async () => {
+  it("sends filterParam as the URL query parameter", async () => {
     let capturedUrl: URL | undefined;
     mockCollection([{ number: "INV-001" }], (url) => {
       capturedUrl = url;
@@ -126,11 +126,12 @@ describe("useTypeahead", () => {
     expect(capturedUrl?.searchParams.get("size")).toBe("10");
   });
 
-  it("extracts the leaf field for dot-notation attribute names", async () => {
-    // "document.title" should extract item.data["title"], not item.data["document.title"]
+  it("extracts the leaf field for dot-notation filter params", async () => {
+    // "document.title~prefix" → valueField = "title" (leaf segment before "~")
+    // Consistent with use-search-suggestions.ts valueField derivation.
     mockCollection([{ title: "Contract A" }]);
 
-    const { result } = makeHook(makeQueryClient(), "document.title");
+    const { result } = makeHook(makeQueryClient(), "document.title~prefix");
     act(() => result.current.search("Con"));
 
     await waitFor(() => expect(result.current.results).toContain("Contract A"), { timeout: 3000 });

@@ -6,6 +6,8 @@ export interface SearchProperty {
   prompt?: string;
   /** Data type, e.g. "string", "date", "datetime" */
   type: string;
+  /** True when this property supports prefix-match typeahead. Set by the data layer; not derived here. */
+  prefixSearchable?: boolean;
   /** Available values for enum-like fields */
   options?: { inline?: string[]; link?: { href: string } };
 }

@@ -374,7 +374,11 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
 // Typeahead / prefix-match tests
 // ---------------------------------------------------------------------------
 
-const PREFIX_PROP: SearchProperty = { name: "number~prefix", type: "string" };
+const PREFIX_PROP: SearchProperty = {
+  name: "number~prefix",
+  type: "string",
+  prefixSearchable: true,
+};
 const EXACT_PROP: SearchProperty = { name: "number", type: "string" };
 
 describe("FilterSidebar — JF-10: exact-match suppression", () => {

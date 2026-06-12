@@ -7,14 +7,26 @@ import { useDebouncedValue } from "../use-debounced-value";
 
 export interface UseTypeaheadOptions {
   entityName: string;
-  /** Full collection URL obtained from the HAL profile's describes link. */
+  /**
+   * Full URL of the collection to fetch suggestions from.
+   *
+   * For direct attribute fields (e.g. filterParam "number~prefix"):
+   * pass the current entity's collection href.
+   *
+   * For relation traversal fields (e.g. "supplier.name~prefix" on invoices):
+   * pass the RELATED entity's collection href and set filterParam to the
+   * leaf attribute's prefix property on that collection. Querying the parent
+   * entity's collection won't yield relation attribute values because parent
+   * items do not embed the related entity's fields inline.
+   */
   collectionHref: string;
   /**
-   * The attribute name to prefix-search on and extract values from.
-   * Supports dot-notation (e.g. "document.title") — the leaf field is used
-   * for value extraction from the response items.
+   * The HAL-Forms search property name used as the URL query parameter.
+   * Taken directly from _templates.search.properties[].name (e.g. "number~prefix",
+   * "name~prefix"). The leaf field before "~" is used to extract values from
+   * response items.
    */
-  attributeName: string;
+  filterParam: string;
   /** Minimum input length before a request is fired. Defaults to 2. */
   minLength?: number;
 }
@@ -22,29 +34,30 @@ export interface UseTypeaheadOptions {
 export function useTypeahead({
   entityName,
   collectionHref,
-  attributeName,
+  filterParam,
   minLength = 2,
 }: UseTypeaheadOptions) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
   const { apiFetch } = useNavigatorData();
 
-  // For dot-notation paths (e.g. "document.title"), the HAL item stores the leaf
-  // field as a top-level key — extract it for response value reading.
-  const leafField = attributeName.includes(".") ? attributeName.split(".").pop()! : attributeName;
-  const prefixParam = `${attributeName}~prefix`;
+  // Derive the item field to read from: take everything before "~", then the
+  // leaf segment. e.g. "number~prefix" → "number", "supplier.name~prefix" → "name".
+  const baseField = filterParam.split("~")[0];
+  const valueField = baseField.includes(".") ? baseField.split(".").pop()! : baseField;
+
   const enabled = debouncedQuery.length >= minLength;
 
   const { data, isFetching } = useQuery({
-    queryKey: queryKeys.typeahead.byProperty(entityName, attributeName, debouncedQuery),
+    queryKey: queryKeys.typeahead.byProperty(entityName, filterParam, debouncedQuery),
     queryFn: async () => {
       const url = new URL(collectionHref);
       url.searchParams.set("size", "10");
-      url.searchParams.set(prefixParam, debouncedQuery);
+      url.searchParams.set(filterParam, debouncedQuery);
       const slice = await fetchHalSlice<Record<string, unknown>>(apiFetch, new Request(url));
       const values = new Set<string>();
       for (const item of slice.items) {
-        const val = item.data[leafField];
+        const val = item.data[valueField];
         if (typeof val === "string" && val.length > 0) values.add(val);
       }
       return [...values];
