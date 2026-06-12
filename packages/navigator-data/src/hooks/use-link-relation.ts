@@ -1,4 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { resolveTemplate } from "@contentgrid/hal-forms";
+import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
 import { CONTENT_TYPE_URI_LIST } from "../api/content-types";
 import { cgRels } from "../api/contentgrid-rels";
@@ -43,16 +45,27 @@ export function useLinkRelation() {
           relationUrl = relLink.href;
         }
 
-        const rawTemplates = (object.data as Record<string, unknown>)._templates as
-          | Record<string, { method?: string; target?: string; contentType?: string }>
+        const entityShape = object.data as HalObjectWithTemplateShape<
+          object,
+          string,
+          unknown,
+          unknown
+        >;
+        const rawTplData = (entityShape as Record<string, unknown>)._templates as
+          | Record<string, Record<string, unknown>>
           | undefined;
-        const rawTpl =
-          rawTemplates?.[`set-${relationName}`] ?? rawTemplates?.[`add-${relationName}`];
-        if (rawTpl && typeof rawTpl.method === "string") {
+        const setTpl = resolveTemplate(entityShape, `set-${relationName}`);
+        const addTpl = resolveTemplate(entityShape, `add-${relationName}`);
+        const tpl = setTpl ?? addTpl;
+        const tplKey = setTpl ? `set-${relationName}` : `add-${relationName}`;
+        if (tpl) {
           linkTemplate = {
-            method: rawTpl.method,
-            target: typeof rawTpl.target === "string" ? rawTpl.target : null,
-            contentType: typeof rawTpl.contentType === "string" ? rawTpl.contentType : null,
+            method: tpl.request.method,
+            target:
+              typeof rawTplData?.[tplKey]?.target === "string"
+                ? (rawTplData[tplKey].target as string)
+                : null,
+            contentType: tpl.contentType ?? null,
           };
         }
       }

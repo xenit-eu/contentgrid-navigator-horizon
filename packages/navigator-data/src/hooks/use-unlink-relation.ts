@@ -1,4 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { resolveTemplate } from "@contentgrid/hal-forms";
+import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
 import { createRequest } from "@contentgrid/typed-fetch";
 import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
@@ -6,21 +8,6 @@ import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import type { EntityDetailResult, ItemTemplate } from "./use-entity-detail";
-
-function parseRawTemplate(
-  rawTemplates:
-    | Record<string, { method?: string; target?: string; contentType?: string }>
-    | undefined,
-  key: string,
-): ItemTemplate | null {
-  const rawTpl = rawTemplates?.[key];
-  if (!rawTpl || typeof rawTpl.method !== "string") return null;
-  return {
-    method: rawTpl.method,
-    target: typeof rawTpl.target === "string" ? rawTpl.target : null,
-    contentType: typeof rawTpl.contentType === "string" ? rawTpl.contentType : null,
-  };
-}
 
 interface UnlinkRelationParams {
   entityName: string;
@@ -55,10 +42,26 @@ export function useUnlinkRelation() {
           relationUrl = relLink.href;
         }
 
-        const rawTemplates = (object.data as Record<string, unknown>)._templates as
-          | Record<string, { method?: string; target?: string; contentType?: string }>
-          | undefined;
-        clearTemplate = parseRawTemplate(rawTemplates, `clear-${relationName}`);
+        const entityShape = object.data as HalObjectWithTemplateShape<
+          object,
+          string,
+          unknown,
+          unknown
+        >;
+        const tpl = resolveTemplate(entityShape, `clear-${relationName}`);
+        if (tpl) {
+          const rawTplData = (entityShape as Record<string, unknown>)._templates as
+            | Record<string, Record<string, unknown>>
+            | undefined;
+          clearTemplate = {
+            method: tpl.request.method,
+            target:
+              typeof rawTplData?.[`clear-${relationName}`]?.target === "string"
+                ? (rawTplData[`clear-${relationName}`].target as string)
+                : null,
+            contentType: tpl.contentType ?? null,
+          };
+        }
       }
 
       if (!clearTemplate) {

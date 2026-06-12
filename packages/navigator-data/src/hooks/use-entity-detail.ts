@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { resolveTemplate } from "@contentgrid/hal-forms";
+import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
@@ -56,17 +58,27 @@ export function getRelationTemplate(
   return result.templates[`set-${relationName}`] ?? result.templates[`add-${relationName}`] ?? null;
 }
 
-function parseTemplates(raw: unknown): Record<string, ItemTemplate> {
-  if (!raw || typeof raw !== "object") return {};
+/**
+ * Resolves all HAL-FORMS templates from a fetched entity item using `resolveTemplate`
+ * from `@contentgrid/hal-forms`. Each template's method and content-type are read from
+ * the library's resolved representation. The explicit `target` from the raw template
+ * shape is preserved as-is (null when absent) so that downstream mutation hooks can
+ * correctly fall back to HAL link hrefs for relation operations that have no target.
+ */
+function resolveTemplates(
+  data: HalObjectWithTemplateShape<object, string, unknown, unknown>,
+): Record<string, ItemTemplate> {
+  const rawTemplates = (data as Record<string, unknown>)._templates;
+  if (!rawTemplates || typeof rawTemplates !== "object") return {};
+  const raw = rawTemplates as Record<string, Record<string, unknown>>;
   const result: Record<string, ItemTemplate> = {};
-  for (const [key, tpl] of Object.entries(raw as Record<string, unknown>)) {
-    if (!tpl || typeof tpl !== "object") continue;
-    const t = tpl as Record<string, unknown>;
-    if (typeof t.method !== "string") continue;
+  for (const key of Object.keys(raw)) {
+    const tpl = resolveTemplate(data, key);
+    if (!tpl) continue;
     result[key] = {
-      method: t.method,
-      target: typeof t.target === "string" ? t.target : null,
-      contentType: typeof t.contentType === "string" ? t.contentType : null,
+      method: tpl.request.method,
+      target: typeof raw[key]?.target === "string" ? raw[key].target : null,
+      contentType: tpl.contentType ?? null,
     };
   }
   return result;
@@ -83,7 +95,9 @@ async function fetchEntityDetail(
   );
 
   const selfLink = object.links.findLink(ianaRelations.self);
-  const templates = parseTemplates((object.data as Record<string, unknown>)._templates);
+  const templates = resolveTemplates(
+    object.data as HalObjectWithTemplateShape<object, string, unknown, unknown>,
+  );
 
   // Build a map of content attribute name → upload URL from cg:content links.
   const contentLinks: Record<string, string> = {};
