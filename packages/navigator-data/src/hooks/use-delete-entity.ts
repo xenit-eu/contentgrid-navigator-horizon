@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createRequest } from "@contentgrid/typed-fetch";
+import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
 import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
@@ -30,12 +31,19 @@ export function useDeleteEntity() {
         );
       }
 
-      await apiFetch(
-        createRequest(
-          { url: `${collectionHref}/${params.entityId}`, method: "DELETE" },
-          { headers: { "If-Match": cached.etag } },
-        ),
-      );
+      try {
+        await apiFetch(
+          createRequest(
+            { url: `${collectionHref}/${params.entityId}`, method: "DELETE" },
+            { headers: { "If-Match": cached.etag } },
+          ),
+        );
+      } catch (e) {
+        if (e instanceof ProblemDetailError && e.problemDetail.status === 412) {
+          throw new PreconditionFailedError(e.problemDetail);
+        }
+        throw e;
+      }
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList(variables.entityName) });

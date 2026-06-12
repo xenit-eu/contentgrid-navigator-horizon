@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
 import { CONTENT_TYPE_JSON } from "../api/content-types";
+import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
 import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
@@ -34,15 +35,22 @@ export function useUpdateEntity() {
         );
       }
 
-      await apiFetch(
-        createRequest(
-          { url: itemUrl, method: "PATCH" },
-          {
-            headers: { "Content-Type": CONTENT_TYPE_JSON, "If-Match": cached.etag },
-            body: Representation.json(params.data),
-          },
-        ),
-      );
+      try {
+        await apiFetch(
+          createRequest(
+            { url: itemUrl, method: "PATCH" },
+            {
+              headers: { "Content-Type": CONTENT_TYPE_JSON, "If-Match": cached.etag },
+              body: Representation.json(params.data),
+            },
+          ),
+        );
+      } catch (e) {
+        if (e instanceof ProblemDetailError && e.problemDetail.status === 412) {
+          throw new PreconditionFailedError(e.problemDetail);
+        }
+        throw e;
+      }
 
       if (params.file && params.contentAttributeName) {
         const contentUrl = `${itemUrl}/${params.contentAttributeName}`;
