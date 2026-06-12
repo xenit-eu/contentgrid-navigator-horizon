@@ -168,6 +168,81 @@ describe("useProfile", () => {
     expect(result.current.data![0].collectionHref).toBe("https://api.example.com/orders");
     expect(result.current.data![0].itemTemplateHref).toBe("https://api.example.com/orders/{id}");
   });
+
+  it("ignores root cg:entity links without a name and titleCases the entity name when title is absent", async () => {
+    server.use(
+      http.get(ROOT_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: ROOT_URL },
+            "cg:entity": [
+              // Nameless root link — must be skipped when building the collection map
+              { href: "https://api.example.com/mystery" },
+              // Named root link — must be matched by name
+              { href: "https://api.example.com/invoices", name: "invoice" },
+            ],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+        }),
+      ),
+      http.get(PROFILE_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: PROFILE_URL },
+            // Profile link with name but NO title — title falls back to titleCase(name)
+            "cg:entity": [{ href: "https://api.example.com/profile/invoices", name: "invoice" }],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+          _templates: {},
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0].name).toBe("invoice");
+    // Title derived from name (no title on the link)
+    expect(result.current.data![0].title).toBe("Invoice");
+    // The named root link wins; the nameless one is ignored
+    expect(result.current.data![0].collectionHref).toBe("https://api.example.com/invoices");
+  });
+
+  it("surfaces an error when the root resource request fails", async () => {
+    server.use(
+      http.get(ROOT_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+      http.get(PROFILE_URL, () =>
+        HttpResponse.json({
+          _links: { self: { href: PROFILE_URL }, "cg:entity": [] },
+          _templates: {},
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeDefined();
+  });
 });
 
 describe("useNavigatorData", () => {

@@ -127,6 +127,60 @@ describe("useEntityRelations", () => {
     expect(result.current.data![0].id).toBe("cust-1");
   });
 
+  it("falls back to URL path parsing for id when the id field is absent (to-one)", async () => {
+    mockProfile();
+    mockEntityDetail();
+    server.use(
+      http.get(RELATION_URL, () =>
+        HttpResponse.json({
+          // No top-level id field — id must be parsed from the self href (documented fallback)
+          name: "Acme Corp",
+          _links: { self: { href: CUSTOMER_URL } },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityRelations("invoice", "inv-1", "customer"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0].id).toBe("cust-1");
+  });
+
+  it("falls back to URL path parsing for id when the id field is absent (to-many)", async () => {
+    mockProfile();
+    mockEntityDetail();
+    server.use(
+      http.get(RELATION_URL, () =>
+        HttpResponse.json({
+          _links: { self: { href: RELATION_URL } },
+          _embedded: {
+            item: [
+              // No top-level id field — id parsed from the self href
+              { name: "Acme", _links: { self: { href: `${BASE}/customers/cust-1` } } },
+              // No id and no self link — id and selfHref degrade to empty strings
+              { name: "Globex" },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityRelations("invoice", "inv-1", "customer"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data).toHaveLength(2);
+    expect(result.current.data![0].id).toBe("cust-1");
+    expect(result.current.data![1].id).toBe("");
+    expect(result.current.data![1].selfHref).toBe("");
+  });
+
   it("returns multiple items for a to-many relation (has _embedded)", async () => {
     mockProfile();
     mockEntityDetail();

@@ -84,4 +84,23 @@ describe("useEntityDetail", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeDefined();
   });
+
+  it("returns empty selfHref and links when the response carries no _links", async () => {
+    server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      // Degenerate response: no _links at all — selfHref and links must fall back
+      http.get(ITEM_URL, () => HttpResponse.json({ id: "inv-1", number: "INV-001" })),
+    );
+
+    const { result } = renderHook(() => useEntityDetail("invoice", "inv-1"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data!.selfHref).toBe("");
+    expect(result.current.data!.links).toEqual({});
+    expect((result.current.data!.data as Record<string, unknown>).number).toBe("INV-001");
+  });
 });

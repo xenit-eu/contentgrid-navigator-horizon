@@ -289,4 +289,85 @@ describe("useEntitySchema", () => {
     expect(result.current.data!.sortOptions[0].property).toBe("number");
     expect(result.current.data!.sortOptions[0].value).toBe("number,asc");
   });
+
+  it("prefers options.link.name over the href path segment for targetEntityName", async () => {
+    const withNamedLink = {
+      ...profileFixture,
+      _templates: {
+        ...profileFixture._templates,
+        "create-form": {
+          method: "POST",
+          target: `${BASE}/invoices`,
+          contentType: "application/json",
+          properties: [
+            {
+              name: "customer",
+              prompt: "Customer",
+              type: "url",
+              maxItems: 1,
+              options: {
+                // name is the authoritative entity name — href segment differs on purpose
+                link: { href: `${BASE}/legacy-customers`, name: "customer" },
+                minItems: 0,
+                valueField: "/_links/self/href",
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withNamedLink)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const rel = result.current.data!.createFormRelations[0];
+    // link.name wins over the href's last path segment ("legacy-customers")
+    expect(rel.targetEntityName).toBe("customer");
+    expect(rel.manyToOne).toBe(true);
+  });
+
+  it("falls back to the href path segment for targetEntityName when link.name is absent", async () => {
+    server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      // The base profileFixture's create-form customer link has href only (no name)
+      http.get(PROFILE_HREF, () => HttpResponse.json(profileFixture)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const rel = result.current.data!.createFormRelations[0];
+    // No name on the link → last path segment of the href (documented fallback)
+    expect(rel.targetEntityName).toBe("customers");
+  });
+
+  it("returns empty attributes and relations when the profile has no _embedded", async () => {
+    const withoutEmbedded = {
+      name: "invoice",
+      title: "Invoice",
+      _links: profileFixture._links,
+      _templates: { default: { method: "HEAD", properties: [] } },
+    };
+
+    server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withoutEmbedded)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.data!.attributes).toEqual([]);
+    expect(result.current.data!.relations).toEqual([]);
+    expect(result.current.data!.searchProperties).toEqual([]);
+    expect(result.current.data!.createFormRelations).toEqual([]);
+  });
 });
