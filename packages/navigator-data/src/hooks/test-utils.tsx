@@ -18,6 +18,7 @@ export const INVOICE_ENTITY: EntityInfo = {
   title: "Invoice",
   href: `${BASE}/profile/invoices`,
   collectionHref: `${BASE}/invoices`,
+  itemTemplateHref: `${BASE}/invoices/{id}`,
 };
 
 export function makeQueryClient() {

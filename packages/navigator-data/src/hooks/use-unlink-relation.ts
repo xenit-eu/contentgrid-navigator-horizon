@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
 import { createRequest } from "@contentgrid/typed-fetch";
+import UriTemplate from "@contentgrid/uri-template";
 import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import type { EntityInfo } from "../types/entity";
@@ -36,7 +37,10 @@ export function useUnlinkRelation() {
 
       if (!relationUrl || !clearTemplate) {
         // Item detail cache is absent or incomplete — do a live fetch.
-        const { object } = await fetchHal(apiFetch, `${entity.collectionHref}/${entityId}`);
+        // Expand the RFC 6570 item template from the entity profile's describes.item link.
+        // This avoids constructing the URL via string concatenation.
+        const itemUrl = new UriTemplate(entity.itemTemplateHref).expand({ id: entityId });
+        const { object } = await fetchHal(apiFetch, itemUrl);
         const relLink = object.links.findLink(cgRels.relation, relationName);
         if (relLink) {
           relationUrl = relLink.href;

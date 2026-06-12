@@ -3,6 +3,10 @@ export interface EntityInfo {
   title: string;
   href: string;
   collectionHref: string;
+  /** RFC 6570 URI template for a single item, e.g. https://api.example.com/invoices/{id}.
+   * Sourced from the entity profile's _links.describes item link (templated: true).
+   * Falls back to collectionHref + "/{id}" if the describes link is absent. */
+  itemTemplateHref: string;
 }
 
 export interface EntityAttribute {
