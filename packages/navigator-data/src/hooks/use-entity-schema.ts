@@ -78,7 +78,7 @@ export async function fetchEntitySchema(
 
   const relations: EntityRelation[] = embeddedRelations.map((halObj) => {
     const rel = halObj.data as unknown as RawRelation;
-    const targetLink = halObj.links.findLink(blueprintRels.targetEntity);
+    const targetLink = halObj.links.findLink(blueprintRels["target-entity"]);
     return {
       name: rel.name,
       title: rel.title || rel.name,

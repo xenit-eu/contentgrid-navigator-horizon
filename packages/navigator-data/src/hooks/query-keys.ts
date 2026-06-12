@@ -1,5 +1,6 @@
 export const queryKeys = {
   profile: () => ["profile"] as const,
+  entityProfile: (entityName: string) => ["entity-profile", entityName] as const,
   entitySchema: (entityName: string) => ["entity-schema", entityName] as const,
   entityList: (entityName: string, params?: Record<string, unknown>) =>
     ["entity-list", entityName, params ?? {}] as const,

@@ -4,4 +4,6 @@ export * from "./api";
 export * from "./auth";
 export * from "./hooks";
 export * from "./types/entity";
+export * from "./types/search-form";
+export * from "./types/create-form";
 export * from "./config";

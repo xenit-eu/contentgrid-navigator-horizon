@@ -26,13 +26,6 @@ export interface EntityRelation {
   targetEntityHref?: string;
 }
 
-export interface SearchProperty {
-  name: string;
-  prompt?: string;
-  type: string;
-  options?: { inline?: string[] };
-}
-
 export interface CreateFormRelation {
   name: string;
   title: string;
@@ -41,18 +34,10 @@ export interface CreateFormRelation {
   manyToOne: boolean;
 }
 
-export interface SortOption {
-  value: string;
-  property: string;
-  prompt: string;
-}
-
 export interface EntitySchema {
   description?: string;
   attributes: EntityAttribute[];
   relations: EntityRelation[];
-  searchProperties: SearchProperty[];
   sortableFields: string[];
-  sortOptions: SortOption[];
   createFormRelations: CreateFormRelation[];
 }
