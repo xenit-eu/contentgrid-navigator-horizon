@@ -154,4 +154,186 @@ describe("useRecentlyCreated", () => {
     expect(result.current.items[2].itemId).toBe("inv-3");
     expect(result.current.items[2].createdDate).toBeUndefined();
   });
+
+  it("sorts by the constraint-discovered modified-date field and reads custom audit names", async () => {
+    // Audit sub-attributes use NON-default names; roles come from system-managed
+    // constraints.  The hook must sort by the discovered modified-date field and
+    // read created-date/created-by through the discovered names.
+    const schemaCustomAudit = {
+      ...schemaSimple,
+      _embedded: {
+        "blueprint:attribute": [
+          schemaSimple._embedded["blueprint:attribute"][0],
+          {
+            name: "tracking",
+            title: "Tracking",
+            type: "object",
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  name: "author",
+                  title: "Author",
+                  type: "string",
+                  _embedded: {
+                    "blueprint:constraint": [{ type: "created-by" }],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+                {
+                  name: "created_at",
+                  title: "Created at",
+                  type: "datetime",
+                  _embedded: {
+                    "blueprint:constraint": [{ type: "created-date" }],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+                {
+                  name: "updated_at",
+                  title: "Updated at",
+                  type: "datetime",
+                  _embedded: {
+                    "blueprint:constraint": [{ type: "modified-date" }],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+              ],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        ...schemaSimple._templates,
+        search: {
+          method: "GET",
+          target: COLLECTION_URL,
+          properties: [
+            {
+              name: "_sort",
+              type: "text",
+              options: {
+                inline: [
+                  {
+                    value: "tracking.updated_at,desc",
+                    property: "tracking.updated_at",
+                    direction: "desc",
+                    prompt: "Newest",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    let requestedSort: string | null = null;
+    server.use(
+      http.get(SCHEMA_URL, () => HttpResponse.json(schemaCustomAudit)),
+      http.get(COLLECTION_URL, ({ request }) => {
+        requestedSort = new URL(request.url).searchParams.get("_sort");
+        return HttpResponse.json({
+          _links: { self: { href: COLLECTION_URL } },
+          _embedded: {
+            item: [
+              {
+                id: "inv-9",
+                number: "INV-009",
+                tracking: { author: "carol", created_at: "2024-03-01T10:00:00Z" },
+                _links: { self: { href: `${COLLECTION_URL}/inv-9` } },
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+
+    const { result } = renderHook(() => useRecentlyCreated(), { wrapper: makeWrapper(qc) });
+
+    await waitFor(() => expect(result.current.items.length).toBeGreaterThan(0), { timeout: 5000 });
+
+    // Sorted by the discovered modified-date sortable field, not a hardcoded name
+    expect(requestedSort).toBe("tracking.updated_at,desc");
+    // created-date / created-by read through the discovered custom names
+    expect(result.current.items[0].createdDate).toBe("2024-03-01T10:00:00Z");
+    expect(result.current.items[0].createdBy).toBe("carol");
+  });
+
+  it("degrades gracefully for entities without audit attributes or sort options", async () => {
+    // No audit attribute, no _sort options, and no name value on the item:
+    // items must still be returned with no createdDate/createdBy and the
+    // displayName falling back to the item id.
+    const schemaNoAudit = {
+      ...schemaSimple,
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "amount",
+            title: "Amount",
+            type: "long",
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        ...schemaSimple._templates,
+        search: { method: "GET", target: COLLECTION_URL, properties: [] },
+      },
+    };
+
+    let requestedSort: string | null = "unset";
+    server.use(
+      http.get(SCHEMA_URL, () => HttpResponse.json(schemaNoAudit)),
+      http.get(COLLECTION_URL, ({ request }) => {
+        requestedSort = new URL(request.url).searchParams.get("_sort");
+        return HttpResponse.json({
+          _links: { self: { href: COLLECTION_URL } },
+          _embedded: {
+            item: [
+              {
+                id: "inv-7",
+                amount: 42,
+                _links: { self: { href: `${COLLECTION_URL}/inv-7` } },
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+
+    const { result } = renderHook(() => useRecentlyCreated(), { wrapper: makeWrapper(qc) });
+
+    await waitFor(() => expect(result.current.items.length).toBeGreaterThan(0), { timeout: 5000 });
+
+    // No sortable fields → no _sort param sent
+    expect(requestedSort).toBeNull();
+    expect(result.current.hasEntities).toBe(true);
+    expect(result.current.items[0].itemId).toBe("inv-7");
+    expect(result.current.items[0].createdDate).toBeUndefined();
+    expect(result.current.items[0].createdBy).toBeUndefined();
+    // No name attribute value → displayName falls back to the item id
+    expect(result.current.items[0].displayName).toBe("inv-7");
+  });
 });

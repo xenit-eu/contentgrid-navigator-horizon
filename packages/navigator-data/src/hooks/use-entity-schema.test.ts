@@ -159,6 +159,164 @@ describe("fetchEntitySchema — entity with no audit attributes", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Plain object attributes and partial/fallback paths
+// ---------------------------------------------------------------------------
+
+/** Build a minimal entity-profile body with a single object attribute. */
+function profileWithObjectAttribute(subAttributes: unknown[] | undefined) {
+  return {
+    name: "thing",
+    title: "Thing",
+    _links: {
+      self: { href: "https://api.example.contentgrid.com/profile/things" },
+      describes: [
+        { href: "https://api.example.contentgrid.com/things", name: "collection" },
+        { href: "https://api.example.contentgrid.com/things/{id}", name: "item", templated: true },
+      ],
+      curies: [
+        {
+          href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+          name: "blueprint",
+          templated: true,
+        },
+      ],
+    },
+    _embedded: {
+      "blueprint:attribute": [
+        {
+          name: "payload",
+          title: "Payload",
+          type: "object",
+          readOnly: false,
+          required: false,
+          ...(subAttributes !== undefined
+            ? {
+                _embedded: {
+                  "blueprint:constraint": [],
+                  "blueprint:search-param": [],
+                  "blueprint:attribute": subAttributes,
+                },
+              }
+            : {}),
+          _links: {},
+        },
+      ],
+      "blueprint:relation": [],
+    },
+    _templates: {
+      default: { method: "HEAD", properties: [] },
+      search: { method: "GET", properties: [] },
+    },
+  };
+}
+
+function subAttr(name: string, constraints: unknown[] = []) {
+  return {
+    name,
+    title: name,
+    type: "string",
+    readOnly: true,
+    required: false,
+    _embedded: {
+      "blueprint:constraint": constraints,
+      "blueprint:search-param": [],
+      "blueprint:attribute": [],
+    },
+    _links: {},
+  };
+}
+
+const THING_PROFILE_URL = "https://api.example.contentgrid.com/profile/things";
+
+async function fetchThingSchema(body: Record<string, unknown>) {
+  server.use(http.get(THING_PROFILE_URL, () => HttpResponse.json(body)));
+  return fetchEntitySchema(createApiClient(noopSupplier), THING_PROFILE_URL);
+}
+
+describe("fetchEntitySchema — plain object attributes stay 'object'", () => {
+  it("keeps type 'object' when sub-attributes match neither content nor audit shapes", async () => {
+    const schema = await fetchThingSchema(
+      profileWithObjectAttribute([subAttr("foo"), subAttr("bar")]),
+    );
+
+    const attr = schema.attributes.find((a) => a.name === "payload");
+    expect(attr?.type).toBe("object");
+    expect(attr?.auditRoles).toBeUndefined();
+  });
+
+  it("keeps type 'object' when the attribute has no embedded sub-attributes at all", async () => {
+    const schema = await fetchThingSchema(profileWithObjectAttribute(undefined));
+
+    const attr = schema.attributes.find((a) => a.name === "payload");
+    expect(attr?.type).toBe("object");
+    expect(attr?.auditRoles).toBeUndefined();
+  });
+
+  it("ignores non-system-managed constraint types on sub-attributes", async () => {
+    // A sub-attribute with only a non-audit constraint (e.g. "required") must
+    // NOT trigger audit detection.
+    const schema = await fetchThingSchema(
+      profileWithObjectAttribute([subAttr("foo", [{ type: "required" }])]),
+    );
+
+    const attr = schema.attributes.find((a) => a.name === "payload");
+    expect(attr?.type).toBe("object");
+    expect(attr?.auditRoles).toBeUndefined();
+  });
+});
+
+describe("fetchEntitySchema — partial audit constraints", () => {
+  it("detects audit_metadata from a single system-managed constraint and maps only that role", async () => {
+    const schema = await fetchThingSchema(
+      profileWithObjectAttribute([
+        subAttr("stamp", [{ type: "modified-date" }]),
+        // Sibling with a non-audit constraint is ignored by role discovery.
+        subAttr("note", [{ type: "required" }]),
+      ]),
+    );
+
+    const attr = schema.attributes.find((a) => a.name === "payload");
+    expect(attr?.type).toBe("audit_metadata");
+    expect(attr?.auditRoles).toEqual({ "modified-date": "stamp" });
+  });
+});
+
+describe("fetchEntitySchema — fallback name-probe path (no constraints)", () => {
+  it("detects audit_metadata from default names and maps created roles only when modified names are absent", async () => {
+    const schema = await fetchThingSchema(
+      profileWithObjectAttribute([subAttr("created_by"), subAttr("created_date")]),
+    );
+
+    const attr = schema.attributes.find((a) => a.name === "payload");
+    expect(attr?.type).toBe("audit_metadata");
+    expect(attr?.auditRoles).toEqual({
+      "created-by": "created_by",
+      "created-date": "created_date",
+    });
+  });
+
+  it("includes modified roles in the fallback map when last_modified_* names are present", async () => {
+    const schema = await fetchThingSchema(
+      profileWithObjectAttribute([
+        subAttr("created_by"),
+        subAttr("created_date"),
+        subAttr("last_modified_by"),
+        subAttr("last_modified_date"),
+      ]),
+    );
+
+    const attr = schema.attributes.find((a) => a.name === "payload");
+    expect(attr?.type).toBe("audit_metadata");
+    expect(attr?.auditRoles).toEqual({
+      "created-by": "created_by",
+      "created-date": "created_date",
+      "modified-by": "last_modified_by",
+      "modified-date": "last_modified_date",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // auditRoles absent on non-audit attributes
 // ---------------------------------------------------------------------------
 
