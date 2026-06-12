@@ -82,6 +82,81 @@ Hooks in this package wrap TanStack Query. Follow these conventions:
 
 ---
 
+## HAL-FORMS affordance rules
+
+These rules prevent the four systemic deviations identified in the HAL-FORMS audit.
+The companion code fixes live in the `halforms/*` PRs.
+
+**1. Drive mutations from `_templates` — never hardcode.**
+
+- Read `method`, `target`, and `contentType` from the template, not from
+  constants in the hook. Templates: `default` (update), `delete`,
+  `set-<relation>` (to-one), `add-<relation>`/`clear-<relation>` (to-many),
+  `create-form` (profile-level create).
+- Do NOT hardcode `PATCH`, `POST`, `DELETE`, `PUT`, or a `Content-Type` string
+  in a mutation hook. The platform can change affordances per item/user; the
+  template is the contract.
+
+**2. Gate every operation on template/link presence — expose capability flags.**
+
+- Absence of `_templates.delete` means delete is not permitted for this
+  item/user (ABAC). Do NOT render or invoke an operation whose template is
+  absent.
+- Expose `canUpdate`, `canDelete`, `canCreate`, `canSetRelation`, etc. as
+  derived booleans from template/link presence. Consumers must not re-check
+  raw templates; they read the flag.
+- Why: template absence is the platform's per-item ABAC signal. Bypassing it
+  silently hides permission boundaries.
+
+**3. URLs only from links — never string-built.**
+
+- Collection URLs: follow `cg:entity` links from the root resource (`/`).
+  Do NOT derive them via `href.replace(/\/profile\//, "/")` or any string
+  transform.
+- Item URLs: expand the profile's `_links.describes` templated item link
+  (`name: "item"`). Do NOT construct `${collectionHref}/${id}`.
+- Relation URLs: follow `cg:relation` links (by `name`) on the entity item.
+  Do NOT concatenate `${itemHref}/${relationName}`.
+- Content URLs: follow `cg:content` links (by `name`) on the entity item.
+  Do NOT concatenate `${itemHref}/${attributeName}`.
+- Pagination: follow `next`/`prev` link `href` directly from the HAL response.
+  Do NOT construct cursor URLs.
+- Why: HAL URLs are server-controlled. Any string transform breaks on
+  non-trivial path structures and bypasses future versioning.
+
+**4. IDs from the `id` field — never parsed from hrefs.**
+
+- Read the `id` field from the response body. Do NOT call
+  `selfHref.split("/").pop()` or any href-parsing idiom.
+- Why: URL structure is an implementation detail. Parsing it couples the
+  client to a path convention the server can change.
+
+**5. Carry full template property metadata through the FieldDescriptor bridge.**
+
+- The HAL-Forms → `FieldDescriptor[]` bridge MUST propagate:
+  - `options.inline` AND `options.link` (remote enumerations). Dropping
+    `options.link` silently removes remote-option fields from forms.
+  - All validation constraints: `required`, `regex`, `readOnly`,
+    `allowed-values`. Each maps to a `FieldDescriptor` field; omitting any
+    is a contract violation.
+- Do NOT narrow the bridge output to a lossy subset of the template shape.
+- Why: downstream renderers rely on the full metadata to produce correct,
+  accessible forms. Any dropped field degrades UX silently.
+
+**6. No hardcoded attribute names — discover roles via profile constraints.**
+
+- Do NOT detect content attributes by probing for sub-attribute names like
+  `filename`, `mimetype`, or `length`. Use the `blueprint:attribute` `type:
+  "content"` field from the entity profile.
+- Do NOT key audit-field logic to literal names (`created_date`, `created_by`,
+  `last_modified_date`, `last_modified_by`). Discover audit-role fields via
+  the `blueprint:constraint` system-managed types: `created-date`,
+  `created-by`, `modified-date`, `modified-by`.
+- Why: attribute names are customer-defined; only the constraint type is
+  stable across applications.
+
+---
+
 ## ETag / conditional-request pattern
 
 The platform uses ETags for optimistic concurrency (RFC 9110).
