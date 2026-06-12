@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
 import { format, parse } from "date-fns";
 import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";
 import { Label } from "../../primitives/label";
+import { Popover, PopoverAnchor, PopoverContent } from "../../primitives/popover";
 import {
   Select,
   SelectContent,
@@ -35,6 +37,19 @@ export interface FilterSidebarProps {
   onFilterChange: (key: string, value: string | undefined) => void;
   /** Called when the user wants to clear all filters */
   onClearAll?: () => void;
+  /**
+   * Called when the user types in a ~prefix field.
+   * The consuming layer calls useTypeahead.search() with the query to fetch suggestions.
+   * fieldParam is the full search property name (e.g. "number~prefix").
+   */
+  onTypeaheadSearch?: (fieldParam: string, query: string) => void;
+  /**
+   * Typeahead suggestions keyed by search property name (e.g. "number~prefix").
+   * Populated by the consuming layer from useTypeahead results.
+   */
+  typeaheadSuggestions?: Record<string, string[]>;
+  /** Loading state per field, keyed by search property name. */
+  typeaheadIsLoading?: Record<string, boolean>;
 }
 
 // ---------------------------------------------------------------------------
@@ -293,6 +308,111 @@ function TextFilter({
   );
 }
 
+/**
+ * Text input with a typeahead suggestions dropdown for ~prefix search fields.
+ * Suggestions are supplied externally (from useTypeahead via FilterSidebarProps).
+ * The input value is the live filter value; selecting a suggestion sets it exactly.
+ */
+function TypeaheadTextFilter({
+  label,
+  fieldParam,
+  value,
+  suggestions,
+  isLoading,
+  onChange,
+  onSearch,
+}: Readonly<{
+  label: string;
+  fieldParam: string;
+  value: string;
+  suggestions: string[];
+  isLoading: boolean;
+  onChange: (value: string | undefined) => void;
+  onSearch: (query: string) => void;
+}>) {
+  const [open, setOpen] = useState(false);
+  const inputId = `filter-${fieldParam.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const hasSuggestions = suggestions.length > 0;
+  const showPopover = open && (hasSuggestions || isLoading);
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
+        {label}
+      </Label>
+      <Popover open={showPopover} onOpenChange={setOpen}>
+        <PopoverAnchor asChild>
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <Input
+                id={inputId}
+                type="text"
+                className="h-8 text-sm"
+                value={value}
+                autoComplete="off"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onChange(v || undefined);
+                  onSearch(v);
+                  setOpen(!!v);
+                }}
+                onFocus={() => {
+                  if (hasSuggestions) setOpen(true);
+                }}
+                onBlur={() => setOpen(false)}
+              />
+            </div>
+            <ClearButton
+              onClick={() => {
+                onChange(undefined);
+                onSearch("");
+                setOpen(false);
+              }}
+              visible={!!value}
+            />
+          </div>
+        </PopoverAnchor>
+        <PopoverContent
+          align="start"
+          // Match the anchor width so the dropdown aligns with the input
+          className="w-[var(--radix-popover-anchor-width)] p-1"
+          // Prevent stealing focus from the input when the popover opens
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          {isLoading && !hasSuggestions && (
+            <p className="py-2 text-center text-sm text-muted-foreground">Loading…</p>
+          )}
+          {hasSuggestions && (
+            <ul
+              role="listbox"
+              aria-label={`${label} suggestions`}
+              className="max-h-48 overflow-y-auto"
+            >
+              {suggestions.map((s) => (
+                <li key={s} role="option" aria-selected={s === value}>
+                  <button
+                    type="button"
+                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    // Prevent the input's onBlur from firing before onClick fires
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      onChange(s);
+                      onSearch("");
+                      setOpen(false);
+                    }}
+                  >
+                    {s}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -302,6 +422,9 @@ export function FilterSidebar({
   filters,
   onFilterChange,
   onClearAll,
+  onTypeaheadSearch,
+  typeaheadSuggestions,
+  typeaheadIsLoading,
 }: Readonly<FilterSidebarProps>) {
   const hasActiveFilters = Object.values(filters).some((v) => !!v);
   const groups = groupFilterProperties(filterProperties);
@@ -374,6 +497,30 @@ export function FilterSidebar({
 
                     // 3. Handle Text types
                     if (type === "text") {
+                      // JF-10: suppress the exact-match field when a ~prefix sibling exists
+                      // in the same field group. The ~prefix variant will render instead.
+                      const hasPrefixSibling = group.items.some(
+                        (p) => p.name === `${prop.name}~prefix`,
+                      );
+                      if (hasPrefixSibling) return null;
+
+                      // Render a typeahead combobox for ~prefix fields when the caller
+                      // has provided a search handler (i.e. useTypeahead is wired up).
+                      if (prop.name.endsWith("~prefix") && onTypeaheadSearch) {
+                        return (
+                          <TypeaheadTextFilter
+                            key={prop.name}
+                            label={label}
+                            fieldParam={prop.name}
+                            value={value}
+                            suggestions={typeaheadSuggestions?.[prop.name] ?? []}
+                            isLoading={typeaheadIsLoading?.[prop.name] ?? false}
+                            onChange={(v) => onFilterChange(prop.name, v)}
+                            onSearch={(q) => onTypeaheadSearch(prop.name, q)}
+                          />
+                        );
+                      }
+
                       return (
                         <TextFilter
                           key={prop.name}

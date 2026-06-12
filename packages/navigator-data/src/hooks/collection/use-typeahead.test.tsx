@@ -7,29 +7,38 @@ import { useTypeahead } from "./use-typeahead";
 
 const COLLECTION_URL = `${BASE}/invoices`;
 
-function mockCollection(items: Record<string, unknown>[] = []) {
+function halCollection(items: Record<string, unknown>[]) {
+  return {
+    _links: { self: { href: COLLECTION_URL } },
+    _embedded: {
+      item: items.map((d, i) => ({
+        ...d,
+        _links: { self: { href: `${COLLECTION_URL}/${i}` } },
+      })),
+    },
+  };
+}
+
+/**
+ * Register an MSW handler for GET COLLECTION_URL.
+ * onRequest is called on every matched request — use it to count hits or inspect the URL.
+ */
+function mockCollection(items: Record<string, unknown>[] = [], onRequest?: (url: URL) => void) {
   server.use(
-    http.get(COLLECTION_URL, () =>
-      HttpResponse.json({
-        _links: { self: { href: COLLECTION_URL } },
-        _embedded: {
-          item: items.map((d, i) => ({
-            ...d,
-            _links: { self: { href: `${COLLECTION_URL}/${i}` } },
-          })),
-        },
-      }),
-    ),
+    http.get(COLLECTION_URL, ({ request }) => {
+      onRequest?.(new URL(request.url));
+      return HttpResponse.json(halCollection(items));
+    }),
   );
 }
 
-function makeHook(qc = makeQueryClient()) {
+function makeHook(qc = makeQueryClient(), attributeName = "number") {
   return renderHook(
     () =>
       useTypeahead({
         entityName: "invoice",
         collectionHref: COLLECTION_URL,
-        attributeName: "number",
+        attributeName,
       }),
     { wrapper: makeWrapper(qc) },
   );
@@ -41,7 +50,7 @@ describe("useTypeahead", () => {
     afterEach(() => vi.useRealTimers());
 
     it("does not fire before the debounce delay", () => {
-      // No MSW handler — if a request fires MSW throws (onUnhandledRequest: "error")
+      // No MSW handler registered — any request would fail with onUnhandledRequest: "error"
       const { result } = makeHook();
 
       act(() => result.current.search("INV"));
@@ -67,17 +76,7 @@ describe("useTypeahead", () => {
 
   it("fires only once when search is called rapidly", async () => {
     let requestCount = 0;
-    server.use(
-      http.get(COLLECTION_URL, () => {
-        requestCount++;
-        return HttpResponse.json({
-          _links: { self: { href: COLLECTION_URL } },
-          _embedded: {
-            item: [{ number: "INV-001", _links: { self: { href: `${COLLECTION_URL}/1` } } }],
-          },
-        });
-      }),
-    );
+    mockCollection([{ number: "INV-001" }], () => requestCount++);
 
     const { result } = makeHook();
 
@@ -110,5 +109,41 @@ describe("useTypeahead", () => {
 
     act(() => result.current.search(""));
     await waitFor(() => expect(result.current.results).toEqual([]), { timeout: 3000 });
+  });
+
+  it("sends the prefix param with the correct attribute name in the query string", async () => {
+    let capturedUrl: URL | undefined;
+    mockCollection([{ number: "INV-001" }], (url) => {
+      capturedUrl = url;
+    });
+
+    const { result } = makeHook();
+    act(() => result.current.search("INV"));
+
+    await waitFor(() => expect(result.current.results).toContain("INV-001"), { timeout: 3000 });
+
+    expect(capturedUrl?.searchParams.get("number~prefix")).toBe("INV");
+    expect(capturedUrl?.searchParams.get("size")).toBe("10");
+  });
+
+  it("extracts the leaf field for dot-notation attribute names", async () => {
+    // "document.title" should extract item.data["title"], not item.data["document.title"]
+    mockCollection([{ title: "Contract A" }]);
+
+    const { result } = makeHook(makeQueryClient(), "document.title");
+    act(() => result.current.search("Con"));
+
+    await waitFor(() => expect(result.current.results).toContain("Contract A"), { timeout: 3000 });
+  });
+
+  it("deduplicates identical attribute values from multiple items", async () => {
+    mockCollection([{ number: "INV-001" }, { number: "INV-001" }, { number: "INV-002" }]);
+
+    const { result } = makeHook();
+    act(() => result.current.search("INV"));
+
+    await waitFor(() => expect(result.current.results).toHaveLength(2), { timeout: 3000 });
+    expect(result.current.results).toContain("INV-001");
+    expect(result.current.results).toContain("INV-002");
   });
 });

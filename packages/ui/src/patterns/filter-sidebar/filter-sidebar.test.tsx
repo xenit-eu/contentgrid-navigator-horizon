@@ -34,6 +34,9 @@ function renderSidebar(
   overrides: Partial<{
     onFilterChange: (key: string, value: string | undefined) => void;
     onClearAll: () => void;
+    onTypeaheadSearch: (fieldParam: string, query: string) => void;
+    typeaheadSuggestions: Record<string, string[]>;
+    typeaheadIsLoading: Record<string, boolean>;
   }> = {},
 ) {
   const onFilterChange = overrides.onFilterChange ?? vi.fn();
@@ -46,6 +49,9 @@ function renderSidebar(
         filters={filters}
         onFilterChange={onFilterChange}
         onClearAll={onClearAll}
+        onTypeaheadSearch={overrides.onTypeaheadSearch}
+        typeaheadSuggestions={overrides.typeaheadSuggestions}
+        typeaheadIsLoading={overrides.typeaheadIsLoading}
       />,
     ),
   };
@@ -361,6 +367,132 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
     const clearBtn = screen.getByRole("button");
     await user.click(clearBtn);
     expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Typeahead / prefix-match tests
+// ---------------------------------------------------------------------------
+
+const PREFIX_PROP: SearchProperty = { name: "number~prefix", type: "string" };
+const EXACT_PROP: SearchProperty = { name: "number", type: "string" };
+
+describe("FilterSidebar — JF-10: exact-match suppression", () => {
+  it("hides the exact-match field when a ~prefix sibling exists in the same group", () => {
+    // Both "number" and "number~prefix" are passed — only one input should appear
+    renderSidebar([EXACT_PROP, PREFIX_PROP]);
+    const inputs = screen.getAllByRole("textbox");
+    expect(inputs).toHaveLength(1);
+  });
+
+  it("still renders the ~prefix field when exact-match is suppressed", () => {
+    renderSidebar([EXACT_PROP, PREFIX_PROP]);
+    // Input should be present and the label "Number" is derived from the field name
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByText("Number")).toBeInTheDocument();
+  });
+
+  it("renders both fields as separate inputs when no prefix sibling exists", () => {
+    const A: SearchProperty = { name: "title", type: "string" };
+    const B: SearchProperty = { name: "code", type: "string" };
+    renderSidebar([A, B]);
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+  });
+});
+
+describe("FilterSidebar — TypeaheadTextFilter", () => {
+  it("renders a plain TextFilter for ~prefix fields when onTypeaheadSearch is not provided", () => {
+    renderSidebar([PREFIX_PROP]);
+    // Should still render a text input, just without the dropdown wiring
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("renders a typeahead input for ~prefix fields when onTypeaheadSearch is provided", () => {
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar([PREFIX_PROP], {}, { onTypeaheadSearch });
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("calls onTypeaheadSearch and onFilterChange when user types", () => {
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar([PREFIX_PROP], {}, { onFilterChange, onTypeaheadSearch });
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "INV" } });
+
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV");
+    expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "INV");
+  });
+
+  it("calls onFilterChange with undefined and onTypeaheadSearch with empty when input is cleared", () => {
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar([PREFIX_PROP], { "number~prefix": "INV" }, { onFilterChange, onTypeaheadSearch });
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
+
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", undefined);
+    expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
+  });
+
+  it("shows suggestions in a listbox when typeaheadSuggestions are provided and input is typed", () => {
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      {},
+      {
+        onTypeaheadSearch,
+        typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002"] },
+      },
+    );
+
+    // Type to open the popover
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "INV" } });
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.getByText("INV-001")).toBeInTheDocument();
+    expect(screen.getByText("INV-002")).toBeInTheDocument();
+  });
+
+  it("calls onFilterChange with the suggestion and clears search when a suggestion is clicked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      {},
+      {
+        onFilterChange,
+        onTypeaheadSearch,
+        typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002"] },
+      },
+    );
+
+    // Type to open the popover
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "INV" } });
+
+    // Click a suggestion
+    await user.click(screen.getByText("INV-001"));
+
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV-001");
+    expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
+  });
+
+  it("clears the filter and search when the clear button is clicked on a typeahead field", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      { "number~prefix": "INV-001" },
+      { onFilterChange, onTypeaheadSearch },
+    );
+
+    const clearBtn = screen.getByRole("button", { name: /clear/i });
+    await user.click(clearBtn);
+
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", undefined);
+    expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
   });
 });
 
