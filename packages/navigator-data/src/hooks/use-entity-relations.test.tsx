@@ -10,6 +10,7 @@ import { useEntityRelations } from "./use-entity-relations";
 
 const BASE = "https://api.example.com";
 const PROFILE_URL = `${BASE}/profile`;
+const ROOT_URL = `${BASE}/`;
 const COLLECTION_URL = `${BASE}/invoices`;
 const ITEM_URL = `${COLLECTION_URL}/inv-1`;
 const RELATION_URL = `${ITEM_URL}/customer`;
@@ -37,8 +38,27 @@ function makeWrapper() {
   };
 }
 
+/**
+ * Register both root resource and profile handlers.
+ * Root resource cg:entity links provide collection hrefs; profile root provides profile hrefs.
+ */
 function mockProfile() {
   server.use(
+    http.get(ROOT_URL, () =>
+      HttpResponse.json({
+        _links: {
+          self: { href: ROOT_URL },
+          "cg:entity": [{ href: COLLECTION_URL, name: "invoice", title: "Invoice" }],
+          curies: [
+            {
+              href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+              name: "cg",
+              templated: true,
+            },
+          ],
+        },
+      }),
+    ),
     http.get(PROFILE_URL, () =>
       HttpResponse.json({
         _links: {
@@ -103,6 +123,8 @@ describe("useEntityRelations", () => {
     expect(result.current.data).toHaveLength(1);
     expect(result.current.data![0].selfHref).toBe(CUSTOMER_URL);
     expect((result.current.data![0].data as Record<string, unknown>).name).toBe("Acme Corp");
+    // id comes from the top-level JSON id field, not URL parsing
+    expect(result.current.data![0].id).toBe("cust-1");
   });
 
   it("returns multiple items for a to-many relation (has _embedded)", async () => {
@@ -141,6 +163,9 @@ describe("useEntityRelations", () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     expect(result.current.data).toHaveLength(2);
+    // id comes from the top-level JSON id field, not URL parsing
+    expect(result.current.data![0].id).toBe("cust-1");
+    expect(result.current.data![1].id).toBe("cust-2");
     // Regression: only one HTTP request should be made, not two
     expect(requestCount).toBe(1);
   });

@@ -140,8 +140,12 @@ export async function fetchEntitySchema(
   const createFormRelations: CreateFormRelation[] = createFormProps
     .filter((p) => p.type === "url" && p.options?.link?.href)
     .map((p) => {
-      const linkHref = p.options!.link!.href;
-      const targetEntityName = linkHref.split("/").at(-1) || p.name;
+      const link = p.options!.link!;
+      // Prefer the link's name field when present — it is the authoritative entity name
+      // provided by the HAL contract. Fall back to last path segment of the href only
+      // if name is absent (e.g. older API versions).
+      const targetEntityName =
+        (link as { href: string; name?: string }).name || link.href.split("/").at(-1) || p.name;
       const schemaRelation = relations.find((r) => r.name === p.name);
       return {
         name: p.name,
@@ -168,9 +172,10 @@ export async function fetchEntitySchema(
 export function useEntitySchema(entityName: string) {
   const { apiFetch } = useNavigatorData();
   const { data: entities } = useProfile();
-  const entity = entities?.find(
-    (e) => e.name === entityName || e.href.split("/").pop() === entityName,
-  );
+  // Match by link name (singular entity name from the profile root cg:entity link).
+  // No longer falls back to last path segment of href — name is always present on
+  // well-formed ContentGrid profile roots.
+  const entity = entities?.find((e) => e.name === entityName);
 
   return useQuery({
     queryKey: queryKeys.entitySchema(entityName),

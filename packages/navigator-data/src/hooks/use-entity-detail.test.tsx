@@ -2,14 +2,23 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "../../test-setup";
-import { BASE, makeQueryClient, makeWrapper, mockProfileResponse, seedProfile } from "./test-utils";
+import {
+  BASE,
+  ROOT_URL,
+  makeQueryClient,
+  makeWrapper,
+  mockProfileResponse,
+  mockRootResponse,
+  seedProfile,
+} from "./test-utils";
 import { useEntityDetail } from "./use-entity-detail";
 
 const ITEM_URL = `${BASE}/invoices/inv-1`;
 
 describe("useEntityDetail", () => {
-  it("fetches entity item and returns data, selfHref, links and etag", async () => {
+  it("fetches entity item using the RFC 6570 item template and returns data, selfHref, links and etag", async () => {
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(ITEM_URL, () =>
         HttpResponse.json(
@@ -58,6 +67,7 @@ describe("useEntityDetail", () => {
 
   it("surfaces ProblemDetailError on a 404 response", async () => {
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(ITEM_URL, () =>
         HttpResponse.json(

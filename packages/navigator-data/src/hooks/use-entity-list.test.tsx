@@ -10,6 +10,7 @@ import { useEntityList } from "./use-entity-list";
 
 const BASE = "https://api.example.com";
 const PROFILE_URL = `${BASE}/profile`;
+const ROOT_URL = `${BASE}/`;
 const COLLECTION_URL = `${BASE}/invoices`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => ({
@@ -34,8 +35,27 @@ function makeWrapper() {
   };
 }
 
+/**
+ * Register both root resource and profile handlers.
+ * Root resource cg:entity links provide collection hrefs; profile root provides profile hrefs.
+ */
 function mockProfile() {
   server.use(
+    http.get(ROOT_URL, () =>
+      HttpResponse.json({
+        _links: {
+          self: { href: ROOT_URL },
+          "cg:entity": [{ href: COLLECTION_URL, name: "invoice", title: "Invoice" }],
+          curies: [
+            {
+              href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+              name: "cg",
+              templated: true,
+            },
+          ],
+        },
+      }),
+    ),
     http.get(PROFILE_URL, () =>
       HttpResponse.json({
         _links: {
@@ -90,6 +110,9 @@ describe("useEntityList", () => {
     expect(result.current.data!.items).toHaveLength(2);
     // Regression: previously slice.page (always undefined) was accessed instead of slice.data.page
     expect(result.current.data!.totalItems).toBe(42);
+    // id comes from the top-level JSON id field, not URL parsing
+    expect(result.current.data!.items[0].id).toBe("inv-1");
+    expect(result.current.data!.items[1].id).toBe("inv-2");
   });
 
   it("returns totalItems from total_items_estimate when exact is absent", async () => {

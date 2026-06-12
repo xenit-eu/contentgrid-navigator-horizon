@@ -14,6 +14,18 @@ export interface RelatedItem {
   id: string;
 }
 
+/**
+ * Extracts the entity id from an item's data or self href.
+ *
+ * Entity-item responses expose id as a top-level JSON field per the HAL contract.
+ * Fall back to last URL path segment only if the field is genuinely absent
+ * (should not happen on a well-formed ContentGrid response).
+ */
+function extractId(data: Record<string, unknown>, selfHref: string): string {
+  if (typeof data.id === "string" && data.id) return data.id;
+  return selfHref.split("/").pop() ?? "";
+}
+
 async function fetchEntityRelations(
   apiFetch: Parameters<typeof fetchHal>[0],
   relationHref: string,
@@ -26,10 +38,11 @@ async function fetchEntityRelations(
       return HalSlice.from<Record<string, unknown>>(object).items.map((item) => {
         const selfLink = item.links.findLink(ianaRelations.self);
         const selfHref = selfLink?.href ?? "";
+        const rawData = item.data as Record<string, unknown>;
         return {
-          data: { ...item.data },
+          data: { ...rawData },
           selfHref,
-          id: selfHref.split("/").pop() ?? "",
+          id: extractId(rawData, selfHref),
         };
       });
     }
@@ -38,11 +51,12 @@ async function fetchEntityRelations(
     const selfLink = object.links.findLink(ianaRelations.self);
     const selfHref = selfLink?.href ?? "";
     if (Object.keys(object.data).length === 0 && !selfLink) return [];
+    const rawData = object.data as Record<string, unknown>;
     return [
       {
-        data: { ...object.data },
+        data: { ...rawData },
         selfHref,
-        id: selfHref.split("/").pop() ?? "",
+        id: extractId(rawData, selfHref),
       },
     ];
   } catch (err) {

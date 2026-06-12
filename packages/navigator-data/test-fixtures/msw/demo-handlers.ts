@@ -25,9 +25,27 @@ export function createDemoHandlers(baseUrl = "") {
     });
 
   return [
+    requireBearer(`${baseUrl}/`),
     requireBearer(`${baseUrl}/profile`),
     requireBearer(`${baseUrl}/profile/invoices`),
     requireBearer(`${baseUrl}/invoices`),
+    // Root resource — cg:entity links point directly at entity collections.
+    // fetchProfile fetches this in parallel with /profile to get collection hrefs.
+    http.get(`${baseUrl}/`, () =>
+      HttpResponse.json({
+        _links: {
+          self: { href: `${baseUrl}/` },
+          curies: [
+            {
+              name: "cg",
+              href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+              templated: true,
+            },
+          ],
+          "cg:entity": [{ href: `${baseUrl}/invoices`, name: "invoice", title: "Invoice" }],
+        },
+      }),
+    ),
     http.get(`${baseUrl}/profile`, () =>
       HttpResponse.json({
         _links: {

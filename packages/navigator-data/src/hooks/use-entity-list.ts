@@ -54,8 +54,14 @@ export async function fetchEntityList(
   const items = slice.items.map((item) => {
     const selfLink = item.links.findLink(ianaRelations.self);
     const selfHref = selfLink?.href ?? "";
-    const id = selfHref.split("/").pop() ?? "";
     const rawData = item.data as Record<string, unknown>;
+
+    // Entity-item responses expose id as a top-level JSON field per the HAL contract.
+    // Fall back to last URL path segment only if the field is genuinely absent
+    // (should not happen on a well-formed ContentGrid response).
+    const id =
+      typeof rawData.id === "string" && rawData.id ? rawData.id : (selfHref.split("/").pop() ?? "");
+
     const links = (rawData._links as Record<string, unknown>) ?? {};
     return { data: { ...rawData }, selfHref, id, links };
   });
@@ -78,9 +84,10 @@ export async function fetchEntityList(
 export function useEntityList(entityName: string, params: EntityListParams) {
   const { apiFetch } = useNavigatorData();
   const { data: entities } = useProfile();
-  const entity = entities?.find(
-    (e) => e.name === entityName || e.href.split("/").pop() === entityName,
-  );
+  // Match by link name (singular entity name from the profile root cg:entity link).
+  // No longer falls back to last path segment of href — name is always present on
+  // well-formed ContentGrid profile roots.
+  const entity = entities?.find((e) => e.name === entityName);
   const collectionHref = entity?.collectionHref;
 
   return useQuery({

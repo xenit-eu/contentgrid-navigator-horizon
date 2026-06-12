@@ -8,7 +8,9 @@ import { type AuthenticationTokenSupplier, createApiClient } from "../api/client
 import { NavigatorDataProvider, useNavigatorData } from "./context";
 import { useProfile } from "./use-profile";
 
-const PROFILE_URL = "https://api.example.com/profile";
+const BASE = "https://api.example.com";
+const PROFILE_URL = `${BASE}/profile`;
+const ROOT_URL = `${BASE}/`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => ({
   token: "test-token",
@@ -33,8 +35,27 @@ function makeWrapper() {
 }
 
 describe("useProfile", () => {
-  it("returns entity list parsed from the profile response", async () => {
+  it("returns entity list with collectionHref from root resource cg:entity links", async () => {
+    // Root resource (GET /) — cg:entity links point at collections
     server.use(
+      http.get(ROOT_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: ROOT_URL },
+            "cg:entity": [
+              { href: "https://api.example.com/invoices", name: "invoice", title: "Invoice" },
+              { href: "https://api.example.com/customers", name: "customer", title: "Customer" },
+            ],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+        }),
+      ),
       http.get(PROFILE_URL, () =>
         HttpResponse.json({
           _links: {
@@ -73,12 +94,16 @@ describe("useProfile", () => {
       name: "invoice",
       title: "Invoice",
       href: "https://api.example.com/profile/invoices",
+      // collectionHref must come from the root resource link, not a string replacement
       collectionHref: "https://api.example.com/invoices",
+      // itemTemplateHref must be the RFC 6570 template for a single item
+      itemTemplateHref: "https://api.example.com/invoices/{id}",
     });
   });
 
   it("surfaces ProblemDetailError when the profile endpoint returns an error", async () => {
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json({ _links: { self: { href: ROOT_URL } } })),
       http.get(PROFILE_URL, () =>
         HttpResponse.json(
           { status: 401, title: "Unauthorized" },
@@ -93,8 +118,26 @@ describe("useProfile", () => {
     expect(result.current.error).toBeDefined();
   });
 
-  it("uses href-derived name when link.name is absent", async () => {
+  it("uses link name when present; falls back to href path segment when absent", async () => {
+    // Root resource provides a matching link by name for one entity,
+    // but no matching link for the nameless one (edge case).
     server.use(
+      http.get(ROOT_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: ROOT_URL },
+            // No cg:entity link for "orders" — triggers collectionHref fallback
+            "cg:entity": [],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
+        }),
+      ),
       http.get(PROFILE_URL, () =>
         HttpResponse.json({
           _links: {
@@ -119,9 +162,11 @@ describe("useProfile", () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     expect(result.current.data).toHaveLength(1);
-    // Name should be derived from the last segment of the href
+    // Name should be derived from the last segment of the profile href
     expect(result.current.data![0].name).toBe("orders");
+    // collectionHref falls back to string replacement when root has no matching link
     expect(result.current.data![0].collectionHref).toBe("https://api.example.com/orders");
+    expect(result.current.data![0].itemTemplateHref).toBe("https://api.example.com/orders/{id}");
   });
 });
 

@@ -2,7 +2,14 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "../../test-setup";
-import { BASE, INVOICE_ENTITY, makeWrapper, mockProfileResponse } from "./test-utils";
+import {
+  BASE,
+  INVOICE_ENTITY,
+  ROOT_URL,
+  makeWrapper,
+  mockProfileResponse,
+  mockRootResponse,
+} from "./test-utils";
 import { useEntitySchema } from "./use-entity-schema";
 
 // Derived from INVOICE_ENTITY so it stays consistent if the entity URL changes.
@@ -123,6 +130,7 @@ const profileFixture = {
 describe("useEntitySchema", () => {
   it("parses attributes, relations, searchProperties and sortOptions from profile", async () => {
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(PROFILE_HREF, () => HttpResponse.json(profileFixture)),
     );
@@ -203,6 +211,7 @@ describe("useEntitySchema", () => {
     };
 
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(PROFILE_HREF, () => HttpResponse.json(contentFixture)),
     );
@@ -236,6 +245,7 @@ describe("useEntitySchema", () => {
     };
 
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(PROFILE_HREF, () => HttpResponse.json(withInlineOptions)),
     );
@@ -267,6 +277,7 @@ describe("useEntitySchema", () => {
     };
 
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(PROFILE_HREF, () => HttpResponse.json(withStringSortOptions)),
     );

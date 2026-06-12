@@ -4,7 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 import { server } from "../../test-setup";
 import { PreconditionFailedError } from "../api/errors";
 import { queryKeys } from "./query-keys";
-import { BASE, makeQueryClient, makeWrapper, mockProfileResponse, seedProfile } from "./test-utils";
+import {
+  BASE,
+  ROOT_URL,
+  makeQueryClient,
+  makeWrapper,
+  mockProfileResponse,
+  mockRootResponse,
+  seedProfile,
+} from "./test-utils";
 import { useEntityDetail } from "./use-entity-detail";
 import { useUpdateEntity } from "./use-update-entity";
 
@@ -164,6 +172,7 @@ describe("useUpdateEntity", () => {
     let getCallCount = 0;
     // First GET returns v1, subsequent GETs (after invalidation) return v2
     server.use(
+      http.get(ROOT_URL, () => HttpResponse.json(mockRootResponse())),
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(ITEM_URL, () => {
         getCallCount++;

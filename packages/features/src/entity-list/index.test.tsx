@@ -15,6 +15,7 @@ import { EntityList } from "./index";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
+const ROOT_URL = `${API_URL}/`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
@@ -37,28 +38,50 @@ function renderEntityList() {
   return render(<EntityList />, { wrapper: Wrapper });
 }
 
-function profileRootHandler() {
-  return http.get(PROFILE_URL, () =>
-    HttpResponse.json({
-      _links: {
-        self: { href: PROFILE_URL },
-        curies: [
-          {
-            name: "cg",
-            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
-            templated: true,
-          },
-        ],
-        "cg:entity": [{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }],
-      },
-    }),
-  );
+/** Returns MSW handlers for both the root resource and profile root.
+ * fetchProfile fetches GET / (for collection hrefs) and GET /profile (for profile hrefs) in parallel.
+ */
+function profileRootHandlers() {
+  return [
+    // Root resource — cg:entity links point at collections
+    http.get(ROOT_URL, () =>
+      HttpResponse.json({
+        _links: {
+          self: { href: ROOT_URL },
+          curies: [
+            {
+              name: "cg",
+              href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+              templated: true,
+            },
+          ],
+          "cg:entity": [{ href: `${API_URL}/invoices`, name: "invoice", title: "Invoice" }],
+        },
+      }),
+    ),
+    // Profile root — cg:entity links point at entity profiles
+    http.get(PROFILE_URL, () =>
+      HttpResponse.json({
+        _links: {
+          self: { href: PROFILE_URL },
+          curies: [
+            {
+              name: "cg",
+              href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+              templated: true,
+            },
+          ],
+          "cg:entity": [{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }],
+        },
+      }),
+    ),
+  ];
 }
 
 describe("EntityList", () => {
   it("renders entities discovered from the profile with their collection items", async () => {
     server.use(
-      profileRootHandler(),
+      ...profileRootHandlers(),
       createListHandler({
         url: `${API_URL}/invoices`,
         items: sampleInvoiceItems,
@@ -75,7 +98,13 @@ describe("EntityList", () => {
   });
 
   it("shows an error message when the profile request fails", async () => {
-    server.use(http.get(PROFILE_URL, () => HttpResponse.json(null, { status: 500 })));
+    server.use(
+      // Root resource succeeds; the profile itself fails
+      http.get(ROOT_URL, () =>
+        HttpResponse.json({ _links: { self: { href: ROOT_URL }, "cg:entity": [] } }),
+      ),
+      http.get(PROFILE_URL, () => HttpResponse.json(null, { status: 500 })),
+    );
 
     renderEntityList();
 
@@ -84,6 +113,9 @@ describe("EntityList", () => {
 
   it("shows an empty state when the profile exposes no entities", async () => {
     server.use(
+      http.get(ROOT_URL, () =>
+        HttpResponse.json({ _links: { self: { href: ROOT_URL }, "cg:entity": [] } }),
+      ),
       http.get(PROFILE_URL, () => HttpResponse.json({ _links: { self: { href: PROFILE_URL } } })),
     );
 
@@ -94,7 +126,7 @@ describe("EntityList", () => {
 
   it("shows an item error message when a collection request fails", async () => {
     server.use(
-      profileRootHandler(),
+      ...profileRootHandlers(),
       http.get(`${API_URL}/invoices`, () => HttpResponse.json(null, { status: 500 })),
     );
 

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ianaRelations } from "@contentgrid/hal/rels";
+import UriTemplate from "@contentgrid/uri-template";
 import { fetchHal } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
@@ -15,13 +16,14 @@ export interface EntityDetailResult {
 
 async function fetchEntityDetail(
   apiFetch: Parameters<typeof fetchHal>[0],
-  collectionHref: string,
+  itemTemplateHref: string,
   entityId: string,
 ): Promise<EntityDetailResult> {
-  const { object, etag } = await fetchHal<Record<string, unknown>>(
-    apiFetch,
-    `${collectionHref}/${entityId}`,
-  );
+  // Expand the RFC 6570 item template from the entity profile's describes.item link.
+  // This avoids constructing the URL via string concatenation.
+  const itemUrl = new UriTemplate(itemTemplateHref).expand({ id: entityId });
+
+  const { object, etag } = await fetchHal<Record<string, unknown>>(apiFetch, itemUrl);
 
   const selfLink = object.links.findLink(ianaRelations.self);
 
@@ -36,14 +38,15 @@ async function fetchEntityDetail(
 export function useEntityDetail(entityName: string, entityId: string) {
   const { apiFetch } = useNavigatorData();
   const { data: entities } = useProfile();
-  const entity = entities?.find(
-    (e) => e.name === entityName || e.href.split("/").pop() === entityName,
-  );
-  const collectionHref = entity?.collectionHref;
+  // Match by link name (singular entity name from the profile root cg:entity link).
+  // No longer falls back to last path segment of href — name is always present on
+  // well-formed ContentGrid profile roots.
+  const entity = entities?.find((e) => e.name === entityName);
+  const itemTemplateHref = entity?.itemTemplateHref;
 
   return useQuery({
     queryKey: queryKeys.entityDetail(entityName, entityId),
-    queryFn: () => fetchEntityDetail(apiFetch, collectionHref as string, entityId),
-    enabled: !!entityName && !!entityId && !!collectionHref,
+    queryFn: () => fetchEntityDetail(apiFetch, itemTemplateHref as string, entityId),
+    enabled: !!entityName && !!entityId && !!itemTemplateHref,
   });
 }
