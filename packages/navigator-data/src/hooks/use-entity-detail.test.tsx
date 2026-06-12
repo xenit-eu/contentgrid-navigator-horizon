@@ -8,7 +8,7 @@ import { useEntityDetail } from "./use-entity-detail";
 const ITEM_URL = `${BASE}/invoices/inv-1`;
 
 describe("useEntityDetail", () => {
-  it("fetches entity item and returns data, selfHref, links and etag", async () => {
+  it("fetches entity item and returns data, selfHref, links, etag, and templates", async () => {
     server.use(
       http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
       http.get(ITEM_URL, () =>
@@ -19,6 +19,7 @@ describe("useEntityDetail", () => {
             _links: {
               self: { href: ITEM_URL },
               "cg:relation": [{ href: `${ITEM_URL}/customer`, name: "customer" }],
+              "cg:content": [{ href: `${ITEM_URL}/document`, name: "document" }],
               curies: [
                 {
                   href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
@@ -26,6 +27,11 @@ describe("useEntityDetail", () => {
                   templated: true,
                 },
               ],
+            },
+            _templates: {
+              default: { method: "PATCH", contentType: "application/json", properties: [] },
+              delete: { method: "DELETE", properties: [] },
+              "set-customer": { method: "PUT", contentType: "text/uri-list", properties: [] },
             },
           },
           { headers: { ETag: '"etag-abc"' } },
@@ -39,10 +45,59 @@ describe("useEntityDetail", () => {
 
     await waitFor(() => expect(result.current.data).toBeDefined());
 
-    expect((result.current.data!.data as Record<string, unknown>).number).toBe("INV-001");
-    expect(result.current.data!.selfHref).toBe(ITEM_URL);
-    expect(result.current.data!.etag).toBe('"etag-abc"');
-    expect(result.current.data!.links).toHaveProperty("self");
+    const detail = result.current.data!;
+    expect((detail.data as Record<string, unknown>).number).toBe("INV-001");
+    expect(detail.selfHref).toBe(ITEM_URL);
+    expect(detail.etag).toBe('"etag-abc"');
+    expect(detail.links).toHaveProperty("self");
+
+    // Template capability flags
+    expect(detail.canUpdate).toBe(true);
+    expect(detail.canDelete).toBe(true);
+    expect(detail.templates["default"]).toEqual({
+      method: "PATCH",
+      target: null,
+      contentType: "application/json",
+    });
+    expect(detail.templates["delete"]).toEqual({
+      method: "DELETE",
+      target: null,
+      contentType: null,
+    });
+    expect(detail.templates["set-customer"]).toEqual({
+      method: "PUT",
+      target: null,
+      contentType: "text/uri-list",
+    });
+
+    // Link maps
+    expect(detail.contentLinks["document"]).toBe(`${ITEM_URL}/document`);
+    expect(detail.relationLinks["customer"]).toBe(`${ITEM_URL}/customer`);
+  });
+
+  it("sets canUpdate=false and canDelete=false when templates are absent", async () => {
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(ITEM_URL, () =>
+        HttpResponse.json(
+          {
+            id: "inv-1",
+            number: "INV-001",
+            _links: { self: { href: ITEM_URL } },
+          },
+          { headers: { ETag: '"etag-ro"' } },
+        ),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityDetail("invoice", "inv-1"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    expect(result.current.data!.canUpdate).toBe(false);
+    expect(result.current.data!.canDelete).toBe(false);
+    expect(result.current.data!.templates).toEqual({});
   });
 
   it("is not enabled when entityName is empty", () => {

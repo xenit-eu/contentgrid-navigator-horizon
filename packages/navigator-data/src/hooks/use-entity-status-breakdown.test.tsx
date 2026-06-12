@@ -27,6 +27,7 @@ const schema: EntitySchema = {
   sortableFields: [],
   sortOptions: [],
   createFormRelations: [],
+  createFormTemplate: null,
 };
 
 describe("useEntityStatusBreakdown", () => {

@@ -2,14 +2,38 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "../../test-setup";
+import type { EntitySchema } from "../types/entity";
+import { queryKeys } from "./query-keys";
 import { BASE, makeQueryClient, makeWrapper, seedProfile } from "./test-utils";
 import { useCreateEntity } from "./use-create-entity";
 
 const COLLECTION_URL = `${BASE}/invoices`;
 const CREATED_URL = `${COLLECTION_URL}/inv-new`;
 
+/** Seed a minimal entity schema cache entry with a create-form template. */
+function seedEntitySchema(
+  qc: ReturnType<typeof makeQueryClient>,
+  overrides: Partial<EntitySchema> = {},
+) {
+  const schema: EntitySchema = {
+    attributes: [],
+    relations: [],
+    searchProperties: [],
+    sortableFields: [],
+    sortOptions: [],
+    createFormRelations: [],
+    createFormTemplate: {
+      method: "POST",
+      target: null,
+      contentType: "application/json",
+    },
+    ...overrides,
+  };
+  qc.setQueryData(queryKeys.entitySchema("invoice"), schema);
+}
+
 describe("useCreateEntity", () => {
-  it("POSTs JSON and returns the Location header", async () => {
+  it("POSTs JSON using method/target from create-form template and returns the Location header", async () => {
     server.use(
       http.post(
         COLLECTION_URL,
@@ -19,6 +43,32 @@ describe("useCreateEntity", () => {
 
     const qc = makeQueryClient();
     seedProfile(qc);
+    seedEntitySchema(qc);
+
+    const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({ entityName: "invoice", data: { number: "INV-001" } });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBe(CREATED_URL);
+  });
+
+  it("uses a custom target URL from create-form template when provided", async () => {
+    const CUSTOM_URL = `${BASE}/invoices?source=api`;
+    server.use(
+      http.post(
+        CUSTOM_URL,
+        () => new HttpResponse(null, { status: 201, headers: { Location: CREATED_URL } }),
+      ),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntitySchema(qc, {
+      createFormTemplate: { method: "POST", target: CUSTOM_URL, contentType: "application/json" },
+    });
 
     const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
 
@@ -41,6 +91,7 @@ describe("useCreateEntity", () => {
 
     const qc = makeQueryClient();
     seedProfile(qc);
+    seedEntitySchema(qc);
 
     const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
     const file = new File(["content"], "doc.pdf", { type: "application/pdf" });
@@ -71,6 +122,38 @@ describe("useCreateEntity", () => {
     expect((result.current.error as Error).message).toMatch(/Unknown entity/);
   });
 
+  it("throws when no create-form template is in the schema cache (operation not supported)", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Schema seeded without a create-form template
+    seedEntitySchema(qc, { createFormTemplate: null });
+
+    const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.mutate({ entityName: "invoice", data: {} });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/Operation not supported/);
+    expect((result.current.error as Error).message).toMatch(/"create-form" template/);
+  });
+
+  it("throws when the schema cache is absent (no create-form template available)", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Schema NOT seeded at all
+
+    const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.mutate({ entityName: "invoice", data: {} });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/Operation not supported/);
+  });
+
   it("invalidates entityList and entityCount queries on success", async () => {
     server.use(
       http.post(
@@ -81,6 +164,7 @@ describe("useCreateEntity", () => {
 
     const qc = makeQueryClient();
     seedProfile(qc);
+    seedEntitySchema(qc);
     const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
@@ -106,6 +190,7 @@ describe("useCreateEntity", () => {
 
     const qc = makeQueryClient();
     seedProfile(qc);
+    seedEntitySchema(qc);
 
     const { result } = renderHook(() => useCreateEntity(), { wrapper: makeWrapper(qc) });
 

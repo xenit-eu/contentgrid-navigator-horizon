@@ -3,6 +3,7 @@ import { blueprintRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import type {
   CreateFormRelation,
+  CreateFormTemplate,
   EntityAttribute,
   EntityRelation,
   EntitySchema,
@@ -154,6 +155,19 @@ export async function fetchEntitySchema(
 
   const description = (object.data as Record<string, unknown>).description as string | undefined;
 
+  const rawCreateForm = templates?.["create-form"] as
+    | { method?: string; target?: string; contentType?: string }
+    | undefined;
+  const createFormTemplate: CreateFormTemplate | null =
+    rawCreateForm && typeof rawCreateForm.method === "string"
+      ? {
+          method: rawCreateForm.method,
+          target: typeof rawCreateForm.target === "string" ? rawCreateForm.target : null,
+          contentType:
+            typeof rawCreateForm.contentType === "string" ? rawCreateForm.contentType : null,
+        }
+      : null;
+
   return {
     description,
     attributes,
@@ -162,6 +176,7 @@ export async function fetchEntitySchema(
     sortableFields,
     sortOptions,
     createFormRelations,
+    createFormTemplate,
   };
 }
 

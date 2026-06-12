@@ -47,6 +47,16 @@ export interface SortOption {
   prompt: string;
 }
 
+/** Template-level affordance from a profile's `create-form` entry. */
+export interface CreateFormTemplate {
+  /** HTTP method to use when creating an entity (typically "POST"). */
+  method: string;
+  /** Target URL for creation; falls back to the entity collection href when absent. */
+  target: string | null;
+  /** Content-Type for the request body; falls back to "application/json" when absent. */
+  contentType: string | null;
+}
+
 export interface EntitySchema {
   description?: string;
   attributes: EntityAttribute[];
@@ -55,4 +65,9 @@ export interface EntitySchema {
   sortableFields: string[];
   sortOptions: SortOption[];
   createFormRelations: CreateFormRelation[];
+  /**
+   * Parsed affordance from the profile's `_templates.create-form` entry.
+   * Null when the profile does not carry a create-form template (creation not allowed).
+   */
+  createFormTemplate: CreateFormTemplate | null;
 }

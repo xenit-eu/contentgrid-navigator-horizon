@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
-import { CONTENT_TYPE_JSON } from "../api/content-types";
 import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
 import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
+import type { EntityDetailResult } from "./use-entity-detail";
 
 interface UpdateEntityParams {
   entityName: string;
@@ -21,26 +21,35 @@ export function useUpdateEntity() {
   return useMutation({
     mutationFn: async (params: UpdateEntityParams) => {
       const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionHref;
-      if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
+      const entity = entities?.find((e) => e.name === params.entityName);
+      if (!entity) throw new Error(`Unknown entity: ${params.entityName}`);
 
-      const itemUrl = `${collectionHref}/${params.entityId}`;
-
-      const cached = queryClient.getQueryData(
+      const cached = queryClient.getQueryData<EntityDetailResult>(
         queryKeys.entityDetail(params.entityName, params.entityId),
-      ) as { etag: string | null } | undefined;
+      );
       if (!cached?.etag) {
         throw new Error(
           `No ETag cached for ${params.entityName}/${params.entityId} — fetch the item before mutating`,
         );
       }
 
+      const updateTemplate = cached.templates["default"];
+      if (!updateTemplate) {
+        throw new Error(
+          `Operation not supported: no "default" template on ${params.entityName}/${params.entityId}`,
+        );
+      }
+
+      const itemUrl = updateTemplate.target ?? cached.selfHref;
+      const method = updateTemplate.method;
+      const contentType = updateTemplate.contentType ?? "application/json";
+
       try {
         await apiFetch(
           createRequest(
-            { url: itemUrl, method: "PATCH" },
+            { url: itemUrl, method },
             {
-              headers: { "Content-Type": CONTENT_TYPE_JSON, "If-Match": cached.etag },
+              headers: { "Content-Type": contentType, "If-Match": cached.etag },
               body: Representation.json(params.data),
             },
           ),
@@ -53,7 +62,13 @@ export function useUpdateEntity() {
       }
 
       if (params.file && params.contentAttributeName) {
-        const contentUrl = `${itemUrl}/${params.contentAttributeName}`;
+        // Resolve the content upload URL from the cg:content link — never string-concat.
+        const contentUrl = cached.contentLinks[params.contentAttributeName];
+        if (!contentUrl) {
+          throw new Error(
+            `No content link for attribute "${params.contentAttributeName}" on ${params.entityName}/${params.entityId}`,
+          );
+        }
         await apiFetch(
           createRequest(
             { url: contentUrl, method: "PUT" },

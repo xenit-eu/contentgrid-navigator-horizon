@@ -9,18 +9,31 @@ import { useDeleteEntity } from "./use-delete-entity";
 
 const ITEM_URL = `${BASE}/invoices/inv-1`;
 
-/** Seed a minimal entity detail cache entry so the ETag is available. */
-function seedEntityDetail(qc: ReturnType<typeof makeQueryClient>, etag = '"etag-abc"') {
+/** Seed a minimal entity detail cache entry so the ETag and templates are available. */
+function seedEntityDetail(
+  qc: ReturnType<typeof makeQueryClient>,
+  etag = '"etag-abc"',
+  overrides: Record<string, unknown> = {},
+) {
   qc.setQueryData(queryKeys.entityDetail("invoice", "inv-1"), {
     data: { number: "INV-001" },
     selfHref: ITEM_URL,
     links: {},
     etag,
+    templates: {
+      default: { method: "PATCH", target: null, contentType: "application/json" },
+      delete: { method: "DELETE", target: null, contentType: null },
+    },
+    canUpdate: true,
+    canDelete: true,
+    contentLinks: {},
+    relationLinks: {},
+    ...overrides,
   });
 }
 
 describe("useDeleteEntity", () => {
-  it("sends DELETE with If-Match to the item URL", async () => {
+  it("sends DELETE with If-Match to the item URL (method/target from template)", async () => {
     let deletedUrl: string | undefined;
     let capturedIfMatch: string | null = null;
     server.use(
@@ -44,6 +57,35 @@ describe("useDeleteEntity", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(deletedUrl).toBe(ITEM_URL);
     expect(capturedIfMatch).toBe('"etag-abc"');
+  });
+
+  it("uses method and target from the 'delete' template", async () => {
+    let capturedMethod: string | undefined;
+    const CUSTOM_URL = `${BASE}/invoices/inv-1?force=true`;
+
+    server.use(
+      http.all(CUSTOM_URL, ({ request }) => {
+        capturedMethod = request.method;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntityDetail(qc, '"etag-abc"', {
+      templates: {
+        delete: { method: "DELETE", target: CUSTOM_URL, contentType: null },
+      },
+    });
+
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({ entityName: "invoice", entityId: "inv-1" });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(capturedMethod).toBe("DELETE");
   });
 
   it("invalidates list and count queries on success", async () => {
@@ -120,5 +162,27 @@ describe("useDeleteEntity", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as Error).message).toMatch(/No ETag cached/);
+  });
+
+  it("throws when the 'delete' template is absent (operation not supported)", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Seed without the 'delete' template — server did not grant delete permission
+    seedEntityDetail(qc, '"etag-abc"', {
+      templates: {
+        default: { method: "PATCH", target: null, contentType: "application/json" },
+      },
+      canDelete: false,
+    });
+
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.mutate({ entityName: "invoice", entityId: "inv-1" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/Operation not supported/);
+    expect((result.current.error as Error).message).toMatch(/"delete" template/);
   });
 });

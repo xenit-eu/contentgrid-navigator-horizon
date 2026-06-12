@@ -9,19 +9,33 @@ import { useEntityDetail } from "./use-entity-detail";
 import { useUpdateEntity } from "./use-update-entity";
 
 const ITEM_URL = `${BASE}/invoices/inv-1`;
+const CONTENT_URL = `${BASE}/invoices/inv-1/document`;
 
-/** Seed a minimal entity detail cache entry so the ETag is available. */
-function seedEntityDetail(qc: ReturnType<typeof makeQueryClient>, etag = '"etag-abc"') {
+/** Seed a minimal entity detail cache entry so the ETag and templates are available. */
+function seedEntityDetail(
+  qc: ReturnType<typeof makeQueryClient>,
+  etag = '"etag-abc"',
+  overrides: Record<string, unknown> = {},
+) {
   qc.setQueryData(queryKeys.entityDetail("invoice", "inv-1"), {
     data: { number: "INV-001" },
     selfHref: ITEM_URL,
     links: {},
     etag,
+    templates: {
+      default: { method: "PATCH", target: null, contentType: "application/json" },
+      delete: { method: "DELETE", target: null, contentType: null },
+    },
+    canUpdate: true,
+    canDelete: true,
+    contentLinks: { document: CONTENT_URL },
+    relationLinks: {},
+    ...overrides,
   });
 }
 
 describe("useUpdateEntity", () => {
-  it("PATCHes JSON with If-Match to the item URL", async () => {
+  it("PATCHes JSON with If-Match to the item URL (method/target from template)", async () => {
     let capturedBody: unknown;
     let capturedIfMatch: string | null = null;
     server.use(
@@ -51,11 +65,48 @@ describe("useUpdateEntity", () => {
     expect(capturedIfMatch).toBe('"etag-abc"');
   });
 
-  it("also PUTs the content file when provided", async () => {
+  it("uses method and target from the 'default' template", async () => {
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+    const CUSTOM_URL = `${BASE}/invoices/inv-1/metadata`;
+
+    server.use(
+      http.all(CUSTOM_URL, async ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Seed with a custom method and target from the template
+    seedEntityDetail(qc, '"etag-abc"', {
+      templates: {
+        default: { method: "PUT", target: CUSTOM_URL, contentType: "application/json" },
+      },
+    });
+
+    const { result } = renderHook(() => useUpdateEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        entityName: "invoice",
+        entityId: "inv-1",
+        data: { number: "INV-001" },
+      });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(capturedMethod).toBe("PUT");
+    expect(capturedUrl).toBe(CUSTOM_URL);
+  });
+
+  it("also PUTs the content file to the cg:content link URL when provided", async () => {
     let contentPutReceived = false;
     server.use(
       http.patch(ITEM_URL, () => new HttpResponse(null, { status: 204 })),
-      http.put(`${ITEM_URL}/document`, () => {
+      http.put(CONTENT_URL, () => {
         contentPutReceived = true;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -139,6 +190,53 @@ describe("useUpdateEntity", () => {
     expect((result.current.error as Error).message).toMatch(/No ETag cached/);
   });
 
+  it("throws when the 'default' template is absent (operation not supported)", async () => {
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Seed without the 'default' template — server did not grant update permission
+    seedEntityDetail(qc, '"etag-abc"', {
+      templates: {},
+      canUpdate: false,
+    });
+
+    const { result } = renderHook(() => useUpdateEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.mutate({ entityName: "invoice", entityId: "inv-1", data: {} });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/Operation not supported/);
+    expect((result.current.error as Error).message).toMatch(/"default" template/);
+  });
+
+  it("throws when a content upload is requested but cg:content link is missing", async () => {
+    server.use(http.patch(ITEM_URL, () => new HttpResponse(null, { status: 204 })));
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Seed without content links
+    seedEntityDetail(qc, '"etag-abc"', {
+      contentLinks: {},
+    });
+
+    const { result } = renderHook(() => useUpdateEntity(), { wrapper: makeWrapper(qc) });
+    const file = new File(["data"], "doc.pdf", { type: "application/pdf" });
+
+    await act(async () => {
+      result.current.mutate({
+        entityName: "invoice",
+        entityId: "inv-1",
+        data: {},
+        file,
+        contentAttributeName: "document",
+      });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/No content link/);
+  });
+
   it("invalidates entityDetail and entityList queries on success", async () => {
     const qc = makeQueryClient();
     seedProfile(qc);
@@ -172,7 +270,20 @@ describe("useUpdateEntity", () => {
           {
             id: "inv-1",
             number,
-            _links: { self: { href: ITEM_URL } },
+            _links: {
+              self: { href: ITEM_URL },
+              curies: [
+                {
+                  href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                  name: "cg",
+                  templated: true,
+                },
+              ],
+            },
+            _templates: {
+              default: { method: "PATCH", contentType: "application/json", properties: [] },
+              delete: { method: "DELETE", properties: [] },
+            },
           },
           { headers: { ETag: `"etag-v${getCallCount}"` } },
         );

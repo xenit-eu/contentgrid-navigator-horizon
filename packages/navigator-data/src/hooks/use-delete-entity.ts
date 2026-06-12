@@ -4,6 +4,7 @@ import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
 import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
+import type { EntityDetailResult } from "./use-entity-detail";
 
 interface DeleteEntityParams {
   entityName: string;
@@ -16,27 +17,34 @@ export function useDeleteEntity() {
 
   return useMutation({
     mutationFn: async (params: DeleteEntityParams) => {
-      // Derive the item URL from the profile cache (staleTime: Infinity — always present)
-      // rather than the entity-detail cache which may have been evicted (default gcTime: 5 min).
+      // Guard: entity must be known in the profile cache.
       const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionHref;
-      if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
+      if (!entities?.find((e) => e.name === params.entityName)) {
+        throw new Error(`Unknown entity: ${params.entityName}`);
+      }
 
-      const cached = queryClient.getQueryData(
+      const cached = queryClient.getQueryData<EntityDetailResult>(
         queryKeys.entityDetail(params.entityName, params.entityId),
-      ) as { etag: string | null } | undefined;
+      );
       if (!cached?.etag) {
         throw new Error(
           `No ETag cached for ${params.entityName}/${params.entityId} — fetch the item before deleting`,
         );
       }
 
+      const deleteTemplate = cached.templates["delete"];
+      if (!deleteTemplate) {
+        throw new Error(
+          `Operation not supported: no "delete" template on ${params.entityName}/${params.entityId}`,
+        );
+      }
+
+      const itemUrl = deleteTemplate.target ?? cached.selfHref;
+      const method = deleteTemplate.method;
+
       try {
         await apiFetch(
-          createRequest(
-            { url: `${collectionHref}/${params.entityId}`, method: "DELETE" },
-            { headers: { "If-Match": cached.etag } },
-          ),
+          createRequest({ url: itemUrl, method }, { headers: { "If-Match": cached.etag } }),
         );
       } catch (e) {
         if (e instanceof ProblemDetailError && e.problemDetail.status === 412) {

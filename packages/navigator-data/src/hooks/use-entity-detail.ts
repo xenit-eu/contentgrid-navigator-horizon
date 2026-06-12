@@ -1,16 +1,75 @@
 import { useQuery } from "@tanstack/react-query";
 import { ianaRelations } from "@contentgrid/hal/rels";
+import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import { useProfile } from "./use-profile";
 
+/** A parsed HAL-FORMS template extracted from an entity-item `_templates` entry. */
+export interface ItemTemplate {
+  /** HTTP method from the template (e.g. "PATCH", "DELETE", "PUT"). */
+  method: string;
+  /** Target URL from the template, or null when absent (fall back to self href). */
+  target: string | null;
+  /** Content-Type from the template, or null when absent. */
+  contentType: string | null;
+}
+
 export interface EntityDetailResult {
   data: Record<string, unknown>;
   selfHref: string;
   links: Record<string, unknown>;
-  /** ETag from the GET response — will be used for If-Match in HZN-5B.1. */
+  /** ETag from the GET response — sent as If-Match on mutations. */
   etag: string | null;
+  /**
+   * Parsed `_templates` from the item response.
+   * Keys match HAL-FORMS template names: "default" (update), "delete",
+   * "set-<relation>" (to-one), "add-<relation>" (to-many), "clear-<relation>".
+   */
+  templates: Record<string, ItemTemplate>;
+  /** True when the item carries a "default" template (update is available). */
+  canUpdate: boolean;
+  /** True when the item carries a "delete" template (delete is available). */
+  canDelete: boolean;
+  /**
+   * Parsed `cg:content` links keyed by attribute name.
+   * Use this to get the upload URL for a content attribute.
+   */
+  contentLinks: Record<string, string>;
+  /**
+   * Parsed `cg:relation` links keyed by relation name.
+   * Use this to get the relation URL for linking/unlinking.
+   */
+  relationLinks: Record<string, string>;
+}
+
+/**
+ * Returns the relation-mutation template for a given relation name.
+ * Checks "set-<relation>" first (to-one), then "add-<relation>" (to-many).
+ * Returns null when neither template is present.
+ */
+export function getRelationTemplate(
+  result: EntityDetailResult,
+  relationName: string,
+): ItemTemplate | null {
+  return result.templates[`set-${relationName}`] ?? result.templates[`add-${relationName}`] ?? null;
+}
+
+function parseTemplates(raw: unknown): Record<string, ItemTemplate> {
+  if (!raw || typeof raw !== "object") return {};
+  const result: Record<string, ItemTemplate> = {};
+  for (const [key, tpl] of Object.entries(raw as Record<string, unknown>)) {
+    if (!tpl || typeof tpl !== "object") continue;
+    const t = tpl as Record<string, unknown>;
+    if (typeof t.method !== "string") continue;
+    result[key] = {
+      method: t.method,
+      target: typeof t.target === "string" ? t.target : null,
+      contentType: typeof t.contentType === "string" ? t.contentType : null,
+    };
+  }
+  return result;
 }
 
 async function fetchEntityDetail(
@@ -24,12 +83,34 @@ async function fetchEntityDetail(
   );
 
   const selfLink = object.links.findLink(ianaRelations.self);
+  const templates = parseTemplates((object.data as Record<string, unknown>)._templates);
+
+  // Build a map of content attribute name → upload URL from cg:content links.
+  const contentLinks: Record<string, string> = {};
+  for (const link of object.links.findLinks(cgRels.content)) {
+    if (link.name) {
+      contentLinks[link.name] = link.href;
+    }
+  }
+
+  // Build a map of relation name → relation URL from cg:relation links.
+  const relationLinks: Record<string, string> = {};
+  for (const link of object.links.findLinks(cgRels.relation)) {
+    if (link.name) {
+      relationLinks[link.name] = link.href;
+    }
+  }
 
   return {
     data: { ...object.data },
     selfHref: selfLink?.href ?? "",
     links: (object.data._links as Record<string, unknown>) ?? {},
     etag,
+    templates,
+    canUpdate: "default" in templates,
+    canDelete: "delete" in templates,
+    contentLinks,
+    relationLinks,
   };
 }
 
