@@ -49,6 +49,7 @@ describe("useLinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });
@@ -79,6 +80,7 @@ describe("useLinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });
@@ -128,6 +130,7 @@ describe("useLinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });
@@ -168,6 +171,7 @@ describe("useLinkRelation", () => {
       result.current.mutate({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });
@@ -191,6 +195,7 @@ describe("useLinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });
@@ -220,6 +225,7 @@ describe("useLinkRelation", () => {
       result.current.mutate({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });
@@ -239,6 +245,7 @@ describe("useLinkRelation", () => {
       result.current.mutate({
         entityName: "unknown-entity",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
         targetUri: `${BASE}/customers/cust-1`,
       });

@@ -74,8 +74,6 @@ describe("useProfile", () => {
       title: "Invoice",
       href: "https://api.example.com/profile/invoices",
       collectionHref: "https://api.example.com/invoices",
-      // itemTemplateHref must be the RFC 6570 template for a single item
-      itemTemplateHref: "https://api.example.com/invoices/{id}",
     });
   });
 

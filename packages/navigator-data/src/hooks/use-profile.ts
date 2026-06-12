@@ -15,17 +15,11 @@ async function fetchProfile(
 
   return entityLinks.map((link) => {
     const name = link.name ?? link.href.split("/").pop() ?? "";
-    const collectionHref = link.href.replace(/\/profile\//, "/");
-
-    // RFC 6570 URI template for a single item, matching the server's describes.item link.
-    const itemTemplateHref = `${collectionHref}/{id}`;
-
     return {
       name,
       title: titleCase(link.title ?? name),
       href: link.href,
-      collectionHref,
-      itemTemplateHref,
+      collectionHref: link.href.replace(/\/profile\//, "/"),
     };
   });
 }

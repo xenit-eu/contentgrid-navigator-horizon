@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import type { HalObjectWithTemplateShape } from "@contentgrid/hal-forms/shape";
 import { createRequest } from "@contentgrid/typed-fetch";
-import UriTemplate from "@contentgrid/uri-template";
 import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import type { EntityInfo } from "../types/entity";
@@ -14,6 +13,12 @@ interface UnlinkRelationParams {
   entityName: string;
   entityId: string;
   relationName: string;
+  /**
+   * The entity item's `self` link href, as returned by the server on the item
+   * resource. Used to re-fetch the item when the detail cache is absent or
+   * incomplete — the URL is server-provided, never constructed client-side.
+   */
+  selfHref: string;
   /** Target item ID — required for many-to-many, omit for many-to-one (clears the relation). */
   targetId?: string;
 }
@@ -23,10 +28,18 @@ export function useUnlinkRelation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ entityName, entityId, relationName, targetId }: UnlinkRelationParams) => {
+    mutationFn: async ({
+      entityName,
+      entityId,
+      relationName,
+      selfHref,
+      targetId,
+    }: UnlinkRelationParams) => {
+      // Guard: entity must be known in the profile cache.
       const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const entity = entities?.find((e) => e.name === entityName);
-      if (!entity) throw new Error(`Unknown entity: ${entityName}`);
+      if (!entities?.find((e) => e.name === entityName)) {
+        throw new Error(`Unknown entity: ${entityName}`);
+      }
 
       const cached = queryClient.getQueryData<EntityDetailResult>(
         queryKeys.entityDetail(entityName, entityId),
@@ -36,11 +49,9 @@ export function useUnlinkRelation() {
       let clearTemplate: ItemTemplate | null = cached?.templates[`clear-${relationName}`] ?? null;
 
       if (!relationUrl || !clearTemplate) {
-        // Item detail cache is absent or incomplete — do a live fetch.
-        // Expand the RFC 6570 item template from the entity profile's describes.item link.
-        // This avoids constructing the URL via string concatenation.
-        const itemUrl = new UriTemplate(entity.itemTemplateHref).expand({ id: entityId });
-        const { object } = await fetchHal(apiFetch, itemUrl);
+        // Item detail cache is absent or incomplete — live-fetch the item via its
+        // server-provided self link (never a client-constructed URL).
+        const { object } = await fetchHal(apiFetch, selfHref);
         const relLink = object.links.findLink(cgRels.relation, relationName);
         if (relLink) {
           relationUrl = relLink.href;

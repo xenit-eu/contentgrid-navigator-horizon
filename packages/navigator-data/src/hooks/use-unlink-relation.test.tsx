@@ -51,6 +51,7 @@ describe("useUnlinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
       });
     });
@@ -78,6 +79,7 @@ describe("useUnlinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "tags",
         targetId: "tag-5",
       });
@@ -126,6 +128,7 @@ describe("useUnlinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
       });
     });
@@ -165,6 +168,7 @@ describe("useUnlinkRelation", () => {
       result.current.mutate({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
       });
     });
@@ -187,6 +191,7 @@ describe("useUnlinkRelation", () => {
       await result.current.mutateAsync({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
       });
     });
@@ -215,6 +220,7 @@ describe("useUnlinkRelation", () => {
       result.current.mutate({
         entityName: "invoice",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
       });
     });
@@ -233,6 +239,7 @@ describe("useUnlinkRelation", () => {
       result.current.mutate({
         entityName: "unknown-entity",
         entityId: "inv-1",
+        selfHref: ITEM_URL,
         relationName: "customer",
       });
     });
