@@ -183,10 +183,9 @@ function parseSearchAndSort(templates: Record<string, RawTemplate> | undefined):
       name: p.name,
       prompt: p.prompt,
       type: p.type,
-      options:
-        Array.isArray(p.options?.inline) && p.options?.inline.every((v) => typeof v === "string")
-          ? { inline: p.options.inline as string[] }
-          : undefined,
+      options: Array.isArray(p.options?.inline)
+        ? { inline: p.options.inline.filter((v): v is string => typeof v === "string") }
+        : undefined,
     }));
 
   const sortProp = searchProps.find((p) => p.name === "_sort");
