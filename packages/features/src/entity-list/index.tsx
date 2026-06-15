@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 import { type EntityInfo, useEntityList, useProfile } from "@contentgrid/navigator-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@contentgrid/ui";
 
-export function EntityList() {
+export interface EntityListProps {
+  /** When provided, only the entity with this name is rendered. Shows all entities if omitted. */
+  entityName?: string;
+}
+
+export function EntityList({ entityName }: Readonly<EntityListProps> = {}) {
   const profile = useProfile();
 
   if (profile.isPending) {
@@ -15,9 +20,11 @@ export function EntityList() {
     return <EntityListMessage>No entities found.</EntityListMessage>;
   }
 
+  const entities = entityName ? profile.data.filter((e) => e.name === entityName) : profile.data;
+
   return (
     <div className="flex flex-col gap-4">
-      {profile.data.map((entity) => (
+      {entities.map((entity) => (
         <EntityCollectionCard key={entity.name} entity={entity} />
       ))}
     </div>

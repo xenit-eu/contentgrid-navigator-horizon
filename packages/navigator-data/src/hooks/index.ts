@@ -2,6 +2,8 @@ export { NavigatorDataProvider, useNavigatorData } from "./context";
 export type { NavigatorDataContextValue } from "./context";
 export { queryKeys } from "./query-keys";
 export { useProfile } from "./use-profile";
+export { useSelectedProfile } from "./use-selected-profile";
+export type { UseSelectedProfileResult } from "./use-selected-profile";
 export { useEntityDetail } from "./use-entity-detail";
 export type { EntityDetailResult } from "./use-entity-detail";
 export { useEntityList, fetchEntityList } from "./use-entity-list";
