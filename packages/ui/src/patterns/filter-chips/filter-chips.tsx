@@ -30,7 +30,7 @@ export function FilterChips({
   filterProperties,
   onRemoveFilter,
   onClearAll,
-}: FilterChipsProps) {
+}: Readonly<FilterChipsProps>) {
   const activeChips = useMemo(() => {
     return Object.entries(filters)
       .filter(([, value]) => value !== "")
