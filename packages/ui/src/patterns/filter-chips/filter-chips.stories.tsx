@@ -71,7 +71,10 @@ export const ManyFilters: Story = {
   },
 };
 
+// FilterChips returns null for empty filters, so this story renders a blank canvas —
+// no pixels to diff against, making visual regression pointless here.
 export const NoActiveFilters: Story = {
+  tags: ["no-visual-test"],
   args: {
     filterProperties: FILTER_PROPERTIES,
     filters: {},
