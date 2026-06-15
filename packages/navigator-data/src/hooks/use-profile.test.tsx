@@ -4,7 +4,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "../../test-setup";
-import { ProfileAttributeSearchType } from "../accessors/attribute-profile-accessor";
+import { ProfileAttributeSearchType } from "../accessors/attribute-profile";
 import { type AuthenticationTokenSupplier, createApiClient } from "../api/client";
 import { NavigatorDataProvider, useNavigatorData } from "./context";
 import { useEntityProfile } from "./use-entity-profile";
@@ -141,7 +141,7 @@ describe("useNavigatorData", () => {
   });
 });
 
-describe("useEntityProfile (ProfileAccessor)", () => {
+describe("useEntityProfile (Profile)", () => {
   const BASE = "https://api.example.com";
   const INVOICE_PROFILE_HREF = `${BASE}/profile/invoices`;
 
@@ -344,7 +344,7 @@ describe("useEntityProfile (ProfileAccessor)", () => {
     },
   });
 
-  it("returns ProfileAccessor with basic properties", async () => {
+  it("returns Profile with basic properties", async () => {
     server.use(
       http.get(PROFILE_URL, () => HttpResponse.json(mockProfileRoot())),
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),

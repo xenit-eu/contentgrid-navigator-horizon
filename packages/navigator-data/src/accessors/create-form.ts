@@ -3,10 +3,10 @@ import type {
   HalFormsPropertyRemoteOptions,
   HalFormsTemplate,
 } from "@contentgrid/hal-forms";
-import type { ProfileAttribute } from "../accessors/attribute-profile-accessor";
-import type ProfileAccessor from "../accessors/profile-accessor";
-import type { ProfileRelation } from "../accessors/relation-profile-accessor";
 import type { EntityInstanceCreateRequestSpec } from "../api/requests";
+import type { ProfileAttribute } from "./attribute-profile";
+import type Profile from "./profile";
+import type { ProfileRelation } from "./relation-profile";
 
 /**
  * Enhanced Create-Form HAL-FORMS Template Wrapper
@@ -29,7 +29,7 @@ import type { EntityInstanceCreateRequestSpec } from "../api/requests";
  * 3. **Relations** - Entity references (type: "url")
  *    - To-one: maxItems === 1 (can be required)
  *    - To-many: !maxItems || maxItems > 1 (never required)
- *    - Linked to target ProfileAccessor via _allProfiles for rich metadata
+ *    - Linked to target Profile via _allProfiles for rich metadata
  */
 
 /**
@@ -58,7 +58,7 @@ export interface CreateFormRelationToOneProperty {
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
   /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: ProfileAccessor;
+  targetProfile?: Profile;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
   /** Whether this field is required */
@@ -75,7 +75,7 @@ export interface CreateFormRelationToManyProperty {
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
   /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: ProfileAccessor;
+  targetProfile?: Profile;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
 }
@@ -84,7 +84,7 @@ export interface CreateFormRelationToManyProperty {
  * Wrapper class for HAL-FORMS create templates with enhanced metadata.
  *
  * Lazily parses and enriches form properties with links to ProfileAttribute,
- * ProfileRelation, and target ProfileAccessor objects.
+ * ProfileRelation, and target Profile objects.
  */
 export class CreateHalFormTemplate {
   private _userDefinedProperties?: readonly CreateFormProperty[];
@@ -95,9 +95,9 @@ export class CreateHalFormTemplate {
     /** The underlying HAL-FORMS template */
     public readonly template: HalFormsTemplate<EntityInstanceCreateRequestSpec>,
     /** The profile accessor for attribute/relation linking */
-    private readonly profileAccessor: ProfileAccessor,
+    private readonly Profile: Profile,
     /** Optional array of all profiles for target entity resolution */
-    private readonly _allProfiles?: ProfileAccessor[],
+    private readonly _allProfiles?: Profile[],
   ) {}
 
   /**
@@ -205,7 +205,7 @@ export class CreateHalFormTemplate {
    * Enhance a user-defined attribute property with profile metadata.
    */
   private enhanceAttributeProperty(property: HalFormsProperty): CreateFormProperty {
-    const profileAttribute = this.profileAccessor.getAttribute(property.name);
+    const profileAttribute = this.Profile.getAttribute(property.name);
     const isContent = property.type === "file" || (profileAttribute?.isContent ?? false);
     const isRequired = property.required ?? false;
 
@@ -230,7 +230,7 @@ export class CreateHalFormTemplate {
   private enhanceToOneRelationProperty(
     property: HalFormsProperty,
   ): CreateFormRelationToOneProperty {
-    const profileRelation = this.profileAccessor.getRelation(property.name);
+    const profileRelation = this.Profile.getRelation(property.name);
 
     // Extract target collection href from options.link.href
     const linkHref = (property.options as HalFormsPropertyRemoteOptions)?.link?.href as
@@ -242,7 +242,7 @@ export class CreateHalFormTemplate {
     const isRequired = property.required ?? false;
 
     // Try to resolve target profile using _allProfiles
-    let targetProfile: ProfileAccessor | undefined;
+    let targetProfile: Profile | undefined;
     if (profileRelation && this._allProfiles) {
       const targetProfileHref = profileRelation.targetProfileHref;
       targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);
@@ -263,7 +263,7 @@ export class CreateHalFormTemplate {
   private enhanceToManyRelationProperty(
     property: HalFormsProperty,
   ): CreateFormRelationToManyProperty {
-    const profileRelation = this.profileAccessor.getRelation(property.name);
+    const profileRelation = this.Profile.getRelation(property.name);
 
     // Extract target collection href from options.link.href
     const linkHref = (property.options as HalFormsPropertyRemoteOptions)?.link?.href as
@@ -272,7 +272,7 @@ export class CreateHalFormTemplate {
     const targetCollectionHref = linkHref ?? "";
 
     // Try to resolve target profile using _allProfiles
-    let targetProfile: ProfileAccessor | undefined;
+    let targetProfile: Profile | undefined;
     if (profileRelation && this._allProfiles) {
       const targetProfileHref = profileRelation.targetProfileHref;
       targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);

@@ -1,9 +1,9 @@
 import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
-import { ProfileAttributeSearchType } from "../accessors/attribute-profile-accessor";
-import type { ProfileAttribute } from "../accessors/attribute-profile-accessor";
-import type ProfileAccessor from "../accessors/profile-accessor";
-import type { ProfileRelation } from "../accessors/relation-profile-accessor";
 import type { SearchRequestSpec } from "../api/requests";
+import { ProfileAttributeSearchType } from "./attribute-profile";
+import type { ProfileAttribute } from "./attribute-profile";
+import type Profile from "./profile";
+import type { ProfileRelation } from "./relation-profile";
 
 /**
  * Enhanced Search HAL-FORMS Template Wrapper
@@ -42,12 +42,12 @@ import type { SearchRequestSpec } from "../api/requests";
  *
  * ## Architecture Decision
  *
- * We parse the template **at the ProfileAccessor level** (not in hooks or components)
+ * We parse the template **at the Profile level** (not in hooks or components)
  * because:
  * - Profile data is stable and cacheable (staleTime: Infinity)
  * - Parsing happens once per profile, not on every render
  * - Enhanced templates can be passed directly to TanStack Query without re-processing
- * - Type safety propagates from ProfileAccessor → hooks → components
+ * - Type safety propagates from Profile → hooks → components
  * - Custom parsing of the search template should stay out of the application code.
  *   When the semantics of the API change, we only need to adjust the parsing in one place.
  */
@@ -96,9 +96,9 @@ export class SearchHalFormTemplate {
     /** The underlying HAL-FORMS template */
     public readonly template: HalFormsTemplate<SearchRequestSpec>,
     /** The profile accessor for attribute/relation linking */
-    private readonly profileAccessor: ProfileAccessor,
+    private readonly Profile: Profile,
     /** Optional map of all profiles for cross-entity relation resolution */
-    private readonly _allProfiles?: ProfileAccessor[],
+    private readonly _allProfiles?: Profile[],
   ) {}
 
   /**
@@ -203,7 +203,7 @@ export class SearchHalFormTemplate {
       const attributePart = parts.slice(1).join(".");
       const attributeName = attributePart.split("~")[0];
 
-      profileRelation = this.profileAccessor.getRelation(relationName);
+      profileRelation = this.Profile.getRelation(relationName);
 
       // Try to resolve the target attribute using allProfiles
       if (profileRelation && this._allProfiles) {
@@ -221,7 +221,7 @@ export class SearchHalFormTemplate {
     } else {
       // Direct attribute: "attribute~suffix"
       const attributeName = propertyName.split("~")[0];
-      profileAttribute = this.profileAccessor.getAttribute(attributeName);
+      profileAttribute = this.Profile.getAttribute(attributeName);
       searchType = this.extractSearchType(propertyName);
     }
 
@@ -257,7 +257,7 @@ export class SearchHalFormTemplate {
     if (typeof opt === "string") {
       // Parse "attribute,direction" format
       const [attributeName, direction = "asc"] = opt.split(",");
-      const profileAttribute = this.profileAccessor.getAttribute(attributeName);
+      const profileAttribute = this.Profile.getAttribute(attributeName);
       return {
         value: opt,
         prompt: opt,
@@ -269,7 +269,7 @@ export class SearchHalFormTemplate {
     // Object format: { value: "attribute,direction", prompt: "..." }
     const o = opt as { value?: string; prompt?: string };
     const [attributeName, direction = "asc"] = (o.value || "").split(",");
-    const profileAttribute = this.profileAccessor.getAttribute(attributeName);
+    const profileAttribute = this.Profile.getAttribute(attributeName);
     return {
       value: o.value || "",
       prompt: o.prompt || o.value || "",

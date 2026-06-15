@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import ProfileAccessor from "../accessors/profile-accessor";
+import Profile from "../accessors/profile";
 import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import type { EntityProfileShape } from "../shapes";
@@ -10,7 +10,7 @@ async function fetchEntityProfile(
   apiFetch: Parameters<typeof fetchHal>[0],
   profileUrl: string,
   entityName: string,
-): Promise<ProfileAccessor | null> {
+): Promise<Profile | null> {
   // First fetch the profile root to get the entity link
   const { object: profileRoot } = await fetchHal<Record<string, unknown>>(apiFetch, profileUrl);
   const entityLinks = profileRoot.links.findLinks(cgRels.entity);
@@ -28,8 +28,8 @@ async function fetchEntityProfile(
   // Fetch the individual entity profile
   const { object: profileObject } = await fetchHal<EntityProfileShape>(apiFetch, entityLink.href);
 
-  // Return ProfileAccessor wrapping the profile
-  return new ProfileAccessor(entityLink, profileObject);
+  // Return Profile wrapping the profile
+  return new Profile(entityLink, profileObject);
 }
 
 export function useEntityProfile(entityName: string) {

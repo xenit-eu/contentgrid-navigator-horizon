@@ -7,12 +7,12 @@ import { checkResponse } from "@contentgrid/problem-details";
 import { blueprintRels } from "../api";
 import type { EntityInstanceCreateRequestSpec, SearchRequestSpec } from "../api/requests";
 import type { EntityProfileShape, ProfileAttributeShape, ProfileRelationShape } from "../shapes";
-import { CreateHalFormTemplate } from "../types/create-form";
-import { SearchHalFormTemplate } from "../types/search-form";
-import { ProfileAttribute } from "./attribute-profile-accessor";
-import { ProfileRelation } from "./relation-profile-accessor";
+import { ProfileAttribute } from "./attribute-profile";
+import { CreateHalFormTemplate } from "./create-form";
+import { ProfileRelation } from "./relation-profile";
+import { SearchHalFormTemplate } from "./search-form";
 
-export default class ProfileAccessor {
+export default class Profile {
   public constructor(
     public readonly link: Link,
     private readonly profile: HalObject<EntityProfileShape>,

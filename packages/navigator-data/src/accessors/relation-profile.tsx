@@ -1,7 +1,7 @@
 import type { HalObject, Link } from "@contentgrid/hal";
 import { blueprintRels } from "../api";
 import type { ProfileRelationShape } from "../shapes";
-import type ProfileAccessor from "./profile-accessor";
+import type Profile from "./profile";
 
 export class ProfileRelation {
   constructor(private readonly hal: HalObject<ProfileRelationShape>) {}
@@ -90,7 +90,7 @@ export class ProfileRelation {
    * Find the target profile from an already-loaded list of profiles.
    * More efficient when profiles are pre-loaded.
    */
-  public getTargetProfile(profiles: readonly ProfileAccessor[]): ProfileAccessor | null {
+  public getTargetProfile(profiles: readonly Profile[]): Profile | null {
     const targetProfile = this.targetProfileLink;
     if (targetProfile) {
       return profiles.find((profile) => profile.describes(targetProfile)) ?? null;
