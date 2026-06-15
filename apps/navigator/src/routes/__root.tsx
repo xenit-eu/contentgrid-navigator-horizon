@@ -41,18 +41,18 @@ function AppLayout() {
   // On initial load (no entity in URL), redirect to the saved or first profile
   useEffect(() => {
     if (!urlEntity && defaultProfile) {
-      void navigate({
+      navigate({
         to: "/",
         search: { entity: defaultProfile.name },
         replace: true,
-      });
+      }).catch(() => {});
     }
   }, [urlEntity, defaultProfile, navigate]);
 
   function handleProfileSelect(profile: Profile) {
     const entityInfo = profiles.find((p) => p.name === profile.name);
     if (entityInfo) setSelectedProfile(entityInfo);
-    void navigate({ to: "/", search: { entity: profile.name } });
+    navigate({ to: "/", search: { entity: profile.name } }).catch(() => {});
   }
 
   return (
