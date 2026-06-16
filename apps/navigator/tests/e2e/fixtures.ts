@@ -10,19 +10,16 @@ export const test = baseTest.extend<{
   goToOverviewPage: () => Promise<void>;
   isSmallViewport: boolean;
 }>({
-  loginPage: async ({ page }, use) => {
-    const loginPage = new LoginPage(page);
-    await use(loginPage);
-  },
+  loginPage: ({ page }, use) => use(new LoginPage(page)),
 
-  isSmallViewport: async (_, use, testInfo: TestInfo) => {
+  isSmallViewport: ({}, use, testInfo: TestInfo) => {
     const viewport = testInfo.project.use.viewport;
     const isSmall = viewport?.width !== undefined && viewport.width <= 800;
-    await use(isSmall);
+    return use(isSmall);
   },
 
-  login: async ({ page, loginPage }, use) => {
-    await use(async () => {
+  login: ({ page, loginPage }, use) =>
+    use(async () => {
       const requiredEnvVars = ["NAVIGATOR_URL", "NAVIGATOR_USERNAME", "NAVIGATOR_PASSWORD"];
       const missingVars = requiredEnvVars.filter((v) => !process.env[v]);
       if (missingVars.length > 0) {
@@ -32,26 +29,22 @@ export const test = baseTest.extend<{
       }
       await page.goto(process.env.NAVIGATOR_URL!);
       await loginPage.login(process.env.NAVIGATOR_USERNAME!, process.env.NAVIGATOR_PASSWORD!);
-    });
-  },
+    }),
 
-  selectSidebarEntity: async ({ page }, use) => {
-    await use(async (entityName: string) => {
-      // The shadcn Sidebar trigger has sr-only text "Toggle Sidebar"
+  selectSidebarEntity: ({ page }, use) =>
+    use(async (entityName: string) => {
       const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
       const link = page.getByRole("link", { name: entityName });
       await toggleBtn.or(link).first().waitFor();
-      // Expand if the sidebar is currently collapsed
       const collapsedSidebar = page.locator('[data-slot="sidebar"][data-state="collapsed"]');
       if (await collapsedSidebar.isVisible()) {
         await toggleBtn.click();
       }
       await link.click();
-    });
-  },
+    }),
 
-  goToClassifyCreateInstancePage: async ({ page }, use) => {
-    await use(async () => {
+  goToClassifyCreateInstancePage: ({ page }, use) =>
+    use(async () => {
       const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
       const createLink = page.getByRole("link", { name: "Create", exact: true });
       await toggleBtn.or(createLink).first().waitFor();
@@ -60,11 +53,10 @@ export const test = baseTest.extend<{
         await toggleBtn.click();
       }
       await createLink.click();
-    });
-  },
+    }),
 
-  goToOverviewPage: async ({ page }, use) => {
-    await use(async () => {
+  goToOverviewPage: ({ page }, use) =>
+    use(async () => {
       const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
       const overviewLink = page.getByRole("link", { name: "Overview" });
       await toggleBtn.or(overviewLink).first().waitFor();
@@ -73,8 +65,7 @@ export const test = baseTest.extend<{
         await toggleBtn.click();
       }
       await overviewLink.click();
-    });
-  },
+    }),
 });
 
 export { expect } from "@playwright/test";

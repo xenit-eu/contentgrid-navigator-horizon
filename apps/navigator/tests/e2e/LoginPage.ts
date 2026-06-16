@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 export class LoginPage {
-  constructor(private page: Page) {}
+  constructor(private readonly page: Page) {}
 
   async login(username: string, password: string) {
     await this.page.getByRole("textbox", { name: "Username or email" }).fill(username);
