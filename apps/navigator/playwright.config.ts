@@ -1,4 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+// Load .env.test into process.env (values already in the environment take precedence).
+// The file is optional so this is a no-op in CI where credentials come from CI secrets.
+try {
+  const lines = readFileSync(new URL(".env.test", import.meta.url), "utf-8").split("\n");
+  for (const line of lines) {
+    const match = line.match(/^([^#=\s][^=]*)=(.*)$/);
+    if (match) process.env[match[1].trim()] ??= match[2].trim();
+  }
+} catch {
+  // .env.test is optional; CI injects credentials via environment variables
+}
 
 /**
  * See https://playwright.dev/docs/test-configuration.
