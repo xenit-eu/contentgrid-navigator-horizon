@@ -244,10 +244,87 @@ describe("useEntitySchema", () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const statusProp = result.current.data!.searchProperties.find((p) => p.name === "status");
+    // Plain strings are formatted with formatWords so users see "Draft" not "draft".
     expect(statusProp?.options?.inline).toEqual([
-      { value: "draft", prompt: "draft" },
-      { value: "sent", prompt: "sent" },
-      { value: "paid", prompt: "paid" },
+      { value: "draft", prompt: "Draft" },
+      { value: "sent", prompt: "Sent" },
+      { value: "paid", prompt: "Paid" },
+    ]);
+  });
+
+  it("formats plain-string option prompts with formatWords so 'in_progress' becomes 'In Progress'", async () => {
+    const withUnderscoreOptions = {
+      ...profileFixture,
+      _templates: {
+        ...profileFixture._templates,
+        search: {
+          method: "GET",
+          target: `${BASE}/invoices`,
+          properties: [
+            {
+              name: "status",
+              prompt: "Status",
+              type: "text",
+              options: { inline: ["draft", "in_progress", "done"] },
+            },
+          ],
+        },
+      },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withUnderscoreOptions)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const statusProp = result.current.data!.searchProperties.find((p) => p.name === "status");
+    expect(statusProp?.options?.inline).toEqual([
+      { value: "draft", prompt: "Draft" },
+      { value: "in_progress", prompt: "In Progress" },
+      { value: "done", prompt: "Done" },
+    ]);
+  });
+
+  it("preserves explicit server-provided prompts on object-form inline options", async () => {
+    const withObjectOptions = {
+      ...profileFixture,
+      _templates: {
+        ...profileFixture._templates,
+        search: {
+          method: "GET",
+          target: `${BASE}/invoices`,
+          properties: [
+            {
+              name: "status",
+              prompt: "Status",
+              type: "text",
+              options: {
+                inline: [
+                  { value: "draft", prompt: "Draft (unsubmitted)" },
+                  { value: "sent" }, // no explicit prompt → format value
+                ],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    server.use(
+      http.get(`${BASE}/profile`, () => HttpResponse.json(mockProfileResponse())),
+      http.get(PROFILE_HREF, () => HttpResponse.json(withObjectOptions)),
+    );
+
+    const { result } = renderHook(() => useEntitySchema("invoice"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    const statusProp = result.current.data!.searchProperties.find((p) => p.name === "status");
+    expect(statusProp?.options?.inline).toEqual([
+      { value: "draft", prompt: "Draft (unsubmitted)" }, // server label preserved
+      { value: "sent", prompt: "Sent" }, // value formatted since no explicit prompt
     ]);
   });
 

@@ -1,5 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { convertToString, titleCase } from "./format";
+import { convertToString, formatWords, titleCase } from "./format";
+
+describe("formatWords", () => {
+  it("capitalises a plain lowercase word", () => {
+    expect(formatWords("draft")).toBe("Draft");
+  });
+
+  it("replaces underscores with spaces and capitalises each word", () => {
+    expect(formatWords("in_progress")).toBe("In Progress");
+  });
+
+  it("replaces dots with spaces and capitalises each word", () => {
+    expect(formatWords("some.field")).toBe("Some Field");
+  });
+
+  it("replaces hyphens with spaces and capitalises each word", () => {
+    expect(formatWords("my-value")).toBe("My Value");
+  });
+
+  it("uppercases known acronyms — id", () => {
+    expect(formatWords("customer_id")).toBe("Customer ID");
+  });
+
+  it("uppercases known acronyms — url", () => {
+    expect(formatWords("redirect_url")).toBe("Redirect URL");
+  });
+
+  it("uppercases known acronyms — api", () => {
+    expect(formatWords("api_key")).toBe("API Key");
+  });
+
+  it("leaves already-capitalised server-provided labels unchanged (e.g. 'In Review')", () => {
+    // The function still capitalises each word, so "In Review" → "In Review" (idempotent)
+    expect(formatWords("In Review")).toBe("In Review");
+  });
+});
 
 describe("titleCase", () => {
   it("capitalises the first letter of each word", () => {

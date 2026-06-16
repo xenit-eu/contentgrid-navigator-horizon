@@ -11,6 +11,7 @@ import type {
   SearchProperty,
   SortOption,
 } from "../types/entity";
+import { formatWords } from "../utils/format";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import { useProfile } from "./use-profile";
@@ -50,18 +51,24 @@ interface RawTemplateProperty {
 
 /**
  * Normalise inline option entries to { value, prompt } pairs.
- * Accepts plain strings (value === prompt) and objects with value/prompt fields.
+ * Accepts plain strings and objects with value/prompt fields.
  * Entries that are objects without a resolvable value are silently dropped.
+ *
+ * Plain-string entries (e.g. "draft", "in_progress") are formatted with
+ * `formatWords` so they display as "Draft", "In Progress" etc. Server-provided
+ * objects that carry an explicit `prompt` field are left untouched — the server
+ * label is always authoritative.
  */
 function normaliseInlineOptions(
   raw: Array<string | { value?: string; prompt?: string; property?: string }>,
 ): OptionEntry[] {
   return raw.flatMap((entry) => {
     if (typeof entry === "string") {
-      return [{ value: entry, prompt: entry }];
+      return [{ value: entry, prompt: formatWords(entry) }];
     }
     if (entry.value) {
-      return [{ value: entry.value, prompt: entry.prompt ?? entry.value }];
+      // Use the server-provided prompt when present; otherwise format the value.
+      return [{ value: entry.value, prompt: entry.prompt ?? formatWords(entry.value) }];
     }
     return [];
   });
