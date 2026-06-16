@@ -186,6 +186,50 @@ describe("useEntityRelations", () => {
     expect(result.current.error).toBeDefined();
   });
 
+  it("resolves the relation href when the server omits the curies block (regression: no HalObject reconstruction)", async () => {
+    // Regression test for the fragile HalObject reconstruction.
+    // Old code: `new HalObject({ _links: detail.links })` + `findLink(cgRels.relation, name)`
+    // When the server omits the curies block, HalObject cannot expand "cg:relation" to its
+    // full URI and findLink returns undefined — so the query never fires.
+    // Fix: read directly from detail.relationLinks, which is already CURIE-expanded by
+    // fetchEntityDetail using the @contentgrid/hal library (which has access to the curies
+    // block at fetch time).
+    mockProfile();
+    // Entity detail WITHOUT a curies block in _links
+    server.use(
+      http.get(ITEM_URL, () =>
+        HttpResponse.json({
+          id: "inv-1",
+          number: "INV-001",
+          _links: {
+            self: { href: ITEM_URL },
+            // Fully-expanded relation rel — no curies block
+            "https://contentgrid.cloud/rels/contentgrid/relation": [
+              { href: RELATION_URL, name: "customer" },
+            ],
+          },
+        }),
+      ),
+    );
+    server.use(
+      http.get(RELATION_URL, () =>
+        HttpResponse.json({
+          id: "cust-1",
+          name: "Acme Corp",
+          _links: { self: { href: CUSTOMER_URL } },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEntityRelations("invoice", "inv-1", "customer"), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBeDefined(), { timeout: 5000 });
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0].selfHref).toBe(CUSTOMER_URL);
+  });
+
   it("is not enabled when the entity item has no matching relation link", async () => {
     mockProfile();
     // Respond with an entity detail that has no relation links

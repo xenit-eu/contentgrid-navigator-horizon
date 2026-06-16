@@ -40,6 +40,14 @@ export function useDeleteEntity() {
       }
 
       const itemUrl = deleteTemplate.target ?? cached.selfHref;
+      if (!itemUrl) {
+        // selfHref is "" when the item response lacked a self link and the template
+        // carried no explicit target. Firing DELETE against "" would resolve to the
+        // page origin — guard here to fail loudly instead.
+        throw new Error(
+          `Cannot delete ${params.entityName}/${params.entityId}: item has no self link and the "delete" template carries no target URL`,
+        );
+      }
       const method = deleteTemplate.method;
 
       try {

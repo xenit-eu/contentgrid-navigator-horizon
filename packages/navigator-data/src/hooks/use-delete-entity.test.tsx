@@ -185,4 +185,27 @@ describe("useDeleteEntity", () => {
     expect((result.current.error as Error).message).toMatch(/Operation not supported/);
     expect((result.current.error as Error).message).toMatch(/"delete" template/);
   });
+
+  it("throws when selfHref is empty and the delete template has no target (no self link in response)", async () => {
+    // Guards against DELETE firing against the page origin ("") when the item
+    // response lacked a _links.self entry and the server did not supply an
+    // explicit target URL on the delete template.
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    seedEntityDetail(qc, '"etag-abc"', {
+      selfHref: "",
+      templates: {
+        delete: { method: "DELETE", target: null, contentType: null },
+      },
+    });
+
+    const { result } = renderHook(() => useDeleteEntity(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      result.current.mutate({ entityName: "invoice", entityId: "inv-1" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toMatch(/no self link/);
+  });
 });

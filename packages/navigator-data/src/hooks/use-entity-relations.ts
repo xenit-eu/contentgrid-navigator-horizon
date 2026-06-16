@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { HalObject, HalSlice } from "@contentgrid/hal";
+import { HalSlice } from "@contentgrid/hal";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { ProblemDetailError } from "@contentgrid/problem-details";
-import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
@@ -56,10 +55,10 @@ export function useEntityRelations(entityName: string, entityId: string, relatio
   const { apiFetch } = useNavigatorData();
   const { data: detail } = useEntityDetail(entityName, entityId);
 
-  // Resolve the relation href from the entity item's cg:relation links
-  const halObj = detail ? new HalObject({ _links: detail.links } as never) : null;
-  const relationLink = halObj?.links.findLink(cgRels.relation, relationName);
-  const relationHref = relationLink?.href;
+  // Resolve the relation href from the already-parsed relationLinks map on the detail result.
+  // Using detail.relationLinks avoids re-constructing a HalObject from raw _links JSON
+  // (which is fragile when the server omits the curies block).
+  const relationHref = detail?.relationLinks[relationName];
 
   return useQuery({
     queryKey: queryKeys.entityRelations(entityName, entityId, relationName),

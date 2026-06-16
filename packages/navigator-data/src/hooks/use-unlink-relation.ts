@@ -89,8 +89,11 @@ export function useUnlinkRelation() {
         throw new Error(`No relation link for "${relationName}" on ${entityName}/${entityId}`);
       }
 
-      // For many-to-many, append the targetId to the relation URL.
-      const url = clearTemplate.target ?? (targetId ? `${relationUrl}/${targetId}` : relationUrl);
+      // When targetId is provided (many-to-many), it MUST be appended to the base URL so
+      // only that specific linked item is removed. Letting clearTemplate.target short-circuit
+      // with ?? would discard targetId and DELETE the entire relation collection instead.
+      const baseUrl = clearTemplate.target ?? relationUrl;
+      const url = targetId ? `${baseUrl}/${targetId}` : baseUrl;
       const method = clearTemplate.method;
 
       await apiFetch(createRequest({ url, method }, {}));

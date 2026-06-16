@@ -60,7 +60,7 @@ describe("useUnlinkRelation", () => {
     expect(deletedUrl).toBe(RELATION_URL);
   });
 
-  it("DELETEs relation/targetId URL for many-to-many", async () => {
+  it("DELETEs relation/targetId URL for many-to-many (template.target is null)", async () => {
     let deletedUrl: string | undefined;
     server.use(
       http.delete(`${TAGS_RELATION_URL}/tag-5`, ({ request }) => {
@@ -86,6 +86,54 @@ describe("useUnlinkRelation", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(deletedUrl).toBe(`${TAGS_RELATION_URL}/tag-5`);
+  });
+
+  it("DELETEs baseUrl/targetId when template.target is the base collection URL (regression: targetId must not be discarded)", async () => {
+    // Regression for the data-destructive bug: when the server supplies an explicit
+    // target on the clear-<relation> template (pointing at the base collection URL),
+    // the old code did `clearTemplate.target ?? (targetId ? ...)` which short-circuited
+    // on the non-null target and silently dropped targetId — causing DELETE to fire
+    // against the entire collection rather than the specific item.
+    let deletedUrl: string | undefined;
+    server.use(
+      http.delete(`${TAGS_RELATION_URL}/tag-5`, ({ request }) => {
+        deletedUrl = request.url;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const qc = makeQueryClient();
+    seedProfile(qc);
+    // Template carries an explicit target pointing at the base collection URL
+    qc.setQueryData(queryKeys.entityDetail("invoice", "inv-1"), {
+      data: { number: "INV-001" },
+      selfHref: ITEM_URL,
+      links: {},
+      etag: '"etag-abc"',
+      templates: {
+        "clear-tags": { method: "DELETE", target: TAGS_RELATION_URL, contentType: null },
+      },
+      canUpdate: false,
+      canDelete: false,
+      contentLinks: {},
+      relationLinks: { tags: TAGS_RELATION_URL },
+    });
+
+    const { result } = renderHook(() => useUnlinkRelation(), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        entityName: "invoice",
+        entityId: "inv-1",
+        selfHref: ITEM_URL,
+        relationName: "tags",
+        targetId: "tag-5",
+      });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // Must hit .../tags/tag-5, NOT .../tags (the base collection)
     expect(deletedUrl).toBe(`${TAGS_RELATION_URL}/tag-5`);
   });
 
