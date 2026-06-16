@@ -268,7 +268,11 @@ describe("useProfile", () => {
     expect(result.current.data![0].collectionHref).toBe("https://api.example.com/invoices");
   });
 
-  it("surfaces an error when the root resource request fails", async () => {
+  it("degrades to derived collection hrefs when the root resource request fails", async () => {
+    // When GET / fails (5xx/network), the query must not fail entirely — a root
+    // failure is a new failure mode introduced by the parallel-fetch approach.
+    // Instead, fall back to deriving collectionHref from the profile href by
+    // stripping "/profile/" (the same derivation the old single-fetch code used).
     server.use(
       http.get(ROOT_URL, () =>
         HttpResponse.json(
@@ -278,7 +282,23 @@ describe("useProfile", () => {
       ),
       http.get(PROFILE_URL, () =>
         HttpResponse.json({
-          _links: { self: { href: PROFILE_URL }, "cg:entity": [] },
+          _links: {
+            self: { href: PROFILE_URL },
+            "cg:entity": [
+              {
+                href: "https://api.example.com/profile/invoices",
+                name: "invoice",
+                title: "Invoice",
+              },
+            ],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                name: "cg",
+                templated: true,
+              },
+            ],
+          },
           _templates: {},
         }),
       ),
@@ -286,8 +306,14 @@ describe("useProfile", () => {
 
     const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error).toBeDefined();
+    // Query must succeed (not error) even though GET / returned 500
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(result.current.isError).toBe(false);
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0].name).toBe("invoice");
+    // collectionHref derived from profile href by stripping "/profile/"
+    expect(result.current.data![0].collectionHref).toBe("https://api.example.com/invoices");
   });
 });
 

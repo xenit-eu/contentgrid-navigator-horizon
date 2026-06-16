@@ -170,9 +170,15 @@ export function useEntityList(entityName: string, params: EntityListParams) {
   // search params; cursor pages follow the HAL next/prev href verbatim.
   const needsSearchTemplate = !params.cursor && activeSearchEntries(params).length > 0;
   const schemaQuery = useEntitySchema(entityName, { enabled: needsSearchTemplate });
-  const searchTemplate = schemaQuery.data?.searchTemplate ?? null;
+  // On schema error, use `undefined` (not `null`) so buildCollectionUrl routes
+  // through buildLegacyCollectionUrl, which still appends active filters as raw
+  // query params. `null` would route through encodeSearchUrl which strips all
+  // filters, producing an unfiltered list cached under a key that says filtered.
+  const searchTemplate = schemaQuery.isError
+    ? undefined
+    : (schemaQuery.data?.searchTemplate ?? null);
   // Wait for the template before a search request; when the schema fetch
-  // errored, degrade to an unfiltered list rather than blocking forever.
+  // errored, degrade to the legacy filter path rather than blocking forever.
   const searchTemplateReady = needsSearchTemplate ? schemaQuery.isFetched : true;
 
   return useQuery({

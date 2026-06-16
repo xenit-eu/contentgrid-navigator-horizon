@@ -297,7 +297,12 @@ describe("useEntityList", () => {
     expect(url.searchParams.has("status")).toBe(false);
   });
 
-  it("degrades to an unfiltered list when the entity profile request fails", async () => {
+  it("applies filters via the legacy path when the entity profile request fails", async () => {
+    // When the schema fetch errors, searchTemplate degrades to `undefined` (not
+    // `null`). `undefined` routes through buildLegacyCollectionUrl which appends
+    // active filters as raw query params — so filters still reach the server.
+    // `null` would have routed through encodeSearchUrl which strips all filters,
+    // producing an unfiltered list cached under a key that says filtered.
     mockProfile();
     server.use(
       http.get(ENTITY_PROFILE_URL, () =>
@@ -324,11 +329,12 @@ describe("useEntityList", () => {
       { wrapper: makeWrapper() },
     );
 
-    // The list still loads (unfiltered) instead of blocking forever
+    // The list still loads instead of blocking forever, and filters are preserved
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const url = new URL(requestedUrl);
-    expect(url.searchParams.has("status")).toBe(false);
+    // Filter is preserved via the legacy raw-query-params path (not stripped)
+    expect(url.searchParams.get("status")).toBe("draft");
   });
 
   it("keeps legacy manual query construction when fetchEntityList is called without a template", async () => {

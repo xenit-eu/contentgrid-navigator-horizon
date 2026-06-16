@@ -31,14 +31,25 @@ async function fetchProfile(
   // Derive root URL from profileUrl (e.g. https://api.example.com/profile → https://api.example.com/)
   const rootUrl = new URL("/", profileUrl).href;
 
-  // Fetch profile root and entities root in parallel
+  // Fetch profile root and entities root in parallel.
+  // The root fetch is wrapped in a try/catch so that a transient GET / failure
+  // (e.g. 500 or network error) degrades gracefully instead of failing the whole
+  // query. When the root is unavailable we cannot get collection hrefs from its
+  // cg:entity links, so we fall back to deriving the collection href from the
+  // profile href (e.g. /profile/invoices → /invoices). This is less reliable than
+  // a real link (the root is the authoritative source), but it keeps entities
+  // discoverable when the root resource is temporarily down.
+  // Note: if the root is available but does NOT list a specific entity link, that
+  // entity is still skipped — link absence means the collection is inaccessible
+  // (ABAC, affordance rule 2). The degraded path only applies when the root
+  // resource itself is completely unreachable.
   const [profileResult, rootResult] = await Promise.all([
     fetchHal<Record<string, unknown>>(apiFetch, profileUrl),
-    fetchHal<Record<string, unknown>>(apiFetch, rootUrl),
+    fetchHal<Record<string, unknown>>(apiFetch, rootUrl).catch(() => null),
   ]);
 
   const profileEntityLinks = profileResult.object.links.findLinks(cgRels.entity);
-  const rootEntityLinks = rootResult.object.links.findLinks(cgRels.entity);
+  const rootEntityLinks = rootResult?.object.links.findLinks(cgRels.entity) ?? [];
 
   // Build a map from entity name → collection href using the root resource's cg:entity links.
   // The root resource link name is the singular entity name, matching the profile root link name.
@@ -53,10 +64,13 @@ async function fetchProfile(
     // Use link.name when present; fall back to last path segment of the profile href
     const name = link.name ?? link.href.split("/").pop() ?? "";
 
-    // Collection href must come from the root resource cg:entity link (matched by
-    // name). No matching link means the collection is not accessible — skip the
-    // entity instead of deriving a URL (rules 2 and 3).
-    const collectionHref = collectionByName.get(name);
+    // Prefer collection href from root resource cg:entity link (matched by name).
+    // When the root was unavailable (rootResult is null), fall back to stripping
+    // "/profile/" from the profile href — the same derivation the old code used.
+    // When the root WAS available but has no matching link, skip the entity:
+    // link absence means the collection is not accessible (affordance rule 2).
+    const collectionHref =
+      rootResult === null ? link.href.replace(/\/profile\//, "/") : collectionByName.get(name);
     if (collectionHref === undefined) return [];
 
     return [
