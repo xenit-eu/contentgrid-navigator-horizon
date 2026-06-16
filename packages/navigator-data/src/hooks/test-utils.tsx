@@ -48,7 +48,7 @@ export function makeWrapper(
 
 /** Pre-seed profile data so mutations can resolve collectionHref without an HTTP call. */
 export function seedProfile(queryClient: QueryClient, entities = [INVOICE_ENTITY]) {
-  queryClient.setQueryData(queryKeys.profile(), entities);
+  queryClient.setQueryData(queryKeys.profileEntities(), entities);
 }
 
 export function mockProfileResponse() {

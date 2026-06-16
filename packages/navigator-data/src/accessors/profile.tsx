@@ -8,7 +8,7 @@ import { blueprintRels, cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type { EntityInstanceCreateRequestSpec, SearchRequestSpec } from "../api/requests";
-import type { EntityProfileShape, ProfileAttributeShape, ProfileRelationShape } from "../shapes";
+import type { ProfileAttributeShape, ProfileEntityShape, ProfileRelationShape } from "../shapes";
 import { ProfileAttribute } from "./attribute-profile";
 import { CreateHalFormTemplate } from "./create-form";
 import { ProfileRelation } from "./relation-profile";
@@ -22,23 +22,56 @@ export async function getProfile(
   return object;
 }
 
-export async function getProfiles(
+export async function getProfileEntities(
   apiFetch: TypedFetch,
   profileUrl: string,
-): Promise<readonly Profile[]> {
+): Promise<readonly ProfileEntity[]> {
   const rootProfile = await getProfile(apiFetch, profileUrl);
   return Promise.all(
     rootProfile.links.findLinks(cgRels.entity).map(async (link) => {
-      const { object } = await fetchHal<EntityProfileShape>(apiFetch, link.href);
-      return new Profile(link, object as HalObject<EntityProfileShape>);
+      const { object } = await fetchHal<ProfileEntityShape>(apiFetch, link.href);
+      return new ProfileEntity(link, object as HalObject<ProfileEntityShape>);
     }),
   );
 }
 
-export default class Profile {
+export interface ProfileEntityFilter {
+  name?: string;
+  link?: SimpleLink;
+}
+
+export async function getProfileEntity(
+  apiFetch: TypedFetch,
+  profileUrl: string,
+  filter: ProfileEntityFilter,
+): Promise<ProfileEntity | null> {
+  const rootProfile = await getProfile(apiFetch, profileUrl);
+  const entityLinks = rootProfile.links.findLinks(cgRels.entity);
+
+  // Find the entity link by name or href
+  const entityLink = entityLinks.find((link) => {
+    if (filter.name && link.name === filter.name) {
+      return true;
+    }
+    if (filter.link && link.href === filter.link.href) {
+      return true;
+    }
+    return false;
+  });
+
+  if (!entityLink) {
+    return null;
+  }
+
+  // Fetch only the specific entity profile
+  const { object } = await fetchHal<ProfileEntityShape>(apiFetch, entityLink.href);
+  return new ProfileEntity(entityLink, object as HalObject<ProfileEntityShape>);
+}
+
+export default class ProfileEntity {
   public constructor(
     public readonly link: Link,
-    private readonly profile: HalObject<EntityProfileShape>,
+    private readonly profileEntity: HalObject<ProfileEntityShape>,
   ) {}
 
   // ========================================
@@ -54,16 +87,16 @@ export default class Profile {
   }
 
   public get description(): string {
-    return this.profile.data.description;
+    return this.profileEntity.data.description;
   }
 
   public get singularName(): string {
-    return this.profile.data.name;
+    return this.profileEntity.data.name;
   }
 
   public get pluralName(): string {
     return (
-      this.profile.links
+      this.profileEntity.links
         .findLinks(ianaRelations.describes)
         .find((describesLink) => describesLink.name == "collection")?.title ?? this.title
     );
@@ -74,7 +107,7 @@ export default class Profile {
   // ========================================
 
   public get attributes(): readonly ProfileAttribute[] {
-    return (this.profile.embedded.findEmbeddeds(blueprintRels.attribute) ?? []).map(
+    return (this.profileEntity.embedded.findEmbeddeds(blueprintRels.attribute) ?? []).map(
       (hal) => new ProfileAttribute(hal as HalObject<ProfileAttributeShape>),
     );
   }
@@ -109,7 +142,7 @@ export default class Profile {
   // ========================================
 
   public get relations(): readonly ProfileRelation[] {
-    return (this.profile.embedded.findEmbeddeds(blueprintRels.relation) ?? []).map(
+    return (this.profileEntity.embedded.findEmbeddeds(blueprintRels.relation) ?? []).map(
       (hal) => new ProfileRelation(hal as HalObject<ProfileRelationShape>),
     );
   }
@@ -171,15 +204,15 @@ export default class Profile {
   // ========================================
 
   public get collectionLink(): Link {
-    return this.profile.links.requireSingleLink(ianaRelations.describes, "collection");
+    return this.profileEntity.links.requireSingleLink(ianaRelations.describes, "collection");
   }
 
   public get itemLink(): Link {
-    return this.profile.links.requireSingleLink(ianaRelations.describes, "item");
+    return this.profileEntity.links.requireSingleLink(ianaRelations.describes, "item");
   }
 
   public describes(link: SimpleLink): boolean {
-    return this.profile.links
+    return this.profileEntity.links
       .findLinks(ianaRelations.describes)
       .some(
         (desc) => desc.template.match(link.href) || desc.template.match(link.href.split("?")[0]),
@@ -191,7 +224,7 @@ export default class Profile {
   // ========================================
 
   public get searchTemplate(): SearchHalFormTemplate | null {
-    const template = resolveTemplate(this.profile.data, "search");
+    const template = resolveTemplate(this.profileEntity.data, "search");
     if (!template) {
       return null;
     }
@@ -211,7 +244,7 @@ export default class Profile {
   }
 
   public get createTemplate(): CreateHalFormTemplate | null {
-    const template = resolveTemplate(this.profile.data, "create-form");
+    const template = resolveTemplate(this.profileEntity.data, "create-form");
     if (!template) {
       return null;
     }

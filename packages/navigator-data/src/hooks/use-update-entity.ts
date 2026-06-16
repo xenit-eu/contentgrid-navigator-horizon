@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
+import type ProfileEntity from "../accessors/profile";
 import { CONTENT_TYPE_JSON } from "../api/content-types";
 import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
-import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
@@ -20,8 +20,9 @@ export function useUpdateEntity() {
 
   return useMutation({
     mutationFn: async (params: UpdateEntityParams) => {
-      const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionHref;
+      const entities = queryClient.getQueryData<ProfileEntity[]>(queryKeys.profileEntities());
+      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionLink
+        .href;
       if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
 
       const itemUrl = `${collectionHref}/${params.entityId}`;

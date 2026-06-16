@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Representation, createRequest } from "@contentgrid/typed-fetch";
+import type ProfileEntity from "../accessors/profile";
 import { CONTENT_TYPE_URI_LIST } from "../api/content-types";
-import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
@@ -18,8 +18,8 @@ export function useLinkRelation() {
 
   return useMutation({
     mutationFn: async ({ entityName, entityId, relationName, targetUri }: LinkRelationParams) => {
-      const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const collectionHref = entities?.find((e) => e.name === entityName)?.collectionHref;
+      const entities = queryClient.getQueryData<ProfileEntity[]>(queryKeys.profileEntities());
+      const collectionHref = entities?.find((e) => e.name === entityName)?.collectionLink.href;
       if (!collectionHref) throw new Error(`Unknown entity: ${entityName}`);
 
       await apiFetch(

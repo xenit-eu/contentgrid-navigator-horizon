@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import Profile from "../accessors/profile";
 import { cgRels } from "../api/contentgrid-rels";
 import { fetchHal } from "../api/hal-client";
-import type { EntityProfileShape } from "../shapes";
+import type { ProfileEntityShape } from "../shapes";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
@@ -26,7 +26,7 @@ async function fetchEntityProfile(
   }
 
   // Fetch the individual entity profile
-  const { object: profileObject } = await fetchHal<EntityProfileShape>(apiFetch, entityLink.href);
+  const { object: profileObject } = await fetchHal<ProfileEntityShape>(apiFetch, entityLink.href);
 
   // Return Profile wrapping the profile
   return new Profile(entityLink, profileObject);

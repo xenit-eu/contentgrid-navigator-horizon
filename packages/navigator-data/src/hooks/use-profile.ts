@@ -1,60 +1,70 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import type { SimpleLink } from "@contentgrid/hal";
-import type Profile from "../accessors/profile";
-import { getProfiles } from "../accessors/profile";
+import type ProfileEntity from "../accessors/profile";
+import {
+  type ProfileEntityFilter,
+  getProfileEntities,
+  getProfileEntity,
+} from "../accessors/profile";
 import type { TypedFetch } from "../api/client";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
-const profileQuery = (apiFetch: TypedFetch, profileUrl: string) =>
+const profileEntitiesQuery = (apiFetch: TypedFetch, profileUrl: string) =>
   queryOptions({
-    queryKey: queryKeys.profile(),
-    queryFn: () => getProfiles(apiFetch, profileUrl),
+    queryKey: queryKeys.profileEntities(),
+    queryFn: () => getProfileEntities(apiFetch, profileUrl),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-interface UseProfilesOptions {
+const profileEntityQuery = (
+  apiFetch: TypedFetch,
+  profileUrl: string,
+  filter: ProfileEntityFilter,
+) =>
+  queryOptions({
+    queryKey: queryKeys.profileEntity(filter),
+    queryFn: () => getProfileEntity(apiFetch, profileUrl, filter),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+interface UseProfileEntitiesOptions {
   readonly queryOptionsOverride?: Readonly<
-    QueryOptionsOverride<readonly Profile[], Error, readonly Profile[], readonly ["profile"]>
+    QueryOptionsOverride<
+      readonly ProfileEntity[],
+      Error,
+      readonly ProfileEntity[],
+      readonly ["profileEntities"]
+    >
   >;
 }
 
-export function useProfiles(options?: UseProfilesOptions) {
+export function useProfileEntities(options?: UseProfileEntitiesOptions) {
   const { apiFetch, profileUrl } = useNavigatorData();
   return useQuery({
-    ...profileQuery(apiFetch, profileUrl),
+    ...profileEntitiesQuery(apiFetch, profileUrl),
     ...(options?.queryOptionsOverride ?? {}),
   });
 }
 
-interface UseProfileFilter {
-  name?: string;
-  link?: SimpleLink;
+interface UseProfileEntityOptions {
+  readonly queryOptionsOverride?: Readonly<
+    QueryOptionsOverride<
+      ProfileEntity | null,
+      Error,
+      ProfileEntity | null,
+      readonly ["profileEntity", ProfileEntityFilter]
+    >
+  >;
 }
 
-export function useProfile(filter: UseProfileFilter = {}, options?: UseProfilesOptions) {
+export function useProfileEntity(filter: ProfileEntityFilter, options?: UseProfileEntityOptions) {
   const { apiFetch, profileUrl } = useNavigatorData();
+  const hasFilter = filter.name !== undefined || filter.link !== undefined;
+
   return useQuery({
-    ...profileQuery(apiFetch, profileUrl),
+    ...profileEntityQuery(apiFetch, profileUrl, filter),
     ...(options?.queryOptionsOverride ?? {}),
-    select(data: readonly Profile[]) {
-      return data.find(createFilter(filter));
-    },
+    enabled: hasFilter,
   });
-}
-
-function createFilter(filter: UseProfileFilter) {
-  const filters: Array<(p: Profile) => boolean> = [];
-  if (filter.name) {
-    filters.push((a) => a.name === filter.name);
-  }
-  if (filter.link) {
-    filters.push((a) => a.link.href === filter.link!.href);
-  }
-
-  return filters.reduce(
-    (a, b) => (p: Profile) => a(p) && b(p),
-    () => true,
-  );
 }

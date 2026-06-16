@@ -6,6 +6,6 @@ export * from "./hooks";
 export * from "./types/entity";
 export * from "./accessors/search-form";
 export * from "./accessors/create-form";
-export { default as Profile } from "./accessors/profile";
-export type { default as ProfileType } from "./accessors/profile";
+export { default as ProfileEntity } from "./accessors/profile";
+export type { default as ProfileEntityType, ProfileEntityFilter } from "./accessors/profile";
 export * from "./config";

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createRequest } from "@contentgrid/typed-fetch";
+import type ProfileEntity from "../accessors/profile";
 import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
-import type { EntityInfo } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
@@ -18,8 +18,9 @@ export function useDeleteEntity() {
     mutationFn: async (params: DeleteEntityParams) => {
       // Derive the item URL from the profile cache (staleTime: Infinity — always present)
       // rather than the entity-detail cache which may have been evicted (default gcTime: 5 min).
-      const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionHref;
+      const entities = queryClient.getQueryData<ProfileEntity[]>(queryKeys.profileEntities());
+      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionLink
+        .href;
       if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
 
       const cached = queryClient.getQueryData(

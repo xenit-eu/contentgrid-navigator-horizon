@@ -11,7 +11,7 @@ import type {
 type HalFormsTemplateShapeFromRequest<RS extends TypedRequestSpec<unknown, unknown>> =
   HalFormsTemplateShape<RequestBodyType<RS>, ResponseBodyType<RS>>;
 
-export interface EntityProfileShape {
+export interface ProfileEntityShape {
   readonly name: string;
   readonly description: string;
   readonly _links?: LinksShape;

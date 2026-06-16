@@ -3,7 +3,7 @@ import { ianaRelations } from "@contentgrid/hal/rels";
 import { fetchHalSlice } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
-import { useProfile } from "./use-profile";
+import { useProfileEntity } from "./use-profile";
 
 export interface EntityListParams {
   cursor?: string;
@@ -77,7 +77,7 @@ export async function fetchEntityList(
 
 export function useEntityList(entityName: string, params: EntityListParams) {
   const { apiFetch } = useNavigatorData();
-  const { data: profile } = useProfile({ name: entityName });
+  const { data: profile } = useProfileEntity({ name: entityName });
   const collectionHref = profile?.collectionLink.href;
 
   return useQuery({
