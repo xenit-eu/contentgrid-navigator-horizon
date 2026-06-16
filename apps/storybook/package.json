@@ -24,7 +24,7 @@
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@playwright/test": "^1.60.0",
-    "@storybook/addon-a11y": "10.4.1",
+    "@storybook/addon-a11y": "10.4.2",
     "@storybook/addon-themes": "^10.0.0",
     "@storybook/react-vite": "^10.0.0",
     "@tailwindcss/vite": "^4.1.18",
