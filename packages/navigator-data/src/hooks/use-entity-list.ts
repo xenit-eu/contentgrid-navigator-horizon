@@ -77,11 +77,8 @@ export async function fetchEntityList(
 
 export function useEntityList(entityName: string, params: EntityListParams) {
   const { apiFetch } = useNavigatorData();
-  const { data: entities } = useProfile();
-  const entity = entities?.find(
-    (e) => e.name === entityName || e.href.split("/").pop() === entityName,
-  );
-  const collectionHref = entity?.collectionHref;
+  const { data: profile } = useProfile({ name: entityName });
+  const collectionHref = profile?.collectionLink.href;
 
   return useQuery({
     queryKey: queryKeys.entityList(entityName, params as Record<string, unknown>),

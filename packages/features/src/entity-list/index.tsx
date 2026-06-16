@@ -1,24 +1,25 @@
 import type { ReactNode } from "react";
-import { type EntityInfo, useEntityList, useProfile } from "@contentgrid/navigator-data";
+import { Profile, useEntityList } from "@contentgrid/navigator-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@contentgrid/ui";
+import { useProfiles } from "../../../navigator-data/src/hooks/use-profile";
 
 export function EntityList() {
-  const profile = useProfile();
+  const profiles = useProfiles();
 
-  if (profile.isPending) {
+  if (profiles.isPending) {
     return <EntityListMessage>Loading entities…</EntityListMessage>;
   }
-  if (profile.isError) {
-    return <EntityListMessage>Failed to load entities: {profile.error.message}</EntityListMessage>;
+  if (profiles.isError) {
+    return <EntityListMessage>Failed to load entities: {profiles.error.message}</EntityListMessage>;
   }
-  if (profile.data.length === 0) {
-    return <EntityListMessage>No entities found.</EntityListMessage>;
+  if (profiles.data.length == 0) {
+    return <EntityListMessage>No entities with name found.</EntityListMessage>;
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {profile.data.map((entity) => (
-        <EntityCollectionCard key={entity.name} entity={entity} />
+      {profiles.data.map((entityProfile) => (
+        <EntityCollectionCard key={entityProfile.name} profile={entityProfile} />
       ))}
     </div>
   );
@@ -37,13 +38,13 @@ function EntityListMessage({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-function EntityCollectionCard({ entity }: Readonly<{ entity: EntityInfo }>) {
-  const list = useEntityList(entity.name, {});
+function EntityCollectionCard({ profile }: Readonly<{ profile: Profile }>) {
+  const list = useEntityList(profile.name, {});
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{entity.title}</CardTitle>
+        <CardTitle>{profile.pluralName}</CardTitle>
       </CardHeader>
       <CardContent>
         {list.isPending && <p className="text-muted-foreground text-sm">Loading items…</p>}

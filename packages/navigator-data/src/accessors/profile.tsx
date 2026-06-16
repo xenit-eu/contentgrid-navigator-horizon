@@ -1,16 +1,39 @@
-import type { HalObject, Link, SimpleLink } from "@contentgrid/hal";
+import { HalObject, type Link, type SimpleLink } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { checkResponse } from "@contentgrid/problem-details";
-import { blueprintRels } from "../api";
+import { blueprintRels, cgRels } from "../api";
+import type { TypedFetch } from "../api/client";
+import { fetchHal } from "../api/hal-client";
 import type { EntityInstanceCreateRequestSpec, SearchRequestSpec } from "../api/requests";
 import type { EntityProfileShape, ProfileAttributeShape, ProfileRelationShape } from "../shapes";
 import { ProfileAttribute } from "./attribute-profile";
 import { CreateHalFormTemplate } from "./create-form";
 import { ProfileRelation } from "./relation-profile";
 import { SearchHalFormTemplate } from "./search-form";
+
+export async function getProfile(
+  apiFetch: TypedFetch,
+  profileUrl: string,
+): Promise<HalObject<unknown>> {
+  const { object } = await fetchHal<Record<string, unknown>>(apiFetch, profileUrl);
+  return object;
+}
+
+export async function getProfiles(
+  apiFetch: TypedFetch,
+  profileUrl: string,
+): Promise<readonly Profile[]> {
+  const rootProfile = await getProfile(apiFetch, profileUrl);
+  return Promise.all(
+    rootProfile.links.findLinks(cgRels.entity).map(async (link) => {
+      const { object } = await fetchHal<EntityProfileShape>(apiFetch, link.href);
+      return new Profile(link, object as HalObject<EntityProfileShape>);
+    }),
+  );
+}
 
 export default class Profile {
   public constructor(

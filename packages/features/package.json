@@ -12,6 +12,10 @@
       "import": "./src/entity-list/index.tsx",
       "types": "./src/entity-list/index.tsx"
     },
+    "./profile-inspector": {
+      "import": "./src/profile-inspector/index.tsx",
+      "types": "./src/profile-inspector/index.tsx"
+    },
     "./_experimental-placeholder": {
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
