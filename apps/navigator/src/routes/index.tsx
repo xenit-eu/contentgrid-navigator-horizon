@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EntityList } from "@contentgrid/features/entity-list";
+import { ProfileInspector } from "@contentgrid/features/profile-inspector";
 
 export const Route = createFileRoute("/")({
   component: IndexPage,
 });
 
 function IndexPage() {
-  return <EntityList />;
+  return <ProfileInspector />;
 }

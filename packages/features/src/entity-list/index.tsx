@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import { Profile, useEntityList } from "@contentgrid/navigator-data";
+import { ProfileEntity, useEntityList, useProfileEntities } from "@contentgrid/navigator-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@contentgrid/ui";
-import { useProfiles } from "../../../navigator-data/src/hooks/use-profile";
 
 export function EntityList() {
-  const profiles = useProfiles();
+  const profiles = useProfileEntities();
 
   if (profiles.isPending) {
     return <EntityListMessage>Loading entities…</EntityListMessage>;
@@ -38,7 +37,7 @@ function EntityListMessage({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-function EntityCollectionCard({ profile }: Readonly<{ profile: Profile }>) {
+function EntityCollectionCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const list = useEntityList(profile.name, {});
 
   return (

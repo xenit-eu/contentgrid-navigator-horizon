@@ -68,3 +68,14 @@ export function useProfileEntity(filter: ProfileEntityFilter, options?: UseProfi
     enabled: hasFilter,
   });
 }
+
+export function useProfile(filter: ProfileEntityFilter, options?: UseProfileEntityOptions) {
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const hasFilter = filter.name !== undefined || filter.link !== undefined;
+
+  return useQuery({
+    ...profileEntityQuery(apiFetch, profileUrl, filter),
+    ...(options?.queryOptionsOverride ?? {}),
+    enabled: hasFilter,
+  });
+}
