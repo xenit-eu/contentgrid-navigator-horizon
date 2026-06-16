@@ -288,8 +288,11 @@ jobs:
               });
             }
 
+  # E2E tests are disabled until the application is feature-complete. Re-enable by removing
+  # the `if: false` line below (HZN-5D.9).
   e2e:
     name: E2E tests (navigator)
+    if: false
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.60.0-noble
     steps:

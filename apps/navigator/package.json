@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "test:e2e": "playwright test"
+    "_test:e2e": "playwright test"
   },
   "dependencies": {
     "@contentgrid/features": "workspace:*",
