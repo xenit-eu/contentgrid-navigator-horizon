@@ -4,7 +4,8 @@ import { fetchHal } from "../api/hal-client";
 import type { EntitySchema } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
-import { useProfile } from "./use-profile";
+
+// import { useProfile } from "./use-profile-entity";
 
 interface StatusBreakdownResult {
   attribute: string;

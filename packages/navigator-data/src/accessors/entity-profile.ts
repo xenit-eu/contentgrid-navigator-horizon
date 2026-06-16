@@ -220,7 +220,7 @@ export default class ProfileEntity {
   }
 
   // ========================================
-  // Templates & Operations
+  // Search Templates & Operations
   // ========================================
 
   public get searchTemplate(): SearchHalFormTemplate | null {
@@ -233,15 +233,19 @@ export default class ProfileEntity {
     return new SearchHalFormTemplate(template, this);
   }
 
-  public async searchEntity(values: HalFormValues<SearchRequestSpec>) {
+  public async searchEntity(apiFetch: TypedFetch, values: HalFormValues<SearchRequestSpec>) {
     const searchTemplate = this.searchTemplate;
     if (!searchTemplate) {
       throw new Error("No search template available");
     }
     const codec = halFormCodecs.requireCodecFor(searchTemplate.template);
     const request = codec.encode(values);
-    return fetch(request).then(checkResponse);
+    return apiFetch(request).then(checkResponse);
   }
+
+  // ========================================
+  // Create Template & Operations
+  // ========================================
 
   public get createTemplate(): CreateHalFormTemplate | null {
     const template = resolveTemplate(this.profileEntity.data, "create-form");
@@ -253,13 +257,16 @@ export default class ProfileEntity {
     return new CreateHalFormTemplate(template, this);
   }
 
-  public async createEntity(values: HalFormValues<EntityInstanceCreateRequestSpec>) {
+  public async createEntity(
+    apiFetch: TypedFetch,
+    values: HalFormValues<EntityInstanceCreateRequestSpec>,
+  ) {
     const createTemplate = this.createTemplate;
     if (!createTemplate) {
       throw new Error("No create template available");
     }
     const codec = halFormCodecs.requireCodecFor(createTemplate.template);
     const request = codec.encode(values);
-    return fetch(request).then(checkResponse);
+    return apiFetch(request).then(checkResponse);
   }
 }

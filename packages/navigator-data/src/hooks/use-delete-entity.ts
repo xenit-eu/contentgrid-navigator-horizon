@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createRequest } from "@contentgrid/typed-fetch";
-import type ProfileEntity from "../accessors/profile";
+import type ProfileEntity from "../accessors/entity-profile";
 import { PreconditionFailedError, ProblemDetailError } from "../api/errors";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";

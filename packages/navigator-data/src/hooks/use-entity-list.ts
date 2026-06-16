@@ -3,7 +3,7 @@ import { ianaRelations } from "@contentgrid/hal/rels";
 import { fetchHalSlice } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
-import { useProfileEntity } from "./use-profile";
+import { useProfileEntity } from "./use-profile-entity";
 
 export interface EntityListParams {
   cursor?: string;

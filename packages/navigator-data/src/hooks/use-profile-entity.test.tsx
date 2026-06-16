@@ -7,8 +7,7 @@ import { server } from "../../test-setup";
 import { ProfileAttributeSearchType } from "../accessors/attribute-profile";
 import { type AuthenticationTokenSupplier, createApiClient } from "../api/client";
 import { NavigatorDataProvider, useNavigatorData } from "./context";
-import { useEntityProfile } from "./use-entity-profile";
-import { useProfile } from "./use-profile";
+import { useProfileEntities, useProfileEntity } from "./use-profile-entity";
 
 const PROFILE_URL = "https://api.example.com/profile";
 
@@ -66,7 +65,7 @@ describe("useProfile", () => {
       ),
     );
 
-    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntities(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.data).toBeDefined());
 
@@ -89,7 +88,7 @@ describe("useProfile", () => {
       ),
     );
 
-    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntities(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeDefined();
@@ -116,14 +115,14 @@ describe("useProfile", () => {
       ),
     );
 
-    const { result } = renderHook(() => useProfile(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntities(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     expect(result.current.data).toHaveLength(1);
     // Name should be derived from the last segment of the href
     expect(result.current.data![0].name).toBe("orders");
-    expect(result.current.data![0].collectionHref).toBe("https://api.example.com/orders");
+    expect(result.current.data![0].collectionLink.href).toBe("https://api.example.com/orders");
   });
 });
 
@@ -350,7 +349,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -367,7 +368,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -389,7 +392,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -404,7 +409,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -431,7 +438,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -450,7 +459,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -470,7 +481,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -498,7 +511,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -512,7 +527,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -532,7 +549,7 @@ describe("useEntityProfile (Profile)", () => {
 
     // Check sort options with ProfileAttribute metadata
     expect(searchTemplate.sortOptions).toHaveLength(2);
-    const firstSort = searchTemplate.sortOptions[0];
+    const firstSort = searchTemplate.sortOptions![0];
     expect(firstSort?.value).toBe("invoice_number,asc");
     expect(firstSort?.direction).toBe("asc");
     expect(firstSort?.profileAttribute?.name).toBe("invoice_number");
@@ -544,7 +561,9 @@ describe("useEntityProfile (Profile)", () => {
       http.get(INVOICE_PROFILE_HREF, () => HttpResponse.json(mockInvoiceProfile())),
     );
 
-    const { result } = renderHook(() => useEntityProfile("invoice"), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useProfileEntity({ name: "invoice" }), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     const accessor = result.current.data!;
@@ -560,7 +579,7 @@ describe("useEntityProfile (Profile)", () => {
   it("returns null when entity is not found", async () => {
     server.use(http.get(PROFILE_URL, () => HttpResponse.json(mockProfileRoot())));
 
-    const { result } = renderHook(() => useEntityProfile("nonexistent"), {
+    const { result } = renderHook(() => useProfileEntity({ name: "nonexistent" }), {
       wrapper: makeWrapper(),
     });
     await waitFor(() => expect(result.current.data).toBeDefined());

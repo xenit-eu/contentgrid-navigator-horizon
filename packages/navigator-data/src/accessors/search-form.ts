@@ -2,7 +2,7 @@ import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms"
 import type { SearchRequestSpec } from "../api/requests";
 import { ProfileAttributeSearchType } from "./attribute-profile";
 import type { ProfileAttribute } from "./attribute-profile";
-import type Profile from "./profile";
+import type ProfileEntity from "./entity-profile";
 import type { ProfileRelation } from "./relation-profile";
 
 /**
@@ -96,9 +96,9 @@ export class SearchHalFormTemplate {
     /** The underlying HAL-FORMS template */
     public readonly template: HalFormsTemplate<SearchRequestSpec>,
     /** The profile accessor for attribute/relation linking */
-    private readonly Profile: Profile,
+    private readonly profileEntity: ProfileEntity,
     /** Optional map of all profiles for cross-entity relation resolution */
-    private readonly _allProfiles?: Profile[],
+    private readonly _allProfiles?: ProfileEntity[],
   ) {}
 
   /**
@@ -116,20 +116,34 @@ export class SearchHalFormTemplate {
 
   /**
    * Get all sort options with enhanced metadata.
+   * Returns undefined if this search template does not support sorting.
    */
-  get sortOptions(): readonly SortOption[] {
-    if (!this._sortOptions) {
+  get sortOptions(): readonly SortOption[] | undefined {
+    if (this._sortOptions === undefined) {
       const sortProperty = this.template.properties?.find((p) => p.name === "_sort");
       if (sortProperty?.options?.isInline()) {
         const inline = sortProperty.options.inline;
         this._sortOptions = (Array.isArray(inline) ? inline : []).map((opt) =>
           this.parseSortOption(opt),
         );
-      } else {
-        this._sortOptions = [];
       }
+      // Leave as undefined if no sort property exists
     }
     return this._sortOptions;
+  }
+
+  /**
+   * Get the raw _sort HAL-FORMS property if present.
+   */
+  get sortProperty(): HalFormsProperty | undefined {
+    return this.template.properties?.find((p) => p.name === "_sort") ?? undefined;
+  }
+
+  /**
+   * Check if this search template supports sorting.
+   */
+  get hasSort(): boolean {
+    return this.sortProperty !== undefined;
   }
 
   /**
@@ -203,7 +217,7 @@ export class SearchHalFormTemplate {
       const attributePart = parts.slice(1).join(".");
       const attributeName = attributePart.split("~")[0];
 
-      profileRelation = this.Profile.getRelation(relationName);
+      profileRelation = this.profileEntity.getRelation(relationName);
 
       // Try to resolve the target attribute using allProfiles
       if (profileRelation && this._allProfiles) {
@@ -221,7 +235,7 @@ export class SearchHalFormTemplate {
     } else {
       // Direct attribute: "attribute~suffix"
       const attributeName = propertyName.split("~")[0];
-      profileAttribute = this.Profile.getAttribute(attributeName);
+      profileAttribute = this.profileEntity.getAttribute(attributeName);
       searchType = this.extractSearchType(propertyName);
     }
 
@@ -257,7 +271,7 @@ export class SearchHalFormTemplate {
     if (typeof opt === "string") {
       // Parse "attribute,direction" format
       const [attributeName, direction = "asc"] = opt.split(",");
-      const profileAttribute = this.Profile.getAttribute(attributeName);
+      const profileAttribute = this.profileEntity.getAttribute(attributeName);
       return {
         value: opt,
         prompt: opt,
@@ -269,7 +283,7 @@ export class SearchHalFormTemplate {
     // Object format: { value: "attribute,direction", prompt: "..." }
     const o = opt as { value?: string; prompt?: string };
     const [attributeName, direction = "asc"] = (o.value || "").split(",");
-    const profileAttribute = this.Profile.getAttribute(attributeName);
+    const profileAttribute = this.profileEntity.getAttribute(attributeName);
     return {
       value: o.value || "",
       prompt: o.prompt || o.value || "",

@@ -11,7 +11,8 @@ import type {
 } from "../types/entity";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
-import { useProfile } from "./use-profile";
+
+// import { useProfile } from "./use-profile-entity";
 
 interface RawAttribute {
   name: string;

@@ -1,12 +1,16 @@
 export { NavigatorDataProvider, useNavigatorData } from "./context";
 export type { NavigatorDataContextValue } from "./context";
 export { queryKeys } from "./query-keys";
-export { useProfileEntities, useProfileEntity } from "./use-profile";
-export { useEntityProfile } from "./use-entity-profile";
+export { useProfileEntities, useProfileEntity } from "./use-profile-entity";
 export { useEntityDetail } from "./use-entity-detail";
 export type { EntityDetailResult } from "./use-entity-detail";
 export { useEntityList, fetchEntityList } from "./use-entity-list";
 export type { EntityListParams, EntityListResult } from "./use-entity-list";
+export {
+  useEntityItemCollection,
+  fetchEntityItemCollection,
+  entityItemCollectionQuery,
+} from "./use-entity-item-collection";
 export { useEntitySchema, fetchEntitySchema } from "./use-entity-schema";
 export { useEntityRelations } from "./use-entity-relations";
 export type { RelatedItem } from "./use-entity-relations";

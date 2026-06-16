@@ -1,7 +1,7 @@
 import type { HalObject, Link } from "@contentgrid/hal";
 import { blueprintRels } from "../api";
 import type { ProfileRelationShape } from "../shapes";
-import type Profile from "./profile";
+import type Profile from "./entity-profile";
 
 export class ProfileRelation {
   constructor(private readonly hal: HalObject<ProfileRelationShape>) {}

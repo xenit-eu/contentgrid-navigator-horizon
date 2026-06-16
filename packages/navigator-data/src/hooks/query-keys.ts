@@ -1,4 +1,4 @@
-import type { ProfileEntityFilter } from "../accessors/profile";
+import type { ProfileEntityFilter } from "../accessors/entity-profile";
 
 export const queryKeys = {
   profileEntities: () => ["profileEntities"] as const,

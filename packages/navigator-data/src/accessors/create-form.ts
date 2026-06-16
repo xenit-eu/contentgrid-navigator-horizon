@@ -5,7 +5,7 @@ import type {
 } from "@contentgrid/hal-forms";
 import type { EntityInstanceCreateRequestSpec } from "../api/requests";
 import type { ProfileAttribute } from "./attribute-profile";
-import type Profile from "./profile";
+import type ProfileEntity from "./entity-profile";
 import type { ProfileRelation } from "./relation-profile";
 
 /**
@@ -58,7 +58,7 @@ export interface CreateFormRelationToOneProperty {
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
   /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: Profile;
+  targetProfile?: ProfileEntity;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
   /** Whether this field is required */
@@ -75,7 +75,7 @@ export interface CreateFormRelationToManyProperty {
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
   /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: Profile;
+  targetProfile?: ProfileEntity;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
 }
@@ -95,9 +95,9 @@ export class CreateHalFormTemplate {
     /** The underlying HAL-FORMS template */
     public readonly template: HalFormsTemplate<EntityInstanceCreateRequestSpec>,
     /** The profile accessor for attribute/relation linking */
-    private readonly Profile: Profile,
+    private readonly profileEntity: ProfileEntity,
     /** Optional array of all profiles for target entity resolution */
-    private readonly _allProfiles?: Profile[],
+    private readonly _allProfiles?: ProfileEntity[],
   ) {}
 
   /**
@@ -205,7 +205,7 @@ export class CreateHalFormTemplate {
    * Enhance a user-defined attribute property with profile metadata.
    */
   private enhanceAttributeProperty(property: HalFormsProperty): CreateFormProperty {
-    const profileAttribute = this.Profile.getAttribute(property.name);
+    const profileAttribute = this.profileEntity.getAttribute(property.name);
     const isContent = property.type === "file" || (profileAttribute?.isContent ?? false);
     const isRequired = property.required ?? false;
 
@@ -230,7 +230,7 @@ export class CreateHalFormTemplate {
   private enhanceToOneRelationProperty(
     property: HalFormsProperty,
   ): CreateFormRelationToOneProperty {
-    const profileRelation = this.Profile.getRelation(property.name);
+    const profileRelation = this.profileEntity.getRelation(property.name);
 
     // Extract target collection href from options.link.href
     const linkHref = (property.options as HalFormsPropertyRemoteOptions)?.link?.href as
@@ -242,7 +242,7 @@ export class CreateHalFormTemplate {
     const isRequired = property.required ?? false;
 
     // Try to resolve target profile using _allProfiles
-    let targetProfile: Profile | undefined;
+    let targetProfile: ProfileEntity | undefined;
     if (profileRelation && this._allProfiles) {
       const targetProfileHref = profileRelation.targetProfileHref;
       targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);
@@ -263,7 +263,7 @@ export class CreateHalFormTemplate {
   private enhanceToManyRelationProperty(
     property: HalFormsProperty,
   ): CreateFormRelationToManyProperty {
-    const profileRelation = this.Profile.getRelation(property.name);
+    const profileRelation = this.profileEntity.getRelation(property.name);
 
     // Extract target collection href from options.link.href
     const linkHref = (property.options as HalFormsPropertyRemoteOptions)?.link?.href as
@@ -272,7 +272,7 @@ export class CreateHalFormTemplate {
     const targetCollectionHref = linkHref ?? "";
 
     // Try to resolve target profile using _allProfiles
-    let targetProfile: Profile | undefined;
+    let targetProfile: ProfileEntity | undefined;
     if (profileRelation && this._allProfiles) {
       const targetProfileHref = profileRelation.targetProfileHref;
       targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);

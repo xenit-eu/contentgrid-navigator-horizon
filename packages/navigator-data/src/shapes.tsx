@@ -17,7 +17,7 @@ export interface ProfileEntityShape {
   readonly _links?: LinksShape;
   readonly _templates?: {
     readonly search?: HalFormsTemplateShape<void, EntityCollectionShape>;
-    readonly "create-form"?: HalFormsTemplateShape<EntityInstanceForUpdate, EntityInstanceShape>;
+    readonly "create-form"?: HalFormsTemplateShape<EntityInstanceForUpdate, EntityItemShape>;
   };
 }
 
@@ -52,7 +52,7 @@ export interface ProfileRelationShape {
   readonly _links?: LinksShape;
 }
 
-export interface EntityCollectionShape extends HalSliceShape<EntityInstanceShape> {
+export interface EntityCollectionShape extends HalSliceShape<EntityItemShape> {
   readonly page: PageMetadataShape;
 }
 
@@ -61,7 +61,7 @@ export type PageMetadataShape = {
   readonly total_items_exact?: number;
 };
 
-export type EntityInstanceShape = HalObjectShape<{
+export type EntityItemShape = HalObjectShape<{
   readonly id: string;
   readonly [k: string]: unknown;
   readonly _templates?: {
@@ -77,4 +77,4 @@ type WithoutHal<T extends HalObjectShape<Record<string, unknown>>> = Omit<
   T,
   "_links" | "_embedded" | "_templates"
 >;
-export type EntityInstanceForUpdate = Omit<WithoutHal<EntityInstanceShape>, "id">;
+export type EntityInstanceForUpdate = Omit<WithoutHal<EntityItemShape>, "id">;

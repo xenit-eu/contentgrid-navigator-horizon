@@ -1,58 +1,63 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Representation, createRequest } from "@contentgrid/typed-fetch";
-import type ProfileEntity from "../accessors/profile";
-import { CONTENT_TYPE_JSON } from "../api/content-types";
-import { convertToString } from "../utils/format";
+import type { HalFormValues } from "@contentgrid/hal-forms/values";
+import type ProfileEntity from "../accessors/entity-profile";
+import type { EntityInstanceCreateRequestSpec } from "../api/requests";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 
 interface CreateEntityParams {
-  entityName: string;
-  data: Record<string, unknown>;
-  file?: File;
+  /** Form values to create the entity with */
+  values: HalFormValues<EntityInstanceCreateRequestSpec>;
 }
-
-export function useCreateEntity() {
+/**
+ * Hook to create a new entity using ProfileEntity's createEntity method.
+ *
+ * @param profileEntity - The entity profile containing the create template
+ * @returns Mutation for creating an entity
+ *
+ * @example
+ * ```tsx
+ * const { data: profile } = useProfileEntity({ name: "invoices" });
+ * const createInvoice = useCreateEntity(profile!);
+ *
+ * // In a form submit handler:
+ * const values = createValues(profile.createTemplate!.template)
+ *   .withValue("amount", 1250.00)
+ *   .withValue("customer", customerUrl);
+ *
+ * createInvoice.mutate({ values }, {
+ *   onSuccess: (result) => {
+ *     console.log("Created entity:", result.data);
+ *     console.log("At location:", result.location);
+ *     navigate(`/entities/${result.id}`);
+ *   }
+ * });
+ * ```
+ */
+export function useCreateEntity(profileEntity: ProfileEntity) {
   const { apiFetch } = useNavigatorData();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: CreateEntityParams) => {
-      const entities = queryClient.getQueryData<ProfileEntity[]>(queryKeys.profileEntities());
-      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionLink
-        .href;
-      if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
-
-      if (params.file) {
-        const formData = new FormData();
-        formData.append("content", params.file);
-        for (const [key, value] of Object.entries(params.data)) {
-          if (value == null) continue;
-          formData.append(key, convertToString(value));
-        }
-        const response = await apiFetch(
-          createRequest(
-            { url: collectionHref, method: "POST" },
-            { body: Representation.createUnsafe(formData) },
-          ),
-        );
-        return response.headers.get("Location") ?? "";
+    mutationFn: async (params: CreateEntityParams): Promise<unknown> => {
+      if (!profileEntity.createTemplate) {
+        throw new Error(`Entity ${profileEntity.name} does not support creation`);
       }
 
-      const response = await apiFetch(
-        createRequest(
-          { url: collectionHref, method: "POST" },
-          {
-            headers: { "Content-Type": CONTENT_TYPE_JSON },
-            body: Representation.json(params.data),
-          },
-        ),
-      );
-      return response.headers.get("Location") ?? "";
+      // Use ProfileEntity's createEntity method with authenticated fetch
+      const response = await profileEntity.createEntity(apiFetch, params.values);
+
+      // Get the Location header
+      return response.headers.get("Location");
     },
-    onSuccess: (_location, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.entityList(variables.entityName) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.entityCount(variables.entityName) });
+    onSuccess: (result) => {
+      // Invalidate the entity list cache to refetch with the new item
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.entityList(profileEntity.name),
+      });
+
+      // Cache the created entity in the detail query
+      queryClient.setQueryData(queryKeys.entityDetail(profileEntity.name, result.id), result.data);
     },
   });
 }

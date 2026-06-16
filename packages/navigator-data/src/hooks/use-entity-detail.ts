@@ -3,7 +3,7 @@ import { ianaRelations } from "@contentgrid/hal/rels";
 import { fetchHal } from "../api/hal-client";
 import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
-import { useProfile } from "./use-profile";
+import { useProfileEntities } from "./use-profile-entity";
 
 export interface EntityDetailResult {
   data: Record<string, unknown>;
@@ -35,7 +35,7 @@ async function fetchEntityDetail(
 
 export function useEntityDetail(entityName: string, entityId: string) {
   const { apiFetch } = useNavigatorData();
-  const { data: entities } = useProfile();
+  const { data: entities } = useProfileEntities();
   const entity = entities?.find(
     (e) => e.name === entityName || e.href.split("/").pop() === entityName,
   );

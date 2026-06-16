@@ -7,7 +7,8 @@ import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import { type EntityListResult, fetchEntityList } from "./use-entity-list";
 import { fetchEntitySchema } from "./use-entity-schema";
-import { useProfile } from "./use-profile";
+
+// import { useProfile } from "./use-profile-entity";
 
 export interface RecentActivityDetail {
   label: string;

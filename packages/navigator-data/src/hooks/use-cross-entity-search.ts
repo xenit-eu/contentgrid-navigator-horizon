@@ -6,7 +6,8 @@ import { useNavigatorData } from "./context";
 import { queryKeys } from "./query-keys";
 import { fetchEntityList } from "./use-entity-list";
 import { fetchEntitySchema } from "./use-entity-schema";
-import { useProfile } from "./use-profile";
+
+// import { useProfile } from "./use-profile-entity";
 
 export interface CrossEntitySearchResult {
   entityName: string;

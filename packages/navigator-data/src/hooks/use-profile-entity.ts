@@ -1,10 +1,10 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import type ProfileEntity from "../accessors/profile";
+import type ProfileEntity from "../accessors/entity-profile";
 import {
   type ProfileEntityFilter,
   getProfileEntities,
   getProfileEntity,
-} from "../accessors/profile";
+} from "../accessors/entity-profile";
 import type { TypedFetch } from "../api/client";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { useNavigatorData } from "./context";
@@ -59,17 +59,6 @@ interface UseProfileEntityOptions {
 }
 
 export function useProfileEntity(filter: ProfileEntityFilter, options?: UseProfileEntityOptions) {
-  const { apiFetch, profileUrl } = useNavigatorData();
-  const hasFilter = filter.name !== undefined || filter.link !== undefined;
-
-  return useQuery({
-    ...profileEntityQuery(apiFetch, profileUrl, filter),
-    ...(options?.queryOptionsOverride ?? {}),
-    enabled: hasFilter,
-  });
-}
-
-export function useProfile(filter: ProfileEntityFilter, options?: UseProfileEntityOptions) {
   const { apiFetch, profileUrl } = useNavigatorData();
   const hasFilter = filter.name !== undefined || filter.link !== undefined;
 

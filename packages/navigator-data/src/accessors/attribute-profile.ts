@@ -157,4 +157,25 @@ export class ProfileAttribute {
   get hasFullTextSearch(): boolean {
     return this.hasSearchType(ProfileAttributeSearchType.fullText);
   }
+
+  // ========================================
+  // Embedded Attributes (for nested objects)
+  // ========================================
+
+  /**
+   * Get embedded attributes for nested object types.
+   * Used for content metadata fields or user-defined nested objects.
+   */
+  get embeddedAttributes(): readonly ProfileAttribute[] {
+    return this.hal.embedded
+      .findEmbeddeds(blueprintRels.attribute)
+      .map((hal) => new ProfileAttribute(hal as HalObject<ProfileAttributeShape>));
+  }
+
+  /**
+   * Get a specific embedded attribute by name.
+   */
+  getEmbeddedAttribute(attributeName: string): ProfileAttribute | undefined {
+    return this.embeddedAttributes.find((attr) => attr.name === attributeName);
+  }
 }
