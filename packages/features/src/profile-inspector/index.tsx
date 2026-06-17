@@ -13,19 +13,35 @@ import {
 } from "@contentgrid/ui";
 
 export function ProfileInspector() {
-  const profiles = useProfileEntities();
+  const profileResults = useProfileEntities();
 
-  if (profiles.isPending) {
+  // Check if any profiles are still loading
+  const isLoading = profileResults.some((result) => result.isPending);
+  const hasErrors = profileResults.some((result) => result.isError);
+
+  // Extract successfully loaded profiles
+  const loadedProfiles = profileResults
+    .filter((result) => result.data)
+    .map((result) => result.data!);
+
+  // Extract errors
+  const errors = profileResults.filter((result) => result.isError).map((result) => result.error);
+
+  // Show loading state if any profile is still loading
+  if (isLoading && loadedProfiles.length === 0) {
     return <ProfileInspectorMessage>Loading profiles…</ProfileInspectorMessage>;
   }
-  if (profiles.isError) {
+
+  // Show errors if all failed
+  if (hasErrors && loadedProfiles.length === 0) {
     return (
       <ProfileInspectorMessage>
-        Failed to load profiles: {profiles.error.message}
+        Failed to load profiles: {errors.map((e) => e.message).join(", ")}
       </ProfileInspectorMessage>
     );
   }
-  if (profiles.data.length === 0) {
+
+  if (profileResults.length === 0) {
     return <ProfileInspectorMessage>No profiles found.</ProfileInspectorMessage>;
   }
 
@@ -37,15 +53,50 @@ export function ProfileInspector() {
           <CardDescription>Detailed view of all entity profiles and their schemas</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">
-            {profiles.data.length} profile(s) discovered
-          </p>
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-sm">
+              {loadedProfiles.length} of {profileResults.length} profile(s) loaded
+            </p>
+            {isLoading && (
+              <p className="text-muted-foreground text-xs">
+                Loading {profileResults.filter((r) => r.isPending).length} profile(s)...
+              </p>
+            )}
+            {hasErrors && (
+              <div className="rounded-md bg-destructive/10 p-3">
+                <p className="text-destructive text-sm font-medium">
+                  {errors.length} profile(s) failed to load
+                </p>
+                <ul className="text-destructive/80 mt-1 list-inside list-disc text-xs">
+                  {errors.map((error, idx) => (
+                    <li key={idx}>{error.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {profiles.data.map((profile) => (
+      {/* Render loaded profiles */}
+      {loadedProfiles.map((profile) => (
         <ProfileCard key={profile.name} profile={profile} />
       ))}
+
+      {/* Show loading placeholders for pending profiles */}
+      {isLoading &&
+        profileResults
+          .filter((r) => r.isPending)
+          .map((_, idx) => (
+            <Card key={`loading-${idx}`}>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground">Loading profile...</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-20 animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
     </div>
   );
 }

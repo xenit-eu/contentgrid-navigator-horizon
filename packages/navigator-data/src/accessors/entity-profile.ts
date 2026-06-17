@@ -1,71 +1,63 @@
+import { queryOptions } from "@tanstack/react-query";
 import { HalObject, type Link, type SimpleLink } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { checkResponse } from "@contentgrid/problem-details";
-import { blueprintRels, cgRels } from "../api";
+import { blueprintRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type { EntityInstanceCreateRequestSpec, SearchRequestSpec } from "../api/requests";
 import type { ProfileAttributeShape, ProfileEntityShape, ProfileRelationShape } from "../shapes";
+import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { ProfileAttribute } from "./attribute-profile";
 import { CreateHalFormTemplate } from "./create-form";
 import { ProfileRelation } from "./relation-profile";
 import { SearchHalFormTemplate } from "./search-form";
 
-export async function getProfile(
+// Query configuration constants
+const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes - profiles rarely change at runtime
+const PROFILE_ROOT_QUERY_KEY = "ProfileRoot";
+const PROFILE_QUERY_KEY = "ProfileEntity";
+
+export async function getProfileRoot(
   apiFetch: TypedFetch,
   profileUrl: string,
 ): Promise<HalObject<unknown>> {
-  const { object } = await fetchHal<Record<string, unknown>>(apiFetch, profileUrl);
+  const { object } = await fetchHal<Record<string, unknown>>(apiFetch, new Request(profileUrl));
   return object;
 }
 
-export async function getProfileEntities(
+/**
+ * Query options for fetching the profile root.
+ *
+ * The profile root is the discovery endpoint that lists all available entity profiles.
+ *
+ * @param apiFetch - Authenticated TypedFetch instance
+ * @param profileUrl - Full URL to the profile root endpoint
+ * @param override - Optional query options to override defaults (staleTime, retry, etc.)
+ *
+ * @example
+ * ```typescript
+ * const rootQuery = profileRootQuery(apiFetch, profileUrl);
+ * const { data: rootProfile } = useQuery(rootQuery);
+ * const entityLinks = rootProfile.links.findLinks(cgRels.entity);
+ * ```
+ */
+export function profileRootQuery(
   apiFetch: TypedFetch,
   profileUrl: string,
-): Promise<readonly ProfileEntity[]> {
-  const rootProfile = await getProfile(apiFetch, profileUrl);
-  return Promise.all(
-    rootProfile.links.findLinks(cgRels.entity).map(async (link) => {
-      const { object } = await fetchHal<ProfileEntityShape>(apiFetch, link.href);
-      return new ProfileEntity(link, object as HalObject<ProfileEntityShape>);
-    }),
-  );
-}
-
-export interface ProfileEntityFilter {
-  name?: string;
-  link?: SimpleLink;
-}
-
-export async function getProfileEntity(
-  apiFetch: TypedFetch,
-  profileUrl: string,
-  filter: ProfileEntityFilter,
-): Promise<ProfileEntity | null> {
-  const rootProfile = await getProfile(apiFetch, profileUrl);
-  const entityLinks = rootProfile.links.findLinks(cgRels.entity);
-
-  // Find the entity link by name or href
-  const entityLink = entityLinks.find((link) => {
-    if (filter.name && link.name === filter.name) {
-      return true;
-    }
-    if (filter.link && link.href === filter.link.href) {
-      return true;
-    }
-    return false;
+  override: QueryOptionsOverride<HalObject<unknown>, Error> = {},
+) {
+  return queryOptions({
+    queryKey: [PROFILE_ROOT_QUERY_KEY, profileUrl] as const,
+    queryFn: () => getProfileRoot(apiFetch, profileUrl),
+    staleTime: PROFILE_STALE_TIME,
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer than stale time
+    retry: 3, // Retry failed requests
+    ...override,
   });
-
-  if (!entityLink) {
-    return null;
-  }
-
-  // Fetch only the specific entity profile
-  const { object } = await fetchHal<ProfileEntityShape>(apiFetch, entityLink.href);
-  return new ProfileEntity(entityLink, object as HalObject<ProfileEntityShape>);
 }
 
 export default class ProfileEntity {
@@ -73,6 +65,31 @@ export default class ProfileEntity {
     public readonly link: Link,
     private readonly profileEntity: HalObject<ProfileEntityShape>,
   ) {}
+
+  // ========================================
+  // Static Query Options Factories
+  // ========================================
+
+  public static profileByLinkQuery(
+    apiFetch: TypedFetch,
+    profileLink: Link,
+    override: QueryOptionsOverride<ProfileEntity, Error> = {},
+  ) {
+    return queryOptions({
+      queryKey: [PROFILE_QUERY_KEY, profileLink.name, profileLink.href] as const,
+      queryFn: async () => {
+        const { object } = await fetchHal<ProfileEntityShape>(
+          apiFetch,
+          new Request(profileLink.href),
+        );
+        return new ProfileEntity(profileLink, object as HalObject<ProfileEntityShape>);
+      },
+      staleTime: PROFILE_STALE_TIME,
+      gcTime: 10 * 60 * 1000,
+      retry: 3,
+      ...override,
+    });
+  }
 
   // ========================================
   // Basic Properties
@@ -240,6 +257,7 @@ export default class ProfileEntity {
     }
     const codec = halFormCodecs.requireCodecFor(searchTemplate.template);
     const request = codec.encode(values);
+    // should be -> fetchHalSlice(apiFetch, request)
     return apiFetch(request).then(checkResponse);
   }
 
