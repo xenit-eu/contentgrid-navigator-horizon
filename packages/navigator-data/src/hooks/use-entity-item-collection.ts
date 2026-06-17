@@ -1,73 +1,18 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { HalObject, HalSlice } from "@contentgrid/hal";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createValues } from "@contentgrid/hal-forms/values";
-import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { EntityItemCollection } from "../accessors/entity-item-collection";
 import type ProfileEntity from "../accessors/entity-profile";
-import type { TypedFetch } from "../api/client";
-import type { EntityItemShape } from "../shapes";
 import { useNavigatorData } from "./context";
-import { queryKeys } from "./query-keys";
-import { useProfileEntity } from "./use-profile-entity";
-
-/**
- * Fetch an entity collection using the ProfileEntity's search method.
- *
- * Calls the search template with empty search values to retrieve
- * the default collection, then wraps the response as an EntityItemCollection.
- *
- * @param apiFetch - Authenticated fetch function from navigator data context
- * @param profileEntity - Entity profile with search template
- * @returns EntityItemCollection instance with typed items
- */
-export async function fetchEntityItemCollection(
-  apiFetch: TypedFetch,
-  profileEntity: ProfileEntity,
-): Promise<EntityItemCollection> {
-  if (!profileEntity.searchTemplate) {
-    throw new Error(`Entity ${profileEntity.name} does not have a search template`);
-  }
-
-  // Create empty search values using the search template
-  const searchValues = createValues(profileEntity.searchTemplate.template);
-
-  // Use ProfileEntity's searchEntity method
-  const response = await profileEntity.searchEntity(apiFetch, searchValues);
-
-  // Parse the response as a HAL collection
-  const json = await response.json();
-
-  // TODO check why this is needed
-  const halObject = new HalObject<EntityItemShape>(json as HalObjectShape<EntityItemShape>);
-  const halSlice = HalSlice.from<EntityItemShape>(halObject);
-
-  return new EntityItemCollection(halSlice, profileEntity);
-}
-
-/**
- * Query options factory for entity item collections.
- *
- * Use this to create queryOptions for prefetching or advanced query configuration.
- *
- * @example
- * ```typescript
- * const options = entityItemCollectionQuery(apiFetch, profileEntity);
- * queryClient.prefetchQuery(options);
- * ```
- */
-export function entityItemCollectionQuery(apiFetch: TypedFetch, profileEntity: ProfileEntity) {
-  return queryOptions({
-    queryKey: queryKeys.entityList(profileEntity.name, {}),
-    queryFn: () => fetchEntityItemCollection(apiFetch, profileEntity),
-  });
-}
 
 /**
  * React hook to fetch and manage an entity collection.
  *
  * Fetches the default entity collection (no search/filter parameters) using the
- * ProfileEntity's search method and returns an EntityItemCollection with typed
+ * ProfileEntity's search template and returns an EntityItemCollection with typed
  * access to items, pagination metadata, and navigation links.
+ *
+ * Uses the static EntityItemCollection.searchQuery() factory with empty search values
+ * for consistent caching behavior.
  *
  * @param entityName - Name of the entity (singular form from profile)
  * @returns TanStack Query result with EntityItemCollection data
@@ -87,18 +32,125 @@ export function entityItemCollectionQuery(apiFetch: TypedFetch, profileEntity: P
  * }
  * ```
  */
-export function useEntityItemCollection(entityName: string) {
+export function useEntityItemCollection(profileEntity: ProfileEntity) {
   const { apiFetch } = useNavigatorData();
-  const { data: profileEntity } = useProfileEntity({ name: entityName });
+  // Create empty search values (default collection, no filters)
+  // Only possible when searchTemplate exists
+  const searchTemplate = profileEntity?.searchTemplate;
+  const searchValues = searchTemplate ? createValues(searchTemplate.template) : null;
 
   return useQuery({
-    queryKey: queryKeys.entityList(profileEntity?.name ?? entityName, {}),
-    queryFn: () => {
-      if (!profileEntity) {
-        throw new Error(`Profile not loaded for entity: ${entityName}`);
-      }
-      return fetchEntityItemCollection(apiFetch, profileEntity);
-    },
-    enabled: !!entityName && !!profileEntity,
+    ...EntityItemCollection.searchQuery(
+      apiFetch,
+      profileEntity!, // TypeScript: guaranteed to exist when enabled=true
+      searchValues!, // TypeScript: guaranteed to exist when enabled=true
+    ),
+    enabled: !!searchValues,
+  });
+}
+
+/**
+ * React hook to fetch a specific page of an entity collection by URL.
+ *
+ * Use this for cursor-based pagination when you have a next/prev URL from
+ * a previous collection response. Typically used with TanStack Router search params.
+ *
+ * The URL serves as the cache key, ensuring each page is cached independently
+ * and can be navigated back to without refetching.
+ *
+ * @param url - Full collection URL (from nextHref/prevHref or search params)
+ * @param profileEntity - Entity profile for schema metadata
+ * @returns TanStack Query result with EntityItemCollection data
+ *
+ * @example
+ * ```typescript
+ * // In a route component with cursor from search params
+ * function EntityListPage() {
+ *   const { entityName } = Route.useParams();
+ *   const { cursor } = Route.useSearch();
+ *   const { data: profile } = useProfileEntity({ name: entityName });
+ *
+ *   // Fetch by cursor URL if present, otherwise first page
+ *   const { data: collection } = cursor && profile
+ *     ? useEntityCollectionPage(cursor, profile)
+ *     : useEntityItemCollection(profile);
+ *
+ *   return (
+ *     <>
+ *       {collection?.items.map(item => <ItemCard key={item.id} item={item} />)}
+ *
+ *       {collection?.hasNext && (
+ *         <Link search={{ cursor: collection.nextHref }}>Next</Link>
+ *       )}
+ *     </>
+ *   );
+ * }
+ * ```
+ */
+export function useEntityCollectionPage(url: string, profileEntity: ProfileEntity) {
+  const { apiFetch } = useNavigatorData();
+
+  return useQuery({
+    ...EntityItemCollection.fetchByUrlQuery(apiFetch, url, profileEntity),
+  });
+}
+
+/**
+ * React hook for infinite scroll / "load more" pattern.
+ *
+ * Fetches pages progressively using HAL next links. Each page is appended
+ * to the previous pages, building up a continuous list.
+ *
+ * Use this for infinite scroll UIs or "Load More" buttons where you want
+ * to accumulate items across multiple pages.
+ *
+ * @param profileEntity - Entity profile for schema metadata
+ * @returns TanStack Infinite Query result with pages array
+ *
+ * @example
+ * ```typescript
+ * function InfiniteEntityList() {
+ *   const { data: profile } = useProfileEntity({ name: "invoice" });
+ *   const {
+ *     data,
+ *     fetchNextPage,
+ *     hasNextPage,
+ *     isFetchingNextPage,
+ *   } = useEntityInfiniteScroll(profile!);
+ *
+ *   return (
+ *     <>
+ *       {data?.pages.map((page, i) => (
+ *         <React.Fragment key={i}>
+ *           {page.items.map(item => (
+ *             <ItemCard key={item.id} item={item} />
+ *           ))}
+ *         </React.Fragment>
+ *       ))}
+ *
+ *       {hasNextPage && (
+ *         <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+ *           {isFetchingNextPage ? 'Loading...' : 'Load More'}
+ *         </button>
+ *       )}
+ *     </>
+ *   );
+ * }
+ * ```
+ */
+export function useEntityInfiniteScroll(profileEntity: ProfileEntity) {
+  const { apiFetch } = useNavigatorData();
+
+  // Create empty search values (default collection, no filters)
+  const searchTemplate = profileEntity?.searchTemplate;
+  const searchValues = searchTemplate ? createValues(searchTemplate.template) : null;
+
+  return useInfiniteQuery({
+    ...EntityItemCollection.infiniteSearchQuery(
+      apiFetch,
+      profileEntity!, // TypeScript: guaranteed to exist when enabled=true
+      searchValues!, // TypeScript: guaranteed to exist when enabled=true
+    ),
+    enabled: !!searchValues,
   });
 }

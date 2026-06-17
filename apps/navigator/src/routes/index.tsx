@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProfileInspector } from "@contentgrid/features/profile-inspector";
+import { EntityListInfiniteScrollDemo } from "@contentgrid/features/entity-list-infinite";
 
 export const Route = createFileRoute("/")({
   component: IndexPage,
 });
 
 function IndexPage() {
-  return <ProfileInspector />;
+  return <EntityListInfiniteScrollDemo />;
 }

@@ -3,11 +3,13 @@ import { useState } from "react";
 import {
   AttributeKind,
   ProfileEntity,
+  useEntityCollectionPage,
   useEntityItemCollection,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -20,21 +22,24 @@ import {
 export function EntityList() {
   const profiles = useProfileEntities();
 
-  if (profiles.isPending) {
+  if (profiles.some((profile) => profile.isPending)) {
     return <EntityListMessage>Loading entities…</EntityListMessage>;
   }
-  if (profiles.isError) {
-    return <EntityListMessage>Failed to load entities: {profiles.error.message}</EntityListMessage>;
+  if (profiles.some((profile) => profile.isError)) {
+    return <EntityListMessage>Failed to load entities: </EntityListMessage>;
   }
-  if (profiles.data.length == 0) {
+  if (profiles.length == 0) {
     return <EntityListMessage>No entities with name found.</EntityListMessage>;
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {profiles.data.map((entityProfile) => (
-        <EntityCollectionCard key={entityProfile.name} profile={entityProfile} />
-      ))}
+      {profiles.map(
+        (entityProfile) =>
+          entityProfile.data && (
+            <EntityCollectionCard key={entityProfile.data.name} profile={entityProfile.data} />
+          ),
+      )}
     </div>
   );
 }
@@ -53,8 +58,14 @@ function EntityListMessage({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function EntityCollectionCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
-  const collection = useEntityItemCollection(profile.name);
+  const [cursor, setCursor] = useState<string | undefined>();
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+
+  // Fetch by cursor if present, otherwise fetch first page
+  const firstPageCollection = useEntityItemCollection(profile);
+  const cursorPageCollection = useEntityCollectionPage(cursor!, profile);
+
+  const collection = cursor ? cursorPageCollection : firstPageCollection;
 
   const toggleItem = (idx: number) => {
     setExpandedItems((prev) => {
@@ -66,6 +77,25 @@ function EntityCollectionCard({ profile }: Readonly<{ profile: ProfileEntity }>)
       }
       return next;
     });
+  };
+
+  const goToNextPage = () => {
+    if (collection.data?.nextHref) {
+      setCursor(collection.data.nextHref);
+      setExpandedItems(new Set()); // Collapse all items on page change
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (collection.data?.prevHref) {
+      setCursor(collection.data.prevHref);
+      setExpandedItems(new Set());
+    }
+  };
+
+  const goToFirstPage = () => {
+    setCursor(undefined);
+    setExpandedItems(new Set());
   };
 
   return (
@@ -145,7 +175,42 @@ function EntityCollectionCard({ profile }: Readonly<{ profile: ProfileEntity }>)
                   </span>
                 </div>
               )}
+              {cursor && (
+                <div className="mt-2 text-xs">
+                  <span className="text-muted-foreground">Current Page URL:</span>{" "}
+                  <span className="font-mono break-all text-[10px]">{cursor}</span>
+                </div>
+              )}
             </div>
+
+            {/* Pagination Controls */}
+            {(collection.data.hasPrevious || collection.data.hasNext) && (
+              <div className="flex items-center justify-between rounded-lg border bg-muted p-3">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={goToPreviousPage}
+                    disabled={!collection.data.hasPrevious}
+                    variant="outline"
+                    size="sm"
+                  >
+                    ← Previous
+                  </Button>
+                  <Button
+                    onClick={goToNextPage}
+                    disabled={!collection.data.hasNext}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Next →
+                  </Button>
+                </div>
+                {cursor && (
+                  <Button onClick={goToFirstPage} variant="ghost" size="sm">
+                    ↺ First Page
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Items list */}
             {collection.data.items.length > 0 ? (

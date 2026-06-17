@@ -250,15 +250,29 @@ export default class ProfileEntity {
     return new SearchHalFormTemplate(template, this);
   }
 
-  public async searchEntity(apiFetch: TypedFetch, values: HalFormValues<SearchRequestSpec>) {
+  /**
+   * Create a search Request for this entity.
+   *
+   * Pure method that encodes search values into a Request using HAL-Forms codecs.
+   * Does not perform the fetch - returns a Request object for use with fetchHalSlice.
+   *
+   * @param values - Search parameters (filters, sort, pagination)
+   * @returns Request object ready to be fetched
+   *
+   * @example
+   * ```typescript
+   * const searchValues = createValues(profile.searchTemplate.template);
+   * const request = profile.searchEntityRequest(searchValues);
+   * const slice = await fetchHalSlice(apiFetch, request);
+   * ```
+   */
+  public searchEntityRequest(values: HalFormValues<SearchRequestSpec>): Request {
     const searchTemplate = this.searchTemplate;
     if (!searchTemplate) {
-      throw new Error("No search template available");
+      throw new Error(`Entity ${this.name} does not have a search template`);
     }
     const codec = halFormCodecs.requireCodecFor(searchTemplate.template);
-    const request = codec.encode(values);
-    // should be -> fetchHalSlice(apiFetch, request)
-    return apiFetch(request).then(checkResponse);
+    return codec.encode(values);
   }
 
   // ========================================
