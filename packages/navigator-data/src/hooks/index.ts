@@ -8,8 +8,12 @@ export { useEntityList, fetchEntityList } from "./use-entity-list";
 export type { EntityListParams, EntityListResult } from "./use-entity-list";
 export {
   useEntityItemCollection,
-  useEntityCollectionPage,
-  useEntityInfiniteScroll,
+  useEntityItemCollectionInfiniteScroll,
+} from "./use-entity-item-collection";
+export type {
+  EntityCollectionParams,
+  EntityCollectionByUrl,
+  EntityCollectionBySearch,
 } from "./use-entity-item-collection";
 export { useEntitySchema, fetchEntitySchema } from "./use-entity-schema";
 export { useEntityRelations } from "./use-entity-relations";

@@ -1,9 +1,7 @@
 import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { HalSlice } from "@contentgrid/hal";
-import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import type { TypedFetch } from "../api/client";
 import { fetchHalSlice } from "../api/hal-client";
-import type { SearchRequestSpec } from "../api/requests";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { EntityItem } from "./entity-item";
@@ -57,47 +55,25 @@ export class EntityItemCollection {
   // ========================================
 
   /**
-   * Query options factory for entity collection search.
+   * Query options factory for fetching a collection by URL.
    *
-   * Creates a TanStack Query configuration for fetching and caching search results.
-   * Use this for prefetching, advanced query configuration, or in TanStack Router loaders.
-   *
-   * @param apiFetch - Authenticated TypedFetch instance
-   * @param profileEntity - Entity profile with search template
-   * @param searchValues - Search parameters (filters, sort, pagination)
-   * @param override - Optional query options to override defaults
-   */
-  public static searchQuery(
-    apiFetch: TypedFetch,
-    profileEntity: ProfileEntity,
-    searchValues: HalFormValues<SearchRequestSpec>,
-    override: QueryOptionsOverride<EntityItemCollection, Error> = {},
-  ) {
-    const request = profileEntity.searchEntityRequest(searchValues);
-    return queryOptions({
-      queryKey: [ENTITY_SEARCH_QUERY_KEY, profileEntity.name, request.url] as const,
-      queryFn: async () => {
-        const slice = await fetchHalSlice<EntityItemShape>(apiFetch, request);
-        return new EntityItemCollection(slice, profileEntity);
-      },
-      staleTime: ENTITY_SEARCH_STALE_TIME,
-      placeholderData: keepPreviousData,
-      gcTime: 5 * 60 * 1000, // 5 minutes - keep in cache longer than stale time
-      retry: 3,
-      ...override,
-    });
-  }
-
-  /**
-   * Query options factory for fetching a collection page by URL.
-   *
-   * Use this for cursor-based pagination when you have a next/prev link URL
-   * from a previous collection response. The URL itself serves as the cache key.
+   * Use this for any collection fetch - first page from search, paginated pages,
+   * or direct collection URLs. The URL itself serves as the cache key.
    *
    * @param apiFetch - Authenticated TypedFetch instance
-   * @param url - Full URL to the collection page (from nextHref/prevHref)
+   * @param url - Full URL to the collection (from search Request or next/prev links)
    * @param profileEntity - Entity profile for schema metadata
    * @param override - Optional query options to override defaults
+   *
+   * @example
+   * ```typescript
+   * // From search form
+   * const request = profileEntity.searchEntityRequest(searchValues);
+   * const query = EntityItemCollection.fetchByUrlQuery(apiFetch, request.url, profile);
+   *
+   * // From pagination
+   * const query = EntityItemCollection.fetchByUrlQuery(apiFetch, collection.nextHref!, profile);
+   * ```
    */
   public static fetchByUrlQuery(
     apiFetch: TypedFetch,
@@ -120,64 +96,40 @@ export class EntityItemCollection {
   }
 
   /**
-   * Infinite query options factory for entity collection search.
+   * Infinite query options factory for progressive collection loading.
    *
-   * Creates a TanStack Infinite Query configuration for infinite scroll / "load more" patterns.
-   * Each page is fetched using the HAL next link from the previous page.
+   * Use this for infinite scroll / "load more" patterns. Each page is fetched
+   * using the HAL next link from the previous page.
    *
    * @param apiFetch - Authenticated TypedFetch instance
-   * @param profileEntity - Entity profile with search template
-   * @param initialSearchValues - Search parameters for the first page
+   * @param initialUrl - URL for the first page (from search Request)
+   * @param profileEntity - Entity profile for schema metadata
    * @param override - Optional query options to override defaults
    *
    * @example
    * ```typescript
-   * // In a hook
-   * const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(
-   *   EntityItemCollection.infiniteSearchQuery(apiFetch, profile, searchValues)
+   * const request = profileEntity.searchEntityRequest(searchValues);
+   * const { data, fetchNextPage, hasNextPage } = useInfiniteQuery(
+   *   EntityItemCollection.infiniteQuery(apiFetch, request.url, profile)
    * );
-   *
-   * // Access all pages
-   * data?.pages.forEach(collection => {
-   *   collection.items.forEach(item => console.log(item));
-   * });
-   *
-   * // Load more
-   * if (hasNextPage) {
-   *   fetchNextPage();
-   * }
    * ```
    */
-  public static infiniteSearchQuery(
+  public static infiniteQuery(
     apiFetch: TypedFetch,
+    initialUrl: string,
     profileEntity: ProfileEntity,
-    initialSearchValues: HalFormValues<SearchRequestSpec>,
     override: Record<string, unknown> = {},
   ) {
-    const firstPageRequest = profileEntity.searchEntityRequest(initialSearchValues);
-
     return infiniteQueryOptions({
-      queryKey: [
-        ENTITY_SEARCH_QUERY_KEY,
-        "infinite",
-        profileEntity.name,
-        firstPageRequest.url,
-      ] as const,
+      queryKey: [ENTITY_SEARCH_QUERY_KEY, "infinite", profileEntity.name, initialUrl] as const,
       queryFn: async ({ pageParam }) => {
-        let slice: HalSlice<EntityItemShape>;
-
-        if (pageParam) {
-          // Fetch subsequent pages using the cursor URL
-          slice = await fetchHalSlice<EntityItemShape>(apiFetch, new Request(pageParam as string));
-        } else {
-          // First page - use the initial search values
-          slice = await fetchHalSlice<EntityItemShape>(apiFetch, firstPageRequest);
-        }
-
+        const url = (pageParam as string | undefined) ?? initialUrl;
+        const slice = await fetchHalSlice<EntityItemShape>(apiFetch, new Request(url));
         return new EntityItemCollection(slice, profileEntity);
       },
       getNextPageParam: (lastPage) => lastPage.nextHref ?? undefined,
       getPreviousPageParam: (firstPage) => firstPage.prevHref ?? undefined,
+
       initialPageParam: undefined as string | undefined,
       ...override,
     });

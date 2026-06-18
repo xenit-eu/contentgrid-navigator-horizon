@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import {
   AttributeKind,
   ProfileEntity,
-  useEntityInfiniteScroll,
+  useEntityItemCollectionInfiniteScroll,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@contentgrid/ui";
@@ -57,7 +57,7 @@ function EntityListMessage({ children }: Readonly<{ children: ReactNode }>) {
 
 function EntityInfiniteScrollCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isFetching, isError, error } =
-    useEntityInfiniteScroll(profile);
+    useEntityItemCollectionInfiniteScroll({ profileEntity: profile });
 
   // Calculate total items loaded across all pages
   const totalItemsLoaded = data?.pages.reduce((sum, page) => sum + page.items.length, 0) ?? 0;
