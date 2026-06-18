@@ -14,6 +14,7 @@ export type {
   EntityCollectionParams,
   EntityCollectionByUrl,
   EntityCollectionBySearch,
+  UseEntityItemCollectionOptions,
 } from "./use-entity-item-collection";
 export { useEntitySchema, fetchEntitySchema } from "./use-entity-schema";
 export { useEntityRelations } from "./use-entity-relations";

@@ -1,8 +1,12 @@
 import { createValues } from "@contentgrid/hal-forms/values";
 import type ProfileEntity from "../accessors/entity-profile";
 import { useEntityItemCollection } from "./use-entity-item-collection";
+import type { UseEntityItemCollectionOptions } from "./use-entity-item-collection";
 
-export function useRecentlyCreated(profileEntity: ProfileEntity) {
+export function useRecentlyCreated(
+  profileEntity: ProfileEntity,
+  options?: UseEntityItemCollectionOptions,
+) {
   const searchTemplate = profileEntity.searchTemplate;
 
   const searchValues = (() => {
@@ -20,10 +24,13 @@ export function useRecentlyCreated(profileEntity: ProfileEntity) {
     ]);
   })();
 
-  return useEntityItemCollection({ profileEntity, searchValues });
+  return useEntityItemCollection({ profileEntity, searchValues }, options);
 }
 
-export function useRecentlyModified(profileEntity: ProfileEntity) {
+export function useRecentlyModified(
+  profileEntity: ProfileEntity,
+  options?: UseEntityItemCollectionOptions,
+) {
   const searchTemplate = profileEntity.searchTemplate;
 
   const searchValues = (() => {
@@ -41,5 +48,5 @@ export function useRecentlyModified(profileEntity: ProfileEntity) {
     ]);
   })();
 
-  return useEntityItemCollection({ profileEntity, searchValues });
+  return useEntityItemCollection({ profileEntity, searchValues }, options);
 }

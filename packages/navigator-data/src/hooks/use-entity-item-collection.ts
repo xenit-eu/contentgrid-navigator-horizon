@@ -4,7 +4,12 @@ import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../accessors/entity-item-collection";
 import type ProfileEntity from "../accessors/entity-profile";
 import type { SearchRequestSpec } from "../api/requests";
+import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { useNavigatorData } from "./context";
+
+export interface UseEntityItemCollectionOptions {
+  readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItemCollection, Error>>;
+}
 
 /**
  * Parameters for fetching a collection by URL.
@@ -86,13 +91,21 @@ function isBySearch(
  * });
  * ```
  */
-export function useEntityItemCollection(params: EntityCollectionParams) {
+export function useEntityItemCollection(
+  params: EntityCollectionParams,
+  options?: UseEntityItemCollectionOptions,
+) {
   const { apiFetch } = useNavigatorData();
 
   // URL-based fetch
   if (isByUrl(params)) {
     return useQuery({
-      ...EntityItemCollection.fetchByUrlQuery(apiFetch, params.url, params.profileEntity),
+      ...EntityItemCollection.fetchByUrlQuery(
+        apiFetch,
+        params.url,
+        params.profileEntity,
+        options?.queryOptionsOverride,
+      ),
     });
   }
 
@@ -103,7 +116,12 @@ export function useEntityItemCollection(params: EntityCollectionParams) {
       ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
       : null;
     return useQuery({
-      ...EntityItemCollection.fetchByUrlQuery(apiFetch, request?.url ?? "", params.profileEntity),
+      ...EntityItemCollection.fetchByUrlQuery(
+        apiFetch,
+        request?.url ?? "",
+        params.profileEntity,
+        options?.queryOptionsOverride,
+      ),
       enabled: !!request,
     });
   }
@@ -114,7 +132,12 @@ export function useEntityItemCollection(params: EntityCollectionParams) {
     : null;
 
   return useQuery({
-    ...EntityItemCollection.fetchByUrlQuery(apiFetch, request?.url ?? "", params.profileEntity),
+    ...EntityItemCollection.fetchByUrlQuery(
+      apiFetch,
+      request?.url ?? "",
+      params.profileEntity,
+      options?.queryOptionsOverride,
+    ),
     enabled: !!request,
   });
 }
@@ -168,13 +191,21 @@ export function useEntityItemCollection(params: EntityCollectionParams) {
  * );
  * ```
  */
-export function useEntityItemCollectionInfiniteScroll(params: EntityCollectionParams) {
+export function useEntityItemCollectionInfiniteScroll(
+  params: EntityCollectionParams,
+  options?: UseEntityItemCollectionOptions,
+) {
   const { apiFetch } = useNavigatorData();
 
   // URL-based fetch
   if (isByUrl(params)) {
     return useInfiniteQuery({
-      ...EntityItemCollection.infiniteQuery(apiFetch, params.url, params.profileEntity),
+      ...EntityItemCollection.infiniteQuery(
+        apiFetch,
+        params.url,
+        params.profileEntity,
+        options?.queryOptionsOverride,
+      ),
     });
   }
 
@@ -185,7 +216,12 @@ export function useEntityItemCollectionInfiniteScroll(params: EntityCollectionPa
       ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
       : null;
     return useInfiniteQuery({
-      ...EntityItemCollection.infiniteQuery(apiFetch, request?.url ?? "", params.profileEntity),
+      ...EntityItemCollection.infiniteQuery(
+        apiFetch,
+        request?.url ?? "",
+        params.profileEntity,
+        options?.queryOptionsOverride,
+      ),
       enabled: !!request,
     });
   }
@@ -196,7 +232,12 @@ export function useEntityItemCollectionInfiniteScroll(params: EntityCollectionPa
     : null;
 
   return useInfiniteQuery({
-    ...EntityItemCollection.infiniteQuery(apiFetch, request?.url ?? "", params.profileEntity),
+    ...EntityItemCollection.infiniteQuery(
+      apiFetch,
+      request?.url ?? "",
+      params.profileEntity,
+      options?.queryOptionsOverride,
+    ),
     enabled: !!request,
   });
 }
