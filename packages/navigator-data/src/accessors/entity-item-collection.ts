@@ -9,7 +9,7 @@ import type ProfileEntity from "./entity-profile";
 
 // Query configuration constants
 const ENTITY_SEARCH_QUERY_KEY = "EntitySearch";
-const ENTITY_SEARCH_STALE_TIME = 30 * 1000; // 30 seconds - search results change frequently
+const ENTITY_SEARCH_STALE_TIME = 10 * 1000; // 10 seconds - search results change frequently
 
 /**
  * Total item count metadata from a collection response.
