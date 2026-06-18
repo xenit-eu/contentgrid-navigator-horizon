@@ -3,7 +3,6 @@
 export * from "./api";
 export * from "./auth";
 export * from "./hooks";
-export * from "./types/entity";
 export * from "./accessors/search-form";
 export * from "./accessors/create-form";
 export * from "./accessors/entity-item";

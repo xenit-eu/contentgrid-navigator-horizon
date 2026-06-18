@@ -1,9 +1,7 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type AuthenticationTokenSupplier, type TypedFetch, createApiClient } from "../api/client";
-import type { EntityInfo } from "../types/entity";
 import { NavigatorDataProvider } from "./context";
-import { queryKeys } from "./query-keys";
 
 export const BASE = "https://api.example.com";
 export const PROFILE_URL = `${BASE}/profile`;
@@ -12,13 +10,6 @@ export const noopSupplier: AuthenticationTokenSupplier = async () => ({
   token: "test-token",
   expiresAt: null,
 });
-
-export const INVOICE_ENTITY: EntityInfo = {
-  name: "invoice",
-  title: "Invoice",
-  href: `${BASE}/profile/invoices`,
-  collectionHref: `${BASE}/invoices`,
-};
 
 export function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -43,23 +34,5 @@ export function makeWrapper(
         </NavigatorDataProvider>
       </QueryClientProvider>
     );
-  };
-}
-
-/** Pre-seed profile data so mutations can resolve collectionHref without an HTTP call. */
-export function seedProfile(queryClient: QueryClient, entities = [INVOICE_ENTITY]) {
-  queryClient.setQueryData(queryKeys.profileEntities(), entities);
-}
-
-export function mockProfileResponse() {
-  return {
-    _links: {
-      self: { href: PROFILE_URL },
-      "cg:entity": [{ href: INVOICE_ENTITY.href, name: "invoice", title: "Invoice" }],
-      curies: [
-        { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
-      ],
-    },
-    _templates: {},
   };
 }

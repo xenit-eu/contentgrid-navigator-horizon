@@ -3,6 +3,15 @@ import type ProfileEntity from "../accessors/entity-profile";
 import { useEntityItemCollection } from "./use-entity-item-collection";
 import type { UseEntityItemCollectionOptions } from "./use-entity-item-collection";
 
+/**
+ * Fetches the most recently created items for an entity, sorted by created-date descending.
+ *
+ * Returns a disabled query (no fetch) when the entity has no created-at audit attribute
+ * or no matching descending sort option on its search template.
+ *
+ * @param profileEntity - Entity profile to fetch items for
+ * @param options - Optional TanStack Query overrides (staleTime, gcTime, etc.)
+ */
 export function useRecentlyCreated(
   profileEntity: ProfileEntity,
   options?: UseEntityItemCollectionOptions,
@@ -27,6 +36,15 @@ export function useRecentlyCreated(
   return useEntityItemCollection({ profileEntity, searchValues }, options);
 }
 
+/**
+ * Fetches the most recently modified items for an entity, sorted by modified-date descending.
+ *
+ * Returns a disabled query (no fetch) when the entity has no modified-at audit attribute
+ * or no matching descending sort option on its search template.
+ *
+ * @param profileEntity - Entity profile to fetch items for
+ * @param options - Optional TanStack Query overrides (staleTime, gcTime, etc.)
+ */
 export function useRecentlyModified(
   profileEntity: ProfileEntity,
   options?: UseEntityItemCollectionOptions,
