@@ -1,411 +1,319 @@
-import type { ReactNode } from "react";
 import { useState } from "react";
 import {
   AttributeKind,
-  ProfileEntity,
+  type EntityItem,
+  type ProfileEntity,
   useEntityItemCollection,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
   Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
+  BrandingHeader,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  Button,
+  DataTable,
+  type DataTableColumn,
+  type DataTableRow,
+  EntityCard,
+  Separator,
+  Skeleton,
 } from "@contentgrid/ui";
+import { ProfileAttributeType } from "../../../navigator-data/src/accessors/attribute-profile";
+
+// ---------------------------------------------------------------------------
+// View state
+// ---------------------------------------------------------------------------
+
+type ViewState = { view: "overview" } | { view: "entity"; profile: ProfileEntity };
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
 
 export function EntityList() {
-  const profiles = useProfileEntities();
+  const [viewState, setViewState] = useState<ViewState>({ view: "overview" });
 
-  if (profiles.some((profile) => profile.isPending)) {
-    return <EntityListMessage>Loading entities…</EntityListMessage>;
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <BrandingHeader
+        title="ContentGrid Navigator"
+        subtitle={viewState.view === "entity" ? viewState.profile.pluralName : "Entity browser"}
+      />
+
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        {viewState.view === "entity" ? (
+          <EntityDetailView
+            profile={viewState.profile}
+            onBack={() => setViewState({ view: "overview" })}
+          />
+        ) : (
+          <EntityOverview onSelectEntity={(profile) => setViewState({ view: "entity", profile })} />
+        )}
+      </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Overview — grid of EntityCard components
+// ---------------------------------------------------------------------------
+
+function EntityOverview({
+  onSelectEntity,
+}: Readonly<{ onSelectEntity: (profile: ProfileEntity) => void }>) {
+  const profileResults = useProfileEntities();
+
+  const isLoading = profileResults.length > 0 && profileResults.every((r) => r.isPending);
+  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <OverviewHeader count={0} loading />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
   }
-  if (profiles.some((profile) => profile.isError)) {
-    return <EntityListMessage>Failed to load entities</EntityListMessage>;
-  }
-  if (profiles.length === 0) {
-    return <EntityListMessage>No entities with name found.</EntityListMessage>;
+
+  if (loadedProfiles.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
+        <p className="text-lg font-medium">No entities found</p>
+        <p className="text-sm">Make sure your ContentGrid application has entities defined.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {profiles.map(
-        (entityProfile) =>
-          entityProfile.data && (
-            <EntityCollectionCard key={entityProfile.data.name} profile={entityProfile.data} />
-          ),
+    <div className="space-y-6">
+      <OverviewHeader count={loadedProfiles.length} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loadedProfiles.map((profile) => (
+          <EntityCardConnected
+            key={profile.name}
+            profile={profile}
+            onSelect={() => onSelectEntity(profile)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OverviewHeader({
+  count,
+  loading = false,
+}: Readonly<{ count: number; loading?: boolean }>) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Entities</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {loading ? "Loading…" : `${count} entity type${count !== 1 ? "s" : ""} available`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// EntityCard wired to the live collection count
+function EntityCardConnected({
+  profile,
+  onSelect,
+}: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {
+  const collection = useEntityItemCollection({ profileEntity: profile });
+
+  return (
+    <EntityCard
+      name={profile.name}
+      title={profile.pluralName}
+      description={profile.description || undefined}
+      count={collection.data?.totalItems?.count}
+      hasContent={profile.attributes.some((a) => a.type === ProfileAttributeType.object)}
+      onTitleClick={onSelect}
+      onCreateClick={onSelect}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Detail view — breadcrumb + DataTable + pagination
+// ---------------------------------------------------------------------------
+
+function EntityDetailView({
+  profile,
+  onBack,
+}: Readonly<{ profile: ProfileEntity; onBack: () => void }>) {
+  const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
+
+  const collection = useEntityItemCollection(
+    pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
+  );
+
+  const columns = buildColumns(profile);
+  const rows = collection.data ? buildRows(collection.data.items, columns) : [];
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              All entities
+            </button>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{profile.pluralName}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <Separator />
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{profile.pluralName}</h1>
+          {profile.description && (
+            <p className="mt-1 text-sm text-muted-foreground">{profile.description}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {collection.isSuccess && collection.data.totalItems && (
+            <Badge variant="secondary">
+              {collection.data.totalItems.count.toLocaleString()} item
+              {collection.data.totalItems.count !== 1 ? "s" : ""}
+              {collection.data.totalItems.isEstimated && " (est.)"}
+            </Badge>
+          )}
+          {collection.isPending && <Skeleton className="h-6 w-20 rounded-full" />}
+        </div>
+      </div>
+
+      {/* Table skeleton */}
+      {collection.isPending && (
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full rounded-md" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
+          ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {collection.isError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Failed to load {profile.pluralName}: {collection.error.message}
+        </div>
+      )}
+
+      {/* Table */}
+      {collection.isSuccess && (
+        <div className="space-y-4">
+          <DataTable
+            entityName={profile.name}
+            entityTitle={profile.pluralName}
+            columns={columns}
+            rows={rows}
+          />
+
+          {/* Pagination */}
+          {(collection.data.hasNext || collection.data.hasPrevious) && (
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!collection.data.hasPrevious}
+                onClick={() => {
+                  setPageUrl(collection.data.prevHref);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                Previous
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {collection.data.pageSize} items on this page
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!collection.data.hasNext}
+                onClick={() => {
+                  setPageUrl(collection.data.nextHref);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function EntityListMessage({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Entities</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground text-sm">{children}</p>
-      </CardContent>
-    </Card>
-  );
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const MAX_COLUMNS = 5;
+
+function buildColumns(profile: ProfileEntity): DataTableColumn[] {
+  const userAttrs = profile.userDefinedAttributes.slice(0, MAX_COLUMNS);
+
+  if (userAttrs.length === 0) {
+    return [{ key: "id", header: "ID" }];
+  }
+
+  return userAttrs.map((attr) => ({
+    key: attr.name,
+    header: attr.title ?? attr.name,
+  }));
 }
 
-function EntityCollectionCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
-  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+function buildRows(items: readonly EntityItem[], columns: DataTableColumn[]): DataTableRow[] {
+  const columnKeys = new Set(columns.map((c) => c.key));
 
-  // Fetch default collection
-  const collection = useEntityItemCollection({ profileEntity: profile });
+  return items.map((item) => {
+    const data: Record<string, unknown> = {};
 
-  const toggleItem = (idx: number) => {
-    setExpandedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) {
-        next.delete(idx);
-      } else {
-        next.add(idx);
+    if (columnKeys.has("id")) {
+      data["id"] = item.halItem.data.id;
+    }
+
+    for (const attr of item.userDefinedAttributes) {
+      if (!columnKeys.has(attr.value.name)) continue;
+
+      switch (attr.value.kind) {
+        case AttributeKind.PLAIN:
+          data[attr.value.name] = attr.value.value;
+          break;
+        case AttributeKind.CONTENT:
+          data[attr.value.name] = attr.value.metadata?.filename ?? "(file)";
+          break;
+        case AttributeKind.NESTED:
+          data[attr.value.name] = "(object)";
+          break;
+        default:
+          data[attr.value.name] = null;
       }
-      return next;
-    });
-  };
+    }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {profile.pluralName}
-          {collection.isSuccess && collection.data.totalItems && (
-            <Badge variant="secondary">
-              {collection.data.totalItems.count}
-              {collection.data.totalItems.isEstimated && " (est.)"}
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {collection.isPending && <p className="text-muted-foreground text-sm">Loading items…</p>}
-        {collection.isError && (
-          <p className="text-muted-foreground text-sm">
-            Failed to load items: {collection.error.message}
-          </p>
-        )}
-        {collection.isSuccess && (
-          <div className="space-y-4">
-            {/* Collection metadata */}
-            <div className="rounded-lg border p-4">
-              <h4 className="mb-2 text-sm font-semibold">Collection Metadata</h4>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Page Size:</span>{" "}
-                  <span className="font-mono">{collection.data.pageSize}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Total Items:</span>{" "}
-                  <span className="font-mono">
-                    {collection.data.totalItems?.count ?? "unknown"}
-                    {collection.data.totalItems?.isEstimated && " (estimated)"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Has Next:</span>{" "}
-                  <Badge
-                    variant={collection.data.hasNext ? "default" : "outline"}
-                    className="text-xs"
-                  >
-                    {collection.data.hasNext ? "Yes" : "No"}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Has Previous:</span>{" "}
-                  <Badge
-                    variant={collection.data.hasPrevious ? "default" : "outline"}
-                    className="text-xs"
-                  >
-                    {collection.data.hasPrevious ? "Yes" : "No"}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Is Empty:</span>{" "}
-                  <Badge
-                    variant={collection.data.isEmpty ? "destructive" : "outline"}
-                    className="text-xs"
-                  >
-                    {collection.data.isEmpty ? "Yes" : "No"}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Entity Profile:</span>{" "}
-                  <span className="font-mono text-xs">{collection.data.profileEntity.name}</span>
-                </div>
-              </div>
-              {collection.data.nextHref && (
-                <div className="mt-2 text-xs">
-                  <span className="text-muted-foreground">Next Page URL:</span>{" "}
-                  <span className="font-mono break-all text-[10px]">
-                    {collection.data.nextHref}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Items list */}
-            {collection.data.items.length > 0 ? (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold">Items ({collection.data.items.length})</h4>
-                {collection.data.items.map((item, idx) => (
-                  <Card key={idx} className="border-2">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-sm font-semibold">
-                            {item.halItem.data.id as string}
-                          </span>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {item.attributes.length} total attrs
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {item.userDefinedAttributes.length} user-defined
-                            </Badge>
-                            {item.contentLinks.length > 0 && (
-                              <Badge variant="default" className="text-xs">
-                                {item.contentLinks.length} files
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => toggleItem(idx)}
-                          className="rounded px-3 py-1 text-xs hover:bg-accent"
-                        >
-                          {expandedItems.has(idx) ? "Collapse" : "Expand"}
-                        </button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Quick summary - always visible */}
-                      <div className="space-y-2">
-                        <h5 className="text-xs font-semibold">Quick View</h5>
-                        <div className="grid grid-cols-2 gap-2">
-                          {item.userDefinedAttributes.slice(0, 4).map((attr) => (
-                            <div key={attr.value.name} className="text-xs">
-                              <span className="text-muted-foreground">
-                                {attr.profileAttribute?.title ?? attr.value.name}:
-                              </span>{" "}
-                              <span className="font-mono">
-                                {attr.value.kind === AttributeKind.PLAIN
-                                  ? String(attr.value.value)
-                                  : attr.value.kind === AttributeKind.CONTENT
-                                    ? `[file: ${attr.value.metadata?.filename ?? "unnamed"}]`
-                                    : attr.value.kind === AttributeKind.NESTED
-                                      ? `[object: ${attr.value.attributes.length} fields]`
-                                      : "[unknown]"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Detailed sections - collapsible */}
-                      {expandedItems.has(idx) && (
-                        <div className="space-y-3 border-t pt-3">
-                          {/* All User-Defined Attributes */}
-                          <div>
-                            <h5 className="mb-2 text-xs font-semibold">
-                              User-Defined Attributes ({item.userDefinedAttributes.length})
-                            </h5>
-                            <div className="space-y-2">
-                              {item.userDefinedAttributes.map((attr) => (
-                                <div key={attr.value.name} className="rounded border bg-muted p-2">
-                                  <div className="mb-1 flex items-center gap-2">
-                                    <span className="font-mono text-xs font-medium">
-                                      {attr.value.name}
-                                    </span>
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {attr.value.kind === AttributeKind.PLAIN
-                                        ? "plain"
-                                        : attr.value.kind === AttributeKind.CONTENT
-                                          ? "content"
-                                          : attr.value.kind === AttributeKind.NESTED
-                                            ? "nested"
-                                            : "unknown"}
-                                    </Badge>
-                                    {attr.profileAttribute && (
-                                      <Badge variant="secondary" className="text-[10px]">
-                                        {attr.profileAttribute.type}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="text-muted-foreground space-y-1 text-[10px]">
-                                    {attr.profileAttribute && (
-                                      <>
-                                        <p>Title: {attr.profileAttribute.title}</p>
-                                        {attr.profileAttribute.description && (
-                                          <p>Description: {attr.profileAttribute.description}</p>
-                                        )}
-                                      </>
-                                    )}
-                                    <div className="mt-1">
-                                      <span className="font-semibold">Value:</span>{" "}
-                                      {attr.value.kind === AttributeKind.PLAIN ? (
-                                        <span className="font-mono">
-                                          {JSON.stringify(attr.value.value)}
-                                        </span>
-                                      ) : attr.value.kind === AttributeKind.CONTENT ? (
-                                        <div className="mt-1 space-y-1">
-                                          <p>Filename: {attr.value.metadata?.filename ?? "null"}</p>
-                                          <p>
-                                            MIME Type: {attr.value.metadata?.mimetype ?? "null"}
-                                          </p>
-                                          <p>Size: {attr.value.metadata?.length ?? 0} bytes</p>
-                                          <p className="font-mono">Link: {attr.value.link.href}</p>
-                                        </div>
-                                      ) : attr.value.kind === AttributeKind.NESTED ? (
-                                        <div className="mt-1 space-y-1">
-                                          <p>Nested fields: {attr.value.attributes.length}</p>
-                                          {attr.value.attributes.map((nested) => (
-                                            <div
-                                              key={nested.value.name}
-                                              className="ml-3 border-l-2 pl-2"
-                                            >
-                                              <span className="font-mono">
-                                                {nested.value.name}:
-                                              </span>{" "}
-                                              {nested.value.kind === AttributeKind.PLAIN
-                                                ? JSON.stringify(nested.value.value)
-                                                : "[complex]"}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <span>[unknown type]</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Audit Attributes */}
-                          {item.auditAttributes.length > 0 && (
-                            <div>
-                              <h5 className="mb-2 text-xs font-semibold">
-                                Audit Attributes ({item.auditAttributes.length})
-                              </h5>
-                              <div className="space-y-1 rounded border bg-amber-50 p-2">
-                                {item.auditAttributes.map((attr) => (
-                                  <div
-                                    key={attr.value.name}
-                                    className="flex items-center gap-2 text-xs"
-                                  >
-                                    <span className="text-muted-foreground font-mono">
-                                      {attr.value.name}:
-                                    </span>
-                                    <span className="font-mono">
-                                      {attr.value.kind === AttributeKind.PLAIN
-                                        ? String(attr.value.value)
-                                        : "[complex]"}
-                                    </span>
-                                    {attr.profileAttribute && (
-                                      <Badge variant="outline" className="text-[10px]">
-                                        {attr.profileAttribute.type}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Content Links */}
-                          {item.contentLinks.length > 0 && (
-                            <div>
-                              <h5 className="mb-2 text-xs font-semibold">
-                                Content Links ({item.contentLinks.length})
-                              </h5>
-                              <div className="space-y-1">
-                                {item.contentLinks.map((link, linkIdx) => (
-                                  <div key={linkIdx} className="rounded border p-2 text-[10px]">
-                                    <p>
-                                      <span className="text-muted-foreground">Name:</span>{" "}
-                                      <span className="font-mono">{link.name ?? "(unnamed)"}</span>
-                                    </p>
-                                    <p>
-                                      <span className="text-muted-foreground">Href:</span>{" "}
-                                      <span className="font-mono break-all">{link.href}</span>
-                                    </p>
-                                    {link.type && (
-                                      <p>
-                                        <span className="text-muted-foreground">Type:</span>{" "}
-                                        <span>{link.type}</span>
-                                      </p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Available Template */}
-                          {item.defaultTemplate && (
-                            <div>
-                              <h5 className="mb-2 text-xs font-semibold">
-                                Default Update Template
-                              </h5>
-                              <div className="rounded border p-2 text-[10px]">
-                                <p>
-                                  <span className="text-muted-foreground">Method:</span>{" "}
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {item.defaultTemplate.request.method}
-                                  </Badge>
-                                </p>
-                                <p className="mt-1">
-                                  <span className="text-muted-foreground">Target:</span>{" "}
-                                  <span className="font-mono break-all">
-                                    {item.defaultTemplate.request.url}
-                                  </span>
-                                </p>
-                                <p className="mt-1">
-                                  <span className="text-muted-foreground">Content-Type:</span>{" "}
-                                  <span className="font-mono">
-                                    {item.defaultTemplate.contentType}
-                                  </span>
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Raw HAL Data */}
-                          <div>
-                            <Collapsible>
-                              <CollapsibleTrigger className="flex w-full items-center justify-between rounded border p-2 text-xs hover:bg-accent">
-                                <span className="font-semibold">Raw HAL Item Data</span>
-                                <span>Show/Hide</span>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent className="mt-2">
-                                <pre className="text-muted-foreground max-h-96 overflow-auto rounded border bg-muted p-3 text-[9px]">
-                                  {JSON.stringify(item.halItem.data, null, 2)}
-                                </pre>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No items in this collection</p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+    return { id: String(item.halItem.data.id), data };
+  });
 }
