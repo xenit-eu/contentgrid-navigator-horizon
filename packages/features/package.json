@@ -16,6 +16,10 @@
       "import": "./src/entity-list/infinite-scroll-demo.tsx",
       "types": "./src/entity-list/infinite-scroll-demo.tsx"
     },
+    "./recently-created": {
+      "import": "./src/recently-created/index.tsx",
+      "types": "./src/recently-created/index.tsx"
+    },
     "./profile-inspector": {
       "import": "./src/profile-inspector/index.tsx",
       "types": "./src/profile-inspector/index.tsx"

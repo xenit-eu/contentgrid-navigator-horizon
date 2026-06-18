@@ -17,26 +17,43 @@ export interface EntityCollectionByUrl {
 }
 
 /**
- * Parameters for fetching a collection by search values.
+ * Parameters for fetching a collection with the template's default empty search.
+ */
+export interface EntityCollectionDefault {
+  /** Entity profile with search template */
+  profileEntity: ProfileEntity;
+}
+
+/**
+ * Parameters for fetching a collection by explicit search values.
+ * Query is disabled when searchValues is undefined.
  */
 export interface EntityCollectionBySearch {
   /** Entity profile with search template */
   profileEntity: ProfileEntity;
-  /** Optional search parameters (filters, sort, pagination). Defaults to empty search. */
-  searchValues?: HalFormValues<SearchRequestSpec>;
+  /** Search parameters (filters, sort, pagination). Query is disabled when undefined. */
+  searchValues: HalFormValues<SearchRequestSpec> | undefined;
 }
 
 /**
  * Parameters for useEntityCollection hook.
- * Either provide a URL directly, or provide searchValues (or use default empty search).
  */
-export type EntityCollectionParams = EntityCollectionByUrl | EntityCollectionBySearch;
+export type EntityCollectionParams =
+  | EntityCollectionByUrl
+  | EntityCollectionDefault
+  | EntityCollectionBySearch;
 
 /**
  * Type guard to check if params specify URL-based fetching.
  */
 function isByUrl(params: EntityCollectionParams): params is EntityCollectionByUrl {
   return "url" in params;
+}
+
+function isBySearch(
+  params: EntityCollectionDefault | EntityCollectionBySearch,
+): params is EntityCollectionBySearch {
+  return "searchValues" in params;
 }
 
 /**
@@ -79,20 +96,25 @@ export function useEntityItemCollection(params: EntityCollectionParams) {
     });
   }
 
-  // Search-based fetch
-  const searchTemplate = params.profileEntity?.searchTemplate;
-  const searchValues =
-    params.searchValues ?? (searchTemplate ? createValues(searchTemplate.template) : null);
+  // Default fetch: use the template's empty search
+  if (!isBySearch(params)) {
+    const searchTemplate = params.profileEntity.searchTemplate;
+    const request = searchTemplate
+      ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
+      : null;
+    return useQuery({
+      ...EntityItemCollection.fetchByUrlQuery(apiFetch, request?.url ?? "", params.profileEntity),
+      enabled: !!request,
+    });
+  }
 
-  // Transform search values to Request URL
-  const request = searchValues ? params.profileEntity.searchEntityRequest(searchValues) : null;
+  // Search-based fetch: undefined → disabled, explicit values → fetch
+  const request = params.searchValues
+    ? params.profileEntity.searchEntityRequest(params.searchValues)
+    : null;
 
   return useQuery({
-    ...EntityItemCollection.fetchByUrlQuery(
-      apiFetch,
-      request!.url, // TypeScript: guaranteed to exist when enabled=true
-      params.profileEntity!,
-    ),
+    ...EntityItemCollection.fetchByUrlQuery(apiFetch, request?.url ?? "", params.profileEntity),
     enabled: !!request,
   });
 }
@@ -156,20 +178,25 @@ export function useEntityItemCollectionInfiniteScroll(params: EntityCollectionPa
     });
   }
 
-  // Search-based fetch
-  const searchTemplate = params.profileEntity?.searchTemplate;
-  const searchValues =
-    params.searchValues ?? (searchTemplate ? createValues(searchTemplate.template) : null);
+  // Default fetch: use the template's empty search
+  if (!isBySearch(params)) {
+    const searchTemplate = params.profileEntity.searchTemplate;
+    const request = searchTemplate
+      ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
+      : null;
+    return useInfiniteQuery({
+      ...EntityItemCollection.infiniteQuery(apiFetch, request?.url ?? "", params.profileEntity),
+      enabled: !!request,
+    });
+  }
 
-  // Transform search values to Request URL
-  const request = searchValues ? params.profileEntity.searchEntityRequest(searchValues) : null;
+  // Search-based fetch: undefined → disabled, explicit values → fetch
+  const request = params.searchValues
+    ? params.profileEntity.searchEntityRequest(params.searchValues)
+    : null;
 
   return useInfiniteQuery({
-    ...EntityItemCollection.infiniteQuery(
-      apiFetch,
-      request!.url, // TypeScript: guaranteed to exist when enabled=true
-      params.profileEntity!,
-    ),
+    ...EntityItemCollection.infiniteQuery(apiFetch, request?.url ?? "", params.profileEntity),
     enabled: !!request,
   });
 }
