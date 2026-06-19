@@ -221,6 +221,11 @@ export default class ProfileEntity {
     return this.profileEntity.links.requireSingleLink(ianaRelations.describes, "collection");
   }
 
+  /** The URL of the entity collection (e.g. `/invoices`). Use instead of constructing URLs manually. */
+  public get collectionUrl(): string {
+    return this.collectionLink.href;
+  }
+
   public get itemLink(): Link {
     return this.profileEntity.links.requireSingleLink(ianaRelations.describes, "item");
   }

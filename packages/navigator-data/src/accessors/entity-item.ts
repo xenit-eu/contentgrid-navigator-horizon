@@ -80,6 +80,9 @@ export class EntityItem {
     public readonly etag: string | null = null,
   ) {}
 
+  public get id(): string {
+    return this.halItem.data.id;
+  }
   /**
    * All content attribute links (cg:content) for this entity.
    * Content attributes store binary files (images, PDFs, etc.) in S3.
