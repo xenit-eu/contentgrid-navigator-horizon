@@ -1,6 +1,7 @@
 import type { Link } from "@contentgrid/hal";
 import type ProfileEntity from "./accessors/entity-profile";
 
+const ENTITY_ITEM_KEY = "EntityItem";
 const ENTITY_COLLECTION_KEY = "EntitySearch";
 const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
@@ -19,6 +20,14 @@ const PROFILE_ROOT_KEY = "ProfileRoot";
  * ```
  */
 export const queryKeys = {
+  entityItem: {
+    /** Prefix key — invalidates ALL cached entity items for one entity type. */
+    forEntity: (profileEntity: ProfileEntity) => [ENTITY_ITEM_KEY, profileEntity.name] as const,
+    /** Exact key for a single entity item by its self URL. */
+    byUrl: (profileEntity: ProfileEntity, url: string) =>
+      [ENTITY_ITEM_KEY, profileEntity.name, url] as const,
+  },
+
   entityItemCollection: {
     /** Prefix key — invalidates ALL collection queries across all entity types. */
     all: () => [ENTITY_COLLECTION_KEY] as const,

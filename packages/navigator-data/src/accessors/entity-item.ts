@@ -4,7 +4,7 @@ import type { HalFormsTemplate } from "@contentgrid/hal-forms";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { checkResponse } from "@contentgrid/problem-details";
+import { ianaRelations } from "@contentgrid/hal/rels";
 import { cgRels } from "../api";
 import type { EntityInstanceUpdateRequestSpec } from "../api/requests";
 import type { EntityItemShape } from "../shapes";
@@ -126,24 +126,26 @@ export class EntityItem {
    *
    * @returns Update template or null if not available
    */
+  public get selfLink(): Link {
+    return this.halItem.links.findLink(ianaRelations.self)!;
+  }
+
   public get defaultTemplate(): HalFormsTemplate<EntityInstanceUpdateRequestSpec> | null {
     return resolveTemplate(this.halItem.data, "default");
   }
 
   /**
-   * Update this entity with the given attribute values.
+   * Encode attribute update values into a PATCH Request using the HAL-FORMS codec.
    *
-   * Encodes the values using the HAL-FORMS codec and sends a PATCH request.
-   * Include an ETag in the request to prevent concurrent update conflicts (RFC 9110).
+   * Returns the Request — callers are responsible for executing it with `apiFetch`.
+   * Include an `If-Match` header on the request to prevent concurrent update conflicts (RFC 9110).
    *
    * @param values - Attribute values to update (partial update via PATCH)
-   * @returns Promise resolving to the updated entity response
-   * @throws {ProblemDetailsError} On validation errors, permission denied, or ETag mismatch
+   * @returns Request ready to be sent with apiFetch
    */
-  public async editEntity(values: HalFormValues<EntityInstanceUpdateRequestSpec>) {
+  public editEntityRequest(values: HalFormValues<EntityInstanceUpdateRequestSpec>): Request {
     const codec = halFormCodecs.requireCodecFor(this.defaultTemplate!);
-    const request = codec.encode(values);
-    return fetch(request).then(checkResponse);
+    return codec.encode(values);
   }
 
   //TODO support relations

@@ -286,7 +286,7 @@ export default class ProfileEntity {
     return new CreateHalFormTemplate(template, this);
   }
 
-  public async createEntityItemRequest(values: HalFormValues<EntityInstanceCreateRequestSpec>) {
+  public createEntityItemRequest(values: HalFormValues<EntityInstanceCreateRequestSpec>): Request {
     const createTemplate = this.createTemplate;
     if (!createTemplate) {
       throw new Error("No create template available");

@@ -11,3 +11,4 @@ export { default as ProfileEntity } from "./accessors/entity-profile";
 export type { default as ProfileEntityType } from "./accessors/entity-profile";
 export * from "./config";
 export { queryKeys } from "./query-keys";
+export { createValues } from "@contentgrid/hal-forms/values";

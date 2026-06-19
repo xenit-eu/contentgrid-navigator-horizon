@@ -46,23 +46,100 @@ reason — only one instance of each must exist at runtime.
 
 Hooks in this package wrap TanStack Query. Follow these conventions:
 
-**Naming:**
+**Hook naming:**
 
-- Collection queries: `useList<EntityName>` (e.g. `useListEntities`)
-- Single-item queries: `useEntity` (generic, entity type via type param)
-- Mutations — create: `useCreate<EntityName>`, update: `useUpdate<EntityName>`,
-  delete: `useDelete<EntityName>`
-- Relation queries: `useRelation` (generic, relation name via param)
-- Search: `useSearch<EntityName>`
+All hooks are **generic** — they accept an accessor instance (e.g. `profileEntity`) as a parameter
+rather than being specialised to a single entity type. The noun suffix reflects the accessor, not an
+entity name like `invoice`.
+
+- Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
+- Single-item queries: `useEntityItem` _(not yet implemented)_
+- Profile queries: `useProfileEntity`, `useProfileEntities`
+- Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem` _(not yet implemented)_,
+  delete: `useDeleteEntityItem` _(not yet implemented)_
+- Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
+
+**Accessor and static factory naming:**
+
+Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query factories:
+
+| Class                   | Wraps                                       | Static query factory                                                                           |
+| ----------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `ProfileEntity`         | `/profile/{plural}` HAL-FORMS profile       | `profileByLinkQuery(apiFetch, link)`                                                           |
+| `ProfileAttribute`      | `blueprint:attribute` embedded resource     | —                                                                                              |
+| `ProfileRelation`       | `blueprint:relation` embedded resource      | —                                                                                              |
+| `SearchHalFormTemplate` | `_templates.search` HAL-FORMS template      | —                                                                                              |
+| `CreateHalFormTemplate` | `_templates.create-form` HAL-FORMS template | —                                                                                              |
+| `EntityItem`            | `/{plural}/{id}` HAL entity-item resource   | _(planned)_                                                                                    |
+| `EntityItemCollection`  | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)` |
+
+Standalone query factories (system-level, not tied to one entity):
+
+- `profileRootQuery(apiFetch, profileUrl)` — query options for `/profile`
+
+**Request builder naming:**
+
+Methods that encode HAL-FORMS values into a `Request` object follow the pattern
+`<verb><Resource>Request`. They do **not** call `apiFetch` — that happens in the hook or query function.
+
+- `profileEntity.searchEntityRequest(values)` → `Request` for `_templates.search`
+- `profileEntity.createEntityItemRequest(values)` → `Request` for `_templates.create-form`
+- `entityItem.editEntityRequest(values)` → `Request` for `_templates.default`
 
 **Return shape:**
 
 - Queries return the standard TanStack Query result shape:
   `{ data, isLoading, isError, error, refetch }`.
-- `data` for collection hooks is `HalSlice` from `@contentgrid/hal`.
-- `data` for item hooks is `HalObject` from `@contentgrid/hal`.
-- Do NOT unwrap or reshape the HAL object inside the hook — leave that
-  to the consumer (pattern component or feature).
+- `data` for collection hooks is `EntityItemCollection` (wraps a `HalSlice`).
+- `data` for item hooks is `EntityItem` (wraps a `HalObject`).
+- Do NOT unwrap or reshape inside the hook — leave that to the consumer.
+
+---
+
+## Search request example
+
+Always build search values from the profile's search template — never construct URLs or property names manually.
+
+```typescript
+import { createValues } from "@contentgrid/hal-forms/values";
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
+
+// 1. Load the profile (cached; cheap to call)
+const { data: profile } = useProfileEntity({ name: "invoice" });
+
+const searchTemplate = profile?.searchTemplate;
+
+// 2. Discover available search properties from the template — never hardcode names.
+//    Example: find the first prefix-match property and apply a filter value.
+const prefixProperty = searchTemplate?.getSearchPropertiesByType(
+  ProfileAttributeSearchType.prefixMatch,
+)[0];
+
+// 3. Discover available sort options from the template — never hardcode sort strings.
+//    Example: pick the first descending sort option.
+const sortOption = searchTemplate?.sortOptions?.find((opt) => opt.direction === "desc");
+
+// 4. Build search values, setting only the fields we have values for.
+const searchValues =
+  searchTemplate && prefixProperty && sortOption
+    ? createValues(searchTemplate.template)
+        .withValue(prefixProperty.property.name, "ABC")
+        .withValue(searchTemplate.sortProperty!.name, [sortOption.value])
+    : undefined;
+
+// 5. Pass to the collection hook — undefined disables the query.
+const { data: collection } = useEntityItemCollection({
+  profileEntity: profile!,
+  searchValues,
+});
+```
+
+**Rules:**
+
+- Use `searchTemplate.searchProperties` / `getSearchPropertiesByType()` to find filter fields — do not hardcode property names.
+- Use `searchTemplate.sortOptions` to find sort values — do not construct sort strings like `"field,asc"` by hand.
+- `_sort` is always multi-value: pass `[sortOption.value]` (an array), never a plain string.
+- `searchValues = undefined` disables the query (no fetch). Intentional when prerequisites are missing.
 
 **Error handling:**
 

@@ -3,6 +3,8 @@ import {
   AttributeKind,
   type EntityItem,
   type ProfileEntity,
+  createValues,
+  useCreateEntityItem,
   useEntityItemCollection,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
@@ -339,6 +341,7 @@ function EntityDetailView({
             </Badge>
           )}
           {collection.isPending && <Skeleton className="h-6 w-20 rounded-full" />}
+          <CreateEntityButton profile={profile} />
         </div>
       </div>
 
@@ -401,6 +404,32 @@ function EntityDetailView({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CreateEntityButton — submits default (empty) values as a placeholder example
+// ---------------------------------------------------------------------------
+
+function CreateEntityButton({ profile }: Readonly<{ profile: ProfileEntity }>) {
+  const { mutate, isPending, error } = useCreateEntityItem(profile);
+  const createTemplate = profile.createTemplate;
+
+  if (!createTemplate) return null;
+
+  function handleCreate() {
+    // NOTE: sending default (empty) values — a real implementation would
+    // collect user input via a form before calling mutate.
+    mutate(createValues(createTemplate!.template));
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button size="sm" disabled={isPending} onClick={handleCreate}>
+        {isPending ? "Creating…" : "Create"}
+      </Button>
+      {error && <p className="text-xs text-destructive">{error.message}</p>}
     </div>
   );
 }

@@ -12,3 +12,5 @@ export type {
   UseEntityItemCollectionOptions,
 } from "./use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./use-recent-items";
+export { useCreateEntityItem } from "./use-create-entity";
+export type { UseCreateEntityItemOptions } from "./use-create-entity";
