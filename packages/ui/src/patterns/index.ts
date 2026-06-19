@@ -6,3 +6,7 @@ export * from "./entity-picker";
 export * from "./file-upload-zone";
 export * from "./branding-header";
 export * from "./sign-in-gate";
+export * from "./nav-item";
+export * from "./provenance-tag";
+export * from "./attribute-row";
+export * from "./table-row";
