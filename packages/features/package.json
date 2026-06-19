@@ -36,12 +36,14 @@
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "@contentgrid/ui": "workspace:*",
-    "@contentgrid/navigator-data": "workspace:*"
+    "@contentgrid/navigator-data": "workspace:*",
+    "@tanstack/react-router": "^1.170.10"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-router": "1.170.10",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "eslint": "^10.0.0",

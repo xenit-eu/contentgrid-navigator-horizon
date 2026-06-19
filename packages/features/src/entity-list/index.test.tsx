@@ -1,5 +1,13 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
@@ -11,20 +19,20 @@ import {
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
 import { server } from "../../test-setup";
-import { EntityList } from "./index";
+import { EntityListLayout, EntityOverviewPage } from "./index";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
-function renderEntityList() {
+function createTestRouter() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const apiFetch = createApiClient(noopSupplier);
 
-  function Wrapper({ children }: { children: ReactNode }) {
+  function Providers({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
@@ -34,7 +42,33 @@ function renderEntityList() {
     );
   }
 
-  return render(<EntityList />, { wrapper: Wrapper });
+  const rootRoute = createRootRoute({
+    component: () => (
+      <Providers>
+        <Outlet />
+      </Providers>
+    ),
+  });
+  const appRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    id: "_app",
+    component: EntityListLayout,
+  });
+  const indexRoute = createRoute({
+    getParentRoute: () => appRoute,
+    path: "/",
+    component: EntityOverviewPage,
+  });
+
+  return createRouter({
+    routeTree: rootRoute.addChildren([appRoute.addChildren([indexRoute])]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+}
+
+function renderEntityList() {
+  const router = createTestRouter();
+  return render(<RouterProvider router={router} />);
 }
 
 function profileRootHandler() {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
   type EntityItem,
@@ -20,41 +20,171 @@ import {
   type DataTableRow,
   EntityCard,
   Separator,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarProvider,
+  SidebarTrigger,
   Skeleton,
 } from "@contentgrid/ui";
 import { ProfileAttributeType } from "../../../navigator-data/src/accessors/attribute-profile";
 
 // ---------------------------------------------------------------------------
-// View state
+// Search param validator — export for use in the $entity route's validateSearch
 // ---------------------------------------------------------------------------
 
-type ViewState = { view: "overview" } | { view: "entity"; profile: ProfileEntity };
+export function entityDetailSearchValidator(search: Record<string, unknown>): { q?: string } {
+  return { q: typeof search.q === "string" ? search.q : undefined };
+}
 
 // ---------------------------------------------------------------------------
-// Root
+// Cross-package navigate cast
+// useNavigate() is typed against the app's registered router, which the feature
+// package doesn't see at compile time. The cast bridges that boundary.
 // ---------------------------------------------------------------------------
 
-export function EntityList() {
-  const [viewState, setViewState] = useState<ViewState>({ view: "overview" });
+type AnyNavigateFn = (opts: {
+  to?: string;
+  params?: Record<string, string>;
+  search?: ((prev: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>;
+}) => void;
+
+// ---------------------------------------------------------------------------
+// EntityListLayout — pathless layout route component (sidebar + BrandingHeader + Outlet)
+// ---------------------------------------------------------------------------
+
+export function EntityListLayout() {
+  const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
+
+  const profileResults = useProfileEntities();
+  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
+  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const selectedProfile = activeEntity
+    ? loadedProfiles.find((p) => p.name === activeEntity)
+    : undefined;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <BrandingHeader
-        title="ContentGrid Navigator"
-        subtitle={viewState.view === "entity" ? viewState.profile.pluralName : "Entity browser"}
-      />
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Entities</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {isLoadingProfiles
+                  ? [1, 2, 3].map((i) => (
+                      <SidebarMenuItem key={i}>
+                        <SidebarMenuSkeleton />
+                      </SidebarMenuItem>
+                    ))
+                  : loadedProfiles.map((profile) => (
+                      <SidebarMenuItem key={profile.name}>
+                        <SidebarMenuButton asChild isActive={activeEntity === profile.name}>
+                          <Link
+                            to={"/$entity" as string}
+                            params={{ entity: profile.name } as Record<string, string>}
+                          >
+                            {profile.pluralName}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-        {viewState.view === "entity" ? (
-          <EntityDetailView
-            profile={viewState.profile}
-            onBack={() => setViewState({ view: "overview" })}
-          />
-        ) : (
-          <EntityOverview onSelectEntity={(profile) => setViewState({ view: "entity", profile })} />
-        )}
-      </main>
-    </div>
+      <SidebarInset>
+        <BrandingHeader
+          title="ContentGrid Navigator"
+          subtitle={selectedProfile?.pluralName ?? "Entity browser"}
+          actions={<SidebarTrigger />}
+        />
+        <div className="px-4 py-6 sm:px-6 lg:px-8">
+          <Outlet />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EntityOverviewPage — index route component (grid of entity cards)
+// ---------------------------------------------------------------------------
+
+export function EntityOverviewPage() {
+  const navigate = useNavigate();
+  const go = navigate as unknown as AnyNavigateFn;
+
+  return (
+    <EntityOverview
+      onSelectEntity={(profile) => go({ to: "/$entity", params: { entity: profile.name } })}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EntityDetailPage — $entity route component (reads path + q search param)
+// ---------------------------------------------------------------------------
+
+export function EntityDetailPage() {
+  const { entity: entityName } = useParams({ strict: false }) as { entity: string };
+  const { q } = useSearch({ strict: false }) as { q?: string };
+  const navigate = useNavigate();
+  const go = navigate as unknown as AnyNavigateFn;
+
+  const profileResults = useProfileEntities();
+  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
+
+  const profile = loadedProfiles.find((p) => p.name === entityName);
+
+  function onCursorChange(url: string | undefined) {
+    if (url) {
+      go({ search: (prev) => ({ ...prev, q: url }) });
+    } else {
+      go({
+        search: (prev) => {
+          const next = { ...prev };
+          delete next["q"];
+          return next;
+        },
+      });
+    }
+  }
+
+  function onBack() {
+    go({ to: "/", search: {} });
+  }
+
+  if (isLoadingProfiles || (!profile && profileResults.length > 0)) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full rounded-md" />
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  return (
+    <EntityDetailView
+      profile={profile}
+      pageUrl={q}
+      onPageUrlChange={onCursorChange}
+      onBack={onBack}
+    />
   );
 }
 
@@ -129,7 +259,10 @@ function EntityCardConnected({
   profile,
   onSelect,
 }: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {
-  const collection = useEntityItemCollection({ profileEntity: profile });
+  const collection = useEntityItemCollection(
+    { profileEntity: profile },
+    { queryOptionsOverride: { refetchOnWindowFocus: false, refetchOnMount: false } },
+  );
 
   return (
     <EntityCard
@@ -150,10 +283,15 @@ function EntityCardConnected({
 
 function EntityDetailView({
   profile,
+  pageUrl,
+  onPageUrlChange,
   onBack,
-}: Readonly<{ profile: ProfileEntity; onBack: () => void }>) {
-  const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
-
+}: Readonly<{
+  profile: ProfileEntity;
+  pageUrl: string | undefined;
+  onPageUrlChange: (url: string | undefined) => void;
+  onBack: () => void;
+}>) {
   const collection = useEntityItemCollection(
     pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
   );
@@ -239,7 +377,7 @@ function EntityDetailView({
                 size="sm"
                 disabled={!collection.data.hasPrevious}
                 onClick={() => {
-                  setPageUrl(collection.data.prevHref);
+                  onPageUrlChange(collection.data.prevHref);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
@@ -253,7 +391,7 @@ function EntityDetailView({
                 size="sm"
                 disabled={!collection.data.hasNext}
                 onClick={() => {
-                  setPageUrl(collection.data.nextHref);
+                  onPageUrlChange(collection.data.nextHref);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
