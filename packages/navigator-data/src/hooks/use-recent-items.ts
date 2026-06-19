@@ -7,7 +7,7 @@ import type { UseEntityItemCollectionOptions } from "./use-entity-item-collectio
  * Fetches the most recently created items for an entity, sorted by created-date descending.
  *
  * Returns a disabled query (no fetch) when the entity has no created-at audit attribute
- * or no matching descending sort option on its search template.
+ * or no matching descending sort option on its search template. When the sort values are undefined, the query never becomes enabled.
  *
  * @param profileEntity - Entity profile to fetch items for
  * @param options - Optional TanStack Query overrides (staleTime, gcTime, etc.)
@@ -40,7 +40,7 @@ export function useRecentlyCreated(
  * Fetches the most recently modified items for an entity, sorted by modified-date descending.
  *
  * Returns a disabled query (no fetch) when the entity has no modified-at audit attribute
- * or no matching descending sort option on its search template.
+ * or no matching descending sort option on its search template. When the sort values are undefined, the query never becomes enabled.
  *
  * @param profileEntity - Entity profile to fetch items for
  * @param options - Optional TanStack Query overrides (staleTime, gcTime, etc.)

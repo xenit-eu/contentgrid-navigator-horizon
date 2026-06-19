@@ -4,11 +4,11 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { ianaRelations } from "@contentgrid/hal/rels";
-import { checkResponse } from "@contentgrid/problem-details";
 import { blueprintRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type { EntityInstanceCreateRequestSpec, SearchRequestSpec } from "../api/requests";
+import { queryKeys } from "../query-keys";
 import type { ProfileAttributeShape, ProfileEntityShape, ProfileRelationShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { ProfileAttribute } from "./attribute-profile";
@@ -16,10 +16,7 @@ import { CreateHalFormTemplate } from "./create-form";
 import { ProfileRelation } from "./relation-profile";
 import { SearchHalFormTemplate } from "./search-form";
 
-// Query configuration constants
 const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes - profiles rarely change at runtime
-const PROFILE_ROOT_QUERY_KEY = "ProfileRoot";
-const PROFILE_QUERY_KEY = "ProfileEntity";
 
 export async function getProfileRoot(
   apiFetch: TypedFetch,
@@ -51,7 +48,7 @@ export function profileRootQuery(
   override: QueryOptionsOverride<HalObject<unknown>, Error> = {},
 ) {
   return queryOptions({
-    queryKey: [PROFILE_ROOT_QUERY_KEY, profileUrl] as const,
+    queryKey: queryKeys.profileRoot.byUrl(profileUrl),
     queryFn: () => getProfileRoot(apiFetch, profileUrl),
     staleTime: PROFILE_STALE_TIME,
     gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer than stale time
@@ -76,7 +73,7 @@ export default class ProfileEntity {
     override: QueryOptionsOverride<ProfileEntity, Error> = {},
   ) {
     return queryOptions({
-      queryKey: [PROFILE_QUERY_KEY, profileLink.name, profileLink.href] as const,
+      queryKey: queryKeys.entityProfile.byLink(profileLink),
       queryFn: async () => {
         const { object } = await fetchHal<ProfileEntityShape>(
           apiFetch,
@@ -289,16 +286,12 @@ export default class ProfileEntity {
     return new CreateHalFormTemplate(template, this);
   }
 
-  public async createEntity(
-    apiFetch: TypedFetch,
-    values: HalFormValues<EntityInstanceCreateRequestSpec>,
-  ) {
+  public async createEntityItemRequest(values: HalFormValues<EntityInstanceCreateRequestSpec>) {
     const createTemplate = this.createTemplate;
     if (!createTemplate) {
       throw new Error("No create template available");
     }
     const codec = halFormCodecs.requireCodecFor(createTemplate.template);
-    const request = codec.encode(values);
-    return apiFetch(request).then(checkResponse);
+    return codec.encode(values);
   }
 }

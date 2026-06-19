@@ -2,13 +2,12 @@ import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/
 import { HalSlice } from "@contentgrid/hal";
 import type { TypedFetch } from "../api/client";
 import { fetchHalSlice } from "../api/hal-client";
+import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { EntityItem } from "./entity-item";
 import type ProfileEntity from "./entity-profile";
 
-// Query configuration constants
-const ENTITY_SEARCH_QUERY_KEY = "EntitySearch";
 const ENTITY_SEARCH_STALE_TIME = 10 * 1000; // 10 seconds - search results change frequently
 
 /**
@@ -82,7 +81,7 @@ export class EntityItemCollection {
     override: QueryOptionsOverride<EntityItemCollection, Error> = {},
   ) {
     return queryOptions({
-      queryKey: [ENTITY_SEARCH_QUERY_KEY, profileEntity.name, url] as const,
+      queryKey: queryKeys.entityItemCollection.byUrl(profileEntity, url),
       queryFn: async () => {
         const slice = await fetchHalSlice<EntityItemShape>(apiFetch, new Request(url));
         return new EntityItemCollection(slice, profileEntity);
@@ -121,7 +120,7 @@ export class EntityItemCollection {
     override: Record<string, unknown> = {},
   ) {
     return infiniteQueryOptions({
-      queryKey: [ENTITY_SEARCH_QUERY_KEY, "infinite", profileEntity.name, initialUrl] as const,
+      queryKey: queryKeys.entityItemCollection.infiniteByUrl(profileEntity, initialUrl),
       queryFn: async ({ pageParam }) => {
         const url = (pageParam as string | undefined) ?? initialUrl;
         const slice = await fetchHalSlice<EntityItemShape>(apiFetch, new Request(url));
