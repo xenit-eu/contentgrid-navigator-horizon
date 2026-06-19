@@ -1,19 +1,15 @@
 import type { TypedRequestSpec } from "@contentgrid/typed-fetch";
-import type {
-  EntityCollectionShape,
-  EntityInstanceForUpdate,
-  EntityInstanceShape,
-} from "../shapes";
+import type { EntityCollectionShape, EntityInstanceForUpdate, EntityItemShape } from "../shapes";
 
 export type SearchRequestSpec = TypedRequestSpec<void, EntityCollectionShape>;
-export type EntityInstanceRequestSpec = TypedRequestSpec<void, EntityInstanceShape>;
+export type EntityInstanceRequestSpec = TypedRequestSpec<void, EntityItemShape>;
 export type EntityInstanceCreateRequestSpec = TypedRequestSpec<
   EntityInstanceForUpdate,
-  EntityInstanceShape
+  EntityItemShape
 >;
 export type EntityInstanceUpdateRequestSpec = TypedRequestSpec<
   EntityInstanceForUpdate,
-  EntityInstanceShape
+  EntityItemShape
 >;
 export type EntityInstanceDeleteRequestSpec = TypedRequestSpec<void, void>;
 export type RelationUpdateRequestSpec = TypedRequestSpec<readonly string[], void>;
