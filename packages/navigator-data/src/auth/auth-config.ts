@@ -145,6 +145,19 @@ export function getAppConfig(): RuntimeAppConfig {
   return cachedConfig;
 }
 
+export async function signinWithNewConfig(config: RuntimeAppConfig): Promise<void> {
+  storeDevConfig(config);
+  const userManager = new (await import("oidc-client-ts")).UserManager({
+    authority: config.authority,
+    client_id: config.clientId,
+    redirect_uri: window.location.origin,
+    scope: "openid profile email",
+    userStore: new WebStorageStateStore({ store: localStorage }),
+  });
+  await userManager.removeUser();
+  return userManager.signinRedirect();
+}
+
 export function getOidcConfig(config: RuntimeAppConfig): AuthProviderProps {
   return {
     authority: config.authority,

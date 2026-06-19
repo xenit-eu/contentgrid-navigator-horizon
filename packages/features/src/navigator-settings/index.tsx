@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import {
+  DEV_CONFIG_STORAGE_KEY,
   type DevApp,
   type DevAppConfig,
   clearDevConfig,
@@ -8,7 +9,7 @@ import {
   getDefaultRenditionUri,
   productionApps,
   sandboxApps,
-  storeDevConfig,
+  signinWithNewConfig,
   useAuth,
 } from "@contentgrid/navigator-data";
 import {
@@ -46,6 +47,9 @@ function saveCustomConfig(config: DevAppConfig) {
 }
 
 function getInitialConfig(): DevAppConfig | null {
+  // Only pre-populate from the dev-override key; after clearDevConfig() the key is gone
+  // so fields render empty. Env-var / config.js values are not shown here.
+  if (!localStorage.getItem(DEV_CONFIG_STORAGE_KEY)) return null;
   try {
     const rc = getAppConfig();
     return {
@@ -64,47 +68,60 @@ export function NavigatorSettingsPage() {
   const auth = useAuth();
   const [selectedConfig, setSelectedConfig] = useState<DevAppConfig | null>(getInitialConfig);
   const [useMockExtract, setUseMockExtract] = useState(loadMockExtract);
+  const [loadedEnvironment, setLoadedEnvironment] = useState<"production" | "sandbox" | null>(null);
 
-  const handleMockExtractChange = useCallback((value: boolean) => {
-    setUseMockExtract(value);
-    localStorage.setItem(MOCK_EXTRACT_STORAGE_KEY, String(value));
-  }, []);
+  const handleMockExtractChange = useCallback(
+    (value: boolean) => {
+      setUseMockExtract(value);
+      localStorage.setItem(MOCK_EXTRACT_STORAGE_KEY, String(value));
+      // Immediately update the extract URL in the currently-displayed config
+      if (loadedEnvironment) {
+        setSelectedConfig((prev) =>
+          prev
+            ? { ...prev, extractServiceUrl: getDefaultExtractServiceUrl(loadedEnvironment, value) }
+            : null,
+        );
+      }
+    },
+    [loadedEnvironment],
+  );
 
   const handleConfigSelect = useCallback(
     (app: DevApp, environment: "production" | "sandbox" | "custom") => {
       const cfg = { ...app.config };
       if (environment !== "custom") {
-        if (!cfg.extractServiceUrl) {
-          cfg.extractServiceUrl = getDefaultExtractServiceUrl(environment, useMockExtract);
-        } else if (useMockExtract) {
+        if (!cfg.extractServiceUrl || useMockExtract) {
           cfg.extractServiceUrl = getDefaultExtractServiceUrl(environment, useMockExtract);
         }
         if (!cfg.renditionUri) {
           cfg.renditionUri = getDefaultRenditionUri(environment);
         }
+        setLoadedEnvironment(environment);
+      } else {
+        setLoadedEnvironment(null);
       }
       setSelectedConfig(cfg);
     },
     [useMockExtract],
   );
 
-  function handleConnect() {
+  async function handleConnect() {
     if (selectedConfig) {
-      storeDevConfig({
+      await signinWithNewConfig({
         apiBaseUrl: selectedConfig.apiBaseUrl,
         authority: selectedConfig.authority,
         clientId: selectedConfig.clientId,
         extractServiceUrl: selectedConfig.extractServiceUrl,
         renditionUri: selectedConfig.renditionUri,
       });
+    } else {
+      void auth.signinRedirect();
     }
-    void auth.removeUser();
-    window.location.reload();
   }
 
-  function handleClear() {
+  async function handleClear() {
     clearDevConfig();
-    void auth.removeUser();
+    await auth.removeUser();
     window.location.reload();
   }
 

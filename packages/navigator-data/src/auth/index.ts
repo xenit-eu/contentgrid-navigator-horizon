@@ -5,6 +5,7 @@ export {
   getOidcConfig,
   storeDevConfig,
   clearDevConfig,
+  signinWithNewConfig,
   DEV_CONFIG_STORAGE_KEY,
 } from "./auth-config";
 export type { RuntimeAppConfig } from "./auth-config";
