@@ -64,7 +64,7 @@ function getInitialConfig(): DevAppConfig | null {
   }
 }
 
-export function NavigatorSettingsPage() {
+export function ApplicationSelectorPage() {
   const auth = useAuth();
   const [selectedConfig, setSelectedConfig] = useState<DevAppConfig | null>(getInitialConfig);
   const [useMockExtract, setUseMockExtract] = useState(loadMockExtract);
@@ -90,12 +90,12 @@ export function NavigatorSettingsPage() {
     (app: DevApp, environment: "production" | "sandbox" | "custom") => {
       const cfg = { ...app.config };
       if (environment !== "custom") {
-        if (!cfg.extractServiceUrl || useMockExtract) {
+        if (useMockExtract) {
           cfg.extractServiceUrl = getDefaultExtractServiceUrl(environment, useMockExtract);
+        } else {
+          cfg.extractServiceUrl ??= getDefaultExtractServiceUrl(environment, useMockExtract);
         }
-        if (!cfg.renditionUri) {
-          cfg.renditionUri = getDefaultRenditionUri(environment);
-        }
+        cfg.renditionUri ??= getDefaultRenditionUri(environment);
         setLoadedEnvironment(environment);
       } else {
         setLoadedEnvironment(null);
@@ -170,14 +170,12 @@ export function NavigatorSettingsPage() {
   );
 }
 
-// --- Left panel ---
-
 interface SettingsPanelProps {
   selectedConfig: DevAppConfig | null;
   useMockExtract: boolean;
   onMockExtractChange: (value: boolean) => void;
-  onConnect: () => void;
-  onClear: () => void;
+  onConnect: () => Promise<void>;
+  onClear: () => Promise<void>;
 }
 
 function SettingsPanel({
@@ -189,7 +187,7 @@ function SettingsPanel({
 }: Readonly<SettingsPanelProps>) {
   return (
     <Card className="h-full p-6 flex flex-col gap-4">
-      <h1 className="text-2xl">Navigator Settings</h1>
+      <h1 className="text-2xl">Application Selector</h1>
 
       <div className="flex items-center gap-1">
         <input
@@ -247,8 +245,6 @@ function ConfigField({ label, value }: Readonly<{ label: string; value: string }
   );
 }
 
-// --- Right panel: app list ---
-
 function AppList({
   apps,
   onSelect,
@@ -281,14 +277,12 @@ function AppCard({ app, onSelect }: Readonly<{ app: DevApp; onSelect: (app: DevA
   );
 }
 
-// --- Custom config form ---
-
 const EMPTY_CONFIG: DevAppConfig = {
   apiBaseUrl: "",
   authority: "",
   clientId: "",
-  extractServiceUrl: "",
-  renditionUri: "",
+  extractServiceUrl: undefined,
+  renditionUri: undefined,
 };
 
 function CustomConfigForm({

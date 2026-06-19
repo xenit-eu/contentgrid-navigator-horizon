@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { NavigatorSettingsPage } from "@contentgrid/features/navigator-settings";
+import { ApplicationSelectorPage } from "@contentgrid/features/navigator-settings";
 
 export const Route = createFileRoute("/config")({
   beforeLoad() {
@@ -8,5 +8,5 @@ export const Route = createFileRoute("/config")({
       throw redirect({ to: "/" });
     }
   },
-  component: NavigatorSettingsPage,
+  component: ApplicationSelectorPage,
 });
