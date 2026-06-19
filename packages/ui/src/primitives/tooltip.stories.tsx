@@ -1,4 +1,4 @@
-import { Info } from "@phosphor-icons/react";
+import { InfoIcon as Info } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";

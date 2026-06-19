@@ -1,5 +1,11 @@
 import * as React from "react";
-import { CheckCircle, CircleNotch, Info, Warning, WarningOctagon } from "@phosphor-icons/react";
+import {
+  CheckCircleIcon as CheckCircle,
+  CircleNotchIcon as CircleNotch,
+  InfoIcon as Info,
+  WarningIcon as Warning,
+  WarningOctagonIcon as WarningOctagon,
+} from "@phosphor-icons/react";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 

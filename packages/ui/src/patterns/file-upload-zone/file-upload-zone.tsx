@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { UploadSimple, X } from "@phosphor-icons/react";
+import { UploadSimpleIcon as UploadSimple, XIcon as X } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";

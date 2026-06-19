@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowsDownUp,
-  DotsThree,
-  Eye,
-  PencilSimple,
-  Trash,
-  Tray,
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  ArrowsDownUpIcon as ArrowsDownUp,
+  DotsThreeIcon as DotsThree,
+  EyeIcon as Eye,
+  PencilSimpleIcon as PencilSimple,
+  TrashIcon as Trash,
+  TrayIcon as Tray,
 } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import {

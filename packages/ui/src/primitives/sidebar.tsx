@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SidebarSimple } from "@phosphor-icons/react";
+import { SidebarSimpleIcon as SidebarSimple } from "@phosphor-icons/react";
 import { type VariantProps, cva } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import { useIsMobile } from "../hooks/use-mobile";

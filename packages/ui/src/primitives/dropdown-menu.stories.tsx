@@ -1,4 +1,9 @@
-import { Envelope, Gear, SignOut, User } from "@phosphor-icons/react";
+import {
+  EnvelopeIcon as Envelope,
+  GearIcon as Gear,
+  SignOutIcon as SignOut,
+  UserIcon as User,
+} from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";

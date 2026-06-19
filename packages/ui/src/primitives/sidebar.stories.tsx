@@ -1,4 +1,8 @@
-import { Gear, SquaresFour, Users } from "@phosphor-icons/react";
+import {
+  GearIcon as Gear,
+  SquaresFourIcon as SquaresFour,
+  UsersIcon as Users,
+} from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
 import {

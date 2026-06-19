@@ -1,4 +1,4 @@
-import { X } from "@phosphor-icons/react";
+import { XIcon as X } from "@phosphor-icons/react";
 import { format, parse } from "date-fns";
 import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";

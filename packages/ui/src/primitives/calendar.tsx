@@ -1,5 +1,9 @@
 import * as React from "react";
-import { CaretDown, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import {
+  CaretDownIcon as CaretDown,
+  CaretLeftIcon as CaretLeft,
+  CaretRightIcon as CaretRight,
+} from "@phosphor-icons/react";
 import { type DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 import { cn } from "../lib/utils";
 import { Button, buttonVariants } from "./button";

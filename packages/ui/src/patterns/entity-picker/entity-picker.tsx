@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useState } from "react";
-import { Check, MagnifyingGlass } from "@phosphor-icons/react";
+import { CheckIcon as Check, MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
 import { cn, formatCellValue } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import {

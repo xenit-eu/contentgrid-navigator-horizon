@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ArrowSquareOut, CaretDown, Link, LinkBreak, Plus } from "@phosphor-icons/react";
+import {
+  ArrowSquareOutIcon as ArrowSquareOut,
+  CaretDownIcon as CaretDown,
+  LinkIcon as Link,
+  LinkBreakIcon as LinkBreak,
+  PlusIcon as Plus,
+} from "@phosphor-icons/react";
 import { cn, formatCellValue } from "../../lib/utils";
 import {
   AlertDialog,
