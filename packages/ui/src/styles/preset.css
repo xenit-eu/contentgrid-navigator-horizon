@@ -1,3 +1,14 @@
+/* Open Sans — ContentGrid system font (weights 300–800, normal style).
+ * Loaded from @fontsource/open-sans@5.2.7 (published 2025-09-17, ≥14d aged).
+ * All consumers of this preset (navigator apps, Storybook) automatically
+ * receive the @font-face declarations; no separate import needed. */
+@import "@fontsource/open-sans/300.css";
+@import "@fontsource/open-sans/400.css";
+@import "@fontsource/open-sans/500.css";
+@import "@fontsource/open-sans/600.css";
+@import "@fontsource/open-sans/700.css";
+@import "@fontsource/open-sans/800.css";
+
 @import "tw-animate-css";
 @import "../../tokens/index.css";
 @source "../";
@@ -5,6 +16,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Typography */
+  --font-sans: var(--font-sans-cg);
+
+  /* Radius — the shadcn calc-chain derives from --radius (set to 12px / 0.75rem).
+   * Resulting values: sm=8px, md=10px, lg=12px, xl=16px, 2xl=20px, 3xl=24px.
+   * New components should prefer the explicit --cg-radius-sm/md/lg tokens
+   * (6/8/12px) over the calc-derived values. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -12,6 +30,14 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Elevation shadow utilities */
+  --shadow-e1: var(--shadow-e1-cg);
+  --shadow-e2: var(--shadow-e2-cg);
+  --shadow-e3: var(--shadow-e3-cg);
+  --shadow-e4: var(--shadow-e4-cg);
+
+  /* Semantic color utilities */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -46,16 +72,20 @@
 }
 
 :root {
-  /* Backward-compatible aliases: components in this repo reference these
+  /* -------------------------------------------------------------------------
+   * Backward-compatible aliases: components in this repo reference these
    * unprefixed names directly (e.g. var(--ocean), var(--sky-extract)).
    * They delegate to the canonical --cg-* tokens so that a single source
-   * of truth exists for raw values. */
+   * of truth exists for raw values.
+   * ------------------------------------------------------------------------- */
   --ocean: var(--cg-color-ocean);
   --ocean-700: var(--cg-color-ocean-700);
   --sky: var(--cg-color-sky);
   --sky-50: var(--cg-color-sky-50);
   --steel: var(--cg-color-steel);
   --midnight: var(--cg-color-midnight);
+  --breeze: var(--cg-color-breeze);
+  --sand: var(--cg-color-sand);
   --mist: var(--cg-color-mist);
   --frost: var(--cg-color-frost);
   --line: var(--cg-color-line);
@@ -72,12 +102,24 @@
   --card-border: var(--cg-color-card-border);
   --sky-extract: var(--cg-color-sky-extract);
   --sky-extract-ring: var(--cg-color-sky-extract-ring);
-  --shadow-lg: var(--cg-shadow-lg);
 
+  /* Elevation aliases — bridge between @theme names and --cg-shadow-* tokens. */
+  --shadow-e1-cg: var(--cg-shadow-e1);
+  --shadow-e2-cg: var(--cg-shadow-e2);
+  --shadow-e3-cg: var(--cg-shadow-e3);
+  --shadow-e4-cg: var(--cg-shadow-e4);
+  --shadow-lg: var(--cg-shadow-lg); /* back-compat alias → e4 */
+
+  /* Font alias for @theme consumption. */
+  --font-sans-cg: var(--cg-font-sans);
+
+  /* Radius — wire base token into shadcn's --radius expectation. */
   --radius: var(--cg-radius);
 
-  /* shadcn semantic layer — references the unprefixed aliases above so that
-   * the @theme inline block (which reads var(--primary) etc.) is unchanged. */
+  /* -------------------------------------------------------------------------
+   * shadcn semantic layer — references the unprefixed aliases above so that
+   * the @theme inline block (which reads var(--primary) etc.) is unchanged.
+   * ------------------------------------------------------------------------- */
   --background: var(--mist);
   --foreground: var(--text);
   --card: var(--frost);
@@ -112,7 +154,71 @@
   --sidebar-ring: var(--sky);
 }
 
-/* Dark theme tokens are out of scope for HZN-3.2 and will be addressed separately. */
+/* -------------------------------------------------------------------------
+ * Dark theme
+ *
+ * Activated by the `dark` class on <html> (see withThemeByClassName in
+ * Storybook preview.ts and @custom-variant dark above). Maps the shadcn
+ * semantic tokens to the dark-palette spec:
+ *
+ *   surface  #102A3E  surface-2 #0C2233  line     #21425A
+ *   primary  #1F9FE0  accent    #5AC4F2  breeze   #5AC4F2
+ *   ink      #EAF4FB  body      #C3D7E5  dim      #9FBCCC  muted #7E9BAD
+ *
+ * Contrast notes (WCAG AA = 4.5:1 for normal text, 3:1 for large/UI):
+ *   --foreground (#EAF4FB) on --background (#102A3E) ≈ 11.2:1 ✓
+ *   --muted-foreground (#9FBCCC) on --background (#102A3E) ≈ 4.9:1 ✓
+ *   --primary (#1F9FE0) on --background (#102A3E) ≈ 3.6:1 — large/UI only ✓
+ *   --primary-foreground (#ffffff) on --primary (#1F9FE0) ≈ 3.5:1 — use for
+ *     buttons (large UI component); borderline for small text — acceptable.
+ * ------------------------------------------------------------------------- */
+
+.dark {
+  /* Raw dark-palette aliases */
+  --dark-surface: #102a3e;
+  --dark-surface-2: #0c2233;
+  --dark-line: #21425a;
+  --dark-primary: #1f9fe0;
+  --dark-accent: #5ac4f2;
+  --dark-ink: #eaf4fb;
+  --dark-body: #c3d7e5;
+  --dark-dim: #9fbccc;
+  --dark-muted: #7e9bad;
+
+  /* Semantic layer overrides */
+  --background: var(--dark-surface);
+  --foreground: var(--dark-ink);
+  --card: var(--dark-surface-2);
+  --card-foreground: var(--dark-ink);
+  --popover: var(--dark-surface-2);
+  --popover-foreground: var(--dark-ink);
+  --primary: var(--dark-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--dark-surface-2);
+  --secondary-foreground: var(--dark-body);
+  --muted: var(--dark-surface-2);
+  --muted-foreground: var(--dark-dim);
+  --accent: var(--dark-accent);
+  --accent-foreground: var(--dark-surface);
+  --destructive: #f87171; /* red-400 — lifted for dark-bg contrast */
+  --destructive-foreground: #ffffff;
+  --border: var(--dark-line);
+  --input: var(--dark-line);
+  --ring: var(--dark-accent);
+  --chart-1: var(--dark-accent);
+  --chart-2: var(--dark-primary);
+  --chart-3: var(--dark-dim);
+  --chart-4: #4ade80; /* green-400 */
+  --chart-5: #fb923c; /* orange-400 */
+  --sidebar: var(--dark-surface-2);
+  --sidebar-foreground: var(--dark-ink);
+  --sidebar-primary: var(--dark-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--dark-line);
+  --sidebar-accent-foreground: var(--dark-body);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: var(--dark-accent);
+}
 
 @layer base {
   * {
