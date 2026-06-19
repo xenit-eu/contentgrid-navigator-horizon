@@ -74,8 +74,8 @@ export class ProfileRelation {
   // Target Entity
   // ========================================
 
-  get targetProfileLink(): Link | undefined {
-    return this.hal.links.findLinks(blueprintRels["target-entity"])[0];
+  get targetProfileLink(): Link | null {
+    return this.hal.links.findLink(blueprintRels["target-entity"]);
   }
 
   get targetProfileHref(): string | undefined {
@@ -90,11 +90,11 @@ export class ProfileRelation {
    * Find the target profile from an already-loaded list of profiles.
    * More efficient when profiles are pre-loaded.
    */
-  public getTargetProfile(profiles: readonly Profile[]): Profile | null {
+  public getTargetProfile(profiles: readonly Profile[]): Profile | undefined {
     const targetProfile = this.targetProfileLink;
     if (targetProfile) {
-      return profiles.find((profile) => profile.describes(targetProfile)) ?? null;
+      return profiles.find((profile) => profile.describes(targetProfile)) ?? undefined;
     }
-    return null;
+    return undefined;
   }
 }

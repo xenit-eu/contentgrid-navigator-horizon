@@ -442,7 +442,7 @@ function buildRows(items: readonly EntityItem[], columns: DataTableColumn[]): Da
           data[attr.value.name] = attr.value.value;
           break;
         case AttributeKind.CONTENT:
-          data[attr.value.name] = attr.value.metadata?.filename ?? "(file)";
+          data[attr.value.name] = attr.value.metadata?.filename ?? "-";
           break;
         case AttributeKind.NESTED:
           data[attr.value.name] = "(object)";

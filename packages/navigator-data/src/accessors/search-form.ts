@@ -69,10 +69,29 @@ export interface SearchHalFormTemplateProperty {
 }
 
 /**
+ * Raw sort option as returned in the HAL-FORMS `_sort` property's inline options array.
+ * The `property` and `direction` fields are explicit — prefer these over parsing `value`.
+ */
+interface RawSortOption {
+  /** Attribute name to sort on (e.g., "order_id") */
+  property: string;
+  /** Sort direction */
+  direction: "asc" | "desc";
+  /** Human-readable label */
+  prompt?: string;
+  /** Encoded sort value sent in the request (e.g., "order_id,asc") */
+  value: string;
+}
+
+function isRawSortOption(opt: unknown): opt is RawSortOption {
+  return typeof opt === "object" && opt !== null && "property" in opt && "value" in opt;
+}
+
+/**
  * Enhanced sort option with linked profile metadata
  */
 export interface SortOption {
-  /** Original sort value (e.g., "name,asc") */
+  /** Original sort value (e.g., "order_id,asc") — use as-is when setting the _sort parameter */
   value: string;
   /** Human-readable prompt */
   prompt: string;
@@ -123,9 +142,9 @@ export class SearchHalFormTemplate {
       const sortProperty = this.template.properties?.find((p) => p.name === "_sort");
       if (sortProperty?.options?.isInline()) {
         const inline = sortProperty.options.inline;
-        this._sortOptions = (Array.isArray(inline) ? inline : []).map((opt) =>
-          this.parseSortOption(opt),
-        );
+        this._sortOptions = (Array.isArray(inline) ? inline : [])
+          .filter(isRawSortOption)
+          .map((opt) => this.parseSortOption(opt));
       }
       // Leave as undefined if no sort property exists
     }
@@ -265,30 +284,15 @@ export class SearchHalFormTemplate {
   }
 
   /**
-   * Parse a sort option (string or object format).
+   * Parse a sort option from the HAL-FORMS inline options array.
+   * Uses the structured `property` and `direction` fields directly.
    */
-  private parseSortOption(opt: unknown): SortOption {
-    if (typeof opt === "string") {
-      // Parse "attribute,direction" format
-      const [attributeName, direction = "asc"] = opt.split(",");
-      const profileAttribute = this.profileEntity.getAttribute(attributeName);
-      return {
-        value: opt,
-        prompt: opt,
-        direction: direction === "desc" ? "desc" : "asc",
-        profileAttribute,
-      };
-    }
-
-    // Object format: { value: "attribute,direction", prompt: "..." }
-    const o = opt as { value?: string; prompt?: string };
-    const [attributeName, direction = "asc"] = (o.value || "").split(",");
-    const profileAttribute = this.profileEntity.getAttribute(attributeName);
+  private parseSortOption(opt: RawSortOption): SortOption {
     return {
-      value: o.value || "",
-      prompt: o.prompt || o.value || "",
-      direction: direction === "desc" ? "desc" : "asc",
-      profileAttribute,
+      value: opt.value,
+      prompt: opt.prompt ?? opt.value,
+      direction: opt.direction,
+      profileAttribute: this.profileEntity.getAttribute(opt.property),
     };
   }
 }
