@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import { HalObject } from "@contentgrid/hal";
 import type { Link } from "@contentgrid/hal";
 import type { HalFormsTemplate } from "@contentgrid/hal-forms";
@@ -6,10 +7,16 @@ import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { cgRels } from "../api";
+import type { TypedFetch } from "../api/client";
+import { fetchHal } from "../api/hal-client";
 import type { EntityInstanceUpdateRequestSpec } from "../api/requests";
+import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
+import type { QueryOptionsOverride } from "../utils/query-options-override";
 import type { ProfileAttribute } from "./attribute-profile";
 import type ProfileEntity from "./entity-profile";
+
+const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
 
 /**
  * Represents a single entity instance (entity-item resource) with typed attribute access.
@@ -35,13 +42,42 @@ import type ProfileEntity from "./entity-profile";
  * ```
  */
 export class EntityItem {
+  // ========================================
+  // Static Query Options Factories
+  // ========================================
+
+  public static fetchByUrlQuery(
+    apiFetch: TypedFetch,
+    url: string,
+    profileEntity: ProfileEntity,
+    override: QueryOptionsOverride<EntityItem, Error> = {},
+  ) {
+    return queryOptions({
+      queryKey: queryKeys.entityItem.byUrl(profileEntity, url),
+      queryFn: async () => {
+        const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, new Request(url));
+        return new EntityItem(object, profileEntity, etag);
+      },
+      staleTime: ENTITY_ITEM_STALE_TIME,
+      gcTime: 5 * 60 * 1000,
+      retry: 3,
+      ...override,
+    });
+  }
+
+  // ========================================
+  // Constructor & Instance Properties
+  // ========================================
+
   /**
    * @param halItem - The HAL entity-item resource from the API
    * @param profileEntity - The entity profile providing schema metadata
+   * @param etag - ETag from the response header; pass as `If-Match` on update requests (RFC 9110)
    */
   public constructor(
     public readonly halItem: HalObject<EntityItemShape>,
     public readonly profileEntity: ProfileEntity,
+    public readonly etag: string | null = null,
   ) {}
 
   /**

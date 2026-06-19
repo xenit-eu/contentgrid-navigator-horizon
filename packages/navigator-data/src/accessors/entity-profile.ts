@@ -225,6 +225,21 @@ export default class ProfileEntity {
     return this.profileEntity.links.requireSingleLink(ianaRelations.describes, "item");
   }
 
+  /**
+   * Expand the item URI template for a given entity ID.
+   *
+   * Uses the `describes` link with `name: "item"` (a URI template like `/{plural}/{id}`).
+   * Expansion is done via the `@contentgrid/uri-template` library — no string concatenation.
+   *
+   * @param entityId - The entity identifier to substitute into the template
+   * @returns The fully expanded item URL
+   */
+  public itemUrl(entityId: string): string {
+    const template = this.itemLink.template;
+    const [idVariable] = template.variables;
+    return template.expand({ [idVariable]: entityId });
+  }
+
   public describes(link: SimpleLink): boolean {
     return this.profileEntity.links
       .findLinks(ianaRelations.describes)

@@ -12,5 +12,12 @@ export type {
   UseEntityItemCollectionOptions,
 } from "./use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./use-recent-items";
+export { useEntityItem } from "./use-entity-item";
+export type {
+  UseEntityItemOptions,
+  UseEntityItemParams,
+  EntityItemByProfile,
+  EntityItemDiscoverProfile,
+} from "./use-entity-item";
 export { useCreateEntityItem } from "./use-create-entity";
 export type { UseCreateEntityItemOptions } from "./use-create-entity";
