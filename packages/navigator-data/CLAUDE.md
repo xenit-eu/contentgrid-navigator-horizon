@@ -53,11 +53,23 @@ rather than being specialised to a single entity type. The noun suffix reflects 
 entity name like `invoice`.
 
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
-- Single-item queries: `useEntityItem` _(not yet implemented)_
+- Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem` _(not yet implemented)_,
   delete: `useDeleteEntityItem` _(not yet implemented)_
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
+
+`useEntityItem` supports two modes — choose based on what you know at call time:
+
+- **Known profile** `{ profileEntity, entityId }` — use when the profile is already in scope.
+  The item URL is expanded from `profileEntity.itemUrl(entityId)` (URI template; no string concatenation).
+  Query is disabled when `entityId` is `undefined`.
+- **Discover profile** `{ url }` — use when only the full item URL is known (e.g. from a relation link).
+  The hook calls `profile.describes(SimpleLink.to(url))` against every loaded profile to find the match.
+  Query is disabled until the matching profile is available.
+
+Both modes always call `useProfileEntities()` (Rules of Hooks). Results are cached so there is no extra
+network cost in known-profile mode.
 
 **Accessor and static factory naming:**
 
@@ -70,7 +82,7 @@ Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query f
 | `ProfileRelation`       | `blueprint:relation` embedded resource      | —                                                                                              |
 | `SearchHalFormTemplate` | `_templates.search` HAL-FORMS template      | —                                                                                              |
 | `CreateHalFormTemplate` | `_templates.create-form` HAL-FORMS template | —                                                                                              |
-| `EntityItem`            | `/{plural}/{id}` HAL entity-item resource   | _(planned)_                                                                                    |
+| `EntityItem`            | `/{plural}/{id}` HAL entity-item resource   | `fetchByUrlQuery(apiFetch, url, profileEntity)`                                                |
 | `EntityItemCollection`  | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)` |
 
 Standalone query factories (system-level, not tied to one entity):
@@ -85,6 +97,12 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `profileEntity.searchEntityRequest(values)` → `Request` for `_templates.search`
 - `profileEntity.createEntityItemRequest(values)` → `Request` for `_templates.create-form`
 - `entityItem.editEntityRequest(values)` → `Request` for `_templates.default`
+
+**URL construction — never concatenate by hand:**
+
+- `profileEntity.collectionUrl` — the entity collection URL (e.g. `/invoices`); read directly from the `describes` collection link.
+- `profileEntity.itemUrl(entityId)` — expands the item URI template (e.g. `/{plural}/{id}`) via `@contentgrid/uri-template`.
+- Follow HAL `next`/`prev`/`self` links directly for pagination — never construct cursor URLs.
 
 **Return shape:**
 
@@ -156,6 +174,76 @@ const { data: collection } = useEntityItemCollection({
 - When adding or changing a hook, update the corresponding MSW fixture so
   contract tests catch shape drift.
 - See [ADR-014](../../docs/adr/ADR-014-hal-contract-tests-msw.md).
+
+---
+
+## HAL-FORMS affordance rules
+
+These rules prevent the systemic deviations identified in an earlier HAL-FORMS audit.
+The current codebase encapsulates most of the correct behaviour in the accessor layer — the
+rules below explain where and why.
+
+**1. Drive mutations from `_templates` — never hardcode method, target, or Content-Type.**
+
+Templates: `default` (update), `delete`, `set-<relation>` (to-one),
+`add-<relation>`/`clear-<relation>` (to-many), `create-form` (profile-level create).
+
+Where to find this now:
+
+- `entityItem.defaultTemplate` — the update template; `null` when not permitted (see rule 2).
+- `profileEntity.createTemplate` — the create template; `null` when not permitted.
+- `entityItem.editEntityRequest(values)` and `profileEntity.createEntityItemRequest(values)`
+  already encode via `halFormCodecs` internally — do not re-implement encoding in a hook or feature.
+- Build values with `createValues(template)` (re-exported from `@contentgrid/navigator-data`);
+  values are immutable — update with `.withValue(name, val)` / `.withoutValue(name)`.
+
+**2. Gate every operation on template/link presence — never assume permission.**
+
+Template absence is the platform's per-item ABAC signal. Rendering or invoking an operation
+whose template is absent bypasses permission boundaries silently.
+
+Rules:
+
+- `entityItem.defaultTemplate !== null` → update is permitted.
+- `profileEntity.createTemplate !== null` → create is permitted.
+- Expose capability as a named boolean (`canUpdate`, `canCreate`, …) derived from template
+  presence. Feature components must read the flag — not re-check raw templates.
+
+**3. URLs only from links — never string-built.**
+
+| What you need      | How to get it — current API                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Collection URL     | `profileEntity.collectionUrl` (from the `describes` collection link)                            |
+| Item URL           | `profileEntity.itemUrl(entityId)` (URI-template expansion via `@contentgrid/uri-template`)      |
+| Content URL        | `entityItem.contentLinks` / `entityItem.halItem.links.findLink(cgRels.content, attrName)?.href` |
+| Next/prev page URL | `EntityItemCollection.nextHref` / `prevHref` from the HAL slice                                 |
+
+Do NOT derive URLs via string transforms such as `href.replace(/\/profile\//, "/")`,
+`${collectionHref}/${id}`, `${itemHref}/${relationName}`, or `.split("/").pop()`.
+
+**4. IDs from the `id` field — never parsed from hrefs.**
+
+Read `item.id`. Do NOT call `selfHref.split("/").pop()` or any
+href-parsing idiom. URL structure is an implementation detail the server can change.
+
+**5. Carry full template property metadata through the FieldDescriptor bridge.**
+
+The HAL-Forms → `FieldDescriptor[]` bridge MUST propagate all of:
+
+- `options.inline` and `options.link` (remote enumerations) — dropping `options.link`
+  silently removes remote-option fields from forms.
+- All validation constraints: `required`, `regex`, `readOnly`, `allowed-values`.
+
+Do NOT narrow the bridge output to a lossy subset of the template shape.
+
+**6. No hardcoded attribute names — discover roles via profile constraints.**
+
+- Content attributes: check `attr.type === ProfileAttributeType.content` (from the entity
+  profile). Do NOT probe for sub-field names like `filename`, `mimetype`, or `length`.
+- Audit fields: use `profileEntity.auditAttributes` and `profileEntity.userDefinedAttributes`
+  which are already classified by constraint type (`created-date`, `created-by`,
+  `modified-date`, `modified-by`). Do NOT key logic to literal names like `created_date`.
+- Attribute names are customer-defined; only the constraint type is stable across applications.
 
 ---
 
