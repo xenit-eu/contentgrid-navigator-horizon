@@ -3,10 +3,10 @@ import type {
   HalFormsPropertyRemoteOptions,
   HalFormsTemplate,
 } from "@contentgrid/hal-forms";
-import type { EntityInstanceCreateRequestSpec } from "../api/requests";
-import type { ProfileAttribute } from "./attribute-profile";
-import type ProfileEntity from "./entity-profile";
-import type { ProfileRelation } from "./relation-profile";
+import type { EntityInstanceCreateRequestSpec } from "../../api/requests";
+import type { ProfileAttribute } from "../attribute-profile";
+import type ProfileEntity from "../entity-profile";
+import type { ProfileRelation } from "../relation-profile";
 
 /**
  * Enhanced Create-Form HAL-FORMS Template Wrapper

@@ -12,9 +12,9 @@ import { queryKeys } from "../query-keys";
 import type { ProfileAttributeShape, ProfileEntityShape, ProfileRelationShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { ProfileAttribute } from "./attribute-profile";
-import { CreateHalFormTemplate } from "./create-form";
+import { CreateHalFormTemplate } from "./extended-forms/create-form";
+import { SearchHalFormTemplate } from "./extended-forms/search-form";
 import { ProfileRelation } from "./relation-profile";
-import { SearchHalFormTemplate } from "./search-form";
 
 const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes - profiles rarely change at runtime
 

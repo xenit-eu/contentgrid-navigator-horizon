@@ -1,9 +1,9 @@
 import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
-import type { SearchRequestSpec } from "../api/requests";
-import { ProfileAttributeSearchType } from "./attribute-profile";
-import type { ProfileAttribute } from "./attribute-profile";
-import type ProfileEntity from "./entity-profile";
-import type { ProfileRelation } from "./relation-profile";
+import type { SearchRequestSpec } from "../../api/requests";
+import { ProfileAttributeSearchType } from "../attribute-profile";
+import type { ProfileAttribute } from "../attribute-profile";
+import type ProfileEntity from "../entity-profile";
+import type { ProfileRelation } from "../relation-profile";
 
 /**
  * Enhanced Search HAL-FORMS Template Wrapper
