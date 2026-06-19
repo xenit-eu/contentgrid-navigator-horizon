@@ -2,14 +2,14 @@ import { cn } from "../lib/utils";
 import { FileIcon } from "../primitives/file-icon";
 
 interface TableRowProps {
-  selected?: boolean;
-  fileType?: "pdf" | "img" | "doc";
-  reference?: string;
-  fileMeta?: string;
-  supplier?: string;
-  total?: string;
-  onClick?: () => void;
-  className?: string;
+  readonly selected?: boolean;
+  readonly fileType?: "pdf" | "img" | "doc";
+  readonly reference?: string;
+  readonly fileMeta?: string;
+  readonly supplier?: string;
+  readonly total?: string;
+  readonly onClick?: () => void;
+  readonly className?: string;
 }
 
 function RecordTableRow({
@@ -27,6 +27,19 @@ function RecordTableRow({
       role="row"
       data-slot="table-row"
       onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter") {
+                onClick();
+              } else if (e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       className={cn(
         "relative grid grid-cols-[1.6fr_1fr_0.9fr] items-center gap-3 px-4 py-3 border-b border-[#F1F4F7] dark:border-[#1B3A50] cursor-pointer transition-colors",
         selected
@@ -42,7 +55,7 @@ function RecordTableRow({
         />
       )}
 
-      <div className="flex items-center gap-[11px]">
+      <div role="gridcell" className="flex items-center gap-[11px]">
         <FileIcon type={fileType} size={30} />
         <div>
           <div className="text-[13px] font-medium text-foreground">{reference}</div>
@@ -50,9 +63,16 @@ function RecordTableRow({
         </div>
       </div>
 
-      <div className="text-[13px] text-[#22384C] dark:text-[#C3D7E5] truncate">{supplier}</div>
+      <div role="gridcell" className="text-[13px] text-[#22384C] dark:text-[#C3D7E5] truncate">
+        {supplier}
+      </div>
 
-      <div className="text-[13px] font-medium text-foreground text-right tabular-nums">{total}</div>
+      <div
+        role="gridcell"
+        className="text-[13px] font-medium text-foreground text-right tabular-nums"
+      >
+        {total}
+      </div>
     </div>
   );
 }

@@ -7,10 +7,10 @@ import {
 import { cn } from "../lib/utils";
 
 interface BannerProps {
-  tone?: "info" | "edit" | "warning";
-  text: string;
-  icon?: React.ReactNode;
-  className?: string;
+  readonly tone?: "info" | "edit" | "warning";
+  readonly text: string;
+  readonly icon?: React.ReactNode;
+  readonly className?: string;
 }
 
 const toneConfig = {

@@ -2,13 +2,13 @@ import * as React from "react";
 import { cn } from "../lib/utils";
 
 interface NavItemProps {
-  active?: boolean;
-  label: string;
-  icon?: React.ReactNode;
-  iconColor?: string;
-  count?: string | number;
-  onClick?: () => void;
-  className?: string;
+  readonly active?: boolean;
+  readonly label: string;
+  readonly icon?: React.ReactNode;
+  readonly iconColor?: string;
+  readonly count?: string | number;
+  readonly onClick?: () => void;
+  readonly className?: string;
 }
 
 function NavItem({

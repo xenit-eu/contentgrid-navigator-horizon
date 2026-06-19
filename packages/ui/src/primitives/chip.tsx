@@ -2,12 +2,12 @@ import { XIcon as X } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface ChipProps {
-  tone?: "neutral" | "applied";
-  field?: string;
-  label: string;
-  removable?: boolean;
-  onRemove?: () => void;
-  className?: string;
+  readonly tone?: "neutral" | "applied";
+  readonly field?: string;
+  readonly label: string;
+  readonly removable?: boolean;
+  readonly onRemove?: () => void;
+  readonly className?: string;
 }
 
 function Chip({ tone = "neutral", field, label, removable, onRemove, className }: ChipProps) {
@@ -23,7 +23,7 @@ function Chip({ tone = "neutral", field, label, removable, onRemove, className }
         className,
       )}
     >
-      {field && <span className="text-[#557891] dark:text-[#9FC4D8] font-normal">{field}: </span>}
+      {field && <span className="text-[#3C5667] dark:text-[#9FC4D8] font-normal">{field}: </span>}
       {label}
       {removable && (
         <button

@@ -2,9 +2,9 @@ import { PencilSimpleIcon as PencilSimple, SparkleIcon as Sparkle } from "@phosp
 import { cn } from "../lib/utils";
 
 interface ProvenanceTagProps {
-  kind?: "extracted" | "modified";
-  label?: string;
-  className?: string;
+  readonly kind?: "extracted" | "modified";
+  readonly label?: string;
+  readonly className?: string;
 }
 
 function ProvenanceTag({ kind = "extracted", label, className }: ProvenanceTagProps) {

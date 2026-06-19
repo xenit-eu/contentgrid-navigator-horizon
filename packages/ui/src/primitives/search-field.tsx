@@ -2,13 +2,13 @@ import { MagnifyingGlassIcon as MagnifyingGlass, XIcon as X } from "@phosphor-ic
 import { cn } from "../lib/utils";
 
 interface SearchFieldProps {
-  focused?: boolean;
-  placeholder?: string;
-  chips?: Array<{ field: string; label: string }>;
-  onRemoveChip?: (index: number) => void;
-  onChange?: (value: string) => void;
-  value?: string;
-  className?: string;
+  readonly focused?: boolean;
+  readonly placeholder?: string;
+  readonly chips?: ReadonlyArray<{ readonly field: string; readonly label: string }>;
+  readonly onRemoveChip?: (index: number) => void;
+  readonly onChange?: (value: string) => void;
+  readonly value?: string;
+  readonly className?: string;
 }
 
 function SearchField({
@@ -33,7 +33,7 @@ function SearchField({
 
       {chips?.map((chip, index) => (
         <span
-          key={index}
+          key={`${chip.field}:${chip.label}`}
           className="inline-flex items-center gap-1 rounded-[6px] border bg-[#FAFDFF] dark:bg-[#13314A] border-border dark:border-[#335269] px-[9px] py-[3px] text-[12px]"
         >
           <span className="text-muted-foreground font-normal mr-0.5">{chip.field}:</span>
@@ -56,6 +56,7 @@ function SearchField({
         value={value}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         placeholder={chips?.length ? undefined : placeholder}
+        aria-label={placeholder ?? "Search"}
         className="flex-1 min-w-[90px] text-[13px] bg-transparent outline-none border-0 text-foreground placeholder:text-muted-foreground"
       />
     </div>

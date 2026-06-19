@@ -1,10 +1,10 @@
 import { cn } from "../lib/utils";
 
 interface SelectionChipProps {
-  selected?: boolean;
-  label: string;
-  onClick?: () => void;
-  className?: string;
+  readonly selected?: boolean;
+  readonly label: string;
+  readonly onClick?: () => void;
+  readonly className?: string;
 }
 
 function SelectionChip({ selected = false, label, onClick, className }: SelectionChipProps) {

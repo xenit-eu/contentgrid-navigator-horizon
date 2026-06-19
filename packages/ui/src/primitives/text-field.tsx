@@ -3,15 +3,15 @@ import { WarningCircleIcon as WarningCircle } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface TextFieldProps {
-  label: string;
-  value?: string;
-  placeholder?: string;
-  helpText?: string;
-  error?: string;
-  required?: boolean;
-  icon?: React.ReactNode;
-  state?: "default" | "focus" | "error" | "disabled";
-  className?: string;
+  readonly label: string;
+  readonly value?: string;
+  readonly placeholder?: string;
+  readonly helpText?: string;
+  readonly error?: string;
+  readonly required?: boolean;
+  readonly icon?: React.ReactNode;
+  readonly state?: "default" | "focus" | "error" | "disabled";
+  readonly className?: string;
 }
 
 function TextField({

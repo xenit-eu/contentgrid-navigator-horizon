@@ -6,9 +6,9 @@ import {
 import { cn } from "../lib/utils";
 
 interface FileIconProps {
-  type?: "pdf" | "img" | "doc";
-  size?: number;
-  className?: string;
+  readonly type?: "pdf" | "img" | "doc";
+  readonly size?: number;
+  readonly className?: string;
 }
 
 const typeConfig = {

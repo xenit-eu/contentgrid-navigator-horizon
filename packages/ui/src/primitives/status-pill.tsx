@@ -8,15 +8,15 @@ import {
 import { cn } from "../lib/utils";
 
 interface StatusPillProps {
-  status?: "success" | "danger" | "warning" | "neutral";
-  label: string;
-  icon?: React.ReactNode;
-  className?: string;
+  readonly status?: "success" | "danger" | "warning" | "neutral";
+  readonly label: string;
+  readonly icon?: React.ReactNode;
+  readonly className?: string;
 }
 
 const statusConfig = {
   success: {
-    textClass: "text-[#2F7A55] dark:text-[#6FD3A1]",
+    textClass: "text-[#266B49] dark:text-[#6FD3A1]",
     bgClass: "bg-[rgba(47,122,85,0.10)] dark:bg-[rgba(111,211,161,0.16)]",
     defaultIcon: <CheckCircle size={14} aria-hidden />,
   },
@@ -31,7 +31,7 @@ const statusConfig = {
     defaultIcon: <Clock size={14} aria-hidden />,
   },
   neutral: {
-    textClass: "text-[#557891] dark:text-[#A6C0D0]",
+    textClass: "text-[#3C5667] dark:text-[#A6C0D0]",
     bgClass: "bg-[rgba(85,120,145,0.12)] dark:bg-[rgba(166,192,208,0.16)]",
     defaultIcon: <Circle size={14} aria-hidden />,
   },

@@ -1,10 +1,10 @@
 import { cn } from "../lib/utils";
 
 interface AttributeRowProps {
-  label: string;
-  value?: string;
-  empty?: boolean;
-  className?: string;
+  readonly label: string;
+  readonly value?: string;
+  readonly empty?: boolean;
+  readonly className?: string;
 }
 
 function AttributeRow({ label, value, empty, className }: AttributeRowProps) {
