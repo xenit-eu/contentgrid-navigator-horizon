@@ -39,7 +39,7 @@ export const queryKeys = {
       [ENTITY_COLLECTION_KEY, profileEntity.name, url] as const,
     /** Exact key for an infinite-scroll query starting at a URL. */
     infiniteByUrl: (profileEntity: ProfileEntity, url: string) =>
-      [ENTITY_COLLECTION_KEY, profileEntity.name, "infinite", url] as const,
+      [ENTITY_COLLECTION_KEY, profileEntity.name, url, "infinite"] as const,
   },
 
   entityProfile: {

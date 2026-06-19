@@ -2,9 +2,11 @@ import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react
 import {
   AttributeKind,
   type EntityItem,
+  type EntityItemAttribute,
   type ProfileEntity,
   createValues,
   useCreateEntityItem,
+  useEntityItem,
   useEntityItemCollection,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
@@ -163,6 +165,10 @@ export function EntityDetailPage() {
     }
   }
 
+  function onRowClick(id: string) {
+    go({ to: "/$entity/$itemId", params: { entity: entityName, itemId: id } });
+  }
+
   function onBack() {
     go({ to: "/", search: {} });
   }
@@ -185,6 +191,7 @@ export function EntityDetailPage() {
       profile={profile}
       pageUrl={q}
       onPageUrlChange={onCursorChange}
+      onRowClick={onRowClick}
       onBack={onBack}
     />
   );
@@ -287,11 +294,13 @@ function EntityDetailView({
   profile,
   pageUrl,
   onPageUrlChange,
+  onRowClick,
   onBack,
 }: Readonly<{
   profile: ProfileEntity;
   pageUrl: string | undefined;
   onPageUrlChange: (url: string | undefined) => void;
+  onRowClick: (id: string) => void;
   onBack: () => void;
 }>) {
   const collection = useEntityItemCollection(
@@ -370,6 +379,7 @@ function EntityDetailView({
             entityTitle={profile.pluralName}
             columns={columns}
             rows={rows}
+            onRowClick={onRowClick}
           />
 
           {/* Pagination */}
@@ -432,6 +442,124 @@ function CreateEntityButton({ profile }: Readonly<{ profile: ProfileEntity }>) {
       {error && <p className="text-xs text-destructive">{error.message}</p>}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// EntityItemDetailPage — $entity/$itemId route component
+// ---------------------------------------------------------------------------
+
+export function EntityItemDetailPage() {
+  const { entity: entityName, itemId } = useParams({ strict: false }) as {
+    entity: string;
+    itemId: string;
+  };
+
+  const profileResults = useProfileEntities();
+  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
+  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const profile = loadedProfiles.find((p) => p.name === entityName);
+
+  if (isLoadingProfiles || (!profile && profileResults.length > 0)) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full rounded-md" />
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  return <EntityItemDetailView profile={profile} itemId={itemId} />;
+}
+
+function EntityItemDetailView({
+  profile,
+  itemId,
+}: Readonly<{ profile: ProfileEntity; itemId: string }>) {
+  const navigate = useNavigate();
+  const go = navigate as unknown as AnyNavigateFn;
+  const item = useEntityItem({ profileEntity: profile, entityId: itemId });
+
+  return (
+    <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <button
+              type="button"
+              onClick={() => go({ to: "/", search: {} })}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              All entities
+            </button>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <button
+              type="button"
+              onClick={() => go({ to: "/$entity", params: { entity: profile.name } })}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {profile.pluralName}
+            </button>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{itemId}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <Separator />
+
+      <h1 className="text-2xl font-bold tracking-tight">{profile.pluralName} detail</h1>
+
+      {item.isPending && (
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
+          ))}
+        </div>
+      )}
+
+      {item.isError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Failed to load item: {item.error.message}
+        </div>
+      )}
+
+      {item.isSuccess && (
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {item.data.userDefinedAttributes.map((attr) => {
+            const label =
+              profile.attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name;
+            return (
+              <div key={attr.value.name} className="rounded-lg border p-4">
+                <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                <dd className="mt-1 truncate text-sm">{renderAttributeValue(attr)}</dd>
+              </div>
+            );
+          })}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function renderAttributeValue(attr: EntityItemAttribute): string {
+  switch (attr.value.kind) {
+    case AttributeKind.PLAIN:
+      return attr.value.value == null ? "—" : String(attr.value.value);
+    case AttributeKind.CONTENT:
+      return attr.value.metadata?.filename ?? "—";
+    case AttributeKind.NESTED:
+      return "(object)";
+    default:
+      return "—";
+  }
 }
 
 // ---------------------------------------------------------------------------
