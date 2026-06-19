@@ -1,4 +1,4 @@
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { TextField } from "./text-field";
 

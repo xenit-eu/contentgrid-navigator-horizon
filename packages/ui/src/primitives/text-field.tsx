@@ -1,5 +1,5 @@
 import * as React from "react";
-import { WarningCircle } from "@phosphor-icons/react";
+import { WarningCircleIcon as WarningCircle } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface TextFieldProps {

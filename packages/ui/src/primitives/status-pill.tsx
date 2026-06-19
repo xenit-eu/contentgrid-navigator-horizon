@@ -1,5 +1,10 @@
 import * as React from "react";
-import { CheckCircle, Circle, Clock, XCircle } from "@phosphor-icons/react";
+import {
+  CheckCircleIcon as CheckCircle,
+  CircleIcon as Circle,
+  ClockIcon as Clock,
+  XCircleIcon as XCircle,
+} from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface StatusPillProps {

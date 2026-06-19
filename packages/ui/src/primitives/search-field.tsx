@@ -1,4 +1,4 @@
-import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as MagnifyingGlass, XIcon as X } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface SearchFieldProps {

@@ -1,4 +1,4 @@
-import { Folder } from "@phosphor-icons/react";
+import { FolderIcon as Folder } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { NavItem } from "./nav-item";
 

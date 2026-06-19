@@ -1,4 +1,8 @@
-import { FilePdf, FileText, Image } from "@phosphor-icons/react";
+import {
+  FilePdfIcon as FilePdf,
+  FileTextIcon as FileText,
+  ImageIcon as Image,
+} from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface FileIconProps {

@@ -1,4 +1,4 @@
-import { Star } from "@phosphor-icons/react";
+import { StarIcon as Star } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { StatusPill } from "./status-pill";
 

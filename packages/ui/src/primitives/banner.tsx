@@ -1,5 +1,9 @@
 import * as React from "react";
-import { Info, PencilSimpleLine, Warning } from "@phosphor-icons/react";
+import {
+  InfoIcon as Info,
+  PencilSimpleLineIcon as PencilSimpleLine,
+  WarningIcon as Warning,
+} from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface BannerProps {

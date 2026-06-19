@@ -1,4 +1,4 @@
-import { Bell } from "@phosphor-icons/react";
+import { BellIcon as Bell } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner } from "./banner";
 

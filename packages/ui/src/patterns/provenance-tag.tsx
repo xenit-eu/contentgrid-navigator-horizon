@@ -1,4 +1,4 @@
-import { PencilSimple, Sparkle } from "@phosphor-icons/react";
+import { PencilSimpleIcon as PencilSimple, SparkleIcon as Sparkle } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface ProvenanceTagProps {
