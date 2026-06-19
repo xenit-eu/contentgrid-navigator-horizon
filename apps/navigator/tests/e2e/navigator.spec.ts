@@ -243,7 +243,7 @@ test("result table document preview @slow", async ({
   await expect(page.getByText("The document is invalid or corrupted")).toBeVisible();
 
   await page.getByText("Bob_protected.pdf [330.46 KB]").click();
-  await expect(page.getByTestId("core__viewer").locator("div").first()).toBeVisible();
+  await expect(page.getByTestId("core__viewer")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Document" }).click();
   await page.getByRole("option", { name: "Receipt" }).click();
@@ -350,9 +350,9 @@ test("Create Entity Continuous mode", async ({ page, login, selectSidebarEntity 
 
   await page.getByLabel("Name").click();
   await page.getByRole("checkbox", { name: "Keep creating entities" }).uncheck();
+  await expect(page.getByRole("checkbox", { name: "Keep creating entities" })).not.toBeChecked();
   await page.getByLabel("Name").click();
   await page.getByLabel("Name").fill("three");
-  await page.waitForTimeout(100);
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByText("three")).toBeVisible();
 });

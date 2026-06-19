@@ -10,16 +10,16 @@ export const test = baseTest.extend<{
   goToOverviewPage: () => Promise<void>;
   isSmallViewport: boolean;
 }>({
-  loginPage: ({ page }, use) => use(new LoginPage(page)),
+  loginPage: ({ page }, provide) => provide(new LoginPage(page)),
 
-  isSmallViewport: ({}, use, testInfo: TestInfo) => {
+  isSmallViewport: ({}, provide, testInfo: TestInfo) => {
     const viewport = testInfo.project.use.viewport;
     const isSmall = viewport?.width !== undefined && viewport.width <= 800;
-    return use(isSmall);
+    return provide(isSmall);
   },
 
-  login: ({ page, loginPage }, use) =>
-    use(async () => {
+  login: ({ page, loginPage }, provide) =>
+    provide(async () => {
       const requiredEnvVars = ["NAVIGATOR_URL", "NAVIGATOR_USERNAME", "NAVIGATOR_PASSWORD"];
       const missingVars = requiredEnvVars.filter((v) => !process.env[v]);
       if (missingVars.length > 0) {
@@ -31,8 +31,8 @@ export const test = baseTest.extend<{
       await loginPage.login(process.env.NAVIGATOR_USERNAME!, process.env.NAVIGATOR_PASSWORD!);
     }),
 
-  selectSidebarEntity: ({ page }, use) =>
-    use(async (entityName: string) => {
+  selectSidebarEntity: ({ page }, provide) =>
+    provide(async (entityName: string) => {
       const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
       const link = page.getByRole("link", { name: entityName });
       await toggleBtn.or(link).first().waitFor();
@@ -43,8 +43,8 @@ export const test = baseTest.extend<{
       await link.click();
     }),
 
-  goToClassifyCreateInstancePage: ({ page }, use) =>
-    use(async () => {
+  goToClassifyCreateInstancePage: ({ page }, provide) =>
+    provide(async () => {
       const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
       const createLink = page.getByRole("link", { name: "Create", exact: true });
       await toggleBtn.or(createLink).first().waitFor();
@@ -55,8 +55,8 @@ export const test = baseTest.extend<{
       await createLink.click();
     }),
 
-  goToOverviewPage: ({ page }, use) =>
-    use(async () => {
+  goToOverviewPage: ({ page }, provide) =>
+    provide(async () => {
       const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
       const overviewLink = page.getByRole("link", { name: "Overview" });
       await toggleBtn.or(overviewLink).first().waitFor();

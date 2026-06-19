@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 try {
   const lines = readFileSync(new URL(".env.test", import.meta.url), "utf-8").split("\n");
   for (const line of lines) {
-    const match = line.match(/^([^#=\s][^=]*)=(.*)$/);
+    const match = /^([^#=\s][^=]*)=(.*)$/.exec(line);
     if (match) process.env[match[1].trim()] ??= match[2].trim();
   }
 } catch {
