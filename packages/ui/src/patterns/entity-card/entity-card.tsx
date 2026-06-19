@@ -1,4 +1,4 @@
-import { Database, FileText, Plus } from "lucide-react";
+import { Database, FileText, Plus } from "@phosphor-icons/react";
 import { Button } from "../../primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../primitives/card";
 

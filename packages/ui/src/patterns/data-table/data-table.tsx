@@ -2,13 +2,13 @@ import { useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  ArrowUpDown,
+  ArrowsDownUp,
+  DotsThree,
   Eye,
-  Inbox,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+  PencilSimple,
+  Trash,
+  Tray,
+} from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import {
   AlertDialog,
@@ -111,7 +111,7 @@ export function DataTable({
     const isDesc = currentSort === `${key},desc`;
     if (isAsc) return <ArrowUp className="ml-1 size-3.5" />;
     if (isDesc) return <ArrowDown className="ml-1 size-3.5" />;
-    return <ArrowUpDown className="ml-1 size-3.5 text-muted-foreground/50" />;
+    return <ArrowsDownUp className="ml-1 size-3.5 text-muted-foreground/50" />;
   }
 
   function getSortTooltip(key: string): string | undefined {
@@ -196,7 +196,7 @@ export function DataTable({
                               className="h-8 w-8 p-0"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              <DotsThree className="h-4 w-4" />
                               <span className="sr-only">Open menu</span>
                             </Button>
                           </DropdownMenuTrigger>
@@ -219,7 +219,7 @@ export function DataTable({
                                   onEdit(row.id);
                                 }}
                               >
-                                <Pencil className="mr-2 h-4 w-4" />
+                                <PencilSimple className="mr-2 h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
                             )}
@@ -233,7 +233,7 @@ export function DataTable({
                                     setDeleteId(row.id);
                                   }}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <Trash className="mr-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
                               </>
@@ -248,7 +248,7 @@ export function DataTable({
                 <TableRow>
                   <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="h-48">
                     <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                      <Inbox className="h-10 w-10" />
+                      <Tray className="h-10 w-10" />
                       <p className="text-lg font-medium">No items found</p>
                       <Button variant="outline" size="sm" onClick={onCreateClick}>
                         Add new item to {entityTitle ?? entityName}

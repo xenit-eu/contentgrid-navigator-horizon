@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { UploadSimple, X } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
@@ -96,7 +96,7 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
         {previewUrl && isImage ? (
           <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
         ) : (
-          <Upload className="h-5 w-5 text-muted-foreground" />
+          <UploadSimple className="h-5 w-5 text-muted-foreground" />
         )}
         <div className="flex-1 min-w-0">
           <p className="truncate text-sm font-medium">{file.name}</p>
@@ -144,7 +144,7 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
             : "border-muted-foreground/25 hover:border-primary/50",
         )}
       >
-        <Upload className="h-8 w-8 text-muted-foreground" />
+        <UploadSimple className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
           {isDragActive ? "Drop the file here" : "Drag & drop a file, or click to select"}
         </p>

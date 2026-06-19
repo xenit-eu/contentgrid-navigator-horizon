@@ -1,5 +1,5 @@
+import { X } from "@phosphor-icons/react";
 import { format, parse } from "date-fns";
-import { X } from "lucide-react";
 import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";
 import { Label } from "../../primitives/label";

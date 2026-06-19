@@ -1,5 +1,5 @@
+import { Gear, SquaresFour, Users } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { LayoutDashboard, Settings, Users } from "lucide-react";
 import { expect, userEvent, within } from "storybook/test";
 import {
   Sidebar,
@@ -30,7 +30,7 @@ const NavItems = () => (
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton isActive>
-            <LayoutDashboard />
+            <SquaresFour />
             <span>Dashboard</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -42,7 +42,7 @@ const NavItems = () => (
         </SidebarMenuItem>
         <SidebarMenuItem>
           <SidebarMenuButton>
-            <Settings />
+            <Gear />
             <span>Settings</span>
           </SidebarMenuButton>
         </SidebarMenuItem>

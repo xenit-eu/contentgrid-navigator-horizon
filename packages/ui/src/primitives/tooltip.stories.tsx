@@ -1,5 +1,5 @@
+import { Info } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { InfoIcon } from "lucide-react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
@@ -23,7 +23,7 @@ export const Default: Story = {
       <Tooltip defaultOpen>
         <TooltipTrigger asChild>
           <Button variant="outline" size="icon" aria-label="Info">
-            <InfoIcon />
+            <Info />
           </Button>
         </TooltipTrigger>
         <TooltipContent>More information</TooltipContent>
@@ -83,7 +83,7 @@ export const WithInteraction: Story = {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="outline" size="icon" aria-label="Info">
-            <InfoIcon />
+            <Info />
           </Button>
         </TooltipTrigger>
         <TooltipContent>More information</TooltipContent>
