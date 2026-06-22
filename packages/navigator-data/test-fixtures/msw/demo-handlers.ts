@@ -1,6 +1,19 @@
 import { HttpResponse, http } from "msw";
+import type { HalFormsTemplateShape } from "@contentgrid/hal-forms/shape";
 import { invoiceProfileBody, invoiceProfileTemplates, sampleInvoiceItems } from "../hal/fixtures";
 import { createListHandler, createProfileHandler } from "./handlers";
+
+function resolveTemplateTargets(
+  baseUrl: string,
+  templates: Record<string, HalFormsTemplateShape>,
+): Record<string, HalFormsTemplateShape> {
+  return Object.fromEntries(
+    Object.entries(templates).map(([key, tmpl]) => [
+      key,
+      tmpl.target ? { ...tmpl, target: `${baseUrl}${tmpl.target}` } : tmpl,
+    ]),
+  );
+}
 
 /**
  * Stubbed ContentGrid HAL endpoint for the app boot smoke tests (HZN-4.7).
@@ -46,7 +59,7 @@ export function createDemoHandlers(baseUrl = "") {
     createProfileHandler({
       url: `${baseUrl}/profile/invoices`,
       body: invoiceProfileBody,
-      templates: invoiceProfileTemplates,
+      templates: resolveTemplateTargets(baseUrl, invoiceProfileTemplates),
     }),
     createListHandler({
       url: `${baseUrl}/invoices`,

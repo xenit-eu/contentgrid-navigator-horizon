@@ -27,7 +27,7 @@ describe("fetchHal", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    const { object } = await fetchHal(apiFetch, TEST_URL);
+    const { object } = await fetchHal(apiFetch, new Request(TEST_URL));
 
     expect(object).toBeInstanceOf(HalObject);
     expect((object.data as Record<string, unknown>).id).toBe("1");
@@ -45,7 +45,7 @@ describe("fetchHal", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    const { etag } = await fetchHal(apiFetch, TEST_URL);
+    const { etag } = await fetchHal(apiFetch, new Request(TEST_URL));
 
     expect(etag).toBe('"abc123"');
   });
@@ -58,7 +58,7 @@ describe("fetchHal", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    const { etag } = await fetchHal(apiFetch, TEST_URL);
+    const { etag } = await fetchHal(apiFetch, new Request(TEST_URL));
 
     expect(etag).toBeNull();
   });
@@ -78,7 +78,9 @@ describe("fetchHal", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    await expect(fetchHal(apiFetch, TEST_URL)).rejects.toBeInstanceOf(ProblemDetailError);
+    await expect(fetchHal(apiFetch, new Request(TEST_URL))).rejects.toBeInstanceOf(
+      ProblemDetailError,
+    );
   });
 
   it("throws ProblemDetailError on a 500 problem detail response", async () => {
@@ -92,7 +94,9 @@ describe("fetchHal", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    await expect(fetchHal(apiFetch, TEST_URL)).rejects.toBeInstanceOf(ProblemDetailError);
+    await expect(fetchHal(apiFetch, new Request(TEST_URL))).rejects.toBeInstanceOf(
+      ProblemDetailError,
+    );
   });
 });
 
@@ -114,7 +118,7 @@ describe("fetchHalSlice", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    const result = await fetchHalSlice(apiFetch, COLLECTION_URL);
+    const result = await fetchHalSlice(apiFetch, new Request(COLLECTION_URL));
 
     expect(result).toBeInstanceOf(HalSlice);
     expect(result.items).toHaveLength(2);
@@ -131,7 +135,7 @@ describe("fetchHalSlice", () => {
     );
 
     const apiFetch = createApiClient(noopSupplier);
-    await expect(fetchHalSlice(apiFetch, COLLECTION_URL)).rejects.toBeInstanceOf(
+    await expect(fetchHalSlice(apiFetch, new Request(COLLECTION_URL))).rejects.toBeInstanceOf(
       ProblemDetailError,
     );
   });

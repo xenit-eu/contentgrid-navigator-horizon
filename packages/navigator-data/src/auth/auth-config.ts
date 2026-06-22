@@ -48,6 +48,7 @@ async function fetchConfigJs(): Promise<unknown> {
   const text = await response.text();
   // Execute config.js which sets window.contentGridConfig. Requires 'unsafe-eval' in CSP.
   // In strict-CSP deployments, include config.js as a <script> tag in index.html instead.
+  // What is this???
   const fn = new Function(text + "\nreturn window.contentGridConfig;"); // NOSONAR: intentional — Liaison config.js pattern; requires 'unsafe-eval' in CSP
   return fn();
 }
