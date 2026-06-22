@@ -48,7 +48,7 @@ export const invoiceUpdateTemplate = {
 
 export const invoiceSearchTemplate = {
   method: "GET",
-  target: "/invoices{?number,status}",
+  target: "/invoices",
   title: "Search invoices",
   properties: [
     { name: "number", type: "text" },

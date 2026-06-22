@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blueprintRels, cgRels, datamodelRels } from "./contentgrid-rels";
+import { blueprintRels, cgRels } from "./contentgrid-rels";
 
 describe("cgRels", () => {
   it("entity resolves to the correct URI", () => {
@@ -31,7 +31,7 @@ describe("blueprintRels", () => {
   });
 
   it("targetEntity resolves to the correct URI", () => {
-    expect(blueprintRels.targetEntity.value).toBe(
+    expect(blueprintRels["target-entity"].value).toBe(
       "https://contentgrid.cloud/rels/blueprint/target-entity",
     );
   });
@@ -40,12 +40,5 @@ describe("blueprintRels", () => {
     expect(blueprintRels.constraint.value).toBe(
       "https://contentgrid.cloud/rels/blueprint/constraint",
     );
-  });
-});
-
-describe("datamodelRels", () => {
-  it("is exported as an empty object ready for extension", () => {
-    expect(datamodelRels).toBeDefined();
-    expect(Object.keys(datamodelRels)).toHaveLength(0);
   });
 });
