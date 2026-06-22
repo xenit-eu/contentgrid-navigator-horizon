@@ -1,5 +1,10 @@
+import {
+  EnvelopeIcon as Envelope,
+  GearIcon as Gear,
+  SignOutIcon as SignOut,
+  UserIcon as User,
+} from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { LogOut, Mail, Settings, User } from "lucide-react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import {
@@ -41,18 +46,18 @@ export const Default: Story = {
             Profile
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Settings />
+            <Gear />
             Settings
             <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Mail />
+            <Envelope />
             Notifications
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive">
-          <LogOut />
+          <SignOut />
           Sign out
           <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
@@ -99,12 +104,12 @@ export const WithInteraction: Story = {
           Profile
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Settings />
+          <Gear />
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive">
-          <LogOut />
+          <SignOut />
           Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

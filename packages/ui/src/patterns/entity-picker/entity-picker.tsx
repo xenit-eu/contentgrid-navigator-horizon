@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useState } from "react";
-import { Check, Search } from "lucide-react";
+import { CheckIcon as Check, MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
 import { cn, formatCellValue } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import {
@@ -270,7 +270,7 @@ export function EntityPicker({
         </DialogHeader>
 
         <div className="relative">
-          <Search className="text-muted-foreground absolute top-2.5 left-3 size-4" />
+          <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
           <Input
             placeholder={searchPlaceholder ?? "Search..."}
             value={searchQuery}

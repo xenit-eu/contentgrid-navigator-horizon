@@ -1,5 +1,5 @@
+import { CaretUpDownIcon as CaretUpDown } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ChevronsUpDown } from "lucide-react";
 import { expect, userEvent, within } from "storybook/test";
 import { Button } from "./button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
@@ -19,7 +19,7 @@ export const Default: Story = {
         <span className="text-sm font-semibold">Notifications</span>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="icon-sm">
-            <ChevronsUpDown className="size-4" />
+            <CaretUpDown className="size-4" />
             <span className="sr-only">Toggle</span>
           </Button>
         </CollapsibleTrigger>
@@ -40,7 +40,7 @@ export const OpenByDefault: Story = {
         <span className="text-sm font-semibold">Advanced options</span>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label="Toggle advanced options">
-            <ChevronsUpDown className="size-4" />
+            <CaretUpDown className="size-4" />
           </Button>
         </CollapsibleTrigger>
       </div>
@@ -61,7 +61,7 @@ export const WithInteraction: Story = {
         <span className="text-sm font-semibold">Filters</span>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label="Toggle filters">
-            <ChevronsUpDown className="size-4" />
+            <CaretUpDown className="size-4" />
           </Button>
         </CollapsibleTrigger>
       </div>

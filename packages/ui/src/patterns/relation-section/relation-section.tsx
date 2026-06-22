@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, ExternalLink, LinkIcon, Plus, Unlink } from "lucide-react";
+import {
+  ArrowSquareOutIcon as ArrowSquareOut,
+  CaretDownIcon as CaretDown,
+  LinkIcon as Link,
+  LinkBreakIcon as LinkBreak,
+  PlusIcon as Plus,
+} from "@phosphor-icons/react";
 import { cn, formatCellValue } from "../../lib/utils";
 import {
   AlertDialog,
@@ -177,7 +183,7 @@ export function RelationSection({
             {!isLoading && !error && !hasItems && (
               <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed py-10">
                 <div className="bg-muted rounded-full p-3">
-                  <LinkIcon className="text-muted-foreground size-6" />
+                  <Link className="text-muted-foreground size-6" />
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium">No {title.toLowerCase()} linked</p>
@@ -221,7 +227,7 @@ export function RelationSection({
                               className="text-muted-foreground hover:text-foreground"
                               onClick={() => onViewItem(item.id)}
                             >
-                              <ExternalLink className="size-4" />
+                              <ArrowSquareOut className="size-4" />
                               <span className="sr-only">View details</span>
                             </Button>
                           </TooltipTrigger>
@@ -237,7 +243,7 @@ export function RelationSection({
                               className="text-muted-foreground hover:text-destructive"
                               onClick={() => setUnlinkTarget({ id: item.id, label })}
                             >
-                              <Unlink className="size-4" />
+                              <LinkBreak className="size-4" />
                               <span className="sr-only">Unlink</span>
                             </Button>
                           </TooltipTrigger>
@@ -273,7 +279,7 @@ export function RelationSection({
             <CardContent>
               <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed py-10">
                 <div className="bg-muted rounded-full p-3">
-                  <LinkIcon className="text-muted-foreground size-6" />
+                  <Link className="text-muted-foreground size-6" />
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium">No {title.toLowerCase()} linked</p>
@@ -301,7 +307,7 @@ export function RelationSection({
                       {itemCount}
                     </Badge>
                   )}
-                  <ChevronDown
+                  <CaretDown
                     className={cn(
                       "chevron text-muted-foreground size-4 transition-transform duration-200",
                     )}
@@ -363,7 +369,7 @@ export function RelationSection({
                                         });
                                       }}
                                     >
-                                      <Unlink className="size-3" />
+                                      <LinkBreak className="size-3" />
                                       <span className="sr-only">Unlink</span>
                                     </Button>
                                   </TooltipTrigger>
