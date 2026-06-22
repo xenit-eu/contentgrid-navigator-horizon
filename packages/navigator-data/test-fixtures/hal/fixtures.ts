@@ -133,3 +133,52 @@ export const sampleInvoiceList: HalSliceShape<Record<string, unknown>> = {
     self: { href: "/invoices" },
   },
 };
+
+// ---- Relation templates for invoice ----
+
+export const invoiceSetSupplierTemplate = {
+  method: "PUT",
+  target: "/invoices/inv-001/supplier",
+  contentType: "text/uri-list",
+  title: "Set supplier",
+  properties: [{ name: "supplier", type: "url" }],
+} as const;
+
+export const invoiceAddLineItemTemplate = {
+  method: "POST",
+  target: "/invoices/inv-001/lineItems",
+  contentType: "text/uri-list",
+  title: "Add line item",
+  // options must be present so the codec treats this as multiValue (to-many)
+  properties: [{ name: "lineItem", type: "url", options: {} }],
+} as const;
+
+export const invoiceClearSupplierTemplate = {
+  method: "DELETE",
+  target: "/invoices/inv-001/supplier",
+  properties: [],
+} as const;
+
+export const invoiceRelationTemplates = {
+  "set-supplier": invoiceSetSupplierTemplate,
+  "add-lineItems": invoiceAddLineItemTemplate,
+  "clear-supplier": invoiceClearSupplierTemplate,
+} as const;
+
+const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
+
+/** Invoice item that has relation templates + cg:relation links + ETag wired */
+export const sampleInvoiceWithRelationTemplates: HalObjectShape<Record<string, unknown>> = {
+  ...sampleInvoice,
+  _links: {
+    ...sampleInvoice._links,
+    [CG_RELATION_REL]: [
+      { href: "/invoices/inv-001/supplier", name: "supplier" },
+      { href: "/invoices/inv-001/lineItems", name: "lineItems" },
+    ],
+  },
+  _templates: {
+    ...invoiceItemTemplates,
+    ...invoiceRelationTemplates,
+  },
+} as const;

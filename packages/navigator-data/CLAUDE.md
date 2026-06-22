@@ -82,7 +82,7 @@ entity name like `invoice`.
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
-  delete: `useDeleteEntityItem`
+  delete: `useDeleteEntityItem`, relation set/add/clear: `useRelationMutation`
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
 `useEntityItem` supports two modes — choose based on what you know at call time:
@@ -123,6 +123,9 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `profileEntity.searchEntityRequest(values)` → `Request` for `_templates.search`
 - `profileEntity.createEntityItemRequest(values)` → `Request` for `_templates.create-form`
 - `entityItem.editEntityRequest(values)` → `Request` for `_templates.default`
+- `entityItem.setRelationRequest(relationName, targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list)
+- `entityItem.addRelationRequest(relationName, targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line)
+- `entityItem.clearRelationRequest(relationName)` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
 
 **URL construction — never concatenate by hand:**
 
@@ -282,7 +285,7 @@ implemented. When building them, mirror the accessors below (all resolved from t
 Binary content (PUT to `cg:content`) has no HAL-FORMS template — see the **Content exception**
 section below.
 
-`EntityItem` currently ends with `//TODO support relations` — relation accessor additions go there.
+Relation accessors (`setRelationTemplate`, `addRelationTemplate`, `clearRelationTemplate`, `setRelationRequest`, `addRelationRequest`, `clearRelationRequest`) and the `useRelationMutation` hook are implemented.
 
 **2. Gate every operation on template/link presence — never assume permission.**
 
@@ -299,7 +302,9 @@ Rules:
 > `entityItem.defaultTemplate !== null → update is permitted (canUpdate getter)`.
 > `entityItem.deleteTemplate !== null → delete is permitted (canDelete getter)`.
 > Both `canUpdate` and `canDelete` are implemented as boolean getters on `EntityItem`.
-> `canCreate` and equivalent named booleans for relation operations are not yet implemented.
+> `canCreate` is not yet implemented.
+> `canSetRelation(name)`, `canAddRelation(name)`, `canClearRelation(name)` are implemented as methods on `EntityItem` (derived from the respective template presence).
+> 409 `integrity/blind-relation-overwrite` must be handled at the call site: unlink the existing relation first, then set the new one.
 
 **3. URLs only from links — never string-built.**
 

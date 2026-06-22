@@ -566,3 +566,192 @@ describe("EntityItem — deleteEntityItemRequest", () => {
     expect(() => item.deleteEntityItemRequest()).toThrow();
   });
 });
+
+// ─── Relation template tests ──────────────────────────────────────────────────
+
+const INVOICE_ITEM_URL = "https://api.example.com/invoices/inv-001";
+const SUPPLIER_URL = "https://api.example.com/suppliers/sup-001";
+const LINE_ITEM_URL_1 = "https://api.example.com/line-items/li-001";
+const LINE_ITEM_URL_2 = "https://api.example.com/line-items/li-002";
+
+const SET_SUPPLIER_TEMPLATE = {
+  method: "PUT",
+  target: `${INVOICE_ITEM_URL}/supplier`,
+  contentType: "text/uri-list",
+  properties: [{ name: "supplier", type: "url" }],
+};
+
+const ADD_LINE_ITEM_TEMPLATE = {
+  method: "POST",
+  target: `${INVOICE_ITEM_URL}/lineItems`,
+  contentType: "text/uri-list",
+  // options must be present to make multiValue = true (required for arrays via the codec)
+  properties: [{ name: "lineItem", type: "url", options: {} }],
+};
+
+const CLEAR_SUPPLIER_TEMPLATE = {
+  method: "DELETE",
+  target: `${INVOICE_ITEM_URL}/supplier`,
+  properties: [],
+};
+
+function makeEntityItemWithRelationTemplates(
+  etag: string | null = '"v1"',
+  templates: Record<string, unknown> = {},
+): EntityItem {
+  const hal = makeEntityItemHal({ id: "inv-001" }, {}, templates);
+  return new EntityItem(hal, makeProfileEntity(), etag);
+}
+
+describe("EntityItem — setRelationTemplate", () => {
+  it("returns null when set-supplier template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(item.setRelationTemplate("supplier")).toBeNull();
+  });
+
+  it("returns template when set-supplier template is present", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "set-supplier": SET_SUPPLIER_TEMPLATE,
+    });
+    expect(item.setRelationTemplate("supplier")).not.toBeNull();
+  });
+});
+
+describe("EntityItem — addRelationTemplate", () => {
+  it("returns null when add-lineItems template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(item.addRelationTemplate("lineItems")).toBeNull();
+  });
+
+  it("returns template when add-lineItems template is present", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "add-lineItems": ADD_LINE_ITEM_TEMPLATE,
+    });
+    expect(item.addRelationTemplate("lineItems")).not.toBeNull();
+  });
+});
+
+describe("EntityItem — clearRelationTemplate", () => {
+  it("returns null when clear-supplier template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(item.clearRelationTemplate("supplier")).toBeNull();
+  });
+
+  it("returns template when clear-supplier template is present", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "clear-supplier": CLEAR_SUPPLIER_TEMPLATE,
+    });
+    expect(item.clearRelationTemplate("supplier")).not.toBeNull();
+  });
+});
+
+describe("EntityItem — canSetRelation", () => {
+  it("returns true when set template is present", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "set-supplier": SET_SUPPLIER_TEMPLATE,
+    });
+    expect(item.canSetRelation("supplier")).toBe(true);
+  });
+
+  it("returns false when set template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(item.canSetRelation("supplier")).toBe(false);
+  });
+});
+
+describe("EntityItem — canAddRelation", () => {
+  it("returns true when add template is present", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "add-lineItems": ADD_LINE_ITEM_TEMPLATE,
+    });
+    expect(item.canAddRelation("lineItems")).toBe(true);
+  });
+
+  it("returns false when add template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(item.canAddRelation("lineItems")).toBe(false);
+  });
+});
+
+describe("EntityItem — canClearRelation", () => {
+  it("returns true when clear template is present", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "clear-supplier": CLEAR_SUPPLIER_TEMPLATE,
+    });
+    expect(item.canClearRelation("supplier")).toBe(true);
+  });
+
+  it("returns false when clear template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(item.canClearRelation("supplier")).toBe(false);
+  });
+});
+
+describe("EntityItem — setRelationRequest", () => {
+  it("returns a Request with PUT method and text/uri-list content-type", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "set-supplier": SET_SUPPLIER_TEMPLATE,
+    });
+    const req = item.setRelationRequest("supplier", SUPPLIER_URL);
+    expect(req).toBeInstanceOf(Request);
+    expect(req.method).toBe("PUT");
+    expect(req.headers.get("Content-Type")).toContain("text/uri-list");
+  });
+
+  it("request body contains the target href", async () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "set-supplier": SET_SUPPLIER_TEMPLATE,
+    });
+    const req = item.setRelationRequest("supplier", SUPPLIER_URL);
+    const body = await req.text();
+    expect(body).toContain(SUPPLIER_URL);
+  });
+
+  it("throws when set template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(() => item.setRelationRequest("supplier", SUPPLIER_URL)).toThrow();
+  });
+});
+
+describe("EntityItem — addRelationRequest", () => {
+  it("returns a Request with POST method and text/uri-list content-type", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "add-lineItems": ADD_LINE_ITEM_TEMPLATE,
+    });
+    const req = item.addRelationRequest("lineItems", [LINE_ITEM_URL_1, LINE_ITEM_URL_2]);
+    expect(req).toBeInstanceOf(Request);
+    expect(req.method).toBe("POST");
+    expect(req.headers.get("Content-Type")).toContain("text/uri-list");
+  });
+
+  it("request body contains all target hrefs (one per line)", async () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "add-lineItems": ADD_LINE_ITEM_TEMPLATE,
+    });
+    const req = item.addRelationRequest("lineItems", [LINE_ITEM_URL_1, LINE_ITEM_URL_2]);
+    const body = await req.text();
+    expect(body).toContain(LINE_ITEM_URL_1);
+    expect(body).toContain(LINE_ITEM_URL_2);
+  });
+
+  it("throws when add template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(() => item.addRelationRequest("lineItems", [LINE_ITEM_URL_1])).toThrow();
+  });
+});
+
+describe("EntityItem — clearRelationRequest", () => {
+  it("returns a Request with DELETE method", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {
+      "clear-supplier": CLEAR_SUPPLIER_TEMPLATE,
+    });
+    const req = item.clearRelationRequest("supplier");
+    expect(req).toBeInstanceOf(Request);
+    expect(req.method).toBe("DELETE");
+  });
+
+  it("throws when clear template is absent", () => {
+    const item = makeEntityItemWithRelationTemplates('"v1"', {});
+    expect(() => item.clearRelationRequest("supplier")).toThrow();
+  });
+});
