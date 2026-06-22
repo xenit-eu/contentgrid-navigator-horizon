@@ -55,7 +55,7 @@ function RecordTableRow({
         />
       )}
 
-      <div role="gridcell" className="flex items-center gap-[11px]">
+      <div role="cell" className="flex items-center gap-[11px]">
         <FileIcon type={fileType} size={30} />
         <div>
           <div className="text-[13px] font-medium text-foreground">{reference}</div>
@@ -63,14 +63,11 @@ function RecordTableRow({
         </div>
       </div>
 
-      <div role="gridcell" className="text-[13px] text-[#22384C] dark:text-[#C3D7E5] truncate">
+      <div role="cell" className="text-[13px] text-[#22384C] dark:text-[#C3D7E5] truncate">
         {supplier}
       </div>
 
-      <div
-        role="gridcell"
-        className="text-[13px] font-medium text-foreground text-right tabular-nums"
-      >
+      <div role="cell" className="text-[13px] font-medium text-foreground text-right tabular-nums">
         {total}
       </div>
     </div>
