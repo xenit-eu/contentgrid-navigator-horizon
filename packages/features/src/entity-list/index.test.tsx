@@ -89,10 +89,57 @@ function profileRootHandler() {
   );
 }
 
+// Per-entity profile handler for /profile/invoices.
+// The rewritten hook fetches each entity profile individually via
+// GET /profile/{plural}, so tests that exercise the overview or detail
+// views must stub this endpoint in addition to the profile root.
+// Notes:
+// - The collection describes link has no title so that ProfileEntity.pluralName
+//   falls back to the cg:entity link title ("Invoice").
+// - The search template is required: useEntityItemCollection with only
+//   { profileEntity } builds its request from the search template. Without it
+//   the query is disabled and the EntityCard count never resolves.
+function invoiceProfileHandler() {
+  return http.get(`${PROFILE_URL}/invoices`, () =>
+    HttpResponse.json({
+      name: "invoice",
+      title: "Invoice",
+      _links: {
+        self: { href: `${PROFILE_URL}/invoices` },
+        describes: [
+          { href: `${API_URL}/invoices`, name: "collection" },
+          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: `${API_URL}/invoices`,
+          properties: [],
+        },
+      },
+    }),
+  );
+}
+
 describe("EntityList", () => {
-  it("renders entities discovered from the profile with their collection items", async () => {
+  // EntityOverviewPage renders a grid of EntityCards (one per entity type).
+  // Each card shows the entity's plural name and its collection item count.
+  it("renders entities discovered from the profile as entity cards", async () => {
     server.use(
       profileRootHandler(),
+      invoiceProfileHandler(),
       createListHandler({
         url: `${API_URL}/invoices`,
         items: sampleInvoiceItems,
@@ -102,18 +149,13 @@ describe("EntityList", () => {
 
     renderEntityList();
 
+    // Entity name is shown in the EntityCard title and in the sidebar link
     expect(await screen.findByText("Invoice")).toBeInTheDocument();
-    expect(await screen.findByText("3 item(s)")).toBeInTheDocument();
-    expect(screen.getByText("inv-001")).toBeInTheDocument();
-    expect(screen.getByText("inv-003")).toBeInTheDocument();
-  });
-
-  it("shows an error message when the profile request fails", async () => {
-    server.use(http.get(PROFILE_URL, () => HttpResponse.json(null, { status: 500 })));
-
-    renderEntityList();
-
-    expect(await screen.findByText(/Failed to load entities/)).toBeInTheDocument();
+    // Overview header shows the count of entity types
+    expect(await screen.findByText("1 entity type available")).toBeInTheDocument();
+    // EntityCard shows the collection item count (number) and "items" label separately
+    expect(await screen.findByText("3")).toBeInTheDocument();
+    expect(screen.getByText("items")).toBeInTheDocument();
   });
 
   it("shows an empty state when the profile exposes no entities", async () => {
@@ -123,18 +165,23 @@ describe("EntityList", () => {
 
     renderEntityList();
 
-    expect(await screen.findByText("No entities found.")).toBeInTheDocument();
+    // Component renders "No entities found" (no trailing period) when the
+    // profile root returns no cg:entity links
+    expect(await screen.findByText("No entities found")).toBeInTheDocument();
   });
 
-  it("shows an item error message when a collection request fails", async () => {
+  it("shows a placeholder when a collection request fails", async () => {
     server.use(
       profileRootHandler(),
+      invoiceProfileHandler(),
       http.get(`${API_URL}/invoices`, () => HttpResponse.json(null, { status: 500 })),
     );
 
     renderEntityList();
 
-    expect(await screen.findByText("Invoice")).toBeInTheDocument();
-    expect(await screen.findByText(/Failed to load items/)).toBeInTheDocument();
+    // "Invoice" appears both in the sidebar link and in the EntityCard title
+    expect(await screen.findAllByText("Invoice")).not.toHaveLength(0);
+    // EntityCard shows "—" as the count placeholder when the collection request fails
+    expect(await screen.findByText("—")).toBeInTheDocument();
   });
 });

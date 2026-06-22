@@ -203,7 +203,9 @@ describe("ProfileInspector", () => {
     renderProfileInspector();
 
     expect(await screen.findByText("Profile Inspector")).toBeInTheDocument();
-    expect(await screen.findByText("2 profile(s) discovered")).toBeInTheDocument();
+    // Component renders "{loaded} of {total} profile(s) loaded" once all per-entity
+    // queries complete (the rewritten hook fetches each profile individually).
+    expect(await screen.findByText("2 of 2 profile(s) loaded")).toBeInTheDocument();
     expect(screen.getByText("Invoice")).toBeInTheDocument();
     expect(screen.getByText("Customer")).toBeInTheDocument();
   });
@@ -215,17 +217,13 @@ describe("ProfileInspector", () => {
 
     expect(await screen.findByText("Invoice")).toBeInTheDocument();
 
-    // Attributes accordion should show count
-    const attributesAccordion = screen.getByText("Attributes");
-    expect(attributesAccordion.parentElement).toHaveTextContent("2");
-  });
-
-  it("shows an error message when the profile request fails", async () => {
-    server.use(http.get(PROFILE_URL, () => HttpResponse.json(null, { status: 500 })));
-
-    renderProfileInspector();
-
-    expect(await screen.findByText(/Failed to load profiles/)).toBeInTheDocument();
+    // Each loaded ProfileCard has its own "Attributes" collapsible trigger, so
+    // there is one "Attributes" label per profile (2 profiles → 2 elements).
+    // Use getAllByText and assert on the first one (Invoice card).
+    const attributesAccordions = screen.getAllByText("Attributes");
+    expect(attributesAccordions.length).toBeGreaterThanOrEqual(1);
+    // The Invoice card has 2 attributes (id + invoice_number)
+    expect(attributesAccordions[0].parentElement).toHaveTextContent("2");
   });
 
   it("shows an empty state when no profiles are found", async () => {
@@ -236,6 +234,17 @@ describe("ProfileInspector", () => {
     renderProfileInspector();
 
     expect(await screen.findByText("No profiles found.")).toBeInTheDocument();
+  });
+
+  it("shows an error message when the profile root request fails", async () => {
+    server.use(http.get(PROFILE_URL, () => HttpResponse.json(null, { status: 500 })));
+
+    renderProfileInspector();
+
+    // ProfileInspector now watches the root query directly so it can surface
+    // root-level errors as "Failed to load profiles: ..." rather than silently
+    // falling through to "No profiles found."
+    expect(await screen.findByText(/Failed to load profiles/)).toBeInTheDocument();
   });
 
   it("shows loading state while fetching profiles", () => {

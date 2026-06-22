@@ -52,7 +52,10 @@ export function profileRootQuery(
     queryFn: () => getProfileRoot(apiFetch, profileUrl),
     staleTime: PROFILE_STALE_TIME,
     gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer than stale time
-    retry: 3, // Retry failed requests
+    // Retry count is left to the QueryClient default (3 in production, overridden
+    // to false in tests via QueryClient({ defaultOptions: { queries: { retry: false } } })).
+    // Do not bake in retry: 3 here — that would override the QueryClient default and
+    // prevent tests from controlling retry behaviour.
     ...override,
   });
 }

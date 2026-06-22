@@ -1,5 +1,11 @@
 import { type ReactNode, useState } from "react";
-import { type ProfileEntity, useProfileEntities } from "@contentgrid/navigator-data";
+import { useQuery } from "@tanstack/react-query";
+import {
+  type ProfileEntity,
+  profileRootQuery,
+  useNavigatorData,
+  useProfileEntities,
+} from "@contentgrid/navigator-data";
 import {
   Badge,
   Card,
@@ -13,26 +19,34 @@ import {
 } from "@contentgrid/ui";
 
 export function ProfileInspector() {
+  const { apiFetch, profileUrl } = useNavigatorData();
+
+  // Watch the profile root query so we can distinguish "root still loading"
+  // from "root loaded with no entities" — both produce an empty profileResults
+  // array from useProfileEntities.
+  const rootQuery = useQuery(profileRootQuery(apiFetch, profileUrl));
   const profileResults = useProfileEntities();
 
-  // Check if any profiles are still loading
-  const isLoading = profileResults.some((result) => result.isPending);
-  const hasErrors = profileResults.some((result) => result.isError);
+  // Check if any profiles are still loading (root or per-entity)
+  const isLoading = rootQuery.isPending || profileResults.some((result) => result.isPending);
+  const hasErrors = rootQuery.isError || profileResults.some((result) => result.isError);
 
   // Extract successfully loaded profiles
   const loadedProfiles = profileResults
     .filter((result) => result.data)
     .map((result) => result.data!);
 
-  // Extract errors
-  const errors = profileResults.filter((result) => result.isError).map((result) => result.error);
+  // Extract errors (root error first, then per-entity errors)
+  const errors: Error[] = [];
+  if (rootQuery.isError) errors.push(rootQuery.error);
+  errors.push(...profileResults.filter((result) => result.isError).map((result) => result.error));
 
-  // Show loading state if any profile is still loading
+  // Show loading state while root or any per-entity profile is still fetching
   if (isLoading && loadedProfiles.length === 0) {
     return <ProfileInspectorMessage>Loading profiles…</ProfileInspectorMessage>;
   }
 
-  // Show errors if all failed
+  // Show errors if all failed (root failed, or root succeeded but all entities failed)
   if (hasErrors && loadedProfiles.length === 0) {
     return (
       <ProfileInspectorMessage>
