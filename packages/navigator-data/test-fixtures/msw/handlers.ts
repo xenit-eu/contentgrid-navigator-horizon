@@ -180,3 +180,18 @@ export function createProblemHandler(config: ProblemHandlerConfig): HttpHandler 
     });
   });
 }
+
+// ---- Relation add handler (POST text/uri-list -> 204) ----
+
+export interface RelationAddHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+}
+
+export function createRelationAddHandler(config: RelationAddHandlerConfig): HttpHandler {
+  const { url, status = 204 } = config;
+  return http.post(url, () => {
+    return new HttpResponse(null, { status });
+  });
+}

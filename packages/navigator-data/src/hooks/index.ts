@@ -25,3 +25,9 @@ export { useUpdateEntityItem } from "./use-update-entity";
 export type { UseUpdateEntityItemOptions } from "./use-update-entity";
 export { useDeleteEntityItem } from "./use-delete-entity";
 export type { UseDeleteEntityItemOptions } from "./use-delete-entity";
+export { useRelationMutation } from "./use-relation-mutation";
+export type {
+  UseRelationMutationOptions,
+  RelationMutationVariables,
+  RelationOp,
+} from "./use-relation-mutation";
