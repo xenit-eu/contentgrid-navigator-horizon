@@ -13,15 +13,10 @@ const STATUS_PROP: SearchProperty = {
 };
 const PREFIX_PROP: SearchProperty = { name: "number~prefix", prompt: "Number", type: "string" };
 const EXACT_PROP: SearchProperty = { name: "ref~exact-match", prompt: "Ref", type: "string" };
-const DATE_GT_PROP: SearchProperty = {
-  name: "issued_date~greater-than",
-  prompt: "Issued date",
-  type: "date",
-};
-const DATE_LT_PROP: SearchProperty = {
-  name: "issued_date~less-than",
-  prompt: "Issued date",
-  type: "date",
+const FULL_TEXT_PROP: SearchProperty = {
+  name: "notes~full-text",
+  prompt: "Notes",
+  type: "string",
 };
 const RANGE_FROM_PROP: SearchProperty = { name: "amount.~from", prompt: "Amount", type: "string" };
 const RANGE_UNTIL_PROP: SearchProperty = {
@@ -30,14 +25,21 @@ const RANGE_UNTIL_PROP: SearchProperty = {
   type: "string",
 };
 
+function issuedDateProp(op: string): SearchProperty {
+  return { name: `issued_date~${op}`, prompt: "Issued date", type: "date" };
+}
+
 const ALL_PROPS = [
   STATUS_PROP,
   PREFIX_PROP,
   EXACT_PROP,
-  DATE_GT_PROP,
-  DATE_LT_PROP,
+  issuedDateProp("greater-than"),
+  issuedDateProp("greater-than-or-equal"),
+  issuedDateProp("less-than"),
+  issuedDateProp("less-than-or-equal"),
   RANGE_FROM_PROP,
   RANGE_UNTIL_PROP,
+  FULL_TEXT_PROP,
 ];
 
 function renderChips(
@@ -124,9 +126,28 @@ describe("FilterChips — operator display (IMPLICIT_OPS suppressed)", () => {
     expect(screen.getByText("after")).toBeInTheDocument();
   });
 
+  it("shows 'from' operator label for greater-than-or-equal date filter", () => {
+    renderChips({ "issued_date~greater-than-or-equal": "2024-01-01T00:00:00Z" }, [
+      issuedDateProp("greater-than-or-equal"),
+    ]);
+    expect(screen.getByText("from")).toBeInTheDocument();
+  });
+
   it("shows 'before' operator label for less-than date filter", () => {
     renderChips({ "issued_date~less-than": "2024-12-31T00:00:00Z" });
     expect(screen.getByText("before")).toBeInTheDocument();
+  });
+
+  it("shows 'until' operator label for less-than-or-equal date filter", () => {
+    renderChips({ "issued_date~less-than-or-equal": "2024-12-31T00:00:00Z" }, [
+      issuedDateProp("less-than-or-equal"),
+    ]);
+    expect(screen.getByText("until")).toBeInTheDocument();
+  });
+
+  it("shows 'contains' operator label for full-text filter", () => {
+    renderChips({ "notes~full-text": "invoice" }, [FULL_TEXT_PROP]);
+    expect(screen.getByText("contains")).toBeInTheDocument();
   });
 
   it("shows 'from' operator label for range-pair ~from filter", () => {
@@ -144,6 +165,22 @@ describe("FilterChips — date value display", () => {
   it("strips ISO timestamp suffix for date-type properties", () => {
     renderChips({ "issued_date~greater-than": "2024-01-01T00:00:00Z" });
     expect(screen.getByText(/2024-01-01/)).toBeInTheDocument();
+    expect(screen.queryByText(/T00:00:00/)).not.toBeInTheDocument();
+  });
+
+  it("strips ISO timestamp suffix for greater-than-or-equal date filter", () => {
+    renderChips({ "issued_date~greater-than-or-equal": "2024-03-15T00:00:00Z" }, [
+      issuedDateProp("greater-than-or-equal"),
+    ]);
+    expect(screen.getByText(/2024-03-15/)).toBeInTheDocument();
+    expect(screen.queryByText(/T00:00:00/)).not.toBeInTheDocument();
+  });
+
+  it("strips ISO timestamp suffix for less-than-or-equal date filter", () => {
+    renderChips({ "issued_date~less-than-or-equal": "2024-06-30T00:00:00Z" }, [
+      issuedDateProp("less-than-or-equal"),
+    ]);
+    expect(screen.getByText(/2024-06-30/)).toBeInTheDocument();
     expect(screen.queryByText(/T00:00:00/)).not.toBeInTheDocument();
   });
 
@@ -180,7 +217,7 @@ describe("FilterChips — dismiss button", () => {
     renderChips({ "issued_date~greater-than": "2024-01-01T00:00:00Z" }, ALL_PROPS, {
       onRemoveFilter,
     });
-    const btn = screen.getByRole("button", { name: /remove issued date filter/i });
+    const btn = screen.getByRole("button", { name: /remove issued date after filter/i });
     await user.click(btn);
     expect(onRemoveFilter).toHaveBeenCalledWith("issued_date~greater-than");
   });
@@ -188,6 +225,19 @@ describe("FilterChips — dismiss button", () => {
   it("aria-label on dismiss button includes the field label", () => {
     renderChips({ status: "paid" });
     expect(screen.getByRole("button", { name: /remove status filter/i })).toBeInTheDocument();
+  });
+
+  it("aria-labels are unique when two date chips share the same field", () => {
+    renderChips({
+      "issued_date~greater-than": "2024-01-01T00:00:00Z",
+      "issued_date~less-than": "2024-12-31T00:00:00Z",
+    });
+    expect(
+      screen.getByRole("button", { name: /remove issued date after filter/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /remove issued date before filter/i }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -225,5 +275,35 @@ describe("FilterChips — unknown filter key (no matching SearchProperty)", () =
   it("renders the raw value for an unknown filter key", () => {
     renderChips({ unknown_field: "somevalue" }, []);
     expect(screen.getByText(/somevalue/)).toBeInTheDocument();
+  });
+});
+
+describe("FilterChips — operator not in SEARCH_TYPE_LABELS (graceful fallback)", () => {
+  it("displays the raw operator string when the op is not in SEARCH_TYPE_LABELS", () => {
+    const prop: SearchProperty = { name: "notes~soundex", prompt: "Notes", type: "string" };
+    renderChips({ "notes~soundex": "invoice" }, [prop]);
+    // Falls back to SEARCH_TYPE_LABELS[op] ?? op, so raw "soundex" is shown
+    expect(screen.getByText("soundex")).toBeInTheDocument();
+  });
+
+  it("does NOT crash or hide the chip value for an unknown operator", () => {
+    const prop: SearchProperty = { name: "ref~future-op", prompt: "Ref", type: "string" };
+    renderChips({ "ref~future-op": "X42" }, [prop]);
+    expect(screen.getByText(/X42/)).toBeInTheDocument();
+  });
+});
+
+describe("FilterChips — date stripping for range-pair props typed as non-date", () => {
+  it("strips ISO timestamp suffix from .~from prop even when type is 'string'", () => {
+    // .~from suffix triggers name-based date detection regardless of the declared type
+    const prop: SearchProperty = { name: "budget.~from", prompt: "Budget", type: "string" };
+    renderChips({ "budget.~from": "2024-01-01T00:00:00Z" }, [prop]);
+    expect(screen.getByText(/2024-01-01/)).toBeInTheDocument();
+    expect(screen.queryByText(/T00:00:00/)).not.toBeInTheDocument();
+  });
+
+  it("does NOT strip a plain ISO-like string from a true plain-string prop", () => {
+    renderChips({ status: "2024-01-01T00:00:00Z" });
+    expect(screen.getByText(/2024-01-01T00:00:00Z/)).toBeInTheDocument();
   });
 });

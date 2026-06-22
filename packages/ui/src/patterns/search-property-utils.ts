@@ -52,10 +52,11 @@ export const SEARCH_TYPE_LABELS: Record<string, string> = {
   prefix: "prefix",
   "prefix-match": "prefix",
   "exact-match": "exact",
+  "full-text": "contains",
   "greater-than": "after",
-  "greater-than-or-equal-to": "from",
+  "greater-than-or-equal": "from",
   "less-than": "before",
-  "less-than-or-equal-to": "until",
+  "less-than-or-equal": "until",
   // Range-pair operators (dot-prefixed, used with `field.~op` key format)
   "~from": "from",
   "~until": "until",
@@ -69,9 +70,9 @@ export const IMPLICIT_OPS = new Set(["prefix", "prefix-match", "exact-match"]);
 const DATE_FIELD_TYPES = new Set(["date", "datetime", "datetime-local", "time"]);
 const DATE_SUFFIXES = [
   "~greater-than",
-  "~greater-than-or-equal-to",
+  "~greater-than-or-equal",
   "~less-than",
-  "~less-than-or-equal-to",
+  "~less-than-or-equal",
   ".~from",
   ".~until",
 ];

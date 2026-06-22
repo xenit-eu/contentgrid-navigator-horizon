@@ -51,8 +51,14 @@ export const invoiceSearchTemplate = {
   target: "/invoices",
   title: "Search invoices",
   properties: [
-    { name: "number", type: "text" },
     { name: "status", type: "text" },
+    { name: "number~prefix-match", type: "text" },
+    { name: "date~greater-than", type: "date" },
+    { name: "date~less-than", type: "date" },
+    { name: "date~greater-than-or-equal", type: "date" },
+    { name: "date~less-than-or-equal", type: "date" },
+    { name: "total.~from", type: "number" },
+    { name: "total.~until", type: "number" },
   ],
 } as const;
 

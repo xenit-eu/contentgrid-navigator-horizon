@@ -61,7 +61,7 @@ export function FilterChips({
             type="button"
             className="ml-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             onClick={() => onRemoveFilter(key)}
-            aria-label={`Remove ${label} filter`}
+            aria-label={`Remove ${label}${displayOp ? ` ${displayOp}` : ""} filter`}
           >
             <X className="h-2.5 w-2.5" />
           </button>

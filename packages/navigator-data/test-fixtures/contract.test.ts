@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   invoiceCreateTemplate,
+  invoiceSearchTemplate,
   invoiceUpdateTemplate,
   sampleInvoice,
   sampleInvoiceList,
@@ -239,6 +240,34 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
         expect(result.data.method).toBe("POST");
         expect(Array.isArray(result.data.properties)).toBe(true);
         expect(result.data.properties.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe("HAL-Forms search template shape", () => {
+    it("invoiceSearchTemplate matches HalFormsTemplateSchema", () => {
+      const result = HalFormsTemplateSchema.safeParse(invoiceSearchTemplate);
+      expect(
+        result.success,
+        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+      ).toBe(true);
+    });
+
+    it("invoiceSearchTemplate covers all documented blueprint:search-param operator names", () => {
+      const result = HalFormsTemplateSchema.safeParse(invoiceSearchTemplate);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const names = result.data.properties.map((p) => p.name);
+        expect(names).toContain("number~prefix-match");
+        expect(names).toContain("date~greater-than");
+        expect(names).toContain("date~less-than");
+        expect(names).toContain("date~greater-than-or-equal");
+        expect(names).toContain("date~less-than-or-equal");
+        expect(names).toContain("total.~from");
+        expect(names).toContain("total.~until");
+        // Guard: the -to suffix is not part of the documented vocabulary
+        expect(names).not.toContain("date~greater-than-or-equal-to");
+        expect(names).not.toContain("date~less-than-or-equal-to");
       }
     });
   });
