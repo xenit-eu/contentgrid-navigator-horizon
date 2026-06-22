@@ -755,3 +755,163 @@ describe("EntityItem — clearRelationRequest", () => {
     expect(() => item.clearRelationRequest("supplier")).toThrow();
   });
 });
+
+// ─── Content link accessor tests ──────────────────────────────────────────────
+
+const CONTENT_URL = "https://api.example.com/invoices/inv-001/document";
+
+function makeEntityItemWithContentLink(etag: string | null = '"v1"'): EntityItem {
+  const hal = makeEntityItemHal(
+    {
+      id: "inv-001",
+      document: { filename: "file.pdf", mimetype: "application/pdf", length: 1024 },
+    },
+    {
+      [CG_CONTENT_REL]: [{ href: CONTENT_URL, name: "document" }],
+    },
+  );
+  return new EntityItem(hal, makeProfileEntity(), etag);
+}
+
+function makeEntityItemWithoutContentLink(etag: string | null = '"v1"'): EntityItem {
+  const hal = makeEntityItemHal({ id: "inv-001" });
+  return new EntityItem(hal, makeProfileEntity(), etag);
+}
+
+describe("EntityItem — contentLink", () => {
+  it("returns the link when the cg:content link is present", () => {
+    const item = makeEntityItemWithContentLink();
+    const link = item.contentLink("document");
+    expect(link).not.toBeNull();
+    expect(link!.href).toBe(CONTENT_URL);
+  });
+
+  it("returns null when the cg:content link is absent", () => {
+    const item = makeEntityItemWithoutContentLink();
+    expect(item.contentLink("document")).toBeNull();
+  });
+
+  it("returns null for unknown attribute name", () => {
+    const item = makeEntityItemWithContentLink();
+    expect(item.contentLink("unknown-attr")).toBeNull();
+  });
+});
+
+describe("EntityItem — canUploadContent", () => {
+  it("returns true when the cg:content link is present", () => {
+    const item = makeEntityItemWithContentLink();
+    expect(item.canUploadContent("document")).toBe(true);
+  });
+
+  it("returns false when the cg:content link is absent", () => {
+    const item = makeEntityItemWithoutContentLink();
+    expect(item.canUploadContent("document")).toBe(false);
+  });
+});
+
+describe("EntityItem — uploadContentRequest", () => {
+  it("returns a Request with PUT method pointing to the content link href", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file);
+    expect(req).toBeInstanceOf(Request);
+    expect(req.method).toBe("PUT");
+    expect(req.url).toBe(CONTENT_URL);
+  });
+
+  it("uses file.type as Content-Type", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file);
+    expect(req.headers.get("Content-Type")).toBe("text/plain");
+  });
+
+  it("uses opts.contentType when provided (overrides file.type)", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file, { contentType: "application/pdf" });
+    expect(req.headers.get("Content-Type")).toBe("application/pdf");
+  });
+
+  it("falls back to application/octet-stream for Blob without type", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const blob = new Blob(["data"]); // no type
+    const req = item.uploadContentRequest("document", blob);
+    expect(req.headers.get("Content-Type")).toBe("application/octet-stream");
+  });
+
+  it("sets Content-Disposition when filename is available from File", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file);
+    expect(req.headers.get("Content-Disposition")).toContain("hello.txt");
+    expect(req.headers.get("Content-Disposition")).toContain("attachment");
+  });
+
+  it("uses opts.filename when provided", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const blob = new Blob(["data"]);
+    const req = item.uploadContentRequest("document", blob, { filename: "override.pdf" });
+    expect(req.headers.get("Content-Disposition")).toContain("override.pdf");
+  });
+
+  it("omits Content-Disposition when no filename is available (Blob without opts.filename)", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const blob = new Blob(["data"]);
+    const req = item.uploadContentRequest("document", blob);
+    expect(req.headers.get("Content-Disposition")).toBeNull();
+  });
+
+  it("attaches If-Match when etag is set", () => {
+    const item = makeEntityItemWithContentLink('"v1"');
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file);
+    expect(req.headers.get("If-Match")).toBe('"v1"');
+  });
+
+  it("omits If-Match when etag is null", () => {
+    const item = makeEntityItemWithContentLink(null);
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file);
+    expect(req.headers.get("If-Match")).toBeNull();
+  });
+
+  it("throws when the cg:content link is absent", () => {
+    const item = makeEntityItemWithoutContentLink();
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    expect(() => item.uploadContentRequest("document", file)).toThrow();
+  });
+});
+
+describe("EntityItem — downloadContentRequest", () => {
+  it("returns a Request with GET method pointing to the content link href", () => {
+    const item = makeEntityItemWithContentLink();
+    const req = item.downloadContentRequest("document");
+    expect(req).toBeInstanceOf(Request);
+    expect(req.method).toBe("GET");
+    expect(req.url).toBe(CONTENT_URL);
+  });
+
+  it("omits Range header when no opts.range provided", () => {
+    const item = makeEntityItemWithContentLink();
+    const req = item.downloadContentRequest("document");
+    expect(req.headers.get("Range")).toBeNull();
+  });
+
+  it("adds Range header when opts.range is provided (start and end)", () => {
+    const item = makeEntityItemWithContentLink();
+    const req = item.downloadContentRequest("document", { range: { start: 0, end: 99 } });
+    expect(req.headers.get("Range")).toBe("bytes=0-99");
+  });
+
+  it("adds Range header with open end when only start is provided", () => {
+    const item = makeEntityItemWithContentLink();
+    const req = item.downloadContentRequest("document", { range: { start: 512 } });
+    expect(req.headers.get("Range")).toBe("bytes=512-");
+  });
+
+  it("throws when the cg:content link is absent", () => {
+    const item = makeEntityItemWithoutContentLink();
+    expect(() => item.downloadContentRequest("document")).toThrow();
+  });
+});

@@ -31,3 +31,11 @@ export type {
   RelationMutationVariables,
   RelationOp,
 } from "./use-relation-mutation";
+export { useUploadContent, useDownloadContent } from "./use-content";
+export type {
+  UseUploadContentOptions,
+  UploadContentVariables,
+  UseDownloadContentOptions,
+  DownloadContentVariables,
+  ContentDownload,
+} from "./use-content";

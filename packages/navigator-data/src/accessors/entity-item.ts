@@ -6,7 +6,7 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels } from "../api";
+import { cgRels, contentDispositionAttachment } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
@@ -407,6 +407,133 @@ export class EntityItem {
     }
     const codec = halFormCodecs.requireCodecFor(template);
     return codec.encode(createValues(template));
+  }
+
+  // ========================================
+  // Content Link Accessors (exception: no HAL-FORMS template)
+  // ========================================
+
+  /**
+   * Resolves the `cg:content` link for a named content attribute.
+   *
+   * The presence of this link is the ABAC gate for binary content operations —
+   * the platform omits it when the current user lacks permission to access the content.
+   * Returns `null` when the link is absent.
+   *
+   * @param attributeName - The name of the content attribute
+   * @returns The resolved Link, or null if absent
+   */
+  public contentLink(attributeName: string): Link | null {
+    return this.halItem.links.findLink(cgRels.content, attributeName) ?? null;
+  }
+
+  /**
+   * Whether the current user is permitted to upload (PUT) binary content for this attribute.
+   *
+   * Derived from `contentLink` presence — the platform omits the link when the
+   * ABAC policy denies content access for this item/user combination.
+   *
+   * @param attributeName - The name of the content attribute
+   * @returns true when upload is permitted
+   */
+  public canUploadContent(attributeName: string): boolean {
+    return this.contentLink(attributeName) !== null;
+  }
+
+  /**
+   * Builds a PUT Request for uploading binary content to a content attribute.
+   *
+   * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
+   * has no `_templates` entry, so the Request is constructed directly from the
+   * `cg:content` link href. The link presence is the ABAC gate.
+   *
+   * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
+   * `contentFetch` omits the `Accept: application/hal+json` header.
+   *
+   * If-Match is attached only when an ETag is available (omitted when null).
+   *
+   * @param attributeName - The name of the content attribute
+   * @param file - The file to upload
+   * @param opts - Optional overrides for Content-Type and filename
+   * @returns Request ready to be sent with contentFetch
+   * @throws Error if the cg:content link is absent (ABAC deny)
+   */
+  public uploadContentRequest(
+    attributeName: string,
+    file: Blob | File,
+    opts?: { contentType?: string; filename?: string },
+  ): Request {
+    const link = this.contentLink(attributeName);
+    if (link === null) {
+      throw new Error(
+        `Content upload not permitted for attribute '${attributeName}': cg:content link absent`,
+      );
+    }
+
+    const contentType =
+      opts?.contentType ??
+      (file instanceof File && file.type ? file.type : "application/octet-stream");
+
+    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
+
+    const headers: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+
+    if (filename) {
+      headers["Content-Disposition"] = contentDispositionAttachment(filename);
+    }
+
+    if (this.etag !== null) {
+      headers["If-Match"] = this.etag;
+    }
+
+    return new Request(link.href, {
+      method: "PUT",
+      body: file,
+      headers,
+    });
+  }
+
+  /**
+   * Builds a GET Request for downloading binary content from a content attribute.
+   *
+   * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
+   * has no `_templates` entry, so the Request is constructed directly from the
+   * `cg:content` link href. The link presence is the ABAC gate.
+   *
+   * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
+   * `contentFetch` omits the `Accept: application/hal+json` header.
+   *
+   * Optionally adds a `Range` header for partial content requests (206 Partial Content).
+   *
+   * @param attributeName - The name of the content attribute
+   * @param opts - Optional range for partial downloads
+   * @returns Request ready to be sent with contentFetch
+   * @throws Error if the cg:content link is absent (ABAC deny)
+   */
+  public downloadContentRequest(
+    attributeName: string,
+    opts?: { range?: { start: number; end?: number } },
+  ): Request {
+    const link = this.contentLink(attributeName);
+    if (link === null) {
+      throw new Error(
+        `Content download not permitted for attribute '${attributeName}': cg:content link absent`,
+      );
+    }
+
+    const headers: Record<string, string> = {};
+
+    if (opts?.range !== undefined) {
+      const { start, end } = opts.range;
+      headers["Range"] = end !== undefined ? `bytes=${start}-${end}` : `bytes=${start}-`;
+    }
+
+    return new Request(link.href, {
+      method: "GET",
+      headers,
+    });
   }
 }
 

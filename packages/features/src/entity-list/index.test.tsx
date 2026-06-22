@@ -17,6 +17,7 @@ import {
   NavigatorDataProvider,
   createApiClient,
   entitySearchStateValidator,
+  createContentClient,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
@@ -42,11 +43,16 @@ function createTestRouter(initialEntry = "/") {
     defaultOptions: { queries: { retry: false } },
   });
   const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
 
   function Providers({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          profileUrl={PROFILE_URL}
+        >
           {children}
         </NavigatorDataProvider>
       </QueryClientProvider>
