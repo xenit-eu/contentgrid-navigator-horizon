@@ -98,14 +98,17 @@ export function useProfileEntity(filter: ProfileFilter, options?: UseProfileEnti
     return false;
   });
 
-  // Fetch the specific profile using the same query pattern as useProfileEntities
-  // Only fetch if we found the link in the profile root
+  // Fetch the specific profile using the same query pattern as useProfileEntities.
+  // Only fetch if we found the link in the profile root. When entityLink is undefined
+  // (profile root not yet loaded or entity not found), provide a placeholder queryKey
+  // so TanStack Query does not throw during key computation on initial renders.
   return useQuery({
-    ...ProfileEntity.profileByLinkQuery(
-      apiFetch,
-      entityLink!, // TypeScript: entityLink is guaranteed to exist when enabled=true
-      options?.queryOptionsOverride,
-    ),
+    ...(entityLink
+      ? ProfileEntity.profileByLinkQuery(apiFetch, entityLink, options?.queryOptionsOverride)
+      : {
+          queryKey: ["ProfileEntity", null, null] as const,
+          queryFn: () => Promise.resolve(null as unknown as ProfileEntity),
+        }),
     enabled: !!entityLink,
   });
 }

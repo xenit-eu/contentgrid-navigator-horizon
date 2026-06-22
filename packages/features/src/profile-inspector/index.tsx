@@ -1,6 +1,8 @@
 import { type ReactNode, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  type CreateFormRelationToManyProperty,
+  type CreateFormRelationToOneProperty,
   type ProfileEntity,
   profileRootQuery,
   useNavigatorData,
@@ -496,51 +498,11 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                       </h5>
                       <div className="space-y-2">
                         {profile.createTemplate.toOneRelationProperties.map((prop) => (
-                          <div key={prop.property.name} className="rounded border bg-muted p-2">
-                            <div className="mb-1 flex items-center gap-2">
-                              <span className="font-mono text-xs font-medium">
-                                {prop.property.name}
-                              </span>
-                              <Badge variant="default" className="text-[10px]">
-                                to-one
-                              </Badge>
-                              {prop.isRequired && (
-                                <Badge variant="destructive" className="text-[10px]">
-                                  required
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-muted-foreground space-y-0.5 text-[10px]">
-                              <p>Prompt: {prop.property.prompt}</p>
-                              {prop.profileRelation && (
-                                <>
-                                  <p>Relation: {prop.profileRelation.title}</p>
-                                  <p>
-                                    Cardinality:{" "}
-                                    {prop.profileRelation.isManyToMany
-                                      ? "many-to-many"
-                                      : prop.profileRelation.isManyToOne
-                                        ? "many-to-one"
-                                        : prop.profileRelation.isOneToMany
-                                          ? "one-to-many"
-                                          : "one-to-one"}
-                                  </p>
-                                  {prop.profileRelation.description && (
-                                    <p>Description: {prop.profileRelation.description}</p>
-                                  )}
-                                </>
-                              )}
-                              {prop.targetProfile && (
-                                <>
-                                  <p>Target Entity: {prop.targetProfile.title}</p>
-                                  <p className="font-mono">
-                                    Target Profile: {prop.targetProfile.link.href}
-                                  </p>
-                                </>
-                              )}
-                              <p className="font-mono">Collection: {prop.targetCollectionHref}</p>
-                            </div>
-                          </div>
+                          <RelationPropertyCard
+                            key={prop.property.name}
+                            prop={prop}
+                            kind="to-one"
+                          />
                         ))}
                       </div>
                     </div>
@@ -553,46 +515,11 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                       </h5>
                       <div className="space-y-2">
                         {profile.createTemplate.toManyRelationProperties.map((prop) => (
-                          <div key={prop.property.name} className="rounded border bg-muted p-2">
-                            <div className="mb-1 flex items-center gap-2">
-                              <span className="font-mono text-xs font-medium">
-                                {prop.property.name}
-                              </span>
-                              <Badge variant="secondary" className="text-[10px]">
-                                to-many
-                              </Badge>
-                            </div>
-                            <div className="text-muted-foreground space-y-0.5 text-[10px]">
-                              <p>Prompt: {prop.property.prompt}</p>
-                              {prop.profileRelation && (
-                                <>
-                                  <p>Relation: {prop.profileRelation.title}</p>
-                                  <p>
-                                    Cardinality:{" "}
-                                    {prop.profileRelation.isManyToMany
-                                      ? "many-to-many"
-                                      : prop.profileRelation.isManyToOne
-                                        ? "many-to-one"
-                                        : prop.profileRelation.isOneToMany
-                                          ? "one-to-many"
-                                          : "one-to-one"}
-                                  </p>
-                                  {prop.profileRelation.description && (
-                                    <p>Description: {prop.profileRelation.description}</p>
-                                  )}
-                                </>
-                              )}
-                              {prop.targetProfile && (
-                                <>
-                                  <p>Target Entity: {prop.targetProfile.title}</p>
-                                  <p className="font-mono">
-                                    Target Profile: {prop.targetProfile.link.href}
-                                  </p>
-                                </>
-                              )}
-                              <p className="font-mono">Collection: {prop.targetCollectionHref}</p>
-                            </div>
-                          </div>
+                          <RelationPropertyCard
+                            key={prop.property.name}
+                            prop={prop}
+                            kind="to-many"
+                          />
                         ))}
                       </div>
                     </div>
@@ -622,6 +549,59 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function RelationPropertyCard({
+  prop,
+  kind,
+}: Readonly<{
+  prop: CreateFormRelationToOneProperty | CreateFormRelationToManyProperty;
+  kind: "to-one" | "to-many";
+}>) {
+  const isRequired = kind === "to-one" && "isRequired" in prop && prop.isRequired;
+  return (
+    <div className="rounded border bg-muted p-2">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="font-mono text-xs font-medium">{prop.property.name}</span>
+        <Badge variant={kind === "to-one" ? "default" : "secondary"} className="text-[10px]">
+          {kind}
+        </Badge>
+        {isRequired && (
+          <Badge variant="destructive" className="text-[10px]">
+            required
+          </Badge>
+        )}
+      </div>
+      <div className="text-muted-foreground space-y-0.5 text-[10px]">
+        <p>Prompt: {prop.property.prompt}</p>
+        {prop.profileRelation && (
+          <>
+            <p>Relation: {prop.profileRelation.title}</p>
+            <p>
+              Cardinality:{" "}
+              {prop.profileRelation.isManyToMany
+                ? "many-to-many"
+                : prop.profileRelation.isManyToOne
+                  ? "many-to-one"
+                  : prop.profileRelation.isOneToMany
+                    ? "one-to-many"
+                    : "one-to-one"}
+            </p>
+            {prop.profileRelation.description && (
+              <p>Description: {prop.profileRelation.description}</p>
+            )}
+          </>
+        )}
+        {prop.targetProfile && (
+          <>
+            <p>Target Entity: {prop.targetProfile.title}</p>
+            <p className="font-mono">Target Profile: {prop.targetProfile.link.href}</p>
+          </>
+        )}
+        <p className="font-mono">Collection: {prop.targetCollectionHref}</p>
+      </div>
+    </div>
   );
 }
 
