@@ -9,50 +9,142 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppEntityRouteImport } from './routes/_app/$entity'
+import { Route as AppEntityIndexRouteImport } from './routes/_app/$entity/index'
+import { Route as AppEntityItemIdRouteImport } from './routes/_app/$entity/$itemId'
 
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEntityRoute = AppEntityRouteImport.update({
+  id: '/$entity',
+  path: '/$entity',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEntityIndexRoute = AppEntityIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppEntityRoute,
+} as any)
+const AppEntityItemIdRoute = AppEntityItemIdRouteImport.update({
+  id: '/$itemId',
+  path: '/$itemId',
+  getParentRoute: () => AppEntityRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/$entity': typeof AppEntityRouteWithChildren
+  '/$entity/$itemId': typeof AppEntityItemIdRoute
+  '/$entity/': typeof AppEntityIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/$entity/$itemId': typeof AppEntityItemIdRoute
+  '/$entity': typeof AppEntityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/$entity': typeof AppEntityRouteWithChildren
+  '/_app/': typeof AppIndexRoute
+  '/_app/$entity/$itemId': typeof AppEntityItemIdRoute
+  '/_app/$entity/': typeof AppEntityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/$entity' | '/$entity/$itemId' | '/$entity/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/$entity/$itemId' | '/$entity'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/$entity'
+    | '/_app/'
+    | '/_app/$entity/$itemId'
+    | '/_app/$entity/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/$entity': {
+      id: '/_app/$entity'
+      path: '/$entity'
+      fullPath: '/$entity'
+      preLoaderRoute: typeof AppEntityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/$entity/': {
+      id: '/_app/$entity/'
+      path: '/'
+      fullPath: '/$entity/'
+      preLoaderRoute: typeof AppEntityIndexRouteImport
+      parentRoute: typeof AppEntityRoute
+    }
+    '/_app/$entity/$itemId': {
+      id: '/_app/$entity/$itemId'
+      path: '/$itemId'
+      fullPath: '/$entity/$itemId'
+      preLoaderRoute: typeof AppEntityItemIdRouteImport
+      parentRoute: typeof AppEntityRoute
     }
   }
 }
 
+interface AppEntityRouteChildren {
+  AppEntityItemIdRoute: typeof AppEntityItemIdRoute
+  AppEntityIndexRoute: typeof AppEntityIndexRoute
+}
+
+const AppEntityRouteChildren: AppEntityRouteChildren = {
+  AppEntityItemIdRoute: AppEntityItemIdRoute,
+  AppEntityIndexRoute: AppEntityIndexRoute,
+}
+
+const AppEntityRouteWithChildren = AppEntityRoute._addFileChildren(
+  AppEntityRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppEntityRoute: typeof AppEntityRouteWithChildren
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppEntityRoute: AppEntityRouteWithChildren,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

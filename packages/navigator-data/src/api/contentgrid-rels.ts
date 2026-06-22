@@ -1,19 +1,12 @@
-import { createRelation } from "@contentgrid/hal/rels";
+import { createRelations } from "@contentgrid/hal/rels";
+import UriTemplate from "@contentgrid/uri-template";
 
-export const cgRels = {
-  entity: createRelation("https://contentgrid.cloud/rels/contentgrid/entity"),
-  profile: createRelation("https://contentgrid.cloud/rels/contentgrid/profile"),
-  content: createRelation("https://contentgrid.cloud/rels/contentgrid/content"),
-  relation: createRelation("https://contentgrid.cloud/rels/contentgrid/relation"),
-} as const;
+export const cgRels = createRelations(
+  new UriTemplate("https://contentgrid.cloud/rels/contentgrid/{rel}"),
+  ["entity", "content", "relation", "profile"] as const,
+);
 
-export const blueprintRels = {
-  attribute: createRelation("https://contentgrid.cloud/rels/blueprint/attribute"),
-  relation: createRelation("https://contentgrid.cloud/rels/blueprint/relation"),
-  targetEntity: createRelation("https://contentgrid.cloud/rels/blueprint/target-entity"),
-  constraint: createRelation("https://contentgrid.cloud/rels/blueprint/constraint"),
-} as const;
-
-export const datamodelRels = {
-  // Add specific datamodel relations as needed
-} as const;
+export const blueprintRels = createRelations(
+  new UriTemplate("https://contentgrid.cloud/rels/blueprint/{rel}"),
+  ["attribute", "constraint", "search-param", "relation", "target-entity"] as const,
+);
