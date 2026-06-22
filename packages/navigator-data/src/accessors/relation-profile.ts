@@ -7,7 +7,7 @@ export class ProfileRelation {
   constructor(private readonly hal: HalObject<ProfileRelationShape>) {}
 
   private get relationProfileData(): ProfileRelationShape {
-    return this.hal.data as ProfileRelationShape;
+    return this.hal.data;
   }
 
   // ========================================

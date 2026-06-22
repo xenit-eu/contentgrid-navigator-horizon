@@ -14,7 +14,7 @@ export function RecentlyCreatedList({ profileEntity }: Readonly<{ profileEntity:
         {isError && (
           <p className="text-muted-foreground text-sm">Failed to load: {error.message}</p>
         )}
-        {data && data.isEmpty && <p className="text-muted-foreground text-sm">No items found.</p>}
+        {data?.isEmpty && <p className="text-muted-foreground text-sm">No items found.</p>}
         {data && !data.isEmpty && (
           <ul className="divide-y">
             {data.items.map((item) => {
@@ -38,20 +38,26 @@ export function RecentlyCreatedList({ profileEntity }: Readonly<{ profileEntity:
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {item.userDefinedAttributes.slice(0, 4).map((attr) => (
-                      <span key={attr.value.name} className="text-muted-foreground text-xs">
-                        <span className="font-medium">
-                          {attr.profileAttribute?.title ?? attr.value.name}:
-                        </span>{" "}
-                        {attr.value.kind === AttributeKind.PLAIN
-                          ? String(attr.value.value ?? "—")
-                          : attr.value.kind === AttributeKind.CONTENT
-                            ? `[file: ${attr.value.metadata?.filename ?? "unnamed"}]`
-                            : attr.value.kind === AttributeKind.NESTED
-                              ? `[object]`
-                              : "—"}
-                      </span>
-                    ))}
+                    {item.userDefinedAttributes.slice(0, 4).map((attr) => {
+                      let display: string;
+                      if (attr.value.kind === AttributeKind.PLAIN) {
+                        display = String(attr.value.value ?? "—");
+                      } else if (attr.value.kind === AttributeKind.CONTENT) {
+                        display = `[file: ${attr.value.metadata?.filename ?? "unnamed"}]`;
+                      } else if (attr.value.kind === AttributeKind.NESTED) {
+                        display = `[object]`;
+                      } else {
+                        display = "—";
+                      }
+                      return (
+                        <span key={attr.value.name} className="text-muted-foreground text-xs">
+                          <span className="font-medium">
+                            {attr.profileAttribute?.title ?? attr.value.name}:
+                          </span>{" "}
+                          {display}
+                        </span>
+                      );
+                    })}
                   </div>
                 </li>
               );

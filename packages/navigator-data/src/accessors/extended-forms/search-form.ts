@@ -125,11 +125,9 @@ export class SearchHalFormTemplate {
    * Excludes the _sort property (use sortOptions instead).
    */
   get searchProperties(): readonly SearchHalFormTemplateProperty[] {
-    if (!this._searchProperties) {
-      this._searchProperties = (this.template.properties ?? [])
-        .filter((property) => property.name !== "_sort")
-        .map((property) => this.enhanceSearchProperty(property));
-    }
+    this._searchProperties ??= (this.template.properties ?? [])
+      .filter((property) => property.name !== "_sort")
+      .map((property) => this.enhanceSearchProperty(property));
     return this._searchProperties;
   }
 

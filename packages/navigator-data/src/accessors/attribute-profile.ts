@@ -40,7 +40,7 @@ export class ProfileAttribute {
   constructor(private readonly hal: HalObject<ProfileAttributeShape>) {}
 
   private get attributeProfileData(): ProfileAttributeShape {
-    return this.hal.data as ProfileAttributeShape;
+    return this.hal.data;
   }
 
   // ========================================
@@ -89,9 +89,7 @@ export class ProfileAttribute {
   }
 
   get isUnique() {
-    return !!this.constraints.find(
-      (constr) => constr.type === ProfileAttributeConstraintType.unique,
-    );
+    return this.constraints.some((constr) => constr.type === ProfileAttributeConstraintType.unique);
   }
 
   get allowedValues(): string[] | undefined {
@@ -105,25 +103,25 @@ export class ProfileAttribute {
   // ========================================
 
   get isCreatedDate() {
-    return !!this.constraints.find(
+    return this.constraints.some(
       (constr) => constr.type === ProfileAttributeConstraintType.createdDate,
     );
   }
 
   get isCreatedBy() {
-    return !!this.constraints.find(
+    return this.constraints.some(
       (constr) => constr.type === ProfileAttributeConstraintType.createdBy,
     );
   }
 
   get isModifiedDate() {
-    return !!this.constraints.find(
+    return this.constraints.some(
       (constr) => constr.type === ProfileAttributeConstraintType.modifiedDate,
     );
   }
 
   get isModifiedBy() {
-    return !!this.constraints.find(
+    return this.constraints.some(
       (constr) => constr.type === ProfileAttributeConstraintType.modifiedBy,
     );
   }

@@ -135,21 +135,25 @@ function EntityInfiniteScrollCard({ profile }: Readonly<{ profile: ProfileEntity
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {/* First few attributes */}
-                      {item.userDefinedAttributes.slice(0, 3).map((attr) => (
-                        <div key={attr.value.name} className="text-xs">
-                          <span className="text-muted-foreground">
-                            {attr.profileAttribute?.title ?? attr.value.name}:
-                          </span>{" "}
-                          <span className="font-mono text-[11px]">
-                            {attr.value.kind === AttributeKind.PLAIN
-                              ? String(attr.value.value).substring(0, 30) +
-                                (String(attr.value.value).length > 30 ? "..." : "")
-                              : attr.value.kind === AttributeKind.CONTENT
-                                ? `[${attr.value.metadata?.filename ?? "file"}]`
-                                : "[object]"}
-                          </span>
-                        </div>
-                      ))}
+                      {item.userDefinedAttributes.slice(0, 3).map((attr) => {
+                        let display: string;
+                        if (attr.value.kind === AttributeKind.PLAIN) {
+                          const str = String(attr.value.value);
+                          display = str.substring(0, 30) + (str.length > 30 ? "..." : "");
+                        } else if (attr.value.kind === AttributeKind.CONTENT) {
+                          display = `[${attr.value.metadata?.filename ?? "file"}]`;
+                        } else {
+                          display = "[object]";
+                        }
+                        return (
+                          <div key={attr.value.name} className="text-xs">
+                            <span className="text-muted-foreground">
+                              {attr.profileAttribute?.title ?? attr.value.name}:
+                            </span>{" "}
+                            <span className="font-mono text-[11px]">{display}</span>
+                          </div>
+                        );
+                      })}
                       {item.userDefinedAttributes.length > 3 && (
                         <div className="text-muted-foreground text-[10px]">
                           +{item.userDefinedAttributes.length - 3} more attributes
@@ -173,8 +177,7 @@ function EntityInfiniteScrollCard({ profile }: Readonly<{ profile: ProfileEntity
               >
                 {isFetchingNextPage ? (
                   <>
-                    <span className="animate-spin mr-2">⟳</span>
-                    Loading More...
+                    <span className="animate-spin mr-2">⟳</span>Loading More...
                   </>
                 ) : (
                   <>

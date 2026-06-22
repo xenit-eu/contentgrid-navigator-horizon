@@ -82,7 +82,7 @@ export default class ProfileEntity {
           apiFetch,
           new Request(profileLink.href),
         );
-        return new ProfileEntity(profileLink, object as HalObject<ProfileEntityShape>);
+        return new ProfileEntity(profileLink, object);
       },
       staleTime: PROFILE_STALE_TIME,
       gcTime: 10 * 60 * 1000,

@@ -105,11 +105,9 @@ export class CreateHalFormTemplate {
    * System fields (id, audit) never appear in create-form.
    */
   get userDefinedProperties(): readonly CreateFormProperty[] {
-    if (!this._userDefinedProperties) {
-      this._userDefinedProperties = (this.template.properties ?? [])
-        .filter((property) => property.type !== "url")
-        .map((property) => this.enhanceAttributeProperty(property));
-    }
+    this._userDefinedProperties ??= (this.template.properties ?? [])
+      .filter((property) => property.type !== "url")
+      .map((property) => this.enhanceAttributeProperty(property));
     return this._userDefinedProperties;
   }
 
@@ -125,17 +123,15 @@ export class CreateHalFormTemplate {
    * To-one relations can be required.
    */
   get toOneRelationProperties(): readonly CreateFormRelationToOneProperty[] {
-    if (!this._toOneRelationProperties) {
-      this._toOneRelationProperties = (this.template.properties ?? [])
-        .filter((property) => {
-          if (property.type !== "url") return false;
-          const maxItems = (property.options as HalFormsPropertyRemoteOptions)?.maxItems as
-            | number
-            | undefined;
-          return maxItems === 1;
-        })
-        .map((property) => this.enhanceToOneRelationProperty(property));
-    }
+    this._toOneRelationProperties ??= (this.template.properties ?? [])
+      .filter((property) => {
+        if (property.type !== "url") return false;
+        const maxItems = (property.options as HalFormsPropertyRemoteOptions)?.maxItems as
+          | number
+          | undefined;
+        return maxItems === 1;
+      })
+      .map((property) => this.enhanceToOneRelationProperty(property));
     return this._toOneRelationProperties;
   }
 
@@ -144,17 +140,15 @@ export class CreateHalFormTemplate {
    * To-many relations are never required.
    */
   get toManyRelationProperties(): readonly CreateFormRelationToManyProperty[] {
-    if (!this._toManyRelationProperties) {
-      this._toManyRelationProperties = (this.template.properties ?? [])
-        .filter((property) => {
-          if (property.type !== "url") return false;
-          const maxItems = (property.options as HalFormsPropertyRemoteOptions)?.maxItems as
-            | number
-            | undefined;
-          return maxItems !== 1;
-        })
-        .map((property) => this.enhanceToManyRelationProperty(property));
-    }
+    this._toManyRelationProperties ??= (this.template.properties ?? [])
+      .filter((property) => {
+        if (property.type !== "url") return false;
+        const maxItems = (property.options as HalFormsPropertyRemoteOptions)?.maxItems as
+          | number
+          | undefined;
+        return maxItems !== 1;
+      })
+      .map((property) => this.enhanceToManyRelationProperty(property));
     return this._toManyRelationProperties;
   }
 

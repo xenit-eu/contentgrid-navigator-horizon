@@ -85,8 +85,8 @@ export function ProfileInspector() {
                   {errors.length} profile(s) failed to load
                 </p>
                 <ul className="text-destructive/80 mt-1 list-inside list-disc text-xs">
-                  {errors.map((error, idx) => (
-                    <li key={idx}>{error.message}</li>
+                  {errors.map((error) => (
+                    <li key={error.message}>{error.message}</li>
                   ))}
                 </ul>
               </div>
@@ -555,13 +555,10 @@ type ProfileRelation = NonNullable<SearchHalFormTemplateProperty["profileRelatio
 type ProfileAttribute = NonNullable<SearchHalFormTemplateProperty["profileAttribute"]>;
 
 function cardinalityLabel(relation: ProfileRelation): string {
-  return relation.isManyToMany
-    ? "many-to-many"
-    : relation.isManyToOne
-      ? "many-to-one"
-      : relation.isOneToMany
-        ? "one-to-many"
-        : "one-to-one";
+  if (relation.isManyToMany) return "many-to-many";
+  if (relation.isManyToOne) return "many-to-one";
+  if (relation.isOneToMany) return "one-to-many";
+  return "one-to-one";
 }
 
 function RelationDetails({

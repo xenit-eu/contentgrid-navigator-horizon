@@ -69,7 +69,7 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
 
   if (isByProfile(params)) {
     profileEntity = params.profileEntity;
-    url = params.entityId != null ? profileEntity.itemUrl(params.entityId) : undefined;
+    url = params.entityId == null ? undefined : profileEntity.itemUrl(params.entityId);
   } else {
     url = params.url;
     profileEntity = profileResults.find((r) => r.data?.describes(SimpleLink.to(url!)))?.data;

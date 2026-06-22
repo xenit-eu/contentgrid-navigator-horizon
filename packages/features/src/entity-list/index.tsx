@@ -251,12 +251,13 @@ function OverviewHeader({
   count,
   loading = false,
 }: Readonly<{ count: number; loading?: boolean }>) {
+  const typeLabel = `entity type${count === 1 ? "" : "s"}`;
   return (
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Entities</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {loading ? "Loading…" : `${count} entity type${count !== 1 ? "s" : ""} available`}
+          {loading ? "Loading…" : `${count} ${typeLabel} available`}
         </p>
       </div>
     </div>
@@ -345,7 +346,7 @@ function EntityDetailView({
           {collection.isSuccess && collection.data.totalItems && (
             <Badge variant="secondary">
               {collection.data.totalItems.count.toLocaleString()} item
-              {collection.data.totalItems.count !== 1 ? "s" : ""}
+              {collection.data.totalItems.count === 1 ? "" : "s"}
               {collection.data.totalItems.isEstimated && " (est.)"}
             </Badge>
           )}
