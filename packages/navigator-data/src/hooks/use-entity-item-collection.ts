@@ -91,34 +91,43 @@ function isBySearch(
  * });
  * ```
  */
+/**
+ * Resolve the collection request URL and query-enabled flag from the params,
+ * without calling any hooks. Shared by both collection hooks so each can call
+ * its TanStack hook exactly once, unconditionally (rules-of-hooks safe).
+ */
+function resolveCollectionRequest(params: EntityCollectionParams): {
+  url: string;
+  enabled: boolean;
+} {
+  // URL-based fetch: always enabled
+  if (isByUrl(params)) {
+    return { url: params.url, enabled: true };
+  }
+
+  let request: ReturnType<ProfileEntity["searchEntityRequest"]> | null;
+  if (!isBySearch(params)) {
+    // Default fetch: use the template's empty search (null when no search template).
+    const searchTemplate = params.profileEntity.searchTemplate;
+    request = searchTemplate
+      ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
+      : null;
+  } else {
+    // Search-based fetch: undefined → disabled, explicit values → fetch.
+    request = params.searchValues
+      ? params.profileEntity.searchEntityRequest(params.searchValues)
+      : null;
+  }
+
+  return { url: request?.url ?? "", enabled: !!request };
+}
+
 export function useEntityItemCollection(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
   const { apiFetch } = useNavigatorData();
-
-  let url: string;
-  let enabled = true;
-
-  if (isByUrl(params)) {
-    // URL-based fetch: always enabled
-    url = params.url;
-  } else if (!isBySearch(params)) {
-    // Default fetch: use the template's empty search
-    const searchTemplate = params.profileEntity.searchTemplate;
-    const request = searchTemplate
-      ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
-      : null;
-    url = request?.url ?? "";
-    enabled = !!request;
-  } else {
-    // Search-based fetch: undefined → disabled, explicit values → fetch
-    const request = params.searchValues
-      ? params.profileEntity.searchEntityRequest(params.searchValues)
-      : null;
-    url = request?.url ?? "";
-    enabled = !!request;
-  }
+  const { url, enabled } = resolveCollectionRequest(params);
 
   return useQuery({
     ...EntityItemCollection.fetchByUrlQuery(
@@ -185,29 +194,7 @@ export function useEntityItemCollectionInfiniteScroll(
   options?: UseEntityItemCollectionOptions,
 ) {
   const { apiFetch } = useNavigatorData();
-
-  let url: string;
-  let enabled = true;
-
-  if (isByUrl(params)) {
-    // URL-based fetch: always enabled
-    url = params.url;
-  } else if (!isBySearch(params)) {
-    // Default fetch: use the template's empty search
-    const searchTemplate = params.profileEntity.searchTemplate;
-    const request = searchTemplate
-      ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
-      : null;
-    url = request?.url ?? "";
-    enabled = !!request;
-  } else {
-    // Search-based fetch: undefined → disabled, explicit values → fetch
-    const request = params.searchValues
-      ? params.profileEntity.searchEntityRequest(params.searchValues)
-      : null;
-    url = request?.url ?? "";
-    enabled = !!request;
-  }
+  const { url, enabled } = resolveCollectionRequest(params);
 
   return useInfiniteQuery({
     ...EntityItemCollection.infiniteQuery(
