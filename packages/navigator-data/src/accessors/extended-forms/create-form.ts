@@ -1,8 +1,4 @@
-import type {
-  HalFormsProperty,
-  HalFormsPropertyRemoteOptions,
-  HalFormsTemplate,
-} from "@contentgrid/hal-forms";
+import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
 import type { EntityInstanceCreateRequestSpec } from "../../api/requests";
 import type { ProfileAttribute } from "../attribute-profile";
 import type ProfileEntity from "../entity-profile";
@@ -126,10 +122,7 @@ export class CreateHalFormTemplate {
     this._toOneRelationProperties ??= (this.template.properties ?? [])
       .filter((property) => {
         if (property.type !== "url") return false;
-        const maxItems = (property.options as HalFormsPropertyRemoteOptions)?.maxItems as
-          | number
-          | undefined;
-        return maxItems === 1;
+        return property.options?.maxItems === 1;
       })
       .map((property) => this.enhanceToOneRelationProperty(property));
     return this._toOneRelationProperties;
@@ -143,10 +136,7 @@ export class CreateHalFormTemplate {
     this._toManyRelationProperties ??= (this.template.properties ?? [])
       .filter((property) => {
         if (property.type !== "url") return false;
-        const maxItems = (property.options as HalFormsPropertyRemoteOptions)?.maxItems as
-          | number
-          | undefined;
-        return maxItems !== 1;
+        return property.options?.maxItems !== 1;
       })
       .map((property) => this.enhanceToManyRelationProperty(property));
     return this._toManyRelationProperties;
@@ -227,10 +217,7 @@ export class CreateHalFormTemplate {
     const profileRelation = this.profileEntity.getRelation(property.name);
 
     // Extract target collection href from options.link.href
-    const linkHref = (property.options as HalFormsPropertyRemoteOptions)?.link?.href as
-      | string
-      | undefined;
-    const targetCollectionHref = linkHref ?? "";
+    const targetCollectionHref = property.options?.isRemote() ? property.options.link.href : "";
 
     // To-one relations can be required
     const isRequired = property.required ?? false;
@@ -260,10 +247,7 @@ export class CreateHalFormTemplate {
     const profileRelation = this.profileEntity.getRelation(property.name);
 
     // Extract target collection href from options.link.href
-    const linkHref = (property.options as HalFormsPropertyRemoteOptions)?.link?.href as
-      | string
-      | undefined;
-    const targetCollectionHref = linkHref ?? "";
+    const targetCollectionHref = property.options?.isRemote() ? property.options.link.href : "";
 
     // Try to resolve target profile using _allProfiles
     let targetProfile: ProfileEntity | undefined;

@@ -5,7 +5,6 @@ import type { HalFormsTemplate } from "@contentgrid/hal-forms";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { ianaRelations } from "@contentgrid/hal/rels";
 import { cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
@@ -166,7 +165,7 @@ export class EntityItem {
    * @returns Update template or null if not available
    */
   public get selfLink(): Link {
-    return this.halItem.links.findLink(ianaRelations.self)!;
+    return this.halItem.self;
   }
 
   public get defaultTemplate(): HalFormsTemplate<EntityInstanceUpdateRequestSpec> | null {
