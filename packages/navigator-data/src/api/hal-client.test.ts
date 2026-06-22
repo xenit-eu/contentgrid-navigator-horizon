@@ -4,7 +4,7 @@ import { HalObject, HalSlice } from "@contentgrid/hal";
 import { ProblemDetailError } from "@contentgrid/problem-details";
 import { server } from "../../test-setup";
 import { type AuthenticationTokenSupplier, createApiClient } from "./client";
-import { fetchHal, fetchHalSlice } from "./hal-client";
+import { addIfMatchHeader, fetchHal, fetchHalSlice, fetchVoid } from "./hal-client";
 
 const TEST_URL = "https://api.example.com/entities/1";
 const COLLECTION_URL = "https://api.example.com/entities";
@@ -138,5 +138,57 @@ describe("fetchHalSlice", () => {
     await expect(fetchHalSlice(apiFetch, new Request(COLLECTION_URL))).rejects.toBeInstanceOf(
       ProblemDetailError,
     );
+  });
+});
+
+describe("addIfMatchHeader", () => {
+  it("adds If-Match header verbatim when etag is non-null", () => {
+    const req = new Request("https://api.example.com/entities/1", { method: "PATCH" });
+    const result = addIfMatchHeader(req, '"v1"');
+    expect(result.headers.get("If-Match")).toBe('"v1"');
+  });
+
+  it("returns request unchanged when etag is null (no If-Match added)", () => {
+    const req = new Request("https://api.example.com/entities/1", { method: "PATCH" });
+    const result = addIfMatchHeader(req, null);
+    expect(result.headers.get("If-Match")).toBeNull();
+    expect(result).toBe(req);
+  });
+
+  it("preserves existing headers when adding If-Match", () => {
+    const req = new Request("https://api.example.com/entities/1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+    });
+    const result = addIfMatchHeader(req, '"abc"');
+    expect(result.headers.get("Content-Type")).toBe("application/json");
+    expect(result.headers.get("If-Match")).toBe('"abc"');
+  });
+});
+
+describe("fetchVoid", () => {
+  it("resolves void on 204 No Content", async () => {
+    server.use(http.patch(TEST_URL, () => new HttpResponse(null, { status: 204 })));
+
+    const apiFetch = createApiClient(noopSupplier);
+    await expect(
+      fetchVoid(apiFetch, new Request(TEST_URL, { method: "PATCH" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws ProblemDetailError on non-2xx response", async () => {
+    server.use(
+      http.patch(TEST_URL, () =>
+        HttpResponse.json(
+          { status: 400, title: "Bad Request" },
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const apiFetch = createApiClient(noopSupplier);
+    await expect(
+      fetchVoid(apiFetch, new Request(TEST_URL, { method: "PATCH" })),
+    ).rejects.toBeInstanceOf(ProblemDetailError);
   });
 });

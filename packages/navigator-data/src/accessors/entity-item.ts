@@ -186,6 +186,17 @@ export class EntityItem {
     return codec.encode(values);
   }
 
+  /**
+   * Whether the current user is permitted to update this entity item.
+   *
+   * Derived from `defaultTemplate` presence — the platform omits the template
+   * when the ABAC policy denies update for this item/user combination.
+   * Feature components must read this flag instead of re-checking raw templates.
+   */
+  public get canUpdate(): boolean {
+    return this.defaultTemplate !== null;
+  }
+
   //TODO support relations
 }
 
