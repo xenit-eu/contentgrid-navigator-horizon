@@ -450,7 +450,7 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 - `onSuccess` composition order: cache → invalidate → caller. Never fire caller `onSuccess` before cache is consistent.
 - 412 must bubble to the caller (`onError`); the hook must not auto-retry.
   Check `error instanceof ProblemDetailError && error.problemDetail.status === 412`.
-- Tests: use `makeQueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })` + `makeWrapper` + MSW handler factories. Extend `contract.test.ts` (ADR-014).
+- Tests: use `makeQueryClient()` (zero-arg; `test-utils.tsx` already sets `queries.retry: false`, and TanStack mutations do not retry by default) + `makeWrapper` + MSW handler factories. Extend `contract.test.ts` (ADR-014).
 
 ---
 
