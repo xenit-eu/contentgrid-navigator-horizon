@@ -31,7 +31,7 @@ export function parseContentDisposition(header: string | null): string | null {
     return null;
   }
   // Match filename*= (RFC 5987 extended) first, then filename=
-  const extMatch = /filename\*\s*=\s*(?:[A-Za-z0-9-]+'')?([^;]+)/i.exec(header);
+  const extMatch = /filename\*\s*=\s*(?:[a-z0-9-]+'')?([^;]+)/i.exec(header);
   if (extMatch) {
     try {
       return decodeURIComponent(extMatch[1].trim());

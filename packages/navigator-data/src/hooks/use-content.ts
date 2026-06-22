@@ -192,7 +192,8 @@ export function useDownloadContent(
       const mimetype = mimetypeHeader ? (mimetypeHeader.split(";")[0]?.trim() ?? null) : null;
       const filename = parseContentDisposition(response.headers.get("Content-Disposition"));
       const contentLengthHeader = response.headers.get("Content-Length");
-      const contentLength = contentLengthHeader !== null ? parseInt(contentLengthHeader, 10) : null;
+      const contentLength =
+        contentLengthHeader === null ? null : Number.parseInt(contentLengthHeader, 10);
       const isPartial = response.status === 206;
 
       return { blob, mimetype, filename, contentLength, isPartial } satisfies ContentDownload;
