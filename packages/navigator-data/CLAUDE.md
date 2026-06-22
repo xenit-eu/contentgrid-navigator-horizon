@@ -199,11 +199,14 @@ const { data: collection } = useEntityItemCollection({
 
 **Error handling:**
 
-- Use `@contentgrid/problem-details` to parse `application/problem+json`
-  responses. Do NOT manually inspect `response.status` for domain logic.
+- All non-2xx responses throw `ProblemDetailError` (`src/api/errors.ts`). Read the RFC 9457 detail
+  via `error.problemDetail` (`{ type, title, detail, status, ... }`). Do NOT manually inspect raw
+  `response.status`.
 - Surface the parsed problem detail via TanStack Query's `error` field.
-- 412 (ETag mismatch) must be handled at the call site: re-fetch, re-apply,
-  retry. The hook must not swallow or auto-retry 412.
+- 412 (ETag mismatch) must be handled at the call site: re-fetch, re-apply, retry. The hook must
+  not swallow or auto-retry 412. Detect via `error instanceof ProblemDetailError &&
+error.problemDetail.status === 412`. `PreconditionFailedError` is exported but never thrown in
+  the current codebase — do not depend on it.
 
 **HAL contract tests (ADR-014):**
 
@@ -235,6 +238,26 @@ Where to find this now:
 - Build values with `createValues(template)` (re-exported from `@contentgrid/navigator-data`);
   values are immutable — update with `.withValue(name, val)` / `.withoutValue(name)`.
 
+**What exists vs. what is planned:**
+
+The request-spec types, `editEntityRequest` accessor, and MSW handler factories for
+update/delete/relation are already in the codebase. The corresponding mutation _hooks_ are not yet
+implemented. When building them, mirror the accessors below (all resolved from the item's
+`_templates`):
+
+| Operation            | Template key  | Planned hook          | Accessor to add to `EntityItem`                                |
+| -------------------- | ------------- | --------------------- | -------------------------------------------------------------- |
+| Update               | `default`     | `useUpdateEntityItem` | _already has_ `defaultTemplate` + `editEntityRequest`          |
+| Delete               | `delete`      | `useDeleteEntityItem` | `deleteTemplate` + `deleteEntityRequest()` (no values)         |
+| Set to-one relation  | `set-<rel>`   | `useRelationMutation` | `setRelationTemplate(name)` + `setRelationRequest(name, uris)` |
+| Add to-many relation | `add-<rel>`   | `useRelationMutation` | `addRelationTemplate(name)` + `addRelationRequest(name, uris)` |
+| Clear relation       | `clear-<rel>` | `useRelationMutation` | `clearRelationTemplate(name)` + `clearRelationRequest(name)`   |
+
+Binary content (PUT to `cg:content`) has no HAL-FORMS template — see the **Content exception**
+section below.
+
+`EntityItem` currently ends with `//TODO support relations` — relation accessor additions go there.
+
 **2. Gate every operation on template/link presence — never assume permission.**
 
 Template absence is the platform's per-item ABAC signal. Rendering or invoking an operation
@@ -246,6 +269,12 @@ Rules:
 - `profileEntity.createTemplate !== null` → create is permitted.
 - Expose capability as a named boolean (`canUpdate`, `canCreate`, …) derived from template
   presence. Feature components must read the flag — not re-check raw templates.
+
+> **NOTE — not yet implemented:** `canUpdate`, `canCreate`, `canDelete`, and equivalent named
+> booleans do NOT yet exist as accessors. Today callers check the raw template directly:
+> `entityItem.defaultTemplate !== null` (update), `profileEntity.createTemplate !== null`
+> (create). The named-boolean convention is the target pattern once those getters are added to
+> the accessor classes.
 
 **3. URLs only from links — never string-built.**
 
@@ -276,8 +305,12 @@ Do NOT narrow the bridge output to a lossy subset of the template shape.
 
 **6. No hardcoded attribute names — discover roles via profile constraints.**
 
-- Content attributes: check `attr.type === ProfileAttributeType.content` (from the entity
-  profile). Do NOT probe for sub-field names like `filename`, `mimetype`, or `length`.
+- Content attributes: use `attr.isContent` on a `ProfileAttribute` instance. Do NOT check
+  `attr.type === ProfileAttributeType.content` — `ProfileAttributeType` has no `content` member
+  (the enum is `string | long | double | boolean | date | datetime | object`). `isContent` is
+  true when `type === object` **and** the attribute has embedded `blueprint:attribute` children
+  (`attribute-profile.ts:74-79`). Do NOT probe for sub-field names like `filename`, `mimetype`,
+  or `length`.
 - Audit fields: use `profileEntity.auditAttributes` and `profileEntity.userDefinedAttributes`
   which are already classified by constraint type (`created-date`, `created-by`,
   `modified-date`, `modified-by`). Do NOT key logic to literal names like `created_date`.
@@ -304,6 +337,137 @@ Rules:
 - Do NOT strip or modify the ETag value — the platform compares verbatim.
 - Do NOT store ETags permanently (session state only).
 - Do NOT parse or construct ETag values — treat them as opaque strings.
+
+**Fetch helpers and ETag capture (`src/api/hal-client.ts`):**
+
+| Helper           | Returns                       | Calls `response.json()` | Use when                                                                                               |
+| ---------------- | ----------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `fetchHal`       | `{ object: HalObject, etag }` | yes                     | GET — need the ETag for subsequent mutations                                                           |
+| `fetchHalObject` | `HalObject` (no ETag)         | yes                     | POST that returns 201 + body (create); not exported from `api/index.ts` — import from `api/hal-client` |
+| `fetchHalSlice`  | `HalSlice` (no ETag)          | yes (via `fetchHal`)    | Collection queries                                                                                     |
+
+Both `fetchHal` and `fetchHalObject` call `response.json()` and will **throw on a 204 No Content
+response** (empty body). Mutations that return 204 — DELETE, relation set/add/clear, content PUT —
+need a separate 204-safe path. No such helper exists yet; add `fetchVoid(apiFetch, request)`
+(calls `checkResponse`, discards body) when building those hooks.
+
+**Attaching `If-Match` to a mutation request:**
+
+Request builders (`editEntityRequest`, etc.) return a bare `Request` with no conditional header.
+The hook attaches it before calling `apiFetch`:
+
+```typescript
+// attach If-Match only when an ETag is available
+const req =
+  etag !== null
+    ? new Request(baseReq, {
+        headers: { ...Object.fromEntries(baseReq.headers), "If-Match": etag },
+      })
+    : baseReq;
+const { object, etag: newEtag } = await fetchHal<EntityItemShape>(apiFetch, req);
+```
+
+Send the stored ETag verbatim — quotes included. Skip the header only when `etag === null`
+(e.g. immediately after a create, before the first GET of that item).
+
+**Error class for 412:**
+
+All non-2xx responses surface as `ProblemDetailError` (`src/api/errors.ts`). Check status via
+`error.problemDetail.status === 412`. `PreconditionFailedError` is exported from this package but
+is **never thrown** anywhere in the current source — do not add a `catch (e instanceof
+PreconditionFailedError)` branch; catch `ProblemDetailError` and inspect `.problemDetail.status`.
+
+---
+
+## Mutation hook authoring recipe
+
+Use `useCreateEntityItem` (`src/hooks/use-create-entity.ts`) as the canonical reference. Generalized pattern for any entity-item mutation:
+
+**Options interface:**
+
+```typescript
+export interface UseXxxOptions {
+  readonly mutationOptions?: Omit<UseMutationOptions<TData, Error, TVariables>, "mutationFn">;
+}
+```
+
+**Hook body:**
+
+```typescript
+export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
+  const { apiFetch } = useNavigatorData();   // apiFetch only — no contentFetch in context yet
+  const queryClient = useQueryClient();
+
+  const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
+
+  return useMutation({
+    mutationFn: async (values) => {
+      // 1. Build Request from accessor (template-driven, never hardcode)
+      const baseReq = entityItem.editEntityRequest(values);
+
+      // 2. Attach If-Match when etag is available (send verbatim, quotes included)
+      const req =
+        entityItem.etag !== null
+          ? new Request(baseReq, {
+              headers: { ...Object.fromEntries(baseReq.headers), "If-Match": entityItem.etag },
+            })
+          : baseReq;
+
+      // 3a. Response has a body (create / update) — use fetchHal to capture new ETag
+      const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, req);
+      return new EntityItem(object, profileEntity, etag);
+
+      // 3b. 204 No Content (delete / relation / content) — use fetchVoid (not yet implemented;
+      //     add it to hal-client.ts when building these hooks)
+      // await fetchVoid(apiFetch, req);
+    },
+    onSuccess: async (item, variables, onMutateResult, context) => {
+      const { href } = item.selfLink;
+
+      // 4. Populate the item cache with the fresh value + new ETag
+      queryClient.setQueryData(
+        queryKeys.entityItem.byUrl(profileEntity, href),
+        item,
+      );
+
+      // 5. Invalidate collections so lists reflect the change
+      //    Collection key string is "EntitySearch" (query-keys.ts:5)
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+      });
+
+      // 6. Compose caller's onSuccess LAST
+      await onSuccess?.(item, variables, onMutateResult, context);
+    },
+    ...restMutationOptions,
+  });
+}
+```
+
+**Key invariants:**
+
+- `useNavigatorData()` provides `apiFetch` only — `contentFetch` does not exist in the context yet (see Content exception below).
+- `onSuccess` composition order: cache → invalidate → caller. Never fire caller `onSuccess` before cache is consistent.
+- 412 must bubble to the caller (`onError`); the hook must not auto-retry.
+  Check `error instanceof ProblemDetailError && error.problemDetail.status === 412`.
+- Tests: use `makeQueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })` + `makeWrapper` + MSW handler factories. Extend `contract.test.ts` (ADR-014).
+
+---
+
+## Content exception
+
+Binary content operations (PUT/GET to `cg:content` links) have **no HAL-FORMS template or codec**.
+They are the one case where a `Request` is constructed by hand:
+
+- The presence of the `cg:content` link is the ABAC gate — if the link is absent, the operation is
+  not permitted. Check `entityItem.contentLinks` or `entityItem.halItem.links.findLink(cgRels.content, attrName)`.
+- Build the `Request` directly: `new Request(link.href, { method: "PUT", body: file, headers: { "Content-Type": mimeType } })`.
+- Use a **binary client** (`createContentClient`) that omits the `Accept: application/hal+json`
+  header set by `createApiClient`. `createContentClient` is already exported from `src/api/client.ts`
+  but is **not yet wired into the context** — the planned hook (`useUploadContent` /
+  `useDownloadContent`) will need `contentFetch` added to `NavigatorDataContextValue` and
+  `NavigatorDataProvider`.
+- Content PUT returns 204 No Content — use `fetchVoid` (not yet implemented) rather than `fetchHal`.
 
 ---
 
