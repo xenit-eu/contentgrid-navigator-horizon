@@ -527,7 +527,7 @@ export class EntityItem {
 
     if (opts?.range !== undefined) {
       const { start, end } = opts.range;
-      headers["Range"] = end !== undefined ? `bytes=${start}-${end}` : `bytes=${start}-`;
+      headers["Range"] = end === undefined ? `bytes=${start}-` : `bytes=${start}-${end}`;
     }
 
     return new Request(link.href, {
