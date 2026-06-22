@@ -378,4 +378,11 @@ Signature verification: RS256; public keys at `GET ${CONTENTGRID_URL}/.well-know
 - Never construct or parse pagination cursors — follow HAL `next`/`prev` links directly.
 - Send Bearer tokens in the `Authorization` header only.
 - Verify webhook signatures using the JWKS endpoint and a JWT library.
-- Extensions must authenticate via OIDC and use the same REST API as any other client.
+- Extensions (external services/automations built on top of a ContentGrid application — see "Small Core & Extensibility") must authenticate via OIDC and use the same REST API as any other client.
+- **Drive mutations from `_templates`**: read `method`, `target`, and `contentType` from the item's `default`/`delete`/`set-<rel>`/`add-<rel>`/`clear-<rel>` template or the profile's `create-form` template. Never hardcode HTTP method, URL, or Content-Type in a mutation hook.
+- **Gate operations on template/link presence**: absence of `_templates.delete` (or any other template) means that operation is not permitted for this item/user. Do NOT render or invoke an operation whose template is absent.
+- **Never derive URLs from path conventions**: collection URLs come from `cg:entity` links; item URLs from expanding the profile's templated `describes` link; relation/content URLs from `cg:relation`/`cg:content` links on the entity item. Do NOT string-build or regex-replace any URL.
+- **IDs from the `id` field only**: never parse an entity ID out of a self href.
+- **No hardcoded attribute names**: detect content attributes via `blueprint:attribute type: "content"`; discover audit-role fields via `blueprint:constraint` system-managed types (`created-date`, `created-by`, `modified-date`, `modified-by`). Attribute names are customer-defined and not stable.
+- **Search operations** must be executed through the `_templates.search` template on the entity profile (`/profile/{plural}`, via `profileEntity.searchTemplate`) — never by hand-building query URLs. See the search template guide in [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
+- For the full data-layer rules see [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).

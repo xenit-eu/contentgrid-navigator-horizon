@@ -112,6 +112,44 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `data` for item hooks is `EntityItem` (wraps a `HalObject`).
 - Do NOT unwrap or reshape inside the hook — leave that to the consumer.
 
+**Rules-of-Hooks safety — multi-mode hooks call the TanStack hook exactly once:**
+
+`useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`, and `useEntityItem` accept
+several parameter shapes (by-url / default / by-search; known-profile / discover-profile). They
+MUST resolve those shapes into plain values first, then call the underlying TanStack hook once,
+unconditionally. NEVER branch into separate `return useQuery(...)` arms — calling a hook inside an
+`if` / early `return` changes hook order between renders (a Rules-of-Hooks violation; React and
+SonarCloud both flag "React Hook is called conditionally").
+
+- Collection hooks resolve params via the hookless helper `resolveCollectionRequest(params) →
+{ url, enabled }`, then make a single `useQuery` / `useInfiniteQuery` call passing `enabled`.
+  Add new param modes inside that helper — never as a new hook-call site.
+- Disable a query with `enabled: false`, never by skipping the hook call. Disabled when:
+  `searchValues === undefined` (search mode), `entityId === undefined` (`useEntityItem` known
+  mode), or the required link/profile is not yet resolved.
+- `useEntityItem` calls `useProfileEntities()` first (both modes — cached), resolves `url` and
+  `profileEntity` in plain code, then makes one `useQuery` (`enabled: !!url && !!profileEntity`).
+- `useProfileEntity` must NOT pass an unresolved link to `ProfileEntity.profileByLinkQuery`
+  (computing a queryKey from `undefined` throws). Until the `cg:entity` link is found, pass a
+  placeholder `queryKey` + `enabled: false`.
+- `useProfileEntities` fans out over the profile-root `cg:entity` links with `useQueries` and
+  returns the per-entity result array via `combine`; consumers read each result's own state.
+
+**Query-options factories, retry, and placeholder data:**
+
+- Factories (`fetchByUrlQuery`, `infiniteQuery`, `profileByLinkQuery`, `profileRootQuery`) return
+  TanStack `queryOptions` / `infiniteQueryOptions`. The hook spreads them and may add `enabled`.
+  Never call `apiFetch` outside the `queryFn`.
+- Retry belongs to the `QueryClient` (production: default of 3; tests: `retry: false` via
+  `makeQueryClient`). Prefer NOT to bake `retry` into a factory — a baked-in value overrides the
+  QueryClient and makes error paths untestable without fake timers. `profileRootQuery` omits it on
+  purpose; `fetchByUrlQuery`, `infiniteQuery`, and `profileByLinkQuery` still hardcode `retry: 3`,
+  so when testing THEIR error paths advance fake timers (`vi.useFakeTimers()` +
+  `vi.runAllTimersAsync()`) to flush backoff.
+- Collection queries use `placeholderData: keepPreviousData` for smooth page-to-page transitions.
+  In tests assert on `isSuccess` / `isError`, not just `!!data` — placeholder data can be present
+  transiently before the real result resolves.
+
 ---
 
 ## Search request example
