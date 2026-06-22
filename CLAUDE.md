@@ -187,6 +187,7 @@ HAL-FORMS extensions:
 - `@contentgrid/hal` — `HalObject`, `HalSlice` for paginated data
 - `@contentgrid/hal/rels` — link relation utilities, `createRelations()`
 - `@contentgrid/hal/shapes` — POJO types for raw HAL JSON
+- See the [Dependency capability map](packages/navigator-data/CLAUDE.md#dependency-capability-map) for the full Layer-1 export inventory across all seven packages.
 
 ---
 
