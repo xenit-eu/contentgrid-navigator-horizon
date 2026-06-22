@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import {
@@ -258,5 +259,269 @@ describe("ProfileInspector", () => {
     renderProfileInspector();
 
     expect(screen.getByText("Loading profiles…")).toBeInTheDocument();
+  });
+
+  it("opens the Attributes collapsible to show attribute details", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    // Wait for profile to load
+    await screen.findByText("Invoice");
+
+    // Find and click the Attributes trigger on the Invoice card
+    const triggers = screen.getAllByText("Attributes");
+    // Each ProfileCard has one "Attributes" trigger; Invoice is first
+    await user.click(triggers[0]);
+
+    // Inside the collapsible: attribute names appear in font-mono spans
+    expect(screen.getAllByText("invoice_number").length).toBeGreaterThan(0);
+    // Title shows in the attribute detail line "Title: Invoice Number"
+    expect(screen.getByText(/Title: Invoice Number/)).toBeInTheDocument();
+  });
+
+  it("opens the User-Defined Attributes collapsible", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    await screen.findByText("Invoice");
+
+    const triggers = screen.getAllByText("User-Defined Attributes");
+    await user.click(triggers[0]);
+
+    // invoice_number is a user-defined attribute (id is readOnly)
+    // Both are in the invoice profile; invoice_number is user-defined
+    expect(screen.getAllByText("invoice_number").length).toBeGreaterThan(0);
+  });
+
+  it("opens the Relations collapsible to show relation details", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    await screen.findByText("Invoice");
+
+    // Click the Relations trigger on the Invoice card
+    const triggers = screen.getAllByText("Relations");
+    await user.click(triggers[0]);
+
+    // Invoice has a "customer" relation — "customer" may appear multiple times
+    // (relation name + Customer profile card); use getAllByText
+    expect(screen.getAllByText("customer").length).toBeGreaterThan(0);
+    // Relation is to-one (many_source_per_target=true, many_target_per_source=false)
+    expect(screen.getByText("to-one")).toBeInTheDocument();
+  });
+
+  it("opens the Audit Attributes collapsible", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    await screen.findByText("Invoice");
+
+    const triggers = screen.getAllByText("Audit Attributes");
+    await user.click(triggers[0]);
+
+    // Invoice has no audit attributes — shows "No audit attributes configured"
+    expect(screen.getAllByText("No audit attributes configured").length).toBeGreaterThan(0);
+  });
+
+  it("opens the Search Template collapsible to show search properties", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    await screen.findByText("Invoice");
+
+    const triggers = screen.getAllByText("Search Template");
+    await user.click(triggers[0]);
+
+    // Search template method and target appear in the content area
+    expect(screen.getAllByText(/Method: GET/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Target:/).length).toBeGreaterThan(0);
+    // The search properties are rendered
+    expect(screen.getAllByText("Search Properties").length).toBeGreaterThan(0);
+  });
+
+  it("shows 'No search template available' when profile has no search template", async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      http.get(PROFILE_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: PROFILE_URL },
+            curies: [
+              {
+                name: "cg",
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                templated: true,
+              },
+            ],
+            "cg:entity": [
+              { href: `${PROFILE_URL}/documents`, name: "document", title: "Document" },
+            ],
+          },
+        }),
+      ),
+      http.get(`${PROFILE_URL}/documents`, () =>
+        HttpResponse.json({
+          name: "document",
+          title: "Document",
+          _links: {
+            self: { href: `${PROFILE_URL}/documents` },
+            describes: [
+              { href: `${API_URL}/documents`, name: "collection" },
+              { href: `${API_URL}/documents/{id}`, name: "item", templated: true },
+            ],
+            curies: [
+              {
+                name: "blueprint",
+                href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+                templated: true,
+              },
+            ],
+          },
+          _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
+          _templates: {}, // no search, no create
+        }),
+      ),
+    );
+
+    renderProfileInspector();
+
+    // "Document" appears in CardTitle and CardDescription — use findAllByText
+    expect(await screen.findAllByText("Document")).toBeTruthy();
+
+    const triggers = screen.getAllByText("Search Template");
+    await user.click(triggers[0]);
+
+    expect(screen.getAllByText("No search template available").length).toBeGreaterThan(0);
+  });
+
+  it("opens the Create Template collapsible to show create properties", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    await screen.findByText("Invoice");
+
+    const triggers = screen.getAllByText("Create Template");
+    await user.click(triggers[0]);
+
+    // Create template content appears
+    expect(screen.getAllByText(/Method: POST/).length).toBeGreaterThan(0);
+    // User-defined attributes section appears
+    expect(screen.getAllByText(/User-Defined Attributes/).length).toBeGreaterThan(0);
+  });
+
+  it("opens the Raw Link Object collapsible", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+    renderProfileInspector();
+
+    await screen.findByText("Invoice");
+
+    const triggers = screen.getAllByText("Raw Link Object");
+    await user.click(triggers[0]);
+
+    // Raw link shows JSON with "href"
+    const preElements = document.querySelectorAll("pre");
+    expect(preElements.length).toBeGreaterThan(0);
+  });
+
+  it("shows partial load state with loading skeleton when some profiles are still loading", async () => {
+    // Hold the customer profile response to keep it in pending state while invoice loads
+    let releaseCustomer: (() => void) | undefined;
+    const customerPending = new Promise<void>((resolve) => {
+      releaseCustomer = resolve;
+    });
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${PROFILE_URL}/customers`, async () => {
+        await customerPending;
+        return HttpResponse.json({ name: "customer", _links: {}, _embedded: {} });
+      }),
+    );
+
+    renderProfileInspector();
+
+    // Wait for invoice to load (1 of 2 loaded, customer still pending)
+    expect(await screen.findByText("1 of 2 profile(s) loaded")).toBeInTheDocument();
+
+    // Loading skeleton card should show for the pending customer profile
+    expect(screen.getByText("Loading profile...")).toBeInTheDocument();
+    // Shows how many are still loading
+    expect(screen.getByText(/Loading 1 profile/)).toBeInTheDocument();
+
+    // Unblock customer so test cleanup doesn't hang
+    releaseCustomer!();
+  });
+
+  it("shows 'No create template available' when profile has no create-form", async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      http.get(PROFILE_URL, () =>
+        HttpResponse.json({
+          _links: {
+            self: { href: PROFILE_URL },
+            curies: [
+              {
+                name: "cg",
+                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+                templated: true,
+              },
+            ],
+            "cg:entity": [{ href: `${PROFILE_URL}/tickets`, name: "ticket", title: "Ticket" }],
+          },
+        }),
+      ),
+      http.get(`${PROFILE_URL}/tickets`, () =>
+        HttpResponse.json({
+          name: "ticket",
+          title: "Ticket",
+          _links: {
+            self: { href: `${PROFILE_URL}/tickets` },
+            describes: [
+              { href: `${API_URL}/tickets`, name: "collection" },
+              { href: `${API_URL}/tickets/{id}`, name: "item", templated: true },
+            ],
+            curies: [
+              {
+                name: "blueprint",
+                href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+                templated: true,
+              },
+            ],
+          },
+          _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
+          _templates: {
+            search: { method: "GET", target: `${API_URL}/tickets`, properties: [] },
+            // no create-form
+          },
+        }),
+      ),
+    );
+
+    renderProfileInspector();
+
+    // "Ticket" appears in CardTitle and "Entity: ticket" in CardDescription — both fine
+    expect(await screen.findAllByText("Ticket")).toBeTruthy();
+
+    const triggers = screen.getAllByText("Create Template");
+    await user.click(triggers[0]);
+
+    expect(screen.getAllByText("No create template available").length).toBeGreaterThan(0);
   });
 });
