@@ -106,16 +106,16 @@ function resolveCollectionRequest(params: EntityCollectionParams): {
   }
 
   let request: ReturnType<ProfileEntity["searchEntityRequest"]> | null;
-  if (!isBySearch(params)) {
+  if (isBySearch(params)) {
+    // Search-based fetch: undefined → disabled, explicit values → fetch.
+    request = params.searchValues
+      ? params.profileEntity.searchEntityRequest(params.searchValues)
+      : null;
+  } else {
     // Default fetch: use the template's empty search (null when no search template).
     const searchTemplate = params.profileEntity.searchTemplate;
     request = searchTemplate
       ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
-      : null;
-  } else {
-    // Search-based fetch: undefined → disabled, explicit values → fetch.
-    request = params.searchValues
-      ? params.profileEntity.searchEntityRequest(params.searchValues)
       : null;
   }
 
