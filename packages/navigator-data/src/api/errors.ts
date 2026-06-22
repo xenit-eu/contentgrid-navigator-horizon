@@ -4,17 +4,6 @@ export { checkResponse } from "@contentgrid/problem-details";
 export { ProblemDetailError };
 export type { ProblemDetail };
 
-/** Thrown when a mutation is rejected with HTTP 412 — the entity was modified concurrently. */
-export class PreconditionFailedError extends Error {
-  readonly problemDetail: ProblemDetail;
-
-  constructor(problemDetail: ProblemDetail) {
-    super(problemDetail.detail ?? problemDetail.title);
-    this.name = "PreconditionFailedError";
-    this.problemDetail = problemDetail;
-  }
-}
-
 /**
  * A single entry from the `errors[]` array on an `input/validation` problem
  * detail. Each sub-error is itself a ProblemDetail (title + optional detail)
