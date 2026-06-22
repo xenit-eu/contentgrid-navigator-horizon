@@ -81,7 +81,7 @@ entity name like `invoice`.
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
-- Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem` _(not yet implemented)_,
+- Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
   delete: `useDeleteEntityItem` _(not yet implemented)_
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
@@ -296,11 +296,9 @@ Rules:
 - Expose capability as a named boolean (`canUpdate`, `canCreate`, …) derived from template
   presence. Feature components must read the flag — not re-check raw templates.
 
-> **NOTE — not yet implemented:** `canUpdate`, `canCreate`, `canDelete`, and equivalent named
-> booleans do NOT yet exist as accessors. Today callers check the raw template directly:
-> `entityItem.defaultTemplate !== null` (update), `profileEntity.createTemplate !== null`
-> (create). The named-boolean convention is the target pattern once those getters are added to
-> the accessor classes.
+> `entityItem.defaultTemplate !== null → update is permitted (canUpdate getter)`. `canUpdate`
+> is implemented as a boolean getter on `EntityItem`. `canCreate`, `canDelete`, and equivalent
+> named booleans for other operations are not yet implemented.
 
 **3. URLs only from links — never string-built.**
 

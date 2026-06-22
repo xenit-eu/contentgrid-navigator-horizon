@@ -458,3 +458,28 @@ describe("EntityItem — editEntityRequest", () => {
     expect(req.method).toBe("PATCH");
   });
 });
+
+describe("EntityItem — canUpdate", () => {
+  it("returns true when the default template is present", () => {
+    const hal = makeEntityItemHal(
+      { id: "inv-001" },
+      {},
+      {
+        default: {
+          method: "PATCH",
+          target: "/invoices/inv-001",
+          contentType: "application/json",
+          properties: [{ name: "number", type: "text" }],
+        },
+      },
+    );
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.canUpdate).toBe(true);
+  });
+
+  it("returns false when no default template is present", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.canUpdate).toBe(false);
+  });
+});

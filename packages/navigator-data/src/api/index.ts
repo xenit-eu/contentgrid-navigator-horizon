@@ -4,5 +4,12 @@ export { checkResponse, ProblemDetailError, extractFieldErrors, getErrorMessage 
 export type { ProblemDetail, FieldError } from "./errors";
 export { createApiClient, createContentClient } from "./client";
 export type { AuthenticationTokenSupplier, TypedFetch } from "./client";
-export { fetchHal, fetchHalSlice, resolveTemplate, resolveTemplateRequired } from "./hal-client";
+export {
+  fetchHal,
+  fetchHalSlice,
+  resolveTemplate,
+  resolveTemplateRequired,
+  addIfMatchHeader,
+  fetchVoid,
+} from "./hal-client";
 export type { HalFetchResult } from "./hal-client";
