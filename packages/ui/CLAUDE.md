@@ -110,6 +110,23 @@ No CLI involved.
 
 ---
 
+## HAL-FORMS metadata in pattern components
+
+- Pattern components that render HAL-FORMS-derived props MUST accept the full
+  `FieldDescriptor` shape, including `options.link` (remote enumerations) and
+  all validation constraints (`required`, `regex`, `readOnly`, `allowed-values`).
+  Do NOT narrow the prop type to a lossy subset — silent field drops degrade
+  UX without compile-time errors.
+- Remote option FETCHING stays out of `packages/ui`. Do NOT import from
+  `@contentgrid/hal`, `@contentgrid/hal-forms`, or any data-layer package to
+  resolve `options.link` inside a pattern component. Accept already-resolved
+  options or a loader callback from the caller.
+- Why: `packages/ui` is the rendering layer; data fetching belongs in
+  `packages/navigator-data`. Mixing them violates the two-layer model (ADR-007)
+  and would pull Layer-1 packages into the UI bundle.
+
+---
+
 ## peerDep policy
 
 `react` and `react-dom` are `peerDependencies`. Do not move them to

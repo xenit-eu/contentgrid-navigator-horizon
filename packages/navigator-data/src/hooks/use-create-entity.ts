@@ -1,57 +1,55 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Representation, createRequest } from "@contentgrid/typed-fetch";
-import { CONTENT_TYPE_JSON } from "../api/content-types";
-import type { EntityInfo } from "../types/entity";
-import { convertToString } from "../utils/format";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import type { HalFormValues } from "@contentgrid/hal-forms/values";
+import { EntityItem } from "../accessors/entity-item";
+import type ProfileEntity from "../accessors/entity-profile";
+import { fetchHalObject } from "../api/hal-client";
+import type { EntityInstanceCreateRequestSpec } from "../api/requests";
+import { queryKeys } from "../query-keys";
+import type { EntityItemShape } from "../shapes";
 import { useNavigatorData } from "./context";
-import { queryKeys } from "./query-keys";
 
-interface CreateEntityParams {
-  entityName: string;
-  data: Record<string, unknown>;
-  file?: File;
+export interface UseCreateEntityItemOptions {
+  readonly mutationOptions?: Omit<
+    UseMutationOptions<EntityItem, Error, HalFormValues<EntityInstanceCreateRequestSpec>>,
+    "mutationFn"
+  >;
 }
 
-export function useCreateEntity() {
+/**
+ * Mutation hook for creating a new entity item.
+ *
+ * Encodes the create-form values via the HAL-FORMS codec, POSTs to the entity collection,
+ * and returns the newly created `EntityItem` on success.
+ * Automatically invalidates all collection queries for the entity type after a successful create.
+ *
+ * @param profileEntity - Entity profile containing the create-form template
+ * @param options - Optional mutation options (onSuccess, onError, etc.)
+ * @returns TanStack mutation result; `data` is the newly created `EntityItem`
+ */
+export function useCreateEntityItem(
+  profileEntity: ProfileEntity,
+  options?: UseCreateEntityItemOptions,
+) {
   const { apiFetch } = useNavigatorData();
   const queryClient = useQueryClient();
 
+  const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
+
   return useMutation({
-    mutationFn: async (params: CreateEntityParams) => {
-      const entities = queryClient.getQueryData<EntityInfo[]>(queryKeys.profile());
-      const collectionHref = entities?.find((e) => e.name === params.entityName)?.collectionHref;
-      if (!collectionHref) throw new Error(`Unknown entity: ${params.entityName}`);
-
-      if (params.file) {
-        const formData = new FormData();
-        formData.append("content", params.file);
-        for (const [key, value] of Object.entries(params.data)) {
-          if (value == null) continue;
-          formData.append(key, convertToString(value));
-        }
-        const response = await apiFetch(
-          createRequest(
-            { url: collectionHref, method: "POST" },
-            { body: Representation.createUnsafe(formData) },
-          ),
-        );
-        return response.headers.get("Location") ?? "";
-      }
-
-      const response = await apiFetch(
-        createRequest(
-          { url: collectionHref, method: "POST" },
-          {
-            headers: { "Content-Type": CONTENT_TYPE_JSON },
-            body: Representation.json(params.data),
-          },
-        ),
-      );
-      return response.headers.get("Location") ?? "";
+    mutationFn: async (values: HalFormValues<EntityInstanceCreateRequestSpec>) => {
+      const request = profileEntity.createEntityItemRequest(values);
+      const object = await fetchHalObject<EntityItemShape>(apiFetch, request);
+      return new EntityItem(object, profileEntity);
     },
-    onSuccess: (_location, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.entityList(variables.entityName) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.entityCount(variables.entityName) });
+    onSuccess: async (item, variables, onMutateResult, context) => {
+      const { href } = item.selfLink;
+      queryClient.setQueryData(queryKeys.entityItem.byUrl(profileEntity, href), item);
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+      });
+      await onSuccess?.(item, variables, onMutateResult, context);
     },
+    ...restMutationOptions,
   });
 }
