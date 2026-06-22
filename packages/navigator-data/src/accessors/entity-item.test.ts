@@ -426,12 +426,11 @@ describe("EntityItem — static fetchByUrlQuery", () => {
     const apiFetch = createApiClient(noopSupplier);
     const profile = makeProfileEntity();
     const opts = EntityItem.fetchByUrlQuery(apiFetch, ITEM_URL, profile);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await opts.queryFn!({
       queryKey: opts.queryKey,
       signal: new AbortController().signal,
       meta: undefined,
-    } as any);
+    } as unknown as Parameters<NonNullable<typeof opts.queryFn>>[0]);
     expect(result).toBeInstanceOf(EntityItem);
     expect(result.id).toBe("inv-001");
     expect(result.etag).toBe('"v1"');
