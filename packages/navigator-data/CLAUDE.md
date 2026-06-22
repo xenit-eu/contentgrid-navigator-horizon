@@ -82,7 +82,8 @@ entity name like `invoice`.
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
-  delete: `useDeleteEntityItem`, relation set/add/clear: `useRelationMutation`
+  delete: `useDeleteEntityItem`, relation set/add/clear: `useRelationMutation`,
+  binary content: `useUploadContent`, `useDownloadContent`
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
 `useEntityItem` supports two modes — choose based on what you know at call time:
@@ -126,6 +127,8 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.setRelationRequest(relationName, targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list)
 - `entityItem.addRelationRequest(relationName, targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line)
 - `entityItem.clearRelationRequest(relationName)` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
+- `entityItem.uploadContentRequest(attrName, file, opts?)` → hand-built PUT `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
+- `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 
 **URL construction — never concatenate by hand:**
 
@@ -426,7 +429,7 @@ export interface UseXxxOptions {
 
 ```typescript
 export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
-  const { apiFetch } = useNavigatorData();   // apiFetch only — no contentFetch in context yet
+  const { apiFetch } = useNavigatorData();   // use apiFetch for HAL; use contentFetch for binary content (see Content exception)
   const queryClient = useQueryClient();
 
   const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
@@ -476,7 +479,7 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 
 **Key invariants:**
 
-- `useNavigatorData()` provides `apiFetch` only — `contentFetch` does not exist in the context yet (see Content exception below).
+- `useNavigatorData()` provides both `apiFetch` (HAL client) and `contentFetch` (binary client, no `Accept: application/hal+json`). Use `apiFetch` for standard HAL mutations; use `contentFetch` only for binary content — see the Content exception section below.
 - `onSuccess` composition order: cache → invalidate → caller. Never fire caller `onSuccess` before cache is consistent.
 - 412 must bubble to the caller (`onError`); the hook must not auto-retry.
   Check `error instanceof ProblemDetailError && error.problemDetail.status === 412`.
@@ -487,17 +490,30 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 ## Content exception
 
 Binary content operations (PUT/GET to `cg:content` links) have **no HAL-FORMS template or codec**.
-They are the one case where a `Request` is constructed by hand:
+They are the one allowed case where a `Request` is constructed by hand.
+
+Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-content.ts`).
+
+**Rules:**
 
 - The presence of the `cg:content` link is the ABAC gate — if the link is absent, the operation is
-  not permitted. Check `entityItem.contentLinks` or `entityItem.halItem.links.findLink(cgRels.content, attrName)`.
-- Build the `Request` directly: `new Request(link.href, { method: "PUT", body: file, headers: { "Content-Type": mimeType } })`.
-- Use a **binary client** (`createContentClient`) that omits the `Accept: application/hal+json`
-  header set by `createApiClient`. `createContentClient` is already exported from `src/api/client.ts`
-  but is **not yet wired into the context** — the planned hook (`useUploadContent` /
-  `useDownloadContent`) will need `contentFetch` added to `NavigatorDataContextValue` and
-  `NavigatorDataProvider`.
-- Content PUT returns 204 No Content — use `fetchVoid` rather than `fetchHal`.
+  not permitted. Use `entityItem.canUploadContent(attrName)` (boolean) before invoking the hook.
+  URL always comes from `entityItem.contentLink(attrName)?.href` via `cgRels.content` — never
+  string-built.
+- Build the `Request` via `entityItem.uploadContentRequest(attrName, file, opts)` or
+  `entityItem.downloadContentRequest(attrName, opts)` — do NOT construct the Request by hand in
+  hook or feature code.
+- Use `contentFetch` (not `apiFetch`) for the binary PUT/GET — `contentFetch` omits the
+  `Accept: application/hal+json` header that `apiFetch` adds.
+- `contentFetch` is wired into `NavigatorDataContextValue` alongside `apiFetch`; access it via
+  `useNavigatorData()`.
+- Upload (PUT) returns 204 No Content — the hook uses `fetchVoid(contentFetch, req)` then re-fetches
+  the parent item via `apiFetch` to capture the fresh ETag and update the item cache.
+- Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
+  response is 206 (Range request).
+- Content helpers live in `src/api/content-types.ts`: `contentDispositionAttachment(filename)`,
+  `parseContentDisposition(header)`.
+- 412/415 surface as `ProblemDetailError`; the hook does not auto-retry.
 
 ---
 
