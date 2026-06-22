@@ -42,6 +42,32 @@ reason — only one instance of each must exist at runtime.
 
 ---
 
+## Dependency capability map
+
+These are the Layer-1 packages (see ADR-007 and the peerDep rule above) — use what they expose; do not re-implement it.
+
+| Package                                      | Concern it owns                             | Key exports                                                                                                                                                                                                     | Check before hand-rolling   |
+| -------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `@contentgrid/hal`                           | HAL parsing & link resolution               | `HalObject` (incl. `.self`), `HalSlice`, `HalEmbedded`, `HalError`, `Link`, `SimpleLink`, `Links` (`findLink`, `findLinks`, `requireSingleLink`)                                                                | `build/index.d.ts`          |
+| `@contentgrid/hal` `/rels`                   | Link-relation helpers                       | `createRelations`, `createRelation`, `ianaRelations`, `LinkRelation` type                                                                                                                                       | `build/rels/index.d.ts`     |
+| `@contentgrid/hal` `/shape`                  | POJO shape types                            | `HalObjectShape`, `LinkShape`, `LinksShape`, `HalEmbeddedShape`, `HalSliceShape`                                                                                                                                | `build/shape/index.d.ts`    |
+| `@contentgrid/hal` `/curies`                 | CURIE registry                              | `Curie`, `CurieRegistry`                                                                                                                                                                                        | `build/curies/index.d.ts`   |
+| `@contentgrid/hal-forms`                     | HAL-FORMS template resolution & errors      | `resolveTemplate`, `resolveTemplateRequired`, `HalFormsTemplate`, `HalFormsProperty` (incl. `multiValue`, `options.isInline()`, `options.isRemote()`), `HalTemplateNotFoundError`, `InvalidHalFormsOptionError` | `build/index.d.ts`          |
+| `@contentgrid/hal-forms` `/values`           | Immutable form value manager                | `createValues`, `HalFormValues` (`withValue`, `withoutValue`, `withValues`, `valueMap`)                                                                                                                         | `build/values/index.d.ts`   |
+| `@contentgrid/hal-forms` `/codecs`           | Request body encoding                       | default `HalFormsCodecs`, `Coders` namespace                                                                                                                                                                    | `build/codecs/index.d.ts`   |
+| `@contentgrid/hal-forms` `/shape`            | Shape types for templates                   | `HalFormsTemplateShape`, `HalFormsPropertyShape`, `HalFormsPropertyType`                                                                                                                                        | `build/shape.d.ts`          |
+| `@contentgrid/typed-fetch`                   | Phantom-typed fetch client & requests       | `createTypedFetch`, `createRequest`, `Representation.json`, `TypedRequestSpec`, `TypedRequest`, `TypedResponse`                                                                                                 | `build/index.d.ts`          |
+| `@contentgrid/fetch-hooks`                   | Composable request hooks                    | `createHook` (default), `compose`, `FetchHooksError`, `UsageError`                                                                                                                                              | `build/index.d.ts`          |
+| `@contentgrid/fetch-hooks` `/request`        | Header mutation hooks                       | `setHeader`, `appendHeader`                                                                                                                                                                                     | `build/request.d.ts`        |
+| `@contentgrid/fetch-hooks` `/value-provider` | Value resolution                            | `ValueProvider` type, `ValueProviderResolver` (namespace: `constant`, `cached`, `fn`, `fromValueProvider`)                                                                                                      | `build/value-provider.d.ts` |
+| `@contentgrid/fetch-hook-authentication`     | OIDC bearer auth hook                       | `createBearerAuthenticationHook` (default), `AuthenticationTokenSupplier`, `AuthenticationToken`, `createCompositeTokenSupplier`, `createContentgridTokenExchangeTokenSupplier`                                 | `build/index.d.ts`          |
+| `@contentgrid/problem-details`               | `application/problem+json` parsing & errors | `checkResponse`, `fromResponse`, `ProblemDetailError`, `ProblemDetail`                                                                                                                                          | `build/index.d.ts`          |
+| `@contentgrid/uri-template`                  | URI Template expand / match                 | `UriTemplate` (default — `expand`, `match`, `variables`, `template`)                                                                                                                                            | `build/index.d.ts`          |
+
+> Map tracks the `0.4.x` line (all seven pinned at `0.4.2`, range `^0.4.0`).
+
+---
+
 ## HAL hook conventions
 
 Hooks in this package wrap TanStack Query. Follow these conventions:
