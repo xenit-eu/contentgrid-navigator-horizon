@@ -97,48 +97,37 @@ export function useEntityItemCollection(
 ) {
   const { apiFetch } = useNavigatorData();
 
-  // URL-based fetch
-  if (isByUrl(params)) {
-    return useQuery({
-      ...EntityItemCollection.fetchByUrlQuery(
-        apiFetch,
-        params.url,
-        params.profileEntity,
-        options?.queryOptionsOverride,
-      ),
-    });
-  }
+  let url: string;
+  let enabled = true;
 
-  // Default fetch: use the template's empty search
-  if (!isBySearch(params)) {
+  if (isByUrl(params)) {
+    // URL-based fetch: always enabled
+    url = params.url;
+  } else if (!isBySearch(params)) {
+    // Default fetch: use the template's empty search
     const searchTemplate = params.profileEntity.searchTemplate;
     const request = searchTemplate
       ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
       : null;
-    return useQuery({
-      ...EntityItemCollection.fetchByUrlQuery(
-        apiFetch,
-        request?.url ?? "",
-        params.profileEntity,
-        options?.queryOptionsOverride,
-      ),
-      enabled: !!request,
-    });
+    url = request?.url ?? "";
+    enabled = !!request;
+  } else {
+    // Search-based fetch: undefined → disabled, explicit values → fetch
+    const request = params.searchValues
+      ? params.profileEntity.searchEntityRequest(params.searchValues)
+      : null;
+    url = request?.url ?? "";
+    enabled = !!request;
   }
-
-  // Search-based fetch: undefined → disabled, explicit values → fetch
-  const request = params.searchValues
-    ? params.profileEntity.searchEntityRequest(params.searchValues)
-    : null;
 
   return useQuery({
     ...EntityItemCollection.fetchByUrlQuery(
       apiFetch,
-      request?.url ?? "",
+      url,
       params.profileEntity,
       options?.queryOptionsOverride,
     ),
-    enabled: !!request,
+    enabled,
   });
 }
 
@@ -197,47 +186,36 @@ export function useEntityItemCollectionInfiniteScroll(
 ) {
   const { apiFetch } = useNavigatorData();
 
-  // URL-based fetch
-  if (isByUrl(params)) {
-    return useInfiniteQuery({
-      ...EntityItemCollection.infiniteQuery(
-        apiFetch,
-        params.url,
-        params.profileEntity,
-        options?.queryOptionsOverride,
-      ),
-    });
-  }
+  let url: string;
+  let enabled = true;
 
-  // Default fetch: use the template's empty search
-  if (!isBySearch(params)) {
+  if (isByUrl(params)) {
+    // URL-based fetch: always enabled
+    url = params.url;
+  } else if (!isBySearch(params)) {
+    // Default fetch: use the template's empty search
     const searchTemplate = params.profileEntity.searchTemplate;
     const request = searchTemplate
       ? params.profileEntity.searchEntityRequest(createValues(searchTemplate.template))
       : null;
-    return useInfiniteQuery({
-      ...EntityItemCollection.infiniteQuery(
-        apiFetch,
-        request?.url ?? "",
-        params.profileEntity,
-        options?.queryOptionsOverride,
-      ),
-      enabled: !!request,
-    });
+    url = request?.url ?? "";
+    enabled = !!request;
+  } else {
+    // Search-based fetch: undefined → disabled, explicit values → fetch
+    const request = params.searchValues
+      ? params.profileEntity.searchEntityRequest(params.searchValues)
+      : null;
+    url = request?.url ?? "";
+    enabled = !!request;
   }
-
-  // Search-based fetch: undefined → disabled, explicit values → fetch
-  const request = params.searchValues
-    ? params.profileEntity.searchEntityRequest(params.searchValues)
-    : null;
 
   return useInfiniteQuery({
     ...EntityItemCollection.infiniteQuery(
       apiFetch,
-      request?.url ?? "",
+      url,
       params.profileEntity,
       options?.queryOptionsOverride,
     ),
-    enabled: !!request,
+    enabled,
   });
 }

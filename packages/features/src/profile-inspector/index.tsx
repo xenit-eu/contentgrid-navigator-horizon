@@ -4,6 +4,7 @@ import {
   type CreateFormRelationToManyProperty,
   type CreateFormRelationToOneProperty,
   type ProfileEntity,
+  type SearchHalFormTemplateProperty,
   profileRootQuery,
   useNavigatorData,
   useProfileEntities,
@@ -259,16 +260,7 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                   <div className="text-muted-foreground space-y-1 text-xs">
                     <p>Title: {rel.title}</p>
                     {rel.description && <p>Description: {rel.description}</p>}
-                    <p>
-                      Cardinality:{" "}
-                      {rel.isManyToMany
-                        ? "many-to-many"
-                        : rel.isManyToOne
-                          ? "many-to-one"
-                          : rel.isOneToMany
-                            ? "one-to-many"
-                            : "one-to-one"}
-                    </p>
+                    <p>Cardinality: {cardinalityLabel(rel)}</p>
                     {rel.targetProfileLink && (
                       <p className="font-mono">Target: {rel.targetProfileLink.href}</p>
                     )}
@@ -354,36 +346,13 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                             <div className="text-muted-foreground space-y-0.5 text-[10px]">
                               <p>Prompt: {prop.property.prompt}</p>
                               {prop.profileAttribute && (
-                                <>
-                                  <p>Attribute: {prop.profileAttribute.title}</p>
-                                  <p>Type: {prop.profileAttribute.type}</p>
-                                  {prop.profileAttribute.description && (
-                                    <p>Description: {prop.profileAttribute.description}</p>
-                                  )}
-                                </>
+                                <AttributeDetails attribute={prop.profileAttribute} />
                               )}
                               {prop.profileRelation && (
-                                <>
-                                  <p>Relation: {prop.profileRelation.title}</p>
-                                  <p>
-                                    Cardinality:{" "}
-                                    {prop.profileRelation.isManyToMany
-                                      ? "many-to-many"
-                                      : prop.profileRelation.isManyToOne
-                                        ? "many-to-one"
-                                        : prop.profileRelation.isOneToMany
-                                          ? "one-to-many"
-                                          : "one-to-one"}
-                                  </p>
-                                  {prop.profileRelation.description && (
-                                    <p>Description: {prop.profileRelation.description}</p>
-                                  )}
-                                  {prop.profileRelation.targetProfileLink && (
-                                    <p className="font-mono">
-                                      Target Profile: {prop.profileRelation.targetProfileLink.href}
-                                    </p>
-                                  )}
-                                </>
+                                <RelationDetails
+                                  relation={prop.profileRelation}
+                                  showTargetProfileLink
+                                />
                               )}
                             </div>
                           </div>
@@ -473,13 +442,7 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                             <div className="text-muted-foreground space-y-0.5 text-[10px]">
                               <p>Prompt: {prop.property.prompt}</p>
                               {prop.profileAttribute && (
-                                <>
-                                  <p>Attribute: {prop.profileAttribute.title}</p>
-                                  <p>Type: {prop.profileAttribute.type}</p>
-                                  {prop.profileAttribute.description && (
-                                    <p>Description: {prop.profileAttribute.description}</p>
-                                  )}
-                                </>
+                                <AttributeDetails attribute={prop.profileAttribute} />
                               )}
                               {prop.allowedValues && (
                                 <p>Allowed: {prop.allowedValues.map((v) => `"${v}"`).join(", ")}</p>
@@ -575,24 +538,7 @@ function RelationPropertyCard({
       </div>
       <div className="text-muted-foreground space-y-0.5 text-[10px]">
         <p>Prompt: {prop.property.prompt}</p>
-        {prop.profileRelation && (
-          <>
-            <p>Relation: {prop.profileRelation.title}</p>
-            <p>
-              Cardinality:{" "}
-              {prop.profileRelation.isManyToMany
-                ? "many-to-many"
-                : prop.profileRelation.isManyToOne
-                  ? "many-to-one"
-                  : prop.profileRelation.isOneToMany
-                    ? "one-to-many"
-                    : "one-to-one"}
-            </p>
-            {prop.profileRelation.description && (
-              <p>Description: {prop.profileRelation.description}</p>
-            )}
-          </>
-        )}
+        {prop.profileRelation && <RelationDetails relation={prop.profileRelation} />}
         {prop.targetProfile && (
           <>
             <p>Target Entity: {prop.targetProfile.title}</p>
@@ -602,6 +548,45 @@ function RelationPropertyCard({
         <p className="font-mono">Collection: {prop.targetCollectionHref}</p>
       </div>
     </div>
+  );
+}
+
+type ProfileRelation = NonNullable<SearchHalFormTemplateProperty["profileRelation"]>;
+type ProfileAttribute = NonNullable<SearchHalFormTemplateProperty["profileAttribute"]>;
+
+function cardinalityLabel(relation: ProfileRelation): string {
+  return relation.isManyToMany
+    ? "many-to-many"
+    : relation.isManyToOne
+      ? "many-to-one"
+      : relation.isOneToMany
+        ? "one-to-many"
+        : "one-to-one";
+}
+
+function RelationDetails({
+  relation,
+  showTargetProfileLink = false,
+}: Readonly<{ relation: ProfileRelation; showTargetProfileLink?: boolean }>) {
+  return (
+    <>
+      <p>Relation: {relation.title}</p>
+      <p>Cardinality: {cardinalityLabel(relation)}</p>
+      {relation.description && <p>Description: {relation.description}</p>}
+      {showTargetProfileLink && relation.targetProfileLink && (
+        <p className="font-mono">Target Profile: {relation.targetProfileLink.href}</p>
+      )}
+    </>
+  );
+}
+
+function AttributeDetails({ attribute }: Readonly<{ attribute: ProfileAttribute }>) {
+  return (
+    <>
+      <p>Attribute: {attribute.title}</p>
+      <p>Type: {attribute.type}</p>
+      {attribute.description && <p>Description: {attribute.description}</p>}
+    </>
   );
 }
 
