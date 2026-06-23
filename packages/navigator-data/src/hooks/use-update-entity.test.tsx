@@ -57,6 +57,21 @@ function makeInvoiceProfile(): ProfileEntity {
   );
 }
 
+// Build an EntityItem with NO default template (ABAC denies update)
+function makeEntityItemWithoutTemplate(): EntityItem {
+  const profile = makeInvoiceProfile();
+  const itemBody = {
+    ...sampleInvoice,
+    _links: {
+      ...sampleInvoice._links,
+      self: { href: INVOICE_ITEM_URL },
+    },
+    // no _templates → defaultTemplate is null
+  };
+  const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
+  return new EntityItem(hal, profile, null);
+}
+
 // Build an EntityItem with a default (update) template and optional etag
 function makeEntityItemWithTemplate(etag: string | null = '"v1"'): EntityItem {
   const profile = makeInvoiceProfile();
@@ -344,5 +359,26 @@ describe("useUpdateEntityItem — error handling", () => {
     );
     // No retry — PATCH handler called exactly once
     expect(patchCallCount).toBe(1);
+  });
+});
+
+describe("useUpdateEntityItem — ABAC absent template", () => {
+  it("surfaces an error when the default template is absent (ABAC denies update)", async () => {
+    const entityItem = makeEntityItemWithoutTemplate();
+    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      result.current.mutate({ status: "paid" } as any);
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect((result.current.error as Error).message).toBe(
+      "Update not permitted: 'default' template absent",
+    );
   });
 });

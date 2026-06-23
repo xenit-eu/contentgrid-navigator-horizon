@@ -182,7 +182,10 @@ export class EntityItem {
    * @returns Request ready to be sent with apiFetch
    */
   public editEntityRequest(values: HalFormValues<EntityInstanceUpdateRequestSpec>): Request {
-    const codec = halFormCodecs.requireCodecFor(this.defaultTemplate!);
+    if (this.defaultTemplate === null) {
+      throw new Error("Update not permitted: 'default' template absent");
+    }
+    const codec = halFormCodecs.requireCodecFor(this.defaultTemplate);
     return codec.encode(values);
   }
 
