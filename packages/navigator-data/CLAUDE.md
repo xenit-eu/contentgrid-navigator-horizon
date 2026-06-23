@@ -81,7 +81,7 @@ entity name like `invoice`.
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
-- Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem` _(not yet implemented)_,
+- Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
   delete: `useDeleteEntityItem` _(not yet implemented)_
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
@@ -296,11 +296,9 @@ Rules:
 - Expose capability as a named boolean (`canUpdate`, `canCreate`, …) derived from template
   presence. Feature components must read the flag — not re-check raw templates.
 
-> **NOTE — not yet implemented:** `canUpdate`, `canCreate`, `canDelete`, and equivalent named
-> booleans do NOT yet exist as accessors. Today callers check the raw template directly:
-> `entityItem.defaultTemplate !== null` (update), `profileEntity.createTemplate !== null`
-> (create). The named-boolean convention is the target pattern once those getters are added to
-> the accessor classes.
+> `entityItem.defaultTemplate !== null → update is permitted (canUpdate getter)`. `canUpdate`
+> is implemented as a boolean getter on `EntityItem`. `canCreate`, `canDelete`, and equivalent
+> named booleans for other operations are not yet implemented.
 
 **3. URLs only from links — never string-built.**
 
@@ -371,11 +369,12 @@ Rules:
 | `fetchHal`       | `{ object: HalObject, etag }` | yes                     | GET — need the ETag for subsequent mutations                                                           |
 | `fetchHalObject` | `HalObject` (no ETag)         | yes                     | POST that returns 201 + body (create); not exported from `api/index.ts` — import from `api/hal-client` |
 | `fetchHalSlice`  | `HalSlice` (no ETag)          | yes (via `fetchHal`)    | Collection queries                                                                                     |
+| `fetchVoid`      | `void`                        | no                      | 204 No Content — DELETE / relation set/add/clear / content PUT; calls `checkResponse`, discards body   |
 
 Both `fetchHal` and `fetchHalObject` call `response.json()` and will **throw on a 204 No Content
 response** (empty body). Mutations that return 204 — DELETE, relation set/add/clear, content PUT —
-need a separate 204-safe path. No such helper exists yet; add `fetchVoid(apiFetch, request)`
-(calls `checkResponse`, discards body) when building those hooks.
+must use `fetchVoid(apiFetch, request)` instead. `fetchVoid` is implemented and exported from
+`src/api/hal-client.ts` — it calls `checkResponse` and discards the body, making it 204-safe.
 
 **Attaching `If-Match` to a mutation request:**
 
@@ -443,9 +442,8 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
       const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, req);
       return new EntityItem(object, profileEntity, etag);
 
-      // 3b. 204 No Content (delete / relation / content) — use fetchVoid (not yet implemented;
-      //     add it to hal-client.ts when building these hooks)
-      // await fetchVoid(apiFetch, req);
+      // 3b. 204 No Content (delete / relation / content) — use fetchVoid (204-safe)
+      await fetchVoid(apiFetch, req);
     },
     onSuccess: async (item, variables, onMutateResult, context) => {
       const { href } = item.selfLink;
@@ -493,7 +491,7 @@ They are the one case where a `Request` is constructed by hand:
   but is **not yet wired into the context** — the planned hook (`useUploadContent` /
   `useDownloadContent`) will need `contentFetch` added to `NavigatorDataContextValue` and
   `NavigatorDataProvider`.
-- Content PUT returns 204 No Content — use `fetchVoid` (not yet implemented) rather than `fetchHal`.
+- Content PUT returns 204 No Content — use `fetchVoid` rather than `fetchHal`.
 
 ---
 
