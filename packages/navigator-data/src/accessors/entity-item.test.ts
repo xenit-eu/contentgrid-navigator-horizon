@@ -492,3 +492,77 @@ describe("EntityItem — canUpdate", () => {
     expect(item.canUpdate).toBe(false);
   });
 });
+
+describe("EntityItem — deleteTemplate", () => {
+  it("returns null when no delete template on the item", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.deleteTemplate).toBeNull();
+  });
+
+  it("returns template when delete template is present", () => {
+    const hal = makeEntityItemHal(
+      { id: "inv-001" },
+      {},
+      {
+        delete: {
+          method: "DELETE",
+          target: "/invoices/inv-001",
+          properties: [],
+        },
+      },
+    );
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.deleteTemplate).not.toBeNull();
+  });
+});
+
+describe("EntityItem — canDelete", () => {
+  it("returns true when the delete template is present", () => {
+    const hal = makeEntityItemHal(
+      { id: "inv-001" },
+      {},
+      {
+        delete: {
+          method: "DELETE",
+          target: "/invoices/inv-001",
+          properties: [],
+        },
+      },
+    );
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.canDelete).toBe(true);
+  });
+
+  it("returns false when no delete template is present", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.canDelete).toBe(false);
+  });
+});
+
+describe("EntityItem — deleteEntityItemRequest", () => {
+  it("returns a Request with DELETE method", () => {
+    const hal = makeEntityItemHal(
+      { id: "inv-001" },
+      {},
+      {
+        delete: {
+          method: "DELETE",
+          target: "https://api.example.com/invoices/inv-001",
+          properties: [],
+        },
+      },
+    );
+    const item = new EntityItem(hal, makeProfileEntity(), '"v1"');
+    const req = item.deleteEntityItemRequest();
+    expect(req).toBeInstanceOf(Request);
+    expect(req.method).toBe("DELETE");
+  });
+
+  it("throws when delete template is absent", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(() => item.deleteEntityItemRequest()).toThrow();
+  });
+});

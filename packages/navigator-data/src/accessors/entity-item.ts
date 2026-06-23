@@ -4,11 +4,15 @@ import type { Link } from "@contentgrid/hal";
 import type { HalFormsTemplate } from "@contentgrid/hal-forms";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
+import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
-import type { EntityInstanceUpdateRequestSpec } from "../api/requests";
+import type {
+  EntityInstanceDeleteRequestSpec,
+  EntityInstanceUpdateRequestSpec,
+} from "../api/requests";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
@@ -198,6 +202,49 @@ export class EntityItem {
    */
   public get canUpdate(): boolean {
     return this.defaultTemplate !== null;
+  }
+
+  /**
+   * The HAL-FORMS "delete" template for deleting this entity item.
+   *
+   * Returns `null` if the current user lacks delete permission or the template is missing.
+   * Template absence is the platform's per-item ABAC signal — never assume permission.
+   *
+   * @returns Delete template or null if not available
+   */
+  public get deleteTemplate(): HalFormsTemplate<EntityInstanceDeleteRequestSpec> | null {
+    return resolveTemplate(this.halItem.data, "delete");
+  }
+
+  /**
+   * Whether the current user is permitted to delete this entity item.
+   *
+   * Derived from `deleteTemplate` presence — the platform omits the template
+   * when the ABAC policy denies delete for this item/user combination.
+   * Feature components must read this flag instead of re-checking raw templates.
+   */
+  public get canDelete(): boolean {
+    return this.deleteTemplate !== null;
+  }
+
+  /**
+   * Encode a delete Request using the HAL-FORMS codec (driven by the `delete` template).
+   *
+   * The codec picks the `encodedToRequestUrl` encoder for DELETE (no request body),
+   * which encodes any properties as URL query parameters.
+   * Returns the Request — callers are responsible for executing it with `apiFetch`.
+   * Include an `If-Match` header on the request to prevent concurrent conflicts (RFC 9110).
+   *
+   * @returns Request ready to be sent with apiFetch
+   * @throws Error if the delete template is not present
+   */
+  public deleteEntityItemRequest(): Request {
+    if (this.deleteTemplate === null) {
+      throw new Error("Delete not permitted: 'delete' template absent");
+    }
+    const template = this.deleteTemplate;
+    const codec = halFormCodecs.requireCodecFor(template);
+    return codec.encode(createValues(template));
   }
 
   //TODO support relations
