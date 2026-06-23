@@ -182,8 +182,22 @@ export class EntityItem {
    * @returns Request ready to be sent with apiFetch
    */
   public editEntityRequest(values: HalFormValues<EntityInstanceUpdateRequestSpec>): Request {
-    const codec = halFormCodecs.requireCodecFor(this.defaultTemplate!);
+    if (this.defaultTemplate === null) {
+      throw new Error("Update not permitted: 'default' template absent");
+    }
+    const codec = halFormCodecs.requireCodecFor(this.defaultTemplate);
     return codec.encode(values);
+  }
+
+  /**
+   * Whether the current user is permitted to update this entity item.
+   *
+   * Derived from `defaultTemplate` presence — the platform omits the template
+   * when the ABAC policy denies update for this item/user combination.
+   * Feature components must read this flag instead of re-checking raw templates.
+   */
+  public get canUpdate(): boolean {
+    return this.defaultTemplate !== null;
   }
 
   //TODO support relations

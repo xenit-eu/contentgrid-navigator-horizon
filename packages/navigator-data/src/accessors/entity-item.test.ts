@@ -457,4 +457,38 @@ describe("EntityItem — editEntityRequest", () => {
     expect(req).toBeInstanceOf(Request);
     expect(req.method).toBe("PATCH");
   });
+
+  it("throws with an explicit ABAC message when defaultTemplate is null", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      item.editEntityRequest({} as any),
+    ).toThrowError("Update not permitted: 'default' template absent");
+  });
+});
+
+describe("EntityItem — canUpdate", () => {
+  it("returns true when the default template is present", () => {
+    const hal = makeEntityItemHal(
+      { id: "inv-001" },
+      {},
+      {
+        default: {
+          method: "PATCH",
+          target: "/invoices/inv-001",
+          contentType: "application/json",
+          properties: [{ name: "number", type: "text" }],
+        },
+      },
+    );
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.canUpdate).toBe(true);
+  });
+
+  it("returns false when no default template is present", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.canUpdate).toBe(false);
+  });
 });
