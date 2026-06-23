@@ -546,3 +546,57 @@ describe("useDownloadContent — uses contentFetch not apiFetch", () => {
     expect(contentFetchSpy).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// ABAC: cg:content link absent — hooks must surface isError
+// ---------------------------------------------------------------------------
+
+function makeEntityItemWithoutContentLink(): EntityItem {
+  const profile = makeInvoiceProfile();
+  const itemBody = {
+    id: "inv-002",
+    document: null,
+    _links: {
+      self: { href: INVOICE_ITEM_URL },
+      // no cg:content link → ABAC deny
+    },
+  };
+  const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
+  return new EntityItem(hal, profile, '"v1"');
+}
+
+describe("useUploadContent — ABAC: cg:content link absent", () => {
+  it("surfaces isError when the entity item has no cg:content link", async () => {
+    const entityItem = makeEntityItemWithoutContentLink();
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect((result.current.error as Error).message).toMatch(/cg:content link absent/);
+  });
+});
+
+describe("useDownloadContent — ABAC: cg:content link absent", () => {
+  it("surfaces isError when the entity item has no cg:content link", async () => {
+    const entityItem = makeEntityItemWithoutContentLink();
+    const { result } = renderHook(() => useDownloadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate();
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect((result.current.error as Error).message).toMatch(/cg:content link absent/);
+  });
+});
