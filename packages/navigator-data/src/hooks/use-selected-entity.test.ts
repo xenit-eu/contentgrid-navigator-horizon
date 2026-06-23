@@ -9,7 +9,7 @@ const INVOICE_PROFILE_URL = `${BASE}/profile/invoices`;
 const CUSTOMER_PROFILE_URL = `${BASE}/profile/customers`;
 const STORAGE_KEY = "cg.api.example.com.selectedEntity";
 
-const profileRootWith1 = {
+const profileRootWith1Entity = {
   _links: {
     self: { href: PROFILE_URL },
     "cg:entity": [{ href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" }],
@@ -20,7 +20,7 @@ const profileRootWith1 = {
   _templates: {},
 };
 
-const profileRootWith2 = {
+const profileRootWith2Entities = {
   _links: {
     self: { href: PROFILE_URL },
     "cg:entity": [
@@ -62,7 +62,7 @@ afterEach(() => localStorage.clear());
 describe("useSelectedEntity — with 1 entity", () => {
   beforeEach(() => {
     server.use(
-      http.get(PROFILE_URL, () => HttpResponse.json(profileRootWith1)),
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootWith1Entity)),
       http.get(INVOICE_PROFILE_URL, () =>
         HttpResponse.json(makeEntityProfileBody("invoice", "invoices")),
       ),
@@ -84,7 +84,7 @@ describe("useSelectedEntity — with 1 entity", () => {
 describe("useSelectedEntity — with 2+ entities", () => {
   beforeEach(() => {
     server.use(
-      http.get(PROFILE_URL, () => HttpResponse.json(profileRootWith2)),
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootWith2Entities)),
       http.get(INVOICE_PROFILE_URL, () =>
         HttpResponse.json(makeEntityProfileBody("invoice", "invoices")),
       ),
@@ -118,7 +118,7 @@ describe("useSelectedEntity — with 2+ entities", () => {
 describe("useSelectedEntity — setSelectedEntity", () => {
   beforeEach(() => {
     server.use(
-      http.get(PROFILE_URL, () => HttpResponse.json(profileRootWith2)),
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootWith2Entities)),
       http.get(INVOICE_PROFILE_URL, () =>
         HttpResponse.json(makeEntityProfileBody("invoice", "invoices")),
       ),

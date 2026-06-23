@@ -33,9 +33,9 @@ function AppLayout() {
   const { entity: urlEntity } = useParams({ strict: false }) as { entity?: string };
   const selectedEntity = entities.find((e) => e.name === urlEntity) ?? null;
 
-  function handleEntitySelect(entity: Entity) {
+  async function handleEntitySelect(entity: Entity) {
     setSelectedEntity(entities.find((e) => e.name === entity.name)!);
-    void navigate({ to: "/$entity", params: { entity: entity.name } });
+    await navigate({ to: "/$entity", params: { entity: entity.name } });
   }
 
   return (
