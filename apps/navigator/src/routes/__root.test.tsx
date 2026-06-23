@@ -164,18 +164,17 @@ describe("AppLayout — entity routing", () => {
     expect(screen.getByTestId("entity-detail")).toHaveAttribute("data-entity", "invoice");
   });
 
-  it("redirects to the default entity when no entity is in the URL", async () => {
+  it("renders entity overview at / even when entities are loaded", async () => {
     vi.mocked(useSelectedEntity).mockReturnValue(
       makeEntityResult({ entities: [INVOICE], selectedEntity: INVOICE }),
     );
     renderRouter("/");
     await waitFor(() => {
-      expect(screen.getByTestId("entity-detail")).toBeInTheDocument();
+      expect(screen.getByTestId("entity-overview")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("entity-detail")).toHaveAttribute("data-entity", "invoice");
   });
 
-  it("renders the entity from the URL even when a different default entity is set", async () => {
+  it("renders the entity from the URL even when a different entity is stored", async () => {
     vi.mocked(useSelectedEntity).mockReturnValue(
       makeEntityResult({ entities: [INVOICE, CUSTOMER], selectedEntity: INVOICE }),
     );

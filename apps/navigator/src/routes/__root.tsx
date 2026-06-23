@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Outlet, createRootRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { NavigatorDataProvider, useAppAuth, useSelectedEntity } from "@contentgrid/navigator-data";
 import { BrandingHeader, EntitySelector, SignInGate } from "@contentgrid/ui";
@@ -28,18 +27,11 @@ function RootComponent() {
 
 function AppLayout() {
   const navigate = useNavigate();
-  // entities + localStorage persistence; selectedEntity here is the localStorage-based default
-  const { entities, selectedEntity: defaultEntity, setSelectedEntity } = useSelectedEntity();
+  const { entities, setSelectedEntity } = useSelectedEntity();
 
   // URL is the runtime source of truth for which entity is displayed
   const { entity: urlEntity } = useParams({ strict: false }) as { entity?: string };
   const selectedEntity = entities.find((e) => e.name === urlEntity) ?? null;
-
-  useEffect(() => {
-    if (!urlEntity && defaultEntity) {
-      void navigate({ to: "/$entity", params: { entity: defaultEntity.name }, replace: true });
-    }
-  }, [urlEntity, defaultEntity, navigate]);
 
   function handleEntitySelect(entity: Entity) {
     setSelectedEntity(entities.find((e) => e.name === entity.name)!);
