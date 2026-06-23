@@ -267,18 +267,30 @@ export class SearchHalFormTemplate {
 
   /**
    * Extract search type from property name suffix.
+   * Uses the last `~` as the suffix delimiter — handles both `field~op` and `field.~op` (range-pair).
    */
   private extractSearchType(propertyName: string): ProfileAttributeSearchType {
-    if (propertyName.includes("~prefix")) return ProfileAttributeSearchType.prefixMatch;
-    if (propertyName.includes("~fts")) return ProfileAttributeSearchType.fullText;
-    if (propertyName.includes("~gte")) return ProfileAttributeSearchType.greaterThanOrEqual;
-    if (propertyName.includes("~gt")) return ProfileAttributeSearchType.greaterThan;
-    if (propertyName.includes("~lte")) return ProfileAttributeSearchType.lessThanOrEqual;
-    if (propertyName.includes("~lt")) return ProfileAttributeSearchType.lessThan;
-    // Note: datetime uses ~after/~before which map to gt/lt semantically
-    if (propertyName.includes("~after")) return ProfileAttributeSearchType.greaterThan;
-    if (propertyName.includes("~before")) return ProfileAttributeSearchType.lessThan;
-    return ProfileAttributeSearchType.exactMatch;
+    const tildeIdx = propertyName.lastIndexOf("~");
+    if (tildeIdx === -1) return ProfileAttributeSearchType.exactMatch;
+    const suffix = propertyName.slice(tildeIdx + 1);
+    switch (suffix) {
+      case "prefix-match":
+        return ProfileAttributeSearchType.prefixMatch;
+      case "full-text":
+        return ProfileAttributeSearchType.fullText;
+      case "greater-than":
+        return ProfileAttributeSearchType.greaterThan;
+      case "greater-than-or-equal":
+      case "from":
+        return ProfileAttributeSearchType.greaterThanOrEqual;
+      case "less-than":
+        return ProfileAttributeSearchType.lessThan;
+      case "less-than-or-equal":
+      case "until":
+        return ProfileAttributeSearchType.lessThanOrEqual;
+      default:
+        return ProfileAttributeSearchType.exactMatch;
+    }
   }
 
   /**

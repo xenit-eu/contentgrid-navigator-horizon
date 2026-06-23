@@ -214,12 +214,14 @@ function EnumFilter({
 }
 
 function DateFilter({
+  propName,
   label,
   searchType,
   value,
   onChange,
   rawDate = false,
 }: Readonly<{
+  propName: string;
   label: string;
   searchType: string;
   value: string;
@@ -228,7 +230,7 @@ function DateFilter({
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
-  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const inputId = `filter-${propName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -254,11 +256,13 @@ function DateFilter({
 }
 
 function TextFilter({
+  propName,
   label,
   value,
   onChange,
   searchType = "exact",
 }: Readonly<{
+  propName: string;
   label: string;
   value: string;
   onChange: (value: string | undefined) => void;
@@ -266,7 +270,7 @@ function TextFilter({
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
-  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const inputId = `filter-${propName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -358,6 +362,7 @@ export function FilterSidebar({
                       return (
                         <DateFilter
                           key={prop.name}
+                          propName={prop.name}
                           label={label}
                           searchType={searchType}
                           value={value}
@@ -372,6 +377,7 @@ export function FilterSidebar({
                       return (
                         <TextFilter
                           key={prop.name}
+                          propName={prop.name}
                           label={label}
                           searchType={searchType}
                           value={value}

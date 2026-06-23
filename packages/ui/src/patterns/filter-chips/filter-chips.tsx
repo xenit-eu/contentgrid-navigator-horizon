@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { X } from "lucide-react";
+import { XIcon as X } from "@phosphor-icons/react";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
 import {

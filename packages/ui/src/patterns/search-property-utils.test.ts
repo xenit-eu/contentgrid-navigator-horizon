@@ -183,10 +183,13 @@ describe("SEARCH_TYPE_LABELS", () => {
 });
 
 describe("IMPLICIT_OPS", () => {
-  it("suppresses prefix, prefix-match, and exact-match labels", () => {
-    expect(IMPLICIT_OPS.has("prefix")).toBe(true);
+  it("suppresses prefix-match and exact-match labels", () => {
     expect(IMPLICIT_OPS.has("prefix-match")).toBe(true);
     expect(IMPLICIT_OPS.has("exact-match")).toBe(true);
+  });
+
+  it("does not suppress bare prefix (platform emits prefix-match, not prefix)", () => {
+    expect(IMPLICIT_OPS.has("prefix")).toBe(false);
   });
 
   it("does not suppress greater-than, full-text, or range operators", () => {

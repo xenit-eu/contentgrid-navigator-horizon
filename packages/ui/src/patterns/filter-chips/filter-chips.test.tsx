@@ -11,7 +11,11 @@ const STATUS_PROP: SearchProperty = {
   type: "string",
   options: { inline: ["draft", "paid"] },
 };
-const PREFIX_PROP: SearchProperty = { name: "number~prefix", prompt: "Number", type: "string" };
+const PREFIX_PROP: SearchProperty = {
+  name: "number~prefix-match",
+  prompt: "Number",
+  type: "string",
+};
 const EXACT_PROP: SearchProperty = { name: "ref~exact-match", prompt: "Ref", type: "string" };
 const FULL_TEXT_PROP: SearchProperty = {
   name: "notes~full-text",
@@ -69,12 +73,12 @@ describe("FilterChips — rendering", () => {
   });
 
   it("renders nothing when all filter values are empty strings", () => {
-    const { container } = renderChips({ status: "", "number~prefix": "" });
+    const { container } = renderChips({ status: "", "number~prefix-match": "" });
     expect(container.firstChild).toBeNull();
   });
 
   it("renders a chip for each non-empty filter", () => {
-    renderChips({ status: "paid", "number~prefix": "INV-001" });
+    renderChips({ status: "paid", "number~prefix-match": "INV-001" });
     expect(screen.getByText("paid", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("INV-001", { exact: false })).toBeInTheDocument();
   });
@@ -105,8 +109,8 @@ describe("FilterChips — chip content", () => {
 });
 
 describe("FilterChips — operator display (IMPLICIT_OPS suppressed)", () => {
-  it("does not show operator label for prefix operator", () => {
-    renderChips({ "number~prefix": "INV" });
+  it("does not show operator label for prefix-match operator", () => {
+    renderChips({ "number~prefix-match": "INV" });
     expect(screen.queryByText("prefix")).not.toBeInTheDocument();
   });
 
@@ -197,7 +201,7 @@ describe("FilterChips — date value display", () => {
 
 describe("FilterChips — dismiss button", () => {
   it("renders a dismiss button for each active chip", () => {
-    renderChips({ status: "paid", "number~prefix": "INV" });
+    renderChips({ status: "paid", "number~prefix-match": "INV" });
     const dismissButtons = screen.getAllByRole("button");
     expect(dismissButtons).toHaveLength(2);
   });
@@ -248,19 +252,21 @@ describe("FilterChips — Clear all button", () => {
   });
 
   it("renders Clear all when two or more chips are active and onClearAll is provided", () => {
-    renderChips({ status: "paid", "number~prefix": "INV" }, ALL_PROPS, { onClearAll: vi.fn() });
+    renderChips({ status: "paid", "number~prefix-match": "INV" }, ALL_PROPS, {
+      onClearAll: vi.fn(),
+    });
     expect(screen.getByRole("button", { name: /clear all/i })).toBeInTheDocument();
   });
 
   it("does not render Clear all even with multiple chips when onClearAll is not provided", () => {
-    renderChips({ status: "paid", "number~prefix": "INV" });
+    renderChips({ status: "paid", "number~prefix-match": "INV" });
     expect(screen.queryByRole("button", { name: /clear all/i })).not.toBeInTheDocument();
   });
 
   it("calls onClearAll when Clear all is clicked", async () => {
     const user = userEvent.setup();
     const onClearAll = vi.fn();
-    renderChips({ status: "paid", "number~prefix": "INV" }, ALL_PROPS, { onClearAll });
+    renderChips({ status: "paid", "number~prefix-match": "INV" }, ALL_PROPS, { onClearAll });
     await user.click(screen.getByRole("button", { name: /clear all/i }));
     expect(onClearAll).toHaveBeenCalled();
   });

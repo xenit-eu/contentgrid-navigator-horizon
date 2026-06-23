@@ -7,7 +7,7 @@ export interface SearchProperty {
   /** Data type, e.g. "string", "date", "datetime" */
   type: string;
   /** Available values for enum-like fields */
-  options?: { inline?: string[] };
+  options?: { inline?: string[]; link?: { href: string } };
 }
 
 const UPPERCASE_WORDS: Record<string, string> = {
@@ -49,7 +49,6 @@ export function formatFieldLabel(prop: SearchProperty): string {
 }
 
 export const SEARCH_TYPE_LABELS: Record<string, string> = {
-  prefix: "prefix",
   "prefix-match": "prefix",
   "exact-match": "exact",
   "full-text": "contains",
@@ -65,7 +64,7 @@ export const SEARCH_TYPE_LABELS: Record<string, string> = {
 };
 
 /** Raw operator keys whose translated label should be suppressed in chip display. */
-export const IMPLICIT_OPS = new Set(["prefix", "prefix-match", "exact-match"]);
+export const IMPLICIT_OPS = new Set(["prefix-match", "exact-match"]);
 
 const DATE_FIELD_TYPES = new Set(["date", "datetime", "datetime-local", "time"]);
 const DATE_SUFFIXES = [
