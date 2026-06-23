@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 const FILTER_PROPERTIES = [
   { name: "status", prompt: "Status", type: "string", options: { inline: ["draft", "paid"] } },
-  { name: "number~prefix", prompt: "Number", type: "string" },
+  { name: "number~prefix-match", prompt: "Number", type: "string" },
   { name: "issued_date~greater-than", prompt: "Issued date", type: "date" },
   { name: "issued_date~less-than", prompt: "Issued date", type: "date" },
   { name: "amount.~from", prompt: "Amount", type: "string" },
@@ -31,7 +31,7 @@ export const SingleChip: Story = {
 export const MultipleChips: Story = {
   args: {
     filterProperties: FILTER_PROPERTIES,
-    filters: { status: "draft", "number~prefix": "INV-001" },
+    filters: { status: "draft", "number~prefix-match": "INV-001" },
     onRemoveFilter: fn(),
     onClearAll: fn(),
   },
@@ -63,7 +63,7 @@ export const ManyFilters: Story = {
     filterProperties: FILTER_PROPERTIES,
     filters: {
       status: "paid",
-      "number~prefix": "INV",
+      "number~prefix-match": "INV",
       "issued_date~greater-than": "2024-01-01T00:00:00Z",
     },
     onRemoveFilter: fn(),

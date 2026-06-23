@@ -114,7 +114,7 @@ describe("FilterChips — operator display (IMPLICIT_OPS suppressed)", () => {
     expect(screen.queryByText("prefix")).not.toBeInTheDocument();
   });
 
-  it("does not show operator label for prefix-match operator", () => {
+  it("does not show operator label for prefix-match on a different field", () => {
     const prop: SearchProperty = { name: "ref~prefix-match", prompt: "Ref", type: "string" };
     renderChips({ "ref~prefix-match": "ABC" }, [prop]);
     expect(screen.queryByText("prefix")).not.toBeInTheDocument();
