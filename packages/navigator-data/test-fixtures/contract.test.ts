@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   invoiceCreateTemplate,
+  invoiceDeleteTemplate,
   invoiceSearchTemplate,
   invoiceUpdateTemplate,
   sampleInvoice,
@@ -288,6 +289,36 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
         expect(result.data.method).toBe("PATCH");
         expect(Array.isArray(result.data.properties)).toBe(true);
       }
+    });
+  });
+
+  describe("HAL-Forms delete template shape", () => {
+    it("invoiceDeleteTemplate matches HalFormsTemplateSchema", () => {
+      const result = HalFormsTemplateSchema.safeParse(invoiceDeleteTemplate);
+      expect(
+        result.success,
+        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+      ).toBe(true);
+    });
+
+    it("invoiceDeleteTemplate has method DELETE and empty properties array", () => {
+      const result = HalFormsTemplateSchema.safeParse(invoiceDeleteTemplate);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.method).toBe("DELETE");
+        expect(result.data.properties).toHaveLength(0);
+      }
+    });
+
+    it("delete template missing method fails HalFormsTemplateSchema", () => {
+      const brokenTemplate = {
+        target: "/invoices/{id}",
+        properties: [],
+        // method intentionally omitted
+      };
+      const strictSchema = HalFormsTemplateSchema;
+      const result = strictSchema.safeParse(brokenTemplate);
+      expect(result.success).toBe(false);
     });
   });
 

@@ -62,6 +62,17 @@ export const invoiceSearchTemplate = {
   ],
 } as const;
 
+export const invoiceDeleteTemplate = {
+  method: "DELETE",
+  target: "/invoices/{id}",
+  properties: [],
+} as const;
+
+export const invoiceItemTemplates = {
+  default: invoiceUpdateTemplate,
+  delete: invoiceDeleteTemplate,
+} as const;
+
 export const invoiceProfileTemplates = {
   "create-form": invoiceCreateTemplate,
   search: invoiceSearchTemplate,
@@ -87,6 +98,11 @@ export const sampleInvoice: HalObjectShape<{
     self: { href: "/invoices/inv-001" },
   },
 };
+
+export const sampleInvoiceWithTemplates = {
+  ...sampleInvoice,
+  _templates: invoiceItemTemplates,
+} as const;
 
 export const sampleInvoiceItems: HalObjectShape<Record<string, unknown>>[] = [
   {

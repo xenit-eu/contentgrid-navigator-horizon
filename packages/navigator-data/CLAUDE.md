@@ -82,7 +82,7 @@ entity name like `invoice`.
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
-  delete: `useDeleteEntityItem` _(not yet implemented)_
+  delete: `useDeleteEntityItem`
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
 `useEntityItem` supports two modes — choose based on what you know at call time:
@@ -271,13 +271,13 @@ update/delete/relation are already in the codebase. The corresponding mutation _
 implemented. When building them, mirror the accessors below (all resolved from the item's
 `_templates`):
 
-| Operation            | Template key  | Planned hook          | Accessor to add to `EntityItem`                                |
-| -------------------- | ------------- | --------------------- | -------------------------------------------------------------- |
-| Update               | `default`     | `useUpdateEntityItem` | _already has_ `defaultTemplate` + `editEntityRequest`          |
-| Delete               | `delete`      | `useDeleteEntityItem` | `deleteTemplate` + `deleteEntityRequest()` (no values)         |
-| Set to-one relation  | `set-<rel>`   | `useRelationMutation` | `setRelationTemplate(name)` + `setRelationRequest(name, uris)` |
-| Add to-many relation | `add-<rel>`   | `useRelationMutation` | `addRelationTemplate(name)` + `addRelationRequest(name, uris)` |
-| Clear relation       | `clear-<rel>` | `useRelationMutation` | `clearRelationTemplate(name)` + `clearRelationRequest(name)`   |
+| Operation            | Template key  | Planned hook          | Accessor on `EntityItem`                                                       |
+| -------------------- | ------------- | --------------------- | ------------------------------------------------------------------------------ |
+| Update               | `default`     | `useUpdateEntityItem` | _has_ `defaultTemplate` + `editEntityRequest(values)`                          |
+| Delete               | `delete`      | `useDeleteEntityItem` | _has_ `deleteTemplate` + `canDelete` + `deleteEntityItemRequest()` (no values) |
+| Set to-one relation  | `set-<rel>`   | `useRelationMutation` | `setRelationTemplate(name)` + `setRelationRequest(name, uris)`                 |
+| Add to-many relation | `add-<rel>`   | `useRelationMutation` | `addRelationTemplate(name)` + `addRelationRequest(name, uris)`                 |
+| Clear relation       | `clear-<rel>` | `useRelationMutation` | `clearRelationTemplate(name)` + `clearRelationRequest(name)`                   |
 
 Binary content (PUT to `cg:content`) has no HAL-FORMS template — see the **Content exception**
 section below.
@@ -296,9 +296,10 @@ Rules:
 - Expose capability as a named boolean (`canUpdate`, `canCreate`, …) derived from template
   presence. Feature components must read the flag — not re-check raw templates.
 
-> `entityItem.defaultTemplate !== null → update is permitted (canUpdate getter)`. `canUpdate`
-> is implemented as a boolean getter on `EntityItem`. `canCreate`, `canDelete`, and equivalent
-> named booleans for other operations are not yet implemented.
+> `entityItem.defaultTemplate !== null → update is permitted (canUpdate getter)`.
+> `entityItem.deleteTemplate !== null → delete is permitted (canDelete getter)`.
+> Both `canUpdate` and `canDelete` are implemented as boolean getters on `EntityItem`.
+> `canCreate` and equivalent named booleans for relation operations are not yet implemented.
 
 **3. URLs only from links — never string-built.**
 
@@ -351,7 +352,7 @@ Canonical flow:
 
 1. **GET** `/{plural}/{id}` — capture the `ETag` response header.
    Store the ETag value exactly as received (including surrounding quotes).
-2. **PUT or PATCH** `/{plural}/{id}` — send `If-Match: <stored-ETag>`.
+2. **PUT, PATCH, or DELETE** `/{plural}/{id}` — send `If-Match: <stored-ETag>`.
 3. **On 412** — the item was modified concurrently. Re-fetch to get the
    current state + new ETag, re-apply the user's changes, and retry.
 

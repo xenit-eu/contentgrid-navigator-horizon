@@ -23,3 +23,5 @@ export { useCreateEntityItem } from "./use-create-entity";
 export type { UseCreateEntityItemOptions } from "./use-create-entity";
 export { useUpdateEntityItem } from "./use-update-entity";
 export type { UseUpdateEntityItemOptions } from "./use-update-entity";
+export { useDeleteEntityItem } from "./use-delete-entity";
+export type { UseDeleteEntityItemOptions } from "./use-delete-entity";
