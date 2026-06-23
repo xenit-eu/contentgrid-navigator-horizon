@@ -8,12 +8,14 @@
  * - If-Match header sent verbatim from item.etag
  * - null etag → no If-Match header attached
  * - Permission denial (missing template → isError, apiFetch NOT called)
- * - 412 ETag mismatch → isError, handler hit exactly once (no retry)
- * - 409 integrity/blind-relation-overwrite → isError
+ * - 412 ETag mismatch → isError, handler hit exactly once (no retry) — set, add, clear
+ * - 409 integrity/blind-relation-overwrite → isError (set)
+ * - 409 integrity/required-relation → isError status 409 (clear)
  * - Cache: setQueryData on entityItem.byUrl after success
  * - Cache: invalidateQueries on entityItemCollection.forEntity always
  * - Cache: invalidateQueries on targetEntityItemCollection.forEntity when targetProfileEntity provided
  * - Caller onSuccess runs after cache is consistent
+ * - Set op with two hrefs throws (exact-count guard)
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
@@ -150,9 +152,8 @@ describe("useRelationMutation — set success (PUT 204 → re-fetch → cache)",
     server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
     wireRefetchHandler('"v2"');
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -179,7 +180,7 @@ describe("useRelationMutation — set success (PUT 204 → re-fetch → cache)",
     const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
 
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -208,9 +209,8 @@ describe("useRelationMutation — add success (POST 204 with all hrefs in body)"
     server.use(createRelationAddHandler({ url: LINE_ITEMS_RELATION_URL }));
     wireRefetchHandler();
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -237,9 +237,8 @@ describe("useRelationMutation — add success (POST 204 with all hrefs in body)"
     );
     wireRefetchHandler();
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -269,9 +268,8 @@ describe("useRelationMutation — clear success (DELETE 204)", () => {
     server.use(createRelationUnlinkHandler({ url: SUPPLIER_RELATION_URL }));
     wireRefetchHandler();
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithClearTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -299,9 +297,8 @@ describe("useRelationMutation — If-Match header", () => {
     );
     wireRefetchHandler();
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -330,9 +327,8 @@ describe("useRelationMutation — If-Match header", () => {
     );
     wireRefetchHandler();
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithSetTemplate(null);
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -357,11 +353,10 @@ describe("useRelationMutation — If-Match header", () => {
 
 describe("useRelationMutation — permission denial", () => {
   it("isError when set template is missing (template absent = ABAC deny)", async () => {
-    const profile = makeInvoiceProfile();
     // Item has NO set-supplier template
     const entityItem = makeEntityItemWithRelations('"v1"', {});
 
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -383,10 +378,9 @@ describe("useRelationMutation — permission denial", () => {
   it("does not call apiFetch when template is absent", async () => {
     const fetchSpy = vi.fn();
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithRelations('"v1"', {});
 
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(makeQueryClient(), fetchSpy as never),
     });
 
@@ -427,9 +421,8 @@ describe("useRelationMutation — 412 ETag mismatch", () => {
       }),
     );
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -469,9 +462,8 @@ describe("useRelationMutation — 409 blind-relation-overwrite", () => {
       }),
     );
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(),
     });
 
@@ -507,7 +499,7 @@ describe("useRelationMutation — cache invalidation", () => {
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -532,14 +524,13 @@ describe("useRelationMutation — cache invalidation", () => {
     wireRefetchHandler();
 
     const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
     const supplierProfile = makeSupplierProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(
-      () => useRelationMutation(profile, { targetProfileEntity: supplierProfile }),
+      () => useRelationMutation({ targetProfileEntity: supplierProfile }),
       { wrapper: makeWrapper(queryClient) },
     );
 
@@ -564,13 +555,12 @@ describe("useRelationMutation — cache invalidation", () => {
     wireRefetchHandler();
 
     const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
     const supplierProfile = makeSupplierProfile();
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    const { result } = renderHook(() => useRelationMutation(profile), {
+    const { result } = renderHook(() => useRelationMutation(), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -610,7 +600,7 @@ describe("useRelationMutation — cache invalidation", () => {
 
     const { result } = renderHook(
       () =>
-        useRelationMutation(profile, {
+        useRelationMutation({
           mutationOptions: { onSuccess: callerOnSuccess },
         }),
       { wrapper: makeWrapper(queryClient) },
@@ -630,5 +620,214 @@ describe("useRelationMutation — cache invalidation", () => {
     expect(callerOnSuccess).toHaveBeenCalledOnce();
     // Cache must already be set when caller onSuccess runs
     expect(cacheAtCallTime).toBeInstanceOf(EntityItem);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 412 ETag mismatch — no retry for add and clear
+// ---------------------------------------------------------------------------
+
+describe("useRelationMutation — 412 no retry (add and clear)", () => {
+  it("surfaces 412 as ProblemDetailError and POST handler is hit exactly once for add (no retry)", async () => {
+    let postCallCount = 0;
+
+    server.use(
+      http.post(LINE_ITEMS_RELATION_URL, () => {
+        postCallCount++;
+        return HttpResponse.json(
+          {
+            status: 412,
+            title: "Precondition Failed",
+            type: "https://contentgrid.cloud/problems/unsatisfied-version",
+          },
+          { status: 412, headers: { "Content-Type": "application/problem+json" } },
+        );
+      }),
+    );
+
+    const entityItem = makeEntityItemWithAddTemplate('"v1"');
+    const { result } = renderHook(() => useRelationMutation(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        entityItem,
+        relationName: "lineItems",
+        op: "add",
+        targetHrefs: [LINE_ITEM_URL_1],
+      });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(ProblemDetailError);
+    expect((result.current.error as ProblemDetailError<ProblemDetail>).problemDetail.status).toBe(
+      412,
+    );
+    // No retry — POST handler called exactly once
+    expect(postCallCount).toBe(1);
+  });
+
+  it("surfaces 412 as ProblemDetailError and DELETE handler is hit exactly once for clear (no retry)", async () => {
+    let deleteCallCount = 0;
+
+    server.use(
+      http.delete(SUPPLIER_RELATION_URL, () => {
+        deleteCallCount++;
+        return HttpResponse.json(
+          {
+            status: 412,
+            title: "Precondition Failed",
+            type: "https://contentgrid.cloud/problems/unsatisfied-version",
+          },
+          { status: 412, headers: { "Content-Type": "application/problem+json" } },
+        );
+      }),
+    );
+
+    const entityItem = makeEntityItemWithClearTemplate('"v1"');
+    const { result } = renderHook(() => useRelationMutation(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({ entityItem, relationName: "supplier", op: "clear" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(ProblemDetailError);
+    expect((result.current.error as ProblemDetailError<ProblemDetail>).problemDetail.status).toBe(
+      412,
+    );
+    // No retry — DELETE handler called exactly once
+    expect(deleteCallCount).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// add op body — newline-separated hrefs
+// ---------------------------------------------------------------------------
+
+describe("useRelationMutation — add body is newline-separated", () => {
+  it("POST body contains each href on its own line (\\n separated)", async () => {
+    let capturedBody: string | null = null;
+
+    server.use(
+      http.post(LINE_ITEMS_RELATION_URL, async ({ request }) => {
+        capturedBody = await request.text();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    wireRefetchHandler();
+
+    const entityItem = makeEntityItemWithAddTemplate('"v1"');
+    const { result } = renderHook(() => useRelationMutation(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        entityItem,
+        relationName: "lineItems",
+        op: "add",
+        targetHrefs: [LINE_ITEM_URL_1, LINE_ITEM_URL_2],
+      });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(capturedBody).not.toBeNull();
+    // The two hrefs must be separated by a newline character
+    const lines = capturedBody!
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    expect(lines).toContain(LINE_ITEM_URL_1);
+    expect(lines).toContain(LINE_ITEM_URL_2);
+    expect(lines).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 409 integrity/required-relation on clear
+// ---------------------------------------------------------------------------
+
+describe("useRelationMutation — 409 integrity/required-relation on clear", () => {
+  it("surfaces 409 required-relation as ProblemDetailError with status 409", async () => {
+    server.use(
+      createProblemHandler({
+        method: "delete",
+        url: SUPPLIER_RELATION_URL,
+        status: 409,
+        type: "https://contentgrid.cloud/problems/integrity/required-relation",
+        title: "Cannot clear required relation",
+      }),
+    );
+
+    const entityItem = makeEntityItemWithClearTemplate('"v1"');
+    const { result } = renderHook(() => useRelationMutation(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({ entityItem, relationName: "supplier", op: "clear" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(ProblemDetailError);
+    const problemError = result.current.error as ProblemDetailError<ProblemDetail>;
+    expect(problemError.problemDetail.status).toBe(409);
+    expect(problemError.problemDetail.type).toContain("required-relation");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// set op exact-count guard — two hrefs throws
+// ---------------------------------------------------------------------------
+
+describe("useRelationMutation — set op exact-count guard", () => {
+  it("throws when two hrefs are passed to set op (only one allowed)", async () => {
+    const entityItem = makeEntityItemWithSetTemplate('"v1"');
+    const { result } = renderHook(() => useRelationMutation(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        entityItem,
+        relationName: "supplier",
+        op: "set",
+        targetHrefs: [SUPPLIER_URL, `${BASE}/suppliers/sup-002`],
+      });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toContain("'set' op requires exactly one targetHref");
+  });
+
+  it("throws when no hrefs are passed to set op", async () => {
+    const entityItem = makeEntityItemWithSetTemplate('"v1"');
+    const { result } = renderHook(() => useRelationMutation(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        entityItem,
+        relationName: "supplier",
+        op: "set",
+        targetHrefs: [],
+      });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toContain("'set' op requires exactly one targetHref");
   });
 });
