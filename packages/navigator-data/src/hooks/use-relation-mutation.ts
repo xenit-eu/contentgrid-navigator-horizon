@@ -40,8 +40,9 @@ export type RelationMutationVariables = {
  */
 export type UseRelationMutationOptions = {
   /**
-   * When provided, invalidates the target entity's collection query on success.
-   * Use this when the relation change affects the target entity's collection view.
+   * When provided, invalidates the target entity's item and collection queries on success.
+   * Use this when the relation change affects the target entity's collection or cached item view.
+   * The target entity type is NOT derivable from the source item — supply it explicitly here.
    */
   readonly targetProfileEntity?: ProfileEntity;
   readonly mutationOptions?: Omit<
@@ -70,18 +71,17 @@ export type UseRelationMutationOptions = {
  *
  * Cache behaviour on success:
  * - `setQueryData` on `entityItem.byUrl` with the re-fetched item (fresh ETag).
- * - `invalidateQueries` on `entityItemCollection.forEntity(profileEntity)`.
- * - If `targetProfileEntity` provided: `invalidateQueries` on `entityItemCollection.forEntity(targetProfileEntity)`.
+ * - `invalidateQueries` on `entityItemCollection.forEntity(sourceProfileEntity)`.
+ * - `invalidateQueries` on `entityItem.forEntity(sourceProfileEntity)`.
+ * - If `targetProfileEntity` provided: `invalidateQueries` on both
+ *   `entityItemCollection.forEntity(targetProfileEntity)` and
+ *   `entityItem.forEntity(targetProfileEntity)`.
  * - Caller's `onSuccess` runs after cache is consistent.
  *
- * @param profileEntity - The entity profile (used for cache key scoping)
  * @param options - Optional hook options (targetProfileEntity, mutationOptions)
  * @returns TanStack mutation result; `data` is the updated `EntityItem` (re-fetched)
  */
-export function useRelationMutation(
-  profileEntity: ProfileEntity,
-  options?: UseRelationMutationOptions,
-) {
+export function useRelationMutation(options?: UseRelationMutationOptions) {
   const { apiFetch } = useNavigatorData();
   const queryClient = useQueryClient();
 
@@ -98,11 +98,10 @@ export function useRelationMutation(
       // Template absence means ABAC denied — throw before calling apiFetch.
       let baseReq: Request;
       if (op === "set") {
-        const href = targetHrefs?.[0];
-        if (!href) {
-          throw new Error(`useRelationMutation: 'set' op requires exactly one targetHref`);
+        if (!targetHrefs || targetHrefs.length !== 1) {
+          throw new Error("useRelationMutation: 'set' op requires exactly one targetHref");
         }
-        baseReq = entityItem.setRelationRequest(relationName, href);
+        baseReq = entityItem.setRelationRequest(relationName, targetHrefs[0]);
       } else if (op === "add") {
         if (!targetHrefs || targetHrefs.length === 0) {
           throw new Error(`useRelationMutation: 'add' op requires at least one targetHref`);
@@ -120,25 +119,40 @@ export function useRelationMutation(
       await fetchVoid(apiFetch, req);
 
       // Re-fetch parent item to get fresh state + new ETag.
+      // Derive the source profile entity from the mutation variables — not from hook params.
+      const sourceProfileEntity = entityItem.profileEntity;
       const { object, etag } = await fetchHal<EntityItemShape>(
         apiFetch,
         new Request(entityItem.selfLink.href),
       );
-      return new EntityItem(object, profileEntity, etag);
+      return new EntityItem(object, sourceProfileEntity, etag);
     },
     onSuccess: async (item, variables, onMutateResult, context) => {
-      // Populate item cache with fresh data + ETag.
-      queryClient.setQueryData(queryKeys.entityItem.byUrl(profileEntity, item.selfLink.href), item);
+      // Derive source profile entity from the mutated item's variables.
+      const sourceProfileEntity = variables.entityItem.profileEntity;
 
-      // Invalidate entity collections so lists reflect the change.
+      // Populate item cache with fresh data + ETag.
+      queryClient.setQueryData(
+        queryKeys.entityItem.byUrl(sourceProfileEntity, item.selfLink.href),
+        item,
+      );
+
+      // Invalidate source entity collections and items so lists reflect the change.
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+        queryKey: queryKeys.entityItemCollection.forEntity(sourceProfileEntity),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItem.forEntity(sourceProfileEntity),
       });
 
-      // Optionally invalidate the target entity's collections (e.g. relation back-link changed).
+      // Optionally invalidate the target entity's collections and items
+      // (e.g. relation back-link changed). Target type is NOT derivable from source.
       if (options?.targetProfileEntity) {
         await queryClient.invalidateQueries({
           queryKey: queryKeys.entityItemCollection.forEntity(options.targetProfileEntity),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entityItem.forEntity(options.targetProfileEntity),
         });
       }
 
