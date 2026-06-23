@@ -239,7 +239,10 @@ export class EntityItem {
    * @throws Error if the delete template is not present
    */
   public deleteEntityItemRequest(): Request {
-    const template = this.deleteTemplate!;
+    if (this.deleteTemplate === null) {
+      throw new Error("Delete not permitted: 'delete' template absent");
+    }
+    const template = this.deleteTemplate;
     const codec = halFormCodecs.requireCodecFor(template);
     return codec.encode(createValues(template));
   }

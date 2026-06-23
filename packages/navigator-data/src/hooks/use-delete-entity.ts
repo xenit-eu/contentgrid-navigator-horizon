@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { EntityItem } from "../accessors/entity-item";
-import type ProfileEntity from "../accessors/entity-profile";
 import { addIfMatchHeader, fetchVoid } from "../api/hal-client";
 import { queryKeys } from "../query-keys";
 import { useNavigatorData } from "./context";
@@ -25,14 +24,10 @@ export interface UseDeleteEntityItemOptions {
  * - `invalidateQueries` on `entityItemCollection.forEntity` so lists reflect the deletion.
  * - Caller's `onSuccess` runs after cache is consistent.
  *
- * @param profileEntity - The entity profile (used for cache key scoping)
  * @param options - Optional mutation options (onSuccess, onError, etc.)
  * @returns TanStack mutation result; `data` is the deleted `EntityItem` (for reference)
  */
-export function useDeleteEntityItem(
-  profileEntity: ProfileEntity,
-  options?: UseDeleteEntityItemOptions,
-) {
+export function useDeleteEntityItem(options?: UseDeleteEntityItemOptions) {
   const { apiFetch } = useNavigatorData();
   const queryClient = useQueryClient();
 
@@ -46,6 +41,7 @@ export function useDeleteEntityItem(
       return item;
     },
     onSuccess: async (deletedItem, variables, onMutateResult, context) => {
+      const { profileEntity } = deletedItem;
       queryClient.removeQueries({
         queryKey: queryKeys.entityItem.byUrl(profileEntity, deletedItem.selfLink.href),
       });

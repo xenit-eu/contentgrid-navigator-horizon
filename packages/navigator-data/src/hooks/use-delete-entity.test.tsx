@@ -10,6 +10,8 @@
  * - Caller onSuccess runs after cache cleanup
  * - 409 integrity/required-relation → isError with ProblemDetailError
  * - 412 ETag mismatch → isError, ProblemDetailError status 412, DELETE handler hit exactly once (no retry)
+ * - ABAC: absent delete template → mutate → isError (explicit guard throw)
+ * - 404 not-found/entity-item → isError, ProblemDetailError status 404
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -85,9 +87,8 @@ describe("useDeleteEntityItem — success DELETE → data is the EntityItem", ()
   it("returns the deleted EntityItem on success", async () => {
     server.use(createDeleteHandler({ url: INVOICE_ITEM_URL }));
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithDeleteTemplate('"v1"');
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(),
     });
 
@@ -117,9 +118,8 @@ describe("useDeleteEntityItem — If-Match header", () => {
       }),
     );
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithDeleteTemplate('"v1"');
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(),
     });
 
@@ -143,9 +143,8 @@ describe("useDeleteEntityItem — If-Match header", () => {
       }),
     );
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithDeleteTemplate(null);
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(),
     });
 
@@ -170,7 +169,7 @@ describe("useDeleteEntityItem — cache behaviour", () => {
     // Pre-populate the item cache so we can verify removal
     queryClient.setQueryData(queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL), entityItem);
 
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -193,7 +192,7 @@ describe("useDeleteEntityItem — cache behaviour", () => {
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -227,7 +226,7 @@ describe("useDeleteEntityItem — cache behaviour", () => {
 
     const { result } = renderHook(
       () =>
-        useDeleteEntityItem(profile, {
+        useDeleteEntityItem({
           mutationOptions: { onSuccess: callerOnSuccess },
         }),
       { wrapper: makeWrapper(queryClient) },
@@ -257,9 +256,8 @@ describe("useDeleteEntityItem — error handling", () => {
       }),
     );
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithDeleteTemplate('"v1"');
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(),
     });
 
@@ -292,9 +290,8 @@ describe("useDeleteEntityItem — error handling", () => {
       }),
     );
 
-    const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithDeleteTemplate('"v1"');
-    const { result } = renderHook(() => useDeleteEntityItem(profile), {
+    const { result } = renderHook(() => useDeleteEntityItem(), {
       wrapper: makeWrapper(),
     });
 
@@ -310,5 +307,65 @@ describe("useDeleteEntityItem — error handling", () => {
     );
     // No retry — DELETE handler called exactly once
     expect(deleteCallCount).toBe(1);
+  });
+});
+
+describe("useDeleteEntityItem — ABAC: absent delete template", () => {
+  it("isError when entity item has no delete template (ABAC guard)", async () => {
+    const profile = makeInvoiceProfile();
+    // Build an EntityItem WITHOUT a delete template — simulates ABAC denial
+    const itemBody = {
+      ...sampleInvoice,
+      _links: {
+        ...sampleInvoice._links,
+        self: { href: INVOICE_ITEM_URL },
+      },
+      // No _templates at all — delete template absent
+    };
+    const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
+    const entityItem = new EntityItem(hal, profile, '"v1"');
+
+    const { result } = renderHook(() => useDeleteEntityItem(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate(entityItem);
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toContain("delete");
+  });
+});
+
+describe("useDeleteEntityItem — 404 not-found/entity-item", () => {
+  it("isError with ProblemDetailError status 404 when server returns not-found/entity-item", async () => {
+    server.use(
+      createProblemHandler({
+        method: "delete",
+        url: INVOICE_ITEM_URL,
+        status: 404,
+        type: "https://contentgrid.cloud/problems/not-found/entity-item",
+        title: "Entity item not found",
+      }),
+    );
+
+    const entityItem = makeEntityItemWithDeleteTemplate('"v1"');
+    const { result } = renderHook(() => useDeleteEntityItem(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate(entityItem);
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(ProblemDetailError);
+    const problemError = result.current.error as ProblemDetailError<ProblemDetail>;
+    expect(problemError.problemDetail.status).toBe(404);
+    expect(problemError.problemDetail.type).toContain("not-found/entity-item");
   });
 });
