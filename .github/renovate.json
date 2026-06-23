@@ -1,5 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>xenit-eu/contentgrid-renovate-presets:renovate.json"],
-  "internalChecksFilter": "strict"
+  "internalChecksFilter": "strict",
+  "packageRules": [
+    {
+      "description": "GitHub Actions are SHA-pinned with a version comment (see root CLAUDE.md). Renovate has no releaseTimestamp for a bare commit SHA, so the shared preset's `minimumReleaseAgeBehaviour: timestamp-required` holds action digest PRs in `renovate/stability-days` PENDING indefinitely and they never auto-merge (e.g. #52/#80 stuck 15-21 days past the window). Drop the age gate for github-actions digest/pinDigest updates only; the SHA pin + human-readable version comment is the supply-chain control for actions. npm/docker age gates are unaffected.",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "pinDigest"],
+      "minimumReleaseAge": "0 days"
+    }
+  ]
 }
