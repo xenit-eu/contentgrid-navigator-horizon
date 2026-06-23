@@ -5,10 +5,18 @@ minimumReleaseAge: 20160
 blockExoticSubdeps: true
 # No package may run lifecycle (install/build) scripts unless explicitly listed here.
 # Packages whose build scripts are currently blocked (intentionally left unbuilt):
-#   - esbuild@0.25.12: ships pre-built via optional platform deps (@esbuild/darwin-arm64 etc.);
+#   - esbuild: ships pre-built via optional platform deps (@esbuild/darwin-arm64 etc.);
 #     its build script is only a fallback for unusual environments. Binary confirmed present.
-# If any of these break at runtime on a CI platform, add the package here only after review.
+#   - msw: postinstall only copies a service-worker file (mockServiceWorker.js) to the
+#     project root; not needed in CI since MSW is used as a test/dev dependency only.
+# If any of these break at runtime on a CI platform, change the entry to true only after review.
 onlyBuiltDependencies: []
+# pnpm 11 replaced ignoredBuiltDependencies with allowBuilds (map of package -> bool).
+# Setting false explicitly marks these as reviewed-and-denied: no scripts run, no error.
+# This preserves the no-builds security posture under pnpm 11.
+allowBuilds:
+  esbuild: false
+  msw: false
 minimumReleaseAgeExclude:
   # Renovate security update: vite@8.0.16
   - vite@8.0.16
