@@ -10,3 +10,4 @@ export * from "./nav-item";
 export * from "./provenance-tag";
 export * from "./attribute-row";
 export * from "./table-row";
+export * from "./entity-selector";
