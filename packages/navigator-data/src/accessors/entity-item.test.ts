@@ -457,6 +457,15 @@ describe("EntityItem — editEntityRequest", () => {
     expect(req).toBeInstanceOf(Request);
     expect(req.method).toBe("PATCH");
   });
+
+  it("throws with an explicit ABAC message when defaultTemplate is null", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      item.editEntityRequest({} as any),
+    ).toThrowError("Update not permitted: 'default' template absent");
+  });
 });
 
 describe("EntityItem — canUpdate", () => {
