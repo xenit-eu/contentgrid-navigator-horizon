@@ -99,7 +99,7 @@ describe("useTypeahead", () => {
     expect(result.current.results).toContain("INV-002");
   });
 
-  it("clears results when query is reset to empty", async () => {
+  it("clears results immediately when query is reset to empty", async () => {
     mockCollection([{ number: "INV-001" }]);
 
     const { result } = makeHook();
@@ -107,8 +107,21 @@ describe("useTypeahead", () => {
     act(() => result.current.search("INV"));
     await waitFor(() => expect(result.current.results).toContain("INV-001"), { timeout: 3000 });
 
+    // Results must clear on the same render as the search("") call — no debounce delay.
+    // The enabled guard checks query.length (not debouncedQuery.length) so the clear
+    // is not deferred by the 250 ms debounce window.
     act(() => result.current.search(""));
-    await waitFor(() => expect(result.current.results).toEqual([]), { timeout: 3000 });
+    expect(result.current.results).toEqual([]);
+  });
+
+  it("exposes isError when the fetch fails", async () => {
+    server.use(http.get(COLLECTION_URL, () => HttpResponse.error()));
+
+    const { result } = makeHook();
+    act(() => result.current.search("INV"));
+
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 3000 });
+    expect(result.current.results).toEqual([]);
   });
 
   it("sends filterParam as the URL query parameter", async () => {

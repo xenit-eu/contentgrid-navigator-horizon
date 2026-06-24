@@ -2,32 +2,39 @@ import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchHalSlice } from "../../api/hal-client";
 import { queryKeys } from "../../query-keys";
+import { getBaseFieldName, getValueField } from "../../utils/search-property";
 import { useNavigatorData } from "../context";
 import { useDebouncedValue } from "../use-debounced-value";
 
 export interface UseTypeaheadOptions {
+  /**
+   * Entity name (singular). Must match `profileEntity.name` — used as cache namespace.
+   * For relation traversal, use the RELATED entity's name, not the source entity's.
+   */
   entityName: string;
   /**
-   * Full URL of the collection to fetch suggestions from.
+   * Collection URL to query for suggestions. Must be sourced from `profileEntity.collectionUrl`
+   * (the `describes` collection link) — never constructed by string concatenation.
    *
-   * For direct attribute fields (e.g. filterParam "number~prefix"):
-   * pass the current entity's collection href.
+   * For direct attribute fields (e.g. filterParam `"number~prefix-match"`):
+   * pass the current entity's `profileEntity.collectionUrl`.
    *
-   * For relation traversal fields (e.g. "supplier.name~prefix" on invoices):
-   * pass the RELATED entity's collection href and set filterParam to the
-   * leaf attribute's prefix property on that collection. Querying the parent
-   * entity's collection won't yield relation attribute values because parent
-   * items do not embed the related entity's fields inline.
+   * For relation traversal (e.g. `"supplier.name~prefix-match"` on invoices):
+   * pass the RELATED entity's `profileEntity.collectionUrl`. Querying the parent
+   * entity's collection will not yield related-entity field values because parent
+   * items do not embed related-entity fields inline.
    */
   collectionHref: string;
   /**
-   * The HAL-Forms search property name used as the URL query parameter.
-   * Taken directly from _templates.search.properties[].name (e.g. "number~prefix",
-   * "name~prefix"). The leaf field before "~" is used to extract values from
-   * response items.
+   * Search property name to filter on. Must be taken from
+   * `profileEntity.searchTemplate.searchProperties[n].property.name`
+   * (e.g. `"number~prefix-match"`) — never hardcoded.
+   *
+   * The leaf field name before `~` is derived automatically and used to
+   * extract the matching string value from each response item.
    */
   filterParam: string;
-  /** Minimum input length before a request is fired. Defaults to 2. */
+  /** Minimum query length before a fetch fires. Defaults to 2. */
   minLength?: number;
 }
 
@@ -41,17 +48,29 @@ export function useTypeahead({
   const debouncedQuery = useDebouncedValue(query, 250);
   const { apiFetch } = useNavigatorData();
 
-  // Derive the item field to read from: take everything before "~", then the
-  // leaf segment. e.g. "number~prefix" → "number", "supplier.name~prefix" → "name".
-  const baseField = filterParam.split("~")[0];
-  const valueField = baseField.includes(".") ? baseField.split(".").pop()! : baseField;
+  // getBaseFieldName strips "~operator", getValueField takes the leaf segment.
+  // "number~prefix-match" → "number"; "supplier.name~prefix-match" → "name".
+  const valueField = getValueField(getBaseFieldName(filterParam));
 
-  const enabled = debouncedQuery.length >= minLength;
+  // Guard on BOTH query and debouncedQuery:
+  // - query prevents stale suggestions showing during the 250 ms debounce window
+  //   after the user clears the field (results vanish immediately on clear).
+  // - debouncedQuery prevents a fetch firing for a value that hasn't settled yet.
+  const enabled = query.length >= minLength && debouncedQuery.length >= minLength;
 
-  const { data, isFetching } = useQuery({
-    queryKey: queryKeys.typeahead.byProperty(entityName, filterParam, debouncedQuery),
+  const { data, isFetching, isError, error } = useQuery({
+    // collectionHref is included in the key so that the same entityName+filterParam+query
+    // triple used against different collections (e.g. relation traversal) never collides.
+    queryKey: queryKeys.typeahead.byProperty(
+      entityName,
+      collectionHref,
+      filterParam,
+      debouncedQuery,
+    ),
     queryFn: async () => {
-      const url = new URL(collectionHref);
+      // new URL(href, base) resolves relative hrefs (e.g. /invoices from collectionUrl)
+      // correctly against the current origin; absolute hrefs ignore the base.
+      const url = new URL(collectionHref, window.location.href);
       url.searchParams.set("size", "10");
       url.searchParams.set(filterParam, debouncedQuery);
       const slice = await fetchHalSlice<Record<string, unknown>>(apiFetch, new Request(url));
@@ -70,9 +89,11 @@ export function useTypeahead({
 
   return {
     results: enabled ? (data ?? []) : [],
-    // Use isFetching (not isLoading) so the flag stays true during background
-    // refetches when keepPreviousData is serving stale placeholder results.
+    // isFetching (not isLoading) stays true during background refetches when
+    // keepPreviousData is serving placeholder results.
     isLoading: enabled && isFetching,
+    isError,
+    error,
     search: setQuery,
   };
 }
