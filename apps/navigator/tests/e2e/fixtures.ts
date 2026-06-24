@@ -1,6 +1,15 @@
 import { test as baseTest } from "@playwright/test";
-import type { TestInfo } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 import { LoginPage } from "./LoginPage";
+
+async function expandSidebarAndClick(page: Page, link: Locator): Promise<void> {
+  const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
+  await toggleBtn.or(link).first().waitFor();
+  if (await page.locator('[data-slot="sidebar"][data-state="collapsed"]').isVisible()) {
+    await toggleBtn.click();
+  }
+  await link.click();
+}
 
 export const test = baseTest.extend<{
   loginPage: LoginPage;
@@ -12,10 +21,10 @@ export const test = baseTest.extend<{
 }>({
   loginPage: ({ page }, provide) => provide(new LoginPage(page)),
 
-  isSmallViewport: ({}, provide, testInfo: TestInfo) => {
+  isSmallViewport: async ({}, provide, testInfo: TestInfo) => {
     const viewport = testInfo.project.use.viewport;
     const isSmall = viewport?.width !== undefined && viewport.width <= 800;
-    return provide(isSmall);
+    await provide(isSmall);
   },
 
   login: ({ page, loginPage }, provide) =>
@@ -33,38 +42,17 @@ export const test = baseTest.extend<{
 
   selectSidebarEntity: ({ page }, provide) =>
     provide(async (entityName: string) => {
-      const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
-      const link = page.getByRole("link", { name: entityName });
-      await toggleBtn.or(link).first().waitFor();
-      const collapsedSidebar = page.locator('[data-slot="sidebar"][data-state="collapsed"]');
-      if (await collapsedSidebar.isVisible()) {
-        await toggleBtn.click();
-      }
-      await link.click();
+      await expandSidebarAndClick(page, page.getByRole("link", { name: entityName }));
     }),
 
   goToClassifyCreateInstancePage: ({ page }, provide) =>
     provide(async () => {
-      const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
-      const createLink = page.getByRole("link", { name: "Create", exact: true });
-      await toggleBtn.or(createLink).first().waitFor();
-      const collapsedSidebar = page.locator('[data-slot="sidebar"][data-state="collapsed"]');
-      if (await collapsedSidebar.isVisible()) {
-        await toggleBtn.click();
-      }
-      await createLink.click();
+      await expandSidebarAndClick(page, page.getByRole("link", { name: "Create", exact: true }));
     }),
 
   goToOverviewPage: ({ page }, provide) =>
     provide(async () => {
-      const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
-      const overviewLink = page.getByRole("link", { name: "Overview" });
-      await toggleBtn.or(overviewLink).first().waitFor();
-      const collapsedSidebar = page.locator('[data-slot="sidebar"][data-state="collapsed"]');
-      if (await collapsedSidebar.isVisible()) {
-        await toggleBtn.click();
-      }
-      await overviewLink.click();
+      await expandSidebarAndClick(page, page.getByRole("link", { name: "Overview" }));
     }),
 });
 

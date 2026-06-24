@@ -17,6 +17,7 @@
  * create forms) will fail until those features are built in the other Phase 5D tickets.
  */
 import { expect, test } from "./fixtures";
+import { ENTITY } from "./testData";
 
 test.beforeEach(async ({ page }) => {
   // Override matchMedia so headless browsers report pointer:fine — prevents
@@ -46,12 +47,12 @@ test.beforeEach(async ({ page }) => {
 
 test("Log in", async ({ login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("All attribute");
+  await selectSidebarEntity(ENTITY.ALL_ATTRIBUTE);
 });
 
 test("search form test", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("All attribute");
+  await selectSidebarEntity(ENTITY.ALL_ATTRIBUTE);
 
   await page.getByRole("button", { name: "Filters" }).click();
 
@@ -102,7 +103,7 @@ test("search form test", async ({ page, login, selectSidebarEntity }) => {
 
 test("search form test2", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("All attribute");
+  await selectSidebarEntity(ENTITY.ALL_ATTRIBUTE);
 
   await expect(page.getByRole("button", { name: "Create", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Filters" }).click();
@@ -135,7 +136,7 @@ test("search form test2", async ({ page, login, selectSidebarEntity }) => {
 
 test("search result", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("All attribute");
+  await selectSidebarEntity(ENTITY.ALL_ATTRIBUTE);
 
   await page.getByRole("button", { name: "Filters" }).click();
   await page.getByRole("combobox", { name: "Constrained text" }).click();
@@ -151,7 +152,7 @@ test("search result", async ({ page, login, selectSidebarEntity }) => {
 
 test("result table", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Read allowed");
+  await selectSidebarEntity(ENTITY.READ_ALLOWED);
 
   await page.getByRole("button", { name: "Filters" }).click();
   await page.getByRole("button", { name: "Search" }).click();
@@ -199,13 +200,13 @@ test("result table document preview @slow", async ({
   );
 
   await login();
-  await selectSidebarEntity("Order");
+  await selectSidebarEntity(ENTITY.ORDER);
 
   // @embedpdf uses the same data-testid attributes as react-pdf-viewer
   await page.getByText("metadata.png [4.08 KB]").click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
-  await page.getByRole("combobox").click();
+  await page.getByRole("combobox").filter({ hasText: "Document" }).click();
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.getByRole("img", { name: "metadata.png" })).toBeVisible();
 
@@ -249,7 +250,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
 
-  await page.getByRole("combobox").click();
+  await page.getByRole("combobox").filter({ hasText: "Receipt" }).click();
   await page.getByRole("option", { name: "Document" }).click();
   await expect(page.getByText("This document requires a")).toBeVisible();
   await expect(page.getByTestId("core__asking-password-input")).toBeVisible();
@@ -258,7 +259,7 @@ test("result table document preview @slow", async ({
 
 test("Test details no content", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Employee");
+  await selectSidebarEntity(ENTITY.EMPLOYEE);
 
   // Row action → View details (replaces inline getByLabel('Details') icon button)
   await page
@@ -286,7 +287,7 @@ test("Test details no content", async ({ page, login, selectSidebarEntity }) => 
 test("Test details with content @slow", async ({ page, login, selectSidebarEntity }) => {
   test.slow();
   await login();
-  await selectSidebarEntity("Order");
+  await selectSidebarEntity(ENTITY.ORDER);
 
   await page
     .getByRole("row", { name: "testdocx.docx [4.26 KB]" })
@@ -300,12 +301,12 @@ test("Test details with content @slow", async ({ page, login, selectSidebarEntit
   await expect(page.getByText("Name: testdocx.docx")).toBeVisible();
   await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
-  await page.getByRole("button", { name: "Save" }).click({ force: true });
+  await page.getByRole("button", { name: "Save" }).click();
 });
 
 test("Not allowed", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Not allowed");
+  await selectSidebarEntity(ENTITY.NOT_ALLOWED);
 
   await page.getByRole("button", { name: "Filters" }).click();
   await page.getByRole("button", { name: "Search" }).click();
@@ -320,7 +321,7 @@ test("Not allowed", async ({ page, login, selectSidebarEntity }) => {
 
 test("Create Entity Basic Flow", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Create allowed");
+  await selectSidebarEntity(ENTITY.CREATE_ALLOWED);
 
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByLabel("Name").click();
@@ -337,7 +338,7 @@ test("Create Entity Basic Flow", async ({ page, login, selectSidebarEntity }) =>
 
 test("Create Entity Continuous mode", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Create allowed");
+  await selectSidebarEntity(ENTITY.CREATE_ALLOWED);
 
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByLabel("Name").click();
@@ -361,9 +362,10 @@ test("Create mode", async ({ page, login, goToClassifyCreateInstancePage }) => {
   await login();
   await goToClassifyCreateInstancePage();
 
-  await page.getByRole("combobox").click();
-  await page.getByRole("option", { name: "Create allowed" }).click();
-  await page.getByRole("paragraph").filter({ hasText: "Create allowed" }).click();
+  // Entity-type selector — use .first() until the label is confirmed from the running app.
+  await page.getByRole("combobox").first().click();
+  await page.getByRole("option", { name: ENTITY.CREATE_ALLOWED }).click();
+  await page.getByRole("paragraph").filter({ hasText: ENTITY.CREATE_ALLOWED }).click();
   await page.getByRole("option", { name: "Empty" }).click();
 
   // Close the open Radix dropdown — Escape replaces the MUI backdrop click
@@ -376,8 +378,8 @@ test("Press cancel in create mode", async ({ page, login, goToClassifyCreateInst
   await login();
   await goToClassifyCreateInstancePage();
 
-  await page.getByRole("combobox").click();
-  await page.getByRole("option", { name: "Create allowed" }).click();
+  await page.getByRole("combobox").first().click();
+  await page.getByRole("option", { name: ENTITY.CREATE_ALLOWED }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await expect(page.getByText("Search")).toBeVisible();
@@ -385,7 +387,7 @@ test("Press cancel in create mode", async ({ page, login, goToClassifyCreateInst
 
 test("Link to create related entities", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Employee");
+  await selectSidebarEntity(ENTITY.EMPLOYEE);
 
   await page.getByRole("button", { name: "Create", exact: true }).click();
 
@@ -420,7 +422,7 @@ test("Link to create related entities", async ({ page, login, selectSidebarEntit
 
 test("Create many relations entity", async ({ page, login, selectSidebarEntity }) => {
   await login();
-  await selectSidebarEntity("Many relation");
+  await selectSidebarEntity(ENTITY.MANY_RELATION);
 
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByRole("textbox", { name: "Name" }).first().click();
@@ -463,7 +465,7 @@ test("search form over relations", async ({
   isSmallViewport,
 }) => {
   await login();
-  await selectSidebarEntity("Employee");
+  await selectSidebarEntity(ENTITY.EMPLOYEE);
 
   await page.getByRole("button", { name: "Filters" }).click();
 
@@ -515,7 +517,7 @@ test("Clicking entity in sidebar from detail page returns to collection", async 
   selectSidebarEntity,
 }) => {
   await login();
-  await selectSidebarEntity("Employee");
+  await selectSidebarEntity(ENTITY.EMPLOYEE);
 
   await page
     .getByRole("row", { name: "Beatrix" })
@@ -525,7 +527,7 @@ test("Clicking entity in sidebar from detail page returns to collection", async 
   await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 
   // Clicking the entity in the sidebar from the detail page returns to collection
-  await selectSidebarEntity("Employee");
+  await selectSidebarEntity(ENTITY.EMPLOYEE);
   await expect(page.getByRole("button", { name: "Filters" })).toBeVisible();
 });
 
@@ -536,7 +538,7 @@ test("Overview button navigates to home page", async ({
   goToOverviewPage,
 }) => {
   await login();
-  await selectSidebarEntity("Employee");
+  await selectSidebarEntity(ENTITY.EMPLOYEE);
   await goToOverviewPage();
   await expect(page.getByText("Welcome to ContentGrid Navigator")).toBeVisible();
 });
@@ -546,12 +548,11 @@ test.skip("File extract in create @slow", async ({ page, login, selectSidebarEnt
   // Also needs to verify the form is filled after extracted values come in.
   test.slow();
   await login();
-  await selectSidebarEntity("All attribute");
+  await selectSidebarEntity(ENTITY.ALL_ATTRIBUTE);
   await page.getByRole("link", { name: "Create", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Drop here to upload Upload" })
-    .setInputFiles("tests/e2e/fixtures/Bob.pdf");
-  await page.getByRole("button", { name: "Extract metadata" }).isVisible();
+  // setInputFiles must target the hidden <input type="file">, not the visible drop-zone button.
+  await page.locator('input[type="file"]').first().setInputFiles("tests/e2e/fixtures/Bob.pdf");
+  await expect(page.getByRole("button", { name: "Extract metadata" })).toBeVisible();
   await Promise.all([
     page.waitForResponse((res) => res.url().includes("/extract") && res.ok()),
     page.getByRole("button", { name: "extract" }).click(),
