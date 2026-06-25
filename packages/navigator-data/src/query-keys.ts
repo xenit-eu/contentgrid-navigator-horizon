@@ -26,6 +26,17 @@ export const queryKeys = {
     /** Exact key for a single entity item by its self URL. */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [ENTITY_ITEM_KEY, profileEntity.name, url] as const,
+    /**
+     * Exact key for a single entity item by entity name string and URL.
+     * Use when only the entity name is known (e.g. derived from a relation's target profile link)
+     * and a full ProfileEntity is not available. Key shape is identical to `byUrl`.
+     */
+    byUrlForName: (entityName: string, url: string) => [ENTITY_ITEM_KEY, entityName, url] as const,
+    /**
+     * Prefix key — invalidates ALL cached entity items for one entity type by name string.
+     * Use when only the entity name is known. Key shape is identical to `forEntity`.
+     */
+    forEntityName: (entityName: string) => [ENTITY_ITEM_KEY, entityName] as const,
   },
 
   entityItemCollection: {

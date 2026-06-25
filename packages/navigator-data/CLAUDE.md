@@ -82,8 +82,8 @@ entity name like `invoice`.
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
-  delete: `useDeleteEntityItem`, relation set/add/clear: `useRelationMutation`,
-  binary content: `useUploadContent`, `useDownloadContent`
+  delete: `useDeleteEntityItem`, relation set: `useSetRelation`, relation add: `useAddRelation`,
+  relation clear: `useClearRelation`, binary content: `useUploadContent`, `useDownloadContent`
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
 `useEntityItem` supports two modes — choose based on what you know at call time:
@@ -270,25 +270,48 @@ Where to find this now:
 - Build values with `createValues(template)` (re-exported from `@contentgrid/navigator-data`);
   values are immutable — update with `.withValue(name, val)` / `.withoutValue(name)`.
 
-**What exists vs. what is planned:**
+**What exists:**
 
-The request-spec types, `editEntityRequest` accessor, and MSW handler factories for
-update/delete/relation are already in the codebase. The corresponding mutation _hooks_ are not yet
-implemented. When building them, mirror the accessors below (all resolved from the item's
-`_templates`):
+All mutation hooks and relation accessors are implemented. Use the table below as a reference:
 
-| Operation            | Template key  | Planned hook          | Accessor on `EntityItem`                                                       |
-| -------------------- | ------------- | --------------------- | ------------------------------------------------------------------------------ |
-| Update               | `default`     | `useUpdateEntityItem` | _has_ `defaultTemplate` + `editEntityRequest(values)`                          |
-| Delete               | `delete`      | `useDeleteEntityItem` | _has_ `deleteTemplate` + `canDelete` + `deleteEntityItemRequest()` (no values) |
-| Set to-one relation  | `set-<rel>`   | `useRelationMutation` | `setRelationTemplate(name)` + `setRelationRequest(name, uris)`                 |
-| Add to-many relation | `add-<rel>`   | `useRelationMutation` | `addRelationTemplate(name)` + `addRelationRequest(name, uris)`                 |
-| Clear relation       | `clear-<rel>` | `useRelationMutation` | `clearRelationTemplate(name)` + `clearRelationRequest(name)`                   |
+| Operation            | Template key  | Hook                  | Accessor on `EntityItem`                                                 |
+| -------------------- | ------------- | --------------------- | ------------------------------------------------------------------------ |
+| Update               | `default`     | `useUpdateEntityItem` | `defaultTemplate` + `editEntityRequest(values)`                          |
+| Delete               | `delete`      | `useDeleteEntityItem` | `deleteTemplate` + `canDelete` + `deleteEntityItemRequest()` (no values) |
+| Set to-one relation  | `set-<rel>`   | `useSetRelation`      | `getRelation(name)?.setRequest(targetHref)` via `EntityItemRelation`     |
+| Add to-many relation | `add-<rel>`   | `useAddRelation`      | `getRelation(name)?.addRequest(targetHrefs)` via `EntityItemRelation`    |
+| Clear relation       | `clear-<rel>` | `useClearRelation`    | `getRelation(name)?.clearRequest()` via `EntityItemRelation`             |
 
 Binary content (PUT to `cg:content`) has no HAL-FORMS template — see the **Content exception**
 section below.
 
-Relation accessors (`setRelationTemplate`, `addRelationTemplate`, `clearRelationTemplate`, `setRelationRequest`, `addRelationRequest`, `clearRelationRequest`) and the `useRelationMutation` hook are implemented.
+**Relation accessor design — `EntityItemRelation` value object:**
+
+`entityItem.getRelation(name)` returns an `EntityItemRelation | undefined`. This value object joins:
+
+- The `ProfileRelation` schema (cardinality, target entity name, title)
+- The `cg:relation` navigation link (may be `null` when ABAC hides the nav link)
+- The item's HAL-FORMS relation templates (`set-<rel>`, `add-<rel>`, `clear-<rel>`)
+
+Key members:
+
+- `canSet / canAdd / canClear` — boolean capability flags derived from template presence (ABAC gate)
+- `setRequest(targetHref)` — throws `RelationCardinalityError` if to-many; throws `Error` if template absent
+- `addRequest(targetHrefs)` — throws `RelationCardinalityError` if to-one; throws `Error` if template absent
+- `clearRequest()` — throws `Error` if template absent
+- `profile.targetProfileLink?.name` — entity name of the target (used for scoped cache invalidation)
+
+`RelationCardinalityError` (exported) is distinct from the ABAC "template absent" error — callers can use `instanceof RelationCardinalityError` to distinguish programming mistakes (wrong cardinality) from permission errors.
+
+`entityItem.relations` returns all relations as `readonly EntityItemRelation[]`.
+
+**Relation hook cache behaviour:**
+
+- `useSetRelation` / `useAddRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → invalidate specific target item URL(s) via `queryKeys.entityItem.byUrlForName(targetName, href)`. Does NOT invalidate source collection or all source items.
+- `useClearRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → NO target invalidation (previously-linked hrefs not available at clear time).
+- All three hooks perform a best-effort re-fetch of the parent item after the mutation. If the re-fetch fails, the mutation still resolves as success (data: `undefined`) — the write succeeded.
+- 409 `integrity/blind-relation-overwrite` from `useSetRelation`: unlink the existing relation first, then set.
+- `queryKeys.entityItem.byUrlForName(entityName, url)` and `queryKeys.entityItem.forEntityName(entityName)` are available for invalidating target items by string name when a full `ProfileEntity` is not in scope.
 
 **2. Gate every operation on template/link presence — never assume permission.**
 
@@ -306,8 +329,10 @@ Rules:
 > `entityItem.deleteTemplate !== null → delete is permitted (canDelete getter)`.
 > Both `canUpdate` and `canDelete` are implemented as boolean getters on `EntityItem`.
 > `canCreate` is not yet implemented.
-> `canSetRelation(name)`, `canAddRelation(name)`, `canClearRelation(name)` are implemented as methods on `EntityItem` (derived from the respective template presence).
-> 409 `integrity/blind-relation-overwrite` must be handled at the call site: unlink the existing relation first, then set the new one.
+> Relation capability is exposed on `EntityItemRelation` (obtained via `entityItem.getRelation(name)`):
+> `relation.canSet`, `relation.canAdd`, `relation.canClear` — boolean flags derived from template presence.
+> Legacy `canSetRelation(name)`, `canAddRelation(name)`, `canClearRelation(name)` methods on `EntityItem` are still present (delegate to the same templates) but `EntityItemRelation` is the preferred API.
+> 409 `integrity/blind-relation-overwrite` must be handled at the call site: unlink the existing relation first (`useClearRelation`), then set the new one (`useSetRelation`).
 
 **3. URLs only from links — never string-built.**
 

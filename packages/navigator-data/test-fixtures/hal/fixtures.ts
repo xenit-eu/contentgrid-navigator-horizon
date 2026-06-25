@@ -166,6 +166,8 @@ export const invoiceRelationTemplates = {
 } as const;
 
 const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
+const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
+const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
 
 /** Invoice item that has relation templates + cg:relation links + ETag wired */
 export const sampleInvoiceWithRelationTemplates: HalObjectShape<Record<string, unknown>> = {
@@ -180,5 +182,61 @@ export const sampleInvoiceWithRelationTemplates: HalObjectShape<Record<string, u
   _templates: {
     ...invoiceItemTemplates,
     ...invoiceRelationTemplates,
+  },
+} as const;
+
+/**
+ * Invoice profile body that includes blueprint:relation embedded resources.
+ *
+ * - `supplier` — to-one relation (many_target_per_source: false), target: supplier entity
+ * - `lineItems` — to-many relation (many_target_per_source: true), target: lineItem entity
+ *
+ * Required so EntityItem.getRelation() can join HAL templates with ProfileRelation metadata.
+ */
+export const invoiceProfileBodyWithRelations: HalObjectShape<Record<string, unknown>> = {
+  name: "invoice",
+  title: "Invoice",
+  _links: {
+    self: { href: "/profile/invoices" },
+    describes: [
+      { href: "/invoices", name: "collection" },
+      { href: "/invoices/{id}", name: "item", templated: true },
+    ],
+  },
+  _embedded: {
+    [BLUEPRINT_RELATION_REL]: [
+      {
+        name: "supplier",
+        title: "Supplier",
+        description: "",
+        required: false,
+        many_source_per_target: false,
+        many_target_per_source: false,
+        _links: {
+          self: { href: "/profile/invoices/relations/supplier" },
+          [BLUEPRINT_TARGET_ENTITY_REL]: {
+            href: "/profile/suppliers",
+            name: "supplier",
+            title: "Supplier",
+          },
+        },
+      },
+      {
+        name: "lineItems",
+        title: "Line Items",
+        description: "",
+        required: false,
+        many_source_per_target: false,
+        many_target_per_source: true,
+        _links: {
+          self: { href: "/profile/invoices/relations/lineItems" },
+          [BLUEPRINT_TARGET_ENTITY_REL]: {
+            href: "/profile/line-items",
+            name: "lineItem",
+            title: "Line Item",
+          },
+        },
+      },
+    ],
   },
 } as const;
