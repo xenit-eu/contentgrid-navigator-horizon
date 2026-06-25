@@ -59,9 +59,9 @@ Read in this order before writing any code:
 
 ## Project Overview
 
-Frontend for [ContentGrid](https://contentgrid.com/) — a cloud Content Services Platform by Xenit/Amexio. Renders a dynamic CRUD interface from a HAL-based REST API. No hardcoded entity names or attributes; everything discovered at runtime via the profile API.
+Frontend for [ContentGrid](https://contentgrid.com/) — a cloud Content Services Platform by Xenit/Amexio. Renders a dynamic CRUD interface from a HAL-based REST API. No hardcoded entity names or attributes; everything discovered at runtime via the profile API. Documentation can be found on https://docs.contentgrid.com
 
-**Key concepts**: Entities have typed attributes (text, number, date, content/files) and relations. Blueprints define the data model; Releases are immutable deployable snapshots. Auth uses ABAC (deny-by-default).
+**Key concepts**: Entities have typed attributes (text, number, date, content/files) and relations. Profiles define the data model; profileEntity contains the schema and datamodel of the profileAttributes and profileRelations. Releases are immutable deployable snapshots. Auth uses ABAC (deny-by-default).
 
 ## Tech Stack
 
@@ -102,83 +102,17 @@ React 19 + TypeScript + Vite | TanStack Router (file-based) + Query + Table | sh
 
 ---
 
-## HAL API Structure
+## HAL Access Layer
 
 **CRITICAL**: Entity collection paths use **plural** names from the profile `href` (e.g., `/invoice-products`, `/companies`), NOT the singular `name` field. Always use `EntityInfo.href` / `EntityInfo.collectionHref` — never construct paths from `entity.name`.
 
-- `GET /` → entities root; `cg:entity` links enumerate all collections
-- `GET /profile` → profile root; `cg:entity` links enumerate all entity profiles (`name` (singular), `title`, `href` (plural profile URL))
-- `GET /profile/{plural}` → HAL-FORMS schema: attributes (`blueprint:attribute`), relations (`blueprint:relation`), search/create templates; each profile's `_links.describes` contains `[{href: "/{plural}", name: "collection"}, {href: "/{plural}/{id}", name: "item", templated: true}]` — use these links to get the actual collection and item URLs
-- `GET /{plural}` → HAL collection | `GET /{plural}/{id}` → single item | `GET /{plural}/{id}/{relation}` → related items (to-many: redirects to filtered collection; to-one: returns single entity-item)
-- `GET /{plural}/{id}/{attribute}` → binary content (entity-content resource)
-- CURIEs: `cg:` (contentgrid), `blueprint:` (schema), `automation:` (automation)
-- Content types: `application/hal+json` (data), `application/prs.hal-forms+json` (profile/forms)
+All HAL access goes through the accessor layer in `@contentgrid/navigator-data`. Do not hand-build URLs, parse cursors, or hardcode HTTP methods or Content-Types — use the accessor API instead. See [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md) for the full reference, in particular:
 
-### Resource Types
-
-- **entity-item**: Single instance; attributes as top-level JSON fields + `id`. Links: `self`, `cg:relation` (per relation, `name` = relation name), `cg:content` (per content attr, `name` = attribute name)
-- **entity-collection**: Ordered set in `_embedded.item`; pagination in `page` object (`total_items_exact`, `total_items_estimate`, cursors)
-- **relation** (to-one): GET returns single entity-item (via redirect); PUT `text/uri-list` sets link; DELETE clears it
-- **relation** (to-many): GET returns filtered collection (via redirect); POST `text/uri-list` adds; DELETE clears all
-- **entity-content**: Binary file; GET/PUT any Content-Type; filename via `Content-Disposition`; supports Range requests
-- **entities-root**: Root resource (`/`); `cg:entity` links enumerate all collections
-- **profile-root**: `GET /profile`; `cg:entity` links enumerate all profiles
-
-### Entity Profile Schema
-
-Embedded in HAL-FORMS profile response:
-
-- `blueprint:attribute` → `{name, title, type, readOnly, required, constraints:[...], searchParams:{exact-match, prefix-match}}`
-- `blueprint:relation` → `{name, title, many_source_per_target, many_target_per_source, required}`; link `blueprint:target-entity` → target profile href
-- `blueprint:constraint` → type: `allowed-values` (enum), `required`, `unique`, system-managed (audit timestamps: `created-date`, `created-by`, `modified-date`, `modified-by`)
-- `blueprint:search-param` → filter types: `exact-match`, `prefix-match`, `greater-than`, `less-than`, `greater-than-or-equal`, `less-than-or-equal`, `full-text`
-- `_templates.search` → search form; `_sort` property has allowed sort values
-- `_templates.create-form` → create form; relation fields have type `url` with `options.link.href`
-
-### Pagination & Filtering
-
-- **Cursor-based**: first page uses `size` param; subsequent pages follow HAL `next`/`prev` link `href` directly — never construct cursor URLs manually
-- Response `page` object: `{ size, total_items_exact, total_items_estimate }`
-- HAL pagination links: `first`, `prev`, `next`, `self` (absent when no more pages) — use `slice.next?.href` / `slice.previous?.href` from `HalSlice`
-- Sort: `_sort=attribute,asc|desc`; repeatable for multi-column sort
-- Multiple different filters → AND logic; same filter repeated → OR logic
-- Unknown parameters are silently ignored
-- In app: `cursor` URL param stores the full next/prev href; cleared on search/filter/sort change
-- DO NOT parse or modify `_cursor` values; DO NOT store cursors permanently
-
-### HTTP Operations
-
-- **PUT**: Replaces all fields; omitted fields become `null` — use only for full replace
-- **PATCH**: Updates only specified fields — prefer for partial updates
-- **DELETE**: Entity items, relations, content
-- **Conditional requests**: `If-Match`/`If-None-Match` with ETag to prevent concurrent update conflicts (RFC 9110); ETag value includes surrounding quotes
-- **Range requests**: Supported on entity-content resources only; check `Accept-Ranges: bytes`; returns 206
-
-### Link Relations
-
-| CURIE         | Full URI                                              | Usage                                                              |
-| ------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
-| `cg:entity`   | `https://contentgrid.cloud/rels/contentgrid/entity`   | Entity ref from root/profile-root; `name` = entity name (singular) |
-| `cg:relation` | `https://contentgrid.cloud/rels/contentgrid/relation` | Relation link on entity-item; `name` = relation name               |
-| `cg:content`  | `https://contentgrid.cloud/rels/contentgrid/content`  | Binary content link; `name` = attribute name                       |
-
-Blueprint profile CURIEs (`blueprint:` → `https://contentgrid.cloud/rels/blueprint/{rel}`):
-
-- `blueprint:attribute`, `blueprint:relation`, `blueprint:constraint`, `blueprint:search-param`, `blueprint:target-entity`
-
-CURIE expansion: expand before comparing relation types. Unknown CURIE prefixes cause the link to be ignored.
-
-### HAL-FORMS Templates
-
-Standard template keys on entity-items: `default` (update), `delete`, `set-<relation>` (to-one), `add-<relation>` (to-many), `clear-<relation>`
-
-Standard template keys on entity-profiles: `create-form`, `search`
-
-HAL-FORMS extensions:
-
-- Property names in `application/json` templates use dot-notation paths (e.g., `document.filename`) for nested objects
-- `text/uri-list` templates: one URL per line for multi-valued; single URL for to-one
-- Remote options (`options.link`): platform retrieves enumerated values from a remote resource; `application/hal+json` uses embedded `item` resources
+- **[Accessor and static factory naming](packages/navigator-data/CLAUDE.md#accessor-and-static-factory-naming)** — `ProfileEntity`, `ProfileAttribute`, `ProfileRelation`, `EntityItem`, `EntityItemCollection` classes and their query factories (`profileByLinkQuery`, `fetchByUrlQuery`, `infiniteQuery`, `profileRootQuery`).
+- **[HAL hook conventions](packages/navigator-data/CLAUDE.md#hal-hook-conventions)** — hook naming, URL construction (`profileEntity.collectionUrl`, `profileEntity.itemUrl(id)`), request builder naming (`searchEntityRequest`, `createEntityItemRequest`, `editEntityRequest`), return shapes, and Rules-of-Hooks safety.
+- **[HAL-FORMS affordance rules](packages/navigator-data/CLAUDE.md#hal-forms-affordance-rules)** — drive mutations from `_templates`; gate every operation on template/link presence; URLs only from links (`entityItem.contentLinks`, `EntityItemCollection.nextHref`); IDs from `item.id` only.
+- **[Search request example](packages/navigator-data/CLAUDE.md#search-request-example)** — build search values from `profileEntity.searchTemplate`; never hand-build query URLs or sort strings.
+- **[ETag / conditional-request pattern](packages/navigator-data/CLAUDE.md#etag--conditional-request-pattern)** — `fetchHal`, `fetchHalSlice`, `fetchVoid` helpers; attaching `If-Match`; handling 412.
 
 ---
 
@@ -188,15 +122,6 @@ HAL-FORMS extensions:
 - `@contentgrid/hal/rels` — link relation utilities, `createRelations()`
 - `@contentgrid/hal/shapes` — POJO types for raw HAL JSON
 - See the [Dependency capability map](packages/navigator-data/CLAUDE.md#dependency-capability-map) for the full Layer-1 export inventory across all seven packages.
-
----
-
-## API Discovery Pattern
-
-1. Start at the root resource (`/`) — discover all entity collections via `cg:entity` links.
-2. Fetch `/profile/<entity>` for generic tooling that must adapt to model changes.
-3. Never hardcode collection URLs or entity names in client code.
-4. Follow `next`, `prev`, `first` links for pagination — never construct cursor URLs.
 
 ---
 
@@ -357,16 +282,19 @@ Signature verification: RS256; public keys at `GET ${CONTENTGRID_URL}/.well-know
 
 ---
 
-## Naming & URL Conventions
+## Naming conventions
 
-- Entity collection URLs use the plural form from the profile `href` — NOT derived by appending `s` to `entity.name`.
-- Relation names appear as path segments after the entity item URL.
-- Attribute names appear as path segments for content attributes.
-- CURIE prefix `cg:` → `https://contentgrid.cloud/rels/contentgrid/`
-- CURIE prefix `blueprint:` → `https://contentgrid.cloud/rels/blueprint/`
-- Problem type URIs base: `https://contentgrid.cloud/problems/`
-- JWKS endpoint: `${CONTENTGRID_URL}/.well-known/jwks.json`
-- Token endpoint: discovered via OIDC Discovery, never hardcoded.
+Use these terms consistently across hooks, components, variables, and parameters:
+
+- **`profileEntity`** — the schema of a single entity type (from `/profile/{plural}`). Describes its attributes, relations, and available operations.
+- **`profileAttribute`** — a single attribute definition within a `profileEntity` (name, type, constraints, search params).
+- **`profileRelation`** — a single relation definition within a `profileEntity` (cardinality, target entity).
+- **`searchTemplate`** — the search form (`_templates.search`) on a `profileEntity`; use it to discover filter properties and sort options.
+- **`createTemplate`** — the create form (`_templates.create-form`) on a `profileEntity`; absent means create is not permitted.
+- **`entityItem`** — a single item from a collection (one entity instance). Holds attribute values, the ETag, and mutation templates.
+- **`entityItemCollection`** — a page of `entityItem`s returned from a collection URL. Exposes `items`, pagination hrefs (`nextHref`, `prevHref`), and total count.
+
+For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
 
 ---
 
