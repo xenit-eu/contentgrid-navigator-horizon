@@ -124,9 +124,9 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `profileEntity.searchEntityRequest(values)` → `Request` for `_templates.search`
 - `profileEntity.createEntityItemRequest(values)` → `Request` for `_templates.create-form`
 - `entityItem.editEntityRequest(values)` → `Request` for `_templates.default`
-- `entityItem.setRelationRequest(relationName, targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list)
-- `entityItem.addRelationRequest(relationName, targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line)
-- `entityItem.clearRelationRequest(relationName)` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
+- `entityItem.getRelation(name)?.setRequest(targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list; via `EntityItemRelation`)
+- `entityItem.getRelation(name)?.addRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemRelation`)
+- `entityItem.getRelation(name)?.clearRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body; via `EntityItemRelation`)
 - `entityItem.uploadContentRequest(attrName, file, opts?)` → hand-built PUT `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 
@@ -331,7 +331,6 @@ Rules:
 > `canCreate` is not yet implemented.
 > Relation capability is exposed on `EntityItemRelation` (obtained via `entityItem.getRelation(name)`):
 > `relation.canSet`, `relation.canAdd`, `relation.canClear` — boolean flags derived from template presence.
-> Legacy `canSetRelation(name)`, `canAddRelation(name)`, `canClearRelation(name)` methods on `EntityItem` are still present (delegate to the same templates) but `EntityItemRelation` is the preferred API.
 > 409 `integrity/blind-relation-overwrite` must be handled at the call site: unlink the existing relation first (`useClearRelation`), then set the new one (`useSetRelation`).
 
 **3. URLs only from links — never string-built.**
