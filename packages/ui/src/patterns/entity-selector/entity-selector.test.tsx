@@ -1,68 +1,73 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { EntitySelector } from "./entity-selector";
-import type { Entity } from "./entity-selector";
+import { ProfileEntitySelector } from "./entity-selector";
 
-const INVOICE: Entity = { name: "invoice", title: "Invoice" };
-const CUSTOMER: Entity = { name: "customer", title: "Customer" };
-const SUPPLIER: Entity = { name: "supplier", title: "Supplier" };
+const INVOICE = { name: "invoice", title: "Invoice" };
+const CUSTOMER = { name: "customer", title: "Customer" };
+const SUPPLIER = { name: "supplier", title: "Supplier" };
 
-describe("EntitySelector — visibility", () => {
+describe("ProfileEntitySelector — visibility", () => {
   it("renders nothing when entities list is empty", () => {
-    const { container } = render(<EntitySelector entities={[]} onSelect={vi.fn()} />);
+    const { container } = render(<ProfileEntitySelector entities={[]} onSelect={vi.fn()} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("renders nothing when only one entity is available", () => {
-    const { container } = render(<EntitySelector entities={[INVOICE]} onSelect={vi.fn()} />);
+    const { container } = render(<ProfileEntitySelector entities={[INVOICE]} onSelect={vi.fn()} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("renders the select trigger when exactly two entities are available", () => {
-    render(<EntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
+    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
   it("renders the select trigger when three or more entities are available", () => {
-    render(<EntitySelector entities={[INVOICE, CUSTOMER, SUPPLIER]} onSelect={vi.fn()} />);
+    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER, SUPPLIER]} onSelect={vi.fn()} />);
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 });
 
-describe("EntitySelector — selected entity display", () => {
+describe("ProfileEntitySelector — selected entity display", () => {
   it("shows the selected entity title in the trigger", () => {
     render(
-      <EntitySelector entities={[INVOICE, CUSTOMER]} selectedEntity={INVOICE} onSelect={vi.fn()} />,
+      <ProfileEntitySelector
+        entities={[INVOICE, CUSTOMER]}
+        selectedEntity={INVOICE}
+        onSelect={vi.fn()}
+      />,
     );
     expect(screen.getByText("Invoice")).toBeInTheDocument();
   });
 
   it("shows placeholder text when no entity is selected", () => {
-    render(<EntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
+    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
     expect(screen.getByText("Select entity")).toBeInTheDocument();
   });
 });
 
-describe("EntitySelector — label prop", () => {
+describe("ProfileEntitySelector — label prop", () => {
   it("renders the label text when label is provided", () => {
-    render(<EntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />);
+    render(
+      <ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
+    );
     expect(screen.getByText("Entity")).toBeInTheDocument();
   });
 
   it("does not render label text when label is omitted", () => {
-    render(<EntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
+    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
     expect(screen.queryByText("Entity")).toBeNull();
   });
 });
 
-describe("EntitySelector — entity switch", () => {
+describe("ProfileEntitySelector — entity switch", () => {
   it("calls onSelect with the chosen entity when the user picks one", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
 
     render(
-      <EntitySelector
+      <ProfileEntitySelector
         entities={[INVOICE, CUSTOMER, SUPPLIER]}
         selectedEntity={INVOICE}
         onSelect={onSelect}
@@ -80,7 +85,7 @@ describe("EntitySelector — entity switch", () => {
     const onSelect = vi.fn();
 
     render(
-      <EntitySelector
+      <ProfileEntitySelector
         entities={[INVOICE, CUSTOMER]}
         selectedEntity={INVOICE}
         onSelect={onSelect}
@@ -97,7 +102,7 @@ describe("EntitySelector — entity switch", () => {
   it("lists all entity titles as options", async () => {
     const user = userEvent.setup();
     render(
-      <EntitySelector
+      <ProfileEntitySelector
         entities={[INVOICE, CUSTOMER, SUPPLIER]}
         selectedEntity={INVOICE}
         onSelect={vi.fn()}

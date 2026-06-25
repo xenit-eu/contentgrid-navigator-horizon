@@ -1,7 +1,7 @@
-import { Outlet, createRootRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { NavigatorDataProvider, useAppAuth, useSelectedEntity } from "@contentgrid/navigator-data";
-import { BrandingHeader, EntitySelector, SignInGate } from "@contentgrid/ui";
-import type { Entity } from "@contentgrid/ui";
+import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { NavigatorHeader } from "@contentgrid/features/navigator-header";
+import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
+import { SignInGate } from "@contentgrid/ui";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -26,30 +26,9 @@ function RootComponent() {
 }
 
 function AppLayout() {
-  const navigate = useNavigate();
-  const { entities, setSelectedEntity } = useSelectedEntity();
-
-  // URL is the runtime source of truth for which entity is displayed
-  const { entity: urlEntity } = useParams({ strict: false }) as { entity?: string };
-  const selectedEntity = entities.find((e) => e.name === urlEntity) ?? null;
-
-  async function handleEntitySelect(entity: Entity) {
-    setSelectedEntity(entities.find((e) => e.name === entity.name)!);
-    await navigate({ to: "/$entity", params: { entity: entity.name } });
-  }
-
   return (
     <div className="flex min-h-svh flex-col">
-      <BrandingHeader
-        title="Navigator"
-        actions={
-          <EntitySelector
-            entities={entities}
-            selectedEntity={selectedEntity ?? undefined}
-            onSelect={handleEntitySelect}
-          />
-        }
-      />
+      <NavigatorHeader />
       <main className="flex-1 p-4">
         <Outlet />
       </main>

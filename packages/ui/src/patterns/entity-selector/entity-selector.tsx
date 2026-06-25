@@ -6,24 +6,24 @@ import {
   SelectValue,
 } from "../../primitives/select";
 
-export interface Entity {
+interface ProfileEntityOption {
   name: string;
   title: string;
 }
 
-export interface EntitySelectorProps {
-  entities: readonly Entity[];
-  selectedEntity?: Entity;
-  onSelect: (entity: Entity) => void;
+export interface ProfileEntitySelectorProps {
+  entities: readonly ProfileEntityOption[];
+  selectedEntity?: ProfileEntityOption;
+  onSelect: (entity: ProfileEntityOption) => void;
   label?: string;
 }
 
-export function EntitySelector({
+export function ProfileEntitySelector({
   entities,
   selectedEntity,
   onSelect,
   label,
-}: Readonly<EntitySelectorProps>) {
+}: Readonly<ProfileEntitySelectorProps>) {
   if (entities.length < 2) return null;
 
   return (

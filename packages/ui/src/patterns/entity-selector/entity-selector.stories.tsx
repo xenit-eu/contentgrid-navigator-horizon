@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
-import { EntitySelector } from "./entity-selector";
+import { ProfileEntitySelector } from "./entity-selector";
 
 const meta = {
-  title: "Patterns/EntitySelector",
-  component: EntitySelector,
+  title: "Patterns/ProfileEntitySelector",
+  component: ProfileEntitySelector,
   tags: ["autodocs"],
-} satisfies Meta<typeof EntitySelector>;
+} satisfies Meta<typeof ProfileEntitySelector>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -17,7 +17,7 @@ const ENTITIES = [
   { name: "supplier", title: "Supplier" },
 ];
 
-// EntitySelector returns null for a single entity — nothing to snapshot.
+// ProfileEntitySelector returns null for a single entity — nothing to snapshot.
 export const SingleEntity: Story = {
   tags: ["no-visual-test"],
   args: {
@@ -49,7 +49,6 @@ export const NoSelection: Story = {
   },
 };
 
-// Demonstrates the create-entity-page usage where a "Entity" label precedes the selector.
 export const WithLabel: Story = {
   args: {
     entities: ENTITIES,

@@ -1,2 +1,2 @@
-export { EntitySelector } from "./entity-selector";
-export type { EntitySelectorProps, Entity } from "./entity-selector";
+export { ProfileEntitySelector } from "./entity-selector";
+export type { ProfileEntitySelectorProps } from "./entity-selector";
