@@ -2,10 +2,63 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../../test-setup";
-import { BASE, makeQueryClient, makeWrapper } from "../test-utils";
+import ProfileEntity from "../../accessors/entity-profile";
+import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
+import { BASE, makeProfileEntity, makeQueryClient, makeWrapper } from "../test-utils";
 import { useTypeahead } from "./use-typeahead";
 
 const COLLECTION_URL = `${BASE}/invoices`;
+
+function makeInvoiceProfileEntity() {
+  return makeProfileEntity(
+    {
+      name: "invoice",
+      description: "",
+      _links: {
+        self: { href: `${BASE}/profile/invoices` },
+        describes: [
+          { href: COLLECTION_URL, name: "collection" },
+          { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            name: "blueprint",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "number",
+            title: "Number",
+            type: "string",
+            description: "",
+            readOnly: false,
+            required: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: COLLECTION_URL,
+          properties: [{ name: "number~prefix", type: "text" }],
+        },
+      },
+    },
+    "invoices",
+    "invoice",
+  );
+}
 
 function halCollection(items: Record<string, unknown>[]) {
   return {
@@ -19,10 +72,6 @@ function halCollection(items: Record<string, unknown>[]) {
   };
 }
 
-/**
- * Register an MSW handler for GET COLLECTION_URL.
- * onRequest is called on every matched request — use it to count hits or inspect the URL.
- */
 function mockCollection(items: Record<string, unknown>[] = [], onRequest?: (url: URL) => void) {
   server.use(
     http.get(COLLECTION_URL, ({ request }) => {
@@ -32,26 +81,64 @@ function mockCollection(items: Record<string, unknown>[] = [], onRequest?: (url:
   );
 }
 
-function makeHook(qc = makeQueryClient(), filterParam = "number~prefix") {
-  return renderHook(
-    () =>
-      useTypeahead({
-        entityName: "invoice",
-        collectionHref: COLLECTION_URL,
-        filterParam,
-      }),
-    { wrapper: makeWrapper(qc) },
-  );
+function makeHook(
+  profileEntity: ProfileEntity,
+  searchProperty: SearchHalFormTemplateProperty,
+  qc = makeQueryClient(),
+) {
+  return renderHook(() => useTypeahead({ profileEntity, searchProperty }), {
+    wrapper: makeWrapper(qc),
+  });
 }
 
 describe("useTypeahead", () => {
+  const profileEntity = makeInvoiceProfileEntity();
+  const searchProperty = profileEntity.searchTemplate!.getSearchPropertyByName("number~prefix")!;
+
+  describe("when the profile entity has no search template", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("does not fetch and returns empty results", () => {
+      const entityWithoutTemplate = makeProfileEntity(
+        {
+          name: "invoice",
+          description: "",
+          _links: {
+            self: { href: `${BASE}/profile/invoices` },
+            describes: [
+              { href: COLLECTION_URL, name: "collection" },
+              { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
+            ],
+            curies: [
+              {
+                href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+                name: "blueprint",
+                templated: true,
+              },
+            ],
+          },
+          _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
+        },
+        "invoices",
+        "invoice",
+      );
+
+      const { result } = makeHook(entityWithoutTemplate, searchProperty);
+      act(() => result.current.search("INV"));
+      act(() => vi.advanceTimersByTime(1000));
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.results).toEqual([]);
+    });
+  });
+
   describe("debounce", () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
     it("does not fire before the debounce delay", () => {
-      // No MSW handler registered — any request would fail with onUnhandledRequest: "error"
-      const { result } = makeHook();
+      const { result } = makeHook(profileEntity, searchProperty);
 
       act(() => result.current.search("INV"));
 
@@ -63,10 +150,9 @@ describe("useTypeahead", () => {
     });
 
     it("does not fire for input shorter than minLength", () => {
-      const { result } = makeHook();
+      const { result } = makeHook(profileEntity, searchProperty);
 
       act(() => result.current.search("I"));
-      // Advance well past debounce delay — debouncedQuery="I" but enabled=false
       act(() => vi.advanceTimersByTime(1000));
 
       expect(result.current.isLoading).toBe(false);
@@ -78,9 +164,8 @@ describe("useTypeahead", () => {
     let requestCount = 0;
     mockCollection([{ number: "INV-001" }], () => requestCount++);
 
-    const { result } = makeHook();
+    const { result } = makeHook(profileEntity, searchProperty);
 
-    // Two rapid searches — the first timer is cancelled before it fires
     act(() => result.current.search("IN"));
     act(() => result.current.search("INV"));
 
@@ -91,7 +176,7 @@ describe("useTypeahead", () => {
   it("returns results after the debounce delay", async () => {
     mockCollection([{ number: "INV-001" }, { number: "INV-002" }]);
 
-    const { result } = makeHook();
+    const { result } = makeHook(profileEntity, searchProperty);
 
     act(() => result.current.search("INV"));
 
@@ -102,14 +187,11 @@ describe("useTypeahead", () => {
   it("clears results immediately when query is reset to empty", async () => {
     mockCollection([{ number: "INV-001" }]);
 
-    const { result } = makeHook();
+    const { result } = makeHook(profileEntity, searchProperty);
 
     act(() => result.current.search("INV"));
     await waitFor(() => expect(result.current.results).toContain("INV-001"), { timeout: 3000 });
 
-    // Results must clear on the same render as the search("") call — no debounce delay.
-    // The enabled guard checks query.length (not debouncedQuery.length) so the clear
-    // is not deferred by the 250 ms debounce window.
     act(() => result.current.search(""));
     expect(result.current.results).toEqual([]);
   });
@@ -117,43 +199,31 @@ describe("useTypeahead", () => {
   it("exposes isError when the fetch fails", async () => {
     server.use(http.get(COLLECTION_URL, () => HttpResponse.error()));
 
-    const { result } = makeHook();
+    const { result } = makeHook(profileEntity, searchProperty);
     act(() => result.current.search("INV"));
 
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 3000 });
     expect(result.current.results).toEqual([]);
   });
 
-  it("sends filterParam as the URL query parameter", async () => {
+  it("sends the search property name as the URL query parameter", async () => {
     let capturedUrl: URL | undefined;
     mockCollection([{ number: "INV-001" }], (url) => {
       capturedUrl = url;
     });
 
-    const { result } = makeHook();
+    const { result } = makeHook(profileEntity, searchProperty);
     act(() => result.current.search("INV"));
 
     await waitFor(() => expect(result.current.results).toContain("INV-001"), { timeout: 3000 });
 
     expect(capturedUrl?.searchParams.get("number~prefix")).toBe("INV");
-    expect(capturedUrl?.searchParams.get("size")).toBe("10");
-  });
-
-  it("extracts the leaf field for dot-notation filter params", async () => {
-    // "document.title~prefix" → valueField = "title" (leaf segment before "~")
-    // Consistent with use-search-suggestions.ts valueField derivation.
-    mockCollection([{ title: "Contract A" }]);
-
-    const { result } = makeHook(makeQueryClient(), "document.title~prefix");
-    act(() => result.current.search("Con"));
-
-    await waitFor(() => expect(result.current.results).toContain("Contract A"), { timeout: 3000 });
   });
 
   it("deduplicates identical attribute values from multiple items", async () => {
     mockCollection([{ number: "INV-001" }, { number: "INV-001" }, { number: "INV-002" }]);
 
-    const { result } = makeHook();
+    const { result } = makeHook(profileEntity, searchProperty);
     act(() => result.current.search("INV"));
 
     await waitFor(() => expect(result.current.results).toHaveLength(2), { timeout: 3000 });

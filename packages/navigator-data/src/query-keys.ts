@@ -85,15 +85,10 @@ export const queryKeys = {
   },
 
   typeahead: {
-    /** Prefix key — invalidates ALL typeahead results for one entity collection. */
-    forEntity: (entityName: string, collectionHref: string) =>
-      [TYPEAHEAD_KEY, entityName, collectionHref] as const,
-    /** Exact key for a single typeahead query (entity × collection × attribute × query string). */
-    byProperty: (
-      entityName: string,
-      collectionHref: string,
-      attributeName: string,
-      query: string,
-    ) => [TYPEAHEAD_KEY, entityName, collectionHref, attributeName, query] as const,
+    /** Prefix key — invalidates ALL typeahead results for one entity. */
+    forEntity: (entityName: string) => [TYPEAHEAD_KEY, entityName] as const,
+    /** Exact key for a single typeahead query (entity × property × query string). */
+    byProperty: (entityName: string, propertyName: string, query: string) =>
+      [TYPEAHEAD_KEY, entityName, propertyName, query] as const,
   },
 };

@@ -1,11 +1,14 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HalObject, type Link } from "@contentgrid/hal";
+import ProfileEntity from "../accessors/entity-profile";
 import {
   type AuthenticationTokenSupplier,
   type TypedFetch,
   createApiClient,
   createContentClient,
 } from "../api/client";
+import type { ProfileEntityShape } from "../shapes";
 import { NavigatorDataProvider } from "./context";
 
 export const BASE = "https://api.example.com";
@@ -15,6 +18,20 @@ export const noopSupplier: AuthenticationTokenSupplier = async () => ({
   token: "test-token",
   expiresAt: null,
 });
+
+/**
+ * Build a ProfileEntity from raw HAL JSON. Used across hook tests that need
+ * a real ProfileEntity instance rather than a mock.
+ */
+export function makeProfileEntity(
+  json: Record<string, unknown>,
+  collectionName: string,
+  entityName: string,
+): ProfileEntity {
+  const hal = new HalObject(json as unknown as ProfileEntityShape);
+  const link = { href: `${BASE}/profile/${collectionName}`, name: entityName } as unknown as Link;
+  return new ProfileEntity(link, hal as HalObject<ProfileEntityShape>);
+}
 
 export function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
