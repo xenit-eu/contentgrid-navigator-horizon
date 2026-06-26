@@ -185,6 +185,51 @@ export const sampleInvoiceWithRelationTemplates: HalObjectShape<Record<string, u
   },
 } as const;
 
+// ---- Sample entity: supplier (to-one relation target) ----
+
+/** A single supplier entity-item, used as the to-one relation target for invoice → supplier. */
+export const sampleSupplierItem: HalObjectShape<{
+  id: string;
+  name: string;
+  vatNumber: string;
+}> = {
+  id: "sup-001",
+  name: "Acme Corp",
+  vatNumber: "BE0123456789",
+  _links: {
+    self: { href: "/suppliers/sup-001" },
+  },
+};
+
+// ---- Sample entity: line item (to-many relation target) ----
+
+const sampleLineItems: HalObjectShape<Record<string, unknown>>[] = [
+  {
+    id: "li-001",
+    description: "Widget A",
+    quantity: 2,
+    unitPrice: 350.0,
+    _links: { self: { href: "/line-items/li-001" } },
+  },
+  {
+    id: "li-002",
+    description: "Widget B",
+    quantity: 1,
+    unitPrice: 550.0,
+    _links: { self: { href: "/line-items/li-002" } },
+  },
+];
+
+/** A HAL slice of line items, used as the to-many relation target for invoice → lineItems. */
+export const sampleLineItemList: HalSliceShape<Record<string, unknown>> = {
+  _embedded: {
+    item: sampleLineItems,
+  },
+  _links: {
+    self: { href: "/invoices/inv-001/lineItems" },
+  },
+};
+
 /**
  * Invoice profile body that includes blueprint:relation embedded resources.
  *

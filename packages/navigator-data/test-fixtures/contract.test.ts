@@ -25,6 +25,8 @@ import {
   sampleInvoice,
   sampleInvoiceList,
   sampleInvoiceWithRelationTemplates,
+  sampleLineItemList,
+  sampleSupplierItem,
 } from "./hal/fixtures";
 import profileRootFixture from "./halforms/_profile-root.json";
 // Phase 0.5 halforms entity-profile fixtures (ACC-2865 AC#4)
@@ -540,6 +542,38 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
         result.success,
         `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
       ).toBe(true);
+    });
+
+    it("sampleSupplierItem matches HalObjectSchema", () => {
+      const result = HalObjectSchema.safeParse(sampleSupplierItem);
+      expect(
+        result.success,
+        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+      ).toBe(true);
+    });
+
+    it("sampleSupplierItem._links.self has an href", () => {
+      const result = HalObjectSchema.safeParse(sampleSupplierItem);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data._links?.self).toMatchObject({ href: expect.any(String) });
+      }
+    });
+
+    it("sampleLineItemList matches HalSliceSchema", () => {
+      const result = HalSliceSchema.safeParse(sampleLineItemList);
+      expect(
+        result.success,
+        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+      ).toBe(true);
+    });
+
+    it("sampleLineItemList._embedded.item is an array", () => {
+      const result = HalSliceSchema.safeParse(sampleLineItemList);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(Array.isArray(result.data._embedded?.item)).toBe(true);
+      }
     });
 
     it("relation template missing method fails HalFormsTemplateSchema", () => {

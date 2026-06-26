@@ -1,128 +1,134 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient, UseMutationOptions } from "@tanstack/react-query";
 import { EntityItem } from "../accessors/entity-item";
-import type { EntityItemRelation } from "../accessors/entity-item";
+import type { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
+import type { EntityItemToOneRelation } from "../accessors/entity-item-to-one-relation";
+import type ProfileEntity from "../accessors/entity-profile";
 import { addIfMatchHeader, fetchHal, fetchVoid } from "../api/hal-client";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import { useNavigatorData } from "./context";
 
 /**
- * Minimum variable shape required by the shared mutation helper.
- * All three relation-mutation hooks extend this with op-specific fields.
- */
-type RelationBaseVariables = {
-  readonly entityItem: EntityItem;
-  readonly relationName: string;
-};
-
-/**
  * Parameters for the shared relation-mutation helper.
  *
  * @internal Not exported from `hooks/index.ts`.
  */
-type RelationMutationBaseParams<TVars extends RelationBaseVariables> = {
+type RelationMutationBaseParams<
+  TRelation extends EntityItemToOneRelation | EntityItemToManyRelation,
+  TInput,
+> = {
   /**
-   * Build the op-specific `Request` from the resolved `EntityItemRelation` and the
-   * full variables object.  Called inside `mutationFn`; the relation is guaranteed to
-   * be non-null at this point (the null check happens before this call).
+   * The bound relation object (carries source item, link, profile metadata, and templates).
    */
-  readonly buildRequest: (relation: EntityItemRelation, vars: TVars) => Request;
+  readonly relation: TRelation;
   /**
-   * Perform any query-cache invalidations that are specific to the operation.
+   * Profile of the target entity type; used to build the relation read-key for invalidation.
+   */
+  readonly targetProfile: ProfileEntity;
+  /**
+   * Build the op-specific `Request` from the mutation input. Called inside `mutationFn`.
+   * The relation's request builders throw early when the template is absent (ABAC deny).
+   */
+  readonly buildRequest: (input: TInput) => Request;
+  /**
+   * The TanStack Query key for the relation read query that must be invalidated on settled.
+   * Pass `queryKeys.toOneRelation.byUrl(...)` or `queryKeys.toManyRelation.byUrl(...)`.
+   */
+  readonly readKey: readonly unknown[];
+  /**
+   * Perform any op-specific target-item invalidations (set: single href, add: per href).
    * Called inside `onSettled`, before the caller's `onSettled` callback.
-   * Omit (or pass `undefined`) when no target invalidation is needed (e.g. clear).
+   * Omit (or pass `undefined`) when no target invalidation is needed (clear).
    */
-  readonly invalidateTargets?: (queryClient: QueryClient, vars: TVars) => Promise<void>;
+  readonly invalidateTargets?: (queryClient: QueryClient, input: TInput) => Promise<void>;
   /**
    * Caller-supplied mutation options (`onSuccess` / `onSettled` are extracted and
    * composed — they must not appear in `mutationOptions` directly).
    */
   readonly mutationOptions?: Omit<
-    UseMutationOptions<EntityItem | undefined, Error, TVars>,
+    UseMutationOptions<EntityItem | undefined, Error, TInput>,
     "mutationFn"
   >;
 };
 
 /**
- * Shared implementation for `useSetRelation`, `useAddRelation`, and `useClearRelation`.
+ * Shared implementation for `useSetToOneRelation`, `useAddToManyRelation`, and
+ * `useClearRelation`.
  *
  * Encapsulates:
- * - Relation-not-found guard (throws before any fetch)
- * - `If-Match` header attachment
+ * - `If-Match` header attachment from `relation.source.etag`
  * - `fetchVoid` for the mutation (all three ops return 204)
- * - Best-effort re-fetch of the parent item for a fresh ETag
- * - `onSuccess` → `setQueryData` on the parent item's cache key
- * - `onSettled` → op-specific target invalidation, then caller's `onSettled`
+ * - Best-effort re-fetch of the source item for a fresh ETag
+ * - `onSuccess` → `setQueryData` on the source item's cache key
+ * - `onSettled` → relation read-key invalidation + op-specific target invalidation
+ * - Composition of caller `onSuccess` / `onSettled` LAST
  *
  * @internal Not exported from `hooks/index.ts`.
  */
-export function useRelationMutationBase<TVars extends RelationBaseVariables>({
+export function useRelationMutationBase<
+  TRelation extends EntityItemToOneRelation | EntityItemToManyRelation,
+  TInput,
+>({
+  relation,
   buildRequest,
+  readKey,
   invalidateTargets,
   mutationOptions,
-}: RelationMutationBaseParams<TVars>) {
+}: RelationMutationBaseParams<TRelation, TInput>) {
   const { apiFetch } = useNavigatorData();
   const queryClient = useQueryClient();
 
   const { onSuccess, onSettled, ...restMutationOptions } = mutationOptions ?? {};
 
-  return useMutation<EntityItem | undefined, Error, TVars>({
-    mutationFn: async (vars) => {
-      const { entityItem, relationName } = vars;
-
-      // Resolve the relation. Throws before any fetch when:
-      //   - profile has no such relation (undefined → guard below)
-      //   - wrong cardinality (RelationCardinalityError, thrown inside buildRequest)
-      //   - template absent (ABAC deny, thrown inside buildRequest)
-      const relation = entityItem.getRelation(relationName);
-      if (!relation) {
-        throw new Error(
-          `Relation '${relationName}' not found in entity profile '${entityItem.profileEntity.name}'`,
-        );
-      }
+  return useMutation<EntityItem | undefined, Error, TInput>({
+    mutationFn: async (input) => {
+      const source = relation.source;
 
       // Build op-specific request (PUT / POST / DELETE with text/uri-list body).
-      const baseReq = buildRequest(relation, vars);
+      const baseReq = buildRequest(input);
 
-      // Attach If-Match from the item ETag (conditional request per RFC 9110).
-      const req = addIfMatchHeader(baseReq, entityItem.etag);
+      // Attach If-Match from the source item ETag (conditional request per RFC 9110).
+      const req = addIfMatchHeader(baseReq, source.etag);
 
       // Execute mutation — 204 No Content.
       await fetchVoid(apiFetch, req);
 
-      // Best-effort re-fetch of the parent item for fresh state + new ETag.
+      // Best-effort re-fetch of the source item for fresh state + new ETag.
       // If the re-fetch throws, the committed write is still a success — resolve with
       // undefined so onSettled invalidation still fires.
       try {
         const { object, etag } = await fetchHal<EntityItemShape>(
           apiFetch,
-          new Request(entityItem.selfLink.href),
+          new Request(source.selfLink.href),
         );
-        return new EntityItem(object, entityItem.profileEntity, etag);
+        return new EntityItem(object, source.profileEntity, etag);
       } catch {
         return undefined;
       }
     },
-    onSuccess: async (item, variables, onMutateResult, context) => {
-      // Populate item cache with fresh data + ETag (only when re-fetch succeeded).
+    onSuccess: async (item, input, onMutateResult, context) => {
+      // Populate source item cache with fresh data + ETag (only when re-fetch succeeded).
       if (item) {
         queryClient.setQueryData(
-          queryKeys.entityItem.byUrl(variables.entityItem.profileEntity, item.selfLink.href),
+          queryKeys.entityItem.byUrl(relation.source.profileEntity, item.selfLink.href),
           item,
         );
       }
 
       // Compose caller's onSuccess LAST — after cache is consistent.
-      await onSuccess?.(item, variables, onMutateResult, context);
+      await onSuccess?.(item, input, onMutateResult, context);
     },
-    onSettled: async (item, error, variables, context, mutation) => {
-      // Op-specific invalidations run on BOTH success and error so stale caches are
-      // always busted (e.g. write succeeded but re-fetch failed).
-      await invalidateTargets?.(queryClient, variables);
+    onSettled: async (item, error, input, context, mutation) => {
+      // Invalidate the relation read key so the read hook refetches after mutation.
+      // Runs on BOTH success and error so stale caches are always busted.
+      await queryClient.invalidateQueries({ queryKey: readKey });
+
+      // Op-specific target-item invalidations (set/add only; omitted for clear).
+      await invalidateTargets?.(queryClient, input);
 
       // Compose caller's onSettled LAST.
-      await onSettled?.(item, error, variables, context, mutation);
+      await onSettled?.(item, error, input, context, mutation);
     },
     ...restMutationOptions,
   });

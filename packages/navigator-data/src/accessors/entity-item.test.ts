@@ -15,9 +15,9 @@ import {
   EntityItemAttributeNested,
   EntityItemAttributePlain,
   EntityItemAttributeUnknown,
-  EntityItemRelation,
-  RelationCardinalityError,
 } from "./entity-item";
+import { EntityItemToManyRelation } from "./entity-item-to-many-relation";
+import { EntityItemToOneRelation } from "./entity-item-to-one-relation";
 import ProfileEntity from "./entity-profile";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => ({
@@ -570,12 +570,9 @@ describe("EntityItem — deleteEntityItemRequest", () => {
   });
 });
 
-// ─── Relation accessor constants (shared with EntityItemRelation tests below) ─
+// ─── Relation accessor constants ─────────────────────────────────────────────
 
 const INVOICE_ITEM_URL = "https://api.example.com/invoices/inv-001";
-const SUPPLIER_URL = "https://api.example.com/suppliers/sup-001";
-const LINE_ITEM_URL_1 = "https://api.example.com/line-items/li-001";
-const LINE_ITEM_URL_2 = "https://api.example.com/line-items/li-002";
 
 // ─── Content link accessor tests ──────────────────────────────────────────────
 
@@ -737,7 +734,7 @@ describe("EntityItem — downloadContentRequest", () => {
   });
 });
 
-// ─── EntityItemRelation tests ─────────────────────────────────────────────────
+// ─── Relation accessor fixture helpers ───────────────────────────────────────
 
 function makeProfileEntityWithRelations(): ProfileEntity {
   const hal = new HalObject<ProfileEntityShape>(
@@ -790,39 +787,54 @@ function makeEntityItemWithFullRelations(
   return new EntityItem(hal, profileEntity, etag);
 }
 
-describe("EntityItem — getRelation", () => {
-  it("returns undefined for an unknown relation name", () => {
+// ─── New split-class relation accessor tests ──────────────────────────────────
+
+describe("EntityItem — toOneRelations", () => {
+  it("returns EntityItemToOneRelation instances for to-one relations with a link", () => {
     const item = makeEntityItemWithFullRelations();
-    expect(item.getRelation("nonexistent")).toBeUndefined();
+    const rels = item.toOneRelations;
+    expect(rels).toHaveLength(1);
+    expect(rels[0]).toBeInstanceOf(EntityItemToOneRelation);
+    expect(rels[0].name).toBe("supplier");
   });
 
-  it("returns an EntityItemRelation for a known to-one relation", () => {
-    const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("supplier");
-    expect(rel).toBeInstanceOf(EntityItemRelation);
-    expect(rel?.name).toBe("supplier");
-    expect(rel?.isToOne).toBe(true);
-    expect(rel?.isToMany).toBe(false);
+  it("omits to-one relations whose cg:relation link is absent (ABAC-hidden)", () => {
+    const profileEntity = makeProfileEntityWithRelations();
+    // No cg:relation links at all
+    const itemBody = {
+      id: "inv-001",
+      _links: { self: { href: INVOICE_ITEM_URL } },
+    };
+    const hal = new HalObject<EntityItemShape>(
+      itemBody as unknown as HalObjectShape<EntityItemShape>,
+    );
+    const item = new EntityItem(hal, profileEntity, null);
+    expect(item.toOneRelations).toHaveLength(0);
   });
 
-  it("returns an EntityItemRelation for a known to-many relation", () => {
-    const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("lineItems");
-    expect(rel).toBeInstanceOf(EntityItemRelation);
-    expect(rel?.name).toBe("lineItems");
-    expect(rel?.isToMany).toBe(true);
-    expect(rel?.isToOne).toBe(false);
+  it("returns empty array when profile has no to-one relations", () => {
+    const hal = makeEntityItemHal({ id: "inv-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.toOneRelations).toHaveLength(0);
   });
 
-  it("exposes the cg:relation navigation link", () => {
+  it("exposes the cg:relation navigation link href", () => {
     const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("supplier");
-    expect(rel?.link).not.toBeNull();
-    expect(rel?.link?.href).toBe(`${INVOICE_ITEM_URL}/supplier`);
+    const rel = item.toOneRelations[0];
+    expect(rel.link.href).toBe(`${INVOICE_ITEM_URL}/supplier`);
+  });
+});
+
+describe("EntityItem — toManyRelations", () => {
+  it("returns EntityItemToManyRelation instances for to-many relations with a link", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rels = item.toManyRelations;
+    expect(rels).toHaveLength(1);
+    expect(rels[0]).toBeInstanceOf(EntityItemToManyRelation);
+    expect(rels[0].name).toBe("lineItems");
   });
 
-  it("link is null when cg:relation link is absent (ABAC hidden)", () => {
-    // Item has profile relation but no cg:relation link for 'supplier'
+  it("omits to-many relations whose cg:relation link is absent (ABAC-hidden)", () => {
     const profileEntity = makeProfileEntityWithRelations();
     const itemBody = {
       id: "inv-001",
@@ -832,192 +844,171 @@ describe("EntityItem — getRelation", () => {
       itemBody as unknown as HalObjectShape<EntityItemShape>,
     );
     const item = new EntityItem(hal, profileEntity, null);
-    const rel = item.getRelation("supplier");
-    expect(rel).toBeInstanceOf(EntityItemRelation);
-    expect(rel?.link).toBeNull();
-  });
-});
-
-describe("EntityItem — relations getter", () => {
-  it("returns one EntityItemRelation per profile relation", () => {
-    const item = makeEntityItemWithFullRelations();
-    const rels = item.relations;
-    expect(rels).toHaveLength(2);
-    expect(rels[0]).toBeInstanceOf(EntityItemRelation);
-    expect(rels[1]).toBeInstanceOf(EntityItemRelation);
+    expect(item.toManyRelations).toHaveLength(0);
   });
 
-  it("names match profile relation order", () => {
-    const item = makeEntityItemWithFullRelations();
-    const names = item.relations.map((r) => r.name);
-    expect(names).toContain("supplier");
-    expect(names).toContain("lineItems");
-  });
-
-  it("returns empty array when profile has no relations", () => {
+  it("returns empty array when profile has no to-many relations", () => {
     const hal = makeEntityItemHal({ id: "inv-001" });
     const item = new EntityItem(hal, makeProfileEntity());
-    expect(item.relations).toHaveLength(0);
+    expect(item.toManyRelations).toHaveLength(0);
+  });
+
+  it("exposes the cg:relation navigation link href", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rel = item.toManyRelations[0];
+    expect(rel.link.href).toBe(`${INVOICE_ITEM_URL}/lineItems`);
   });
 });
 
-describe("EntityItemRelation — capability flags (ABAC via template presence)", () => {
-  it("canSet is true when set-<rel> template is present", () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "set-supplier": SET_SUPPLIER_TMPL });
-    expect(item.getRelation("supplier")?.canSet).toBe(true);
-  });
-
-  it("canSet is false when set-<rel> template is absent", () => {
+describe("EntityItem — getToOneRelation", () => {
+  it("returns the matching EntityItemToOneRelation by name", () => {
     const item = makeEntityItemWithFullRelations();
-    expect(item.getRelation("supplier")?.canSet).toBe(false);
+    const rel = item.getToOneRelation("supplier");
+    expect(rel).toBeInstanceOf(EntityItemToOneRelation);
+    expect(rel?.name).toBe("supplier");
   });
 
-  it("canAdd is true when add-<rel> template is present", () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "add-lineItems": ADD_LINE_ITEM_TMPL });
-    expect(item.getRelation("lineItems")?.canAdd).toBe(true);
-  });
-
-  it("canAdd is false when add-<rel> template is absent", () => {
+  it("returns undefined for a to-many relation name", () => {
     const item = makeEntityItemWithFullRelations();
-    expect(item.getRelation("lineItems")?.canAdd).toBe(false);
+    expect(item.getToOneRelation("lineItems")).toBeUndefined();
   });
 
-  it("canClear is true when clear-<rel> template is present", () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "clear-supplier": CLEAR_SUPPLIER_TMPL });
-    expect(item.getRelation("supplier")?.canClear).toBe(true);
-  });
-
-  it("canClear is false when clear-<rel> template is absent", () => {
+  it("returns undefined for an unknown name", () => {
     const item = makeEntityItemWithFullRelations();
-    expect(item.getRelation("supplier")?.canClear).toBe(false);
-  });
-});
-
-describe("EntityItemRelation — setRequest", () => {
-  it("returns a PUT request with text/uri-list containing the target href", async () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "set-supplier": SET_SUPPLIER_TMPL });
-    const rel = item.getRelation("supplier")!;
-    const req = rel.setRequest(SUPPLIER_URL);
-    expect(req.method).toBe("PUT");
-    expect(req.headers.get("Content-Type")).toContain("text/uri-list");
-    const body = await req.text();
-    expect(body).toContain(SUPPLIER_URL);
+    expect(item.getToOneRelation("nonexistent")).toBeUndefined();
   });
 
-  it("throws RelationCardinalityError when called on a to-many relation", () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "add-lineItems": ADD_LINE_ITEM_TMPL });
-    const rel = item.getRelation("lineItems")!;
-    expect(() => rel.setRequest(LINE_ITEM_URL_1)).toThrow(RelationCardinalityError);
-    expect(() => rel.setRequest(LINE_ITEM_URL_1)).toThrow(/to-many/);
-  });
-
-  it("throws an ABAC error (not RelationCardinalityError) when template is absent on to-one", () => {
-    const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("supplier")!;
-    let thrown: Error | undefined;
-    try {
-      rel.setRequest(SUPPLIER_URL);
-    } catch (e) {
-      thrown = e as Error;
-    }
-    expect(thrown).toBeInstanceOf(Error);
-    expect(thrown).not.toBeInstanceOf(RelationCardinalityError);
-    expect(thrown?.message).toContain("template absent");
-  });
-});
-
-describe("EntityItemRelation — addRequest", () => {
-  it("returns a POST request with text/uri-list containing all target hrefs", async () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "add-lineItems": ADD_LINE_ITEM_TMPL });
-    const rel = item.getRelation("lineItems")!;
-    const req = rel.addRequest([LINE_ITEM_URL_1, LINE_ITEM_URL_2]);
-    expect(req.method).toBe("POST");
-    expect(req.headers.get("Content-Type")).toContain("text/uri-list");
-    const body = await req.text();
-    expect(body).toContain(LINE_ITEM_URL_1);
-    expect(body).toContain(LINE_ITEM_URL_2);
-  });
-
-  it("throws RelationCardinalityError when called on a to-one relation", () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "set-supplier": SET_SUPPLIER_TMPL });
-    const rel = item.getRelation("supplier")!;
-    expect(() => rel.addRequest([SUPPLIER_URL])).toThrow(RelationCardinalityError);
-    expect(() => rel.addRequest([SUPPLIER_URL])).toThrow(/to-one/);
-  });
-
-  it("throws an ABAC error (not RelationCardinalityError) when template is absent on to-many", () => {
-    const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("lineItems")!;
-    let thrown: Error | undefined;
-    try {
-      rel.addRequest([LINE_ITEM_URL_1]);
-    } catch (e) {
-      thrown = e as Error;
-    }
-    expect(thrown).toBeInstanceOf(Error);
-    expect(thrown).not.toBeInstanceOf(RelationCardinalityError);
-    expect(thrown?.message).toContain("template absent");
-  });
-});
-
-describe("EntityItemRelation — clearRequest", () => {
-  it("returns a DELETE request", () => {
-    const item = makeEntityItemWithFullRelations('"v1"', { "clear-supplier": CLEAR_SUPPLIER_TMPL });
-    const rel = item.getRelation("supplier")!;
-    const req = rel.clearRequest();
-    expect(req.method).toBe("DELETE");
-  });
-
-  it("throws an ABAC error when clear template is absent", () => {
-    const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("supplier")!;
-    expect(() => rel.clearRequest()).toThrow(/template absent/);
-  });
-});
-
-describe("EntityItemRelation — empty properties guard", () => {
-  it("setRequest throws a clear error when set template has no properties", () => {
-    const templateWithNoProps = {
-      method: "PUT",
-      target: `${INVOICE_ITEM_URL}/supplier`,
-      contentType: "text/uri-list",
-      properties: [],
+  it("returns undefined when the link is absent (ABAC-hidden)", () => {
+    const profileEntity = makeProfileEntityWithRelations();
+    const itemBody = {
+      id: "inv-001",
+      _links: { self: { href: INVOICE_ITEM_URL } },
     };
-    const item = makeEntityItemWithFullRelations('"v1"', { "set-supplier": templateWithNoProps });
-    const rel = item.getRelation("supplier")!;
-    expect(() => rel.setRequest(SUPPLIER_URL)).toThrow(/no properties/);
-  });
-
-  it("addRequest throws a clear error when add template has no properties", () => {
-    const templateWithNoProps = {
-      method: "POST",
-      target: `${INVOICE_ITEM_URL}/lineItems`,
-      contentType: "text/uri-list",
-      properties: [],
-    };
-    const item = makeEntityItemWithFullRelations('"v1"', { "add-lineItems": templateWithNoProps });
-    const rel = item.getRelation("lineItems")!;
-    expect(() => rel.addRequest([LINE_ITEM_URL_1])).toThrow(/no properties/);
+    const hal = new HalObject<EntityItemShape>(
+      itemBody as unknown as HalObjectShape<EntityItemShape>,
+    );
+    const item = new EntityItem(hal, profileEntity, null);
+    expect(item.getToOneRelation("supplier")).toBeUndefined();
   });
 });
 
-describe("EntityItemRelation — profile metadata", () => {
-  it("exposes title from the profile relation", () => {
+describe("EntityItem — getToManyRelation", () => {
+  it("returns the matching EntityItemToManyRelation by name", () => {
     const item = makeEntityItemWithFullRelations();
-    expect(item.getRelation("supplier")?.title).toBe("Supplier");
-    expect(item.getRelation("lineItems")?.title).toBe("Line Items");
+    const rel = item.getToManyRelation("lineItems");
+    expect(rel).toBeInstanceOf(EntityItemToManyRelation);
+    expect(rel?.name).toBe("lineItems");
   });
 
-  it("exposes the ProfileRelation via .profile", () => {
+  it("returns undefined for a to-one relation name", () => {
     const item = makeEntityItemWithFullRelations();
-    const rel = item.getRelation("supplier")!;
-    expect(rel.profile.name).toBe("supplier");
-    expect(rel.profile.isToOne).toBe(true);
+    expect(item.getToManyRelation("supplier")).toBeUndefined();
   });
 
-  it("targetProfileLink.name carries the target entity name", () => {
+  it("returns undefined for an unknown name", () => {
     const item = makeEntityItemWithFullRelations();
-    expect(item.getRelation("supplier")?.profile.targetProfileLink?.name).toBe("supplier");
-    expect(item.getRelation("lineItems")?.profile.targetProfileLink?.name).toBe("lineItem");
+    expect(item.getToManyRelation("nonexistent")).toBeUndefined();
+  });
+
+  it("returns undefined when the link is absent (ABAC-hidden)", () => {
+    const profileEntity = makeProfileEntityWithRelations();
+    const itemBody = {
+      id: "inv-001",
+      _links: { self: { href: INVOICE_ITEM_URL } },
+    };
+    const hal = new HalObject<EntityItemShape>(
+      itemBody as unknown as HalObjectShape<EntityItemShape>,
+    );
+    const item = new EntityItem(hal, profileEntity, null);
+    expect(item.getToManyRelation("lineItems")).toBeUndefined();
+  });
+});
+
+describe("EntityItem — getRelation (union)", () => {
+  it("returns EntityItemToOneRelation for a to-one relation name", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rel = item.getRelation("supplier");
+    expect(rel).toBeInstanceOf(EntityItemToOneRelation);
+  });
+
+  it("returns EntityItemToManyRelation for a to-many relation name", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rel = item.getRelation("lineItems");
+    expect(rel).toBeInstanceOf(EntityItemToManyRelation);
+  });
+
+  it("returns undefined for an unknown relation name", () => {
+    const item = makeEntityItemWithFullRelations();
+    expect(item.getRelation("nonexistent")).toBeUndefined();
+  });
+
+  it("returns undefined when the link is absent (ABAC-hidden)", () => {
+    const profileEntity = makeProfileEntityWithRelations();
+    const itemBody = {
+      id: "inv-001",
+      _links: { self: { href: INVOICE_ITEM_URL } },
+    };
+    const hal = new HalObject<EntityItemShape>(
+      itemBody as unknown as HalObjectShape<EntityItemShape>,
+    );
+    const item = new EntityItem(hal, profileEntity, null);
+    expect(item.getRelation("supplier")).toBeUndefined();
+    expect(item.getRelation("lineItems")).toBeUndefined();
+  });
+});
+
+describe("EntityItem — relation accessor profileRelation metadata", () => {
+  it("to-one relation exposes profileRelation with correct cardinality", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rel = item.getToOneRelation("supplier")!;
+    expect(rel.profileRelation.isToOne).toBe(true);
+    expect(rel.profileRelation.isToMany).toBe(false);
+    expect(rel.profileRelation.targetProfileLink?.name).toBe("supplier");
+  });
+
+  it("to-many relation exposes profileRelation with correct cardinality", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rel = item.getToManyRelation("lineItems")!;
+    expect(rel.profileRelation.isToMany).toBe(true);
+    expect(rel.profileRelation.isToOne).toBe(false);
+    expect(rel.profileRelation.targetProfileLink?.name).toBe("lineItem");
+  });
+
+  it("relation carries a reference to the source EntityItem", () => {
+    const item = makeEntityItemWithFullRelations();
+    const rel = item.getToOneRelation("supplier")!;
+    expect(rel.source).toBe(item);
+  });
+});
+
+describe("EntityItem — relation capability flags", () => {
+  it("canSet is true on to-one relation when set-<rel> template is present", () => {
+    const item = makeEntityItemWithFullRelations('"v1"', { "set-supplier": SET_SUPPLIER_TMPL });
+    expect(item.getToOneRelation("supplier")?.canSet).toBe(true);
+  });
+
+  it("canSet is false on to-one relation when set-<rel> template is absent", () => {
+    const item = makeEntityItemWithFullRelations();
+    expect(item.getToOneRelation("supplier")?.canSet).toBe(false);
+  });
+
+  it("canAdd is true on to-many relation when add-<rel> template is present", () => {
+    const item = makeEntityItemWithFullRelations('"v1"', { "add-lineItems": ADD_LINE_ITEM_TMPL });
+    expect(item.getToManyRelation("lineItems")?.canAdd).toBe(true);
+  });
+
+  it("canAdd is false on to-many relation when add-<rel> template is absent", () => {
+    const item = makeEntityItemWithFullRelations();
+    expect(item.getToManyRelation("lineItems")?.canAdd).toBe(false);
+  });
+
+  it("canClear is true on to-one relation when clear-<rel> template is present", () => {
+    const item = makeEntityItemWithFullRelations('"v1"', { "clear-supplier": CLEAR_SUPPLIER_TMPL });
+    expect(item.getToOneRelation("supplier")?.canClear).toBe(true);
+  });
+
+  it("canClear is false on to-one relation when clear-<rel> template is absent", () => {
+    const item = makeEntityItemWithFullRelations();
+    expect(item.getToOneRelation("supplier")?.canClear).toBe(false);
   });
 });

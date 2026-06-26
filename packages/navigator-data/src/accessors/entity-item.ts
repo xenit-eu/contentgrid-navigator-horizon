@@ -12,204 +12,16 @@ import { fetchHal } from "../api/hal-client";
 import type {
   EntityInstanceDeleteRequestSpec,
   EntityInstanceUpdateRequestSpec,
-  RelationDeleteRequestSpec,
-  RelationUpdateRequestSpec,
 } from "../api/requests";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import type { ProfileAttribute } from "./attribute-profile";
+import { EntityItemToManyRelation } from "./entity-item-to-many-relation";
+import { EntityItemToOneRelation } from "./entity-item-to-one-relation";
 import type ProfileEntity from "./entity-profile";
-import type { ProfileRelation } from "./relation-profile";
 
 const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
-
-// ========================================
-// Relation value object + cardinality error
-// ========================================
-
-/**
- * Thrown when a relation operation is attempted with the wrong cardinality.
- *
- * For example: calling `setRequest` on a to-many relation, or `addRequest` on a to-one
- * relation. Distinct from the ABAC "template absent" error so callers can distinguish
- * programming errors (wrong cardinality) from permission errors (ABAC deny).
- */
-export class RelationCardinalityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RelationCardinalityError";
-  }
-}
-
-/**
- * A relation on an entity item, joining the `cg:relation` navigation link with the
- * `ProfileRelation` schema metadata and the item's HAL-FORMS relation templates.
- *
- * Mirrors the legacy `EntityRelation` shape from `xenit-eu/contentgrid-navigator`
- * (EntityInstanceAccessor.ts) but integrates with the new ProfileRelation for
- * cardinality information and target discovery.
- *
- * @example
- * ```typescript
- * const rel = item.getRelation("supplier");
- * if (rel?.canSet) {
- *   const req = rel.setRequest("https://api.example.com/suppliers/sup-001");
- *   await fetchVoid(apiFetch, req);
- * }
- * ```
- */
-export class EntityItemRelation {
-  constructor(
-    private readonly halItem: HalObject<EntityItemShape>,
-    public readonly profile: ProfileRelation,
-    /** The `cg:relation` navigation link for this relation. May be absent when ABAC hides it. */
-    public readonly link: Link | null,
-  ) {}
-
-  /** The relation name (e.g. "supplier", "lineItems"). */
-  get name(): string {
-    return this.profile.name;
-  }
-
-  /** Human-readable title from the profile. */
-  get title(): string {
-    return this.profile.title;
-  }
-
-  /** True when this is a to-many relation (many_target_per_source = true). */
-  get isToMany(): boolean {
-    return this.profile.isToMany;
-  }
-
-  /** True when this is a to-one relation (many_target_per_source = false). */
-  get isToOne(): boolean {
-    return this.profile.isToOne;
-  }
-
-  // ---- Template resolvers ----
-
-  private get setTemplate(): HalFormsTemplate<RelationUpdateRequestSpec> | null {
-    return resolveTemplate(this.halItem.data, `set-${this.name}`);
-  }
-
-  private get addTemplate(): HalFormsTemplate<RelationUpdateRequestSpec> | null {
-    return resolveTemplate(this.halItem.data, `add-${this.name}`);
-  }
-
-  private get clearTemplate(): HalFormsTemplate<RelationDeleteRequestSpec> | null {
-    return resolveTemplate(this.halItem.data, `clear-${this.name}`);
-  }
-
-  // ---- Capability flags (ABAC gate via template presence) ----
-
-  /**
-   * Whether the current user is permitted to set (replace) this to-one relation.
-   *
-   * Derived from `set-<name>` template presence — the platform omits the template
-   * when the ABAC policy denies the operation for this item/user combination.
-   */
-  get canSet(): boolean {
-    return this.setTemplate !== null;
-  }
-
-  /**
-   * Whether the current user is permitted to add to this to-many relation.
-   *
-   * Derived from `add-<name>` template presence — the platform omits the template
-   * when the ABAC policy denies the operation for this item/user combination.
-   */
-  get canAdd(): boolean {
-    return this.addTemplate !== null;
-  }
-
-  /**
-   * Whether the current user is permitted to clear this relation.
-   *
-   * Derived from `clear-<name>` template presence — the platform omits the template
-   * when the ABAC policy denies the operation for this item/user combination.
-   */
-  get canClear(): boolean {
-    return this.clearTemplate !== null;
-  }
-
-  // ---- Request builders ----
-
-  /**
-   * Encode a "set" Request for this to-one relation using the HAL-FORMS codec.
-   *
-   * @param targetHref - The href of the target entity item (single URL for to-one)
-   * @returns Request ready to be sent with apiFetch
-   * @throws {RelationCardinalityError} if this is a to-many relation
-   * @throws {Error} if the `set-<name>` template is absent (ABAC deny)
-   */
-  setRequest(targetHref: string): Request {
-    if (this.isToMany) {
-      throw new RelationCardinalityError(
-        `Relation '${this.name}' is to-many; use addRequest() instead of setRequest()`,
-      );
-    }
-    const template = this.setTemplate;
-    if (template === null) {
-      throw new Error(`Relation operation 'set' not permitted for '${this.name}': template absent`);
-    }
-    const codec = halFormCodecs.requireCodecFor(template);
-    const prop = template.properties[0];
-    if (!prop) {
-      throw new Error(
-        `set-${this.name} template has no properties; cannot encode uri-list request`,
-      );
-    }
-    return codec.encode(createValues(template).withValue(prop.name, targetHref));
-  }
-
-  /**
-   * Encode an "add" Request for this to-many relation using the HAL-FORMS codec.
-   *
-   * @param targetHrefs - The hrefs of the target entity items (one or more)
-   * @returns Request ready to be sent with apiFetch
-   * @throws {RelationCardinalityError} if this is a to-one relation
-   * @throws {Error} if the `add-<name>` template is absent (ABAC deny)
-   */
-  addRequest(targetHrefs: readonly string[]): Request {
-    if (this.isToOne) {
-      throw new RelationCardinalityError(
-        `Relation '${this.name}' is to-one; use setRequest() instead of addRequest()`,
-      );
-    }
-    const template = this.addTemplate;
-    if (template === null) {
-      throw new Error(`Relation operation 'add' not permitted for '${this.name}': template absent`);
-    }
-    const codec = halFormCodecs.requireCodecFor(template);
-    const prop = template.properties[0];
-    if (!prop) {
-      throw new Error(
-        `add-${this.name} template has no properties; cannot encode uri-list request`,
-      );
-    }
-    return codec.encode(createValues(template).withValue(prop.name, targetHrefs));
-  }
-
-  /**
-   * Encode a "clear" Request for this relation using the HAL-FORMS codec.
-   *
-   * Valid for both to-one and to-many relations.
-   *
-   * @returns Request ready to be sent with apiFetch
-   * @throws {Error} if the `clear-<name>` template is absent (ABAC deny)
-   */
-  clearRequest(): Request {
-    const template = this.clearTemplate;
-    if (template === null) {
-      throw new Error(
-        `Relation operation 'clear' not permitted for '${this.name}': template absent`,
-      );
-    }
-    const codec = halFormCodecs.requireCodecFor(template);
-    return codec.encode(createValues(template));
-  }
-}
 
 /**
  * Represents a single entity instance (entity-item resource) with typed attribute access.
@@ -438,41 +250,76 @@ export class EntityItem {
   }
 
   // ========================================
-  // Relation Accessors (EntityItemRelation value objects)
+  // Relation Accessors
   // ========================================
 
   /**
-   * Look up a relation by name, joining the `ProfileRelation` schema with the
-   * `cg:relation` navigation link from this item.
+   * All to-one relations visible on this item (i.e. the `cg:relation` link is present).
    *
-   * Returns `undefined` when the profile has no relation of that name (unknown relation).
-   * The `cg:relation` link may be absent when ABAC hides the navigation target — in that
-   * case the object is still constructed (with `link: null`) so capability flags can
-   * report false without callers having to guard against undefined separately.
+   * Relations whose `cg:relation` link is absent (ABAC-hidden) are omitted — they cannot
+   * be navigated or mutated by the current user.
    *
-   * @param relationName - The name of the relation (e.g. "supplier", "lineItems")
-   * @returns EntityItemRelation or undefined if the relation is not in the profile
+   * Order matches `profileEntity.toOneRelations`.
    */
-  public getRelation(relationName: string): EntityItemRelation | undefined {
-    const profileRelation = this.profileEntity.getRelation(relationName);
-    if (!profileRelation) {
-      return undefined;
-    }
-    const link = this.halItem.links.findLink(cgRels.relation, relationName) ?? null;
-    return new EntityItemRelation(this.halItem, profileRelation, link);
+  public get toOneRelations(): readonly EntityItemToOneRelation[] {
+    return this.profileEntity.toOneRelations.flatMap((profileRelation) => {
+      const link = this.halItem.links.findLink(cgRels.relation, profileRelation.name);
+      if (!link) return [];
+      return [new EntityItemToOneRelation(profileRelation.name, link, profileRelation, this)];
+    });
   }
 
   /**
-   * All relations defined in the entity profile, each joined with their `cg:relation`
-   * navigation link from this item (link may be null when ABAC hides it).
+   * All to-many relations visible on this item (i.e. the `cg:relation` link is present).
    *
-   * Order matches `profileEntity.relations`.
+   * Relations whose `cg:relation` link is absent (ABAC-hidden) are omitted — they cannot
+   * be navigated or mutated by the current user.
+   *
+   * Order matches `profileEntity.toManyRelations`.
    */
-  public get relations(): readonly EntityItemRelation[] {
-    return this.profileEntity.relations.map((profileRelation) => {
-      const link = this.halItem.links.findLink(cgRels.relation, profileRelation.name) ?? null;
-      return new EntityItemRelation(this.halItem, profileRelation, link);
+  public get toManyRelations(): readonly EntityItemToManyRelation[] {
+    return this.profileEntity.toManyRelations.flatMap((profileRelation) => {
+      const link = this.halItem.links.findLink(cgRels.relation, profileRelation.name);
+      if (!link) return [];
+      return [new EntityItemToManyRelation(profileRelation.name, link, profileRelation, this)];
     });
+  }
+
+  /**
+   * Look up a to-one relation by name.
+   *
+   * Returns `undefined` when the profile has no matching to-one relation, or when the
+   * `cg:relation` link is absent (ABAC-hidden).
+   *
+   * @param name - The relation name (e.g. "supplier")
+   */
+  public getToOneRelation(name: string): EntityItemToOneRelation | undefined {
+    return this.toOneRelations.find((r) => r.name === name);
+  }
+
+  /**
+   * Look up a to-many relation by name.
+   *
+   * Returns `undefined` when the profile has no matching to-many relation, or when the
+   * `cg:relation` link is absent (ABAC-hidden).
+   *
+   * @param name - The relation name (e.g. "lineItems")
+   */
+  public getToManyRelation(name: string): EntityItemToManyRelation | undefined {
+    return this.toManyRelations.find((r) => r.name === name);
+  }
+
+  /**
+   * Look up any relation by name, regardless of cardinality.
+   *
+   * Returns `undefined` when no matching relation is present (unknown name, profile miss,
+   * or ABAC-hidden link). The return type is a union — narrow by `instanceof` to access
+   * cardinality-specific builders.
+   *
+   * @param name - The relation name (e.g. "supplier", "lineItems")
+   */
+  public getRelation(name: string): EntityItemToOneRelation | EntityItemToManyRelation | undefined {
+    return this.getToOneRelation(name) ?? this.getToManyRelation(name);
   }
 
   // ========================================

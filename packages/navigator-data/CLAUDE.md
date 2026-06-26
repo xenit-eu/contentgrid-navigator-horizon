@@ -81,9 +81,11 @@ entity name like `invoice`.
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
+- Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
-  delete: `useDeleteEntityItem`, relation set: `useSetRelation`, relation add: `useAddRelation`,
-  relation clear: `useClearRelation`, binary content: `useUploadContent`, `useDownloadContent`
+  delete: `useDeleteEntityItem`, relation set (to-one): `useSetToOneRelation`,
+  relation add (to-many): `useAddToManyRelation`, relation clear: `useClearRelation`,
+  binary content: `useUploadContent`, `useDownloadContent`
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
 `useEntityItem` supports two modes — choose based on what you know at call time:
@@ -102,15 +104,17 @@ network cost in known-profile mode.
 
 Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query factories:
 
-| Class                   | Wraps                                       | Static query factory                                                                           |
-| ----------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `ProfileEntity`         | `/profile/{plural}` HAL-FORMS profile       | `profileByLinkQuery(apiFetch, link)`                                                           |
-| `ProfileAttribute`      | `blueprint:attribute` embedded resource     | —                                                                                              |
-| `ProfileRelation`       | `blueprint:relation` embedded resource      | —                                                                                              |
-| `SearchHalFormTemplate` | `_templates.search` HAL-FORMS template      | —                                                                                              |
-| `CreateHalFormTemplate` | `_templates.create-form` HAL-FORMS template | —                                                                                              |
-| `EntityItem`            | `/{plural}/{id}` HAL entity-item resource   | `fetchByUrlQuery(apiFetch, url, profileEntity)`                                                |
-| `EntityItemCollection`  | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)` |
+| Class                      | Wraps                                       | Static query factory                                                                                              |
+| -------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `ProfileEntity`            | `/profile/{plural}` HAL-FORMS profile       | `profileByLinkQuery(apiFetch, link)`                                                                              |
+| `ProfileAttribute`         | `blueprint:attribute` embedded resource     | —                                                                                                                 |
+| `ProfileRelation`          | `blueprint:relation` embedded resource      | —                                                                                                                 |
+| `SearchHalFormTemplate`    | `_templates.search` HAL-FORMS template      | —                                                                                                                 |
+| `CreateHalFormTemplate`    | `_templates.create-form` HAL-FORMS template | —                                                                                                                 |
+| `EntityItem`               | `/{plural}/{id}` HAL entity-item resource   | `fetchByUrlQuery(apiFetch, url, profileEntity)`                                                                   |
+| `EntityItemCollection`     | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)`                    |
+| `EntityItemToOneRelation`  | to-one relation link on an entity item      | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItem \| null` (null = empty slot; 404 → null)           |
+| `EntityItemToManyRelation` | to-many relation link on an entity item     | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItemCollection` (keys under `toManyRelation` namespace) |
 
 Standalone query factories (system-level, not tied to one entity):
 
@@ -124,9 +128,9 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `profileEntity.searchEntityRequest(values)` → `Request` for `_templates.search`
 - `profileEntity.createEntityItemRequest(values)` → `Request` for `_templates.create-form`
 - `entityItem.editEntityRequest(values)` → `Request` for `_templates.default`
-- `entityItem.getRelation(name)?.setRequest(targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list; via `EntityItemRelation`)
-- `entityItem.getRelation(name)?.addRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemRelation`)
-- `entityItem.getRelation(name)?.clearRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body; via `EntityItemRelation`)
+- `entityItem.getToOneRelation(name)?.setRelationRequest(targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list; via `EntityItemToOneRelation`)
+- `entityItem.getToManyRelation(name)?.addRelationRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemToManyRelation`)
+- `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
 - `entityItem.uploadContentRequest(attrName, file, opts?)` → hand-built PUT `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 
@@ -274,43 +278,86 @@ Where to find this now:
 
 All mutation hooks and relation accessors are implemented. Use the table below as a reference:
 
-| Operation            | Template key  | Hook                  | Accessor on `EntityItem`                                                 |
-| -------------------- | ------------- | --------------------- | ------------------------------------------------------------------------ |
-| Update               | `default`     | `useUpdateEntityItem` | `defaultTemplate` + `editEntityRequest(values)`                          |
-| Delete               | `delete`      | `useDeleteEntityItem` | `deleteTemplate` + `canDelete` + `deleteEntityItemRequest()` (no values) |
-| Set to-one relation  | `set-<rel>`   | `useSetRelation`      | `getRelation(name)?.setRequest(targetHref)` via `EntityItemRelation`     |
-| Add to-many relation | `add-<rel>`   | `useAddRelation`      | `getRelation(name)?.addRequest(targetHrefs)` via `EntityItemRelation`    |
-| Clear relation       | `clear-<rel>` | `useClearRelation`    | `getRelation(name)?.clearRequest()` via `EntityItemRelation`             |
+| Operation            | Template key  | Hook                   | Accessor on `EntityItem`                                                                              |
+| -------------------- | ------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| Update               | `default`     | `useUpdateEntityItem`  | `defaultTemplate` + `editEntityRequest(values)`                                                       |
+| Delete               | `delete`      | `useDeleteEntityItem`  | `deleteTemplate` + `canDelete` + `deleteEntityItemRequest()` (no values)                              |
+| Set to-one relation  | `set-<rel>`   | `useSetToOneRelation`  | `getToOneRelation(name)?.setRelationRequest(targetHref)` via `EntityItemToOneRelation`                |
+| Add to-many relation | `add-<rel>`   | `useAddToManyRelation` | `getToManyRelation(name)?.addRelationRequest(targetHrefs)` via `EntityItemToManyRelation`             |
+| Clear relation       | `clear-<rel>` | `useClearRelation`     | `getToOneRelation(name)?.clearRelationRequest()` or `getToManyRelation(name)?.clearRelationRequest()` |
 
 Binary content (PUT to `cg:content`) has no HAL-FORMS template — see the **Content exception**
 section below.
 
-**Relation accessor design — `EntityItemRelation` value object:**
+**Relation accessor design — two-class split:**
 
-`entityItem.getRelation(name)` returns an `EntityItemRelation | undefined`. This value object joins:
+`EntityItemToOneRelation` and `EntityItemToManyRelation` are distinct cardinality-specific classes.
+`entityItem.getToOneRelation(name)` returns `EntityItemToOneRelation | undefined`;
+`entityItem.getToManyRelation(name)` returns `EntityItemToManyRelation | undefined`;
+`entityItem.getRelation(name)` returns either or `undefined`.
+`entityItem.toOneRelations` and `entityItem.toManyRelations` return the full lists.
 
-- The `ProfileRelation` schema (cardinality, target entity name, title)
-- The `cg:relation` navigation link (may be `null` when ABAC hides the nav link)
-- The item's HAL-FORMS relation templates (`set-<rel>`, `add-<rel>`, `clear-<rel>`)
+Each class carries:
 
-Key members:
+- `name` — the relation name (matches the `name` field on the `cg:relation` link)
+- `link` — the `cg:relation` navigation link on the source item
+- `profileRelation` — the `ProfileRelation` schema (cardinality, target entity name, title)
+- `source` — the source `EntityItem` (used by mutation hooks for `If-Match` + parent re-fetch)
 
-- `canSet / canAdd / canClear` — boolean capability flags derived from template presence (ABAC gate)
-- `setRequest(targetHref)` — throws `RelationCardinalityError` if to-many; throws `Error` if template absent
-- `addRequest(targetHrefs)` — throws `RelationCardinalityError` if to-one; throws `Error` if template absent
-- `clearRequest()` — throws `Error` if template absent
-- `profile.targetProfileLink?.name` — entity name of the target (used for scoped cache invalidation)
+`EntityItemToOneRelation` key members:
 
-`RelationCardinalityError` (exported) is distinct from the ABAC "template absent" error — callers can use `instanceof RelationCardinalityError` to distinguish programming mistakes (wrong cardinality) from permission errors.
+- `canSet / canClear` — boolean capability flags derived from `set-<rel>` / `clear-<rel>` template presence (ABAC gate)
+- `setRelationRequest(uri)` — throws `Error` if `setTemplate` is null (ABAC deny)
+- `clearRelationRequest()` — throws `Error` if `clearTemplate` is null
+- Static `fetchQuery(apiFetch, url, targetProfileEntity)` → 404 maps to `null` (empty slot); cached under `queryKeys.toOneRelation.byUrl(targetProfile, url)`
 
-`entityItem.relations` returns all relations as `readonly EntityItemRelation[]`.
+`EntityItemToManyRelation` key members:
+
+- `canAdd / canClear` — boolean capability flags derived from `add-<rel>` / `clear-<rel>` template presence (ABAC gate)
+- `addRelationRequest(uris)` — throws `Error` if `addTemplate` is null
+- `clearRelationRequest()` — throws `Error` if `clearTemplate` is null
+- Static `fetchQuery(apiFetch, url, targetProfileEntity)` → returns `EntityItemCollection`; cached under `queryKeys.toManyRelation.byUrl(targetProfile, url)`
+
+**Relation read hooks:**
+
+- `useEntityItemToOneRelation(relation, options?)` → `UseQueryResult<EntityItem | null, Error>`.
+  Returns `null` when the to-one slot is empty (server returns 404). Disabled until the target
+  profile resolves from `useProfileEntities()`.
+- `useEntityItemToManyRelation(relation, options?)` → `UseQueryResult<EntityItemCollection, Error>`.
+  Disabled until the target profile resolves.
+
+**Relation mutation hooks:**
+
+All three mutation hooks accept `(relation, targetProfile, options?)` and return
+`UseMutationResult<EntityItem | undefined, Error, TInput>`. Result data is `EntityItem | undefined`
+because the hook performs a best-effort re-fetch of the source item to capture its new ETag and
+populate the item cache. If the re-fetch fails, the mutation still resolves as success
+(`data: undefined`).
+
+`If-Match` is attached by the mutation hook from `relation.source.etag` — the request builders
+(`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) do NOT attach it.
+
+- `useSetToOneRelation(relation, targetProfile, options?)` — TInput `string`; invalidates `queryKeys.toOneRelation.byUrl(targetProfile, relation.link.href)` on settle + target item URL(s).
+- `useAddToManyRelation(relation, targetProfile, options?)` — TInput `string[]`; invalidates `queryKeys.toManyRelation.byUrl(targetProfile, relation.link.href)` on settle + each target item URL.
+- `useClearRelation(relation, targetProfile, options?)` — TInput `void`; cardinality determined at runtime via `relation instanceof EntityItemToOneRelation`; no target invalidation (previously-linked hrefs unknown).
+
+**Relation query-key namespaces:**
+
+```ts
+queryKeys.toOneRelation.byUrl(targetProfile, url); // exact key for a to-one relation read
+queryKeys.toOneRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-one reads for that entity type
+queryKeys.toManyRelation.byUrl(targetProfile, url); // exact key for a to-many relation read
+queryKeys.toManyRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-many reads for that entity type
+```
+
+Root strings are `"ToOneRelation"` / `"ToManyRelation"` — distinct from `"EntityItem"`, so there is
+no prefix collision with `entityItem.forEntityName`.
 
 **Relation hook cache behaviour:**
 
-- `useSetRelation` / `useAddRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → invalidate specific target item URL(s) via `queryKeys.entityItem.byUrlForName(targetName, href)`. Does NOT invalidate source collection or all source items.
-- `useClearRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → NO target invalidation (previously-linked hrefs not available at clear time).
-- All three hooks perform a best-effort re-fetch of the parent item after the mutation. If the re-fetch fails, the mutation still resolves as success (data: `undefined`) — the write succeeded.
-- 409 `integrity/blind-relation-overwrite` from `useSetRelation`: unlink the existing relation first, then set.
+- `useSetToOneRelation` / `useAddToManyRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → invalidate specific target item URL(s) via `queryKeys.entityItem.byUrlForName(targetName, href)` AND invalidate the relation read key. Does NOT invalidate source collection or all source items.
+- `useClearRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → invalidate the relation read key; NO target invalidation (previously-linked hrefs not available at clear time).
+- 409 `integrity/blind-relation-overwrite` from `useSetToOneRelation`: unlink the existing relation first (`useClearRelation`), then set.
 - `queryKeys.entityItem.byUrlForName(entityName, url)` and `queryKeys.entityItem.forEntityName(entityName)` are available for invalidating target items by string name when a full `ProfileEntity` is not in scope.
 
 **2. Gate every operation on template/link presence — never assume permission.**
@@ -329,9 +376,10 @@ Rules:
 > `entityItem.deleteTemplate !== null → delete is permitted (canDelete getter)`.
 > Both `canUpdate` and `canDelete` are implemented as boolean getters on `EntityItem`.
 > `canCreate` is not yet implemented.
-> Relation capability is exposed on `EntityItemRelation` (obtained via `entityItem.getRelation(name)`):
-> `relation.canSet`, `relation.canAdd`, `relation.canClear` — boolean flags derived from template presence.
-> 409 `integrity/blind-relation-overwrite` must be handled at the call site: unlink the existing relation first (`useClearRelation`), then set the new one (`useSetRelation`).
+> Relation capability is exposed on `EntityItemToOneRelation` / `EntityItemToManyRelation`
+> (obtained via `entityItem.getToOneRelation(name)` / `entityItem.getToManyRelation(name)`):
+> `toOne.canSet`, `toOne.canClear`, `toMany.canAdd`, `toMany.canClear` — boolean flags derived from template presence.
+> 409 `integrity/blind-relation-overwrite` must be handled at the call site: unlink the existing relation first (`useClearRelation`), then set the new one (`useSetToOneRelation`).
 
 **3. URLs only from links — never string-built.**
 
@@ -411,19 +459,19 @@ must use `fetchVoid(apiFetch, request)` instead. `fetchVoid` is implemented and 
 
 **Attaching `If-Match` to a mutation request:**
 
-Request builders (`editEntityRequest`, etc.) return a bare `Request` with no conditional header.
-The hook attaches it before calling `apiFetch`:
+Request builders (`editEntityRequest`, `setRelationRequest`, etc.) return a bare `Request` with no
+conditional header. The hook attaches it before calling `apiFetch` via `addIfMatchHeader` from
+`src/api/hal-client.ts`:
 
 ```typescript
-// attach If-Match only when an ETag is available
-const req =
-  etag !== null
-    ? new Request(baseReq, {
-        headers: { ...Object.fromEntries(baseReq.headers), "If-Match": etag },
-      })
-    : baseReq;
-const { object, etag: newEtag } = await fetchHal<EntityItemShape>(apiFetch, req);
+import { addIfMatchHeader } from "../api/hal-client";
+
+// addIfMatchHeader handles the null-etag case internally — returns the request unchanged when etag is null
+const req = addIfMatchHeader(baseReq, entityItem.etag);
 ```
+
+For relation mutations the hook reads `relation.source.etag` — the relation accessor does NOT
+attach `If-Match` in its request builder.
 
 Send the stored ETag verbatim — quotes included. Skip the header only when `etag === null`
 (e.g. immediately after a create, before the first GET of that item).

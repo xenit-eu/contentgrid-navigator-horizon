@@ -5,6 +5,8 @@ const ENTITY_ITEM_KEY = "EntityItem";
 const ENTITY_COLLECTION_KEY = "EntitySearch";
 const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
+const TO_ONE_RELATION_KEY = "ToOneRelation";
+const TO_MANY_RELATION_KEY = "ToManyRelation";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -63,5 +65,23 @@ export const queryKeys = {
   profileRoot: {
     /** Exact key for the profile root at a given URL. */
     byUrl: (profileUrl: string) => [PROFILE_ROOT_KEY, profileUrl] as const,
+  },
+
+  toOneRelation: {
+    /** Prefix key — invalidates ALL cached to-one relation queries for a target entity type. */
+    forTargetEntity: (targetProfile: ProfileEntity) =>
+      [TO_ONE_RELATION_KEY, targetProfile.name] as const,
+    /** Exact key for a specific to-one relation by its relation href. */
+    byUrl: (targetProfile: ProfileEntity, url: string) =>
+      [TO_ONE_RELATION_KEY, targetProfile.name, url] as const,
+  },
+
+  toManyRelation: {
+    /** Prefix key — invalidates ALL cached to-many relation queries for a target entity type. */
+    forTargetEntity: (targetProfile: ProfileEntity) =>
+      [TO_MANY_RELATION_KEY, targetProfile.name] as const,
+    /** Exact key for a specific to-many relation by its relation href. */
+    byUrl: (targetProfile: ProfileEntity, url: string) =>
+      [TO_MANY_RELATION_KEY, targetProfile.name, url] as const,
   },
 };
