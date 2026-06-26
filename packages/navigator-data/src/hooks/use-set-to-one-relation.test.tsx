@@ -2,24 +2,21 @@
  * Tests for useSetToOneRelation hook.
  *
  * useSetToOneRelation (to-one PUT):
- * - set success (PUT 204 → best-effort re-fetch → isSuccess, cache set via setQueryData)
+ * - set success (PUT 204 → isSuccess; data is void)
  * - If-Match header sent verbatim from source.etag
  * - null etag → no If-Match header
  * - ABAC denial (missing template) throws before any fetch (verified via error message)
  * - 412 ETag mismatch → isError, handler hit exactly once (no retry)
  * - 409 blind-relation-overwrite → isError
- * - Best-effort read-back: write succeeds + readback 5xx → mutation still resolves (undefined data)
- * - onSettled runs even when readback fails → invalidation still fires
  * - Relation read key (toOneRelation.byUrl) is invalidated on settled
- * - Target item invalidated by URL on settled (scoped, not whole collection)
- * - No source collection / no source forEntity invalidation
- * - Caller onSuccess runs after cache is populated (ordering)
- * - Caller onSettled runs last
+ * - Source item (entityItem.byUrl) is invalidated on settled (ETag may be bumped)
+ * - Target byUrlForName key and entityItemCollection keys are NOT invalidated
+ * - Caller onSettled runs
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { HalObject } from "@contentgrid/hal";
+import { HalObject, type Link } from "@contentgrid/hal";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
 import {
@@ -33,7 +30,7 @@ import type { EntityItemToOneRelation } from "../accessors/entity-item-to-one-re
 import ProfileEntity from "../accessors/entity-profile";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, makeQueryClient, makeWrapper } from "./test-utils";
+import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "./test-utils";
 import { useSetToOneRelation } from "./use-set-to-one-relation";
 
 // ---------------------------------------------------------------------------
@@ -41,32 +38,139 @@ import { useSetToOneRelation } from "./use-set-to-one-relation";
 // ---------------------------------------------------------------------------
 
 const INVOICE_PROFILE_URL = `${BASE}/profile/invoices`;
+const SUPPLIER_PROFILE_URL = `${BASE}/profile/suppliers`;
 const INVOICE_ITEM_URL = `${BASE}/invoices/inv-001`;
 const SUPPLIER_RELATION_URL = `${INVOICE_ITEM_URL}/supplier`;
 const SUPPLIER_URL = `${BASE}/suppliers/sup-001`;
 
 const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
+const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
+const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
+
+// ---------------------------------------------------------------------------
+// Profile MSW bodies
+// ---------------------------------------------------------------------------
+
+/**
+ * Profile root that exposes invoice and supplier profiles.
+ * Required so useProfileEntities() can discover the supplier profile link
+ * and the mutation base can resolve getTargetProfile().
+ */
+const profileRootBody = {
+  _links: {
+    self: { href: PROFILE_URL },
+    "cg:entity": [
+      { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" },
+      { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+    ],
+    curies: [
+      { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
+    ],
+  },
+  _templates: {},
+};
+
+/**
+ * Supplier profile body.
+ * The `describes` array includes the absolute profile URL as a non-templated entry
+ * so ProfileEntity.describes() matches the blueprint:target-entity href.
+ */
+const supplierProfileBody = {
+  name: "supplier",
+  title: "Supplier",
+  description: "",
+  _embedded: {
+    "blueprint:attribute": [],
+    "blueprint:relation": [],
+  },
+  _links: {
+    self: { href: SUPPLIER_PROFILE_URL, title: "Supplier" },
+    describes: [
+      { href: SUPPLIER_PROFILE_URL },
+      { href: `${BASE}/suppliers`, name: "collection" },
+      { href: `${BASE}/suppliers/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        name: "blueprint",
+        templated: true,
+      },
+    ],
+  },
+  _templates: {},
+};
+
+/**
+ * Invoice profile body with absolute blueprint:target-entity href for supplier.
+ * Uses the same override pattern as use-entity-item-to-one-relation.test.tsx so
+ * getTargetProfile() can resolve the supplier profile from the loaded profiles.
+ */
+const invoiceProfileBody = {
+  ...invoiceProfileBodyWithRelations,
+  _links: {
+    self: { href: INVOICE_PROFILE_URL },
+    describes: [
+      { href: `${BASE}/invoices`, name: "collection" },
+      { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        name: "blueprint",
+        templated: true,
+      },
+    ],
+  },
+  _embedded: {
+    [BLUEPRINT_RELATION_REL]: [
+      {
+        name: "supplier",
+        title: "Supplier",
+        description: "",
+        required: false,
+        many_source_per_target: false,
+        many_target_per_source: false,
+        _links: {
+          self: { href: `${INVOICE_PROFILE_URL}/relations/supplier` },
+          [BLUEPRINT_TARGET_ENTITY_REL]: {
+            href: SUPPLIER_PROFILE_URL,
+            name: "supplier",
+            title: "Supplier",
+          },
+        },
+      },
+      {
+        name: "lineItems",
+        title: "Line Items",
+        description: "",
+        required: false,
+        many_source_per_target: false,
+        many_target_per_source: true,
+        _links: {
+          self: { href: `${INVOICE_PROFILE_URL}/relations/lineItems` },
+          [BLUEPRINT_TARGET_ENTITY_REL]: {
+            href: `${BASE}/profile/line-items`,
+            name: "lineItem",
+            title: "Line Item",
+          },
+        },
+      },
+    ],
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Fixture factories
 // ---------------------------------------------------------------------------
 
 function makeInvoiceProfile(): ProfileEntity {
-  const profileBody = {
-    ...invoiceProfileBodyWithRelations,
-    _links: {
-      self: { href: INVOICE_PROFILE_URL },
-      describes: [
-        { href: `${BASE}/invoices`, name: "collection" },
-        { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
-      ],
-    },
-  };
-  const hal = new HalObject(profileBody as unknown as ProfileEntityShape);
-  const link = { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" };
+  const hal = new HalObject<ProfileEntityShape>(
+    invoiceProfileBody as unknown as HalObjectShape<ProfileEntityShape>,
+  );
   return new ProfileEntity(
-    link as unknown as import("@contentgrid/hal").Link,
-    hal as HalObject<ProfileEntityShape>,
+    { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" } as unknown as Link,
+    hal,
   );
 }
 
@@ -75,15 +179,16 @@ function makeSupplierProfile(): ProfileEntity {
     name: "supplier",
     title: "Supplier",
     _links: {
-      self: { href: `${BASE}/profile/suppliers` },
+      self: { href: SUPPLIER_PROFILE_URL },
       describes: [
+        { href: SUPPLIER_PROFILE_URL },
         { href: `${BASE}/suppliers`, name: "collection" },
         { href: `${BASE}/suppliers/{id}`, name: "item", templated: true },
       ],
     },
   };
   const hal = new HalObject(profileBody as unknown as ProfileEntityShape);
-  const link = { href: `${BASE}/profile/suppliers`, name: "supplier", title: "Supplier" };
+  const link = { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" };
   return new ProfileEntity(
     link as unknown as import("@contentgrid/hal").Link,
     hal as HalObject<ProfileEntityShape>,
@@ -93,9 +198,8 @@ function makeSupplierProfile(): ProfileEntity {
 function makeEntityItemWithTemplates(
   etag: string | null = '"v1"',
   templates: Record<string, unknown> = {},
-  profile?: ProfileEntity,
 ): EntityItem {
-  const itemProfile = profile ?? makeInvoiceProfile();
+  const itemProfile = makeInvoiceProfile();
   const itemBody = {
     id: "inv-001",
     _links: {
@@ -111,20 +215,13 @@ function makeEntityItemWithTemplates(
   return new EntityItem(hal, itemProfile, etag);
 }
 
-function makeEntityItemWithSetTemplate(
-  etag: string | null = '"v1"',
-  profile?: ProfileEntity,
-): EntityItem {
-  return makeEntityItemWithTemplates(
-    etag,
-    {
-      "set-supplier": {
-        ...invoiceSetSupplierTemplate,
-        target: SUPPLIER_RELATION_URL,
-      },
+function makeEntityItemWithSetTemplate(etag: string | null = '"v1"'): EntityItem {
+  return makeEntityItemWithTemplates(etag, {
+    "set-supplier": {
+      ...invoiceSetSupplierTemplate,
+      target: SUPPLIER_RELATION_URL,
     },
-    profile,
-  );
+  });
 }
 
 /** Get the to-one supplier relation from an entity item */
@@ -134,24 +231,13 @@ function getSupplierRelation(entityItem: EntityItem): EntityItemToOneRelation {
   return rel;
 }
 
-/** Wire a GET handler for the best-effort re-fetch after mutation success */
-function wireRefetchHandler(etag = '"v2"') {
+/** Register MSW handlers for the profile root + invoice + supplier profiles. */
+function setupProfileHandlers() {
   server.use(
-    http.get(INVOICE_ITEM_URL, () =>
-      HttpResponse.json(
-        {
-          id: "inv-001",
-          _links: { self: { href: INVOICE_ITEM_URL } },
-        } as unknown as HalObjectShape<EntityItemShape>,
-        { headers: { ETag: etag } },
-      ),
-    ),
+    http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+    http.get(INVOICE_PROFILE_URL, () => HttpResponse.json(invoiceProfileBody)),
+    http.get(SUPPLIER_PROFILE_URL, () => HttpResponse.json(supplierProfileBody)),
   );
-}
-
-/** Wire a GET handler that returns 500 to simulate readback failure */
-function wireRefetchFailureHandler() {
-  server.use(http.get(INVOICE_ITEM_URL, () => new HttpResponse(null, { status: 500 })));
 }
 
 // ===========================================================================
@@ -159,15 +245,14 @@ function wireRefetchFailureHandler() {
 // ===========================================================================
 
 describe("useSetToOneRelation — set success", () => {
-  it("returns isSuccess and fresh EntityItem on set", async () => {
+  it("returns isSuccess and data is void on set", async () => {
+    setupProfileHandlers();
     server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler('"v2"');
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -176,32 +261,7 @@ describe("useSetToOneRelation — set success", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toBeInstanceOf(EntityItem);
-    expect(result.current.data?.etag).toBe('"v2"');
-  });
-
-  it("writes fresh item to setQueryData after set success", async () => {
-    server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler('"v2"');
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithSetTemplate('"v1"', profile);
-    const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
-
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      result.current.mutate(SUPPLIER_URL);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    const cached = queryClient.getQueryData(queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL));
-    expect(cached).toBeInstanceOf(EntityItem);
+    expect(result.current.data).toBeUndefined();
   });
 });
 
@@ -211,6 +271,7 @@ describe("useSetToOneRelation — set success", () => {
 
 describe("useSetToOneRelation — If-Match header", () => {
   it("sends If-Match verbatim from source.etag", async () => {
+    setupProfileHandlers();
     let capturedIfMatch: string | null = null;
 
     server.use(
@@ -219,13 +280,11 @@ describe("useSetToOneRelation — If-Match header", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    wireRefetchHandler();
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -238,6 +297,7 @@ describe("useSetToOneRelation — If-Match header", () => {
   });
 
   it("sends no If-Match header when etag is null", async () => {
+    setupProfileHandlers();
     let capturedIfMatch: string | null | undefined = undefined;
 
     server.use(
@@ -246,13 +306,11 @@ describe("useSetToOneRelation — If-Match header", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    wireRefetchHandler();
 
     const entityItem = makeEntityItemWithSetTemplate(null);
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -271,6 +329,7 @@ describe("useSetToOneRelation — If-Match header", () => {
 
 describe("useSetToOneRelation — ABAC denial (missing template)", () => {
   it("is error when set template is missing; error says template absent (no network call)", async () => {
+    setupProfileHandlers();
     let networkCallHappened = false;
     server.use(
       http.put(SUPPLIER_RELATION_URL, () => {
@@ -282,9 +341,8 @@ describe("useSetToOneRelation — ABAC denial (missing template)", () => {
     // No set-supplier template — template absent = ABAC deny
     const entityItem = makeEntityItemWithTemplates('"v1"', {});
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -304,6 +362,7 @@ describe("useSetToOneRelation — ABAC denial (missing template)", () => {
 
 describe("useSetToOneRelation — 412 ETag mismatch (no retry)", () => {
   it("surfaces 412 as ProblemDetailError and PUT handler is hit exactly once", async () => {
+    setupProfileHandlers();
     let putCallCount = 0;
 
     server.use(
@@ -322,9 +381,8 @@ describe("useSetToOneRelation — 412 ETag mismatch (no retry)", () => {
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -348,6 +406,7 @@ describe("useSetToOneRelation — 412 ETag mismatch (no retry)", () => {
 
 describe("useSetToOneRelation — 409 blind-relation-overwrite", () => {
   it("surfaces 409 as ProblemDetailError with blind-relation-overwrite type", async () => {
+    setupProfileHandlers();
     server.use(
       createProblemHandler({
         method: "put",
@@ -360,9 +419,8 @@ describe("useSetToOneRelation — 409 blind-relation-overwrite", () => {
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -379,71 +437,21 @@ describe("useSetToOneRelation — 409 blind-relation-overwrite", () => {
 });
 
 // ===========================================================================
-// useSetToOneRelation — best-effort readback
-// ===========================================================================
-
-describe("useSetToOneRelation — best-effort readback (write succeeds, readback fails)", () => {
-  it("mutation resolves as success (data=undefined) when readback returns 5xx", async () => {
-    server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchFailureHandler();
-
-    const entityItem = makeEntityItemWithSetTemplate('"v1"');
-    const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
-
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      result.current.mutate(SUPPLIER_URL);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toBeUndefined();
-  });
-
-  it("onSettled invalidations still fire even when readback fails", async () => {
-    server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchFailureHandler();
-
-    const queryClient = makeQueryClient();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const entityItem = makeEntityItemWithSetTemplate('"v1"');
-    const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
-
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      result.current.mutate(SUPPLIER_URL);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(invalidateSpy).toHaveBeenCalled();
-  });
-});
-
-// ===========================================================================
 // useSetToOneRelation — cache invalidation behaviour
 // ===========================================================================
 
 describe("useSetToOneRelation — cache invalidation", () => {
   it("invalidates the toOneRelation read key on settled", async () => {
+    setupProfileHandlers();
     server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler();
 
     const queryClient = makeQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -453,25 +461,25 @@ describe("useSetToOneRelation — cache invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const readKey = queryKeys.toOneRelation.byUrl(targetProfile, SUPPLIER_RELATION_URL);
-    const calledWithReadKey = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: readKey }),
+    // The key uses profile.name ("supplier") + relation.link.href — no object identity needed
+    const readKey = queryKeys.toOneRelation.byUrl(makeSupplierProfile(), SUPPLIER_RELATION_URL);
+    const calledWithReadKey = invalidateSpy.mock.calls.some((call) =>
+      expect.objectContaining({ queryKey: readKey }).asymmetricMatch(call[0]),
     );
     expect(calledWithReadKey).toBe(true);
   });
 
-  it("invalidates the specific target item URL in onSettled, not a broader key", async () => {
+  it("invalidates the source item (entityItem.byUrl) on settled", async () => {
+    setupProfileHandlers();
     server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler();
 
     const queryClient = makeQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useSetToOneRelation(relation), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -481,123 +489,49 @@ describe("useSetToOneRelation — cache invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const targetKey = queryKeys.entityItem.byUrlForName("supplier", SUPPLIER_URL);
-    const calledWithTargetKey = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: targetKey }),
+    // Source item invalidated — relation op is gated on the source ETag and may bump it
+    const sourceItemKey = queryKeys.entityItem.byUrl(
+      relation.source.profileEntity,
+      relation.source.selfLink.href,
     );
-    expect(calledWithTargetKey).toBe(true);
-  });
-
-  it("does NOT invalidate source collection in onSettled", async () => {
-    server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler();
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithSetTemplate('"v1"', profile);
-    const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      result.current.mutate(SUPPLIER_URL);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    const sourceCollectionKey = queryKeys.entityItemCollection.forEntity(profile);
-    const calledWithSourceCollection = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: sourceCollectionKey }),
+    const calledWithSourceKey = invalidateSpy.mock.calls.some((call) =>
+      expect.objectContaining({ queryKey: sourceItemKey }).asymmetricMatch(call[0]),
     );
-    expect(calledWithSourceCollection).toBe(false);
-  });
+    expect(calledWithSourceKey).toBe(true);
 
-  it("does NOT invalidate all source items (forEntity prefix) in onSettled", async () => {
-    server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler();
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithSetTemplate('"v1"', profile);
-    const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { result } = renderHook(() => useSetToOneRelation(relation, targetProfile), {
-      wrapper: makeWrapper(queryClient),
+    // Target byUrlForName key is NOT invalidated (over-invalidation we deliberately avoid)
+    const targetEntityItemInvalidations = invalidateSpy.mock.calls.filter((call) => {
+      const queryKey = (call[0] as { queryKey: unknown[] }).queryKey;
+      return Array.isArray(queryKey) && queryKey[0] === "EntityItem" && queryKey[1] === "supplier";
     });
+    expect(targetEntityItemInvalidations).toHaveLength(0);
 
-    await act(async () => {
-      result.current.mutate(SUPPLIER_URL);
+    // entityItemCollection keys are NOT invalidated
+    const collectionInvalidations = invalidateSpy.mock.calls.filter((call) => {
+      const queryKey = (call[0] as { queryKey: unknown[] }).queryKey;
+      return Array.isArray(queryKey) && queryKey[0] === "EntitySearch";
     });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    const sourceItemsKey = queryKeys.entityItem.forEntity(profile);
-    const calledWithSourceItems = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: sourceItemsKey }),
-    );
-    expect(calledWithSourceItems).toBe(false);
+    expect(collectionInvalidations).toHaveLength(0);
   });
 });
 
 // ===========================================================================
-// useSetToOneRelation — caller onSuccess ordering
+// useSetToOneRelation — caller onSettled
 // ===========================================================================
 
-describe("useSetToOneRelation — caller onSuccess ordering", () => {
-  it("calls caller onSuccess after cache is populated", async () => {
+describe("useSetToOneRelation — caller onSettled", () => {
+  it("calls caller onSettled after mutation settles", async () => {
+    setupProfileHandlers();
     server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler();
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithSetTemplate('"v1"', profile);
-    const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
-
-    let cacheAtCallTime: unknown = "NOT_CHECKED";
-    const callerOnSuccess = vi.fn(async () => {
-      cacheAtCallTime = queryClient.getQueryData(
-        queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
-      );
-    });
-
-    const { result } = renderHook(
-      () =>
-        useSetToOneRelation(relation, targetProfile, {
-          mutationOptions: { onSuccess: callerOnSuccess },
-        }),
-      { wrapper: makeWrapper(queryClient) },
-    );
-
-    await act(async () => {
-      result.current.mutate(SUPPLIER_URL);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(callerOnSuccess).toHaveBeenCalledOnce();
-    expect(cacheAtCallTime).toBeInstanceOf(EntityItem);
-  });
-
-  it("calls caller onSettled last", async () => {
-    server.use(createRelationLinkHandler({ url: SUPPLIER_RELATION_URL }));
-    wireRefetchHandler();
 
     const callerOnSettled = vi.fn();
 
     const entityItem = makeEntityItemWithSetTemplate('"v1"');
     const relation = getSupplierRelation(entityItem);
-    const targetProfile = makeSupplierProfile();
 
     const { result } = renderHook(
       () =>
-        useSetToOneRelation(relation, targetProfile, {
+        useSetToOneRelation(relation, {
           mutationOptions: { onSettled: callerOnSettled },
         }),
       { wrapper: makeWrapper() },

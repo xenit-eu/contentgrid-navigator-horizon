@@ -74,6 +74,13 @@ export const queryKeys = {
     /** Exact key for a specific to-one relation by its relation href. */
     byUrl: (targetProfile: ProfileEntity, url: string) =>
       [TO_ONE_RELATION_KEY, targetProfile.name, url] as const,
+    /**
+     * Exact key for a specific to-one relation by entity name string and href.
+     * Use when only the entity name is known (e.g. from the blueprint:target-entity link)
+     * and a full ProfileEntity is not available. Key shape is identical to `byUrl`.
+     */
+    byUrlForName: (entityName: string, url: string) =>
+      [TO_ONE_RELATION_KEY, entityName, url] as const,
   },
 
   toManyRelation: {
@@ -83,5 +90,12 @@ export const queryKeys = {
     /** Exact key for a specific to-many relation by its relation href. */
     byUrl: (targetProfile: ProfileEntity, url: string) =>
       [TO_MANY_RELATION_KEY, targetProfile.name, url] as const,
+    /**
+     * Exact key for a specific to-many relation by entity name string and href.
+     * Use when only the entity name is known (e.g. from the blueprint:target-entity link)
+     * and a full ProfileEntity is not available. Key shape is identical to `byUrl`.
+     */
+    byUrlForName: (entityName: string, url: string) =>
+      [TO_MANY_RELATION_KEY, entityName, url] as const,
   },
 };

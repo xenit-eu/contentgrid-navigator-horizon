@@ -2,18 +2,19 @@
  * Tests for useAddToManyRelation hook.
  *
  * useAddToManyRelation (to-many POST):
- * - add success (POST 204 → best-effort re-fetch → isSuccess)
+ * - add success (POST 204 → isSuccess; data is void)
  * - sends both hrefs in POST body (one per line)
  * - ABAC denial (missing template) throws before any fetch
  * - 412 no retry
  * - Relation read key (toManyRelation.byUrl) is invalidated on settled
- * - Each targetHref invalidated by URL in onSettled
- * - Caller onSettled runs last
+ * - Source item (entityItem.byUrl) is invalidated on settled (ETag may be bumped)
+ * - Target byUrlForName key and entityItemCollection keys are NOT invalidated
+ * - Caller onSettled runs
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { HalObject } from "@contentgrid/hal";
+import { HalObject, type Link } from "@contentgrid/hal";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
 import {
@@ -27,7 +28,7 @@ import type { EntityItemToManyRelation } from "../accessors/entity-item-to-many-
 import ProfileEntity from "../accessors/entity-profile";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, makeQueryClient, makeWrapper } from "./test-utils";
+import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "./test-utils";
 import { useAddToManyRelation } from "./use-add-to-many-relation";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +36,8 @@ import { useAddToManyRelation } from "./use-add-to-many-relation";
 // ---------------------------------------------------------------------------
 
 const INVOICE_PROFILE_URL = `${BASE}/profile/invoices`;
+const SUPPLIER_PROFILE_URL = `${BASE}/profile/suppliers`;
+const LINE_ITEM_PROFILE_URL = `${BASE}/profile/line-items`;
 const INVOICE_ITEM_URL = `${BASE}/invoices/inv-001`;
 const SUPPLIER_RELATION_URL = `${INVOICE_ITEM_URL}/supplier`;
 const LINE_ITEMS_RELATION_URL = `${INVOICE_ITEM_URL}/lineItems`;
@@ -42,27 +45,150 @@ const LINE_ITEM_URL_1 = `${BASE}/line-items/li-001`;
 const LINE_ITEM_URL_2 = `${BASE}/line-items/li-002`;
 
 const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
+const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
+const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
+
+// ---------------------------------------------------------------------------
+// Profile MSW bodies
+// ---------------------------------------------------------------------------
+
+/**
+ * Profile root that exposes invoice, supplier, and line-item profiles.
+ * Required so useProfileEntities() can discover all profile links and
+ * the mutation base can resolve getTargetProfile() for lineItems → lineItem.
+ */
+const profileRootBody = {
+  _links: {
+    self: { href: PROFILE_URL },
+    "cg:entity": [
+      { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" },
+      { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+      { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
+    ],
+    curies: [
+      { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
+    ],
+  },
+  _templates: {},
+};
+
+/**
+ * Line item profile body.
+ * The `describes` array includes the absolute profile URL as a non-templated entry
+ * so ProfileEntity.describes() matches the blueprint:target-entity href.
+ */
+const lineItemProfileBody = {
+  name: "lineItem",
+  title: "Line Item",
+  description: "",
+  _embedded: {
+    "blueprint:attribute": [],
+    "blueprint:relation": [],
+  },
+  _links: {
+    self: { href: LINE_ITEM_PROFILE_URL, title: "Line Item" },
+    describes: [
+      { href: LINE_ITEM_PROFILE_URL },
+      { href: `${BASE}/line-items`, name: "collection" },
+      { href: `${BASE}/line-items/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        name: "blueprint",
+        templated: true,
+      },
+    ],
+  },
+  _templates: {},
+};
+
+const supplierProfileBody = {
+  name: "supplier",
+  title: "Supplier",
+  description: "",
+  _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
+  _links: {
+    self: { href: SUPPLIER_PROFILE_URL },
+    describes: [
+      { href: SUPPLIER_PROFILE_URL },
+      { href: `${BASE}/suppliers`, name: "collection" },
+      { href: `${BASE}/suppliers/{id}`, name: "item", templated: true },
+    ],
+  },
+  _templates: {},
+};
+
+/**
+ * Invoice profile body with absolute blueprint:target-entity href for lineItems.
+ * Uses the same override pattern as the read-hook tests so
+ * getTargetProfile() can resolve the lineItem profile from the loaded profiles.
+ */
+const invoiceProfileBody = {
+  ...invoiceProfileBodyWithRelations,
+  _links: {
+    self: { href: INVOICE_PROFILE_URL },
+    describes: [
+      { href: `${BASE}/invoices`, name: "collection" },
+      { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        name: "blueprint",
+        templated: true,
+      },
+    ],
+  },
+  _embedded: {
+    [BLUEPRINT_RELATION_REL]: [
+      {
+        name: "supplier",
+        title: "Supplier",
+        description: "",
+        required: false,
+        many_source_per_target: false,
+        many_target_per_source: false,
+        _links: {
+          self: { href: `${INVOICE_PROFILE_URL}/relations/supplier` },
+          [BLUEPRINT_TARGET_ENTITY_REL]: {
+            href: SUPPLIER_PROFILE_URL,
+            name: "supplier",
+            title: "Supplier",
+          },
+        },
+      },
+      {
+        name: "lineItems",
+        title: "Line Items",
+        description: "",
+        required: false,
+        many_source_per_target: false,
+        many_target_per_source: true,
+        _links: {
+          self: { href: `${INVOICE_PROFILE_URL}/relations/lineItems` },
+          [BLUEPRINT_TARGET_ENTITY_REL]: {
+            href: LINE_ITEM_PROFILE_URL,
+            name: "lineItem",
+            title: "Line Item",
+          },
+        },
+      },
+    ],
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Fixture factories
 // ---------------------------------------------------------------------------
 
 function makeInvoiceProfile(): ProfileEntity {
-  const profileBody = {
-    ...invoiceProfileBodyWithRelations,
-    _links: {
-      self: { href: INVOICE_PROFILE_URL },
-      describes: [
-        { href: `${BASE}/invoices`, name: "collection" },
-        { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
-      ],
-    },
-  };
-  const hal = new HalObject(profileBody as unknown as ProfileEntityShape);
-  const link = { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" };
+  const hal = new HalObject<ProfileEntityShape>(
+    invoiceProfileBody as unknown as HalObjectShape<ProfileEntityShape>,
+  );
   return new ProfileEntity(
-    link as unknown as import("@contentgrid/hal").Link,
-    hal as HalObject<ProfileEntityShape>,
+    { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" } as unknown as Link,
+    hal,
   );
 }
 
@@ -71,15 +197,16 @@ function makeLineItemProfile(): ProfileEntity {
     name: "lineItem",
     title: "Line Item",
     _links: {
-      self: { href: `${BASE}/profile/line-items` },
+      self: { href: LINE_ITEM_PROFILE_URL },
       describes: [
+        { href: LINE_ITEM_PROFILE_URL },
         { href: `${BASE}/line-items`, name: "collection" },
         { href: `${BASE}/line-items/{id}`, name: "item", templated: true },
       ],
     },
   };
   const hal = new HalObject(profileBody as unknown as ProfileEntityShape);
-  const link = { href: `${BASE}/profile/line-items`, name: "lineItem", title: "Line Item" };
+  const link = { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" };
   return new ProfileEntity(
     link as unknown as import("@contentgrid/hal").Link,
     hal as HalObject<ProfileEntityShape>,
@@ -89,9 +216,8 @@ function makeLineItemProfile(): ProfileEntity {
 function makeEntityItemWithTemplates(
   etag: string | null = '"v1"',
   templates: Record<string, unknown> = {},
-  profile?: ProfileEntity,
 ): EntityItem {
-  const itemProfile = profile ?? makeInvoiceProfile();
+  const itemProfile = makeInvoiceProfile();
   const itemBody = {
     id: "inv-001",
     _links: {
@@ -107,20 +233,13 @@ function makeEntityItemWithTemplates(
   return new EntityItem(hal, itemProfile, etag);
 }
 
-function makeEntityItemWithAddTemplate(
-  etag: string | null = '"v1"',
-  profile?: ProfileEntity,
-): EntityItem {
-  return makeEntityItemWithTemplates(
-    etag,
-    {
-      "add-lineItems": {
-        ...invoiceAddLineItemTemplate,
-        target: LINE_ITEMS_RELATION_URL,
-      },
+function makeEntityItemWithAddTemplate(etag: string | null = '"v1"'): EntityItem {
+  return makeEntityItemWithTemplates(etag, {
+    "add-lineItems": {
+      ...invoiceAddLineItemTemplate,
+      target: LINE_ITEMS_RELATION_URL,
     },
-    profile,
-  );
+  });
 }
 
 /** Get the to-many lineItems relation from an entity item */
@@ -130,18 +249,13 @@ function getLineItemsRelation(entityItem: EntityItem): EntityItemToManyRelation 
   return rel;
 }
 
-/** Wire a GET handler for the best-effort re-fetch after mutation success */
-function wireRefetchHandler(etag = '"v2"') {
+/** Register MSW handlers for the profile root + invoice + lineItem + supplier profiles. */
+function setupProfileHandlers() {
   server.use(
-    http.get(INVOICE_ITEM_URL, () =>
-      HttpResponse.json(
-        {
-          id: "inv-001",
-          _links: { self: { href: INVOICE_ITEM_URL } },
-        } as unknown as HalObjectShape<EntityItemShape>,
-        { headers: { ETag: etag } },
-      ),
-    ),
+    http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+    http.get(INVOICE_PROFILE_URL, () => HttpResponse.json(invoiceProfileBody)),
+    http.get(LINE_ITEM_PROFILE_URL, () => HttpResponse.json(lineItemProfileBody)),
+    http.get(SUPPLIER_PROFILE_URL, () => HttpResponse.json(supplierProfileBody)),
   );
 }
 
@@ -150,15 +264,14 @@ function wireRefetchHandler(etag = '"v2"') {
 // ===========================================================================
 
 describe("useAddToManyRelation — add success", () => {
-  it("returns isSuccess on add", async () => {
+  it("returns isSuccess and data is void on add", async () => {
+    setupProfileHandlers();
     server.use(createRelationAddHandler({ url: LINE_ITEMS_RELATION_URL }));
-    wireRefetchHandler();
 
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
-    const { result } = renderHook(() => useAddToManyRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useAddToManyRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -167,9 +280,11 @@ describe("useAddToManyRelation — add success", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 
   it("sends both hrefs in POST body (one per line)", async () => {
+    setupProfileHandlers();
     let capturedBody: string | null = null;
 
     server.use(
@@ -178,13 +293,11 @@ describe("useAddToManyRelation — add success", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    wireRefetchHandler();
 
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
-    const { result } = renderHook(() => useAddToManyRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useAddToManyRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -211,6 +324,7 @@ describe("useAddToManyRelation — add success", () => {
 
 describe("useAddToManyRelation — ABAC denial (missing template)", () => {
   it("is error when add template is missing; error says template absent (no network call)", async () => {
+    setupProfileHandlers();
     let networkCallHappened = false;
     server.use(
       http.post(LINE_ITEMS_RELATION_URL, () => {
@@ -222,9 +336,8 @@ describe("useAddToManyRelation — ABAC denial (missing template)", () => {
     // No add-lineItems template — template absent = ABAC deny
     const entityItem = makeEntityItemWithTemplates('"v1"', {});
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
-    const { result } = renderHook(() => useAddToManyRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useAddToManyRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -244,6 +357,7 @@ describe("useAddToManyRelation — ABAC denial (missing template)", () => {
 
 describe("useAddToManyRelation — 412 no retry", () => {
   it("surfaces 412 as ProblemDetailError and POST handler hit exactly once", async () => {
+    setupProfileHandlers();
     let postCallCount = 0;
 
     server.use(
@@ -262,9 +376,8 @@ describe("useAddToManyRelation — 412 no retry", () => {
 
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
-    const { result } = renderHook(() => useAddToManyRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useAddToManyRelation(relation), {
       wrapper: makeWrapper(),
     });
 
@@ -288,17 +401,16 @@ describe("useAddToManyRelation — 412 no retry", () => {
 
 describe("useAddToManyRelation — cache invalidation", () => {
   it("invalidates the toManyRelation read key on settled", async () => {
+    setupProfileHandlers();
     server.use(createRelationAddHandler({ url: LINE_ITEMS_RELATION_URL }));
-    wireRefetchHandler();
 
     const queryClient = makeQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
-    const { result } = renderHook(() => useAddToManyRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useAddToManyRelation(relation), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -308,25 +420,25 @@ describe("useAddToManyRelation — cache invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const readKey = queryKeys.toManyRelation.byUrl(targetProfile, LINE_ITEMS_RELATION_URL);
-    const calledWithReadKey = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: readKey }),
+    // The key uses profile.name ("lineItem") + relation.link.href — no object identity needed
+    const readKey = queryKeys.toManyRelation.byUrl(makeLineItemProfile(), LINE_ITEMS_RELATION_URL);
+    const calledWithReadKey = invalidateSpy.mock.calls.some((call) =>
+      expect.objectContaining({ queryKey: readKey }).asymmetricMatch(call[0]),
     );
     expect(calledWithReadKey).toBe(true);
   });
 
-  it("invalidates each specific target item URL in onSettled", async () => {
+  it("invalidates the source item (entityItem.byUrl) on settled", async () => {
+    setupProfileHandlers();
     server.use(createRelationAddHandler({ url: LINE_ITEMS_RELATION_URL }));
-    wireRefetchHandler();
 
     const queryClient = makeQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
-    const { result } = renderHook(() => useAddToManyRelation(relation, targetProfile), {
+    const { result } = renderHook(() => useAddToManyRelation(relation), {
       wrapper: makeWrapper(queryClient),
     });
 
@@ -336,33 +448,43 @@ describe("useAddToManyRelation — cache invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // lineItems target entity name in fixture is "lineItem" (from blueprint:target-entity link)
-    const targetKey1 = queryKeys.entityItem.byUrlForName("lineItem", LINE_ITEM_URL_1);
-    const targetKey2 = queryKeys.entityItem.byUrlForName("lineItem", LINE_ITEM_URL_2);
+    // Source item invalidated — relation op is gated on the source ETag and may bump it
+    const sourceItemKey = queryKeys.entityItem.byUrl(
+      relation.source.profileEntity,
+      relation.source.selfLink.href,
+    );
+    const calledWithSourceKey = invalidateSpy.mock.calls.some((call) =>
+      expect.objectContaining({ queryKey: sourceItemKey }).asymmetricMatch(call[0]),
+    );
+    expect(calledWithSourceKey).toBe(true);
 
-    const calledWith1 = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: targetKey1 }),
-    );
-    const calledWith2 = invalidateSpy.mock.calls.some(
-      (call) => JSON.stringify(call[0]) === JSON.stringify({ queryKey: targetKey2 }),
-    );
-    expect(calledWith1).toBe(true);
-    expect(calledWith2).toBe(true);
+    // Target byUrlForName key is NOT invalidated (over-invalidation we deliberately avoid)
+    const targetEntityItemInvalidations = invalidateSpy.mock.calls.filter((call) => {
+      const queryKey = (call[0] as { queryKey: unknown[] }).queryKey;
+      return Array.isArray(queryKey) && queryKey[0] === "EntityItem" && queryKey[1] === "lineItem";
+    });
+    expect(targetEntityItemInvalidations).toHaveLength(0);
+
+    // entityItemCollection keys are NOT invalidated
+    const collectionInvalidations = invalidateSpy.mock.calls.filter((call) => {
+      const queryKey = (call[0] as { queryKey: unknown[] }).queryKey;
+      return Array.isArray(queryKey) && queryKey[0] === "EntitySearch";
+    });
+    expect(collectionInvalidations).toHaveLength(0);
   });
 
-  it("caller onSettled runs last", async () => {
+  it("caller onSettled runs after mutation settles", async () => {
+    setupProfileHandlers();
     server.use(createRelationAddHandler({ url: LINE_ITEMS_RELATION_URL }));
-    wireRefetchHandler();
 
     const callerOnSettled = vi.fn();
 
     const entityItem = makeEntityItemWithAddTemplate('"v1"');
     const relation = getLineItemsRelation(entityItem);
-    const targetProfile = makeLineItemProfile();
 
     const { result } = renderHook(
       () =>
-        useAddToManyRelation(relation, targetProfile, {
+        useAddToManyRelation(relation, {
           mutationOptions: { onSettled: callerOnSettled },
         }),
       { wrapper: makeWrapper() },

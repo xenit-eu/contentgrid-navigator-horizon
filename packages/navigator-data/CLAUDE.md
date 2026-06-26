@@ -302,7 +302,7 @@ Each class carries:
 - `name` — the relation name (matches the `name` field on the `cg:relation` link)
 - `link` — the `cg:relation` navigation link on the source item
 - `profileRelation` — the `ProfileRelation` schema (cardinality, target entity name, title)
-- `source` — the source `EntityItem` (used by mutation hooks for `If-Match` + parent re-fetch)
+- `source` — the source `EntityItem` (used by mutation hooks for `If-Match` via `relation.source.etag`)
 
 `EntityItemToOneRelation` key members:
 
@@ -328,18 +328,16 @@ Each class carries:
 
 **Relation mutation hooks:**
 
-All three mutation hooks accept `(relation, targetProfile, options?)` and return
-`UseMutationResult<EntityItem | undefined, Error, TInput>`. Result data is `EntityItem | undefined`
-because the hook performs a best-effort re-fetch of the source item to capture its new ETag and
-populate the item cache. If the re-fetch fails, the mutation still resolves as success
-(`data: undefined`).
+All three mutation hooks accept `(relation, options?)` — no `targetProfile` param; it is resolved
+internally the same way the read hooks do it (`useProfileEntities()` + `getTargetProfile`). They
+return `UseMutationResult<void, Error, TInput>`.
 
 `If-Match` is attached by the mutation hook from `relation.source.etag` — the request builders
 (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) do NOT attach it.
 
-- `useSetToOneRelation(relation, targetProfile, options?)` — TInput `string`; invalidates `queryKeys.toOneRelation.byUrl(targetProfile, relation.link.href)` on settle + target item URL(s).
-- `useAddToManyRelation(relation, targetProfile, options?)` — TInput `string[]`; invalidates `queryKeys.toManyRelation.byUrl(targetProfile, relation.link.href)` on settle + each target item URL.
-- `useClearRelation(relation, targetProfile, options?)` — TInput `void`; cardinality determined at runtime via `relation instanceof EntityItemToOneRelation`; no target invalidation (previously-linked hrefs unknown).
+- `useSetToOneRelation(relation, options?)` — TInput `string`; on settle, invalidates `queryKeys.toOneRelation.byUrl` for the relation read key AND `queryKeys.entityItem.byUrl` for the source item.
+- `useAddToManyRelation(relation, options?)` — TInput `string[]`; on settle, invalidates `queryKeys.toManyRelation.byUrl` for the relation read key AND `queryKeys.entityItem.byUrl` for the source item.
+- `useClearRelation(relation, options?)` — TInput `void`; cardinality determined at runtime via `relation instanceof EntityItemToOneRelation`; on settle, invalidates the corresponding relation read key AND `queryKeys.entityItem.byUrl` for the source item.
 
 **Relation query-key namespaces:**
 
@@ -355,10 +353,13 @@ no prefix collision with `entityItem.forEntityName`.
 
 **Relation hook cache behaviour:**
 
-- `useSetToOneRelation` / `useAddToManyRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → invalidate specific target item URL(s) via `queryKeys.entityItem.byUrlForName(targetName, href)` AND invalidate the relation read key. Does NOT invalidate source collection or all source items.
-- `useClearRelation`: `onSuccess` → `setQueryData` on parent item; `onSettled` → invalidate the relation read key; NO target invalidation (previously-linked hrefs not available at clear time).
+- `useSetToOneRelation`: `onSettled` → invalidate `queryKeys.toOneRelation.byUrl` for the relation link URL (lazy refetch of the relation read); AND invalidate `queryKeys.entityItem.byUrl` for the source item (lazy refetch — the op is gated on the source ETag and may bump it). No `setQueryData`. No target item (`byUrlForName`) or collection invalidation.
+- `useAddToManyRelation`: `onSettled` → invalidate `queryKeys.toManyRelation.byUrl` for the relation link URL; AND invalidate `queryKeys.entityItem.byUrl` for the source item. No `setQueryData`. No target item or collection invalidation.
+- `useClearRelation`: `onSettled` → invalidate the corresponding relation read key (`toOneRelation.byUrl` or `toManyRelation.byUrl`); AND invalidate `queryKeys.entityItem.byUrl` for the source item. No `setQueryData`. No target item or collection invalidation.
+- The source item invalidation is UNCONDITIONAL — `relation.source.profileEntity` and `relation.source.selfLink.href` are always available, unlike `targetProfile` which requires profile queries to settle.
+- Rationale for relation read key: a relation set/add/clear changes the relation-link response — the relation response cache needs busting.
+- Rationale for source item invalidation: the op is gated on the source item's `If-Match` ETag; the server may bump the ETag on the source item as part of the operation. A lazy refetch keeps the cached ETag valid and prevents a 412 on the next mutation against the same source item.
 - 409 `integrity/blind-relation-overwrite` from `useSetToOneRelation`: unlink the existing relation first (`useClearRelation`), then set.
-- `queryKeys.entityItem.byUrlForName(entityName, url)` and `queryKeys.entityItem.forEntityName(entityName)` are available for invalidating target items by string name when a full `ProfileEntity` is not in scope.
 
 **2. Gate every operation on template/link presence — never assume permission.**
 
