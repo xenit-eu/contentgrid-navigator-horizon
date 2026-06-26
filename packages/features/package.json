@@ -27,6 +27,10 @@
     "./_experimental-placeholder": {
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
+    },
+    "./navigator-header": {
+      "import": "./src/navigator-header/index.ts",
+      "types": "./src/navigator-header/index.ts"
     }
   },
   "scripts": {
