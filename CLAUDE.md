@@ -85,6 +85,7 @@ React 19 + TypeScript + Vite | TanStack Router (file-based) + Query + Table | sh
 
 ### Data Model Primitives
 
+- **Profile**: The runtime representation of an application's data model, generated from the active Blueprint/Release. Served as HAL at `/profile` (root). Navigator discovers all Entities, Attributes, and Relations exclusively from the Profile — never from hardcoded knowledge.
 - **Entity**: A typed object representing a real-world concept (e.g., `invoice`, `supplier`). Maps to a PostgreSQL table and a REST collection endpoint.
 - **Attribute**: A single typed field on an Entity. Types: `string`, `long`, `double`, `boolean`, `date`, `datetime`, `object`, or `content` (file/binary).
 - **Relation**: A named link between Entities. Cardinalities: one-to-one, one-to-many, many-to-one, many-to-many.
