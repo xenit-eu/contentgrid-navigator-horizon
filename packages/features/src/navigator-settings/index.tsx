@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import {
+  type AppCategory,
   DEV_CONFIG_STORAGE_KEY,
   type DevApp,
   type DevAppConfig,
@@ -69,6 +70,7 @@ export function ApplicationSelectorPage() {
   const [selectedConfig, setSelectedConfig] = useState<DevAppConfig | null>(getInitialConfig);
   const [useMockExtract, setUseMockExtract] = useState(loadMockExtract);
   const [loadedEnvironment, setLoadedEnvironment] = useState<"production" | "sandbox" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleMockExtractChange = useCallback(
     (value: boolean) => {
@@ -87,7 +89,7 @@ export function ApplicationSelectorPage() {
   );
 
   const handleConfigSelect = useCallback(
-    (app: DevApp, environment: "production" | "sandbox" | "custom") => {
+    (app: DevApp, environment: AppCategory) => {
       const cfg = { ...app.config };
       if (environment !== "custom") {
         if (useMockExtract) {
@@ -106,23 +108,33 @@ export function ApplicationSelectorPage() {
   );
 
   async function handleConnect() {
-    if (selectedConfig) {
-      await signinWithNewConfig({
-        apiBaseUrl: selectedConfig.apiBaseUrl,
-        authority: selectedConfig.authority,
-        clientId: selectedConfig.clientId,
-        extractServiceUrl: selectedConfig.extractServiceUrl,
-        renditionUri: selectedConfig.renditionUri,
-      });
-    } else {
-      void auth.signinRedirect();
+    setActionError(null);
+    try {
+      if (selectedConfig) {
+        await signinWithNewConfig({
+          apiBaseUrl: selectedConfig.apiBaseUrl,
+          authority: selectedConfig.authority,
+          clientId: selectedConfig.clientId,
+          extractServiceUrl: selectedConfig.extractServiceUrl,
+          renditionUri: selectedConfig.renditionUri,
+        });
+      } else {
+        await auth.signinRedirect();
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Connection failed");
     }
   }
 
   async function handleClear() {
-    clearDevConfig();
-    await auth.removeUser();
-    window.location.reload();
+    setActionError(null);
+    try {
+      clearDevConfig();
+      await auth.removeUser();
+      window.location.reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to clear configuration");
+    }
   }
 
   return (
@@ -134,6 +146,7 @@ export function ApplicationSelectorPage() {
           onMockExtractChange={handleMockExtractChange}
           onConnect={handleConnect}
           onClear={handleClear}
+          actionError={actionError}
         />
       </div>
 
@@ -176,6 +189,7 @@ interface SettingsPanelProps {
   onMockExtractChange: (value: boolean) => void;
   onConnect: () => Promise<void>;
   onClear: () => Promise<void>;
+  actionError: string | null;
 }
 
 function SettingsPanel({
@@ -184,6 +198,7 @@ function SettingsPanel({
   onMockExtractChange,
   onConnect,
   onClear,
+  actionError,
 }: Readonly<SettingsPanelProps>) {
   return (
     <Card className="h-full p-6 flex flex-col gap-4">
@@ -231,6 +246,11 @@ function SettingsPanel({
       <Button className="w-full" onClick={onConnect}>
         Connect
       </Button>
+      {actionError && (
+        <p className="text-sm text-destructive" role="alert">
+          {actionError}
+        </p>
+      )}
     </Card>
   );
 }
@@ -289,12 +309,13 @@ function CustomConfigForm({
   config,
   onChange,
 }: Readonly<{ config: DevAppConfig | null; onChange: (c: DevAppConfig) => void }>) {
-  const savedCustomConfig = loadSavedCustomConfig();
+  const [savedCustomConfig, setSavedCustomConfig] = useState(loadSavedCustomConfig);
   const formConfig = config ?? savedCustomConfig ?? EMPTY_CONFIG;
 
   function update(partial: Partial<DevAppConfig>) {
     const next = { ...formConfig, ...partial };
     saveCustomConfig(next);
+    setSavedCustomConfig(next);
     onChange(next);
   }
 

@@ -208,6 +208,20 @@ describe("ApplicationSelectorPage", () => {
         expect(signinWithNewConfig).not.toHaveBeenCalled();
       });
     });
+
+    it("displays an error message when signinWithNewConfig rejects", async () => {
+      vi.mocked(signinWithNewConfig).mockRejectedValue(new Error("OIDC discovery failed"));
+      const user = userEvent.setup();
+      render(<ApplicationSelectorPage />);
+
+      await user.click(screen.getByRole("tab", { name: "Production" }));
+      await user.click(screen.getAllByRole("button", { name: "Load Config" })[0]);
+      await user.click(screen.getByRole("button", { name: "Connect" }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent("OIDC discovery failed");
+      });
+    });
   });
 
   describe("Clear button", () => {
@@ -251,6 +265,21 @@ describe("ApplicationSelectorPage", () => {
         expect(auth.removeUser).toHaveBeenCalledOnce();
       });
       expect(configClearedBeforeRemoveUser).toBe(true);
+    });
+
+    it("displays an error message when removeUser rejects", async () => {
+      const auth = makeAuth({
+        removeUser: vi.fn().mockRejectedValue(new Error("Session removal failed")),
+      });
+      vi.mocked(useAuth).mockReturnValue(auth as unknown as ReturnType<typeof useAuth>);
+      const user = userEvent.setup();
+      render(<ApplicationSelectorPage />);
+
+      await user.click(screen.getByRole("button", { name: /Clear Runtime Config/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent("Session removal failed");
+      });
     });
   });
 });

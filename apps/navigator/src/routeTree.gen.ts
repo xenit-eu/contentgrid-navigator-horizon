@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as ConfigRouteImport } from './routes/config'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppEntityRouteImport } from './routes/_app/$entity'
 import { Route as AppEntityIndexRouteImport } from './routes/_app/$entity/index'
@@ -18,11 +17,6 @@ import { Route as AppEntityItemIdRouteImport } from './routes/_app/$entity/$item
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfigRoute = ConfigRouteImport.update({
-  id: '/config',
-  path: '/config',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -48,21 +42,18 @@ const AppEntityItemIdRoute = AppEntityItemIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/config': typeof ConfigRoute
   '/$entity': typeof AppEntityRouteWithChildren
   '/$entity/$itemId': typeof AppEntityItemIdRoute
   '/$entity/': typeof AppEntityIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
-  '/config': typeof ConfigRoute
   '/$entity/$itemId': typeof AppEntityItemIdRoute
   '/$entity': typeof AppEntityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/config': typeof ConfigRoute
   '/_app/$entity': typeof AppEntityRouteWithChildren
   '/_app/': typeof AppIndexRoute
   '/_app/$entity/$itemId': typeof AppEntityItemIdRoute
@@ -70,13 +61,12 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/config' | '/$entity' | '/$entity/$itemId' | '/$entity/'
+  fullPaths: '/' | '/$entity' | '/$entity/$itemId' | '/$entity/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/config' | '/$entity/$itemId' | '/$entity'
+  to: '/' | '/$entity/$itemId' | '/$entity'
   id:
     | '__root__'
     | '/_app'
-    | '/config'
     | '/_app/$entity'
     | '/_app/'
     | '/_app/$entity/$itemId'
@@ -85,7 +75,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
-  ConfigRoute: typeof ConfigRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -95,13 +84,6 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/config': {
-      id: '/config'
-      path: '/config'
-      fullPath: '/config'
-      preLoaderRoute: typeof ConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -163,7 +145,6 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
-  ConfigRoute: ConfigRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

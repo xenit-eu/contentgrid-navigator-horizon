@@ -145,28 +145,28 @@ export function getAppConfig(): RuntimeAppConfig {
   return cachedConfig;
 }
 
-export async function signinWithNewConfig(config: RuntimeAppConfig): Promise<void> {
-  storeDevConfig(config);
-  const userManager = new (await import("oidc-client-ts")).UserManager({
+function buildOidcBase(config: RuntimeAppConfig) {
+  return {
     authority: config.authority,
     client_id: config.clientId,
     redirect_uri: window.location.origin,
     scope: "openid profile email",
     userStore: new WebStorageStateStore({ store: localStorage }),
-  });
+  };
+}
+
+export async function signinWithNewConfig(config: RuntimeAppConfig): Promise<void> {
+  storeDevConfig(config);
+  const userManager = new (await import("oidc-client-ts")).UserManager(buildOidcBase(config));
   await userManager.removeUser();
   return userManager.signinRedirect();
 }
 
 export function getOidcConfig(config: RuntimeAppConfig): AuthProviderProps {
   return {
-    authority: config.authority,
-    client_id: config.clientId,
-    redirect_uri: window.location.origin,
+    ...buildOidcBase(config),
     post_logout_redirect_uri: window.location.origin,
-    scope: "openid profile email",
     automaticSilentRenew: true,
-    userStore: new WebStorageStateStore({ store: localStorage }),
     onSigninCallback: () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     },
