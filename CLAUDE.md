@@ -104,7 +104,7 @@ React 19 + TypeScript + Vite | TanStack Router (file-based) + Query + Table | sh
 
 ## HAL Access Layer
 
-**CRITICAL**: Entity collection paths use **plural** names from the profile `href` (e.g., `/invoice-products`, `/companies`), NOT the singular `name` field. Always use `EntityInfo.href` / `EntityInfo.collectionHref` — never construct paths from `entity.name`.
+**CRITICAL**: Entity collection paths use **plural** names from the profile `href` (e.g., `/invoice-products`, `/companies`), NOT the singular `name` field. Always use `profileEntity.href` / `profileEntity.collectionHref` — never construct paths from `entity.name`.
 
 All HAL access goes through the accessor layer in `@contentgrid/navigator-data`. Do not hand-build URLs, parse cursors, or hardcode HTTP methods or Content-Types — use the accessor API instead. See [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md) for the full reference, in particular:
 
