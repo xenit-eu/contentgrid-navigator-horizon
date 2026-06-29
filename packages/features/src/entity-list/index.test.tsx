@@ -16,6 +16,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
@@ -25,7 +26,6 @@ import {
   EntityItemDetailPage,
   EntityListLayout,
   EntityOverviewPage,
-  entityDetailSearchValidator,
 } from "./index";
 
 const API_URL = "https://api.example.com";
@@ -76,7 +76,7 @@ function createTestRouter(initialEntry = "/") {
     getParentRoute: () => appRoute,
     path: "/$entity",
     component: EntityDetailPage,
-    validateSearch: entityDetailSearchValidator,
+    validateSearch: entitySearchStateValidator,
   });
   // Item detail route: /$entity/$itemId — FLAT sibling of entityRoute so
   // EntityDetailPage doesn't need to render <Outlet>
@@ -292,19 +292,25 @@ const sampleItem = {
 };
 
 // ----------------------------------------------------------------
-// entityDetailSearchValidator
+// entitySearchStateValidator
 // ----------------------------------------------------------------
 
-describe("entityDetailSearchValidator", () => {
-  it("returns q when provided as a string", () => {
-    expect(entityDetailSearchValidator({ q: "https://example.com/invoices?cursor=abc" })).toEqual({
-      q: "https://example.com/invoices?cursor=abc",
-    });
+describe("entitySearchStateValidator", () => {
+  it("passes s.cursor through when provided as a string", () => {
+    expect(
+      entitySearchStateValidator({ "s.cursor": "https://example.com/invoices?cursor=abc" }),
+    ).toEqual({ "s.cursor": "https://example.com/invoices?cursor=abc" });
   });
 
-  it("returns undefined q when q is not a string", () => {
-    expect(entityDetailSearchValidator({ q: 123 })).toEqual({ q: undefined });
-    expect(entityDetailSearchValidator({})).toEqual({ q: undefined });
+  it("returns empty object when s.cursor is absent or not a string", () => {
+    expect(entitySearchStateValidator({})).toEqual({});
+    expect(entitySearchStateValidator({ "s.cursor": 123 })).toEqual({});
+  });
+
+  it("strips unrecognised keys", () => {
+    expect(entitySearchStateValidator({ "s.cursor": "abc", q: "old" })).toEqual({
+      "s.cursor": "abc",
+    });
   });
 });
 
@@ -539,10 +545,28 @@ describe("EntityList", () => {
     expect(prevButton).toBeDisabled();
     expect(nextButton).not.toBeDisabled();
 
-    // Clicking Next calls onPageUrlChange with the next page URL
-    // This triggers router navigation - the button should remain in the DOM
     await user.click(nextButton);
     expect(nextButton).toBeInTheDocument();
+  });
+
+  it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
+    const nextPageUrl = `${API_URL}/invoices-page2`;
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      // Cursor page — completely distinct path so MSW routing is unambiguous
+      createListHandler({
+        url: nextPageUrl,
+        items: [sampleItem],
+        page: { size: 1, total_items_exact: 4 },
+      }),
+    );
+
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(nextPageUrl)}`);
+
+    // Data from the cursor page should be rendered
+    expect(await screen.findByText("INV-2024-001")).toBeInTheDocument();
   });
 });
 

@@ -3,6 +3,7 @@ import {
   AttributeKind,
   type EntityItem,
   type EntityItemAttribute,
+  type EntitySearchState,
   type ProfileEntity,
   createValues,
   useCreateEntityItem,
@@ -39,14 +40,6 @@ import {
   Skeleton,
 } from "@contentgrid/ui";
 import { ProfileAttributeType } from "../../../navigator-data/src/accessors/attribute-profile";
-
-// ---------------------------------------------------------------------------
-// Search param validator — export for use in the $entity route's validateSearch
-// ---------------------------------------------------------------------------
-
-export function entityDetailSearchValidator(search: Record<string, unknown>): { q?: string } {
-  return { q: typeof search.q === "string" ? search.q : undefined };
-}
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -136,12 +129,12 @@ export function EntityOverviewPage() {
 }
 
 // ---------------------------------------------------------------------------
-// EntityDetailPage — $entity route component (reads path + q search param)
+// EntityDetailPage — $entity route component (reads path + s.cursor search param)
 // ---------------------------------------------------------------------------
 
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const { q } = useSearch({ strict: false }) as { q?: string };
+  const cursor = (useSearch({ strict: false }) as EntitySearchState)["s.cursor"];
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
 
@@ -153,12 +146,12 @@ export function EntityDetailPage() {
 
   function onCursorChange(url: string | undefined) {
     if (url) {
-      go({ search: (prev) => ({ ...prev, q: url }) });
+      go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
     } else {
       go({
         search: (prev) => {
           const next = { ...prev };
-          delete next["q"];
+          delete next["s.cursor"];
           return next;
         },
       });
@@ -189,7 +182,7 @@ export function EntityDetailPage() {
   return (
     <EntityDetailView
       profile={profile}
-      pageUrl={q}
+      pageUrl={cursor}
       onPageUrlChange={onCursorChange}
       onRowClick={onRowClick}
       onBack={onBack}
