@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const entitySearchStateSchema = z.object({
+const entitySearchStateSchema = z.object({
   "s.cursor": z.string().optional(),
 });
 

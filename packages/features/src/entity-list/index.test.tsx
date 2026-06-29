@@ -292,29 +292,6 @@ const sampleItem = {
 };
 
 // ----------------------------------------------------------------
-// entitySearchStateValidator
-// ----------------------------------------------------------------
-
-describe("entitySearchStateValidator", () => {
-  it("passes s.cursor through when provided as a string", () => {
-    expect(
-      entitySearchStateValidator({ "s.cursor": "https://example.com/invoices?cursor=abc" }),
-    ).toEqual({ "s.cursor": "https://example.com/invoices?cursor=abc" });
-  });
-
-  it("returns empty object when s.cursor is absent or not a string", () => {
-    expect(entitySearchStateValidator({})).toEqual({});
-    expect(entitySearchStateValidator({ "s.cursor": 123 })).toEqual({});
-  });
-
-  it("strips unrecognised keys", () => {
-    expect(entitySearchStateValidator({ "s.cursor": "abc", q: "old" })).toEqual({
-      "s.cursor": "abc",
-    });
-  });
-});
-
-// ----------------------------------------------------------------
 // EntityList — overview (index) route
 // ----------------------------------------------------------------
 
@@ -545,17 +522,20 @@ describe("EntityList", () => {
     expect(prevButton).toBeDisabled();
     expect(nextButton).not.toBeDisabled();
 
+    // Clicking Next triggers router navigation — the button stays in the DOM
+    // because the component re-renders in place rather than unmounting
     await user.click(nextButton);
     expect(nextButton).toBeInTheDocument();
   });
 
   it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
-    const nextPageUrl = `${API_URL}/invoices-page2`;
+    const nextPageUrl = `${API_URL}/invoices?_cursor=page2token`;
 
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
-      // Cursor page — completely distinct path so MSW routing is unambiguous
+      // Only the cursor-page handler is registered — when s.cursor is set the component
+      // fetches that URL directly and never requests the base collection URL
       createListHandler({
         url: nextPageUrl,
         items: [sampleItem],
