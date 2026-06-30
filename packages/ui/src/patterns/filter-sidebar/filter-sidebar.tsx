@@ -497,13 +497,10 @@ export function FilterSidebar({
 
                     // 3. Handle Text types
                     if (type === "text") {
-                      // JF-10: suppress exact-match fields (no operator suffix) when a
-                      // prefix-searchable sibling exists in the same group.
+                      // Suppress bare exact-match fields when a prefix-searchable sibling exists in the same group.
                       const { op } = parseName(prop.name);
                       if (!op && group.items.some((p) => p.prefixSearchable)) return null;
 
-                      // Render a typeahead combobox for prefix-searchable fields when the
-                      // caller has provided a search handler (i.e. useTypeahead is wired up).
                       if (prop.prefixSearchable && onTypeaheadSearch) {
                         return (
                           <TypeaheadTextFilter

@@ -1,7 +1,9 @@
 import { useState } from "react";
+import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
+import type { SearchRequestSpec } from "../../api/requests";
 import { useDebouncedValue } from "../use-debounced-value";
 import { useEntityItemCollection } from "./use-entity-item-collection";
 
@@ -25,27 +27,32 @@ export interface UseTypeaheadOptions {
   searchProperty: SearchHalFormTemplateProperty;
   /** Minimum query length before a fetch fires. Defaults to 2. */
   minLength?: number;
+  /**
+   * Existing search values to include in each typeahead query.
+   * The typeahead prefix filter is merged on top of these values so
+   * suggestions are scoped to the current active filters.
+   * Build from `searchTemplate.template` via `createValues(...).withValue(...)`.
+   */
+  searchValues?: HalFormValues<SearchRequestSpec>;
 }
 
 export function useTypeahead({
   profileEntity,
   searchProperty,
   minLength = 2,
+  searchValues,
 }: UseTypeaheadOptions) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
 
   const searchTemplate = profileEntity.searchTemplate;
 
-  // Guard on BOTH query and debouncedQuery:
-  // - query prevents stale suggestions showing during the 250 ms debounce window
-  //   after the user clears the field (results vanish immediately on clear).
-  // - debouncedQuery prevents a fetch firing for a value that hasn't settled yet.
+  // Both must meet minLength: query clears results instantly on empty; debouncedQuery gates the fetch.
   const enabled = query.length >= minLength && debouncedQuery.length >= minLength;
 
-  const searchValues =
+  const collectionSearchValues =
     enabled && searchTemplate
-      ? createValues(searchTemplate.template).withValue(
+      ? (searchValues ?? createValues(searchTemplate.template)).withValue(
           searchProperty.property.name,
           debouncedQuery,
         )
@@ -57,7 +64,7 @@ export function useTypeahead({
     isError,
     error,
   } = useEntityItemCollection(
-    { profileEntity, searchValues },
+    { profileEntity, searchValues: collectionSearchValues },
     { queryOptionsOverride: { staleTime: 30_000, gcTime: 60_000, retry: 0 } },
   );
 
@@ -74,9 +81,7 @@ export function useTypeahead({
 
   return {
     results: enabled ? suggestions : [],
-    // isFetching (not isLoading) stays true during background refetches when
-    // keepPreviousData is serving placeholder results.
-    isLoading: enabled && isFetching,
+    isLoading: enabled && isFetching, // isFetching stays true during background refetches; isLoading would not
     isError,
     error,
     search: setQuery,

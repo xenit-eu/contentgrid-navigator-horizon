@@ -7,7 +7,6 @@ const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
 const TO_ONE_RELATION_KEY = "ToOneRelation";
 const TO_MANY_RELATION_KEY = "ToManyRelation";
-const TYPEAHEAD_KEY = "Typeahead";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -82,13 +81,5 @@ export const queryKeys = {
     /** Exact key for a specific to-many relation by relation name and relation URL. */
     byUrl: (relationName: string, relationUrl: string) =>
       [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
-  },
-
-  typeahead: {
-    /** Prefix key — invalidates ALL typeahead results for one entity. */
-    forEntity: (entityName: string) => [TYPEAHEAD_KEY, entityName] as const,
-    /** Exact key for a single typeahead query (entity × property × query string). */
-    byProperty: (entityName: string, propertyName: string, query: string) =>
-      [TYPEAHEAD_KEY, entityName, propertyName, query] as const,
   },
 };

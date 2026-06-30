@@ -19,10 +19,7 @@ export const noopSupplier: AuthenticationTokenSupplier = async () => ({
   expiresAt: null,
 });
 
-/**
- * Build a ProfileEntity from raw HAL JSON. Used across hook tests that need
- * a real ProfileEntity instance rather than a mock.
- */
+/** Build a ProfileEntity from raw HAL JSON for use in hook tests. */
 export function makeProfileEntity(
   json: Record<string, unknown>,
   collectionName: string,

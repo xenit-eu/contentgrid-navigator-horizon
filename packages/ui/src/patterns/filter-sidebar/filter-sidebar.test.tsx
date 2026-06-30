@@ -381,7 +381,7 @@ const PREFIX_PROP: SearchProperty = {
 };
 const EXACT_PROP: SearchProperty = { name: "number", type: "string" };
 
-describe("FilterSidebar — JF-10: exact-match suppression", () => {
+describe("FilterSidebar — exact-match suppression when a ~prefix sibling exists", () => {
   it("hides the exact-match field when a ~prefix sibling exists in the same group", () => {
     // Both "number" and "number~prefix" are passed — only one input should appear
     renderSidebar([EXACT_PROP, PREFIX_PROP]);
@@ -414,7 +414,7 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
   it("renders a typeahead input for ~prefix fields when onTypeaheadSearch is provided", () => {
     const onTypeaheadSearch = vi.fn();
     renderSidebar([PREFIX_PROP], {}, { onTypeaheadSearch });
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveAttribute("autocomplete", "off");
   });
 
   it("calls onTypeaheadSearch and onFilterChange when user types", () => {

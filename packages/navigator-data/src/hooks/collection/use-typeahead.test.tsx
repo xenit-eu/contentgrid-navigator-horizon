@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createValues } from "@contentgrid/hal-forms/values";
 import { server } from "../../../test-setup";
 import ProfileEntity from "../../accessors/entity-profile";
 import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
@@ -8,6 +9,23 @@ import { BASE, makeProfileEntity, makeQueryClient, makeWrapper } from "../test-u
 import { useTypeahead } from "./use-typeahead";
 
 const COLLECTION_URL = `${BASE}/invoices`;
+
+function makeAttribute(name: string, title: string) {
+  return {
+    name,
+    title,
+    type: "string",
+    description: "",
+    readOnly: false,
+    required: false,
+    _embedded: {
+      "blueprint:constraint": [],
+      "blueprint:search-param": [],
+      "blueprint:attribute": [],
+    },
+    _links: {},
+  };
+}
 
 function makeInvoiceProfileEntity() {
   return makeProfileEntity(
@@ -29,22 +47,7 @@ function makeInvoiceProfileEntity() {
         ],
       },
       _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "number",
-            title: "Number",
-            type: "string",
-            description: "",
-            readOnly: false,
-            required: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-        ],
+        "blueprint:attribute": [makeAttribute("number", "Number")],
         "blueprint:relation": [],
       },
       _templates: {
@@ -52,6 +55,74 @@ function makeInvoiceProfileEntity() {
           method: "GET",
           target: COLLECTION_URL,
           properties: [{ name: "number~prefix", type: "text" }],
+        },
+      },
+    },
+    "invoices",
+    "invoice",
+  );
+}
+
+function makeInvoiceProfileEntityWithoutSearchTemplate() {
+  return makeProfileEntity(
+    {
+      name: "invoice",
+      description: "",
+      _links: {
+        self: { href: `${BASE}/profile/invoices` },
+        describes: [
+          { href: COLLECTION_URL, name: "collection" },
+          { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            name: "blueprint",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
+    },
+    "invoices",
+    "invoice",
+  );
+}
+
+function makeInvoiceProfileEntityWithStatus() {
+  return makeProfileEntity(
+    {
+      name: "invoice",
+      description: "",
+      _links: {
+        self: { href: `${BASE}/profile/invoices` },
+        describes: [
+          { href: COLLECTION_URL, name: "collection" },
+          { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            name: "blueprint",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          makeAttribute("number", "Number"),
+          makeAttribute("status", "Status"),
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: COLLECTION_URL,
+          properties: [
+            { name: "number~prefix", type: "text" },
+            { name: "status", type: "text" },
+          ],
         },
       },
     },
@@ -100,31 +171,9 @@ describe("useTypeahead", () => {
     afterEach(() => vi.useRealTimers());
 
     it("does not fetch and returns empty results", () => {
-      const entityWithoutTemplate = makeProfileEntity(
-        {
-          name: "invoice",
-          description: "",
-          _links: {
-            self: { href: `${BASE}/profile/invoices` },
-            describes: [
-              { href: COLLECTION_URL, name: "collection" },
-              { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
-            ],
-            curies: [
-              {
-                href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-                name: "blueprint",
-                templated: true,
-              },
-            ],
-          },
-          _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
-        },
-        "invoices",
-        "invoice",
-      );
+      const entityWithoutSearchTemplate = makeInvoiceProfileEntityWithoutSearchTemplate();
 
-      const { result } = makeHook(entityWithoutTemplate, searchProperty);
+      const { result } = makeHook(entityWithoutSearchTemplate, searchProperty);
       act(() => result.current.search("INV"));
       act(() => vi.advanceTimersByTime(1000));
 
@@ -148,6 +197,11 @@ describe("useTypeahead", () => {
       act(() => vi.advanceTimersByTime(249));
       expect(result.current.isLoading).toBe(false);
     });
+  });
+
+  describe("minLength guard", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
 
     it("does not fire for input shorter than minLength", () => {
       const { result } = makeHook(profileEntity, searchProperty);
@@ -229,5 +283,40 @@ describe("useTypeahead", () => {
     await waitFor(() => expect(result.current.results).toHaveLength(2), { timeout: 3000 });
     expect(result.current.results).toContain("INV-001");
     expect(result.current.results).toContain("INV-002");
+  });
+
+  describe("searchValues", () => {
+    const entityWithStatus = makeInvoiceProfileEntityWithStatus();
+    const numberPrefixProperty =
+      entityWithStatus.searchTemplate!.getSearchPropertyByName("number~prefix")!;
+
+    it("merges searchValues into the outgoing request URL alongside the prefix filter", async () => {
+      let capturedUrl: URL | undefined;
+      mockCollection([{ number: "INV-001" }], (url) => {
+        capturedUrl = url;
+      });
+
+      const searchValues = createValues(entityWithStatus.searchTemplate!.template).withValue(
+        "status",
+        "active",
+      );
+
+      const qc = makeQueryClient();
+      const { result } = renderHook(
+        () =>
+          useTypeahead({
+            profileEntity: entityWithStatus,
+            searchProperty: numberPrefixProperty,
+            searchValues,
+          }),
+        { wrapper: makeWrapper(qc) },
+      );
+
+      act(() => result.current.search("INV"));
+      await waitFor(() => expect(result.current.results).toContain("INV-001"), { timeout: 3000 });
+
+      expect(capturedUrl?.searchParams.get("number~prefix")).toBe("INV");
+      expect(capturedUrl?.searchParams.get("status")).toBe("active");
+    });
   });
 });
