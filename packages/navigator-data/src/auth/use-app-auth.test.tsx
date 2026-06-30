@@ -51,21 +51,39 @@ describe("useAppAuth", () => {
     vi.clearAllMocks();
   });
 
-  it("returns auth, apiFetch, and profileUrl derived from app config", () => {
+  it("returns auth, apiFetch, contentFetch, getToken, and profileUrl", () => {
     const ctx = makeAuthCtx();
     const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
 
     expect(result.current.auth).toBe(ctx);
     expect(typeof result.current.apiFetch).toBe("function");
+    expect(typeof result.current.contentFetch).toBe("function");
+    expect(typeof result.current.getToken).toBe("function");
     expect(result.current.profileUrl).toBe("https://api.example.com/profile");
   });
 
-  it("apiFetch reference is stable across re-renders", () => {
+  it("apiFetch and contentFetch references are stable across re-renders", () => {
     const ctx = makeAuthCtx();
     const { result, rerender } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
-    const firstFetch = result.current.apiFetch;
+    const firstApiFetch = result.current.apiFetch;
+    const firstContentFetch = result.current.contentFetch;
     rerender();
-    expect(result.current.apiFetch).toBe(firstFetch);
+    expect(result.current.apiFetch).toBe(firstApiFetch);
+    expect(result.current.contentFetch).toBe(firstContentFetch);
+  });
+
+  it("getToken returns null when user is unauthenticated", async () => {
+    const ctx = makeAuthCtx({ user: null });
+    const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
+    await expect(result.current.getToken()).resolves.toBeNull();
+  });
+
+  it("getToken returns the access token when user is authenticated", async () => {
+    const ctx = makeAuthCtx({
+      user: { access_token: "tok-abc", expired: false } as import("oidc-client-ts").User,
+    });
+    const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
+    await expect(result.current.getToken()).resolves.toBe("tok-abc");
   });
 
   it("calls signinSilent when user is expired and not loading", async () => {

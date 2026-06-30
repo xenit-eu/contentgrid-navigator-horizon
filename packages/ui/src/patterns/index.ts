@@ -3,7 +3,7 @@ export * from "./data-table";
 export * from "./filter-sidebar";
 export * from "./relation-section";
 export * from "./entity-picker";
-export * from "./file-upload-zone";
+export * from "./content-upload-field";
 export * from "./branding-header";
 export * from "./sign-in-gate";
 export * from "./nav-item";

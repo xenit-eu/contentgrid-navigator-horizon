@@ -3,6 +3,8 @@ export { cgRels, blueprintRels } from "./contentgrid-rels";
 export { checkResponse, ProblemDetailError, extractFieldErrors, getErrorMessage } from "./errors";
 export type { ProblemDetail, FieldError } from "./errors";
 export { createApiClient, createContentClient } from "./client";
+export { uploadContent } from "./content-upload";
+export type { ContentUploadHandle } from "./content-upload";
 export type { AuthenticationTokenSupplier, TypedFetch } from "./client";
 export {
   fetchHal,

@@ -25,3 +25,5 @@ export { useUpdateEntityItem } from "./use-update-entity";
 export type { UseUpdateEntityItemOptions } from "./use-update-entity";
 export { useDeleteEntityItem } from "./use-delete-entity";
 export type { UseDeleteEntityItemOptions } from "./use-delete-entity";
+export { useContentUpload } from "./use-content-upload";
+export type { ContentUploadState, ContentUploadStatus } from "./use-content-upload";

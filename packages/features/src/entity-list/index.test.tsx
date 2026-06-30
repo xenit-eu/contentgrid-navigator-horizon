@@ -16,6 +16,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  createContentClient,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
@@ -32,6 +33,7 @@ const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
+const noopGetToken = async () => null;
 
 // ----------------------------------------------------------------
 // Router + provider factories
@@ -42,11 +44,17 @@ function createTestRouter(initialEntry = "/") {
     defaultOptions: { queries: { retry: false } },
   });
   const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
 
   function Providers({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          getToken={noopGetToken}
+          profileUrl={PROFILE_URL}
+        >
           {children}
         </NavigatorDataProvider>
       </QueryClientProvider>

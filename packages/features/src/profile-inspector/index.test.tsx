@@ -8,6 +8,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  createContentClient,
 } from "@contentgrid/navigator-data";
 import { server } from "../../test-setup";
 import { ProfileInspector } from "./index";
@@ -16,17 +17,24 @@ const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
+const noopGetToken = async () => null;
 
 function renderProfileInspector() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          getToken={noopGetToken}
+          profileUrl={PROFILE_URL}
+        >
           {children}
         </NavigatorDataProvider>
       </QueryClientProvider>
