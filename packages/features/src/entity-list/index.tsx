@@ -24,6 +24,7 @@ import {
   useNavigatorData,
   useProfileEntities,
   useSetToOneRelation,
+  useTypeahead,
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import {
@@ -53,7 +54,9 @@ import {
   DialogHeader,
   DialogTitle,
   EntityCard,
+  FilterSidebar,
   Input,
+  type SearchProperty,
   Separator,
   Sidebar,
   SidebarContent,
@@ -74,6 +77,14 @@ import {
   ProfileAttributeSearchType,
   ProfileAttributeType,
 } from "../../../navigator-data/src/accessors/attribute-profile";
+
+// ---------------------------------------------------------------------------
+// Search param validator — export for use in the $entity route's validateSearch
+// ---------------------------------------------------------------------------
+
+export function entityDetailSearchValidator(search: Record<string, unknown>): { q?: string } {
+  return { q: typeof search.q === "string" ? search.q : undefined };
+}
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -237,6 +248,7 @@ export function EntityDetailPage() {
 
   return (
     <EntityDetailView
+      key={entityName}
       profile={profile}
       pageUrl={cursor}
       onPageUrlChange={onCursorChange}
@@ -353,8 +365,54 @@ function EntityDetailView({
   onRowClick: (id: string) => void;
   onBack: () => void;
 }>) {
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const searchTemplate = profile.searchTemplate;
+
+  const filterProperties: SearchProperty[] = (searchTemplate?.searchProperties ?? []).map((sp) => {
+    const prop = sp.property;
+    const inlineOptions = prop.options?.isInline() ? (prop.options.inline as string[]) : undefined;
+    return {
+      name: prop.name,
+      prompt: prop.prompt ?? undefined,
+      type: prop.type ?? "string",
+      prefixSearchable: sp.searchType === ProfileAttributeSearchType.prefixMatch,
+      options: inlineOptions ? { inline: inlineOptions } : undefined,
+    };
+  });
+
+  function handleFilterChange(key: string, value: string | undefined) {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value === undefined) {
+        delete next[key];
+      } else {
+        next[key] = value;
+      }
+      return next;
+    });
+    onPageUrlChange(undefined);
+  }
+
+  function handleClearAll() {
+    setFilters({});
+    onPageUrlChange(undefined);
+  }
+
+  const activeFilterEntries = Object.entries(filters).filter(([, v]) => !!v);
+
   const collection = useEntityItemCollection(
-    pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
+    pageUrl
+      ? { url: pageUrl, profileEntity: profile }
+      : searchTemplate
+        ? {
+            profileEntity: profile,
+            searchValues: activeFilterEntries.reduce(
+              (vals, [key, value]) => vals.withValue(key, value),
+              createValues(searchTemplate.template),
+            ),
+          }
+        : { profileEntity: profile },
   );
 
   // The data layer's origin guard (use-entity-item-collection.ts) silently
@@ -416,83 +474,151 @@ function EntityDetailView({
         </div>
       </div>
 
-      {/* Table skeleton */}
-      {collection.isPending && (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full rounded-md" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-md" />
-          ))}
-        </div>
-      )}
-
-      {/* Error */}
-      {collection.isError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <p>
-            Failed to load {profile.pluralName}: {collection.error.message}
-          </p>
-          {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
-              shared or expired s.cursor makes the server reject the request
-              and would otherwise strand the user on an unrecoverable URL.
-              Offer a reset to the first page whenever a cursor was active. */}
-          {pageUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => onPageUrlChange(undefined)}
-            >
-              Back to first page
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Table */}
-      {collection.isSuccess && (
-        <div className="space-y-4">
-          <DataTable
-            entityName={profile.name}
-            entityTitle={profile.pluralName}
-            columns={columns}
-            rows={rows}
-            onRowClick={onRowClick}
+      {/* Filters + Table */}
+      <div className="flex gap-6 items-start">
+        {filterProperties.length > 0 && (
+          <EntityFilterSidebar
+            profile={profile}
+            filterProperties={filterProperties}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onClearAll={handleClearAll}
           />
+        )}
 
-          {/* Pagination */}
-          {(collection.data.hasNext || collection.data.hasPrevious) && (
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!collection.data.hasPrevious}
-                onClick={() => {
-                  onPageUrlChange(collection.data.prevHref);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Previous
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                {collection.data.pageSize} items on this page
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!collection.data.hasNext}
-                onClick={() => {
-                  onPageUrlChange(collection.data.nextHref);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Next
-              </Button>
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Table skeleton */}
+          {collection.isPending && (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full rounded-md" />
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {collection.isError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <p>
+                Failed to load {profile.pluralName}: {collection.error.message}
+              </p>
+              {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
+                  shared or expired s.cursor makes the server reject the request
+                  and would otherwise strand the user on an unrecoverable URL.
+                  Offer a reset to the first page whenever a cursor was active. */}
+              {pageUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => onPageUrlChange(undefined)}
+                >
+                  Back to first page
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Table */}
+          {collection.isSuccess && (
+            <div className="space-y-4">
+              <DataTable
+                entityName={profile.name}
+                entityTitle={profile.pluralName}
+                columns={columns}
+                rows={rows}
+                onRowClick={onRowClick}
+              />
+
+              {/* Pagination */}
+              {(collection.data.hasNext || collection.data.hasPrevious) && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!collection.data.hasPrevious}
+                    onClick={() => {
+                      onPageUrlChange(collection.data.prevHref);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {collection.data.pageSize} items on this page
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!collection.data.hasNext}
+                    onClick={() => {
+                      onPageUrlChange(collection.data.nextHref);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EntityFilterSidebar — owns typeahead state; only mounted when the profile
+// has at least one search property, so `searchTemplate.searchProperties[0]`
+// is always a safe fallback (Rules of Hooks: useTypeahead needs a concrete
+// SearchHalFormTemplateProperty on every render, never undefined).
+// ---------------------------------------------------------------------------
+
+function EntityFilterSidebar({
+  profile,
+  filterProperties,
+  filters,
+  onFilterChange,
+  onClearAll,
+}: Readonly<{
+  profile: ProfileEntity;
+  filterProperties: SearchProperty[];
+  filters: Record<string, string>;
+  onFilterChange: (key: string, value: string | undefined) => void;
+  onClearAll: () => void;
+}>) {
+  const [activeTypeaheadParam, setActiveTypeaheadParam] = useState<string>("");
+
+  const searchTemplate = profile.searchTemplate!;
+  const searchProperty =
+    searchTemplate.getSearchPropertyByName(activeTypeaheadParam) ??
+    searchTemplate.searchProperties[0]!;
+
+  const typeahead = useTypeahead({ profileEntity: profile, searchProperty });
+
+  function handleTypeaheadSearch(fieldParam: string, query: string) {
+    if (fieldParam !== activeTypeaheadParam) {
+      setActiveTypeaheadParam(fieldParam);
+    }
+    typeahead.search(query);
+  }
+
+  return (
+    <FilterSidebar
+      filterProperties={filterProperties}
+      filters={filters}
+      onFilterChange={onFilterChange}
+      onClearAll={onClearAll}
+      onTypeaheadSearch={handleTypeaheadSearch}
+      typeaheadSuggestions={
+        activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.results } : undefined
+      }
+      typeaheadIsLoading={
+        activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.isLoading } : undefined
+      }
+    />
   );
 }
 
