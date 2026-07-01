@@ -595,3 +595,79 @@ describe("SearchHalFormTemplate.withHiddenParams", () => {
     expect(names).toContain("_internal_b");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Range-pair operator properties (attribute.~from / attribute.~until)
+// ---------------------------------------------------------------------------
+
+const rangePairProfileJson = {
+  ...invoiceProfileJson,
+  _embedded: {
+    ...invoiceProfileJson._embedded,
+    "blueprint:attribute": [
+      ...invoiceProfileJson._embedded["blueprint:attribute"],
+      {
+        name: "created_at",
+        title: "Created At",
+        type: "date",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            { name: "created_at.~from", title: "Created at from", type: "greater-than-or-equal" },
+            { name: "created_at.~until", title: "Created at until", type: "less-than-or-equal" },
+          ],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
+    ],
+  },
+  _templates: {
+    ...invoiceProfileJson._templates,
+    search: {
+      ...invoiceProfileJson._templates.search,
+      properties: [
+        ...invoiceProfileJson._templates.search.properties,
+        { name: "created_at.~from", type: "date" },
+        { name: "created_at.~until", type: "date" },
+      ],
+    },
+  },
+};
+
+describe("SearchHalFormTemplate — range-pair operators (.~from / .~until)", () => {
+  it("does not treat attribute.~op as a relation traversal", () => {
+    const tmpl = makeSearchTemplate(rangePairProfileJson);
+    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~from")!;
+    expect(fromProp.isOverRelation).toBe(false);
+  });
+
+  it("links the direct profileAttribute for attribute.~from", () => {
+    const tmpl = makeSearchTemplate(rangePairProfileJson);
+    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~from")!;
+    expect(fromProp.profileAttribute?.name).toBe("created_at");
+    expect(fromProp.profileAttribute?.type).toBe("date");
+  });
+
+  it("links the direct profileAttribute for attribute.~until", () => {
+    const tmpl = makeSearchTemplate(rangePairProfileJson);
+    const untilProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~until")!;
+    expect(untilProp.profileAttribute?.name).toBe("created_at");
+    expect(untilProp.isOverRelation).toBe(false);
+  });
+
+  it("does not set profileRelation for range-pair operators", () => {
+    const tmpl = makeSearchTemplate(rangePairProfileJson);
+    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~from")!;
+    expect(fromProp.profileRelation).toBeUndefined();
+  });
+
+  it("still treats relation.attribute~suffix as isOverRelation", () => {
+    const tmpl = makeSearchTemplate(rangePairProfileJson);
+    const relProp = tmpl.searchProperties.find((p) => p.property.name === "customer.name~prefix")!;
+    expect(relProp.isOverRelation).toBe(true);
+  });
+});

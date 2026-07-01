@@ -23,8 +23,9 @@ export interface UseTypeaheadOptions {
    * A search property from `profileEntity.searchTemplate`.
    * Provides the filter parameter name and the attribute to extract from each result.
    * Obtain via `searchTemplate.getSearchPropertiesByType(...)` or `getSearchPropertyByName(...)`.
+   * When undefined (e.g. no field is active yet), the hook returns empty results without fetching.
    */
-  searchProperty: SearchHalFormTemplateProperty;
+  searchProperty?: SearchHalFormTemplateProperty;
   /** Minimum query length before a fetch fires. Defaults to 2. */
   minLength?: number;
   /**
@@ -48,10 +49,12 @@ export function useTypeahead({
   const searchTemplate = profileEntity.searchTemplate;
 
   // Both must meet minLength: query clears results instantly on empty; debouncedQuery gates the fetch.
-  const enabled = query.length >= minLength && debouncedQuery.length >= minLength;
+  // Also disabled when no searchProperty is active yet.
+  const enabled =
+    !!searchProperty && query.length >= minLength && debouncedQuery.length >= minLength;
 
   const collectionSearchValues =
-    enabled && searchTemplate
+    enabled && searchTemplate && searchProperty
       ? (searchValues ?? createValues(searchTemplate.template)).withValue(
           searchProperty.property.name,
           debouncedQuery,
@@ -68,7 +71,7 @@ export function useTypeahead({
     { queryOptionsOverride: { staleTime: 30_000, gcTime: 60_000, retry: 0 } },
   );
 
-  const attributeName = searchProperty.profileAttribute?.name;
+  const attributeName = searchProperty?.profileAttribute?.name;
   const suggestions: string[] = [];
   if (entityItemCollection && attributeName) {
     const found = new Set<string>();

@@ -9,7 +9,10 @@ import {
   type EntityItemToOneRelation,
   type EntitySearchState,
   ProblemDetailError,
+  ProfileAttributeSearchType,
+  ProfileAttributeType,
   type ProfileEntity,
+  buildFilterProperties,
   createValues,
   extractFieldErrors,
   resolveTrustedCollectionUrl,
@@ -56,7 +59,6 @@ import {
   EntityCard,
   FilterSidebar,
   Input,
-  type SearchProperty,
   Separator,
   Sidebar,
   SidebarContent,
@@ -73,10 +75,6 @@ import {
   SidebarTrigger,
   Skeleton,
 } from "@contentgrid/ui";
-import {
-  ProfileAttributeSearchType,
-  ProfileAttributeType,
-} from "../../../navigator-data/src/accessors/attribute-profile";
 
 // ---------------------------------------------------------------------------
 // Search param validator — export for use in the $entity route's validateSearch
@@ -366,20 +364,16 @@ function EntityDetailView({
   onBack: () => void;
 }>) {
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [activeTypeaheadParam, setActiveTypeaheadParam] = useState<string>("");
 
   const searchTemplate = profile.searchTemplate;
 
-  const filterProperties: SearchProperty[] = (searchTemplate?.searchProperties ?? []).map((sp) => {
-    const prop = sp.property;
-    const inlineOptions = prop.options?.isInline() ? (prop.options.inline as string[]) : undefined;
-    return {
-      name: prop.name,
-      prompt: prop.prompt ?? undefined,
-      type: prop.type ?? "string",
-      prefixSearchable: sp.searchType === ProfileAttributeSearchType.prefixMatch,
-      options: inlineOptions ? { inline: inlineOptions } : undefined,
-    };
+  const typeahead = useTypeahead({
+    profileEntity: profile,
+    searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
   });
+
+  const filterProperties = searchTemplate ? buildFilterProperties(searchTemplate) : [];
 
   function handleFilterChange(key: string, value: string | undefined) {
     setFilters((prev) => {
@@ -397,6 +391,13 @@ function EntityDetailView({
   function handleClearAll() {
     setFilters({});
     onPageUrlChange(undefined);
+  }
+
+  function handleTypeaheadSearch(fieldParam: string, query: string) {
+    if (fieldParam !== activeTypeaheadParam) {
+      setActiveTypeaheadParam(fieldParam);
+    }
+    typeahead.search(query);
   }
 
   const activeFilterEntries = Object.entries(filters).filter(([, v]) => !!v);
@@ -477,12 +478,18 @@ function EntityDetailView({
       {/* Filters + Table */}
       <div className="flex gap-6 items-start">
         {filterProperties.length > 0 && (
-          <EntityFilterSidebar
-            profile={profile}
+          <FilterSidebar
             filterProperties={filterProperties}
             filters={filters}
             onFilterChange={handleFilterChange}
             onClearAll={handleClearAll}
+            onTypeaheadSearch={handleTypeaheadSearch}
+            typeaheadSuggestions={
+              activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.results } : undefined
+            }
+            typeaheadIsLoading={
+              activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.isLoading } : undefined
+            }
           />
         )}
 
@@ -566,59 +573,6 @@ function EntityDetailView({
         </div>
       </div>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// EntityFilterSidebar — owns typeahead state; only mounted when the profile
-// has at least one search property, so `searchTemplate.searchProperties[0]`
-// is always a safe fallback (Rules of Hooks: useTypeahead needs a concrete
-// SearchHalFormTemplateProperty on every render, never undefined).
-// ---------------------------------------------------------------------------
-
-function EntityFilterSidebar({
-  profile,
-  filterProperties,
-  filters,
-  onFilterChange,
-  onClearAll,
-}: Readonly<{
-  profile: ProfileEntity;
-  filterProperties: SearchProperty[];
-  filters: Record<string, string>;
-  onFilterChange: (key: string, value: string | undefined) => void;
-  onClearAll: () => void;
-}>) {
-  const [activeTypeaheadParam, setActiveTypeaheadParam] = useState<string>("");
-
-  const searchTemplate = profile.searchTemplate!;
-  const searchProperty =
-    searchTemplate.getSearchPropertyByName(activeTypeaheadParam) ??
-    searchTemplate.searchProperties[0]!;
-
-  const typeahead = useTypeahead({ profileEntity: profile, searchProperty });
-
-  function handleTypeaheadSearch(fieldParam: string, query: string) {
-    if (fieldParam !== activeTypeaheadParam) {
-      setActiveTypeaheadParam(fieldParam);
-    }
-    typeahead.search(query);
-  }
-
-  return (
-    <FilterSidebar
-      filterProperties={filterProperties}
-      filters={filters}
-      onFilterChange={onFilterChange}
-      onClearAll={onClearAll}
-      onTypeaheadSearch={handleTypeaheadSearch}
-      typeaheadSuggestions={
-        activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.results } : undefined
-      }
-      typeaheadIsLoading={
-        activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.isLoading } : undefined
-      }
-    />
   );
 }
 

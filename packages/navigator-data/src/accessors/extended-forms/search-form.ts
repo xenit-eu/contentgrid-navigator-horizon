@@ -67,6 +67,12 @@ export interface SearchHalFormTemplateProperty {
   profileRelation?: ProfileRelation;
   /** Pre-parsed search type based on property name suffix */
   searchType: ProfileAttributeSearchType;
+  /**
+   * Base key with all operator suffixes stripped.
+   * Groups range-pair properties (e.g. "created.~from" + "created.~until" → "created").
+   * Computed once here so consumers never need to parse the raw property name.
+   */
+  groupKey: string;
 }
 
 /**
@@ -194,17 +200,18 @@ export class SearchHalFormTemplate {
    */
   getSearchPropertiesByAttribute(attributeName: string): readonly SearchHalFormTemplateProperty[] {
     return this.searchProperties.filter((prop) => {
-      if (prop.isOverRelation) {
-        // For relation properties like "customer.name~prefix", extract the attribute part
-        const parts = prop.property.name.split(".");
-        const attributePart = parts.slice(1).join(".");
-        const attrName = attributePart.split("~")[0];
-        return attrName === attributeName;
-      } else {
-        // For direct properties like "name~prefix", extract attribute name
-        const attrName = prop.property.name.split("~")[0];
-        return attrName === attributeName;
+      // profileAttribute.name is the resolved attribute name on the owning entity (direct)
+      // or the target entity (relation traversal). Use it when available.
+      if (prop.profileAttribute !== undefined) {
+        return prop.profileAttribute.name === attributeName;
       }
+      // profileAttribute is undefined when allProfiles was not provided. Fall back to groupKey:
+      // - direct: groupKey IS the attribute name ("code" from "code~prefix")
+      // - relation: groupKey is "relation.attribute" ("customer.name") — take the last segment
+      if (prop.isOverRelation) {
+        return prop.groupKey.slice(prop.groupKey.lastIndexOf(".") + 1) === attributeName;
+      }
+      return prop.groupKey === attributeName;
     });
   }
 
@@ -222,8 +229,17 @@ export class SearchHalFormTemplate {
    */
   private enhanceSearchProperty(property: HalFormsProperty): SearchHalFormTemplateProperty {
     const propertyName = property.name;
+    // Range-pair operators use the form "attribute.~op" (e.g. "created_at.~from").
+    // The ".~" sequence is NOT a relation separator — the second segment starts with "~",
+    // which means it is an operator suffix on a direct attribute, not a relation path.
+    const dotTildeIdx = propertyName.indexOf(".~");
     const parts = propertyName.split(".");
-    const isOverRelation = parts.length > 1;
+    const isOverRelation = parts.length > 1 && dotTildeIdx === -1;
+
+    // groupKey: strip all operator suffixes (~prefix, .~from, etc.) once here so
+    // consumers (filter-properties, getSearchPropertiesByAttribute, etc.) never re-parse.
+    const tildeSplitIdx = dotTildeIdx !== -1 ? dotTildeIdx : propertyName.indexOf("~");
+    const groupKey = tildeSplitIdx !== -1 ? propertyName.slice(0, tildeSplitIdx) : propertyName;
 
     let profileAttribute: ProfileAttribute | undefined;
     let profileRelation: ProfileRelation | undefined;
@@ -251,8 +267,9 @@ export class SearchHalFormTemplate {
 
       searchType = this.extractSearchType(attributePart);
     } else {
-      // Direct attribute: "attribute~suffix"
-      const attributeName = propertyName.split("~")[0];
+      // Direct attribute: "attribute~suffix" or "attribute.~op" (range-pair)
+      const splitIdx = dotTildeIdx !== -1 ? dotTildeIdx : propertyName.indexOf("~");
+      const attributeName = splitIdx !== -1 ? propertyName.slice(0, splitIdx) : propertyName;
       profileAttribute = this.profileEntity.getAttribute(attributeName);
       searchType = this.extractSearchType(propertyName);
     }
@@ -263,6 +280,7 @@ export class SearchHalFormTemplate {
       isOverRelation,
       profileRelation,
       searchType,
+      groupKey,
     };
   }
 

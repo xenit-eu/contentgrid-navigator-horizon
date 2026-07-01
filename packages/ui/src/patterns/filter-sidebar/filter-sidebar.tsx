@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";
 import { Label } from "../../primitives/label";
@@ -13,86 +13,62 @@ import {
   SelectValue,
 } from "../../primitives/select";
 import { Separator } from "../../primitives/separator";
-import {
-  SEARCH_TYPE_LABELS,
-  type SearchProperty,
-  formatFieldLabel,
-  formatWords,
-  isDateProperty,
-  parseName,
-} from "../search-property-utils";
 
-// ---------------------------------------------------------------------------
-// Public types
-// ---------------------------------------------------------------------------
+export type FilterInputKind = "text" | "date" | "select";
 
-export type { SearchProperty } from "../search-property-utils";
+export type SearchOperator =
+  | "exact-match"
+  | "prefix-match"
+  | "full-text"
+  | "greater-than"
+  | "greater-than-or-equal"
+  | "less-than"
+  | "less-than-or-equal";
+
+/** Pre-computed view model produced by buildFilterProperties() in @contentgrid/navigator-data. */
+export interface SearchFilterProperty {
+  name: string;
+  label: string;
+  description?: string;
+  inputKind: FilterInputKind;
+  searchOperator: SearchOperator;
+  groupKey: string;
+  directionLabel?: "After" | "Before" | "From" | "Until";
+  dateEncoding?: "iso" | "plain";
+  options?: string[];
+  relationKey?: string;
+  relationDescription?: string;
+}
 
 export interface FilterSidebarProps {
-  /** All filterable search properties */
-  filterProperties: SearchProperty[];
-  /** Current active filter values keyed by SearchProperty.name */
+  filterProperties: SearchFilterProperty[];
   filters: Record<string, string>;
-  /** Called when a single filter value changes. Pass undefined to clear. */
   onFilterChange: (key: string, value: string | undefined) => void;
-  /** Called when the user wants to clear all filters */
   onClearAll?: () => void;
-  /**
-   * Called when the user types in a ~prefix field.
-   * The consuming layer calls useTypeahead.search() with the query to fetch suggestions.
-   * fieldParam is the full search property name (e.g. "number~prefix").
-   */
+  /** Called when user types in a prefix-match field; fieldParam is the full property name. */
   onTypeaheadSearch?: (fieldParam: string, query: string) => void;
-  /**
-   * Typeahead suggestions keyed by search property name (e.g. "number~prefix").
-   * Populated by the consuming layer from useTypeahead results.
-   */
+  /** Suggestions keyed by search property name; populated externally from useTypeahead. */
   typeaheadSuggestions?: Record<string, string[]>;
   /** Loading state per field, keyed by search property name. */
   typeaheadIsLoading?: Record<string, boolean>;
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
+const UPPERCASE_WORDS: Record<string, string> = {
+  id: "ID",
+  url: "URL",
+  uri: "URI",
+  api: "API",
+  uuid: "UUID",
+};
 
-/** True for range-pair operator names like "created.~from" (dot before the tilde). */
-function isRangePair(name: string): boolean {
-  return name.includes(".~");
+function formatWords(text: string): string {
+  return text
+    .replace(/[._]/g, " ")
+    .split(" ")
+    .map((w) => UPPERCASE_WORDS[w.toLowerCase()] ?? w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
-/** Convert a raw date input value to an API value. Range-pair operators use plain yyyy-MM-dd; legacy operators use ISO 8601. */
-function encodeDateInputValue(rawValue: string, rangePair: boolean): string {
-  return rangePair ? rawValue : dateToApi(rawValue);
-}
-
-function getSearchType(prop: SearchProperty): string {
-  const { op } = parseName(prop.name);
-  if (!op) return "exact";
-  return SEARCH_TYPE_LABELS[op] ?? op;
-}
-
-type InputType = "text" | "select" | "date";
-
-function getInputType(prop: SearchProperty): InputType {
-  if (prop.options?.inline?.length) return "select";
-  if (isDateProperty(prop.name, prop.type)) return "date";
-  return "text";
-}
-
-/** Map a search-type label to a capitalised direction word, or null. */
-function getDirectionLabel(searchType: string): "After" | "Before" | null {
-  if (searchType === "after" || searchType === "from") return "After";
-  if (searchType === "before" || searchType === "until") return "Before";
-  return null;
-}
-
-/** Convert a date string from <input type="date"> (yyyy-MM-dd) to ISO 8601 for the API */
-function dateToApi(dateStr: string): string {
-  return `${dateStr}T00:00:00Z`;
-}
-
-/** Convert an ISO 8601 date string back to input format (yyyy-MM-dd) */
 function apiToDate(apiStr: string): string {
   if (apiStr.includes("T")) {
     const date = new Date(apiStr);
@@ -100,37 +76,31 @@ function apiToDate(apiStr: string): string {
       return format(date, "yyyy-MM-dd");
     }
   }
-  const parsed = parse(apiStr, "yyyy-MM-dd", new Date());
-  if (!Number.isNaN(parsed.getTime())) return apiStr;
   return apiStr;
 }
 
 interface FilterGroup {
   label: string;
-  items: SearchProperty[];
+  items: SearchFilterProperty[];
 }
 
-function groupFilterProperties(props: SearchProperty[]): FilterGroup[] {
+function groupFilterProperties(props: SearchFilterProperty[]): FilterGroup[] {
   const groups: FilterGroup[] = [];
   const seen = new Set<string>();
   for (const prop of props) {
-    const base = parseName(prop.name).base;
-    if (seen.has(base)) continue;
-    seen.add(base);
-    const items = props.filter((p) => parseName(p.name).base === base);
-    groups.push({ label: formatFieldLabel(items[0]), items });
+    if (seen.has(prop.groupKey)) continue;
+    seen.add(prop.groupKey);
+    const items = props.filter((p) => p.groupKey === prop.groupKey);
+    groups.push({ label: prop.label, items });
   }
   return groups;
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
 function ClearButton({
   onClick,
   visible = true,
-}: Readonly<{ onClick: () => void; visible?: boolean }>) {
+  ariaLabel = "Clear",
+}: Readonly<{ onClick: () => void; visible?: boolean; ariaLabel?: string }>) {
   return (
     <Button
       type="button"
@@ -140,7 +110,7 @@ function ClearButton({
       onClick={onClick}
     >
       <X className="h-3 w-3" />
-      <span className="sr-only">Clear</span>
+      <span className="sr-only">{ariaLabel}</span>
     </Button>
   );
 }
@@ -152,7 +122,7 @@ function DateGroupFilter({
   onFilterChange,
 }: Readonly<{
   label: string;
-  items: SearchProperty[];
+  items: SearchFilterProperty[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string | undefined) => void;
 }>) {
@@ -160,31 +130,35 @@ function DateGroupFilter({
     <div className="space-y-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       {items.map((prop) => {
-        const searchType = getSearchType(prop);
         const value = filters[prop.name] ?? "";
-        const direction = getDirectionLabel(searchType);
-
         return (
           <div key={prop.name} className="space-y-1">
-            {direction && <span className="text-xs text-muted-foreground">{direction}</span>}
+            {prop.directionLabel && (
+              <span className="text-xs text-muted-foreground">{prop.directionLabel}</span>
+            )}
             <div className="flex items-center gap-1">
               <div className="min-w-0 flex-1">
                 <Input
                   type="date"
-                  aria-label={direction ? `${label} ${direction.toLowerCase()}` : label}
+                  aria-label={
+                    prop.directionLabel ? `${label} ${prop.directionLabel.toLowerCase()}` : label
+                  }
                   className="h-8 text-sm"
                   value={value ? apiToDate(value) : ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const raw = e.target.value;
                     onFilterChange(
                       prop.name,
-                      e.target.value
-                        ? encodeDateInputValue(e.target.value, isRangePair(prop.name))
-                        : undefined,
-                    )
-                  }
+                      raw ? (prop.dateEncoding === "plain" ? raw : `${raw}T00:00:00Z`) : undefined,
+                    );
+                  }}
                 />
               </div>
-              <ClearButton onClick={() => onFilterChange(prop.name, undefined)} visible={!!value} />
+              <ClearButton
+                onClick={() => onFilterChange(prop.name, undefined)}
+                visible={!!value}
+                ariaLabel={`Clear ${label}${prop.directionLabel ? ` ${prop.directionLabel.toLowerCase()}` : ""}`}
+              />
             </div>
           </div>
         );
@@ -229,23 +203,20 @@ function EnumFilter({
 }
 
 function DateFilter({
-  propName,
   label,
-  searchType,
+  directionLabel,
+  dateEncoding,
   value,
   onChange,
-  rawDate = false,
 }: Readonly<{
-  propName: string;
   label: string;
-  searchType: string;
+  directionLabel?: "After" | "Before" | "From" | "Until";
+  dateEncoding?: "iso" | "plain";
   value: string;
   onChange: (value: string | undefined) => void;
-  rawDate?: boolean;
 }>) {
-  const direction = getDirectionLabel(searchType);
-  const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
-  const inputId = `filter-${propName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const displayLabel = directionLabel ? `${label} ${directionLabel.toLowerCase()}` : label;
+  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -259,9 +230,10 @@ function DateFilter({
             type="date"
             className="h-8 text-sm"
             value={value ? apiToDate(value) : ""}
-            onChange={(e) =>
-              onChange(e.target.value ? encodeDateInputValue(e.target.value, rawDate) : undefined)
-            }
+            onChange={(e) => {
+              const raw = e.target.value;
+              onChange(raw ? (dateEncoding === "plain" ? raw : `${raw}T00:00:00Z`) : undefined);
+            }}
           />
         </div>
         <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
@@ -271,21 +243,18 @@ function DateFilter({
 }
 
 function TextFilter({
-  propName,
   label,
+  directionLabel,
   value,
   onChange,
-  searchType = "exact",
 }: Readonly<{
-  propName: string;
   label: string;
+  directionLabel?: "After" | "Before" | "From" | "Until";
   value: string;
   onChange: (value: string | undefined) => void;
-  searchType?: string;
 }>) {
-  const direction = getDirectionLabel(searchType);
-  const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
-  const inputId = `filter-${propName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const displayLabel = directionLabel ? `${label} ${directionLabel.toLowerCase()}` : label;
+  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -309,9 +278,8 @@ function TextFilter({
 }
 
 /**
- * Text input with a typeahead suggestions dropdown for ~prefix search fields.
+ * Text input with a typeahead suggestions dropdown for prefix-match search fields.
  * Suggestions are supplied externally (from useTypeahead via FilterSidebarProps).
- * The input value is the live filter value; selecting a suggestion sets it exactly.
  */
 function TypeaheadTextFilter({
   label,
@@ -374,10 +342,13 @@ function TypeaheadTextFilter({
         </PopoverAnchor>
         <PopoverContent
           align="start"
-          // Match the anchor width so the dropdown aligns with the input
           className="w-[var(--radix-popover-anchor-width)] p-1"
           // Prevent stealing focus from the input when the popover opens
           onOpenAutoFocus={(e) => e.preventDefault()}
+          // Focus lives on the input (inside PopoverAnchor, not PopoverContent).
+          // Without this, Radix fires onOpenChange(false) the instant the popover
+          // opens because it sees focus "outside" the content — causing the flash.
+          onFocusOutside={(e) => e.preventDefault()}
         >
           {isLoading && !hasSuggestions && (
             <p className="py-2 text-center text-sm text-muted-foreground">Loading…</p>
@@ -447,7 +418,7 @@ export function FilterSidebar({
       <div className="space-y-4">
         {groups.map((group, index) => {
           const isDateGroup =
-            group.items.length > 1 && group.items.every((p) => getInputType(p) === "date");
+            group.items.length > 1 && group.items.every((p) => p.inputKind === "date");
 
           return (
             <div key={group.label}>
@@ -462,50 +433,49 @@ export function FilterSidebar({
                   />
                 ) : (
                   group.items.map((prop) => {
-                    const type = getInputType(prop);
                     const value = filters[prop.name] ?? "";
-                    const label = formatFieldLabel(prop);
-                    const searchType = getSearchType(prop);
 
-                    // 1. Handle Select/Enum types
-                    if (type === "select" && prop.options?.inline) {
+                    if (prop.inputKind === "select" && prop.options) {
                       return (
                         <EnumFilter
                           key={prop.name}
-                          label={label}
-                          options={prop.options.inline}
+                          label={prop.label}
+                          options={prop.options}
                           value={value}
                           onChange={(v) => onFilterChange(prop.name, v)}
                         />
                       );
                     }
 
-                    // 2. Handle Date types
-                    if (type === "date") {
+                    if (prop.inputKind === "date") {
                       return (
                         <DateFilter
                           key={prop.name}
-                          propName={prop.name}
-                          label={label}
-                          searchType={searchType}
+                          label={prop.label}
+                          directionLabel={prop.directionLabel}
+                          dateEncoding={prop.dateEncoding}
                           value={value}
-                          rawDate={isRangePair(prop.name)}
                           onChange={(v) => onFilterChange(prop.name, v)}
                         />
                       );
                     }
 
-                    // 3. Handle Text types
-                    if (type === "text") {
-                      // Suppress bare exact-match fields when a prefix-searchable sibling exists in the same group.
-                      const { op } = parseName(prop.name);
-                      if (!op && group.items.some((p) => p.prefixSearchable)) return null;
+                    if (prop.inputKind === "text") {
+                      // Suppress a bare exact-match field when a prefix-match sibling exists in
+                      // the same group (e.g. both "number" and "number~prefix" are present).
+                      if (
+                        prop.searchOperator === "exact-match" &&
+                        prop.name === prop.groupKey &&
+                        group.items.some((p) => p.searchOperator === "prefix-match")
+                      ) {
+                        return null;
+                      }
 
-                      if (prop.prefixSearchable && onTypeaheadSearch) {
+                      if (prop.searchOperator === "prefix-match" && onTypeaheadSearch) {
                         return (
                           <TypeaheadTextFilter
                             key={prop.name}
-                            label={label}
+                            label={prop.label}
                             fieldParam={prop.name}
                             value={value}
                             suggestions={typeaheadSuggestions?.[prop.name] ?? []}
@@ -519,9 +489,8 @@ export function FilterSidebar({
                       return (
                         <TextFilter
                           key={prop.name}
-                          propName={prop.name}
-                          label={label}
-                          searchType={searchType}
+                          label={prop.label}
+                          directionLabel={prop.directionLabel}
                           value={value}
                           onChange={(v) => onFilterChange(prop.name, v)}
                         />

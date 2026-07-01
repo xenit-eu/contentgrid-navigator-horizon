@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fireEvent, fn, userEvent, within } from "storybook/test";
 import { FilterSidebar } from "./filter-sidebar";
+import type { SearchFilterProperty } from "./filter-sidebar";
 
 const meta = {
   title: "Patterns/FilterSidebar",
@@ -11,22 +12,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Note: FilterSidebar renders inputs only for "select" (inline options) and "date" / date-suffix
-// type properties. Plain string properties without options fall through to null in the component
-// — confirmed by filter-sidebar.test.tsx. Text-based searching is typically handled elsewhere
-// (e.g. a top-level search bar).
-
 export const Default: Story = {
   args: {
     filterProperties: [
       {
         name: "status",
-        prompt: "Status",
-        type: "string",
-        options: { inline: ["draft", "pending", "paid", "cancelled"] },
+        label: "Status",
+        inputKind: "select",
+        searchOperator: "exact-match",
+        groupKey: "status",
+        options: ["draft", "pending", "paid", "cancelled"],
       },
-      { name: "issued_date~greater-than", type: "string" },
-    ],
+      {
+        name: "issued_date~greater-than",
+        label: "Issued Date",
+        inputKind: "date",
+        searchOperator: "greater-than",
+        groupKey: "issued_date",
+        directionLabel: "After",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
@@ -37,12 +43,22 @@ export const WithActiveFilters: Story = {
     filterProperties: [
       {
         name: "status",
-        prompt: "Status",
-        type: "string",
-        options: { inline: ["draft", "pending", "paid"] },
+        label: "Status",
+        inputKind: "select",
+        searchOperator: "exact-match",
+        groupKey: "status",
+        options: ["draft", "pending", "paid"],
       },
-      { name: "issued_date~greater-than", type: "string" },
-    ],
+      {
+        name: "issued_date~greater-than",
+        label: "Issued Date",
+        inputKind: "date",
+        searchOperator: "greater-than",
+        groupKey: "issued_date",
+        directionLabel: "After",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: { status: "paid" },
     onFilterChange: fn(),
     onClearAll: fn(),
@@ -54,11 +70,13 @@ export const WithEnumFilter: Story = {
     filterProperties: [
       {
         name: "status",
-        prompt: "Status",
-        type: "string",
-        options: { inline: ["draft", "pending", "paid", "cancelled"] },
+        label: "Status",
+        inputKind: "select",
+        searchOperator: "exact-match",
+        groupKey: "status",
+        options: ["draft", "pending", "paid", "cancelled"],
       },
-    ],
+    ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
@@ -67,9 +85,25 @@ export const WithEnumFilter: Story = {
 export const WithDateRangeFilter: Story = {
   args: {
     filterProperties: [
-      { name: "issued_date~greater-than", type: "string" },
-      { name: "issued_date~less-than", type: "string" },
-    ],
+      {
+        name: "issued_date~greater-than",
+        label: "Issued Date",
+        inputKind: "date",
+        searchOperator: "greater-than",
+        groupKey: "issued_date",
+        directionLabel: "After",
+        dateEncoding: "iso",
+      },
+      {
+        name: "issued_date~less-than",
+        label: "Issued Date",
+        inputKind: "date",
+        searchOperator: "less-than",
+        groupKey: "issued_date",
+        directionLabel: "Before",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
@@ -80,13 +114,31 @@ export const WithMixedFilters: Story = {
     filterProperties: [
       {
         name: "status",
-        prompt: "Status",
-        type: "string",
-        options: { inline: ["draft", "pending", "paid"] },
+        label: "Status",
+        inputKind: "select",
+        searchOperator: "exact-match",
+        groupKey: "status",
+        options: ["draft", "pending", "paid"],
       },
-      { name: "issued_date~greater-than", type: "string" },
-      { name: "issued_date~less-than", type: "string" },
-    ],
+      {
+        name: "issued_date~greater-than",
+        label: "Issued Date",
+        inputKind: "date",
+        searchOperator: "greater-than",
+        groupKey: "issued_date",
+        directionLabel: "After",
+        dateEncoding: "iso",
+      },
+      {
+        name: "issued_date~less-than",
+        label: "Issued Date",
+        inputKind: "date",
+        searchOperator: "less-than",
+        groupKey: "issued_date",
+        directionLabel: "Before",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: { status: "pending" },
     onFilterChange: fn(),
     onClearAll: fn(),
@@ -96,9 +148,25 @@ export const WithMixedFilters: Story = {
 export const WithRangePairFilter: Story = {
   args: {
     filterProperties: [
-      { name: "created.~from", type: "date" },
-      { name: "created.~until", type: "date" },
-    ],
+      {
+        name: "created.~from",
+        label: "Created",
+        inputKind: "date",
+        searchOperator: "greater-than-or-equal",
+        groupKey: "created",
+        directionLabel: "From",
+        dateEncoding: "plain",
+      },
+      {
+        name: "created.~until",
+        label: "Created",
+        inputKind: "date",
+        searchOperator: "less-than-or-equal",
+        groupKey: "created",
+        directionLabel: "Until",
+        dateEncoding: "plain",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
@@ -107,9 +175,23 @@ export const WithRangePairFilter: Story = {
 export const WithRangePairNumericFilter: Story = {
   args: {
     filterProperties: [
-      { name: "amount.~gte", type: "string" },
-      { name: "amount.~lte", type: "string" },
-    ],
+      {
+        name: "amount.~gte",
+        label: "Amount",
+        inputKind: "text",
+        searchOperator: "greater-than-or-equal",
+        groupKey: "amount",
+        directionLabel: "From",
+      },
+      {
+        name: "amount.~lte",
+        label: "Amount",
+        inputKind: "text",
+        searchOperator: "less-than-or-equal",
+        groupKey: "amount",
+        directionLabel: "Until",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
@@ -118,16 +200,22 @@ export const WithRangePairNumericFilter: Story = {
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
-    filterProperties: [{ name: "created_at", type: "date" }],
+    filterProperties: [
+      {
+        name: "created_at",
+        label: "Created At",
+        inputKind: "date",
+        searchOperator: "exact-match",
+        groupKey: "created_at",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    // date-type property renders an <input type="date">
     const input = canvas.getByDisplayValue("");
-    await expect(input).toBeInTheDocument();
-    // fireEvent.change matches the pattern used in filter-sidebar.test.tsx for date inputs
     fireEvent.change(input, { target: { value: "2024-01-15" } });
     await expect(args.onFilterChange).toHaveBeenCalledWith("created_at", "2024-01-15T00:00:00Z");
   },
@@ -139,11 +227,13 @@ export const ClearAllInteraction: Story = {
     filterProperties: [
       {
         name: "status",
-        prompt: "Status",
-        type: "string",
-        options: { inline: ["draft", "pending", "paid"] },
+        label: "Status",
+        inputKind: "select",
+        searchOperator: "exact-match",
+        groupKey: "status",
+        options: ["draft", "pending", "paid"],
       },
-    ],
+    ] satisfies SearchFilterProperty[],
     filters: { status: "paid" },
     onFilterChange: fn(),
     onClearAll: fn(),
@@ -151,7 +241,6 @@ export const ClearAllInteraction: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const clearBtn = canvas.getByRole("button", { name: /clear all/i });
-    await expect(clearBtn).toBeInTheDocument();
     await userEvent.click(clearBtn);
     await expect(args.onClearAll).toHaveBeenCalled();
   },
