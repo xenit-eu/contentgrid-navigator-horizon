@@ -92,6 +92,18 @@ function isBySearch(
  * ```
  */
 /**
+ * Parse a URL string into its origin, or `null` when it cannot be parsed as
+ * an absolute URL (e.g. relative paths, malformed input).
+ */
+function safeOrigin(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Resolve the collection request URL and query-enabled flag from the params,
  * without calling any hooks. Shared by both collection hooks so each can call
  * its TanStack hook exactly once, unconditionally (rules-of-hooks safe).
@@ -100,9 +112,18 @@ function resolveCollectionRequest(params: EntityCollectionParams): {
   url: string;
   enabled: boolean;
 } {
-  // URL-based fetch: always enabled
+  // URL-based fetch: only trust URLs that share the origin of the entity's
+  // own collection URL. A caller-supplied cursor (e.g. from bookmarked or
+  // crafted URL state) could otherwise point apiFetch — which unconditionally
+  // attaches the bearer token — at an attacker-controlled origin. Discard and
+  // fall back to the normal first-page request instead of throwing.
   if (isByUrl(params)) {
-    return { url: params.url, enabled: true };
+    const trustedOrigin = safeOrigin(params.profileEntity.collectionUrl);
+    const suppliedOrigin = safeOrigin(params.url);
+    if (suppliedOrigin !== null && suppliedOrigin === trustedOrigin) {
+      return { url: params.url, enabled: true };
+    }
+    return resolveCollectionRequest({ profileEntity: params.profileEntity });
   }
 
   let request: ReturnType<ProfileEntity["searchEntityRequest"]> | null;

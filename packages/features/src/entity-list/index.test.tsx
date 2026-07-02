@@ -436,6 +436,88 @@ describe("EntityList", () => {
     expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
   });
 
+  it("does not offer a reset when the collection fails without an active cursor", async () => {
+    vi.useFakeTimers();
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, () => HttpResponse.json(null, { status: 500 })),
+    );
+
+    renderEntityList("/invoice");
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back to first page/i })).not.toBeInTheDocument();
+  });
+
+  it("offers a reset to the first page when a stale cursor fails to load", async () => {
+    vi.useFakeTimers();
+
+    // A same-origin cursor survives the data layer's origin guard, so the
+    // request reaches the server and gets rejected as a stale/invalid cursor.
+    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
+        return HttpResponse.json({
+          _links: { self: { href: `${API_URL}/invoices` } },
+          _embedded: { item: [] },
+          page: { size: 0, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back to first page/i })).toBeInTheDocument();
+  });
+
+  it("recovers to the first page when the reset action is clicked", async () => {
+    vi.useFakeTimers();
+
+    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
+        return HttpResponse.json({
+          _links: { self: { href: `${API_URL}/invoices` } },
+          _embedded: { item: [] },
+          page: { size: 0, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    const resetButton = await screen.findByRole("button", { name: /back to first page/i });
+
+    const user = userEvent.setup();
+    await user.click(resetButton);
+
+    // Clearing the cursor switches the hook to the default (first-page) request,
+    // which succeeds — the error and its reset action disappear.
+    await screen.findByRole("table");
+    expect(screen.queryByText(/Failed to load/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back to first page/i })).not.toBeInTheDocument();
+  });
+
   it("shows entity item count badge when collection succeeds", async () => {
     server.use(
       profileRootHandler(),

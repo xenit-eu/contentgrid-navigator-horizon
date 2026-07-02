@@ -361,7 +361,23 @@ function EntityDetailView({
       {/* Error */}
       {collection.isError && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Failed to load {profile.pluralName}: {collection.error.message}
+          <p>
+            Failed to load {profile.pluralName}: {collection.error.message}
+          </p>
+          {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
+              shared or expired s.cursor makes the server reject the request
+              and would otherwise strand the user on an unrecoverable URL.
+              Offer a reset to the first page whenever a cursor was active. */}
+          {pageUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => onPageUrlChange(undefined)}
+            >
+              Back to first page
+            </Button>
+          )}
         </div>
       )}
 
