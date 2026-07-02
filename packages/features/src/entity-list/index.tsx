@@ -8,6 +8,7 @@ import {
   type ProfileEntity,
   createValues,
   resolveTrustedCollectionUrl,
+  extractFieldErrors,
   useCreateEntityItem,
   useDeleteRelationItem,
   useEntityItem,
@@ -23,6 +24,7 @@ import {
   useProfileEntities,
   useSetToOneRelation,
   useUnlinkRelation,
+  ProblemDetailError,
 } from "@contentgrid/navigator-data";
 import {
   AlertDialog,
@@ -631,8 +633,17 @@ function EntityItemDetailView({
 function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOneRelation }>) {
   const go = useNavigate() as unknown as AnyNavigateFn;
   const result = useEntityItemToOneRelation(relation);
-  const { mutate: clearRelation, isPending: isClearing } = useClearRelation(relation);
-  const { mutate: setRelation, isPending: isSetting } = useSetToOneRelation(relation);
+  const {
+    mutate: clearRelation,
+    isPending: isClearing,
+    error: clearError,
+  } = useClearRelation(relation);
+  const {
+    mutate: setRelation,
+    isPending: isSetting,
+    error: setError,
+  } = useSetToOneRelation(relation);
+  const mutationError = clearError ?? setError;
   const [linkOpen, setLinkOpen] = useState(false);
   const profileResults = useProfileEntities();
   const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
@@ -685,6 +696,7 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
           )}
         </div>
       </div>
+      {mutationError && <MutationErrorDisplay error={mutationError} />}
       {result.isPending && <Skeleton className="h-12 w-full rounded-md" />}
       {result.isError && (
         <p className="text-xs text-destructive">Failed to load: {result.error.message}</p>
@@ -728,12 +740,29 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
   const go = useNavigate() as unknown as AnyNavigateFn;
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
   const result = useEntityItemToManyRelation(relation, { pageUrl });
-  const { mutate: clearRelation, isPending: isClearing } = useClearRelation(relation, {
+  const {
+    mutate: clearRelation,
+    isPending: isClearing,
+    error: clearError,
+  } = useClearRelation(relation, {
     mutationOptions: { onSuccess: () => setPageUrl(undefined) },
   });
-  const { mutate: addRelation, isPending: isAdding } = useAddToManyRelation(relation);
-  const { mutate: unlinkItem, isPending: isUnlinking } = useUnlinkRelation(relation);
-  const { mutate: deleteItem, isPending: isDeleting } = useDeleteRelationItem(relation);
+  const {
+    mutate: addRelation,
+    isPending: isAdding,
+    error: addError,
+  } = useAddToManyRelation(relation);
+  const {
+    mutate: unlinkItem,
+    isPending: isUnlinking,
+    error: unlinkError,
+  } = useUnlinkRelation(relation);
+  const {
+    mutate: deleteItem,
+    isPending: isDeleting,
+    error: deleteError,
+  } = useDeleteRelationItem(relation);
+  const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
   const [testSearchActive, setTestSearchActive] = useState(false);
   const profileResults = useProfileEntities();
@@ -817,6 +846,7 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
           )}
         </div>
       </div>
+      {mutationError && <MutationErrorDisplay error={mutationError} />}
       {result.isPending && <Skeleton className="h-12 w-full rounded-md" />}
       {result.isError && (
         <p className="text-xs text-destructive">Failed to load: {result.error.message}</p>
@@ -982,6 +1012,39 @@ function RelationItemSearchDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MutationErrorDisplay — structured error from a failed relation mutation
+// ---------------------------------------------------------------------------
+
+function MutationErrorDisplay({ error }: Readonly<{ error: Error }>) {
+  if (!(error instanceof ProblemDetailError)) {
+    return <p className="text-xs text-destructive">{error.message}</p>;
+  }
+  const { status, title, detail, type } = error.problemDetail;
+  const fieldErrors = extractFieldErrors(error);
+  const problemTypeLabel = type ? type.split("/").filter(Boolean).pop() : undefined;
+  return (
+    <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive space-y-1">
+      <div className="flex items-baseline gap-2">
+        <span className="font-semibold tabular-nums">{status}</span>
+        <span className="font-medium">{title}</span>
+        {detail && detail !== title && <span>{detail}</span>}
+      </div>
+      {problemTypeLabel && <p className="font-mono text-muted-foreground">{problemTypeLabel}</p>}
+      {fieldErrors.length > 0 && (
+        <ul className="mt-1 list-inside list-disc space-y-0.5">
+          {fieldErrors.map((fe, i) => (
+            <li key={i}>
+              {fe.property && <span className="font-medium">{fe.property}: </span>}
+              {fe.detail ?? fe.title}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
