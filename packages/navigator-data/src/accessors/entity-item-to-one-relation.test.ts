@@ -242,10 +242,13 @@ describe("EntityItemToOneRelation.fetchQuery — queryKey", () => {
   it("has the correct toOneRelation.byUrl queryKey", () => {
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeSupplierProfile();
-    const opts = EntityItemToOneRelation.fetchQuery(apiFetch, SUPPLIER_RELATION_URL, targetProfile);
-    expect(opts.queryKey).toEqual(
-      queryKeys.toOneRelation.byUrl(targetProfile, SUPPLIER_RELATION_URL),
+    const opts = EntityItemToOneRelation.fetchQuery(
+      apiFetch,
+      SUPPLIER_RELATION_URL,
+      targetProfile,
+      "supplier",
     );
+    expect(opts.queryKey).toEqual(queryKeys.toOneRelation.byUrl("supplier", SUPPLIER_RELATION_URL));
   });
 
   it("applies override options — staleTime override wins", () => {
@@ -255,6 +258,7 @@ describe("EntityItemToOneRelation.fetchQuery — queryKey", () => {
       apiFetch,
       SUPPLIER_RELATION_URL,
       targetProfile,
+      "supplier",
       {
         staleTime: 1234,
       },
@@ -277,7 +281,12 @@ describe("EntityItemToOneRelation.fetchQuery — success", () => {
     );
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeSupplierProfile();
-    const opts = EntityItemToOneRelation.fetchQuery(apiFetch, absoluteUrl, targetProfile);
+    const opts = EntityItemToOneRelation.fetchQuery(
+      apiFetch,
+      absoluteUrl,
+      targetProfile,
+      "supplier",
+    );
     const result = await opts.queryFn!({
       queryKey: opts.queryKey,
       signal: new AbortController().signal,
@@ -301,9 +310,15 @@ describe("EntityItemToOneRelation.fetchQuery — 404 returns null", () => {
     );
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeSupplierProfile();
-    const opts = EntityItemToOneRelation.fetchQuery(apiFetch, absoluteUrl, targetProfile, {
-      retry: false,
-    });
+    const opts = EntityItemToOneRelation.fetchQuery(
+      apiFetch,
+      absoluteUrl,
+      targetProfile,
+      "supplier",
+      {
+        retry: false,
+      },
+    );
     const result = await opts.queryFn!({
       queryKey: opts.queryKey,
       signal: new AbortController().signal,
@@ -324,7 +339,7 @@ describe("EntityItemToOneRelation — instance fetchQuery", () => {
     const targetProfile = makeSupplierProfile();
     const opts = rel.fetchQuery(apiFetch, targetProfile);
     // queryKey must use the link href, not the full absolute URL constant
-    expect(opts.queryKey).toEqual(queryKeys.toOneRelation.byUrl(targetProfile, RELATION_HREF));
+    expect(opts.queryKey).toEqual(queryKeys.toOneRelation.byUrl("supplier", RELATION_HREF));
   });
 });
 

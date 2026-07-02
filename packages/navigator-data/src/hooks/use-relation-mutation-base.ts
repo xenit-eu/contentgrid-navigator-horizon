@@ -56,20 +56,12 @@ export function useRelationMutationBase<
   const { apiFetch } = useNavigatorData();
   const queryClient = useQueryClient();
 
-  // Derive the target entity name synchronously from the relation's profile metadata.
-  // This is available immediately without waiting for profile queries to resolve —
-  // it comes from the blueprint:target-entity link embedded in the source item's
-  // profile data that was passed when constructing the relation accessor.
-  // Used in onSettled to build the exact relation read key for cache invalidation
-  // without a dependency on async profile loading completing before mutation settle.
-  const targetEntityName = relation.profileRelation.targetProfileLink?.name;
-
   const { onSuccess, onSettled, ...restMutationOptions } = mutationOptions ?? {};
 
   return useMutation<void, Error, TInput>({
     mutationFn: async (input) => {
       // Build op-specific request (PUT / POST / DELETE with text/uri-list body).
-      const baseReq = buildRequest(input);
+      const baseReq = await buildRequest(input);
 
       // Attach If-Match from the source item ETag (conditional request per RFC 9110).
       const req = addIfMatchHeader(baseReq, relation.source.etag);
@@ -84,17 +76,12 @@ export function useRelationMutationBase<
     onSettled: async (_, error, input, context, mutation) => {
       // Invalidate the relation read key so the read hook refetches after mutation.
       // Runs on BOTH success and error so stale caches are always busted.
-      // Uses byUrlForName (entity name string) rather than byUrl (ProfileEntity) so
-      // the key is available immediately — targetEntityName comes from the embedded
-      // blueprint:target-entity link and does not depend on profile queries settling.
-      // Skipped when targetEntityName is absent (degenerate profile without target link).
-      if (targetEntityName) {
-        const readKey =
-          relation instanceof EntityItemToOneRelation
-            ? queryKeys.toOneRelation.byUrlForName(targetEntityName, relation.link.href)
-            : queryKeys.toManyRelation.byUrlForName(targetEntityName, relation.link.href);
-        await queryClient.invalidateQueries({ queryKey: readKey });
-      }
+      // relation.name is always available — no profile lookup needed.
+      const readKey =
+        relation instanceof EntityItemToOneRelation
+          ? queryKeys.toOneRelation.byUrl(relation.name, relation.link.href)
+          : queryKeys.toManyRelation.byUrl(relation.name, relation.link.href);
+      await queryClient.invalidateQueries({ queryKey: readKey });
 
       // Invalidate the source item's entityItem cache entry unconditionally.
       // Relation set/add/clear is gated on the source item's ETag and may bump it — a

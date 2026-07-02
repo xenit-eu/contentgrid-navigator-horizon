@@ -49,6 +49,7 @@ export class EntityItemToManyRelation {
     apiFetch: TypedFetch,
     url: string,
     targetProfileEntity: ProfileEntity,
+    relationName: string,
     override: QueryOptionsOverride<EntityItemCollection, Error> = {},
   ) {
     const base = EntityItemCollection.fetchByUrlQuery(apiFetch, url, targetProfileEntity, override);
@@ -57,7 +58,7 @@ export class EntityItemToManyRelation {
     // caller passed a custom queryKey in override.
     return {
       ...base,
-      queryKey: queryKeys.toManyRelation.byUrl(targetProfileEntity, url),
+      queryKey: queryKeys.toManyRelation.byUrl(relationName, url),
     };
   }
 
@@ -81,7 +82,12 @@ export class EntityItemToManyRelation {
    * Uses `this.link.href` as the URL.
    */
   public fetchQuery(apiFetch: TypedFetch, targetProfileEntity: ProfileEntity) {
-    return EntityItemToManyRelation.fetchQuery(apiFetch, this.link.href, targetProfileEntity);
+    return EntityItemToManyRelation.fetchQuery(
+      apiFetch,
+      this.link.href,
+      targetProfileEntity,
+      this.name,
+    );
   }
 
   // ========================================

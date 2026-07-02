@@ -54,10 +54,11 @@ export class EntityItemToOneRelation {
     apiFetch: TypedFetch,
     url: string,
     targetProfileEntity: ProfileEntity,
+    relationName: string,
     override: QueryOptionsOverride<EntityItem | null, Error> = {},
   ) {
     return queryOptions({
-      queryKey: queryKeys.toOneRelation.byUrl(targetProfileEntity, url),
+      queryKey: queryKeys.toOneRelation.byUrl(relationName, url),
       queryFn: async () => {
         try {
           const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, new Request(url));
@@ -104,7 +105,12 @@ export class EntityItemToOneRelation {
    * Delegates to the static factory using `this.link.href`.
    */
   public fetchQuery(apiFetch: TypedFetch, targetProfileEntity: ProfileEntity) {
-    return EntityItemToOneRelation.fetchQuery(apiFetch, this.link.href, targetProfileEntity);
+    return EntityItemToOneRelation.fetchQuery(
+      apiFetch,
+      this.link.href,
+      targetProfileEntity,
+      this.name,
+    );
   }
 
   // ========================================

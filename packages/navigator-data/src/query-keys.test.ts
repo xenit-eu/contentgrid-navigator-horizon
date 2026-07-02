@@ -115,71 +115,68 @@ describe("queryKeys.profileRoot", () => {
 });
 
 describe("queryKeys.toOneRelation", () => {
-  const profile = makeProfileEntity("supplier", "/profile/suppliers");
-
-  it("forTargetEntity returns prefix key with target entity name", () => {
-    const key = queryKeys.toOneRelation.forTargetEntity(profile);
+  it("forRelationName returns prefix key with relation name", () => {
+    const key = queryKeys.toOneRelation.forRelationName("supplier");
     expect(key).toEqual(["ToOneRelation", "supplier"]);
   });
 
-  it("byUrl returns key including target entity name and URL", () => {
-    const key = queryKeys.toOneRelation.byUrl(profile, "/invoices/inv-001/supplier");
+  it("byUrl returns key including relation name and URL", () => {
+    const key = queryKeys.toOneRelation.byUrl("supplier", "/invoices/inv-001/supplier");
     expect(key).toEqual(["ToOneRelation", "supplier", "/invoices/inv-001/supplier"]);
   });
 
-  it("forTargetEntity key is a prefix of byUrl key", () => {
-    const prefix = queryKeys.toOneRelation.forTargetEntity(profile);
-    const full = queryKeys.toOneRelation.byUrl(profile, "/invoices/inv-001/supplier");
+  it("forRelationName key is a prefix of byUrl key", () => {
+    const prefix = queryKeys.toOneRelation.forRelationName("supplier");
+    const full = queryKeys.toOneRelation.byUrl("supplier", "/invoices/inv-001/supplier");
     expect(full.slice(0, prefix.length)).toEqual([...prefix]);
   });
 
   it("different URLs produce different byUrl keys", () => {
-    const key1 = queryKeys.toOneRelation.byUrl(profile, "/invoices/inv-001/supplier");
-    const key2 = queryKeys.toOneRelation.byUrl(profile, "/invoices/inv-002/supplier");
+    const key1 = queryKeys.toOneRelation.byUrl("supplier", "/invoices/inv-001/supplier");
+    const key2 = queryKeys.toOneRelation.byUrl("supplier", "/invoices/inv-002/supplier");
     expect(key1).not.toEqual(key2);
   });
 
   it("root string does not collide with entityItem namespace", () => {
-    const toOneKey = queryKeys.toOneRelation.forTargetEntity(profile);
+    const profile = makeProfileEntity("supplier", "/profile/suppliers");
+    const toOneKey = queryKeys.toOneRelation.forRelationName("supplier");
     const entityItemKey = queryKeys.entityItem.forEntity(profile);
     expect(toOneKey[0]).not.toEqual(entityItemKey[0]);
   });
 });
 
 describe("queryKeys.toManyRelation", () => {
-  const profile = makeProfileEntity("lineItem", "/profile/line-items");
-
-  it("forTargetEntity returns prefix key with target entity name", () => {
-    const key = queryKeys.toManyRelation.forTargetEntity(profile);
-    expect(key).toEqual(["ToManyRelation", "lineItem"]);
+  it("forRelationName returns prefix key with relation name", () => {
+    const key = queryKeys.toManyRelation.forRelationName("lineItems");
+    expect(key).toEqual(["ToManyRelation", "lineItems"]);
   });
 
-  it("byUrl returns key including target entity name and URL", () => {
-    const key = queryKeys.toManyRelation.byUrl(profile, "/invoices/inv-001/lineItems");
-    expect(key).toEqual(["ToManyRelation", "lineItem", "/invoices/inv-001/lineItems"]);
+  it("byUrl returns key including relation name and URL", () => {
+    const key = queryKeys.toManyRelation.byUrl("lineItems", "/invoices/inv-001/lineItems");
+    expect(key).toEqual(["ToManyRelation", "lineItems", "/invoices/inv-001/lineItems"]);
   });
 
-  it("forTargetEntity key is a prefix of byUrl key", () => {
-    const prefix = queryKeys.toManyRelation.forTargetEntity(profile);
-    const full = queryKeys.toManyRelation.byUrl(profile, "/invoices/inv-001/lineItems");
+  it("forRelationName key is a prefix of byUrl key", () => {
+    const prefix = queryKeys.toManyRelation.forRelationName("lineItems");
+    const full = queryKeys.toManyRelation.byUrl("lineItems", "/invoices/inv-001/lineItems");
     expect(full.slice(0, prefix.length)).toEqual([...prefix]);
   });
 
   it("different URLs produce different byUrl keys", () => {
-    const key1 = queryKeys.toManyRelation.byUrl(profile, "/invoices/inv-001/lineItems");
-    const key2 = queryKeys.toManyRelation.byUrl(profile, "/invoices/inv-002/lineItems");
+    const key1 = queryKeys.toManyRelation.byUrl("lineItems", "/invoices/inv-001/lineItems");
+    const key2 = queryKeys.toManyRelation.byUrl("lineItems", "/invoices/inv-002/lineItems");
     expect(key1).not.toEqual(key2);
   });
 
   it("root string does not collide with toOneRelation namespace", () => {
-    const toManyKey = queryKeys.toManyRelation.forTargetEntity(profile);
-    const toOneProfile = makeProfileEntity("lineItem", "/profile/line-items");
-    const toOneKey = queryKeys.toOneRelation.forTargetEntity(toOneProfile);
+    const toManyKey = queryKeys.toManyRelation.forRelationName("lineItems");
+    const toOneKey = queryKeys.toOneRelation.forRelationName("lineItems");
     expect(toManyKey[0]).not.toEqual(toOneKey[0]);
   });
 
   it("root string does not collide with entityItem namespace", () => {
-    const toManyKey = queryKeys.toManyRelation.forTargetEntity(profile);
+    const profile = makeProfileEntity("lineItem", "/profile/line-items");
+    const toManyKey = queryKeys.toManyRelation.forRelationName("lineItems");
     const entityItemKey = queryKeys.entityItem.forEntity(profile);
     expect(toManyKey[0]).not.toEqual(entityItemKey[0]);
   });

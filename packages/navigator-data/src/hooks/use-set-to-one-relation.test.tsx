@@ -151,7 +151,6 @@ const invoiceProfileBody = {
           self: { href: `${INVOICE_PROFILE_URL}/relations/lineItems` },
           [BLUEPRINT_TARGET_ENTITY_REL]: {
             href: `${BASE}/profile/line-items`,
-            name: "lineItem",
             title: "Line Item",
           },
         },
@@ -171,27 +170,6 @@ function makeInvoiceProfile(): ProfileEntity {
   return new ProfileEntity(
     { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" } as unknown as Link,
     hal,
-  );
-}
-
-function makeSupplierProfile(): ProfileEntity {
-  const profileBody = {
-    name: "supplier",
-    title: "Supplier",
-    _links: {
-      self: { href: SUPPLIER_PROFILE_URL },
-      describes: [
-        { href: SUPPLIER_PROFILE_URL },
-        { href: `${BASE}/suppliers`, name: "collection" },
-        { href: `${BASE}/suppliers/{id}`, name: "item", templated: true },
-      ],
-    },
-  };
-  const hal = new HalObject(profileBody as unknown as ProfileEntityShape);
-  const link = { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" };
-  return new ProfileEntity(
-    link as unknown as import("@contentgrid/hal").Link,
-    hal as HalObject<ProfileEntityShape>,
   );
 }
 
@@ -461,8 +439,8 @@ describe("useSetToOneRelation — cache invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // The key uses profile.name ("supplier") + relation.link.href — no object identity needed
-    const readKey = queryKeys.toOneRelation.byUrl(makeSupplierProfile(), SUPPLIER_RELATION_URL);
+    // The key uses the relation name ("supplier") + relation.link.href
+    const readKey = queryKeys.toOneRelation.byUrl("supplier", SUPPLIER_RELATION_URL);
     const calledWithReadKey = invalidateSpy.mock.calls.some((call) =>
       expect.objectContaining({ queryKey: readKey }).asymmetricMatch(call[0]),
     );

@@ -50,9 +50,9 @@ export function useEntityItemToOneRelation(
     // queryKey + no-op queryFn, and disable the query via `enabled: false`.
     // This mirrors the pattern in use-profile-entity.ts for unresolved entity links.
     ...(targetProfile
-      ? EntityItemToOneRelation.fetchQuery(apiFetch, relation.link.href, targetProfile)
+      ? relation.fetchQuery(apiFetch, targetProfile)
       : {
-          queryKey: ["ToOneRelation", null, null] as const,
+          queryKey: ["ToOneRelation", relation.name, null] as const,
           queryFn: () => Promise.resolve(null as unknown as EntityItem | null),
         }),
     enabled: !!targetProfile,

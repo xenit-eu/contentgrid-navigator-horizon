@@ -8,6 +8,12 @@ import { useProfileEntities } from "./use-profile-entity";
 
 export interface UseEntityItemToManyRelationOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItemCollection, Error>>;
+  /**
+   * Fetch a specific page URL instead of the relation's first-page URL.
+   * Use `collection.nextHref` / `collection.prevHref` from a previous result.
+   * Defaults to `relation.link.href` when omitted.
+   */
+  readonly pageUrl?: string;
 }
 
 /**
@@ -20,7 +26,7 @@ export interface UseEntityItemToManyRelationOptions {
  * An empty collection is returned when no items are linked (server returns an empty HAL slice).
  *
  * @param relation - The to-many relation instance from `entityItem.getToManyRelation(name)`
- * @param options  - Optional TanStack Query overrides
+ * @param options  - Optional TanStack Query overrides; pass `pageUrl` to fetch a specific page
  *
  * @example
  * ```typescript
@@ -43,14 +49,16 @@ export function useEntityItemToManyRelation(
     profileResults.flatMap((r) => r.data ?? []),
   );
 
+  const url = options?.pageUrl ?? relation.link.href;
+
   return useQuery({
     // When targetProfile is undefined (not yet resolved), use a stable placeholder
     // queryKey + no-op queryFn, and disable the query via `enabled: false`.
     // This mirrors the pattern in use-profile-entity.ts for unresolved entity links.
     ...(targetProfile
-      ? EntityItemToManyRelation.fetchQuery(apiFetch, relation.link.href, targetProfile)
+      ? EntityItemToManyRelation.fetchQuery(apiFetch, url, targetProfile, relation.name)
       : {
-          queryKey: ["ToManyRelation", null, null] as const,
+          queryKey: ["ToManyRelation", relation.name, null] as const,
           queryFn: () => Promise.resolve(null as unknown as EntityItemCollection),
         }),
     enabled: !!targetProfile,

@@ -260,16 +260,24 @@ describe("EntityItemToManyRelation.fetchQuery — static", () => {
   it("returns query options keyed under toManyRelation.byUrl", () => {
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeLineItemProfileEntity();
-    const opts = EntityItemToManyRelation.fetchQuery(apiFetch, ABS_LINE_ITEMS_URL, targetProfile);
-    expect(opts.queryKey).toEqual(
-      queryKeys.toManyRelation.byUrl(targetProfile, ABS_LINE_ITEMS_URL),
+    const opts = EntityItemToManyRelation.fetchQuery(
+      apiFetch,
+      ABS_LINE_ITEMS_URL,
+      targetProfile,
+      "lineItems",
     );
+    expect(opts.queryKey).toEqual(queryKeys.toManyRelation.byUrl("lineItems", ABS_LINE_ITEMS_URL));
   });
 
   it("queryKey differs from entityItemCollection.byUrl for the same url", () => {
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeLineItemProfileEntity();
-    const opts = EntityItemToManyRelation.fetchQuery(apiFetch, ABS_LINE_ITEMS_URL, targetProfile);
+    const opts = EntityItemToManyRelation.fetchQuery(
+      apiFetch,
+      ABS_LINE_ITEMS_URL,
+      targetProfile,
+      "lineItems",
+    );
     const collectionKey = queryKeys.entityItemCollection.byUrl(targetProfile, ABS_LINE_ITEMS_URL);
     expect(opts.queryKey).not.toEqual(collectionKey);
   });
@@ -277,9 +285,15 @@ describe("EntityItemToManyRelation.fetchQuery — static", () => {
   it("applies override options (e.g. staleTime)", () => {
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeLineItemProfileEntity();
-    const opts = EntityItemToManyRelation.fetchQuery(apiFetch, ABS_LINE_ITEMS_URL, targetProfile, {
-      staleTime: 9999,
-    });
+    const opts = EntityItemToManyRelation.fetchQuery(
+      apiFetch,
+      ABS_LINE_ITEMS_URL,
+      targetProfile,
+      "lineItems",
+      {
+        staleTime: 9999,
+      },
+    );
     expect(opts.staleTime).toBe(9999);
   });
 
@@ -290,6 +304,7 @@ describe("EntityItemToManyRelation.fetchQuery — static", () => {
       apiFetch,
       ABS_LINE_ITEMS_URL,
       targetProfile,
+      "lineItems",
       // Cast via unknown so TS excess-property check does not block the queryKey field;
       // the test intentionally verifies our namespace key wins over a caller-supplied one.
       { queryKey: ["custom", "key"] } as unknown as QueryOptionsOverride<
@@ -298,9 +313,7 @@ describe("EntityItemToManyRelation.fetchQuery — static", () => {
       >,
     );
     // Our to-many namespace key always wins
-    expect(opts.queryKey).toEqual(
-      queryKeys.toManyRelation.byUrl(targetProfile, ABS_LINE_ITEMS_URL),
-    );
+    expect(opts.queryKey).toEqual(queryKeys.toManyRelation.byUrl("lineItems", ABS_LINE_ITEMS_URL));
   });
 
   it("queryFn fetches and returns an EntityItemCollection", async () => {
@@ -312,7 +325,12 @@ describe("EntityItemToManyRelation.fetchQuery — static", () => {
     );
     const apiFetch = createApiClient(noopSupplier);
     const targetProfile = makeLineItemProfileEntity();
-    const opts = EntityItemToManyRelation.fetchQuery(apiFetch, ABS_LINE_ITEMS_URL, targetProfile);
+    const opts = EntityItemToManyRelation.fetchQuery(
+      apiFetch,
+      ABS_LINE_ITEMS_URL,
+      targetProfile,
+      "lineItems",
+    );
     const result = await opts.queryFn!({
       queryKey: opts.queryKey,
       signal: new AbortController().signal,
@@ -349,9 +367,7 @@ describe("EntityItemToManyRelation — instance fetchQuery", () => {
     const targetProfile = makeLineItemProfileEntity();
     const opts = rel.fetchQuery(apiFetch, targetProfile);
 
-    expect(opts.queryKey).toEqual(
-      queryKeys.toManyRelation.byUrl(targetProfile, ABS_LINE_ITEMS_URL),
-    );
+    expect(opts.queryKey).toEqual(queryKeys.toManyRelation.byUrl("lineItems", ABS_LINE_ITEMS_URL));
 
     const result = await opts.queryFn!({
       queryKey: opts.queryKey,

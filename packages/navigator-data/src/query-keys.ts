@@ -68,34 +68,18 @@ export const queryKeys = {
   },
 
   toOneRelation: {
-    /** Prefix key — invalidates ALL cached to-one relation queries for a target entity type. */
-    forTargetEntity: (targetProfile: ProfileEntity) =>
-      [TO_ONE_RELATION_KEY, targetProfile.name] as const,
-    /** Exact key for a specific to-one relation by its relation href. */
-    byUrl: (targetProfile: ProfileEntity, url: string) =>
-      [TO_ONE_RELATION_KEY, targetProfile.name, url] as const,
-    /**
-     * Exact key for a specific to-one relation by entity name string and href.
-     * Use when only the entity name is known (e.g. from the blueprint:target-entity link)
-     * and a full ProfileEntity is not available. Key shape is identical to `byUrl`.
-     */
-    byUrlForName: (entityName: string, url: string) =>
-      [TO_ONE_RELATION_KEY, entityName, url] as const,
+    /** Prefix key — invalidates ALL cached to-one relation queries for a given relation name. */
+    forRelationName: (relationName: string) => [TO_ONE_RELATION_KEY, relationName] as const,
+    /** Exact key for a specific to-one relation by relation name and relation URL. */
+    byUrl: (relationName: string, relationUrl: string) =>
+      [TO_ONE_RELATION_KEY, relationName, relationUrl] as const,
   },
 
   toManyRelation: {
-    /** Prefix key — invalidates ALL cached to-many relation queries for a target entity type. */
-    forTargetEntity: (targetProfile: ProfileEntity) =>
-      [TO_MANY_RELATION_KEY, targetProfile.name] as const,
-    /** Exact key for a specific to-many relation by its relation href. */
-    byUrl: (targetProfile: ProfileEntity, url: string) =>
-      [TO_MANY_RELATION_KEY, targetProfile.name, url] as const,
-    /**
-     * Exact key for a specific to-many relation by entity name string and href.
-     * Use when only the entity name is known (e.g. from the blueprint:target-entity link)
-     * and a full ProfileEntity is not available. Key shape is identical to `byUrl`.
-     */
-    byUrlForName: (entityName: string, url: string) =>
-      [TO_MANY_RELATION_KEY, entityName, url] as const,
+    /** Prefix key — invalidates ALL cached to-many relation queries for a given relation name. */
+    forRelationName: (relationName: string) => [TO_MANY_RELATION_KEY, relationName] as const,
+    /** Exact key for a specific to-many relation by relation name and relation URL. */
+    byUrl: (relationName: string, relationUrl: string) =>
+      [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
   },
 };
