@@ -81,10 +81,12 @@ entity name like `invoice`.
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
-- Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
+- Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`,
+  `useEntityItemToManyRelationSearch`
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
   delete: `useDeleteEntityItem`, relation set (to-one): `useSetToOneRelation`,
   relation add (to-many): `useAddToManyRelation`, relation clear: `useClearRelation`,
+  delete relation item: `useDeleteRelationItem`, unlink from to-many: `useUnlinkRelation`,
   binary content: `useUploadContent`, `useDownloadContent`
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
@@ -278,13 +280,15 @@ Where to find this now:
 
 All mutation hooks and relation accessors are implemented. Use the table below as a reference:
 
-| Operation            | Template key  | Hook                   | Accessor on `EntityItem`                                                                              |
-| -------------------- | ------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
-| Update               | `default`     | `useUpdateEntityItem`  | `defaultTemplate` + `editEntityRequest(values)`                                                       |
-| Delete               | `delete`      | `useDeleteEntityItem`  | `deleteTemplate` + `canDelete` + `deleteEntityItemRequest()` (no values)                              |
-| Set to-one relation  | `set-<rel>`   | `useSetToOneRelation`  | `getToOneRelation(name)?.setRelationRequest(targetHref)` via `EntityItemToOneRelation`                |
-| Add to-many relation | `add-<rel>`   | `useAddToManyRelation` | `getToManyRelation(name)?.addRelationRequest(targetHrefs)` via `EntityItemToManyRelation`             |
-| Clear relation       | `clear-<rel>` | `useClearRelation`     | `getToOneRelation(name)?.clearRelationRequest()` or `getToManyRelation(name)?.clearRelationRequest()` |
+| Operation                         | Template key        | Hook                    | Notes                                                                                                                       |
+| --------------------------------- | ------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Update                            | `default`           | `useUpdateEntityItem`   | `entityItem.defaultTemplate` + `editEntityRequest(values)`                                                                  |
+| Delete entity item                | `delete`            | `useDeleteEntityItem`   | `entityItem.canDelete` gate; also removes it from global collection cache                                                   |
+| Delete entity item from relation  | `delete` (on item)  | `useDeleteRelationItem` | Same as Delete but also invalidates the relation read key; use when the item lives inside a relation context                |
+| Unlink item from to-many relation | — (no template yet) | `useUnlinkRelation`     | **Removes the link only — the target entity is NOT deleted.** Workaround: `unlinkItemRequest` on `EntityItemToManyRelation` |
+| Set to-one relation               | `set-<rel>`         | `useSetToOneRelation`   | `getToOneRelation(name)?.setRelationRequest(targetHref)` via `EntityItemToOneRelation`                                      |
+| Add to-many relation              | `add-<rel>`         | `useAddToManyRelation`  | `getToManyRelation(name)?.addRelationRequest(targetHrefs)` via `EntityItemToManyRelation`                                   |
+| Clear relation (all items / slot) | `clear-<rel>`       | `useClearRelation`      | `getToOneRelation(name)?.clearRelationRequest()` or `getToManyRelation(name)?.clearRelationRequest()`                       |
 
 Binary content (PUT to `cg:content`) has no HAL-FORMS template — see the **Content exception**
 section below.
@@ -325,10 +329,31 @@ Each class carries:
   profile resolves from `useProfileEntities()`.
 - `useEntityItemToManyRelation(relation, options?)` → `UseQueryResult<EntityItemCollection, Error>`.
   Disabled until the target profile resolves.
+- `useEntityItemToManyRelationSearch(relation, searchValues, options?)` → `UseQueryResult<EntityItemCollection, Error>`.
+  Relation-scoped search within a to-many relation. Internally fetches the base collection first
+  (cache hit when `useEntityItemToManyRelation` is also mounted) to extract `internalRelationParams`,
+  then patches those into the search template via `withHiddenParams` and runs the user's
+  `searchValues` against the scoped template. Disabled when `searchValues` is `undefined` or while
+  the base collection is loading. See the workaround note in the "To-many relation collection
+  resolution" section.
 
 **Relation mutation hooks:**
 
-All three mutation hooks accept `(relation, options?)` — no `targetProfile` param; it is resolved
+**Conceptual vocabulary — link vs. delete:**
+
+| Concept                        | What it means                                                                                  | Target entity deleted? |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- | ---------------------- |
+| **Set** (to-one)               | Replace the to-one slot with a different target entity                                         | No                     |
+| **Add** (to-many)              | Create one or more links to existing target entities                                           | No                     |
+| **Clear**                      | Remove the link(s): empties the to-one slot OR removes **all** members from a to-many relation | No                     |
+| **Unlink** (to-many, per-item) | Remove a single item's link from a to-many relation                                            | No                     |
+| **Delete**                     | Permanently destroy the target entity (also removes it from any relation)                      | Yes                    |
+
+Use **Clear** when you want to remove everything from a relation at once.
+Use **Unlink** when you want to remove a specific item from a to-many relation without deleting it.
+Use **Delete** (via `useDeleteRelationItem`) when the entity itself should be destroyed.
+
+All relation mutation hooks accept `(relation, options?)` — no `targetProfile` param; it is resolved
 internally the same way the read hooks do it (`useProfileEntities()` + `getTargetProfile`). They
 return `UseMutationResult<void, Error, TInput>`.
 
@@ -337,7 +362,9 @@ return `UseMutationResult<void, Error, TInput>`.
 
 - `useSetToOneRelation(relation, options?)` — TInput `string`; on settle, invalidates `queryKeys.toOneRelation.byUrl` for the relation read key AND `queryKeys.entityItem.byUrl` for the source item.
 - `useAddToManyRelation(relation, options?)` — TInput `string[]`; on settle, invalidates `queryKeys.toManyRelation.byUrl` for the relation read key AND `queryKeys.entityItem.byUrl` for the source item.
-- `useClearRelation(relation, options?)` — TInput `void`; cardinality determined at runtime via `relation instanceof EntityItemToOneRelation`; on settle, invalidates the corresponding relation read key AND `queryKeys.entityItem.byUrl` for the source item.
+- `useClearRelation(relation, options?)` — TInput `void`; cardinality determined at runtime via `relation instanceof EntityItemToOneRelation`. On a **to-one** relation: empties the slot. On a **to-many** relation: removes **all** member links at once. On settle, invalidates the corresponding relation read key AND `queryKeys.entityItem.byUrl` for the source item.
+- `useDeleteRelationItem(relation, options?)` — TInput `EntityItem`; **permanently deletes the target entity**. Accepts `EntityItemToOneRelation | EntityItemToManyRelation`. On success: removes `entityItem.byUrl`, invalidates `entityItemCollection.forEntity`, and invalidates the relation read key (`toOneRelation.byUrl` for to-one; `toManyRelation.forRelationName` for to-many).
+- `useUnlinkRelation(relation, options?)` — TInput `EntityItem`; **removes a single item's link — target entity is NOT deleted**. Only accepts `EntityItemToManyRelation`. Workaround using `unlinkItemRequest` (no HAL-FORMS template yet — replace when the server adds one). On settle: invalidates `toManyRelation.forRelationName` (all pages, because item removal can shift pages) AND `entityItem.byUrl` for the source item.
 
 **Relation query-key namespaces:**
 
@@ -612,12 +639,12 @@ comes from the server in the `self` link of the collection response.
 everything **except** `_cursor`, `_size`, and `_sort`:
 
 ```typescript
-const scopingParams = collection.scopingParams;
+const internalRelationParams = collection.internalRelationParams;
 // e.g. { "_internal_invoice__products": "019d2aee-7ee9-73ca-ab78-4b93eb888882" }
 ```
 
-`EntityItemCollection.scopingParams` is a getter that performs this filtering. Never derive scoping
-params from the original `relation.link.href` — they are only available after the first fetch.
+`EntityItemCollection.internalRelationParams` is a getter that performs this filtering. Never derive
+scoping params from the original `relation.link.href` — they are only available after the first fetch.
 
 **Profile link on the collection**
 
@@ -633,10 +660,24 @@ the scoping params must be injected into the template as hidden properties — t
 only encodes declared template properties, so `createValues(template).withValue("_internal_…", x)`
 alone is insufficient.
 
-Use `SearchHalFormTemplate.withHiddenParams(scopingParams)` to get a patched copy of the template
-with those params baked in as hidden properties. This method uses `HalFormsTemplateBuilder`
+Use `SearchHalFormTemplate.withHiddenParams(internalRelationParams)` to get a patched copy of the
+template with those params baked in as hidden properties. This method uses `HalFormsTemplateBuilder`
 internally (Layer-1, allowed in navigator-data). Only the scoping params (not `_cursor`/`_size`/
 `_sort`) should be injected; the user's search input goes through the normal template properties.
+
+After patching, encode by creating values FROM the scoped template so hidden property defaults are
+pre-populated, then layer the caller's input on top:
+
+```typescript
+const scopedTemplate = targetProfile.searchTemplate?.withHiddenParams(internalRelationParams);
+const codec = halFormCodecs.requireCodecFor(scopedTemplate.template);
+const scopedValues = createValues(scopedTemplate.template).withValues(searchValues.valueMap);
+const searchUrl = codec.encode(scopedValues).url;
+```
+
+Do NOT pass the original `searchValues` directly to `codec.encode()` — the hidden property value
+lives in the template definition and only enters the value map when `createValues` is called on the
+scoped template.
 
 **Per-item unlink (temporary workaround)**
 

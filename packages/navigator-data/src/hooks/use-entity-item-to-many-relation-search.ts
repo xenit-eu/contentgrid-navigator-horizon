@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
+import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../accessors/entity-item-collection";
 import { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
@@ -70,17 +71,22 @@ export function useEntityItemToManyRelationSearch(
 
   const internalRelationParams = baseQuery.data?.internalRelationParams;
 
-  // Step 2: build the scoped search URL by patching internalRelationParams into the
-  // search template as hidden properties, then encoding the user's searchValues.
+  // Step 2: build the scoped search URL.
+  // Patch internalRelationParams into the search template as hidden properties, then
+  // encode by creating values FROM the scoped template (so hidden property defaults
+  // are pre-populated in the value map) and layering the caller's search input on top.
   let searchUrl: string | undefined;
   if (targetProfile && searchValues && internalRelationParams) {
     const scopedTemplate = targetProfile.searchTemplate?.withHiddenParams(internalRelationParams);
     if (scopedTemplate) {
       try {
         const codec = halFormCodecs.requireCodecFor(scopedTemplate.template);
-        searchUrl = codec.encode(searchValues).url;
+        const scopedValues = createValues(scopedTemplate.template).withValues(
+          searchValues.valueMap,
+        );
+        searchUrl = codec.encode(scopedValues).url;
       } catch {
-        // codec not found for this template — search disabled
+        // codec not found or encoding failed; searchUrl stays undefined → query disabled
       }
     }
   }

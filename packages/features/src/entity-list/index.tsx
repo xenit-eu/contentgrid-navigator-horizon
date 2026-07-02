@@ -18,6 +18,7 @@ import {
   useAddToManyRelation,
   useClearRelation,
   useEntityItemToManyRelation,
+  useEntityItemToManyRelationSearch,
   useEntityItemToOneRelation,
   useProfileEntities,
   useSetToOneRelation,
@@ -734,10 +735,20 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
   const { mutate: unlinkItem, isPending: isUnlinking } = useUnlinkRelation(relation);
   const { mutate: deleteItem, isPending: isDeleting } = useDeleteRelationItem(relation);
   const [addOpen, setAddOpen] = useState(false);
+  const [testSearchActive, setTestSearchActive] = useState(false);
   const profileResults = useProfileEntities();
   const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
   const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
   const title = relation.profileRelation.title ?? relation.name;
+
+  const testSearchValues =
+    testSearchActive && targetProfile?.searchTemplate
+      ? createValues(targetProfile.searchTemplate.template).withValue(
+          "product_name~prefix",
+          "Mouse",
+        )
+      : undefined;
+  const testSearchResult = useEntityItemToManyRelationSearch(relation, testSearchValues);
 
   const columns = targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }];
   const rows = result.isSuccess ? buildRows(result.data.items, columns) : [];
@@ -753,6 +764,11 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setTestSearchActive((v) => !v)}>
+            {testSearchActive
+              ? `TEST: ${testSearchResult.isSuccess ? (testSearchResult.data.totalItems?.count ?? "?") : testSearchResult.isPending ? "…" : "err"} results`
+              : "TEST search"}
+          </Button>
           {total !== undefined && (
             <Badge variant="secondary">
               {total.count.toLocaleString()} item{total.count === 1 ? "" : "s"}
