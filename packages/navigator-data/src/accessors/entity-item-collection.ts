@@ -279,4 +279,14 @@ export class EntityItemCollection {
   public get isEmpty(): boolean {
     return this.pageSize === 0 && (this.totalItems?.count === 0 || this.totalItems === undefined);
   }
+
+  /**
+   * Find an item in this page by its ID.
+   *
+   * @param id - The entity item ID to look up
+   * @returns The matching EntityItem, or `undefined` if not on this page
+   */
+  public findById(id: string): EntityItem | undefined {
+    return this.items.find((item) => item.id === id);
+  }
 }

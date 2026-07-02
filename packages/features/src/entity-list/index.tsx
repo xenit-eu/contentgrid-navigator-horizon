@@ -9,6 +9,7 @@ import {
   createValues,
   resolveTrustedCollectionUrl,
   useCreateEntityItem,
+  useDeleteRelationItem,
   useEntityItem,
   useEntityItemCollection,
   useNavigatorData,
@@ -20,6 +21,7 @@ import {
   useEntityItemToOneRelation,
   useProfileEntities,
   useSetToOneRelation,
+  useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import {
   AlertDialog,
@@ -729,6 +731,8 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
     mutationOptions: { onSuccess: () => setPageUrl(undefined) },
   });
   const { mutate: addRelation, isPending: isAdding } = useAddToManyRelation(relation);
+  const { mutate: unlinkItem, isPending: isUnlinking } = useUnlinkRelation(relation);
+  const { mutate: deleteItem, isPending: isDeleting } = useDeleteRelationItem(relation);
   const [addOpen, setAddOpen] = useState(false);
   const profileResults = useProfileEntities();
   const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
@@ -812,6 +816,24 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
             columns={columns}
             rows={rows}
             onRowClick={onRowClick}
+            onUnlink={
+              relation.canUnlinkItem
+                ? (id) => {
+                    const item = result.data.findById(id);
+                    if (item) unlinkItem(item);
+                  }
+                : undefined
+            }
+            isUnlinking={isUnlinking}
+            onDelete={
+              result.data.items.some((i) => i.canDelete)
+                ? (id) => {
+                    const item = result.data.findById(id);
+                    if (item?.canDelete) deleteItem(item);
+                  }
+                : undefined
+            }
+            isDeleting={isDeleting}
           />
           {(result.data.hasNext || result.data.hasPrevious) && (
             <div className="flex items-center justify-between pt-1">

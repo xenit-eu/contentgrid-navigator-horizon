@@ -29,12 +29,16 @@ export { useUpdateEntityItem } from "./use-update-entity";
 export type { UseUpdateEntityItemOptions } from "./use-update-entity";
 export { useDeleteEntityItem } from "./use-delete-entity";
 export type { UseDeleteEntityItemOptions } from "./use-delete-entity";
+export { useDeleteRelationItem } from "./use-delete-relation-item";
+export type { UseDeleteRelationItemOptions } from "./use-delete-relation-item";
 export { useSetToOneRelation } from "./use-set-to-one-relation";
 export type { UseSetToOneRelationOptions } from "./use-set-to-one-relation";
 export { useAddToManyRelation } from "./use-add-to-many-relation";
 export type { UseAddToManyRelationOptions } from "./use-add-to-many-relation";
 export { useClearRelation } from "./use-clear-relation";
 export type { UseClearRelationOptions } from "./use-clear-relation";
+export { useUnlinkRelation } from "./use-unlink-relation";
+export type { UseUnlinkRelationOptions } from "./use-unlink-relation";
 export { useUploadContent, useDownloadContent } from "./use-content";
 export type {
   UseUploadContentOptions,

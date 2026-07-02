@@ -115,6 +115,36 @@ export class EntityItemToManyRelation {
   }
 
   // ========================================
+  // Per-item unlink (temporary workaround)
+  // ========================================
+
+  /**
+   * Always `true` — the server does not yet emit a per-item delete template for to-many
+   * relation members, so there is no HAL-FORMS gate to check. The server returns 403 if
+   * ABAC denies the operation.
+   *
+   * Replace with a template-presence check when the server adds the template.
+   */
+  get canUnlinkItem(): boolean {
+    return true;
+  }
+
+  /**
+   * Build a DELETE request to remove a single item from this to-many relation.
+   *
+   * **Workaround**: constructs `DELETE ${this.link.href}/${item.id}` by hand because the
+   * server does not yet emit a per-item delete template. `this.link.href` is the original
+   * `cg:relation` navigation link (e.g. `/invoices/123/products`), NOT the resolved
+   * `_internal_*` collection URL. The server accepts DELETE on the original relation path.
+   *
+   * Do NOT use this method as a model for other URL construction.
+   * Remove and replace with a template-driven approach when the template lands.
+   */
+  public unlinkItemRequest(item: EntityItem): Request {
+    return new Request(`${this.link.href}/${item.id}`, { method: "DELETE" });
+  }
+
+  // ========================================
   // Request Builders
   // ========================================
 
