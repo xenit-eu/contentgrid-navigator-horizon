@@ -471,7 +471,18 @@ export function FilterSidebar({
                         return null;
                       }
 
-                      if (prop.searchOperator === "prefix-match" && onTypeaheadSearch) {
+                      // Relation-traversal prefix-match params (e.g. "customer.name~prefix") are
+                      // rendered as a plain text filter — the source entity's profile has no
+                      // attribute to resolve suggestions against for a related entity's field,
+                      // so wiring a working typeahead here requires the related entity's own
+                      // profile/collection. Deferred as out of scope for ACC-2889; falls back to
+                      // TextFilter so the field stays usable instead of showing a dead "Loading…"
+                      // popover that never resolves.
+                      if (
+                        prop.searchOperator === "prefix-match" &&
+                        onTypeaheadSearch &&
+                        !prop.relationKey
+                      ) {
                         return (
                           <TypeaheadTextFilter
                             key={prop.name}

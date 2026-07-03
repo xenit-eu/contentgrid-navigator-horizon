@@ -368,9 +368,22 @@ function EntityDetailView({
 
   const searchTemplate = profile.searchTemplate;
 
+  const activeFilterEntries = Object.entries(filters).filter(([, v]) => !!v);
+
+  // Shared with the collection query below so typeahead suggestions are scoped to the
+  // SAME active filters as the table — otherwise the dropdown could suggest a value that
+  // yields zero rows once combined with the other active filters.
+  const filterSearchValues = searchTemplate
+    ? activeFilterEntries.reduce(
+        (vals, [key, value]) => vals.withValue(key, value),
+        createValues(searchTemplate.template),
+      )
+    : undefined;
+
   const typeahead = useTypeahead({
     profileEntity: profile,
     searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
+    searchValues: filterSearchValues,
   });
 
   const filterProperties = searchTemplate ? buildFilterProperties(searchTemplate) : [];
@@ -400,18 +413,13 @@ function EntityDetailView({
     typeahead.search(query);
   }
 
-  const activeFilterEntries = Object.entries(filters).filter(([, v]) => !!v);
-
   const collection = useEntityItemCollection(
     pageUrl
       ? { url: pageUrl, profileEntity: profile }
       : searchTemplate
         ? {
             profileEntity: profile,
-            searchValues: activeFilterEntries.reduce(
-              (vals, [key, value]) => vals.withValue(key, value),
-              createValues(searchTemplate.template),
-            ),
+            searchValues: filterSearchValues,
           }
         : { profileEntity: profile },
   );
