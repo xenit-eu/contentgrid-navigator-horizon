@@ -296,6 +296,110 @@ describe("useEntityItemCollection — URL mode { url, profileEntity }", () => {
 });
 
 // ---------------------------------------------------------------------------
+// EntityCollectionByUrl mode — origin guard (security)
+// ---------------------------------------------------------------------------
+
+describe("useEntityItemCollection — URL mode origin guard", () => {
+  it("discards a cross-origin cursor URL and falls back to the first-page URL", async () => {
+    // Only the trusted first-page (default search) collection URL is registered.
+    // If the evil-origin URL were fetched, MSW would report an unhandled request
+    // and the query would error instead of succeeding.
+    setupCollectionHandler();
+    const profileEntity = makeCustomerProfile();
+    const evilUrl = "https://evil.example/x";
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItemCollection({ url: evilUrl, profileEntity }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.items).toHaveLength(2);
+  });
+
+  it("accepts a same-origin cursor URL verbatim", async () => {
+    const nextPageUrl = `${CUSTOMER_COLLECTION_URL}/page2`;
+    const nextPageBody = {
+      _embedded: {
+        item: [
+          {
+            id: "cust-003",
+            name: "Corp Three",
+            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-003` } },
+          },
+        ],
+      },
+      _links: { self: { href: nextPageUrl } },
+      page: { size: 20, total_items_exact: 1 },
+    };
+    server.use(http.get(nextPageUrl, () => HttpResponse.json(nextPageBody)));
+
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemCollection({ url: nextPageUrl, profileEntity }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.items).toHaveLength(1);
+    expect(result.current.data?.items[0].id).toBe("cust-003");
+  });
+
+  it("accepts a relative same-origin cursor, resolving it against the API base", async () => {
+    // Regression coverage: the trust anchor is the absolute API base
+    // (profileUrl), not profileEntity.collectionUrl. A relative cursor must
+    // resolve against that base and be trusted — anchoring on a relative
+    // collectionUrl would make `new URL(...)` throw and silently disable
+    // cursor pagination for every relative-collection-URL deployment.
+    const resolvedUrl = `${BASE}/relative-path`;
+    const relativePageBody = {
+      _embedded: {
+        item: [
+          {
+            id: "cust-004",
+            name: "Relative Corp",
+            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-004` } },
+          },
+        ],
+      },
+      _links: { self: { href: resolvedUrl } },
+      page: { size: 20, total_items_exact: 1 },
+    };
+    server.use(http.get(resolvedUrl, () => HttpResponse.json(relativePageBody)));
+
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemCollection({ url: "/relative-path", profileEntity }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.items).toHaveLength(1);
+    expect(result.current.data?.items[0].id).toBe("cust-004");
+  });
+
+  it("discards an unparsable cursor URL and falls back to the first-page URL", async () => {
+    setupCollectionHandler();
+    const profileEntity = makeCustomerProfile();
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemCollection({ url: "http://[::1", profileEntity }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.items).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // useEntityItemCollectionInfiniteScroll
 // ---------------------------------------------------------------------------
 

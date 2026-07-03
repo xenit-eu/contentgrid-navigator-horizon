@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EntityDetailPage, entityDetailSearchValidator } from "@contentgrid/features/entity-list";
+import { EntityDetailPage } from "@contentgrid/features/entity-list";
+import { entitySearchStateValidator } from "@contentgrid/navigator-data";
 
 export const Route = createFileRoute("/_app/$entity/")({
-  validateSearch: entityDetailSearchValidator,
+  validateSearch: entitySearchStateValidator,
   component: EntityDetailPage,
 });

@@ -1,7 +1,8 @@
-import { HttpResponse, http } from "msw";
+import { type HttpHandler, HttpResponse, http } from "msw";
 import type { HalFormsTemplateShape } from "@contentgrid/hal-forms/shape";
+import type { HalObjectShape, HalSliceShape } from "@contentgrid/hal/shape";
 import { invoiceProfileBody, invoiceProfileTemplates, sampleInvoiceItems } from "../hal/fixtures";
-import { createListHandler, createProfileHandler } from "./handlers";
+import { createProfileHandler } from "./handlers";
 
 function resolveTemplateTargets(
   baseUrl: string,
@@ -13,6 +14,66 @@ function resolveTemplateTargets(
       tmpl.target ? { ...tmpl, target: `${baseUrl}${tmpl.target}` } : tmpl,
     ]),
   );
+}
+
+/**
+ * Distinctive text shown for the single item on cursor page 2 (see
+ * `createInvoicesCursorHandler`). The demo invoice profile has no embedded
+ * `blueprint:attribute` list, so `ProfileEntity.userDefinedAttributes` is
+ * empty and the entity-list table falls back to a single `id` column
+ * (packages/features/src/entity-list — `buildColumns`). That means the `id`
+ * field — not `number` — is the only value actually rendered in the table,
+ * so it has to carry the recognizable marker text used by the e2e test.
+ */
+export const PAGE_2_INVOICE_ID = "INVOICE-PAGE2";
+
+/**
+ * Cursor-paginated `/invoices` handler used by the e2e cursor-pagination
+ * test. MSW matches handlers by path only (query string is ignored), so a
+ * single handler serves both pages by branching on the `_cursor` query
+ * param — registering two handlers on the same path would only ever hit the
+ * first one.
+ */
+function createInvoicesCursorHandler(baseUrl: string): HttpHandler {
+  const collectionUrl = `${baseUrl}/invoices`;
+  const page2Url = `${collectionUrl}?_cursor=page2`;
+
+  const page2Item: HalObjectShape<Record<string, unknown>> = {
+    ...sampleInvoiceItems[0],
+    id: PAGE_2_INVOICE_ID,
+    number: PAGE_2_INVOICE_ID,
+    _links: { self: { href: `${collectionUrl}/${PAGE_2_INVOICE_ID}` } },
+  };
+
+  return http.get(collectionUrl, ({ request }) => {
+    const cursor = new URL(request.url).searchParams.get("_cursor");
+
+    if (cursor === "page2") {
+      const body: HalSliceShape<Record<string, unknown>> & {
+        page: { size: number; total_items_exact: number };
+      } = {
+        _embedded: { item: [page2Item] },
+        _links: {
+          self: { href: page2Url },
+          prev: { href: collectionUrl },
+        },
+        page: { size: 20, total_items_exact: sampleInvoiceItems.length },
+      };
+      return HttpResponse.json(body);
+    }
+
+    const body: HalSliceShape<Record<string, unknown>> & {
+      page: { size: number; total_items_exact: number };
+    } = {
+      _embedded: { item: sampleInvoiceItems },
+      _links: {
+        self: { href: collectionUrl },
+        next: { href: page2Url },
+      },
+      page: { size: 20, total_items_exact: sampleInvoiceItems.length },
+    };
+    return HttpResponse.json(body);
+  });
 }
 
 /**
@@ -61,10 +122,6 @@ export function createDemoHandlers(baseUrl = "") {
       body: invoiceProfileBody,
       templates: resolveTemplateTargets(baseUrl, invoiceProfileTemplates),
     }),
-    createListHandler({
-      url: `${baseUrl}/invoices`,
-      items: sampleInvoiceItems,
-      page: { size: 20, total_items_exact: sampleInvoiceItems.length },
-    }),
+    createInvoicesCursorHandler(baseUrl),
   ];
 }
