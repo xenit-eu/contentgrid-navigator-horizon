@@ -16,8 +16,8 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
-  entitySearchStateValidator,
   createContentClient,
+  entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
