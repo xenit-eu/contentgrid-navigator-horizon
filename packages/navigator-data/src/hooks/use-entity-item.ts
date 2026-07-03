@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { SimpleLink } from "@contentgrid/hal";
-import type { EntityItem } from "../accessors/entity-item";
-import { EntityItem as EntityItemClass } from "../accessors/entity-item";
+import { EntityItem } from "../accessors/entity-item";
 import type ProfileEntity from "../accessors/entity-profile";
 import { fetchHal } from "../api/hal-client";
 import { queryKeys } from "../query-keys";
@@ -79,7 +78,7 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
     queryKey: profileEntity && url ? queryKeys.entityItem.byUrl(profileEntity, url) : [],
     queryFn: async () => {
       const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, new Request(url!));
-      return new EntityItemClass(object, profileEntity!, etag);
+      return new EntityItem(object, profileEntity!, etag);
     },
     enabled: !!url && !!profileEntity,
     ...options?.queryOptionsOverride,
