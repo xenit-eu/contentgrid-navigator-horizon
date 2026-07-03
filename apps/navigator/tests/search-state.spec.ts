@@ -2,8 +2,8 @@
  * Verifies that the s.cursor param is validated by TanStack Router and that
  * browser back/forward navigation correctly restores prior search state.
  *
- * The entity list lives at /$entity (e.g. /invoices). `_app` is a *pathless*
- * layout route, so it never appears in the URL — navigating to `/_app/invoices`
+ * The entity list lives at /$entity (e.g. /invoice). `_app` is a *pathless*
+ * layout route, so it never appears in the URL — navigating to `/_app/invoice`
  * would match the item-detail route ($entity/$itemId), not the list. The list
  * view is the only screen that renders a data table (role="table"); the
  * item-detail view renders a description list, so asserting on the table pins
@@ -16,7 +16,7 @@ test("s.cursor param is preserved and validated through browser back/forward", a
   page.on("pageerror", (err) => errors.push(String(err)));
 
   // Navigate to the entity list (no cursor — first page)
-  await page.goto("/invoices");
+  await page.goto("/invoice");
   await expect(page.getByRole("table")).toBeVisible();
   expect(page.url()).not.toContain("s.cursor");
 
@@ -25,7 +25,7 @@ test("s.cursor param is preserved and validated through browser back/forward", a
   // It is built from the app's own origin so it survives the data layer's
   // same-origin cursor guard.
   const fakeCursorUrl = encodeURIComponent(`${page.url()}?cursor=page2`);
-  await page.goto(`/invoices?s.cursor=${fakeCursorUrl}`);
+  await page.goto(`/invoice?s.cursor=${fakeCursorUrl}`);
   await expect(page.getByRole("table")).toBeVisible();
   expect(page.url()).toContain("s.cursor");
 
