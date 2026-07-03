@@ -10,7 +10,7 @@ try {
     process.env[key] ??= value;
   }
 } catch (err) {
-  if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  if ((err as { code?: string }).code !== "ENOENT") throw err;
 }
 
 // Firefox headless date-picker fix: https://github.com/microsoft/playwright/issues/7769
