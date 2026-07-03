@@ -1,13 +1,17 @@
+import { useCallback, useEffect } from "react";
 import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
   type EntityItem,
   type EntityItemAttribute,
+  type EntitySearchState,
   type ProfileEntity,
   createValues,
+  resolveTrustedCollectionUrl,
   useCreateEntityItem,
   useEntityItem,
   useEntityItemCollection,
+  useNavigatorData,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
@@ -39,14 +43,6 @@ import {
   Skeleton,
 } from "@contentgrid/ui";
 import { ProfileAttributeType } from "../../../navigator-data/src/accessors/attribute-profile";
-
-// ---------------------------------------------------------------------------
-// Search param validator — export for use in the $entity route's validateSearch
-// ---------------------------------------------------------------------------
-
-export function entityDetailSearchValidator(search: Record<string, unknown>): { q?: string } {
-  return { q: typeof search.q === "string" ? search.q : undefined };
-}
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -136,12 +132,12 @@ export function EntityOverviewPage() {
 }
 
 // ---------------------------------------------------------------------------
-// EntityDetailPage — $entity route component (reads path + q search param)
+// EntityDetailPage — $entity route component (reads path + s.cursor search param)
 // ---------------------------------------------------------------------------
 
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const { q } = useSearch({ strict: false }) as { q?: string };
+  const cursor = (useSearch({ strict: false }) as EntitySearchState)["s.cursor"];
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
 
@@ -151,19 +147,23 @@ export function EntityDetailPage() {
 
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
-  function onCursorChange(url: string | undefined) {
-    if (url) {
-      go({ search: (prev) => ({ ...prev, q: url }) });
-    } else {
-      go({
-        search: (prev) => {
-          const next = { ...prev };
-          delete next["q"];
-          return next;
-        },
-      });
-    }
-  }
+  const onCursorChange = useCallback(
+    (url: string | undefined) => {
+      const go = navigate as unknown as AnyNavigateFn;
+      if (url) {
+        go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
+      } else {
+        go({
+          search: (prev) => {
+            const next = { ...prev };
+            delete next["s.cursor"];
+            return next;
+          },
+        });
+      }
+    },
+    [navigate],
+  );
 
   function onRowClick(id: string) {
     go({ to: "/$entity/$itemId", params: { entity: entityName, itemId: id } });
@@ -189,7 +189,7 @@ export function EntityDetailPage() {
   return (
     <EntityDetailView
       profile={profile}
-      pageUrl={q}
+      pageUrl={cursor}
       onPageUrlChange={onCursorChange}
       onRowClick={onRowClick}
       onBack={onBack}
@@ -308,6 +308,18 @@ function EntityDetailView({
     pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
   );
 
+  // The data layer's origin guard (use-entity-item-collection.ts) silently
+  // falls back to the first page when pageUrl is not same-origin with the
+  // API base — it never throws. Without this effect, a stale/tampered
+  // s.cursor would keep showing up in the URL forever even though it's being
+  // ignored. Clear it so the URL reflects what is actually being fetched.
+  const { profileUrl: apiBaseUrl } = useNavigatorData();
+  useEffect(() => {
+    if (pageUrl && resolveTrustedCollectionUrl(pageUrl, apiBaseUrl) === null) {
+      onPageUrlChange(undefined);
+    }
+  }, [pageUrl, apiBaseUrl, onPageUrlChange]);
+
   const columns = buildColumns(profile);
   const rows = collection.data ? buildRows(collection.data.items, columns) : [];
 
@@ -368,7 +380,23 @@ function EntityDetailView({
       {/* Error */}
       {collection.isError && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Failed to load {profile.pluralName}: {collection.error.message}
+          <p>
+            Failed to load {profile.pluralName}: {collection.error.message}
+          </p>
+          {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
+              shared or expired s.cursor makes the server reject the request
+              and would otherwise strand the user on an unrecoverable URL.
+              Offer a reset to the first page whenever a cursor was active. */}
+          {pageUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => onPageUrlChange(undefined)}
+            >
+              Back to first page
+            </Button>
+          )}
         </div>
       )}
 
