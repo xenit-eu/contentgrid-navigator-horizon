@@ -1,3 +1,4 @@
+import { useCallback, useEffect } from "react";
 import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
@@ -6,9 +7,11 @@ import {
   type EntitySearchState,
   type ProfileEntity,
   createValues,
+  resolveTrustedCollectionUrl,
   useCreateEntityItem,
   useEntityItem,
   useEntityItemCollection,
+  useNavigatorData,
   useProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
@@ -144,19 +147,23 @@ export function EntityDetailPage() {
 
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
-  function onCursorChange(url: string | undefined) {
-    if (url) {
-      go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
-    } else {
-      go({
-        search: (prev) => {
-          const next = { ...prev };
-          delete next["s.cursor"];
-          return next;
-        },
-      });
-    }
-  }
+  const onCursorChange = useCallback(
+    (url: string | undefined) => {
+      const go = navigate as unknown as AnyNavigateFn;
+      if (url) {
+        go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
+      } else {
+        go({
+          search: (prev) => {
+            const next = { ...prev };
+            delete next["s.cursor"];
+            return next;
+          },
+        });
+      }
+    },
+    [navigate],
+  );
 
   function onRowClick(id: string) {
     go({ to: "/$entity/$itemId", params: { entity: entityName, itemId: id } });
@@ -300,6 +307,18 @@ function EntityDetailView({
   const collection = useEntityItemCollection(
     pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
   );
+
+  // The data layer's origin guard (use-entity-item-collection.ts) silently
+  // falls back to the first page when pageUrl is not same-origin with the
+  // API base — it never throws. Without this effect, a stale/tampered
+  // s.cursor would keep showing up in the URL forever even though it's being
+  // ignored. Clear it so the URL reflects what is actually being fetched.
+  const { profileUrl: apiBaseUrl } = useNavigatorData();
+  useEffect(() => {
+    if (pageUrl && resolveTrustedCollectionUrl(pageUrl, apiBaseUrl) === null) {
+      onPageUrlChange(undefined);
+    }
+  }, [pageUrl, apiBaseUrl, onPageUrlChange]);
 
   const columns = buildColumns(profile);
   const rows = collection.data ? buildRows(collection.data.items, columns) : [];

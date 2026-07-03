@@ -7,8 +7,8 @@ const entitySearchStateSchema = z.object({
 export type EntitySearchState = z.infer<typeof entitySearchStateSchema>;
 
 export function entitySearchStateValidator(search: Record<string, unknown>): EntitySearchState {
-  // Per-field .catch(undefined) drops only the invalid field instead of
-  // failing the whole safeParse and wiping sibling params.
-  const result = entitySearchStateSchema.safeParse(search);
-  return result.success ? result.data : {};
+  // Per-field .catch(undefined) coerces an invalid s.cursor to absent instead
+  // of failing the whole parse and wiping sibling params. Because of that,
+  // .parse() here can never throw — every field has a fallback.
+  return entitySearchStateSchema.parse(search);
 }

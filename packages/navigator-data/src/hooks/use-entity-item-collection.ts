@@ -4,6 +4,7 @@ import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../accessors/entity-item-collection";
 import type ProfileEntity from "../accessors/entity-profile";
 import type { SearchRequestSpec } from "../api/requests";
+import { resolveTrustedCollectionUrl } from "../search/cursor-trust";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { useNavigatorData } from "./context";
 
@@ -92,38 +93,34 @@ function isBySearch(
  * ```
  */
 /**
- * Parse a URL string into its origin, or `null` when it cannot be parsed as
- * an absolute URL (e.g. relative paths, malformed input).
- */
-function safeOrigin(url: string): string | null {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Resolve the collection request URL and query-enabled flag from the params,
  * without calling any hooks. Shared by both collection hooks so each can call
  * its TanStack hook exactly once, unconditionally (rules-of-hooks safe).
+ *
+ * @param apiBaseUrl - Absolute API base URL (the trusted `profileUrl` from
+ *   `useNavigatorData()`), used as the trust anchor for by-url requests. It is
+ *   always absolute, unlike `profileEntity.collectionUrl` which may be a
+ *   relative path — anchoring on a relative URL would make `new URL(...)`
+ *   throw for every cursor and silently disable pagination entirely.
  */
-function resolveCollectionRequest(params: EntityCollectionParams): {
+function resolveCollectionRequest(
+  params: EntityCollectionParams,
+  apiBaseUrl: string,
+): {
   url: string;
   enabled: boolean;
 } {
-  // URL-based fetch: only trust URLs that share the origin of the entity's
-  // own collection URL. A caller-supplied cursor (e.g. from bookmarked or
+  // URL-based fetch: only trust URLs that resolve to the same origin as the
+  // trusted API base. A caller-supplied cursor (e.g. from bookmarked or
   // crafted URL state) could otherwise point apiFetch — which unconditionally
   // attaches the bearer token — at an attacker-controlled origin. Discard and
   // fall back to the normal first-page request instead of throwing.
   if (isByUrl(params)) {
-    const trustedOrigin = safeOrigin(params.profileEntity.collectionUrl);
-    const suppliedOrigin = safeOrigin(params.url);
-    if (suppliedOrigin !== null && suppliedOrigin === trustedOrigin) {
-      return { url: params.url, enabled: true };
+    const trustedUrl = resolveTrustedCollectionUrl(params.url, apiBaseUrl);
+    if (trustedUrl !== null) {
+      return { url: trustedUrl, enabled: true };
     }
-    return resolveCollectionRequest({ profileEntity: params.profileEntity });
+    return resolveCollectionRequest({ profileEntity: params.profileEntity }, apiBaseUrl);
   }
 
   let request: ReturnType<ProfileEntity["searchEntityRequest"]> | null;
@@ -147,8 +144,8 @@ export function useEntityItemCollection(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch } = useNavigatorData();
-  const { url, enabled } = resolveCollectionRequest(params);
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
 
   return useQuery({
     ...EntityItemCollection.fetchByUrlQuery(
@@ -214,8 +211,8 @@ export function useEntityItemCollectionInfiniteScroll(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch } = useNavigatorData();
-  const { url, enabled } = resolveCollectionRequest(params);
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
 
   return useInfiniteQuery({
     ...EntityItemCollection.infiniteQuery(
