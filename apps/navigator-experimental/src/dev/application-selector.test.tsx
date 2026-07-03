@@ -9,7 +9,7 @@ import {
   signinWithNewConfig,
   useAuth,
 } from "@contentgrid/navigator-data";
-import { ApplicationSelectorPage } from "./index";
+import { ApplicationSelectorPage } from "./application-selector";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();

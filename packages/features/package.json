@@ -31,10 +31,6 @@
     "./navigator-header": {
       "import": "./src/navigator-header/index.ts",
       "types": "./src/navigator-header/index.ts"
-    },
-    "./navigator-settings": {
-      "import": "./src/navigator-settings/index.tsx",
-      "types": "./src/navigator-settings/index.tsx"
     }
   },
   "scripts": {

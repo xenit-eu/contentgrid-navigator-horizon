@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ApplicationSelectorPage } from "@contentgrid/features/navigator-settings";
+import { ApplicationSelectorPage } from "../dev/application-selector";
 
 export const Route = createFileRoute("/config")({
   beforeLoad() {
