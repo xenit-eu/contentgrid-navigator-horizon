@@ -81,8 +81,8 @@ entity name like `invoice`.
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
-- Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`,
-  `useEntityItemToManyRelationSearch`
+- Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
+  (supports default, URL-pagination, and relation-scoped search via `RelationCollectionParams`)
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
   delete: `useDeleteEntityItem`, relation set (to-one): `useSetToOneRelation`,
   relation add (to-many): `useAddToManyRelation`, relation clear: `useClearRelation`,
@@ -320,22 +320,25 @@ Each class carries:
 - `canAdd / canClear` — boolean capability flags derived from `add-<rel>` / `clear-<rel>` template presence (ABAC gate)
 - `addRelationRequest(uris)` — throws `Error` if `addTemplate` is null
 - `clearRelationRequest()` — throws `Error` if `clearTemplate` is null
-- Static `fetchQuery(apiFetch, url, targetProfileEntity)` → returns `EntityItemCollection`; cached under `queryKeys.toManyRelation.byUrl(targetProfile, url)`
+- Static `fetchQuery(apiFetch, url, targetProfileEntity, relationName)` → returns `EntityItemCollection`; cached under `queryKeys.toManyRelation.byUrl(relationName, url)`
 
 **Relation read hooks:**
 
 - `useEntityItemToOneRelation(relation, options?)` → `UseQueryResult<EntityItem | null, Error>`.
   Returns `null` when the to-one slot is empty (server returns 404). Disabled until the target
   profile resolves from `useProfileEntities()`.
-- `useEntityItemToManyRelation(relation, options?)` → `UseQueryResult<EntityItemCollection, Error>`.
-  Disabled until the target profile resolves.
-- `useEntityItemToManyRelationSearch(relation, searchValues, options?)` → `UseQueryResult<EntityItemCollection, Error>`.
-  Relation-scoped search within a to-many relation. Internally fetches the base collection first
-  (cache hit when `useEntityItemToManyRelation` is also mounted) to extract `internalRelationParams`,
-  then patches those into the search template via `withHiddenParams` and runs the user's
-  `searchValues` against the scoped template. Disabled when `searchValues` is `undefined` or while
-  the base collection is loading. See the workaround note in the "To-many relation collection
-  resolution" section.
+- `useEntityItemToManyRelation(relation, params?, options?)` → `UseQueryResult<EntityItemCollection, Error>`.
+  Supports three modes via the `params` discriminated union (`RelationCollectionParams`):
+  - **Default** (`params` omitted) — fetches the relation's first page via `relation.link.href`.
+  - **By URL** (`{ url }`) — fetches a specific page. Use `collection.nextHref` / `collection.prevHref`
+    to paginate through either the base collection or a search result.
+  - **By search** (`{ searchValues }`) — relation-scoped search. Internally fetches the base
+    collection first (typically a cache hit from a co-mounted default-mode call) to extract
+    `internalRelationParams`, injects them into the search template via `withHiddenParams`, and runs
+    the encoded scoped URL. `searchValues: undefined` disables the query. See the workaround note in
+    the "To-many relation collection resolution" section.
+
+  All modes are disabled until the target profile resolves.
 
 **Relation mutation hooks:**
 
@@ -654,30 +657,21 @@ target profile via `useProfileEntities()` when the collection is already loaded.
 
 **Relation-scoped search**
 
-The HAL-FORMS search template on a target entity profile (e.g. `/profile/products`) targets the
-entity's global collection URL. To scope a search to only a specific source entity's linked items,
-the scoping params must be injected into the template as hidden properties — the HAL-FORMS codec
-only encodes declared template properties, so `createValues(template).withValue("_internal_…", x)`
-alone is insufficient.
+Use `useEntityItemToManyRelation(relation, { searchValues })` — the hook handles scoping
+internally. Do NOT re-implement the scoping logic in feature or hook code.
 
-Use `SearchHalFormTemplate.withHiddenParams(internalRelationParams)` to get a patched copy of the
-template with those params baked in as hidden properties. This method uses `HalFormsTemplateBuilder`
-internally (Layer-1, allowed in navigator-data). Only the scoping params (not `_cursor`/`_size`/
-`_sort`) should be injected; the user's search input goes through the normal template properties.
+Internally the hook:
 
-After patching, encode by creating values FROM the scoped template so hidden property defaults are
-pre-populated, then layer the caller's input on top:
+1. Fetches the base relation collection (typically a cache hit) to read `internalRelationParams`.
+2. Calls `SearchHalFormTemplate.withHiddenParams(internalRelationParams)` to inject the scoping
+   params as hidden HAL-FORMS properties — the codec only encodes declared template properties,
+   so this step is required.
+3. Encodes by calling `createValues(scopedTemplate.template).withValues(searchValues.valueMap)` so
+   hidden property defaults are pre-populated before the caller's values are layered on top.
+4. Fetches the encoded scoped URL as the search result.
 
-```typescript
-const scopedTemplate = targetProfile.searchTemplate?.withHiddenParams(internalRelationParams);
-const codec = halFormCodecs.requireCodecFor(scopedTemplate.template);
-const scopedValues = createValues(scopedTemplate.template).withValues(searchValues.valueMap);
-const searchUrl = codec.encode(scopedValues).url;
-```
-
-Do NOT pass the original `searchValues` directly to `codec.encode()` — the hidden property value
-lives in the template definition and only enters the value map when `createValues` is called on the
-scoped template.
+For pagination of search results use `{ url: collection.nextHref }` — the server includes the
+`_internal_*` scoping params in `next`/`prev` links, so no re-encoding is needed.
 
 **Per-item unlink (temporary workaround)**
 

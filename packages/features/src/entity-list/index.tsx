@@ -19,7 +19,6 @@ import {
   useAddToManyRelation,
   useClearRelation,
   useEntityItemToManyRelation,
-  useEntityItemToManyRelationSearch,
   useEntityItemToOneRelation,
   useProfileEntities,
   useSetToOneRelation,
@@ -739,7 +738,7 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
 function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToManyRelation }>) {
   const go = useNavigate() as unknown as AnyNavigateFn;
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
-  const result = useEntityItemToManyRelation(relation, { pageUrl });
+  const result = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
   const {
     mutate: clearRelation,
     isPending: isClearing,
@@ -777,7 +776,9 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
           "Mouse",
         )
       : undefined;
-  const testSearchResult = useEntityItemToManyRelationSearch(relation, testSearchValues);
+  const testSearchResult = useEntityItemToManyRelation(relation, {
+    searchValues: testSearchValues,
+  });
 
   const columns = targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }];
   const rows = result.isSuccess ? buildRows(result.data.items, columns) : [];

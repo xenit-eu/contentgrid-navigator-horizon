@@ -22,9 +22,12 @@ export type {
 export { useEntityItemToOneRelation } from "./use-entity-item-to-one-relation";
 export type { UseEntityItemToOneRelationOptions } from "./use-entity-item-to-one-relation";
 export { useEntityItemToManyRelation } from "./use-entity-item-to-many-relation";
-export type { UseEntityItemToManyRelationOptions } from "./use-entity-item-to-many-relation";
-export { useEntityItemToManyRelationSearch } from "./use-entity-item-to-many-relation-search";
-export type { UseEntityItemToManyRelationSearchOptions } from "./use-entity-item-to-many-relation-search";
+export type {
+  UseEntityItemToManyRelationOptions,
+  RelationCollectionParams,
+  RelationCollectionByUrl,
+  RelationCollectionBySearch,
+} from "./use-entity-item-to-many-relation";
 export { useCreateEntityItem } from "./use-create-entity";
 export type { UseCreateEntityItemOptions } from "./use-create-entity";
 export { useUpdateEntityItem } from "./use-update-entity";
