@@ -214,6 +214,94 @@ function invoiceProfileHandler() {
   );
 }
 
+/**
+ * Per-entity profile handler for /profile/invoices with a NON-EMPTY search
+ * template — this is what makes FilterSidebar render (index.tsx:354-356:
+ * `filterProperties` is empty, and the sidebar is not rendered at all, unless
+ * `searchTemplate.searchProperties` is non-empty).
+ *
+ * Mix of search-param shapes to exercise the different toSearchProperty /
+ * FilterSidebar branches:
+ * - "status": exact-match text field (no suffix) -> plain TextFilter, handleFilterChange
+ * - "number~prefix": prefix-match on a direct attribute -> TypeaheadTextFilter
+ * - "customer.name~prefix": prefix-match over a relation traversal -> falls back
+ *   to a plain TextFilter (packages/ui filter-sidebar.tsx relation-traversal guard)
+ * - "region": remote-options field (options.link) -> exercises toSearchProperty's
+ *   `options.isRemote()` branch
+ */
+function invoiceProfileHandlerWithFilters() {
+  return http.get(`${PROFILE_URL}/invoices`, () =>
+    HttpResponse.json({
+      name: "invoice",
+      title: "Invoice",
+      _links: {
+        self: { href: `${PROFILE_URL}/invoices` },
+        describes: [
+          { href: `${API_URL}/invoices`, name: "collection" },
+          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "id",
+            title: "ID",
+            type: "string",
+            readOnly: true,
+            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+            _links: {},
+          },
+          {
+            name: "number",
+            title: "Number",
+            type: "string",
+            readOnly: false,
+            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+            _links: {},
+          },
+          {
+            name: "status",
+            title: "Status",
+            type: "string",
+            readOnly: false,
+            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: `${API_URL}/invoices`,
+          properties: [
+            { name: "number~prefix", type: "text" },
+            { name: "status", type: "text" },
+            { name: "customer.name~prefix", type: "text" },
+            {
+              name: "region",
+              type: "text",
+              options: { link: { href: `${API_URL}/regions` } },
+            },
+          ],
+        },
+        "create-form": {
+          method: "POST",
+          target: `${API_URL}/invoices`,
+          properties: [{ name: "number", type: "text", required: true }],
+        },
+      },
+    }),
+  );
+}
+
 function invoiceProfileHandlerNoCreate() {
   return http.get(`${PROFILE_URL}/invoices`, () =>
     HttpResponse.json({
@@ -1708,5 +1796,159 @@ describe("EntityItemDetailPage — RelationToManySection", () => {
 
     expect(await screen.findByText("Widget B")).toBeInTheDocument();
     expect(screen.queryByText("Widget A")).not.toBeInTheDocument();
+  });
+});
+
+// ----------------------------------------------------------------
+// EntityDetailView filters — FilterSidebar / typeahead integration (ACC-2889)
+// ----------------------------------------------------------------
+
+describe("EntityDetailView filters", () => {
+  function invoicesCollectionHandler(
+    onRequest: (url: URL) => void,
+    itemsForUrl?: (url: URL) => Record<string, unknown>[],
+  ) {
+    return http.get(`${API_URL}/invoices`, ({ request }) => {
+      const url = new URL(request.url);
+      onRequest(url);
+      const items = itemsForUrl ? itemsForUrl(url) : sampleInvoiceItems;
+      return HttpResponse.json({
+        _links: { self: { href: `${API_URL}/invoices` } },
+        _embedded: { item: items },
+        page: { size: items.length, total_items_exact: items.length },
+      });
+    });
+  }
+
+  it("renders the FilterSidebar with filter inputs when the search template has properties", async () => {
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithFilters(),
+      invoicesCollectionHandler(() => {}),
+    );
+
+    renderEntityList("/invoice");
+
+    expect(await screen.findByText("Filters")).toBeInTheDocument();
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    expect(screen.getByLabelText("Number")).toBeInTheDocument();
+    expect(screen.getByLabelText("Customer Name")).toBeInTheDocument();
+  });
+
+  it("does not render the FilterSidebar when the search template has no properties", async () => {
+    server.use(profileRootHandler(), invoiceProfileHandler(), emptyInvoicesList);
+
+    renderEntityList("/invoice");
+
+    await screen.findByText("All entities");
+    expect(screen.queryByText("Filters")).not.toBeInTheDocument();
+  });
+
+  it("updates active filters and refetches when typing in an exact-match filter, resetting the cursor", async () => {
+    const user = userEvent.setup();
+    const capturedUrls: URL[] = [];
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithFilters(),
+      invoicesCollectionHandler((url) => capturedUrls.push(url)),
+    );
+
+    // Start with an active cursor: typing in a filter must reset it (handleFilterChange
+    // calls onPageUrlChange(undefined)), so the request that follows hits the base
+    // collection URL rather than the stale cursor URL.
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(`${API_URL}/invoices?_cursor=stale`)}`);
+
+    const statusInput = await screen.findByLabelText("Status");
+    await user.type(statusInput, "open");
+
+    await waitFor(() => {
+      const last = capturedUrls[capturedUrls.length - 1];
+      expect(last?.searchParams.get("status")).toBe("open");
+    });
+
+    expect(statusInput).toHaveValue("open");
+  });
+
+  it("shows Clear all once a filter is active and clears it on click", async () => {
+    const user = userEvent.setup();
+    const capturedUrls: URL[] = [];
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithFilters(),
+      invoicesCollectionHandler((url) => capturedUrls.push(url)),
+    );
+
+    renderEntityList("/invoice");
+
+    const statusInput = await screen.findByLabelText("Status");
+    await user.type(statusInput, "open");
+
+    // A request carrying the active filter must have been made before we clear it.
+    await waitFor(() =>
+      expect(capturedUrls.some((u) => u.searchParams.get("status") === "open")).toBe(true),
+    );
+
+    const clearAllButton = await screen.findByRole("button", { name: /clear all/i });
+    await user.click(clearAllButton);
+
+    await waitFor(() => expect(statusInput).toHaveValue(""));
+    expect(screen.queryByRole("button", { name: /clear all/i })).not.toBeInTheDocument();
+  });
+
+  it("renders typeahead suggestions when typing in a prefix-match filter", async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithFilters(),
+      invoicesCollectionHandler(
+        () => {},
+        (url) =>
+          url.searchParams.get("number~prefix")
+            ? [
+                {
+                  id: "inv-999",
+                  // Deliberately distinct from sampleInvoiceItems' numbers so the
+                  // suggestion text is unambiguous (not also present as a table row).
+                  number: "INV-2024-999",
+                  _links: { self: { href: `${API_URL}/invoices/inv-999` } },
+                },
+              ]
+            : sampleInvoiceItems,
+      ),
+    );
+
+    renderEntityList("/invoice");
+
+    const numberInput = await screen.findByLabelText("Number");
+    await user.type(numberInput, "INV");
+
+    // The suggestion also surfaces as a table row (typing sets the number~prefix
+    // filter too), so scope the assertion to the suggestions listbox.
+    const listbox = await screen.findByRole(
+      "listbox",
+      { name: /number suggestions/i },
+      { timeout: 3000 },
+    );
+    expect(await within(listbox).findByText("INV-2024-999", {}, { timeout: 3000 })).toBeInTheDocument();
+  });
+
+  it("renders a plain text input (no typeahead popover) for a relation-traversal prefix filter", async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithFilters(),
+      invoicesCollectionHandler(() => {}),
+    );
+
+    renderEntityList("/invoice");
+
+    const customerInput = await screen.findByLabelText("Customer Name");
+    await user.type(customerInput, "Acme");
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });
