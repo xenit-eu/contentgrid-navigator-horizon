@@ -16,6 +16,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
@@ -25,7 +26,6 @@ import {
   EntityItemDetailPage,
   EntityListLayout,
   EntityOverviewPage,
-  entityDetailSearchValidator,
 } from "./index";
 
 const API_URL = "https://api.example.com";
@@ -76,7 +76,7 @@ function createTestRouter(initialEntry = "/") {
     getParentRoute: () => appRoute,
     path: "/$entity",
     component: EntityDetailPage,
-    validateSearch: entityDetailSearchValidator,
+    validateSearch: entitySearchStateValidator,
   });
   // Item detail route: /$entity/$itemId — FLAT sibling of entityRoute so
   // EntityDetailPage doesn't need to render <Outlet>
@@ -292,23 +292,6 @@ const sampleItem = {
 };
 
 // ----------------------------------------------------------------
-// entityDetailSearchValidator
-// ----------------------------------------------------------------
-
-describe("entityDetailSearchValidator", () => {
-  it("returns q when provided as a string", () => {
-    expect(entityDetailSearchValidator({ q: "https://example.com/invoices?cursor=abc" })).toEqual({
-      q: "https://example.com/invoices?cursor=abc",
-    });
-  });
-
-  it("returns undefined q when q is not a string", () => {
-    expect(entityDetailSearchValidator({ q: 123 })).toEqual({ q: undefined });
-    expect(entityDetailSearchValidator({})).toEqual({ q: undefined });
-  });
-});
-
-// ----------------------------------------------------------------
 // EntityList — overview (index) route
 // ----------------------------------------------------------------
 
@@ -453,6 +436,88 @@ describe("EntityList", () => {
     expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
   });
 
+  it("does not offer a reset when the collection fails without an active cursor", async () => {
+    vi.useFakeTimers();
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, () => HttpResponse.json(null, { status: 500 })),
+    );
+
+    renderEntityList("/invoice");
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back to first page/i })).not.toBeInTheDocument();
+  });
+
+  it("offers a reset to the first page when a stale cursor fails to load", async () => {
+    vi.useFakeTimers();
+
+    // A same-origin cursor survives the data layer's origin guard, so the
+    // request reaches the server and gets rejected as a stale/invalid cursor.
+    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
+        return HttpResponse.json({
+          _links: { self: { href: `${API_URL}/invoices` } },
+          _embedded: { item: [] },
+          page: { size: 0, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back to first page/i })).toBeInTheDocument();
+  });
+
+  it("recovers to the first page when the reset action is clicked", async () => {
+    vi.useFakeTimers();
+
+    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
+        return HttpResponse.json({
+          _links: { self: { href: `${API_URL}/invoices` } },
+          _embedded: { item: [] },
+          page: { size: 0, total_items_exact: 0 },
+        });
+      }),
+    );
+
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    const resetButton = await screen.findByRole("button", { name: /back to first page/i });
+
+    const user = userEvent.setup();
+    await user.click(resetButton);
+
+    // Clearing the cursor switches the hook to the default (first-page) request,
+    // which succeeds — the error and its reset action disappear.
+    await screen.findByRole("table");
+    expect(screen.queryByText(/Failed to load/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back to first page/i })).not.toBeInTheDocument();
+  });
+
   it("shows entity item count badge when collection succeeds", async () => {
     server.use(
       profileRootHandler(),
@@ -539,10 +604,31 @@ describe("EntityList", () => {
     expect(prevButton).toBeDisabled();
     expect(nextButton).not.toBeDisabled();
 
-    // Clicking Next calls onPageUrlChange with the next page URL
-    // This triggers router navigation - the button should remain in the DOM
+    // Clicking Next triggers router navigation — the button stays in the DOM
+    // because the component re-renders in place rather than unmounting
     await user.click(nextButton);
     expect(nextButton).toBeInTheDocument();
+  });
+
+  it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
+    const nextPageUrl = `${API_URL}/invoices?_cursor=page2token`;
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      // Only the cursor-page handler is registered — when s.cursor is set the component
+      // fetches that URL directly and never requests the base collection URL
+      createListHandler({
+        url: nextPageUrl,
+        items: [sampleItem],
+        page: { size: 1, total_items_exact: 4 },
+      }),
+    );
+
+    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(nextPageUrl)}`);
+
+    // Data from the cursor page should be rendered
+    expect(await screen.findByText("INV-2024-001")).toBeInTheDocument();
   });
 });
 
