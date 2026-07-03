@@ -82,7 +82,7 @@ const invoiceProfileJson = {
           "blueprint:constraint": [],
           "blueprint:search-param": [
             { name: "number", title: "Number", type: "exact-match" },
-            { name: "number~prefix-match", title: "Number prefix-match", type: "prefix-match" },
+            { name: "number~prefix", title: "Number prefix", type: "prefix-match" },
           ],
           "blueprint:attribute": [],
         },
@@ -98,18 +98,10 @@ const invoiceProfileJson = {
         _embedded: {
           "blueprint:constraint": [],
           "blueprint:search-param": [
-            { name: "total~greater-than", title: "Total greater-than", type: "greater-than" },
-            {
-              name: "total~greater-than-or-equal",
-              title: "Total greater-than-or-equal",
-              type: "greater-than-or-equal",
-            },
-            { name: "total~less-than", title: "Total less-than", type: "less-than" },
-            {
-              name: "total~less-than-or-equal",
-              title: "Total less-than-or-equal",
-              type: "less-than-or-equal",
-            },
+            { name: "total~gt", title: "Total gt", type: "greater-than" },
+            { name: "total~gte", title: "Total gte", type: "greater-than-or-equal" },
+            { name: "total~lt", title: "Total lt", type: "less-than" },
+            { name: "total~lte", title: "Total lte", type: "less-than-or-equal" },
           ],
           "blueprint:attribute": [],
         },
@@ -124,9 +116,7 @@ const invoiceProfileJson = {
         required: false,
         _embedded: {
           "blueprint:constraint": [],
-          "blueprint:search-param": [
-            { name: "note~full-text", title: "Note full-text", type: "full-text" },
-          ],
+          "blueprint:search-param": [{ name: "note~fts", title: "Note fts", type: "full-text" }],
           "blueprint:attribute": [],
         },
         _links: {},
@@ -165,15 +155,15 @@ const invoiceProfileJson = {
       target: "https://example.com/invoices",
       properties: [
         { name: "number", type: "text" },
-        { name: "number~prefix-match", type: "text" },
-        { name: "total~greater-than", type: "number" },
-        { name: "total~greater-than-or-equal", type: "number" },
-        { name: "total~less-than", type: "number" },
-        { name: "total~less-than-or-equal", type: "number" },
-        { name: "note~full-text", type: "text" },
-        { name: "due_date~greater-than", type: "datetime" },
-        { name: "due_date~less-than", type: "datetime" },
-        { name: "customer.name~prefix-match", type: "text" },
+        { name: "number~prefix", type: "text" },
+        { name: "total~gt", type: "number" },
+        { name: "total~gte", type: "number" },
+        { name: "total~lt", type: "number" },
+        { name: "total~lte", type: "number" },
+        { name: "note~fts", type: "text" },
+        { name: "due_date~after", type: "datetime" },
+        { name: "due_date~before", type: "datetime" },
+        { name: "customer.name~prefix", type: "text" },
         {
           name: "_sort",
           type: "text",
@@ -225,8 +215,8 @@ describe("SearchHalFormTemplate.searchProperties", () => {
     const tmpl = makeSearchTemplate();
     const names = tmpl.searchProperties.map((p) => p.property.name);
     expect(names).toContain("number");
-    expect(names).toContain("number~prefix-match");
-    expect(names).toContain("total~greater-than");
+    expect(names).toContain("number~prefix");
+    expect(names).toContain("total~gt");
   });
 
   it("links profileAttribute for direct attribute properties", () => {
@@ -238,7 +228,7 @@ describe("SearchHalFormTemplate.searchProperties", () => {
   it("returns undefined profileAttribute for relation traversal when allProfiles not provided", () => {
     const tmpl = makeSearchTemplate();
     const customerProp = tmpl.searchProperties.find(
-      (p) => p.property.name === "customer.name~prefix-match",
+      (p) => p.property.name === "customer.name~prefix",
     );
     expect(customerProp?.profileAttribute).toBeUndefined();
     expect(customerProp?.isOverRelation).toBe(true);
@@ -247,7 +237,7 @@ describe("SearchHalFormTemplate.searchProperties", () => {
   it("links profileRelation for relation traversal properties", () => {
     const tmpl = makeSearchTemplate();
     const customerProp = tmpl.searchProperties.find(
-      (p) => p.property.name === "customer.name~prefix-match",
+      (p) => p.property.name === "customer.name~prefix",
     );
     expect(customerProp?.profileRelation?.name).toBe("customer");
   });
@@ -260,57 +250,57 @@ describe("SearchHalFormTemplate search type extraction", () => {
     expect(p?.searchType).toBe(ProfileAttributeSearchType.exactMatch);
   });
 
-  it("classifies prefix-match (~prefix-match suffix)", () => {
+  it("classifies prefix-match (~prefix suffix)", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "number~prefix-match");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "number~prefix");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.prefixMatch);
   });
 
-  it("classifies full-text (~full-text suffix)", () => {
+  it("classifies full-text (~fts suffix)", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "note~full-text");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "note~fts");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.fullText);
   });
 
-  it("classifies greaterThan (~greater-than suffix)", () => {
+  it("classifies greaterThan (~gt suffix)", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "total~greater-than");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "total~gt");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.greaterThan);
   });
 
-  it("classifies greaterThanOrEqual (~greater-than-or-equal suffix)", () => {
+  it("classifies greaterThanOrEqual (~gte suffix)", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "total~greater-than-or-equal");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "total~gte");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.greaterThanOrEqual);
   });
 
-  it("classifies lessThan (~less-than suffix)", () => {
+  it("classifies lessThan (~lt suffix)", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "total~less-than");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "total~lt");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.lessThan);
   });
 
-  it("classifies lessThanOrEqual (~less-than-or-equal suffix)", () => {
+  it("classifies lessThanOrEqual (~lte suffix)", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "total~less-than-or-equal");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "total~lte");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.lessThanOrEqual);
   });
 
-  it("classifies greaterThan for ~greater-than suffix on datetime fields", () => {
+  it("classifies greaterThan for ~after suffix", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "due_date~greater-than");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "due_date~after");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.greaterThan);
   });
 
-  it("classifies lessThan for ~less-than suffix on datetime fields", () => {
+  it("classifies lessThan for ~before suffix", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "due_date~less-than");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "due_date~before");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.lessThan);
   });
 
-  it("classifies prefix-match for relation traversal with ~prefix-match", () => {
+  it("classifies prefix-match for relation traversal with ~prefix", () => {
     const tmpl = makeSearchTemplate();
-    const p = tmpl.searchProperties.find((x) => x.property.name === "customer.name~prefix-match");
+    const p = tmpl.searchProperties.find((x) => x.property.name === "customer.name~prefix");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.prefixMatch);
   });
 });
@@ -448,19 +438,20 @@ describe("SearchHalFormTemplate.getSearchPropertiesByType", () => {
     expect(results.length).toBeGreaterThan(0);
   });
 
-  it("returns the one full-text property when filtering by fullText type", () => {
+  it("returns empty array when no properties of that type", () => {
     const tmpl = makeSearchTemplate();
+    // No full-text properties other than note~fts — verify we get exactly that one
     const results = tmpl.getSearchPropertiesByType(ProfileAttributeSearchType.fullText);
     expect(results).toHaveLength(1);
-    expect(results[0].property.name).toBe("note~full-text");
+    expect(results[0].property.name).toBe("note~fts");
   });
 });
 
 describe("SearchHalFormTemplate.getSearchPropertyByName", () => {
   it("returns the matching property by name", () => {
     const tmpl = makeSearchTemplate();
-    const prop = tmpl.getSearchPropertyByName("number~prefix-match");
-    expect(prop?.property.name).toBe("number~prefix-match");
+    const prop = tmpl.getSearchPropertyByName("number~prefix");
+    expect(prop?.property.name).toBe("number~prefix");
   });
 
   it("returns undefined for unknown property name", () => {
@@ -470,12 +461,12 @@ describe("SearchHalFormTemplate.getSearchPropertyByName", () => {
 });
 
 describe("SearchHalFormTemplate.getSearchPropertiesByAttribute", () => {
-  it("finds both exact and prefix-match properties for the same attribute", () => {
+  it("finds both exact and prefix properties for the same attribute", () => {
     const tmpl = makeSearchTemplate();
     const results = tmpl.getSearchPropertiesByAttribute("number");
     const names = results.map((p) => p.property.name);
     expect(names).toContain("number");
-    expect(names).toContain("number~prefix-match");
+    expect(names).toContain("number~prefix");
   });
 
   it("returns empty array for unknown attribute", () => {
@@ -485,9 +476,9 @@ describe("SearchHalFormTemplate.getSearchPropertiesByAttribute", () => {
 
   it("returns relation traversal properties filtered by attribute name", () => {
     const tmpl = makeSearchTemplate();
-    // customer.name~prefix-match — attribute part is "name"
+    // customer.name~prefix — attribute part is "name"
     const results = tmpl.getSearchPropertiesByAttribute("name");
-    expect(results.some((p) => p.property.name === "customer.name~prefix-match")).toBe(true);
+    expect(results.some((p) => p.property.name === "customer.name~prefix")).toBe(true);
   });
 });
 
@@ -497,7 +488,7 @@ describe("SearchHalFormTemplate.getRelationSearchProperties", () => {
     const results = tmpl.getRelationSearchProperties();
     expect(results.every((p) => p.isOverRelation)).toBe(true);
     expect(results).toHaveLength(1);
-    expect(results[0].property.name).toBe("customer.name~prefix-match");
+    expect(results[0].property.name).toBe("customer.name~prefix");
   });
 });
 
@@ -567,7 +558,7 @@ describe("SearchHalFormTemplate with allProfiles (relation attribute resolution)
     const tmpl = makeSearchTemplate(invoiceProfileJson, [customerProfile]);
 
     const customerProp = tmpl.searchProperties.find(
-      (p) => p.property.name === "customer.name~prefix-match",
+      (p) => p.property.name === "customer.name~prefix",
     );
     expect(customerProp?.isOverRelation).toBe(true);
     expect(customerProp?.profileRelation?.name).toBe("customer");
