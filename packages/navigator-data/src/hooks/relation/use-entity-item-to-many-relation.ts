@@ -3,12 +3,12 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { EntityItemCollection } from "../accessors/entity-item-collection";
-import { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
-import type { SearchRequestSpec } from "../api/requests";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
-import { useProfileEntities } from "./use-profile-entity";
+import { EntityItemCollection } from "../../accessors/entity-item-collection";
+import { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
+import type { SearchRequestSpec } from "../../api/requests";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
+import { useProfileEntities } from "../profile/use-profile-entity";
 
 /**
  * Fetch a specific page from a prior base-collection or search result.

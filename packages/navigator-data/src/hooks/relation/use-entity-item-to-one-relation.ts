@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { EntityItem } from "../accessors/entity-item";
-import { EntityItemToOneRelation } from "../accessors/entity-item-to-one-relation";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
-import { useProfileEntities } from "./use-profile-entity";
+import type { EntityItem } from "../../accessors/entity-item";
+import { EntityItemToOneRelation } from "../../accessors/entity-item-to-one-relation";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
+import { useProfileEntities } from "../profile/use-profile-entity";
 
 export interface UseEntityItemToOneRelationOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItem | null, Error>>;

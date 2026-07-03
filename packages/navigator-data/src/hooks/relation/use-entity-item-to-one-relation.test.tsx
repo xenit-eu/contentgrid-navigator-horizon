@@ -16,15 +16,15 @@ import {
   invoiceProfileBodyWithRelations,
   sampleInvoiceWithRelationTemplates,
   sampleSupplierItem,
-} from "../../test-fixtures/hal/fixtures";
-import { createEntityHandler, createProblemHandler } from "../../test-fixtures/msw/handlers";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import { EntityItemToOneRelation } from "../accessors/entity-item-to-one-relation";
-import ProfileEntity from "../accessors/entity-profile";
-import { cgRels } from "../api";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, PROFILE_URL, makeWrapper } from "./test-utils";
+} from "../../../test-fixtures/hal/fixtures";
+import { createEntityHandler, createProblemHandler } from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import { EntityItemToOneRelation } from "../../accessors/entity-item-to-one-relation";
+import ProfileEntity from "../../accessors/entity-profile";
+import { cgRels } from "../../api";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
 import { useEntityItemToOneRelation } from "./use-entity-item-to-one-relation";
 
 // ---------------------------------------------------------------------------

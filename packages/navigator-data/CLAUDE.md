@@ -72,6 +72,22 @@ These are the Layer-1 packages (see ADR-007 and the peerDep rule above) — use 
 
 Hooks in this package wrap TanStack Query. Follow these conventions:
 
+**Hooks directory layout:**
+
+Hooks are grouped into subfolders under `src/hooks/` by the kind of resource they target:
+
+```
+src/hooks/
+  profile/     # profile schema queries
+  collection/  # entity collection queries and pagination helpers
+  item/        # single entity-item queries and item mutations (create/update/delete/content)
+  relation/    # relation read queries and relation mutations
+  context.tsx  # NavigatorDataProvider / useNavigatorData
+  index.ts     # single public barrel — all hooks re-exported from here
+```
+
+Always import via the barrel (`@contentgrid/navigator-data`), not from the subfolder path directly. Add new hooks to the subfolder that matches their resource type and re-export from `index.ts`.
+
 **Hook naming:**
 
 All hooks are **generic** — they accept an accessor instance (e.g. `profileEntity`) as a parameter

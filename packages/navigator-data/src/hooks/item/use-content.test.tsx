@@ -21,14 +21,14 @@ import {
   createContentDownloadHandler,
   createContentUploadHandler,
   createProblemHandler,
-} from "../../test-fixtures/msw/handlers";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import ProfileEntity from "../accessors/entity-profile";
-import { createContentClient } from "../api/client";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "./test-utils";
+} from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import ProfileEntity from "../../accessors/entity-profile";
+import { createContentClient } from "../../api/client";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
 import { useDownloadContent, useUploadContent } from "./use-content";
 
 // ---------------------------------------------------------------------------

@@ -15,16 +15,16 @@ import {
   invoiceProfileBodyWithRelations,
   sampleInvoiceWithRelationTemplates,
   sampleLineItemList,
-} from "../../test-fixtures/hal/fixtures";
-import { createListHandler } from "../../test-fixtures/msw/handlers";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import { EntityItemCollection } from "../accessors/entity-item-collection";
-import { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
-import ProfileEntity from "../accessors/entity-profile";
-import { cgRels } from "../api";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, PROFILE_URL, makeWrapper } from "./test-utils";
+} from "../../../test-fixtures/hal/fixtures";
+import { createListHandler } from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import { EntityItemCollection } from "../../accessors/entity-item-collection";
+import { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
+import ProfileEntity from "../../accessors/entity-profile";
+import { cgRels } from "../../api";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
 import { useEntityItemToManyRelation } from "./use-entity-item-to-many-relation";
 
 // ---------------------------------------------------------------------------

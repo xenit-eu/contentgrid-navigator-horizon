@@ -20,15 +20,15 @@ import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-det
 import {
   invoiceAddLineItemTemplate,
   invoiceProfileBodyWithRelations,
-} from "../../test-fixtures/hal/fixtures";
-import { createRelationAddHandler } from "../../test-fixtures/msw/handlers";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import type { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
-import ProfileEntity from "../accessors/entity-profile";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "./test-utils";
+} from "../../../test-fixtures/hal/fixtures";
+import { createRelationAddHandler } from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
+import ProfileEntity from "../../accessors/entity-profile";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "../test-utils";
 import { useAddToManyRelation } from "./use-add-to-many-relation";
 
 // ---------------------------------------------------------------------------

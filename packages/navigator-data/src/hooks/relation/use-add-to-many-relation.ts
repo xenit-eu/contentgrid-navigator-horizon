@@ -1,5 +1,5 @@
 import type { UseMutationOptions } from "@tanstack/react-query";
-import type { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
+import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
 import { useRelationMutationBase } from "./use-relation-mutation-base";
 
 /**

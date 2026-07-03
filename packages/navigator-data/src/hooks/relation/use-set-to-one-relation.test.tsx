@@ -22,15 +22,18 @@ import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-det
 import {
   invoiceProfileBodyWithRelations,
   invoiceSetSupplierTemplate,
-} from "../../test-fixtures/hal/fixtures";
-import { createProblemHandler, createRelationLinkHandler } from "../../test-fixtures/msw/handlers";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import type { EntityItemToOneRelation } from "../accessors/entity-item-to-one-relation";
-import ProfileEntity from "../accessors/entity-profile";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "./test-utils";
+} from "../../../test-fixtures/hal/fixtures";
+import {
+  createProblemHandler,
+  createRelationLinkHandler,
+} from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import type { EntityItemToOneRelation } from "../../accessors/entity-item-to-one-relation";
+import ProfileEntity from "../../accessors/entity-profile";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "../test-utils";
 import { useSetToOneRelation } from "./use-set-to-one-relation";
 
 // ---------------------------------------------------------------------------

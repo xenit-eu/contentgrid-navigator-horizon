@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { SimpleLink } from "@contentgrid/hal";
-import { EntityItem } from "../accessors/entity-item";
-import type ProfileEntity from "../accessors/entity-profile";
-import { fetchHal } from "../api/hal-client";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape } from "../shapes";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
-import { useProfileEntities } from "./use-profile-entity";
+import { EntityItem } from "../../accessors/entity-item";
+import type ProfileEntity from "../../accessors/entity-profile";
+import { fetchHal } from "../../api/hal-client";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape } from "../../shapes";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
+import { useProfileEntities } from "../profile/use-profile-entity";
 
 export interface UseEntityItemOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItem, Error>>;

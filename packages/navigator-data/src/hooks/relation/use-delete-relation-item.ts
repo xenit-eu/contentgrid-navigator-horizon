@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
-import type { EntityItem } from "../accessors/entity-item";
-import type { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
-import { EntityItemToOneRelation } from "../accessors/entity-item-to-one-relation";
-import { addIfMatchHeader, fetchVoid } from "../api/hal-client";
-import { queryKeys } from "../query-keys";
-import { useNavigatorData } from "./context";
+import type { EntityItem } from "../../accessors/entity-item";
+import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
+import { EntityItemToOneRelation } from "../../accessors/entity-item-to-one-relation";
+import { addIfMatchHeader, fetchVoid } from "../../api/hal-client";
+import { queryKeys } from "../../query-keys";
+import { useNavigatorData } from "../context";
 
 export type UseDeleteRelationItemOptions = {
   readonly mutationOptions?: Omit<UseMutationOptions<EntityItem, Error, EntityItem>, "mutationFn">;

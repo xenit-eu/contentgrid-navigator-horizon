@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
-import type { EntityItemToManyRelation } from "../accessors/entity-item-to-many-relation";
-import { EntityItemToOneRelation } from "../accessors/entity-item-to-one-relation";
-import { addIfMatchHeader, fetchVoid } from "../api/hal-client";
-import { queryKeys } from "../query-keys";
-import { useNavigatorData } from "./context";
+import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
+import { EntityItemToOneRelation } from "../../accessors/entity-item-to-one-relation";
+import { addIfMatchHeader, fetchVoid } from "../../api/hal-client";
+import { queryKeys } from "../../query-keys";
+import { useNavigatorData } from "../context";
 
 /**
  * Parameters for the shared relation-mutation helper.
