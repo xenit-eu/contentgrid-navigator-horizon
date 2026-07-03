@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { NavigatorHeader } from "@contentgrid/features/navigator-header";
 import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
 import { SignInGate } from "@contentgrid/ui";
 
@@ -19,7 +20,18 @@ function RootComponent() {
 
   return (
     <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
-      <Outlet />
+      <AppLayout />
     </NavigatorDataProvider>
+  );
+}
+
+function AppLayout() {
+  return (
+    <div className="flex min-h-svh flex-col">
+      <NavigatorHeader />
+      <main className="flex-1 p-4">
+        <Outlet />
+      </main>
+    </div>
   );
 }
