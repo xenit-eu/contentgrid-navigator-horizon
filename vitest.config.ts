@@ -51,6 +51,14 @@ export default defineConfig({
           setupFiles: ["./test-setup.ts"],
         },
       },
+      {
+        test: {
+          name: "navigator-e2e-utils",
+          root: "./apps/navigator",
+          environment: "node",
+          include: ["tests/e2e/parse-env-file.test.ts"],
+        },
+      },
       "./packages/eslint-config",
     ],
     passWithNoTests: true,
