@@ -109,8 +109,8 @@ function basePropertyName(propertyName: string, dotTildeIdx: number): string {
  * The attribute name on the related entity, from a relation-traversal segment
  * with its trailing "~" operator suffix removed (e.g. "name~prefix-match" → "name").
  */
-function relationTargetAttributeName(attributePart: string): string {
-  return attributePart.split("~")[0];
+function relationTargetAttributeName(attributeSegmentWithSuffix: string): string {
+  return attributeSegmentWithSuffix.split("~")[0];
 }
 
 /**
@@ -293,8 +293,8 @@ export class SearchHalFormTemplate {
     if (isOverRelation) {
       // Relation traversal: "relation.attribute~suffix"
       const relationName = parts[0];
-      const attributePart = parts.slice(1).join(".");
-      const attributeName = relationTargetAttributeName(attributePart);
+      const attributeSegmentWithSuffix = parts.slice(1).join(".");
+      const attributeName = relationTargetAttributeName(attributeSegmentWithSuffix);
 
       profileRelation = this.profileEntity.getRelation(relationName);
 
@@ -310,7 +310,7 @@ export class SearchHalFormTemplate {
         }
       }
 
-      searchType = extractSearchType(attributePart);
+      searchType = extractSearchType(attributeSegmentWithSuffix);
     } else {
       // Direct attribute: "attribute~suffix" or "attribute.~op" (range-pair).
       // groupKey (computed above) IS the attribute name here — no relation prefix to strip.
