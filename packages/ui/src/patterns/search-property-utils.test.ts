@@ -6,6 +6,7 @@ import {
   formatFieldLabel,
   formatWords,
   isDateProperty,
+  isRelationProperty,
   parseName,
 } from "./search-property-utils";
 
@@ -162,6 +163,24 @@ describe("isDateProperty", () => {
     // "greater-than-or-equal-to" ends with "greater-than-or-equal" is FALSE as a substring,
     // but we want to confirm the endsWith check is exact at the suffix boundary
     expect(isDateProperty("field~greater-than-or-equal-to", "string")).toBe(false);
+  });
+});
+
+describe("isRelationProperty", () => {
+  it("returns false for a direct attribute property", () => {
+    expect(isRelationProperty("name~prefix-match")).toBe(false);
+  });
+
+  it("returns true for a relation-traversal property", () => {
+    expect(isRelationProperty("customer.name~prefix-match")).toBe(true);
+  });
+
+  it("returns false for a range-pair property (dot is part of the .~ operator, not a relation)", () => {
+    expect(isRelationProperty("amount.~from")).toBe(false);
+  });
+
+  it("returns false for a plain name with no operator or relation", () => {
+    expect(isRelationProperty("status")).toBe(false);
   });
 });
 

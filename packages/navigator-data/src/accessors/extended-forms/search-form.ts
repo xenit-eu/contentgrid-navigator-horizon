@@ -95,6 +95,52 @@ function isRawSortOption(opt: unknown): opt is RawSortOption {
 }
 
 /**
+ * The bare attribute/relation path of a property name, with its trailing operator
+ * suffix ("~prefix-match", ".~from", etc.) removed.
+ * `dotTildeIdx` is the index of a range-pair ".~" separator, or -1 if this property
+ * uses the legacy "~suffix" form instead.
+ */
+function basePropertyName(propertyName: string, dotTildeIdx: number): string {
+  const splitIdx = dotTildeIdx === -1 ? propertyName.indexOf("~") : dotTildeIdx;
+  return splitIdx === -1 ? propertyName : propertyName.slice(0, splitIdx);
+}
+
+/**
+ * The attribute name on the related entity, from a relation-traversal segment
+ * with its trailing "~" operator suffix removed (e.g. "name~prefix-match" → "name").
+ */
+function relationTargetAttributeName(attributePart: string): string {
+  return attributePart.split("~")[0];
+}
+
+/**
+ * The attribute name on the related entity, from a relation-traversal groupKey
+ * (e.g. "customer.name" → "name" — everything after the last dot is the relation's attribute).
+ */
+function relationAttributeName(groupKey: string): string {
+  return groupKey.slice(groupKey.lastIndexOf(".") + 1);
+}
+
+/** Property-name suffix → search type. Order matters: checked top to bottom, first match wins. */
+const SEARCH_TYPE_BY_SUFFIX: ReadonlyArray<readonly [string, ProfileAttributeSearchType]> = [
+  ["~prefix", ProfileAttributeSearchType.prefixMatch],
+  ["~fts", ProfileAttributeSearchType.fullText],
+  ["~gte", ProfileAttributeSearchType.greaterThanOrEqual],
+  ["~gt", ProfileAttributeSearchType.greaterThan],
+  ["~lte", ProfileAttributeSearchType.lessThanOrEqual],
+  ["~lt", ProfileAttributeSearchType.lessThan],
+  // datetime uses ~after/~before, which map to gt/lt semantically
+  ["~after", ProfileAttributeSearchType.greaterThan],
+  ["~before", ProfileAttributeSearchType.lessThan],
+];
+
+/** Extract the search type encoded in a property name's suffix (defaults to exact-match). */
+function extractSearchType(propertyName: string): ProfileAttributeSearchType {
+  const match = SEARCH_TYPE_BY_SUFFIX.find(([suffix]) => propertyName.includes(suffix));
+  return match?.[1] ?? ProfileAttributeSearchType.exactMatch;
+}
+
+/**
  * Enhanced sort option with linked profile metadata
  */
 export interface SortOption {
@@ -209,7 +255,7 @@ export class SearchHalFormTemplate {
       // - direct: groupKey IS the attribute name ("code" from "code~prefix")
       // - relation: groupKey is "relation.attribute" ("customer.name") — take the last segment
       if (prop.isOverRelation) {
-        return prop.groupKey.slice(prop.groupKey.lastIndexOf(".") + 1) === attributeName;
+        return relationAttributeName(prop.groupKey) === attributeName;
       }
       return prop.groupKey === attributeName;
     });
@@ -238,8 +284,7 @@ export class SearchHalFormTemplate {
 
     // groupKey: strip all operator suffixes (~prefix, .~from, etc.) once here so
     // consumers (filter-properties, getSearchPropertiesByAttribute, etc.) never re-parse.
-    const tildeSplitIdx = dotTildeIdx === -1 ? propertyName.indexOf("~") : dotTildeIdx;
-    const groupKey = tildeSplitIdx === -1 ? propertyName : propertyName.slice(0, tildeSplitIdx);
+    const groupKey = basePropertyName(propertyName, dotTildeIdx);
 
     let profileAttribute: ProfileAttribute | undefined;
     let profileRelation: ProfileRelation | undefined;
@@ -249,7 +294,7 @@ export class SearchHalFormTemplate {
       // Relation traversal: "relation.attribute~suffix"
       const relationName = parts[0];
       const attributePart = parts.slice(1).join(".");
-      const attributeName = attributePart.split("~")[0];
+      const attributeName = relationTargetAttributeName(attributePart);
 
       profileRelation = this.profileEntity.getRelation(relationName);
 
@@ -265,13 +310,12 @@ export class SearchHalFormTemplate {
         }
       }
 
-      searchType = this.extractSearchType(attributePart);
+      searchType = extractSearchType(attributePart);
     } else {
-      // Direct attribute: "attribute~suffix" or "attribute.~op" (range-pair)
-      const splitIdx = dotTildeIdx === -1 ? propertyName.indexOf("~") : dotTildeIdx;
-      const attributeName = splitIdx === -1 ? propertyName : propertyName.slice(0, splitIdx);
-      profileAttribute = this.profileEntity.getAttribute(attributeName);
-      searchType = this.extractSearchType(propertyName);
+      // Direct attribute: "attribute~suffix" or "attribute.~op" (range-pair).
+      // groupKey (computed above) IS the attribute name here — no relation prefix to strip.
+      profileAttribute = this.profileEntity.getAttribute(groupKey);
+      searchType = extractSearchType(propertyName);
     }
 
     return {
@@ -282,22 +326,6 @@ export class SearchHalFormTemplate {
       searchType,
       groupKey,
     };
-  }
-
-  /**
-   * Extract search type from property name suffix.
-   */
-  private extractSearchType(propertyName: string): ProfileAttributeSearchType {
-    if (propertyName.includes("~prefix")) return ProfileAttributeSearchType.prefixMatch;
-    if (propertyName.includes("~fts")) return ProfileAttributeSearchType.fullText;
-    if (propertyName.includes("~gte")) return ProfileAttributeSearchType.greaterThanOrEqual;
-    if (propertyName.includes("~gt")) return ProfileAttributeSearchType.greaterThan;
-    if (propertyName.includes("~lte")) return ProfileAttributeSearchType.lessThanOrEqual;
-    if (propertyName.includes("~lt")) return ProfileAttributeSearchType.lessThan;
-    // Note: datetime uses ~after/~before which map to gt/lt semantically
-    if (propertyName.includes("~after")) return ProfileAttributeSearchType.greaterThan;
-    if (propertyName.includes("~before")) return ProfileAttributeSearchType.lessThan;
-    return ProfileAttributeSearchType.exactMatch;
   }
 
   /**

@@ -50,6 +50,11 @@ export function formatFieldLabel(prop: SearchProperty): string {
   return formatWords(parseName(prop.name).base);
 }
 
+/** True when a property name traverses a relation (e.g. "customer.name~prefix-match"). */
+export function isRelationProperty(name: string): boolean {
+  return parseName(name).base.includes(".");
+}
+
 export const SEARCH_TYPE_LABELS: Record<string, string> = {
   "prefix-match": "prefix",
   "exact-match": "exact",
