@@ -413,16 +413,15 @@ function EntityDetailView({
     typeahead.search(query);
   }
 
-  const collection = useEntityItemCollection(
-    pageUrl
-      ? { url: pageUrl, profileEntity: profile }
-      : searchTemplate
-        ? {
-            profileEntity: profile,
-            searchValues: filterSearchValues,
-          }
-        : { profileEntity: profile },
-  );
+  let collectionRequest;
+  if (pageUrl) {
+    collectionRequest = { url: pageUrl, profileEntity: profile };
+  } else if (searchTemplate) {
+    collectionRequest = { profileEntity: profile, searchValues: filterSearchValues };
+  } else {
+    collectionRequest = { profileEntity: profile };
+  }
+  const collection = useEntityItemCollection(collectionRequest);
 
   // The data layer's origin guard (use-entity-item-collection.ts) silently
   // falls back to the first page when pageUrl is not same-origin with the

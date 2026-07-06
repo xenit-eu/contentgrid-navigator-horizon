@@ -1,3 +1,4 @@
+import type React from "react";
 import { useState } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
 import { format } from "date-fns";
@@ -299,9 +300,53 @@ function TypeaheadTextFilter({
   onSearch: (query: string) => void;
 }>) {
   const [open, setOpen] = useState(false);
+  // Index of the keyboard-highlighted suggestion; -1 means none highlighted.
+  // Drives aria-activedescendant per the WAI-ARIA combobox-with-listbox-popup pattern —
+  // focus stays on the input, and this index is the only signal of "current" option.
+  const [activeIndex, setActiveIndex] = useState(-1);
   const inputId = `filter-${fieldParam.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const listboxId = `${inputId}-listbox`;
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
   const hasSuggestions = suggestions.length > 0;
   const showPopover = open && (hasSuggestions || isLoading);
+
+  function closePopover() {
+    setOpen(false);
+    setActiveIndex(-1);
+  }
+
+  function selectSuggestion(s: string) {
+    onChange(s);
+    onSearch("");
+    closePopover();
+  }
+
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!hasSuggestions) return;
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setOpen(true);
+        setActiveIndex((i) => (i + 1) % suggestions.length);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setOpen(true);
+        setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+        break;
+      case "Enter":
+        if (activeIndex >= 0) {
+          e.preventDefault();
+          selectSuggestion(suggestions[activeIndex]);
+        }
+        break;
+      case "Escape":
+        closePopover();
+        break;
+      default:
+        break;
+    }
+  }
 
   return (
     <div className="space-y-1.5">
@@ -315,6 +360,11 @@ function TypeaheadTextFilter({
               <Input
                 id={inputId}
                 type="text"
+                role="combobox"
+                aria-expanded={showPopover}
+                aria-controls={listboxId}
+                aria-autocomplete="list"
+                aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
                 className="h-8 text-sm"
                 value={value}
                 autoComplete="off"
@@ -323,18 +373,20 @@ function TypeaheadTextFilter({
                   onChange(v || undefined);
                   onSearch(v);
                   setOpen(!!v);
+                  setActiveIndex(-1);
                 }}
+                onKeyDown={handleInputKeyDown}
                 onFocus={() => {
                   if (hasSuggestions) setOpen(true);
                 }}
-                onBlur={() => setOpen(false)}
+                onBlur={closePopover}
               />
             </div>
             <ClearButton
               onClick={() => {
                 onChange(undefined);
                 onSearch("");
-                setOpen(false);
+                closePopover();
               }}
               visible={!!value}
             />
@@ -354,23 +406,33 @@ function TypeaheadTextFilter({
             <p className="py-2 text-center text-sm text-muted-foreground">Loading…</p>
           )}
           {hasSuggestions && (
+            // Native <select>/<datalist> can't render this: suggestions arrive async
+            // (debounced typeahead fetch) and must keep shadcn styling consistent across
+            // browsers. role="combobox" + aria-activedescendant above wires this listbox
+            // into the standard WAI-ARIA combobox pattern with full keyboard support.
+            // NOSONAR: no native-element alternative for an async, custom-styled combobox popup.
             <ul
+              id={listboxId}
               role="listbox"
               aria-label={`${label} suggestions`}
               className="max-h-48 overflow-y-auto"
             >
-              {suggestions.map((s) => (
-                <li key={s} role="option" aria-selected={s === value}>
+              {suggestions.map((s, index) => (
+                <li
+                  key={s}
+                  id={optionId(index)}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                >
                   <button
                     type="button"
-                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    className={`w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent ${
+                      index === activeIndex ? "bg-accent" : ""
+                    }`}
                     // Prevent the input's onBlur from firing before onClick fires
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      onChange(s);
-                      onSearch("");
-                      setOpen(false);
-                    }}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => selectSuggestion(s)}
                   >
                     {s}
                   </button>

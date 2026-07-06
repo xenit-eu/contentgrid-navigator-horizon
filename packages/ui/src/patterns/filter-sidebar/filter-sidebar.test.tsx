@@ -506,20 +506,30 @@ describe("FilterSidebar — exact-match suppression when a prefix-match sibling 
 });
 
 describe("FilterSidebar — TypeaheadTextFilter", () => {
+  const RELATION_PREFIX_PROP: SearchFilterProperty = {
+    name: "customer.name~prefix",
+    label: "Customer Name",
+    inputKind: "text",
+    searchOperator: "prefix-match",
+    groupKey: "customer.name",
+    relationKey: "customer",
+  };
+
   it("renders a plain TextFilter for prefix-match fields when onTypeaheadSearch is not provided", () => {
     renderSidebar([PREFIX_PROP]);
-    expect(screen.getByRole("textbox")).not.toHaveAttribute("autocomplete", "off");
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("renders a typeahead input for prefix-match fields when onTypeaheadSearch is provided", () => {
+  it("renders a typeahead combobox for prefix-match fields when onTypeaheadSearch is provided", () => {
     const onTypeaheadSearch = vi.fn();
     renderSidebar([PREFIX_PROP], {}, { onTypeaheadSearch });
-    expect(screen.getByRole("textbox")).toHaveAttribute("autocomplete", "off");
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
   it("shows the current filter value in the typeahead input", () => {
     renderSidebar([PREFIX_PROP], { "number~prefix": "INV-001" }, { onTypeaheadSearch: vi.fn() });
-    expect(screen.getByRole("textbox")).toHaveValue("INV-001");
+    expect(screen.getByRole("combobox")).toHaveValue("INV-001");
   });
 
   it("calls onTypeaheadSearch and onFilterChange when user types", () => {
@@ -527,7 +537,7 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     const onTypeaheadSearch = vi.fn();
     renderSidebar([PREFIX_PROP], {}, { onFilterChange, onTypeaheadSearch });
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "INV" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "INV" } });
 
     expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV");
     expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "INV");
@@ -538,7 +548,7 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     const onTypeaheadSearch = vi.fn();
     renderSidebar([PREFIX_PROP], { "number~prefix": "INV" }, { onFilterChange, onTypeaheadSearch });
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "" } });
 
     expect(onFilterChange).toHaveBeenCalledWith("number~prefix", undefined);
     expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
@@ -555,7 +565,7 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
       },
     );
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "INV" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "INV" } });
 
     const options = screen.getAllByRole("option");
     expect(options).toHaveLength(2);
@@ -577,7 +587,7 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
       },
     );
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "INV" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "INV" } });
     await user.click(screen.getByText("INV-001"));
 
     expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV-001");
@@ -599,6 +609,41 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
 
     expect(onFilterChange).toHaveBeenCalledWith("number~prefix", undefined);
     expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
+  });
+
+  it("navigates suggestions with arrow keys and selects the highlighted one on Enter", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      {},
+      {
+        onFilterChange,
+        onTypeaheadSearch,
+        typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002"] },
+      },
+    );
+    const input = screen.getByRole("combobox");
+    await user.click(input);
+    fireEvent.change(input, { target: { value: "INV" } });
+
+    await user.keyboard("{ArrowDown}");
+    expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("option-0"));
+
+    await user.keyboard("{ArrowDown}");
+    expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("option-1"));
+
+    await user.keyboard("{Enter}");
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV-002");
+  });
+
+  it("falls back to a plain text input for a relation-traversal prefix-match field", () => {
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar([RELATION_PREFIX_PROP], {}, { onTypeaheadSearch });
+
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 });
 

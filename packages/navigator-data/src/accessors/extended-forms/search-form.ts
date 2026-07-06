@@ -238,8 +238,8 @@ export class SearchHalFormTemplate {
 
     // groupKey: strip all operator suffixes (~prefix, .~from, etc.) once here so
     // consumers (filter-properties, getSearchPropertiesByAttribute, etc.) never re-parse.
-    const tildeSplitIdx = dotTildeIdx !== -1 ? dotTildeIdx : propertyName.indexOf("~");
-    const groupKey = tildeSplitIdx !== -1 ? propertyName.slice(0, tildeSplitIdx) : propertyName;
+    const tildeSplitIdx = dotTildeIdx === -1 ? propertyName.indexOf("~") : dotTildeIdx;
+    const groupKey = tildeSplitIdx === -1 ? propertyName : propertyName.slice(0, tildeSplitIdx);
 
     let profileAttribute: ProfileAttribute | undefined;
     let profileRelation: ProfileRelation | undefined;
@@ -268,8 +268,8 @@ export class SearchHalFormTemplate {
       searchType = this.extractSearchType(attributePart);
     } else {
       // Direct attribute: "attribute~suffix" or "attribute.~op" (range-pair)
-      const splitIdx = dotTildeIdx !== -1 ? dotTildeIdx : propertyName.indexOf("~");
-      const attributeName = splitIdx !== -1 ? propertyName.slice(0, splitIdx) : propertyName;
+      const splitIdx = dotTildeIdx === -1 ? propertyName.indexOf("~") : dotTildeIdx;
+      const attributeName = splitIdx === -1 ? propertyName : propertyName.slice(0, splitIdx);
       profileAttribute = this.profileEntity.getAttribute(attributeName);
       searchType = this.extractSearchType(propertyName);
     }
