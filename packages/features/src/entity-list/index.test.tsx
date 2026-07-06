@@ -1857,7 +1857,9 @@ describe("EntityDetailView filters", () => {
     // Start with an active cursor: typing in a filter must reset it (handleFilterChange
     // calls onPageUrlChange(undefined)), so the request that follows hits the base
     // collection URL rather than the stale cursor URL.
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(`${API_URL}/invoices?_cursor=stale`)}`);
+    renderEntityList(
+      `/invoice?s.cursor=${encodeURIComponent(`${API_URL}/invoices?_cursor=stale`)}`,
+    );
 
     const statusInput = await screen.findByLabelText("Status");
     await user.type(statusInput, "open");
@@ -1932,7 +1934,9 @@ describe("EntityDetailView filters", () => {
       { name: /number suggestions/i },
       { timeout: 3000 },
     );
-    expect(await within(listbox).findByText("INV-2024-999", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(
+      await within(listbox).findByText("INV-2024-999", {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
   });
 
   it("renders a plain text input (no typeahead popover) for a relation-traversal prefix filter", async () => {
