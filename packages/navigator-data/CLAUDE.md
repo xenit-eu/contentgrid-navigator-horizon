@@ -394,7 +394,7 @@ queryKeys.toManyRelation.byUrl(relationName, relationUrl); // exact key for a to
 queryKeys.toManyRelation.forRelationName(relationName); // prefix — invalidates all to-many reads for that relation name
 ```
 
-Both factories are keyed by the relation **name** string (e.g. `"supplier"`, `"lineItems"`), not by a `ProfileEntity` instance — unlike `entityItem`/`entityItemCollection`, which key by `ProfileEntity`. This is intentional: a relation read is scoped to a specific relation on a specific source item's link, not to the target entity type as a whole.
+Both factories are keyed by the relation **name** string (e.g. `"supplier"`, `"lineItems"`), not by a `ProfileEntity` instance — unlike `entityItem`/`entityItemCollection`, which key by `ProfileEntity`. This is intentional: a relation read is scoped to a specific relation on a specific source item's link, not to the target entity type as a whole. Multiple relations can also target the same `ProfileEntity`, which would make a profile-keyed relation cache ambiguous.
 
 Root strings are `"ToOneRelation"` / `"ToManyRelation"` — distinct from `"EntityItem"`, so there is
 no prefix collision with `entityItem.forEntityName`.

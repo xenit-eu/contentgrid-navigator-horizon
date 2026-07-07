@@ -103,13 +103,7 @@ Request builders return a **bare** `Request` — they do not attach `If-Match`. 
 
 `useUnlinkRelation` and `useDeleteRelationItem` do not go through the shared base (they have different request shapes — a hand-built DELETE and a full entity delete, respectively) but follow the identical If-Match pattern locally: `addIfMatchHeader(baseReq, relation.source.etag)` for unlink, `addIfMatchHeader(baseReq, item.etag)` for delete (using the _target_ item's own etag, since deleting the item is gated on the item's own state, not the source's).
 
-### 4.3 412/409 surfacing
-
-All non-2xx responses become `ProblemDetailError` (via `checkResponse`/`fetchVoid`), and no relation hook auto-retries. Two problem types are relevant at the call site:
-
-- **412 `unsatisfied-version`** — the source item's ETag was stale. Standard re-fetch/re-apply/retry flow.
-- **409 `integrity/blind-relation-overwrite`** — from `useSetToOneRelation` when the to-one slot already has a link. The caller must `useClearRelation` first, then set.
-- **409 `integrity/required-relation`** — from `useClearRelation` when clearing would violate a required relation. The caller must re-link or delete the referencing entity first.
+All non-2xx responses surface to the caller as `ProblemDetailError` (via `checkResponse`/`fetchVoid`) and no relation hook auto-retries. Structured problem-details handling at call sites is still a TODO; the per-problem-type contract will be documented when that leg lands.
 
 ---
 
@@ -138,7 +132,7 @@ This is a deliberate departure from `entityItem`/`entityItemCollection`, which k
 | `useUnlinkRelation`     | settled                    | `toManyRelation.forRelationName(relation.name)` (**prefix** — all pages) **and** `entityItem.byUrl(source)`                                                                                                                                  | Removing one item can shift page boundaries for every other cached page of this relation, so a single exact-key bust is insufficient.                                                                                                                                   |
 | `useDeleteRelationItem` | success only               | `entityItem.byUrl` removed for the deleted item (`removeQueries`), `entityItemCollection.forEntity` invalidated, and the relation read key — `toOneRelation.byUrl` (exact) for to-one, `toManyRelation.forRelationName` (prefix) for to-many | The item is gone globally, not just from this relation, so the global item cache and collection cache are also cleaned up. No source-item invalidation — this hook does not attach the _source_ item's ETag (it deletes the _target_ item using the target's own ETag). |
 
-The set/add/clear source-item invalidation is **unconditional** — `relation.source.profileEntity` and `relation.source.selfLink.href` are always available synchronously off the bound `relation` object, so there's no dependency on a profile query settling first. This was previously undocumented and contradicted by stale JSDoc on `useSetToOneRelation` and `useAddToManyRelation`, which claimed "does NOT invalidate the source item" — both have been corrected in this pass (see §7).
+The set/add/clear source-item invalidation is **unconditional** — `relation.source.profileEntity` and `relation.source.selfLink.href` are always available synchronously off the bound `relation` object, so there's no dependency on a profile query settling first.
 
 None of the set/add/clear/unlink hooks use `setQueryData` — they invalidate and let the read hook lazily refetch. Only `useUploadContent` (content layer) and the generic entity-item mutation recipe use `setQueryData` to populate a fresh value directly.
 
@@ -174,30 +168,9 @@ Both clients share the bearer-auth hook and the `problemDetailsHook` (`checkResp
 
 ---
 
-## 7. `src/hooks/` restructure map
+## 7. `src/hooks/` restructure
 
-Hooks were moved into resource-kind subfolders. All imports from outside the package remain unaffected — the public barrel (`@contentgrid/navigator-data` → `src/index.ts` → `src/hooks/index.ts`) is unchanged in shape; only internal file locations moved.
-
-| Old path                                           | New path                                                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `src/hooks/use-profile-entity.ts` (+ test)         | `src/hooks/profile/use-profile-entity.ts`                                                               |
-| `src/hooks/use-entity-item-collection.ts` (+ test) | `src/hooks/collection/use-entity-item-collection.ts`                                                    |
-| `src/hooks/use-recent-items.ts` (+ test)           | `src/hooks/collection/use-recent-items.ts`                                                              |
-| `src/hooks/use-entity-item.ts` (+ test)            | `src/hooks/item/use-entity-item.ts`                                                                     |
-| `src/hooks/use-create-entity.ts`                   | `src/hooks/item/use-create-entity.ts`                                                                   |
-| `src/hooks/use-update-entity.ts` (+ test)          | `src/hooks/item/use-update-entity.ts`                                                                   |
-| `src/hooks/use-delete-entity.ts` (+ test)          | `src/hooks/item/use-delete-entity.ts`                                                                   |
-| _(new)_                                            | `src/hooks/item/use-content.ts` — `useUploadContent`, `useDownloadContent`                              |
-| _(new)_                                            | `src/hooks/relation/use-entity-item-to-one-relation.ts`                                                 |
-| _(new)_                                            | `src/hooks/relation/use-entity-item-to-many-relation.ts`                                                |
-| _(new)_                                            | `src/hooks/relation/use-relation-mutation-base.ts` — shared internal base, not exported from the barrel |
-| _(new)_                                            | `src/hooks/relation/use-set-to-one-relation.ts`                                                         |
-| _(new)_                                            | `src/hooks/relation/use-add-to-many-relation.ts`                                                        |
-| _(new)_                                            | `src/hooks/relation/use-clear-relation.ts`                                                              |
-| _(new)_                                            | `src/hooks/relation/use-unlink-relation.ts`                                                             |
-| _(new)_                                            | `src/hooks/relation/use-delete-relation-item.ts`                                                        |
-
-`src/hooks/context.tsx` (provider/context) and `src/hooks/index.ts` (barrel) stay at the top level, alongside the four subfolders.
+Hooks now live in resource-kind subfolders (`profile/`, `collection/`, `item/`, `relation/`); `src/hooks/context.tsx` (provider/context) and `src/hooks/index.ts` (barrel) stay at the top level. Imports from outside the package are unaffected — the public barrel (`@contentgrid/navigator-data` → `src/index.ts` → `src/hooks/index.ts`) is unchanged in shape; git tracks the individual renames.
 
 ---
 
@@ -211,8 +184,5 @@ These are explicit, contained workarounds pending server-side changes — not mo
 2. **Relation-scoped search requires a base-collection fetch first.**
    The scoping mechanism described in §3.2 depends on fetching the base relation collection to read `internalRelationParams` off the _resolved_ URL, then re-injecting those params into the search template as hidden properties. This only works because the server currently returns the scoping params via a 302 redirect rather than exposing them directly on the search template. **Follow-up:** if the server starts emitting relation-scoping params directly in the search template (or as a documented, stable query parameter), remove the base-fetch step in `useEntityItemToManyRelation` and encode search requests in one round trip.
 
-3. **JSDoc/CLAUDE.md drift on source-item invalidation (fixed in this pass, flagged for review).**
-   Prior to this documentation pass, `useSetToOneRelation` and `useAddToManyRelation`'s JSDoc, plus `packages/navigator-data/CLAUDE.md`, both stated that these mutations do **not** invalidate the source item. The actual shared implementation (`use-relation-mutation-base.ts`) has always invalidated the source item's `entityItem.byUrl` unconditionally on settle. The JSDoc and CLAUDE.md text have been corrected to match the code (§5.2). Worth a second pair of eyes in review: is the unconditional source-item invalidation itself the intended long-term contract, or should it be narrowed (e.g. skip when the mutation errors before the request was even sent)? Currently it runs on both success and error paths inside `onSettled`.
-
-4. **`queryKeys.toOneRelation`/`toManyRelation` naming: relation-name-keyed, not entity-keyed.**
+3. **`queryKeys.toOneRelation`/`toManyRelation` naming: relation-name-keyed, not entity-keyed.**
    This is an intentional design choice (§5.1), not a bug, but it is a deviation from the `entityItem`/`entityItemCollection` convention of keying by `ProfileEntity`. If two different source entity types ever expose relations with the same name to structurally different targets, their relation-read caches would share a `forRelationName` prefix. This has not caused an observed problem, but is worth keeping in mind if a future change needs per-source-entity relation cache isolation.
