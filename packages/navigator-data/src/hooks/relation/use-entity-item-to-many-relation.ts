@@ -5,6 +5,7 @@ import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
+import type ProfileEntity from "../../accessors/entity-profile";
 import type { SearchRequestSpec } from "../../api/requests";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
@@ -49,6 +50,46 @@ const PLACEHOLDER = {
   queryKey: ["ToManyRelation", "__placeholder__"] as const,
   queryFn: () => Promise.resolve(null as unknown as EntityItemCollection),
 } as const;
+
+/**
+ * Resolves the URL for the main collection query, based on the requested mode.
+ *
+ * - By URL: the URL is used as-is.
+ * - By search: the scoped search URL is encoded from `targetProfile.searchTemplate`
+ *   with `internalRelationParams` injected as hidden params. Returns `undefined`
+ *   while any prerequisite (target profile, internal params, codec) isn't ready.
+ * - Default: the relation's own link href.
+ */
+function resolveMainUrl(
+  params: RelationCollectionParams | undefined,
+  relation: EntityItemToManyRelation,
+  targetProfile: ProfileEntity | undefined,
+  internalRelationParams: Record<string, string> | undefined,
+): string | undefined {
+  if (isByUrl(params)) {
+    return params.url;
+  }
+  if (isBySearch(params)) {
+    if (!params.searchValues || !targetProfile || !internalRelationParams) {
+      return undefined;
+    }
+    const scopedTemplate = targetProfile.searchTemplate?.withHiddenParams(internalRelationParams);
+    if (!scopedTemplate) {
+      return undefined;
+    }
+    try {
+      const codec = halFormCodecs.requireCodecFor(scopedTemplate.template);
+      const scopedValues = createValues(scopedTemplate.template).withValues(
+        params.searchValues.valueMap,
+      );
+      return codec.encode(scopedValues).url;
+    } catch {
+      // codec not found or encoding failed; caller disables the query
+      return undefined;
+    }
+  }
+  return relation.link.href;
+}
 
 /**
  * Fetches the target entity collection for a to-many relation.
@@ -109,25 +150,7 @@ export function useEntityItemToManyRelation(
   const internalRelationParams = baseQuery.data?.internalRelationParams;
 
   // Resolve the main query URL.
-  let mainUrl: string | undefined;
-  if (isByUrl(params)) {
-    mainUrl = params.url;
-  } else if (searchMode && searchValues && targetProfile && internalRelationParams) {
-    const scopedTemplate = targetProfile.searchTemplate?.withHiddenParams(internalRelationParams);
-    if (scopedTemplate) {
-      try {
-        const codec = halFormCodecs.requireCodecFor(scopedTemplate.template);
-        const scopedValues = createValues(scopedTemplate.template).withValues(
-          searchValues.valueMap,
-        );
-        mainUrl = codec.encode(scopedValues).url;
-      } catch {
-        // codec not found or encoding failed; mainUrl stays undefined → query disabled
-      }
-    }
-  } else if (!searchMode) {
-    mainUrl = relation.link.href;
-  }
+  const mainUrl = resolveMainUrl(params, relation, targetProfile, internalRelationParams);
 
   const mainEnabled =
     !!targetProfile &&

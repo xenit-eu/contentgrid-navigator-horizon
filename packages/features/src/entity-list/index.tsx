@@ -911,6 +911,22 @@ function renderAttributeValue(attr: EntityItemAttribute): string {
 // RelationItemSearchDialog — search and select an entity item to link
 // ---------------------------------------------------------------------------
 
+/**
+ * Builds the search values for the relation-item search dialog: applies the
+ * query text to the given search property when both are present, otherwise
+ * returns the template's default (empty) values.
+ */
+function buildRelationSearchValues(
+  searchTemplate: NonNullable<ProfileEntity["searchTemplate"]>,
+  query: string,
+  searchProperty:
+    | ReturnType<NonNullable<ProfileEntity["searchTemplate"]>["getSearchPropertiesByType"]>[number]
+    | undefined,
+) {
+  const values = createValues(searchTemplate.template);
+  return query && searchProperty ? values.withValue(searchProperty.property.name, query) : values;
+}
+
 function RelationItemSearchDialog({
   targetProfile,
   open,
@@ -930,9 +946,7 @@ function RelationItemSearchDialog({
     searchTemplate?.getSearchPropertiesByType(ProfileAttributeSearchType.fullText)[0];
 
   const searchValues = searchTemplate
-    ? query && searchProperty
-      ? createValues(searchTemplate.template).withValue(searchProperty.property.name, query)
-      : createValues(searchTemplate.template)
+    ? buildRelationSearchValues(searchTemplate, query, searchProperty)
     : undefined;
 
   const collection = useEntityItemCollection(
@@ -1009,7 +1023,7 @@ function MutationErrorDisplay({ error }: Readonly<{ error: Error }>) {
   }
   const { status, title, detail, type } = error.problemDetail;
   const fieldErrors = extractFieldErrors(error);
-  const problemTypeLabel = type ? type.split("/").filter(Boolean).pop() : undefined;
+  const problemTypeLabel = type ? type.split("/").findLast(Boolean) : undefined;
   return (
     <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive space-y-1">
       <div className="flex items-baseline gap-2">
@@ -1020,8 +1034,8 @@ function MutationErrorDisplay({ error }: Readonly<{ error: Error }>) {
       {problemTypeLabel && <p className="font-mono text-muted-foreground">{problemTypeLabel}</p>}
       {fieldErrors.length > 0 && (
         <ul className="mt-1 list-inside list-disc space-y-0.5">
-          {fieldErrors.map((fe, i) => (
-            <li key={i}>
+          {fieldErrors.map((fe) => (
+            <li key={`${fe.property ?? ""}-${fe.detail ?? fe.title}`}>
               {fe.property && <span className="font-medium">{fe.property}: </span>}
               {fe.detail ?? fe.title}
             </li>

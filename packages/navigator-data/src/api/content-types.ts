@@ -15,7 +15,7 @@ export const CONTENT_TYPE_URI_LIST = "text/uri-list";
  * @returns A Content-Disposition header value string
  */
 export function contentDispositionAttachment(filename: string): string {
-  const isAscii = [...filename].every((c) => c.charCodeAt(0) <= 127);
+  const isAscii = [...filename].every((c) => (c.codePointAt(0) ?? 0) <= 127);
   if (isAscii) {
     // RFC 6266 quoted-string: backslash-escape only " and \
     const escaped = filename.replace(/["\\]/g, (c) => `\\${c}`);
