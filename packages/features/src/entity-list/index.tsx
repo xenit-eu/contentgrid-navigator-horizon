@@ -6,9 +6,14 @@ import {
   type EntityItemAttribute,
   type EntityItemToManyRelation,
   type EntityItemToOneRelation,
+  type NavigatorRouterContext,
   ProblemDetailError,
   type ProfileEntity,
+  bestEffortPrefetch,
   createValues,
+  ensureEntityItem,
+  ensureEntityItemCollection,
+  ensureProfileEntityByName,
   extractFieldErrors,
   useAddToManyRelation,
   useClearRelation,
@@ -69,7 +74,7 @@ import {
   ProfileAttributeSearchType,
   ProfileAttributeType,
 } from "../../../navigator-data/src/accessors/attribute-profile";
-import type { EntitySearchState } from "./entity-search-state";
+import { type EntitySearchState, validateEntitySearchState } from "./entity-search-state";
 
 export { type EntitySearchState, validateEntitySearchState } from "./entity-search-state";
 
@@ -1098,3 +1103,78 @@ function buildRows(items: readonly EntityItem[], columns: DataTableColumn[]): Da
     return { id: String(item.halItem.data.id), data };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Shared route options for the /_app/$entity/ and /_app/$entity/$itemId routes.
+// Identical in both navigator and navigator-experimental — file-based routing
+// needs the actual createFileRoute(path)(...) call in each app's own
+// src/routes/ tree, but the options object itself doesn't, so it lives here
+// once instead of being duplicated per app.
+// ---------------------------------------------------------------------------
+
+/**
+ * Shared first step of both loaders below: resolve the profile for the
+ * route's `$entity` param. Returns undefined for an unknown entity name —
+ * callers skip their own prefetch in that case; the component handles the
+ * not-found state.
+ */
+function resolveRouteProfileEntity(context: NavigatorRouterContext, entityName: string) {
+  return ensureProfileEntityByName(
+    context.queryClient,
+    context.apiFetch,
+    context.profileUrl,
+    entityName,
+  );
+}
+
+export const entityDetailRouteOptions = {
+  validateSearch: validateEntitySearchState,
+  // Only the cursor affects which page gets prefetched — filters/sort aren't
+  // in scope yet (see EntitySearchState). Re-runs the loader on cursor change
+  // so Next/Previous prime the cache too, not just the initial page load.
+  loaderDeps: ({ search }: { search: EntitySearchState }) => ({ cursor: search.cursor }),
+  // Best-effort: see bestEffortPrefetch's docstring for why a failed prefetch
+  // (e.g. not yet authenticated) must not crash the route — EntityDetailPage's
+  // own useProfileEntities()/useEntityItemCollection() calls take over.
+  loader: ({
+    context,
+    params,
+    deps,
+  }: {
+    context: NavigatorRouterContext;
+    params: { entity: string };
+    deps: { cursor: string | undefined };
+  }) =>
+    bestEffortPrefetch(async () => {
+      const profileEntity = await resolveRouteProfileEntity(context, params.entity);
+      if (!profileEntity) return;
+      await ensureEntityItemCollection(context.queryClient, context.apiFetch, {
+        profileEntity,
+        cursor: deps.cursor,
+      });
+    }),
+  component: EntityDetailPage,
+};
+
+export const entityItemDetailRouteOptions = {
+  // The list page's cursor is carried into this route's own URL on row click
+  // (see onRowClick in EntityDetailPage) so the breadcrumb can hand it back
+  // when navigating to the list — this route never reads or acts on it itself.
+  validateSearch: validateEntitySearchState,
+  // Best-effort: see bestEffortPrefetch's docstring for why a failed prefetch
+  // (e.g. not yet authenticated) must not crash the route — EntityItemDetailPage's
+  // own useProfileEntities()/useEntityItem() calls take over.
+  loader: ({
+    context,
+    params,
+  }: {
+    context: NavigatorRouterContext;
+    params: { entity: string; itemId: string };
+  }) =>
+    bestEffortPrefetch(async () => {
+      const profileEntity = await resolveRouteProfileEntity(context, params.entity);
+      if (!profileEntity) return;
+      await ensureEntityItem(context.queryClient, context.apiFetch, profileEntity, params.itemId);
+    }),
+  component: EntityItemDetailPage,
+};

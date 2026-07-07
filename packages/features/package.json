@@ -31,6 +31,10 @@
     "./navigator-header": {
       "import": "./src/navigator-header/index.ts",
       "types": "./src/navigator-header/index.ts"
+    },
+    "./app-shell": {
+      "import": "./src/app-shell/index.ts",
+      "types": "./src/app-shell/index.ts"
     }
   },
   "scripts": {
