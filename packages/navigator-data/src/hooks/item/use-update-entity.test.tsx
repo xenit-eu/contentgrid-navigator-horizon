@@ -21,13 +21,13 @@ import {
   invoiceProfileBody,
   invoiceUpdateTemplate,
   sampleInvoice,
-} from "../../test-fixtures/hal/fixtures";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import ProfileEntity from "../accessors/entity-profile";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, makeQueryClient, makeWrapper } from "./test-utils";
+} from "../../../test-fixtures/hal/fixtures";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import ProfileEntity from "../../accessors/entity-profile";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { BASE, makeQueryClient, makeWrapper } from "../test-utils";
 import { useUpdateEntityItem } from "./use-update-entity";
 
 // ---------------------------------------------------------------------------

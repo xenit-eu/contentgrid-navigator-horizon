@@ -22,15 +22,15 @@ import {
   invoiceDeleteTemplate,
   invoiceProfileBody,
   sampleInvoice,
-} from "../../test-fixtures/hal/fixtures";
-import { createDeleteHandler, createProblemHandler } from "../../test-fixtures/msw/handlers";
-import { server } from "../../test-setup";
-import { EntityItem } from "../accessors/entity-item";
-import ProfileEntity from "../accessors/entity-profile";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../shapes";
-import { BASE, makeQueryClient, makeWrapper } from "./test-utils";
-import { useDeleteEntityItem } from "./use-delete-entity";
+} from "../../../test-fixtures/hal/fixtures";
+import { createDeleteHandler, createProblemHandler } from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { EntityItem } from "../../accessors/entity-item";
+import ProfileEntity from "../../accessors/entity-profile";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
+import { useDeleteEntityItem } from "../item/use-delete-entity";
+import { BASE, makeQueryClient, makeWrapper } from "../test-utils";
 
 // ---------------------------------------------------------------------------
 // Fixtures

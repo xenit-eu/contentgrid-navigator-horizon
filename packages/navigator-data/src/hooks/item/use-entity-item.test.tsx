@@ -13,10 +13,10 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
-import { server } from "../../test-setup";
-import ProfileEntity from "../accessors/entity-profile";
-import type { ProfileEntityShape } from "../shapes";
-import { BASE, PROFILE_URL, makeWrapper } from "./test-utils";
+import { server } from "../../../test-setup";
+import ProfileEntity from "../../accessors/entity-profile";
+import type { ProfileEntityShape } from "../../shapes";
+import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
 import { useEntityItem } from "./use-entity-item";
 
 // ---------------------------------------------------------------------------

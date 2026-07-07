@@ -13,10 +13,10 @@ import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
 import { createValues } from "@contentgrid/hal-forms/values";
-import { server } from "../../test-setup";
-import ProfileEntity from "../accessors/entity-profile";
-import type { ProfileEntityShape } from "../shapes";
-import { BASE, makeWrapper } from "./test-utils";
+import { server } from "../../../test-setup";
+import ProfileEntity from "../../accessors/entity-profile";
+import type { ProfileEntityShape } from "../../shapes";
+import { BASE, makeWrapper } from "../test-utils";
 import {
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,

@@ -1,8 +1,8 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import ProfileEntity, { profileRootQuery } from "../accessors/entity-profile";
-import { cgRels } from "../api";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
+import ProfileEntity, { profileRootQuery } from "../../accessors/entity-profile";
+import { cgRels } from "../../api";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
 
 interface UseProfileEntitiesOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<ProfileEntity, Error>>;

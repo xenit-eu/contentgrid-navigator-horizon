@@ -40,13 +40,14 @@ function makeHalSlice(overrides: {
   nextHref?: string;
   prevHref?: string;
   firstHref?: string;
+  selfHref?: string;
   pageData?: { total_items_exact?: number; total_items_estimate?: number };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): HalSlice<any> {
-  const { items = [], nextHref, prevHref, firstHref, pageData } = overrides;
+  const { items = [], nextHref, prevHref, firstHref, selfHref, pageData } = overrides;
 
   const links: Record<string, unknown> = {
-    self: { href: "/invoices" },
+    self: { href: selfHref ?? "/invoices" },
   };
   if (nextHref) links.next = { href: nextHref };
   if (prevHref) links.prev = { href: prevHref };
@@ -371,5 +372,59 @@ describe("EntityItemCollection — static infiniteQuery", () => {
       meta: undefined,
     });
     expect(result).toBeInstanceOf(EntityItemCollection);
+  });
+});
+
+describe("EntityItemCollection — findById", () => {
+  it("returns the matching item when present on this page", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ items: [{ id: "inv-001" }, { id: "inv-002" }] }),
+      makeProfileEntity(),
+    );
+    const found = collection.findById("inv-002");
+    expect(found).toBeInstanceOf(EntityItem);
+    expect(found?.id).toBe("inv-002");
+  });
+
+  it("returns undefined when no item on this page matches the id", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ items: [{ id: "inv-001" }] }),
+      makeProfileEntity(),
+    );
+    expect(collection.findById("inv-999")).toBeUndefined();
+  });
+});
+
+describe("EntityItemCollection — internalRelationParams", () => {
+  it("returns scoping params, stripping pagination params", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({
+        selfHref: "/invoices?_internal_invoice__products=019d&_cursor=abc&_size=20&_sort=name,asc",
+      }),
+      makeProfileEntity(),
+    );
+    expect(collection.internalRelationParams).toEqual({ _internal_invoice__products: "019d" });
+  });
+
+  it("returns an empty object when self href has no scoping params", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ selfHref: "/invoices" }),
+      makeProfileEntity(),
+    );
+    expect(collection.internalRelationParams).toEqual({});
+  });
+
+  it("returns an empty object when self href is absent", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const collection = new EntityItemCollection({ self: undefined } as any, makeProfileEntity());
+    expect(collection.internalRelationParams).toEqual({});
+  });
+
+  it("returns an empty object when the self href cannot be parsed as a URL", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ selfHref: "http://[invalid" }),
+      makeProfileEntity(),
+    );
+    expect(collection.internalRelationParams).toEqual({});
   });
 });

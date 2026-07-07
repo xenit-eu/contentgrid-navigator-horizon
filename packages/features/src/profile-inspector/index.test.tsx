@@ -8,6 +8,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  createContentClient,
 } from "@contentgrid/navigator-data";
 import { server } from "../../test-setup";
 import { ProfileInspector } from "./index";
@@ -22,11 +23,16 @@ function renderProfileInspector() {
     defaultOptions: { queries: { retry: false } },
   });
   const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          profileUrl={PROFILE_URL}
+        >
           {children}
         </NavigatorDataProvider>
       </QueryClientProvider>
