@@ -5,6 +5,7 @@
  * - EntityCollectionDefault mode { profileEntity }: fetches empty search collection
  * - EntityCollectionBySearch mode { profileEntity, searchValues }: fetches with values, disabled when undefined
  * - EntityCollectionByUrl mode { url, profileEntity }: fetches a specific URL
+ * - cursor param: merges a bare cursor token onto the default/search request URL
  * - Error state (EntityItemCollection.fetchByUrlQuery has hardcoded retry:3 — fake timers required)
  * - useEntityItemCollectionInfiniteScroll: success, disabled on undefined searchValues, default mode, URL mode
  */
@@ -230,6 +231,147 @@ describe("useEntityItemCollection — search mode { profileEntity, searchValues 
 });
 
 // ---------------------------------------------------------------------------
+// cursor param — bare-token pagination (ACC-2898 follow-up)
+// ---------------------------------------------------------------------------
+
+describe("useEntityItemCollection — cursor param (bare token pagination)", () => {
+  it("merges the cursor token onto the default-mode request URL", async () => {
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        if (cursor === "abc123") {
+          return HttpResponse.json({
+            _embedded: {
+              item: [
+                {
+                  id: "cust-005",
+                  name: "Cursor Corp",
+                  _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-005` } },
+                },
+              ],
+            },
+            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}?_cursor=abc123` } },
+            page: { size: 20, total_items_exact: 1 },
+          });
+        }
+        return HttpResponse.json(customerCollectionBody);
+      }),
+    );
+
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemCollection({ profileEntity, cursor: "abc123" }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.items).toHaveLength(1);
+    expect(result.current.data?.items[0].id).toBe("cust-005");
+  });
+
+  it("merges the cursor token onto the search-mode request URL alongside filter values", async () => {
+    let capturedUrl: URL | undefined;
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json(customerCollectionBody);
+      }),
+    );
+
+    const profileEntity = makeCustomerProfile();
+    const searchTemplate = profileEntity.searchTemplate!;
+    const searchValues = createValues(searchTemplate.template).withValue("name~prefix", "Acme");
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemCollection({ profileEntity, searchValues, cursor: "abc123" }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(capturedUrl?.searchParams.get("name~prefix")).toBe("Acme");
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("abc123");
+  });
+
+  it("fetches the plain request URL (no _cursor param) when cursor is undefined", async () => {
+    let capturedUrl: URL | undefined;
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json(customerCollectionBody);
+      }),
+    );
+
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItemCollection({ profileEntity }), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(capturedUrl?.searchParams.has("_cursor")).toBe(false);
+  });
+
+  it("round-trips: a token extracted via EntityItemCollection.nextCursor refetches the exact same backend page", async () => {
+    // Regression coverage for the existing navigator's SearchEntityPage.tsx bug:
+    // it writes the browser cursor param under one name but reads it back
+    // under another, so a token that came from a real `next` link never
+    // actually reaches the backend again. Extract via the real accessor
+    // (not a hardcoded string) and feed it back through the real hook, so a
+    // future param-name drift between EntityItemCollection.nextCursor and
+    // resolveCollectionRequest's merge would fail this test.
+    const TOKEN = "roundtrip-token-789";
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        if (cursor === TOKEN) {
+          return HttpResponse.json({
+            _embedded: {
+              item: [
+                {
+                  id: "cust-006",
+                  name: "Roundtrip Corp",
+                  _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-006` } },
+                },
+              ],
+            },
+            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}?_cursor=${TOKEN}` } },
+            page: { size: 20, total_items_exact: 1 },
+          });
+        }
+        return HttpResponse.json({
+          ...customerCollectionBody,
+          _links: {
+            ...customerCollectionBody._links,
+            next: { href: `${CUSTOMER_COLLECTION_URL}?_size=20&_cursor=${TOKEN}` },
+          },
+        });
+      }),
+    );
+
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+
+    const firstPage = renderHook(() => useEntityItemCollection({ profileEntity }), { wrapper });
+    await waitFor(() => expect(firstPage.result.current.isSuccess).toBe(true));
+
+    const extractedCursor = firstPage.result.current.data?.nextCursor;
+    expect(extractedCursor).toBe(TOKEN);
+
+    const secondPage = renderHook(
+      () => useEntityItemCollection({ profileEntity, cursor: extractedCursor }),
+      { wrapper },
+    );
+    await waitFor(() => expect(secondPage.result.current.isSuccess).toBe(true));
+
+    expect(secondPage.result.current.data?.items).toHaveLength(1);
+    expect(secondPage.result.current.data?.items[0].id).toBe("cust-006");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // EntityCollectionByUrl mode
 // ---------------------------------------------------------------------------
 
@@ -292,110 +434,6 @@ describe("useEntityItemCollection — URL mode { url, profileEntity }", () => {
     await vi.runAllTimersAsync();
 
     expect(result.current.isError).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// EntityCollectionByUrl mode — origin guard (security)
-// ---------------------------------------------------------------------------
-
-describe("useEntityItemCollection — URL mode origin guard", () => {
-  it("discards a cross-origin cursor URL and falls back to the first-page URL", async () => {
-    // Only the trusted first-page (default search) collection URL is registered.
-    // If the evil-origin URL were fetched, MSW would report an unhandled request
-    // and the query would error instead of succeeding.
-    setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
-    const evilUrl = "https://evil.example/x";
-
-    const wrapper = makeWrapper();
-    const { result } = renderHook(() => useEntityItemCollection({ url: evilUrl, profileEntity }), {
-      wrapper,
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(2);
-  });
-
-  it("accepts a same-origin cursor URL verbatim", async () => {
-    const nextPageUrl = `${CUSTOMER_COLLECTION_URL}/page2`;
-    const nextPageBody = {
-      _embedded: {
-        item: [
-          {
-            id: "cust-003",
-            name: "Corp Three",
-            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-003` } },
-          },
-        ],
-      },
-      _links: { self: { href: nextPageUrl } },
-      page: { size: 20, total_items_exact: 1 },
-    };
-    server.use(http.get(nextPageUrl, () => HttpResponse.json(nextPageBody)));
-
-    const profileEntity = makeCustomerProfile();
-    const wrapper = makeWrapper();
-    const { result } = renderHook(
-      () => useEntityItemCollection({ url: nextPageUrl, profileEntity }),
-      { wrapper },
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(1);
-    expect(result.current.data?.items[0].id).toBe("cust-003");
-  });
-
-  it("accepts a relative same-origin cursor, resolving it against the API base", async () => {
-    // Regression coverage: the trust anchor is the absolute API base
-    // (profileUrl), not profileEntity.collectionUrl. A relative cursor must
-    // resolve against that base and be trusted — anchoring on a relative
-    // collectionUrl would make `new URL(...)` throw and silently disable
-    // cursor pagination for every relative-collection-URL deployment.
-    const resolvedUrl = `${BASE}/relative-path`;
-    const relativePageBody = {
-      _embedded: {
-        item: [
-          {
-            id: "cust-004",
-            name: "Relative Corp",
-            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-004` } },
-          },
-        ],
-      },
-      _links: { self: { href: resolvedUrl } },
-      page: { size: 20, total_items_exact: 1 },
-    };
-    server.use(http.get(resolvedUrl, () => HttpResponse.json(relativePageBody)));
-
-    const profileEntity = makeCustomerProfile();
-    const wrapper = makeWrapper();
-    const { result } = renderHook(
-      () => useEntityItemCollection({ url: "/relative-path", profileEntity }),
-      { wrapper },
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(1);
-    expect(result.current.data?.items[0].id).toBe("cust-004");
-  });
-
-  it("discards an unparsable cursor URL and falls back to the first-page URL", async () => {
-    setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
-
-    const wrapper = makeWrapper();
-    const { result } = renderHook(
-      () => useEntityItemCollection({ url: "http://[::1", profileEntity }),
-      { wrapper },
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(2);
   });
 });
 

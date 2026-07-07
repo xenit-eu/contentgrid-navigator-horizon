@@ -156,7 +156,7 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 
 - `profileEntity.collectionUrl` — the entity collection URL (e.g. `/invoices`); read directly from the `describes` collection link.
 - `profileEntity.itemUrl(entityId)` — expands the item URI template (e.g. `/{plural}/{id}`) via `@contentgrid/uri-template`.
-- Follow HAL `next`/`prev`/`self` links directly for pagination — never construct cursor URLs.
+- Follow HAL `next`/`prev`/`self` links directly for pagination — never construct cursor URLs. **Exception**: persisting the cursor across browser navigation — see "Cursor-token URL-state exception" below.
 
 **Return shape:**
 
@@ -430,15 +430,56 @@ Rules:
 
 **3. URLs only from links — never string-built.**
 
-| What you need      | How to get it — current API                                                                     |
-| ------------------ | ----------------------------------------------------------------------------------------------- |
-| Collection URL     | `profileEntity.collectionUrl` (from the `describes` collection link)                            |
-| Item URL           | `profileEntity.itemUrl(entityId)` (URI-template expansion via `@contentgrid/uri-template`)      |
-| Content URL        | `entityItem.contentLinks` / `entityItem.halItem.links.findLink(cgRels.content, attrName)?.href` |
-| Next/prev page URL | `EntityItemCollection.nextHref` / `prevHref` from the HAL slice                                 |
+| What you need            | How to get it — current API                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| Collection URL           | `profileEntity.collectionUrl` (from the `describes` collection link)                             |
+| Item URL                 | `profileEntity.itemUrl(entityId)` (URI-template expansion via `@contentgrid/uri-template`)       |
+| Content URL              | `entityItem.contentLinks` / `entityItem.halItem.links.findLink(cgRels.content, attrName)?.href`  |
+| Next/prev page URL       | `EntityItemCollection.nextHref` / `prevHref` from the HAL slice — use when actually fetching     |
+| Next/prev cursor _token_ | `EntityItemCollection.nextCursor` / `prevCursor` — use ONLY for URL-state persistence, see below |
 
 Do NOT derive URLs via string transforms such as `href.replace(/\/profile\//, "/")`,
 `${collectionHref}/${id}`, `${itemHref}/${relationName}`, or `.split("/").pop()`.
+
+**Exception to rule 3 — cursor-token URL-state persistence.** The `nextCursor`/`prevCursor`
+row in the table above is the one sanctioned exception to "never construct/parse cursor
+URLs." This exception is ported from **the existing navigator — a separate, pre-rewrite
+codebase, not this repo** — which never puts a full backend URL in the browser's address
+bar. All bare file references below (`src/app/helpers/routing.ts`, `CollectionSearch.tsx`,
+`useCollectionSearch.ts`) are paths in that other codebase, not in `navigator-data`.
+
+- Why: `nextHref`/`prevHref` are full backend URLs (origin, `_size`, etc. included).
+  Writing one verbatim into a router search param leaks backend/tenant infrastructure
+  into the browser's address bar, history, and any shared/bookmarked link — and
+  needlessly couples that link to one specific API origin. The existing navigator avoids
+  this the same way, in `src/app/helpers/routing.ts`'s `translateResourceUrlToFrontendUrl`
+  and `CollectionSearch.tsx`'s `onNext`/`onPrev`.
+- What's allowed: `EntityItemCollection.nextCursor` / `prevCursor` (getters on
+  `src/accessors/entity-item-collection.ts`, in this repo) pull out ONLY the `_cursor`
+  query-param value from the href — no origin, no other params — via
+  `new URL(href).searchParams.get("_cursor")`, same technique as the existing navigator's
+  inline `onNext`/`onPrev` handlers. Store just that bare token in the URL (e.g. the `cursor`
+  search param — deliberately NOT `s.`-prefixed; see
+  `packages/features/src/entity-list/entity-search-state.ts` in this repo — cursor is a
+  pagination mechanism, not a search filter value; that file owns the `$entity` route's
+  search-param shape since it's a routing/feature concern, not a HAL data-access one — this
+  package only owns the token itself). To refetch, pass it back as
+  `useEntityItemCollection({ profileEntity, searchValues?, cursor })` —
+  `resolveCollectionRequest` (`src/hooks/collection/use-entity-item-collection.ts`, in this repo) merges
+  it onto a freshly-built request URL with `url.searchParams.set("_cursor", cursor)`,
+  mirroring the existing navigator's `useCollectionSearch.ts` reducer. The same bare token is
+  also carried into the `$entity/$itemId` route's URL on row click (still via
+  `EntitySearchState`/`validateEntitySearchState`) purely so that route's breadcrumb can hand
+  it back when navigating to the list — the item route never reads or acts on it itself.
+- What's still forbidden: decoding or interpreting the token's meaning, computing offsets,
+  or reconstructing cursors for any purpose other than this one persistence path. The
+  token is still 100% opaque — this exception only relocates _where_ it's carried (from a
+  full href to a bare query value), it never inspects _what_ it means.
+- This also simplifies trust: a bare token merged as a query _value_ cannot redirect
+  `apiFetch` to a different origin, unlike a raw href. `EntityCollectionByUrl` mode (following
+  a link verbatim, e.g. a relation's collection link or infinite scroll) has no origin check —
+  the URL always comes from a HAL response already fetched from the ContentGrid backend via
+  `apiFetch`, so it is always fired straight through.
 
 **4. IDs from the `id` field — never parsed from hrefs.**
 

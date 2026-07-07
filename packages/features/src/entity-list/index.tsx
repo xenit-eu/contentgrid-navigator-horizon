@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
@@ -6,12 +6,10 @@ import {
   type EntityItemAttribute,
   type EntityItemToManyRelation,
   type EntityItemToOneRelation,
-  type EntitySearchState,
   ProblemDetailError,
   type ProfileEntity,
   createValues,
   extractFieldErrors,
-  resolveTrustedCollectionUrl,
   useAddToManyRelation,
   useClearRelation,
   useCreateEntityItem,
@@ -20,7 +18,6 @@ import {
   useEntityItemCollection,
   useEntityItemToManyRelation,
   useEntityItemToOneRelation,
-  useNavigatorData,
   useProfileEntities,
   useSetToOneRelation,
   useUnlinkRelation,
@@ -72,6 +69,9 @@ import {
   ProfileAttributeSearchType,
   ProfileAttributeType,
 } from "../../../navigator-data/src/accessors/attribute-profile";
+import type { EntitySearchState } from "./entity-search-state";
+
+export { type EntitySearchState, validateEntitySearchState } from "./entity-search-state";
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -161,12 +161,14 @@ export function EntityOverviewPage() {
 }
 
 // ---------------------------------------------------------------------------
-// EntityDetailPage — $entity route component (reads path + s.cursor search param)
+// EntityDetailPage — $entity route component (reads path + cursor search param)
 // ---------------------------------------------------------------------------
 
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const cursor = (useSearch({ strict: false }) as EntitySearchState)["s.cursor"];
+  // Bare pagination cursor token — NOT prefixed s.* (cursor is a pagination
+  // mechanism, not a search filter value; see entity-search-state.ts).
+  const cursor = (useSearch({ strict: false }) as EntitySearchState).cursor;
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
 
@@ -177,15 +179,15 @@ export function EntityDetailPage() {
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
   const onCursorChange = useCallback(
-    (url: string | undefined) => {
+    (token: string | undefined) => {
       const go = navigate as unknown as AnyNavigateFn;
-      if (url) {
-        go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
+      if (token) {
+        go({ search: (prev) => ({ ...prev, cursor: token }) });
       } else {
         go({
           search: (prev) => {
             const next = { ...prev };
-            delete next["s.cursor"];
+            delete next.cursor;
             return next;
           },
         });
@@ -195,7 +197,14 @@ export function EntityDetailPage() {
   );
 
   function onRowClick(id: string) {
-    go({ to: "/$entity/$itemId", params: { entity: entityName, itemId: id } });
+    // Carry the active cursor into the item page's own URL, so the item
+    // page's breadcrumb can hand it back when navigating to the list —
+    // otherwise "back to list" always lands on page 1 (see EntityItemDetailView).
+    go({
+      to: "/$entity/$itemId",
+      params: { entity: entityName, itemId: id },
+      search: cursor ? { cursor } : {},
+    });
   }
 
   function onBack() {
@@ -218,8 +227,8 @@ export function EntityDetailPage() {
   return (
     <EntityDetailView
       profile={profile}
-      pageUrl={cursor}
-      onPageUrlChange={onCursorChange}
+      cursor={cursor}
+      onCursorChange={onCursorChange}
       onRowClick={onRowClick}
       onBack={onBack}
     />
@@ -322,32 +331,18 @@ function EntityCardConnected({
 
 function EntityDetailView({
   profile,
-  pageUrl,
-  onPageUrlChange,
+  cursor,
+  onCursorChange,
   onRowClick,
   onBack,
 }: Readonly<{
   profile: ProfileEntity;
-  pageUrl: string | undefined;
-  onPageUrlChange: (url: string | undefined) => void;
+  cursor: string | undefined;
+  onCursorChange: (cursor: string | undefined) => void;
   onRowClick: (id: string) => void;
   onBack: () => void;
 }>) {
-  const collection = useEntityItemCollection(
-    pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
-  );
-
-  // The data layer's origin guard (use-entity-item-collection.ts) silently
-  // falls back to the first page when pageUrl is not same-origin with the
-  // API base — it never throws. Without this effect, a stale/tampered
-  // s.cursor would keep showing up in the URL forever even though it's being
-  // ignored. Clear it so the URL reflects what is actually being fetched.
-  const { profileUrl: apiBaseUrl } = useNavigatorData();
-  useEffect(() => {
-    if (pageUrl && resolveTrustedCollectionUrl(pageUrl, apiBaseUrl) === null) {
-      onPageUrlChange(undefined);
-    }
-  }, [pageUrl, apiBaseUrl, onPageUrlChange]);
+  const collection = useEntityItemCollection({ profileEntity: profile, cursor });
 
   const columns = buildColumns(profile);
   const rows = collection.data ? buildRows(collection.data.items, columns) : [];
@@ -413,15 +408,15 @@ function EntityDetailView({
             Failed to load {profile.pluralName}: {collection.error.message}
           </p>
           {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
-              shared or expired s.cursor makes the server reject the request
+              shared or expired cursor makes the server reject the request
               and would otherwise strand the user on an unrecoverable URL.
               Offer a reset to the first page whenever a cursor was active. */}
-          {pageUrl && (
+          {cursor && (
             <Button
               variant="outline"
               size="sm"
               className="mt-3"
-              onClick={() => onPageUrlChange(undefined)}
+              onClick={() => onCursorChange(undefined)}
             >
               Back to first page
             </Button>
@@ -448,7 +443,7 @@ function EntityDetailView({
                 size="sm"
                 disabled={!collection.data.hasPrevious}
                 onClick={() => {
-                  onPageUrlChange(collection.data.prevHref);
+                  onCursorChange(collection.data.prevCursor);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
@@ -462,7 +457,7 @@ function EntityDetailView({
                 size="sm"
                 disabled={!collection.data.hasNext}
                 onClick={() => {
-                  onPageUrlChange(collection.data.nextHref);
+                  onCursorChange(collection.data.nextCursor);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
@@ -511,6 +506,10 @@ export function EntityItemDetailPage() {
     entity: string;
     itemId: string;
   };
+  // Cursor carried forward from the list page's row click (see onRowClick in
+  // EntityDetailPage) — handed back to the breadcrumb below so "back to list"
+  // restores the page the item was opened from instead of always page 1.
+  const cursor = (useSearch({ strict: false }) as EntitySearchState).cursor;
 
   const profileResults = useProfileEntities();
   const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
@@ -530,13 +529,14 @@ export function EntityItemDetailPage() {
 
   if (!profile) return null;
 
-  return <EntityItemDetailView profile={profile} itemId={itemId} />;
+  return <EntityItemDetailView profile={profile} itemId={itemId} cursor={cursor} />;
 }
 
 function EntityItemDetailView({
   profile,
   itemId,
-}: Readonly<{ profile: ProfileEntity; itemId: string }>) {
+  cursor,
+}: Readonly<{ profile: ProfileEntity; itemId: string; cursor: string | undefined }>) {
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
   const item = useEntityItem({ profileEntity: profile, entityId: itemId });
@@ -558,7 +558,13 @@ function EntityItemDetailView({
           <BreadcrumbItem>
             <button
               type="button"
-              onClick={() => go({ to: "/$entity", params: { entity: profile.name } })}
+              onClick={() =>
+                go({
+                  to: "/$entity",
+                  params: { entity: profile.name },
+                  search: cursor ? { cursor } : {},
+                })
+              }
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {profile.pluralName}

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { QueryClient } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,12 +7,18 @@ import type { AppAuthResult } from "@contentgrid/navigator-data";
 import { useAppAuth } from "@contentgrid/navigator-data";
 import { routeTree } from "../routeTree.gen";
 
+// This suite tests routing/auth-gating behaviour only (see the
+// @contentgrid/features/entity-list mock below) — route loaders are
+// no-op'd rather than exercised against real data, matching that same intent.
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
   return {
     ...actual,
     useAppAuth: vi.fn(),
     NavigatorDataProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+    ensureProfileEntityByName: vi.fn().mockResolvedValue(undefined),
+    ensureEntityItemCollection: vi.fn().mockResolvedValue(undefined),
+    ensureEntityItem: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -36,6 +43,7 @@ vi.mock("@contentgrid/features/entity-list", async () => {
       return <div data-testid="entity-detail" data-entity={entity} />;
     },
     EntityItemDetailPage: () => <div data-testid="entity-item-detail" />,
+    validateEntitySearchState: (search: Record<string, unknown>) => search,
   };
 });
 
@@ -60,6 +68,11 @@ function renderRouter(initialPath = "/") {
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [initialPath] }),
+    context: {
+      queryClient: new QueryClient(),
+      apiFetch: vi.fn(),
+      profileUrl: "https://api.example.com/profile",
+    },
   });
   return render(<RouterProvider router={router} />);
 }

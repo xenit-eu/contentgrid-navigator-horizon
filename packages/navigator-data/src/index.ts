@@ -13,6 +13,6 @@ export { ProfileRelation } from "./accessors/relation-profile";
 export { default as ProfileEntity, profileRootQuery } from "./accessors/entity-profile";
 export type { default as ProfileEntityType } from "./accessors/entity-profile";
 export * from "./config";
+export * from "./loader";
 export { queryKeys } from "./query-keys";
-export * from "./search";
 export { createValues } from "@contentgrid/hal-forms/values";

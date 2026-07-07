@@ -2,6 +2,7 @@ export { NavigatorDataProvider, useNavigatorData } from "./context";
 export type { NavigatorDataContextValue } from "./context";
 export { useProfileEntities, useProfileEntity } from "./profile/use-profile-entity";
 export {
+  resolveCollectionRequest,
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,
 } from "./collection/use-entity-item-collection";

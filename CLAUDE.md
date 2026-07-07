@@ -305,7 +305,7 @@ For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/nav
 - Use the entity profile (`/profile/<entity>`) for generic tooling that must adapt to model changes.
 - Prefer PATCH over PUT for partial updates.
 - Always include and validate ETags for mutable operations.
-- Never construct or parse pagination cursors — follow HAL `next`/`prev` links directly.
+- Never construct or parse pagination cursors when building the actual fetch request — follow HAL `next`/`prev` links directly. **Narrow, documented exception**: the entity-list page persists pagination state across browser navigation as a bare cursor _token_ (the `_cursor` query-param value only, via `EntityItemCollection.nextCursor`/`prevCursor`) in the `cursor` URL param — never the full href (which would leak the backend origin into the browser's address bar/history). The token is never decoded; it is only relocated onto a freshly-built request at fetch time. See [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md) for the full rationale and API.
 - Send Bearer tokens in the `Authorization` header only.
 - Verify webhook signatures using the JWKS endpoint and a JWT library.
 - Extensions (external services/automations built on top of a ContentGrid application — see "Small Core & Extensibility") must authenticate via OIDC and use the same REST API as any other client.

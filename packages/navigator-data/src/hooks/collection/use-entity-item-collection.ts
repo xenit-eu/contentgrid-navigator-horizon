@@ -1,10 +1,9 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { EntityItemCollection } from "../../accessors/entity-item-collection";
+import { CURSOR_QUERY_PARAM, EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { SearchRequestSpec } from "../../api/requests";
-import { resolveTrustedCollectionUrl } from "../../search/cursor-trust";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
 
@@ -28,6 +27,12 @@ export interface EntityCollectionByUrl {
 export interface EntityCollectionDefault {
   /** Entity profile with search template */
   profileEntity: ProfileEntity;
+  /**
+   * Bare pagination cursor token (from `EntityItemCollection.nextCursor` /
+   * `prevCursor`) to merge onto this request. Use this — not a raw next/prev
+   * href — when restoring pagination state from the `cursor` URL param.
+   */
+  cursor?: string;
 }
 
 /**
@@ -39,6 +44,8 @@ export interface EntityCollectionBySearch {
   profileEntity: ProfileEntity;
   /** Search parameters (filters, sort, pagination). Query is disabled when undefined. */
   searchValues: HalFormValues<SearchRequestSpec> | undefined;
+  /** Bare pagination cursor token — see `EntityCollectionDefault.cursor`. */
+  cursor?: string;
 }
 
 /**
@@ -66,10 +73,15 @@ function isBySearch(
  * React hook to fetch and manage an entity collection.
  *
  * Supports two modes:
- * - **By URL**: Fetch a specific page using a cursor URL (from next/prev links or router params)
- * - **By Search**: Transform search values to a Request URL, then fetch (defaults to empty search)
+ * - **By URL**: Fetch a specific page using a full collection URL (from next/prev links or
+ *   router params). Prefer the `cursor` option below for pagination — this mode is for
+ *   following a link verbatim (e.g. a relation's collection link) where no reconstruction
+ *   is needed or wanted.
+ * - **By Search**: Transform search values to a Request URL, then fetch (defaults to empty
+ *   search). Accepts an optional `cursor` (a bare token from `nextCursor`/`prevCursor`) merged
+ *   onto the built URL — this is the pagination path for state restored from a URL param.
  *
- * @param params - Either `{ url, profileEntity }` or `{ profileEntity, searchValues? }`
+ * @param params - Either `{ url, profileEntity }` or `{ profileEntity, searchValues?, cursor? }`
  * @returns TanStack Query result with EntityItemCollection data
  *
  * @example
@@ -85,10 +97,10 @@ function isBySearch(
  *   searchValues
  * });
  *
- * // By URL (pagination)
+ * // Pagination — restore from a bare cursor token (e.g. the cursor URL param)
  * const { data: nextPage } = useEntityCollection({
- *   url: collection.nextHref!,
- *   profileEntity: profile!
+ *   profileEntity: profile!,
+ *   cursor: collection.nextCursor
  * });
  * ```
  */
@@ -96,31 +108,16 @@ function isBySearch(
  * Resolve the collection request URL and query-enabled flag from the params,
  * without calling any hooks. Shared by both collection hooks so each can call
  * its TanStack hook exactly once, unconditionally (rules-of-hooks safe).
- *
- * @param apiBaseUrl - Absolute API base URL (the trusted `profileUrl` from
- *   `useNavigatorData()`), used as the trust anchor for by-url requests. It is
- *   always absolute, unlike `profileEntity.collectionUrl` which may be a
- *   relative path — anchoring on a relative URL would make `new URL(...)`
- *   throw for every cursor and silently disable pagination entirely.
  */
-function resolveCollectionRequest(
-  params: EntityCollectionParams,
-  apiBaseUrl: string,
-): {
+export function resolveCollectionRequest(params: EntityCollectionParams): {
   url: string;
   enabled: boolean;
 } {
-  // URL-based fetch: only trust URLs that resolve to the same origin as the
-  // trusted API base. A caller-supplied cursor (e.g. from bookmarked or
-  // crafted URL state) could otherwise point apiFetch — which unconditionally
-  // attaches the bearer token — at an attacker-controlled origin. Discard and
-  // fall back to the normal first-page request instead of throwing.
+  // URL-based fetch: follow the given URL verbatim (e.g. a relation's
+  // collection link, or a next/prev link for infinite scroll) — always fired
+  // straight to the ContentGrid backend.
   if (isByUrl(params)) {
-    const trustedUrl = resolveTrustedCollectionUrl(params.url, apiBaseUrl);
-    if (trustedUrl !== null) {
-      return { url: trustedUrl, enabled: true };
-    }
-    return resolveCollectionRequest({ profileEntity: params.profileEntity }, apiBaseUrl);
+    return { url: params.url, enabled: true };
   }
 
   let request: ReturnType<ProfileEntity["searchEntityRequest"]> | null;
@@ -137,15 +134,28 @@ function resolveCollectionRequest(
       : null;
   }
 
-  return { url: request?.url ?? "", enabled: !!request };
+  if (!request) {
+    return { url: "", enabled: false };
+  }
+
+  // Merge a restored pagination cursor token onto the freshly-built request —
+  // the token itself is never inspected, only relocated onto this trusted
+  // base URL. See the exception documented in navigator-data/CLAUDE.md.
+  let url = request.url;
+  if (params.cursor) {
+    const cursorUrl = new URL(url);
+    cursorUrl.searchParams.set(CURSOR_QUERY_PARAM, params.cursor);
+    url = cursorUrl.href;
+  }
+  return { url, enabled: true };
 }
 
 export function useEntityItemCollection(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch, profileUrl } = useNavigatorData();
-  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
+  const { apiFetch } = useNavigatorData();
+  const { url, enabled } = resolveCollectionRequest(params);
 
   return useQuery({
     ...EntityItemCollection.fetchByUrlQuery(
@@ -211,8 +221,8 @@ export function useEntityItemCollectionInfiniteScroll(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch, profileUrl } = useNavigatorData();
-  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
+  const { apiFetch } = useNavigatorData();
+  const { url, enabled } = resolveCollectionRequest(params);
 
   return useInfiniteQuery({
     ...EntityItemCollection.infiniteQuery(

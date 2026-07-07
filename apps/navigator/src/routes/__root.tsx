@@ -1,9 +1,10 @@
-import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { NavigatorHeader } from "@contentgrid/features/navigator-header";
+import type { NavigatorRouterContext } from "@contentgrid/navigator-data";
 import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
 import { SignInGate } from "@contentgrid/ui";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<NavigatorRouterContext>()({
   component: RootComponent,
 });
 

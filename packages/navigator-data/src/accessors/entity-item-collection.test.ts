@@ -188,6 +188,40 @@ describe("EntityItemCollection — pagination", () => {
     expect(collection.prevHref).toBeUndefined();
   });
 
+  it("nextCursor extracts the bare _cursor token from nextHref", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ nextHref: "https://api.example.com/invoices?_size=20&_cursor=0p4jtvf1" }),
+      makeProfileEntity(),
+    );
+    expect(collection.nextCursor).toBe("0p4jtvf1");
+  });
+
+  it("nextCursor returns undefined when there is no next link", () => {
+    const collection = new EntityItemCollection(makeHalSlice({}), makeProfileEntity());
+    expect(collection.nextCursor).toBeUndefined();
+  });
+
+  it("prevCursor extracts the bare _cursor token from prevHref", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ prevHref: "https://api.example.com/invoices?_size=20&_cursor=xyz789" }),
+      makeProfileEntity(),
+    );
+    expect(collection.prevCursor).toBe("xyz789");
+  });
+
+  it("prevCursor returns undefined when there is no prev link", () => {
+    const collection = new EntityItemCollection(makeHalSlice({}), makeProfileEntity());
+    expect(collection.prevCursor).toBeUndefined();
+  });
+
+  it("prevCursor returns undefined when prevHref has no _cursor param (first page)", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ prevHref: "https://api.example.com/invoices" }),
+      makeProfileEntity(),
+    );
+    expect(collection.prevCursor).toBeUndefined();
+  });
+
   it("firstHref returns the first page link href", () => {
     const collection = new EntityItemCollection(
       makeHalSlice({ firstHref: "/invoices" }),

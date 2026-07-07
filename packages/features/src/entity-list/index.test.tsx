@@ -17,7 +17,6 @@ import {
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
-  entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
@@ -27,6 +26,7 @@ import {
   EntityItemDetailPage,
   EntityListLayout,
   EntityOverviewPage,
+  validateEntitySearchState,
 } from "./index";
 
 const API_URL = "https://api.example.com";
@@ -82,7 +82,7 @@ function createTestRouter(initialEntry = "/") {
     getParentRoute: () => appRoute,
     path: "/$entity",
     component: EntityDetailPage,
-    validateSearch: entitySearchStateValidator,
+    validateSearch: validateEntitySearchState,
   });
   // Item detail route: /$entity/$itemId — FLAT sibling of entityRoute so
   // EntityDetailPage doesn't need to render <Outlet>
@@ -463,9 +463,8 @@ describe("EntityList", () => {
   it("offers a reset to the first page when a stale cursor fails to load", async () => {
     vi.useFakeTimers();
 
-    // A same-origin cursor survives the data layer's origin guard, so the
-    // request reaches the server and gets rejected as a stale/invalid cursor.
-    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
+    // The cursor token is merged onto a freshly-built request, so a stale/
+    // invalid token still reaches the server (as _cursor) and gets rejected.
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
@@ -480,7 +479,7 @@ describe("EntityList", () => {
       }),
     );
 
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
+    renderEntityList("/invoice?cursor=stale");
 
     await vi.runAllTimersAsync();
     vi.useRealTimers();
@@ -492,7 +491,6 @@ describe("EntityList", () => {
   it("recovers to the first page when the reset action is clicked", async () => {
     vi.useFakeTimers();
 
-    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
@@ -507,7 +505,7 @@ describe("EntityList", () => {
       }),
     );
 
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
+    renderEntityList("/invoice?cursor=stale");
 
     await vi.runAllTimersAsync();
     vi.useRealTimers();
@@ -616,25 +614,28 @@ describe("EntityList", () => {
     expect(nextButton).toBeInTheDocument();
   });
 
-  it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
-    const nextPageUrl = `${API_URL}/invoices?_cursor=page2token`;
-
+  it("merges the cursor token from the route onto the collection request when cursor is present", async () => {
+    let capturedUrl: URL | undefined;
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
-      // Only the cursor-page handler is registered — when s.cursor is set the component
-      // fetches that URL directly and never requests the base collection URL
-      createListHandler({
-        url: nextPageUrl,
-        items: [sampleItem],
-        page: { size: 1, total_items_exact: 4 },
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json({
+          _links: { self: { href: `${API_URL}/invoices?_cursor=page2token` } },
+          _embedded: { item: [sampleItem] },
+          page: { size: 1, total_items_exact: 4 },
+        });
       }),
     );
 
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(nextPageUrl)}`);
+    renderEntityList("/invoice?cursor=page2token");
 
     // Data from the cursor page should be rendered
     expect(await screen.findByText("INV-2024-001")).toBeInTheDocument();
+    // The bare token from the route was merged onto the request as _cursor —
+    // never a raw next/prev href, never anything s.*-prefixed.
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("page2token");
   });
 });
 
@@ -828,6 +829,55 @@ describe("EntityItemDetailPage", () => {
       await user.click(invoiceButtons[0]);
       expect(await screen.findByText("All entities")).toBeInTheDocument();
     }
+  });
+
+  it("preserves the list's cursor through a row click and back via the entity breadcrumb", async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("_cursor");
+        const item =
+          cursor === "page2token"
+            ? {
+                id: "inv-page2",
+                number: "INV-2024-PAGE2",
+                _links: { self: { href: `${API_URL}/invoices/inv-page2` } },
+              }
+            : { ...sampleItem };
+        return HttpResponse.json({
+          _embedded: { item: [item] },
+          _links: { self: { href: `${API_URL}/invoices` } },
+          page: { size: 1, total_items_exact: 2 },
+        });
+      }),
+      http.get(`${API_URL}/invoices/inv-page2`, () =>
+        HttpResponse.json({
+          id: "inv-page2",
+          number: "INV-2024-PAGE2",
+          _links: { self: { href: `${API_URL}/invoices/inv-page2` } },
+        }),
+      ),
+    );
+
+    // Start on the list already on page 2 (as if Next was clicked earlier).
+    renderEntityList("/invoice?cursor=page2token");
+    const cell = await screen.findByText("INV-2024-PAGE2");
+    await user.click(cell);
+
+    // Row click carried the cursor into the item page's own URL.
+    expect(await screen.findByText("inv-page2")).toBeInTheDocument();
+
+    // Click the "Invoice" entity breadcrumb to go back to the list.
+    const invoiceButtons = screen
+      .getAllByText("Invoice")
+      .filter((el) => el.closest("button") !== null);
+    await user.click(invoiceButtons[0]);
+
+    // Back on the list, still page 2 — not reset to page 1's item.
+    expect(await screen.findByText("INV-2024-PAGE2")).toBeInTheDocument();
   });
 
   it("navigates back to root via all entities breadcrumb", async () => {

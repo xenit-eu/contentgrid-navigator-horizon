@@ -11,6 +11,20 @@ import type ProfileEntity from "./entity-profile";
 const ENTITY_SEARCH_STALE_TIME = 10 * 1000; // 10 seconds - search results change frequently
 
 /**
+ * The backend's pagination cursor query param, as sent by the ContentGrid
+ * HAL API on `next`/`prev` links. Single source of truth for both directions
+ * of the cursor-token exception (packages/navigator-data/CLAUDE.md) — extracting
+ * it here in `nextCursor`/`prevCursor` and merging it back in
+ * `resolveCollectionRequest` (`hooks/collection/use-entity-item-collection.ts`). Import
+ * this constant rather than repeating the string literal: the existing
+ * navigator's `SearchEntityPage.tsx` reads and writes this value under two
+ * different literals (`_cursor` vs `cursor`) in different code paths, which
+ * silently breaks cursor restoration — a single shared constant makes that
+ * class of mismatch impossible here.
+ */
+export const CURSOR_QUERY_PARAM = "_cursor";
+
+/**
  * Total item count metadata from a collection response.
  */
 export interface CollectionTotalCount {
@@ -256,6 +270,29 @@ export class EntityItemCollection {
    */
   public get prevHref(): string | undefined {
     return this.halSlice.previous?.href;
+  }
+
+  /**
+   * Bare pagination cursor token extracted from `nextHref` (the `_cursor`
+   * query-param value only — no origin, no other params). Use this instead
+   * of `nextHref` when persisting pagination state in the browser URL (e.g.
+   * `cursor`); pass it to `useEntityItemCollection({ ..., cursor })` to
+   * refetch. See `packages/navigator-data/CLAUDE.md` for why this narrow
+   * exception to "never construct/parse cursor URLs" exists.
+   */
+  public get nextCursor(): string | undefined {
+    return this.nextHref
+      ? (new URL(this.nextHref).searchParams.get(CURSOR_QUERY_PARAM) ?? undefined)
+      : undefined;
+  }
+
+  /**
+   * Bare pagination cursor token extracted from `prevHref`. See `nextCursor`.
+   */
+  public get prevCursor(): string | undefined {
+    return this.prevHref
+      ? (new URL(this.prevHref).searchParams.get(CURSOR_QUERY_PARAM) ?? undefined)
+      : undefined;
   }
 
   /**
