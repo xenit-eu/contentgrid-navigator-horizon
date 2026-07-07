@@ -38,14 +38,14 @@ type RelationMutationBaseParams<
  * Encapsulates:
  * - `If-Match` header attachment from `relation.source.etag`
  * - `fetchVoid` for the mutation (all three ops return 204)
- * - `onSettled` → relation read-key invalidation only (relation responses must
- *   be refetched; entity items themselves do not change when a relation is set/cleared)
+ * - `onSettled` → relation read-key invalidation (the relation response must be
+ *   refetched) AND unconditional source-item `entityItem.byUrl` invalidation
+ *   (the source item's ETag may have been bumped by the operation)
  * - Composition of caller `onSuccess` / `onSettled` LAST
  *
- * The target entity name is derived synchronously from
- * `relation.profileRelation.targetProfileLink?.name` — no profile query needed.
- * Read-key invalidation is skipped only when `targetProfileLink` is absent
- * (degenerate profile without a target-entity link).
+ * The relation read key is derived synchronously from `relation.name` and
+ * `relation.link.href` — no profile query needed, so invalidation never has to
+ * wait on `useProfileEntities()` to resolve the target profile.
  *
  * @internal Not exported from `hooks/index.ts`.
  */

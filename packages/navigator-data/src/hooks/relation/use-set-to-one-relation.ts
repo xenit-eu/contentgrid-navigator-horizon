@@ -24,9 +24,11 @@ export type UseSetToOneRelationOptions = {
  *
  * Cache behaviour on settled:
  * - `onSettled`: Invalidates the to-one relation read key
- *   (`toOneRelation.byUrl(targetProfile, relation.link.href)`) so the read hook
- *   refetches. Does NOT invalidate the source item or source collection — entity
- *   items do not change when a relation is set.
+ *   (`toOneRelation.byUrl(relation.name, relation.link.href)`) so the read hook
+ *   refetches. ALSO invalidates the source item's `entityItem.byUrl` entry —
+ *   the mutation is gated on the source item's ETag, which the server may bump,
+ *   so the cached ETag is refreshed to avoid a spurious 412 on the next mutation.
+ *   Does NOT invalidate the source collection or the target item.
  * - Caller's `onSuccess` / `onSettled` run last (after cache is consistent).
  *
  * On HTTP 412 (ETag mismatch) or 409 (blind-relation-overwrite), the error surfaces

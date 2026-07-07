@@ -27,8 +27,10 @@ export type UseClearRelationOptions = {
  *
  * Cache behaviour on settled:
  * - `onSettled`: Invalidates the relation read key (to-one or to-many, chosen by
- *   cardinality) so the read hook refetches. Does NOT invalidate target items —
- *   the previously-linked hrefs are not available at clear time.
+ *   cardinality) so the read hook refetches. ALSO invalidates the source item's
+ *   `entityItem.byUrl` entry (ETag may have been bumped by the operation).
+ *   Does NOT invalidate target items — the previously-linked hrefs are not
+ *   available at clear time.
  * - Caller's `onSuccess` / `onSettled` run last (after cache is consistent).
  *
  * On HTTP 412 (ETag mismatch) or 409 (integrity/required-relation), the error surfaces
