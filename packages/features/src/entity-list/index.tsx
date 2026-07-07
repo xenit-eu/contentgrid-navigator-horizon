@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
@@ -178,23 +178,19 @@ export function EntityDetailPage() {
 
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
-  const onCursorChange = useCallback(
-    (token: string | undefined) => {
-      const go = navigate as unknown as AnyNavigateFn;
-      if (token) {
-        go({ search: (prev) => ({ ...prev, cursor: token }) });
-      } else {
-        go({
-          search: (prev) => {
-            const next = { ...prev };
-            delete next.cursor;
-            return next;
-          },
-        });
-      }
-    },
-    [navigate],
-  );
+  function onCursorChange(token: string | undefined) {
+    if (token) {
+      go({ search: (prev) => ({ ...prev, cursor: token }) });
+    } else {
+      go({
+        search: (prev) => {
+          const next = { ...prev };
+          delete next.cursor;
+          return next;
+        },
+      });
+    }
+  }
 
   function onRowClick(id: string) {
     // Carry the active cursor into the item page's own URL, so the item
