@@ -48,7 +48,11 @@ function DataProviders() {
   const { apiFetch, contentFetch, profileUrl } = useAppAuth();
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigatorDataProvider apiFetch={apiFetch} contentFetch={contentFetch} profileUrl={profileUrl}>
+      <NavigatorDataProvider
+        apiFetch={apiFetch}
+        contentFetch={contentFetch}
+        profileUrl={profileUrl}
+      >
         <RouterProvider router={router} context={{ queryClient, apiFetch, profileUrl }} />
       </NavigatorDataProvider>
       <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
