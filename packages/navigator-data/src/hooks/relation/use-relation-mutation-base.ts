@@ -61,7 +61,7 @@ export function useRelationMutationBase<
   return useMutation<void, Error, TInput>({
     mutationFn: async (input) => {
       // Build op-specific request (PUT / POST / DELETE with text/uri-list body).
-      const baseReq = await buildRequest(input);
+      const baseReq = buildRequest(input);
 
       // Attach If-Match from the source item ETag (conditional request per RFC 9110).
       const req = addIfMatchHeader(baseReq, relation.source.etag);

@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -862,5 +862,851 @@ describe("EntityItemDetailPage", () => {
 
     // Heading shows entity plural name + " detail"
     expect(await screen.findByText(/detail/)).toBeInTheDocument();
+  });
+});
+
+// ----------------------------------------------------------------
+// EntityItemDetailPage — relations (RelationToOneSection, RelationToManySection,
+// RelationItemSearchDialog, MutationErrorDisplay)
+// ----------------------------------------------------------------
+
+const SUPPLIER_PROFILE_URL = `${PROFILE_URL}/suppliers`;
+const LINE_ITEM_PROFILE_URL = `${PROFILE_URL}/line-items`;
+const SUPPLIERS_COLLECTION_URL = `${API_URL}/suppliers`;
+const LINE_ITEMS_COLLECTION_URL = `${API_URL}/line-items`;
+
+const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
+const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
+const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
+
+function profileRootWithRelationsHandler() {
+  return http.get(PROFILE_URL, () =>
+    HttpResponse.json({
+      _links: {
+        self: { href: PROFILE_URL },
+        curies: [
+          {
+            name: "cg",
+            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            templated: true,
+          },
+        ],
+        "cg:entity": [
+          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+          { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+          { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
+        ],
+      },
+    }),
+  );
+}
+
+function invoiceProfileHandlerWithRelations() {
+  return http.get(`${PROFILE_URL}/invoices`, () =>
+    HttpResponse.json({
+      name: "invoice",
+      title: "Invoice",
+      _links: {
+        self: { href: `${PROFILE_URL}/invoices` },
+        describes: [
+          { href: `${API_URL}/invoices`, name: "collection" },
+          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "number",
+            title: "Invoice Number",
+            type: "string",
+            readOnly: false,
+            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+            _links: {},
+          },
+        ],
+        [BLUEPRINT_RELATION_REL]: [
+          {
+            name: "supplier",
+            title: "Supplier",
+            description: "",
+            required: false,
+            many_source_per_target: false,
+            many_target_per_source: false,
+            _links: {
+              self: { href: `${PROFILE_URL}/invoices/relations/supplier` },
+              [BLUEPRINT_TARGET_ENTITY_REL]: {
+                href: SUPPLIER_PROFILE_URL,
+                name: "supplier",
+                title: "Supplier",
+              },
+            },
+          },
+          {
+            name: "lineItems",
+            title: "Line Items",
+            description: "",
+            required: false,
+            many_source_per_target: false,
+            many_target_per_source: true,
+            _links: {
+              self: { href: `${PROFILE_URL}/invoices/relations/lineItems` },
+              [BLUEPRINT_TARGET_ENTITY_REL]: {
+                href: LINE_ITEM_PROFILE_URL,
+                name: "lineItem",
+                title: "Line Item",
+              },
+            },
+          },
+        ],
+      },
+      _templates: {
+        search: { method: "GET", target: `${API_URL}/invoices`, properties: [] },
+      },
+    }),
+  );
+}
+
+function supplierProfileHandler() {
+  return http.get(SUPPLIER_PROFILE_URL, () =>
+    HttpResponse.json({
+      name: "supplier",
+      title: "Supplier",
+      _links: {
+        self: { href: SUPPLIER_PROFILE_URL },
+        describes: [
+          { href: SUPPLIERS_COLLECTION_URL, name: "collection" },
+          { href: `${SUPPLIERS_COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "name",
+            title: "Name",
+            type: "string",
+            readOnly: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                { name: "name~prefix", title: "Name prefix", type: "prefix-match" },
+              ],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: SUPPLIERS_COLLECTION_URL,
+          properties: [{ name: "name~prefix", type: "text" }],
+        },
+      },
+    }),
+  );
+}
+
+function lineItemProfileHandler() {
+  return http.get(LINE_ITEM_PROFILE_URL, () =>
+    HttpResponse.json({
+      name: "lineItem",
+      title: "Line Item",
+      _links: {
+        self: { href: LINE_ITEM_PROFILE_URL },
+        describes: [
+          { href: LINE_ITEMS_COLLECTION_URL, name: "collection" },
+          { href: `${LINE_ITEMS_COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "description",
+            title: "Description",
+            type: "string",
+            readOnly: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                { name: "description~prefix", title: "Description prefix", type: "prefix-match" },
+              ],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: LINE_ITEMS_COLLECTION_URL,
+          properties: [{ name: "description~prefix", type: "text" }],
+        },
+      },
+    }),
+  );
+}
+
+/** Invoice item exposing only the to-one `supplier` relation. */
+function makeInvoiceItemWithSupplier(itemId: string) {
+  const itemUrl = `${API_URL}/invoices/${itemId}`;
+  return {
+    id: itemId,
+    number: "INV-2024-001",
+    _links: {
+      self: { href: itemUrl },
+      [CG_RELATION_REL]: [{ href: `${itemUrl}/supplier`, name: "supplier" }],
+    },
+    _templates: {
+      "set-supplier": {
+        method: "PUT",
+        target: `${itemUrl}/supplier`,
+        contentType: "text/uri-list",
+        properties: [{ name: "supplier", type: "url" }],
+      },
+      "clear-supplier": {
+        method: "DELETE",
+        target: `${itemUrl}/supplier`,
+        properties: [],
+      },
+    },
+  };
+}
+
+/** Invoice item exposing only the to-many `lineItems` relation. */
+function makeInvoiceItemWithLineItems(itemId: string) {
+  const itemUrl = `${API_URL}/invoices/${itemId}`;
+  return {
+    id: itemId,
+    number: "INV-2024-002",
+    _links: {
+      self: { href: itemUrl },
+      [CG_RELATION_REL]: [{ href: `${itemUrl}/lineItems`, name: "lineItems" }],
+    },
+    _templates: {
+      "add-lineItems": {
+        method: "POST",
+        target: `${itemUrl}/lineItems`,
+        contentType: "text/uri-list",
+        properties: [{ name: "lineItem", type: "url", options: {} }],
+      },
+      "clear-lineItems": {
+        method: "DELETE",
+        target: `${itemUrl}/lineItems`,
+        properties: [],
+      },
+    },
+  };
+}
+
+function lineItem(id: string, description: string, withDeleteTemplate = false) {
+  const itemUrl = `${LINE_ITEMS_COLLECTION_URL}/${id}`;
+  return {
+    id,
+    description,
+    _links: { self: { href: itemUrl } },
+    ...(withDeleteTemplate
+      ? { _templates: { delete: { method: "DELETE", target: itemUrl, properties: [] } } }
+      : {}),
+  };
+}
+
+function notFoundProblem() {
+  return HttpResponse.json(
+    {
+      status: 404,
+      title: "Not Found",
+      type: "https://contentgrid.cloud/problems/not-found/entity-item",
+    },
+    { status: 404, headers: { "Content-Type": "application/problem+json" } },
+  );
+}
+
+describe("EntityItemDetailPage — RelationToOneSection", () => {
+  it("links a relation via the search dialog when no item is linked", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-one-link";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const supplierRelationUrl = `${itemUrl}/supplier`;
+    let linked = false;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithSupplier(itemId))),
+      http.get(supplierRelationUrl, () =>
+        linked
+          ? HttpResponse.json({
+              id: "sup-001",
+              name: "Acme Corp",
+              _links: { self: { href: `${SUPPLIERS_COLLECTION_URL}/sup-001` } },
+            })
+          : notFoundProblem(),
+      ),
+      createListHandler({
+        url: SUPPLIERS_COLLECTION_URL,
+        items: [
+          {
+            id: "sup-001",
+            name: "Acme Corp",
+            _links: { self: { href: `${SUPPLIERS_COLLECTION_URL}/sup-001` } },
+          },
+        ],
+      }),
+      http.put(supplierRelationUrl, () => {
+        linked = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    expect(await screen.findByText("No item linked")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Link" }));
+    await user.click(await screen.findByText("Acme Corp"));
+
+    await waitFor(() => expect(screen.queryByText("No item linked")).not.toBeInTheDocument());
+    expect(await screen.findByText("Acme Corp")).toBeInTheDocument();
+  });
+
+  it("shows the linked item and navigates to its detail page when clicked", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-one-navigate";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const supplierRelationUrl = `${itemUrl}/supplier`;
+    const supplierItemUrl = `${SUPPLIERS_COLLECTION_URL}/sup-001`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithSupplier(itemId))),
+      http.get(supplierRelationUrl, () =>
+        HttpResponse.json({
+          id: "sup-001",
+          name: "Acme Corp",
+          _links: { self: { href: supplierItemUrl } },
+        }),
+      ),
+      http.get(supplierItemUrl, () =>
+        HttpResponse.json({
+          id: "sup-001",
+          name: "Acme Corp",
+          _links: { self: { href: supplierItemUrl } },
+        }),
+      ),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    const linkedButton = await screen.findByText("Acme Corp");
+    await user.click(linkedButton);
+
+    expect(await screen.findByText("sup-001")).toBeInTheDocument();
+  });
+
+  it("unlinks a relation after confirming the alert dialog", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-one-unlink";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const supplierRelationUrl = `${itemUrl}/supplier`;
+    let linked = true;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithSupplier(itemId))),
+      http.get(supplierRelationUrl, () =>
+        linked
+          ? HttpResponse.json({
+              id: "sup-001",
+              name: "Acme Corp",
+              _links: { self: { href: `${SUPPLIERS_COLLECTION_URL}/sup-001` } },
+            })
+          : notFoundProblem(),
+      ),
+      http.delete(supplierRelationUrl, () => {
+        linked = false;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("Acme Corp");
+    await user.click(screen.getByRole("button", { name: "Unlink" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Unlink" }));
+
+    await waitFor(() => expect(screen.getByText("No item linked")).toBeInTheDocument());
+  });
+
+  it("shows a plain problem summary when clearing the relation fails", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-one-clear-error";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const supplierRelationUrl = `${itemUrl}/supplier`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithSupplier(itemId))),
+      http.get(supplierRelationUrl, () =>
+        HttpResponse.json({
+          id: "sup-001",
+          name: "Acme Corp",
+          _links: { self: { href: `${SUPPLIERS_COLLECTION_URL}/sup-001` } },
+        }),
+      ),
+      http.delete(supplierRelationUrl, () =>
+        HttpResponse.json(
+          {
+            status: 409,
+            title: "Conflict",
+            detail: "This supplier is still referenced elsewhere.",
+            type: "https://contentgrid.cloud/problems/integrity/required-relation",
+          },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("Acme Corp");
+    await user.click(screen.getByRole("button", { name: "Unlink" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Unlink" }));
+
+    expect(await screen.findByText("Conflict")).toBeInTheDocument();
+    expect(screen.getByText("This supplier is still referenced elsewhere.")).toBeInTheDocument();
+    expect(screen.getByText("required-relation")).toBeInTheDocument();
+  });
+
+  it("shows field-level validation errors when linking fails", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-one-link-error";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const supplierRelationUrl = `${itemUrl}/supplier`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithSupplier(itemId))),
+      http.get(supplierRelationUrl, () => notFoundProblem()),
+      createListHandler({
+        url: SUPPLIERS_COLLECTION_URL,
+        items: [
+          {
+            id: "sup-001",
+            name: "Acme Corp",
+            _links: { self: { href: `${SUPPLIERS_COLLECTION_URL}/sup-001` } },
+          },
+        ],
+      }),
+      http.put(supplierRelationUrl, () =>
+        HttpResponse.json(
+          {
+            status: 400,
+            title: "Validation Failed",
+            type: "https://contentgrid.cloud/problems/input/validation",
+            errors: [
+              {
+                property: "supplier",
+                title: "Invalid value",
+                detail: "must be a valid supplier",
+              },
+            ],
+          },
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("No item linked");
+    await user.click(screen.getByRole("button", { name: "Link" }));
+    await user.click(await screen.findByText("Acme Corp"));
+
+    const propertyLabel = await screen.findByText("supplier:");
+    expect(propertyLabel.closest("li")).toHaveTextContent("must be a valid supplier");
+  });
+});
+
+describe("EntityItemDetailPage — RelationToManySection", () => {
+  it("renders the relation table with a total-count badge", async () => {
+    const itemId = "inv-many-render";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      createListHandler({
+        url: lineItemsRelationUrl,
+        items: [lineItem("li-001", "Widget A"), lineItem("li-002", "Widget B")],
+        page: { size: 2, total_items_exact: 2 },
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    expect(await screen.findByText("Widget A")).toBeInTheDocument();
+    expect(screen.getByText("Widget B")).toBeInTheDocument();
+    expect(screen.getByText(/2 items/)).toBeInTheDocument();
+  });
+
+  it("shows 'No items linked' for an empty relation", async () => {
+    const itemId = "inv-many-empty";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      createListHandler({
+        url: lineItemsRelationUrl,
+        items: [],
+        page: { size: 0, total_items_exact: 0 },
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    expect(await screen.findByText("No items linked")).toBeInTheDocument();
+  });
+
+  it("adds an item via the search dialog, including a typed search query", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-add";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+    let items: ReturnType<typeof lineItem>[] = [];
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      http.get(lineItemsRelationUrl, () =>
+        HttpResponse.json({
+          _links: { self: { href: lineItemsRelationUrl } },
+          _embedded: { item: items },
+          page: { size: items.length, total_items_exact: items.length },
+        }),
+      ),
+      http.get(LINE_ITEMS_COLLECTION_URL, ({ request }) => {
+        const query = new URL(request.url).searchParams.get("description~prefix");
+        const found =
+          query === "Widget"
+            ? [lineItem("li-010", "Widget Searched")]
+            : [lineItem("li-020", "Any")];
+        return HttpResponse.json({
+          _links: { self: { href: LINE_ITEMS_COLLECTION_URL } },
+          _embedded: { item: found },
+          page: { size: found.length, total_items_exact: found.length },
+        });
+      }),
+      http.post(lineItemsRelationUrl, () => {
+        items = [lineItem("li-010", "Widget Searched")];
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("No items linked");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    // Default (empty query) search result
+    expect(await screen.findByText("Any")).toBeInTheDocument();
+
+    // Typing narrows the search via the prefix-match property (single atomic
+    // change avoids racing intermediate per-keystroke queries in this test).
+    const input = screen.getByPlaceholderText(/Search/);
+    fireEvent.change(input, { target: { value: "Widget" } });
+    expect(await screen.findByText("Widget Searched")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Widget Searched"));
+
+    await waitFor(() => expect(screen.queryByText("No items linked")).not.toBeInTheDocument());
+    expect(await screen.findByText("Widget Searched")).toBeInTheDocument();
+  });
+
+  it("shows 'No items found' when the search dialog has no results", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-add-empty";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      createListHandler({
+        url: lineItemsRelationUrl,
+        items: [],
+        page: { size: 0, total_items_exact: 0 },
+      }),
+      createListHandler({ url: LINE_ITEMS_COLLECTION_URL, items: [] }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("No items linked");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByText("No items found")).toBeInTheDocument();
+  });
+
+  it("clears all items after confirming the alert dialog", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-clear";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+    let items = [lineItem("li-001", "Widget A"), lineItem("li-002", "Widget B")];
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      http.get(lineItemsRelationUrl, () =>
+        HttpResponse.json({
+          _links: { self: { href: lineItemsRelationUrl } },
+          _embedded: { item: items },
+          page: { size: items.length, total_items_exact: items.length },
+        }),
+      ),
+      http.delete(lineItemsRelationUrl, () => {
+        items = [];
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("Widget A");
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Clear all" }));
+
+    await waitFor(() => expect(screen.getByText("No items linked")).toBeInTheDocument());
+  });
+
+  it("shows field-level validation errors when adding fails", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-add-error";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      createListHandler({
+        url: lineItemsRelationUrl,
+        items: [],
+        page: { size: 0, total_items_exact: 0 },
+      }),
+      createListHandler({
+        url: LINE_ITEMS_COLLECTION_URL,
+        items: [lineItem("li-030", "Gadget")],
+      }),
+      http.post(lineItemsRelationUrl, () =>
+        HttpResponse.json(
+          {
+            status: 400,
+            title: "Validation Failed",
+            type: "https://contentgrid.cloud/problems/input/validation",
+            errors: [
+              {
+                property: "lineItem",
+                title: "Invalid value",
+                detail: "must reference an existing line item",
+              },
+            ],
+          },
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("No items linked");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.click(await screen.findByText("Gadget"));
+
+    const propertyLabel = await screen.findByText("lineItem:");
+    expect(propertyLabel.closest("li")).toHaveTextContent("must reference an existing line item");
+  });
+
+  it("unlinks a single row via the row-level unlink action", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-unlink-row";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+    let items = [lineItem("li-001", "Widget A"), lineItem("li-002", "Widget B")];
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      http.get(lineItemsRelationUrl, () =>
+        HttpResponse.json({
+          _links: { self: { href: lineItemsRelationUrl } },
+          _embedded: { item: items },
+          page: { size: items.length, total_items_exact: items.length },
+        }),
+      ),
+      http.delete(`${lineItemsRelationUrl}/li-001`, () => {
+        items = items.filter((i) => i.id !== "li-001");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("Widget A");
+    const unlinkButtons = screen.getAllByRole("button", { name: "Unlink" });
+    await user.click(unlinkButtons[0]);
+
+    await waitFor(() => expect(screen.queryByText("Widget A")).not.toBeInTheDocument());
+    expect(screen.getByText("Widget B")).toBeInTheDocument();
+  });
+
+  it("deletes a row item via the row action menu when the item has a delete template", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-delete-row";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+    let items = [lineItem("li-001", "Widget A", true), lineItem("li-002", "Widget B", false)];
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      http.get(lineItemsRelationUrl, () =>
+        HttpResponse.json({
+          _links: { self: { href: lineItemsRelationUrl } },
+          _embedded: { item: items },
+          page: { size: items.length, total_items_exact: items.length },
+        }),
+      ),
+      http.delete(`${LINE_ITEMS_COLLECTION_URL}/li-001`, () => {
+        items = items.filter((i) => i.id !== "li-001");
+        return new HttpResponse(null, { status: 204 });
+      }),
+      // RelationItemSearchDialog mounts (and queries) as soon as the section
+      // renders, since `canAdd` is true here — even though the dialog is closed.
+      createListHandler({ url: LINE_ITEMS_COLLECTION_URL, items: [] }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("Widget A");
+    const menuButtons = screen.getAllByRole("button", { name: "Open menu" });
+    await user.click(menuButtons[0]);
+    await user.click(await screen.findByText("Delete"));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(screen.queryByText("Widget A")).not.toBeInTheDocument());
+    expect(screen.getByText("Widget B")).toBeInTheDocument();
+  });
+
+  it("paginates via Next / Previous, fetching the requested page URL", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-many-paginate";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const lineItemsRelationUrl = `${itemUrl}/lineItems`;
+    const page2Url = `${lineItemsRelationUrl}?_cursor=page2`;
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithLineItems(itemId))),
+      // Single dynamic handler on the pathname — branches on the `_cursor` query
+      // param instead of registering two handlers that only differ by query string
+      // (MSW matches paths, not query strings, and warns/misbehaves otherwise).
+      http.get(lineItemsRelationUrl, ({ request }) => {
+        const isPage2 = new URL(request.url).searchParams.get("_cursor") === "page2";
+        return HttpResponse.json({
+          _links: isPage2
+            ? { self: { href: page2Url }, previous: { href: lineItemsRelationUrl } }
+            : { self: { href: lineItemsRelationUrl }, next: { href: page2Url } },
+          _embedded: {
+            item: [isPage2 ? lineItem("li-002", "Widget B") : lineItem("li-001", "Widget A")],
+          },
+          page: { size: 1, total_items_exact: 2 },
+        });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+
+    await screen.findByText("Widget A");
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+
+    await user.click(nextButton);
+
+    expect(await screen.findByText("Widget B")).toBeInTheDocument();
+    expect(screen.queryByText("Widget A")).not.toBeInTheDocument();
   });
 });

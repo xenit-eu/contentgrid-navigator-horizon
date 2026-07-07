@@ -5,11 +5,14 @@
  *
  * (a) Returns an EntityItemCollection when the target profile resolves via useProfileEntities.
  * (b) Query is disabled (isPending, fetchStatus idle, no fetch) until the target profile resolves.
+ * (c) `{ url }` mode fetches the given page URL directly.
+ * (d) `{ searchValues }` mode fetches a relation-scoped search URL.
  */
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
+import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import {
   invoiceProfileBodyWithRelations,
@@ -96,8 +99,16 @@ const lineItemProfileBody = {
       },
     ],
   },
-  _templates: {},
+  _templates: {
+    search: {
+      method: "GET",
+      target: `${BASE}/line-items`,
+      properties: [{ name: "description~prefix", type: "text" }],
+    },
+  },
 };
+
+const LINE_ITEMS_COLLECTION_URL = `${BASE}/line-items`;
 
 /**
  * Invoice profile body — contains blueprint:relation entries for supplier + lineItems.
@@ -159,6 +170,16 @@ const invoiceProfileBody = {
     ],
   },
 };
+
+function makeLineItemProfile(): ProfileEntity {
+  const hal = new HalObject<ProfileEntityShape>(
+    lineItemProfileBody as unknown as HalObjectShape<ProfileEntityShape>,
+  );
+  return new ProfileEntity(
+    { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" } as unknown as Link,
+    hal,
+  );
+}
 
 function makeInvoiceProfile(): ProfileEntity {
   const hal = new HalObject<ProfileEntityShape>(
@@ -297,5 +318,105 @@ describe("useEntityItemToManyRelation — disabled until target profile resolves
     resolveRoot();
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
     expect(result.current.data).toBeInstanceOf(EntityItemCollection);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (c) `{ url }` mode — fetches a specific page URL directly
+// ---------------------------------------------------------------------------
+
+describe("useEntityItemToManyRelation — { url } mode", () => {
+  it("fetches the given page URL instead of the relation's default link", async () => {
+    setupProfileHandlers();
+    const pageUrl = `${LINE_ITEMS_RELATION_URL}?_cursor=page2`;
+    server.use(
+      createListHandler({
+        url: pageUrl,
+        items: [{ id: "li-003", description: "Widget C", _links: { self: { href: "/x" } } }],
+      }),
+    );
+    // No handler registered for LINE_ITEMS_RELATION_URL itself — by-url mode must not fetch it.
+
+    const relation = makeLineItemsRelation();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItemToManyRelation(relation, { url: pageUrl }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+
+    expect(result.current.data).toBeInstanceOf(EntityItemCollection);
+    expect(result.current.data?.items.map((item) => item.id)).toEqual(["li-003"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (d) `{ searchValues }` mode — relation-scoped search
+// ---------------------------------------------------------------------------
+
+describe("useEntityItemToManyRelation — { searchValues } mode", () => {
+  it("fetches the relation's base page to extract scoping params, then the scoped search URL", async () => {
+    setupProfileHandlers();
+    server.use(
+      // Base fetch (used to extract internalRelationParams from self href)
+      createListHandler({
+        url: LINE_ITEMS_RELATION_URL,
+        items: sampleLineItemList._embedded!.item as Record<string, unknown>[],
+      }),
+      // Scoped search fetch — returns a distinct item so we can tell it apart from the base fetch
+      http.get(LINE_ITEMS_COLLECTION_URL, () =>
+        HttpResponse.json({
+          _links: { self: { href: LINE_ITEMS_COLLECTION_URL } },
+          _embedded: {
+            item: [
+              {
+                id: "li-099",
+                description: "Widget Searched",
+                _links: { self: { href: `${LINE_ITEMS_COLLECTION_URL}/li-099` } },
+              },
+            ],
+          },
+          page: { size: 1, total_items_exact: 1 },
+        }),
+      ),
+    );
+
+    const relation = makeLineItemsRelation();
+    // Build values off the resolved profile's own searchTemplate — createValues()
+    // requires an actual HalFormsTemplate instance, not the raw fixture object.
+    const searchValues = createValues(makeLineItemProfile().searchTemplate!.template).withValue(
+      "description~prefix",
+      "Widget",
+    );
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItemToManyRelation(relation, { searchValues }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+
+    expect(result.current.data).toBeInstanceOf(EntityItemCollection);
+    expect(result.current.data?.items.map((item) => item.id)).toEqual(["li-099"]);
+  });
+
+  it("stays pending (disabled) while searchValues is undefined", async () => {
+    setupProfileHandlers();
+    server.use(
+      createListHandler({
+        url: LINE_ITEMS_RELATION_URL,
+        items: sampleLineItemList._embedded!.item as Record<string, unknown>[],
+      }),
+    );
+
+    const relation = makeLineItemsRelation();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemToManyRelation(relation, { searchValues: undefined }),
+      { wrapper },
+    );
+
+    await new Promise((r) => setTimeout(r, 30));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
   });
 });

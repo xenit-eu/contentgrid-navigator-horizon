@@ -307,7 +307,7 @@ export class EntityItemCollection {
     const href = this.halSlice.self?.href;
     if (!href) return {};
     try {
-      const url = new URL(href, "http://placeholder");
+      const url = new URL(href, "https://placeholder");
       const result: Record<string, string> = {};
       for (const [key, value] of url.searchParams.entries()) {
         if (key !== "_cursor" && key !== "_size" && key !== "_sort") {
