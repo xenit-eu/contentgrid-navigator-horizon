@@ -20,7 +20,13 @@ import type { ProblemDetail } from "@contentgrid/problem-details";
 import { ContentGridProblemType } from "./constants";
 
 export * from "./constants";
-export type { ProblemDetail };
+export * from "./guards";
+export * from "./display-model";
+
+// Re-export the generic RFC 9457 primitives from the base package so consumers
+// have a single import surface for all problem-detail handling.
+export { checkResponse, ProblemDetailError } from "@contentgrid/problem-details";
+export type { ProblemDetail } from "@contentgrid/problem-details";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Input validation (HTTP 400)
