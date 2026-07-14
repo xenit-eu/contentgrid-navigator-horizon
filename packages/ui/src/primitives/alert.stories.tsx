@@ -19,7 +19,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Info: Story = {
+export const InfoAlert: Story = {
   render: (args) => (
     <Alert {...args}>
       <AlertTitle>Heads up</AlertTitle>
@@ -31,7 +31,7 @@ export const Info: Story = {
   args: { tone: "info" },
 };
 
-export const Warning: Story = {
+export const WarningAlert: Story = {
   render: (args) => (
     <Alert {...args}>
       <AlertTitle>Careful</AlertTitle>
@@ -43,7 +43,7 @@ export const Warning: Story = {
   args: { tone: "warning" },
 };
 
-export const Error: Story = {
+export const ErrorAlert: Story = {
   render: (args) => (
     <Alert {...args}>
       <AlertTitle>400 Validation error</AlertTitle>
