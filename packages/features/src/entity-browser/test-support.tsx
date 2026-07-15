@@ -312,3 +312,294 @@ export const sampleItem = {
     self: { href: `${API_URL}/invoices/inv-001` },
   },
 };
+
+// ----------------------------------------------------------------
+// Relation fixtures — invoice -> supplier (to-one), invoice -> lineItems (to-many)
+// ----------------------------------------------------------------
+
+export const SUPPLIER_PROFILE_URL = `${PROFILE_URL}/suppliers`;
+export const LINE_ITEM_PROFILE_URL = `${PROFILE_URL}/line-items`;
+export const SUPPLIERS_COLLECTION_URL = `${API_URL}/suppliers`;
+export const LINE_ITEMS_COLLECTION_URL = `${API_URL}/line-items`;
+
+const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
+const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
+const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
+
+export function profileRootWithRelationsHandler() {
+  return http.get(PROFILE_URL, () =>
+    HttpResponse.json({
+      _links: {
+        self: { href: PROFILE_URL },
+        curies: [
+          {
+            name: "cg",
+            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            templated: true,
+          },
+        ],
+        "cg:entity": [
+          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+          { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+          { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
+        ],
+      },
+      _templates: {},
+    }),
+  );
+}
+
+export function invoiceProfileHandlerWithRelations() {
+  return http.get(`${PROFILE_URL}/invoices`, () =>
+    HttpResponse.json({
+      name: "invoice",
+      title: "Invoice",
+      description: null,
+      _links: {
+        self: { href: `${PROFILE_URL}/invoices` },
+        describes: [
+          { href: `${API_URL}/invoices`, name: "collection" },
+          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "number",
+            title: "Invoice Number",
+            type: "string",
+            description: null,
+            readOnly: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+        ],
+        [BLUEPRINT_RELATION_REL]: [
+          {
+            name: "supplier",
+            title: "Supplier",
+            description: null,
+            required: false,
+            many_source_per_target: false,
+            many_target_per_source: false,
+            _links: {
+              self: { href: `${PROFILE_URL}/invoices/relations/supplier` },
+              [BLUEPRINT_TARGET_ENTITY_REL]: {
+                href: SUPPLIER_PROFILE_URL,
+                name: "supplier",
+                title: "Supplier",
+              },
+            },
+          },
+          {
+            name: "lineItems",
+            title: "Line Items",
+            description: null,
+            required: false,
+            many_source_per_target: false,
+            many_target_per_source: true,
+            _links: {
+              self: { href: `${PROFILE_URL}/invoices/relations/lineItems` },
+              [BLUEPRINT_TARGET_ENTITY_REL]: {
+                href: LINE_ITEM_PROFILE_URL,
+                name: "lineItem",
+                title: "Line Item",
+              },
+            },
+          },
+        ],
+      },
+      _templates: {
+        search: { method: "GET", target: `${API_URL}/invoices`, properties: [] },
+      },
+    }),
+  );
+}
+
+export function supplierProfileHandler() {
+  return http.get(SUPPLIER_PROFILE_URL, () =>
+    HttpResponse.json({
+      name: "supplier",
+      title: "Supplier",
+      description: null,
+      _links: {
+        self: { href: SUPPLIER_PROFILE_URL },
+        describes: [
+          { href: SUPPLIERS_COLLECTION_URL, name: "collection" },
+          { href: `${SUPPLIERS_COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "name",
+            title: "Name",
+            type: "string",
+            description: null,
+            readOnly: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                { name: "name~prefix", title: "Name prefix", type: "prefix-match" },
+              ],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: SUPPLIERS_COLLECTION_URL,
+          properties: [{ name: "name~prefix", prompt: "Name prefix", type: "text" }],
+        },
+      },
+    }),
+  );
+}
+
+export function lineItemProfileHandler() {
+  return http.get(LINE_ITEM_PROFILE_URL, () =>
+    HttpResponse.json({
+      name: "lineItem",
+      title: "Line Item",
+      description: null,
+      _links: {
+        self: { href: LINE_ITEM_PROFILE_URL },
+        describes: [
+          { href: LINE_ITEMS_COLLECTION_URL, name: "collection" },
+          { href: `${LINE_ITEMS_COLLECTION_URL}/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "description",
+            title: "Description",
+            type: "string",
+            description: null,
+            readOnly: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [
+                { name: "description~prefix", title: "Description prefix", type: "prefix-match" },
+              ],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: {
+          method: "GET",
+          target: LINE_ITEMS_COLLECTION_URL,
+          properties: [{ name: "description~prefix", prompt: "Description prefix", type: "text" }],
+        },
+      },
+    }),
+  );
+}
+
+/** Invoice item exposing only the to-one `supplier` relation. */
+export function makeInvoiceItemWithSupplier(itemId: string) {
+  const itemUrl = `${API_URL}/invoices/${itemId}`;
+  return {
+    id: itemId,
+    number: "INV-2024-001",
+    _links: {
+      self: { href: itemUrl },
+      [CG_RELATION_REL]: [{ href: `${itemUrl}/supplier`, name: "supplier" }],
+    },
+    _templates: {
+      "set-supplier": {
+        method: "PUT",
+        target: `${itemUrl}/supplier`,
+        contentType: "text/uri-list",
+        properties: [{ name: "supplier", type: "url" }],
+      },
+      "clear-supplier": {
+        method: "DELETE",
+        target: `${itemUrl}/supplier`,
+        properties: [],
+      },
+    },
+  };
+}
+
+/** Invoice item exposing only the to-many `lineItems` relation. */
+export function makeInvoiceItemWithLineItems(itemId: string) {
+  const itemUrl = `${API_URL}/invoices/${itemId}`;
+  return {
+    id: itemId,
+    number: "INV-2024-002",
+    _links: {
+      self: { href: itemUrl },
+      [CG_RELATION_REL]: [{ href: `${itemUrl}/lineItems`, name: "lineItems" }],
+    },
+    _templates: {
+      "add-lineItems": {
+        method: "POST",
+        target: `${itemUrl}/lineItems`,
+        contentType: "text/uri-list",
+        properties: [{ name: "lineItem", type: "url", options: {} }],
+      },
+      "clear-lineItems": {
+        method: "DELETE",
+        target: `${itemUrl}/lineItems`,
+        properties: [],
+      },
+    },
+  };
+}
+
+export function lineItem(id: string, description: string, withDeleteTemplate = false) {
+  const itemUrl = `${LINE_ITEMS_COLLECTION_URL}/${id}`;
+  return {
+    id,
+    description,
+    _links: { self: { href: itemUrl } },
+    ...(withDeleteTemplate
+      ? { _templates: { delete: { method: "DELETE", target: itemUrl, properties: [] } } }
+      : {}),
+  };
+}
+
+export function notFoundProblem() {
+  return HttpResponse.json(
+    {
+      status: 404,
+      title: "Not Found",
+      type: "https://contentgrid.cloud/problems/not-found/entity-item",
+    },
+    { status: 404, headers: { "Content-Type": "application/problem+json" } },
+  );
+}
