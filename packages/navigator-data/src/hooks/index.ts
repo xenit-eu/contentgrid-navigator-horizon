@@ -1,18 +1,19 @@
 export { NavigatorDataProvider, useNavigatorData } from "./context";
 export type { NavigatorDataContextValue } from "./context";
-export { useProfileEntities, useProfileEntity } from "./use-profile-entity";
+export { useProfileEntities, useProfileEntity, ensureProfileEntity } from "./use-profile-entity";
+export type { ProfileFilter } from "./use-profile-entity";
 export {
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,
+  ensureEntityItemCollection,
 } from "./use-entity-item-collection";
 export type {
   EntityCollectionParams,
-  EntityCollectionByUrl,
   EntityCollectionBySearch,
   UseEntityItemCollectionOptions,
 } from "./use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./use-recent-items";
-export { useEntityItem } from "./use-entity-item";
+export { useEntityItem, ensureEntityItem } from "./use-entity-item";
 export type {
   UseEntityItemOptions,
   UseEntityItemParams,

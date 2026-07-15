@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExperimentalSandbox } from "@contentgrid/features/_experimental-placeholder";
-import { EntityOverviewPage } from "@contentgrid/features/entity-list";
+import { EntityOverviewPage } from "@contentgrid/features/entity-browser";
 import { RecentlyCreatedList } from "@contentgrid/features/recently-created";
 import { useProfileEntities } from "@contentgrid/navigator-data";
 

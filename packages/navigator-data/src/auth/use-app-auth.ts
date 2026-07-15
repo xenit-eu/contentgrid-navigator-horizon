@@ -11,6 +11,17 @@ export interface AppAuthResult {
   profileUrl: string;
 }
 
+/**
+ * Whether auth has settled into a definite, usable state: not still loading,
+ * not silently refreshing an expired session, and actually authenticated.
+ * Shared by `AuthShell` (gates rendering children) and `RouterContextBridge`
+ * (gates pushing `apiFetch`/`profileUrl` into router context) so both agree
+ * on exactly when it's safe to start firing authenticated requests.
+ */
+export function isAuthReady(auth: ReturnType<typeof useAuth>): boolean {
+  return !auth.isLoading && !(auth.user?.expired && !auth.error) && auth.isAuthenticated;
+}
+
 export function useAppAuth(): AppAuthResult {
   const auth = useAuth();
 

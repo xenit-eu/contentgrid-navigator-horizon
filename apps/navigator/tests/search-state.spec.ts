@@ -1,5 +1,5 @@
 /**
- * Verifies that the s.cursor param is validated by TanStack Router, that
+ * Verifies that the cursor param is validated by TanStack Router, that
  * clicking Next/Previous actually drives cursor-based pagination against the
  * stubbed HAL endpoint, and that browser back/forward correctly restores
  * prior search state.
@@ -31,25 +31,25 @@ test("Next/Previous drive real cursor pagination, preserved through browser back
   await page.goto("/invoice");
   await expect(page.getByRole("table")).toBeVisible();
   await expect(page.getByText(PAGE_1_INVOICE_ID)).toBeVisible();
-  expect(page.url()).not.toContain("s.cursor");
+  expect(page.url()).not.toContain("cursor");
 
   // Click Next — this issues a real fetch to the HAL next link and stores
-  // its URL under s.cursor. If the cursor fetch or the origin guard were
+  // just the opaque `_cursor` token under `cursor`. If the cursor fetch were
   // broken, this would either fall back to page 1 (page-2 text never
   // appears) or throw (caught below via pageerror).
   await page.getByRole("button", { name: /next/i }).click();
   await expect(page.getByText(PAGE_2_INVOICE_ID)).toBeVisible();
-  expect(page.url()).toContain("s.cursor");
+  expect(page.url()).toContain("cursor=page2");
 
   // Browser back → first page (no cursor, page-1 row visible again).
   await page.goBack();
   await expect(page.getByText(PAGE_1_INVOICE_ID)).toBeVisible();
-  expect(page.url()).not.toContain("s.cursor");
+  expect(page.url()).not.toContain("cursor");
 
   // Browser forward → second page (cursor restored, page-2 row visible again).
   await page.goForward();
   await expect(page.getByText(PAGE_2_INVOICE_ID)).toBeVisible();
-  expect(page.url()).toContain("s.cursor");
+  expect(page.url()).toContain("cursor=page2");
 
   expect(errors).toEqual([]);
 });

@@ -4,20 +4,23 @@
  * Covers:
  * - EntityCollectionDefault mode { profileEntity }: fetches empty search collection
  * - EntityCollectionBySearch mode { profileEntity, searchValues }: fetches with values, disabled when undefined
- * - EntityCollectionByUrl mode { url, profileEntity }: fetches a specific URL
+ * - searchParams "cursor": appends the opaque token as `_cursor` onto the resolved search URL
  * - Error state (EntityItemCollection.fetchByUrlQuery has hardcoded retry:3 — fake timers required)
- * - useEntityItemCollectionInfiniteScroll: success, disabled on undefined searchValues, default mode, URL mode
+ * - useEntityItemCollectionInfiniteScroll: success, disabled on undefined searchValues, default mode
+ * - ensureEntityItemCollection: the non-hook, loader-safe equivalent
  */
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
 import { createValues } from "@contentgrid/hal-forms/values";
 import { server } from "../../test-setup";
 import ProfileEntity from "../accessors/entity-profile";
+import { createApiClient } from "../api/client";
 import type { ProfileEntityShape } from "../shapes";
-import { BASE, makeWrapper } from "./test-utils";
+import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "./test-utils";
 import {
+  ensureEntityItemCollection,
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,
 } from "./use-entity-item-collection";
@@ -32,14 +35,14 @@ const CUSTOMER_COLLECTION_URL = `${BASE}/customers`;
 const customerProfileBody = {
   name: "customer",
   title: "Customer",
-  description: "",
+  description: null,
   _embedded: {
     "blueprint:attribute": [
       {
         name: "id",
         title: "id",
         type: "string",
-        description: "",
+        description: null,
         readOnly: true,
         required: false,
         _embedded: {
@@ -53,7 +56,7 @@ const customerProfileBody = {
         name: "name",
         title: "Name",
         type: "string",
-        description: "",
+        description: null,
         readOnly: false,
         required: false,
         _embedded: {
@@ -85,7 +88,7 @@ const customerProfileBody = {
     search: {
       method: "GET",
       target: CUSTOMER_COLLECTION_URL,
-      properties: [{ name: "name~prefix", type: "text" }],
+      properties: [{ name: "name~prefix", prompt: "Name", type: "text" }],
     },
   },
 };
@@ -121,6 +124,14 @@ function setupCollectionHandler() {
   server.use(http.get(CUSTOMER_COLLECTION_URL, () => HttpResponse.json(customerCollectionBody)));
 }
 
+// Shared across every test below that just needs "a normal customer profile"
+// — only tests exercising a different profile shape (e.g. no search
+// template) construct their own local profile instead of using this.
+let profileEntity: ProfileEntity;
+beforeEach(() => {
+  profileEntity = makeCustomerProfile();
+});
+
 // ---------------------------------------------------------------------------
 // EntityCollectionDefault mode
 // ---------------------------------------------------------------------------
@@ -128,7 +139,6 @@ function setupCollectionHandler() {
 describe("useEntityItemCollection — default mode { profileEntity }", () => {
   it("fetches the entity collection using empty search", async () => {
     setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useEntityItemCollection({ profileEntity }), { wrapper });
 
@@ -174,7 +184,6 @@ describe("useEntityItemCollection — search mode { profileEntity, searchValues 
 
   it("fetches with explicit searchValues", async () => {
     setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
     const searchTemplate = profileEntity.searchTemplate!;
     const searchValues = createValues(searchTemplate.template);
 
@@ -190,8 +199,6 @@ describe("useEntityItemCollection — search mode { profileEntity, searchValues 
 
   it("query is disabled (isPending) when searchValues is undefined", async () => {
     // Do not register collection handler — should not be called
-    const profileEntity = makeCustomerProfile();
-
     const wrapper = makeWrapper();
     const { result } = renderHook(
       () => useEntityItemCollection({ profileEntity, searchValues: undefined }),
@@ -214,7 +221,6 @@ describe("useEntityItemCollection — search mode { profileEntity, searchValues 
         ),
       ),
     );
-    const profileEntity = makeCustomerProfile();
     const searchTemplate = profileEntity.searchTemplate!;
     const searchValues = createValues(searchTemplate.template);
 
@@ -230,172 +236,131 @@ describe("useEntityItemCollection — search mode { profileEntity, searchValues 
 });
 
 // ---------------------------------------------------------------------------
-// EntityCollectionByUrl mode
+// searchParams "cursor" — opaque token appended to the resolved search URL
 // ---------------------------------------------------------------------------
 
-describe("useEntityItemCollection — URL mode { url, profileEntity }", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+describe("useEntityItemCollection — searchParams cursor", () => {
+  it("appends the cursor as _cursor onto the default search URL", async () => {
+    let capturedUrl: URL | undefined;
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json(customerCollectionBody);
+      }),
+    );
 
-  it("fetches from the specified URL", async () => {
-    // Use a clean URL without query params to avoid MSW query-param handler issues
-    const nextPageUrl = `${CUSTOMER_COLLECTION_URL}/page2`;
-    const nextPageBody = {
-      _embedded: {
-        item: [
-          {
-            id: "cust-003",
-            name: "Corp Three",
-            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-003` } },
-          },
-        ],
-      },
-      _links: { self: { href: nextPageUrl } },
-      page: { size: 20, total_items_exact: 1 },
-    };
-
-    server.use(http.get(nextPageUrl, () => HttpResponse.json(nextPageBody)));
-
-    const profileEntity = makeCustomerProfile();
     const wrapper = makeWrapper();
     const { result } = renderHook(
-      () => useEntityItemCollection({ url: nextPageUrl, profileEntity }),
+      () =>
+        useEntityItemCollection({
+          profileEntity,
+          searchParams: new URLSearchParams({ cursor: "abc123" }),
+        }),
       { wrapper },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.items).toHaveLength(1);
-    expect(result.current.data?.items[0].id).toBe("cust-003");
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("abc123");
   });
 
-  it("isError is true when URL endpoint returns an error (retry:3 — fake timers)", async () => {
-    vi.useFakeTimers();
-
-    const errorUrl = `${CUSTOMER_COLLECTION_URL}/error-page`;
+  it("appends the cursor onto a search-values URL too", async () => {
+    let capturedUrl: URL | undefined;
     server.use(
-      http.get(errorUrl, () =>
-        HttpResponse.json(
-          { status: 403, title: "Forbidden" },
-          { status: 403, headers: { "Content-Type": "application/problem+json" } },
-        ),
-      ),
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json(customerCollectionBody);
+      }),
     );
 
-    const profileEntity = makeCustomerProfile();
+    const searchTemplate = profileEntity.searchTemplate!;
+    const searchValues = createValues(searchTemplate.template);
     const wrapper = makeWrapper();
-    const { result } = renderHook(() => useEntityItemCollection({ url: errorUrl, profileEntity }), {
-      wrapper,
-    });
+    const { result } = renderHook(
+      () =>
+        useEntityItemCollection({
+          profileEntity,
+          searchValues,
+          searchParams: new URLSearchParams({ cursor: "xyz789" }),
+        }),
+      { wrapper },
+    );
 
-    await vi.runAllTimersAsync();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.isError).toBe(true);
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("xyz789");
   });
+
+  // "No cursor given" is already covered by the default-mode describe above
+  // (useEntityItemCollection({ profileEntity }) with no searchParams at all).
+
+  // Error/retry behavior is generic to fetchByUrlQuery regardless of how the
+  // URL was built — already covered by the "search mode" describe above, so
+  // it isn't re-verified per param mode here.
 });
 
 // ---------------------------------------------------------------------------
-// EntityCollectionByUrl mode — origin guard (security)
+// ensureEntityItemCollection — non-hook, loader-safe equivalent
 // ---------------------------------------------------------------------------
 
-describe("useEntityItemCollection — URL mode origin guard", () => {
-  it("discards a cross-origin cursor URL and falls back to the first-page URL", async () => {
-    // Only the trusted first-page (default search) collection URL is registered.
-    // If the evil-origin URL were fetched, MSW would report an unhandled request
-    // and the query would error instead of succeeding.
-    setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
-    const evilUrl = "https://evil.example/x";
+describe("ensureEntityItemCollection", () => {
+  it("resolves with a cursor", async () => {
+    let capturedUrl: URL | undefined;
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json(customerCollectionBody);
+      }),
+    );
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
 
-    const wrapper = makeWrapper();
-    const { result } = renderHook(() => useEntityItemCollection({ url: evilUrl, profileEntity }), {
-      wrapper,
-    });
+    await ensureEntityItemCollection(
+      queryClient,
+      apiFetch,
+      { profileEntity, searchParams: new URLSearchParams({ cursor: "abc123" }) },
+      BASE,
+    );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(2);
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("abc123");
   });
 
-  it("accepts a same-origin cursor URL verbatim", async () => {
-    const nextPageUrl = `${CUSTOMER_COLLECTION_URL}/page2`;
-    const nextPageBody = {
-      _embedded: {
-        item: [
-          {
-            id: "cust-003",
-            name: "Corp Three",
-            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-003` } },
-          },
-        ],
+  it("resolves without a cursor (first page)", async () => {
+    let calls = 0;
+    server.use(
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        calls += 1;
+        expect(new URL(request.url).searchParams.get("_cursor")).toBeNull();
+        return HttpResponse.json(customerCollectionBody);
+      }),
+    );
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
+
+    await ensureEntityItemCollection(queryClient, apiFetch, { profileEntity }, BASE);
+
+    expect(calls).toBe(1);
+  });
+
+  it("is a no-op when the request is disabled (no search template, no searchValues)", async () => {
+    const noSearchBody = {
+      ...customerProfileBody,
+      _templates: {
+        default: { method: "HEAD", target: CUSTOMER_COLLECTION_URL, properties: [] },
       },
-      _links: { self: { href: nextPageUrl } },
-      page: { size: 20, total_items_exact: 1 },
     };
-    server.use(http.get(nextPageUrl, () => HttpResponse.json(nextPageBody)));
-
-    const profileEntity = makeCustomerProfile();
-    const wrapper = makeWrapper();
-    const { result } = renderHook(
-      () => useEntityItemCollection({ url: nextPageUrl, profileEntity }),
-      { wrapper },
+    const hal = new HalObject(noSearchBody as unknown as ProfileEntityShape);
+    const profileEntity = new ProfileEntity(
+      { href: CUSTOMER_PROFILE_URL, name: "customer", title: "Customer" } as unknown as Link,
+      hal as HalObject<ProfileEntityShape>,
     );
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(1);
-    expect(result.current.data?.items[0].id).toBe("cust-003");
-  });
-
-  it("accepts a relative same-origin cursor, resolving it against the API base", async () => {
-    // Regression coverage: the trust anchor is the absolute API base
-    // (profileUrl), not profileEntity.collectionUrl. A relative cursor must
-    // resolve against that base and be trusted — anchoring on a relative
-    // collectionUrl would make `new URL(...)` throw and silently disable
-    // cursor pagination for every relative-collection-URL deployment.
-    const resolvedUrl = `${BASE}/relative-path`;
-    const relativePageBody = {
-      _embedded: {
-        item: [
-          {
-            id: "cust-004",
-            name: "Relative Corp",
-            _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-004` } },
-          },
-        ],
-      },
-      _links: { self: { href: resolvedUrl } },
-      page: { size: 20, total_items_exact: 1 },
-    };
-    server.use(http.get(resolvedUrl, () => HttpResponse.json(relativePageBody)));
-
-    const profileEntity = makeCustomerProfile();
-    const wrapper = makeWrapper();
-    const { result } = renderHook(
-      () => useEntityItemCollection({ url: "/relative-path", profileEntity }),
-      { wrapper },
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(1);
-    expect(result.current.data?.items[0].id).toBe("cust-004");
-  });
-
-  it("discards an unparsable cursor URL and falls back to the first-page URL", async () => {
-    setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
-
-    const wrapper = makeWrapper();
-    const { result } = renderHook(
-      () => useEntityItemCollection({ url: "http://[::1", profileEntity }),
-      { wrapper },
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.items).toHaveLength(2);
+    // No collection handler registered — if a fetch were attempted, MSW would error.
+    await expect(
+      ensureEntityItemCollection(queryClient, apiFetch, { profileEntity }, BASE),
+    ).resolves.toBeUndefined();
   });
 });
 
@@ -406,7 +371,6 @@ describe("useEntityItemCollection — URL mode origin guard", () => {
 describe("useEntityItemCollectionInfiniteScroll", () => {
   it("fetches the first page in infinite scroll mode (search mode)", async () => {
     setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
     const searchTemplate = profileEntity.searchTemplate!;
     const searchValues = createValues(searchTemplate.template);
 
@@ -423,8 +387,6 @@ describe("useEntityItemCollectionInfiniteScroll", () => {
   });
 
   it("infinite scroll is disabled (isPending) when searchValues is undefined", async () => {
-    const profileEntity = makeCustomerProfile();
-
     const wrapper = makeWrapper();
     const { result } = renderHook(
       () => useEntityItemCollectionInfiniteScroll({ profileEntity, searchValues: undefined }),
@@ -438,7 +400,6 @@ describe("useEntityItemCollectionInfiniteScroll", () => {
 
   it("infinite scroll default mode fetches collection", async () => {
     setupCollectionHandler();
-    const profileEntity = makeCustomerProfile();
 
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useEntityItemCollectionInfiniteScroll({ profileEntity }), {
@@ -451,27 +412,28 @@ describe("useEntityItemCollectionInfiniteScroll", () => {
     expect(result.current.data?.pages[0].items).toHaveLength(2);
   });
 
-  it("infinite scroll by URL fetches from specified URL", async () => {
-    const specificUrl = `${CUSTOMER_COLLECTION_URL}/specific-page`;
+  it("infinite scroll starts from a given cursor", async () => {
+    let capturedUrl: URL | undefined;
     server.use(
-      http.get(specificUrl, () =>
-        HttpResponse.json({
-          ...customerCollectionBody,
-          _links: { self: { href: specificUrl } },
-        }),
-      ),
+      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
+        capturedUrl = new URL(request.url);
+        return HttpResponse.json(customerCollectionBody);
+      }),
     );
-    const profileEntity = makeCustomerProfile();
 
     const wrapper = makeWrapper();
     const { result } = renderHook(
-      () => useEntityItemCollectionInfiniteScroll({ url: specificUrl, profileEntity }),
+      () =>
+        useEntityItemCollectionInfiniteScroll({
+          profileEntity,
+          searchParams: new URLSearchParams({ cursor: "abc123" }),
+        }),
       { wrapper },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.pages).toHaveLength(1);
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("abc123");
     expect(result.current.data?.pages[0].items).toHaveLength(2);
   });
 });

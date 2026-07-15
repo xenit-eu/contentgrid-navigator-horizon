@@ -128,7 +128,19 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 
 - `profileEntity.collectionUrl` — the entity collection URL (e.g. `/invoices`); read directly from the `describes` collection link.
 - `profileEntity.itemUrl(entityId)` — expands the item URI template (e.g. `/{plural}/{id}`) via `@contentgrid/uri-template`.
-- Follow HAL `next`/`prev`/`self` links directly for pagination — never construct cursor URLs.
+- Follow HAL `next`/`prev`/`self` links directly for pagination. Cursor **values** stay opaque —
+  never decode or interpret them. The one exception: `_cursor` is a known, stable query-param
+  name in this platform's HAL API (every next/prev link uses it).
+  - `extractCursorFromHref` (`src/search/entity-search-state.ts`) extracts just that token from
+    `EntityItemCollection.nextHref`/`prevHref` for storage in browser URL state.
+  - The route boundary (`validateSearch`/`useSearch`) stays TanStack's typed search params —
+    see ADR-005. Past that boundary, wrap the token in a standard `URLSearchParams` before
+    calling into the data layer.
+  - `useEntityItemCollection({ profileEntity, searchParams })` reads `searchParams.get("cursor")`
+    and re-attaches it as `_cursor` to a URL built from the entity's own search template — never
+    to an arbitrary caller-supplied URL. `URLSearchParams`, not a bespoke object, is the
+    parameter type here, so any caller with a query string can call these hooks without shaping
+    a custom type.
 
 **Return shape:**
 

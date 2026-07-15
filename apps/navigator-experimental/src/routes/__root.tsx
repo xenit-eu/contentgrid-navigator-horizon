@@ -1,29 +1,17 @@
-import { Outlet, createRootRoute } from "@tanstack/react-router";
-import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
-import { SignInGate } from "@contentgrid/ui";
+import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import { AuthShell } from "@contentgrid/features/auth-shell";
 import { ExperimentalBanner } from "../components/experimental-banner";
+import type { AppRouterContext } from "../router-context";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<AppRouterContext>()({
   component: RootComponent,
 });
 
 function RootComponent() {
-  const { auth, apiFetch, profileUrl } = useAppAuth();
-
-  if (auth.isLoading || (auth.user?.expired && !auth.error)) {
-    return null;
-  }
-
-  if (!auth.isAuthenticated) {
-    return <SignInGate onSignIn={() => auth.signinRedirect()} />;
-  }
-
   return (
-    <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
-      <>
-        <ExperimentalBanner />
-        <Outlet />
-      </>
-    </NavigatorDataProvider>
+    <AuthShell>
+      <ExperimentalBanner />
+      <Outlet />
+    </AuthShell>
   );
 }

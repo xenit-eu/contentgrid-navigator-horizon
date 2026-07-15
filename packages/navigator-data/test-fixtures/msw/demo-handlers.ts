@@ -20,8 +20,8 @@ function resolveTemplateTargets(
  * Distinctive text shown for the single item on cursor page 2 (see
  * `createInvoicesCursorHandler`). The demo invoice profile has no embedded
  * `blueprint:attribute` list, so `ProfileEntity.userDefinedAttributes` is
- * empty and the entity-list table falls back to a single `id` column
- * (packages/features/src/entity-list — `buildColumns`). That means the `id`
+ * empty and the entity-browser table falls back to a single `id` column
+ * (packages/features/src/entity-browser/entity-detail.tsx — `buildColumns`). That means the `id`
  * field — not `number` — is the only value actually rendered in the table,
  * so it has to carry the recognizable marker text used by the e2e test.
  */

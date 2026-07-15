@@ -1,19 +1,27 @@
-import { type ReactNode, StrictMode } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { NotFoundPage } from "@contentgrid/features/auth-shell";
 import {
   AppConfigProvider,
   AuthProvider,
-  NavigatorDataProvider,
+  isAuthReady,
   loadAppConfig,
   useAppAuth,
 } from "@contentgrid/navigator-data";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
+import type { AppRouterContext } from "./router-context";
 
-const router = createRouter({ routeTree });
+const queryClient = new QueryClient();
+
+const router = createRouter({
+  routeTree,
+  context: { queryClient, apiFetch: null, profileUrl: null } satisfies AppRouterContext,
+  defaultNotFoundComponent: NotFoundPage,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -21,20 +29,20 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const queryClient = new QueryClient();
+// Only push the authenticated apiFetch/profileUrl into router context once
+// auth has actually settled (same check as AuthShell) — otherwise a loader
+// could fire before the token is ready and send an unauthenticated request.
+function RouterContextBridge() {
+  const { auth, apiFetch, profileUrl } = useAppAuth();
+  const ready = isAuthReady(auth);
 
-// Bridges auth → data layer: useAppAuth derives an OIDC-token-supplied
-// apiFetch and the profile URL from the runtime config, so it must render
-// inside <AuthProvider> and after loadAppConfig() resolved.
-function DataProviders({ children }: Readonly<{ children: ReactNode }>) {
-  const { apiFetch, profileUrl } = useAppAuth();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
-        {children}
-      </NavigatorDataProvider>
-    </QueryClientProvider>
-  );
+  useEffect(() => {
+    if (!ready) return;
+    router.update({ context: { queryClient, apiFetch, profileUrl } });
+    router.invalidate();
+  }, [ready, apiFetch, profileUrl]);
+
+  return <RouterProvider router={router} />;
 }
 
 // Dev without a real backend: serve the stubbed HAL endpoint via MSW
@@ -55,10 +63,10 @@ try {
     <StrictMode>
       <AppConfigProvider>
         <AuthProvider>
-          <DataProviders>
-            <RouterProvider router={router} />
+          <QueryClientProvider client={queryClient}>
+            <RouterContextBridge />
             <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-          </DataProviders>
+          </QueryClientProvider>
         </AuthProvider>
       </AppConfigProvider>
     </StrictMode>,

@@ -8,13 +8,13 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./entity-list": {
-      "import": "./src/entity-list/index.tsx",
-      "types": "./src/entity-list/index.tsx"
+    "./entity-browser": {
+      "import": "./src/entity-browser/index.ts",
+      "types": "./src/entity-browser/index.ts"
     },
-    "./entity-list-infinite": {
-      "import": "./src/entity-list/infinite-scroll-demo.tsx",
-      "types": "./src/entity-list/infinite-scroll-demo.tsx"
+    "./auth-shell": {
+      "import": "./src/auth-shell/index.ts",
+      "types": "./src/auth-shell/index.ts"
     },
     "./recently-created": {
       "import": "./src/recently-created/index.tsx",
@@ -27,10 +27,6 @@
     "./_experimental-placeholder": {
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
-    },
-    "./navigator-header": {
-      "import": "./src/navigator-header/index.ts",
-      "types": "./src/navigator-header/index.ts"
     }
   },
   "scripts": {
