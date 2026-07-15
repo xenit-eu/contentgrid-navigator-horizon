@@ -5,6 +5,14 @@ export interface NavigatorDataContextValue {
   /** Authenticated TypedFetch for HAL GET requests (fetchHal / fetchHalSlice). */
   apiFetch: TypedFetch;
   /**
+   * Authenticated TypedFetch for binary content requests (PUT/GET to cg:content links).
+   *
+   * Unlike `apiFetch`, this client does NOT set `Accept: application/hal+json`. Use it
+   * exclusively for binary content operations (`useUploadContent` / `useDownloadContent`).
+   * Built from `createContentClient` — see `src/api/client.ts`.
+   */
+  contentFetch: TypedFetch;
+  /**
    * Full URL of the HAL-FORMS profile root, e.g. https://api.example.com/profile.
    * Resolved once by the app (typically from the root resource's cg:entity links or
    * the app's known ContentGrid deployment URL) and injected here so the hooks
@@ -17,10 +25,14 @@ const NavigatorDataContext = createContext<NavigatorDataContextValue | null>(nul
 
 export function NavigatorDataProvider({
   apiFetch,
+  contentFetch,
   profileUrl,
   children,
 }: NavigatorDataContextValue & { children: ReactNode }) {
-  const value = useMemo(() => ({ apiFetch, profileUrl }), [apiFetch, profileUrl]);
+  const value = useMemo(
+    () => ({ apiFetch, contentFetch, profileUrl }),
+    [apiFetch, contentFetch, profileUrl],
+  );
   return <NavigatorDataContext.Provider value={value}>{children}</NavigatorDataContext.Provider>;
 }
 

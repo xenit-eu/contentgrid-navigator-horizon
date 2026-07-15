@@ -9,4 +9,10 @@ export default [
       "@contentgrid/no-unstable-features": ["error", { allowedStability: ["stable"] }],
     },
   },
+  {
+    files: ["tests/**"],
+    rules: {
+      "no-empty-pattern": "off",
+    },
+  },
 ];

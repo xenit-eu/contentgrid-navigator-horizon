@@ -279,4 +279,44 @@ export class EntityItemCollection {
   public get isEmpty(): boolean {
     return this.pageSize === 0 && (this.totalItems?.count === 0 || this.totalItems === undefined);
   }
+
+  /**
+   * Find an item in this page by its ID.
+   *
+   * @param id - The entity item ID to look up
+   * @returns The matching EntityItem, or `undefined` if not on this page
+   */
+  public findById(id: string): EntityItem | undefined {
+    return this.items.find((item) => item.id === id);
+  }
+
+  /**
+   * Internal scoping parameters extracted from the resolved collection URL.
+   *
+   * When a `cg:relation` link is followed, the server 302-redirects to the target
+   * entity's collection with `_internal_*` query params that scope results to the
+   * linked items only. These params live in `halSlice.self.href` (the final URL
+   * after the redirect).
+   *
+   * Strips pagination params (`_cursor`, `_size`, `_sort`) — only the relation
+   * scoping params are returned (e.g. `{ "_internal_invoice__products": "019d…" }`).
+   *
+   * Empty object when no scoping params are present (plain collection fetch).
+   */
+  public get internalRelationParams(): Record<string, string> {
+    const href = this.halSlice.self?.href;
+    if (!href) return {};
+    try {
+      const url = new URL(href, "https://placeholder");
+      const result: Record<string, string> = {};
+      for (const [key, value] of url.searchParams.entries()) {
+        if (key !== "_cursor" && key !== "_size" && key !== "_sort") {
+          result[key] = value;
+        }
+      }
+      return result;
+    } catch {
+      return {};
+    }
+  }
 }

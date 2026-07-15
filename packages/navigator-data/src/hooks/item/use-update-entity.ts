@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { EntityItem } from "../accessors/entity-item";
-import { addIfMatchHeader, fetchHal } from "../api/hal-client";
-import type { EntityInstanceUpdateRequestSpec } from "../api/requests";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape } from "../shapes";
-import { useNavigatorData } from "./context";
+import { EntityItem } from "../../accessors/entity-item";
+import { addIfMatchHeader, fetchHal } from "../../api/hal-client";
+import type { EntityInstanceUpdateRequestSpec } from "../../api/requests";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape } from "../../shapes";
+import { useNavigatorData } from "../context";
 
 export interface UseUpdateEntityItemOptions {
   readonly mutationOptions?: Omit<

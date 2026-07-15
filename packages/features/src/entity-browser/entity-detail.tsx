@@ -247,7 +247,7 @@ function CreateEntityButton({ profile }: Readonly<{ profile: ProfileEntity }>) {
 
 const MAX_COLUMNS = 5;
 
-function buildColumns(profile: ProfileEntity): DataTableColumn[] {
+export function buildColumns(profile: ProfileEntity): DataTableColumn[] {
   const userAttrs = profile.userDefinedAttributes.slice(0, MAX_COLUMNS);
 
   if (userAttrs.length === 0) {
@@ -260,7 +260,10 @@ function buildColumns(profile: ProfileEntity): DataTableColumn[] {
   }));
 }
 
-function buildRows(items: readonly EntityItem[], columns: DataTableColumn[]): DataTableRow[] {
+export function buildRows(
+  items: readonly EntityItem[],
+  columns: DataTableColumn[],
+): DataTableRow[] {
   const columnKeys = new Set(columns.map((c) => c.key));
 
   return items.map((item) => {

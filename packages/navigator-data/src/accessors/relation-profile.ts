@@ -88,13 +88,15 @@ export class ProfileRelation {
 
   /**
    * Find the target profile from an already-loaded list of profiles.
-   * More efficient when profiles are pre-loaded.
+   *
+   * Matches by the profile's own link href (the `cg:entity` link href from the profile
+   * root), which is the same URL the `blueprint:target-entity` relation link points to.
+   * Using `profile.describes()` does not work here: `describes` links contain collection
+   * and item URL patterns (e.g. `/products`, `/products/{id}`), not the profile URL itself.
    */
   public getTargetProfile(profiles: readonly Profile[]): Profile | undefined {
-    const targetProfile = this.targetProfileLink;
-    if (targetProfile) {
-      return profiles.find((profile) => profile.describes(targetProfile)) ?? undefined;
-    }
-    return undefined;
+    const targetProfileLink = this.targetProfileLink;
+    if (!targetProfileLink) return undefined;
+    return profiles.find((profile) => profile.link.href === targetProfileLink.href);
   }
 }

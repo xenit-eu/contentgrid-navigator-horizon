@@ -14,11 +14,15 @@ export interface AuthShellProps {
  * one place so the two can't silently drift out of sync.
  */
 export function AuthShell({ children }: Readonly<AuthShellProps>) {
-  const { auth, apiFetch, profileUrl } = useAppAuth();
+  const { auth, apiFetch, contentFetch, profileUrl } = useAppAuth();
 
   if (isAuthReady(auth)) {
     return (
-      <NavigatorDataProvider apiFetch={apiFetch} profileUrl={profileUrl}>
+      <NavigatorDataProvider
+        apiFetch={apiFetch}
+        contentFetch={contentFetch}
+        profileUrl={profileUrl}
+      >
         {children}
       </NavigatorDataProvider>
     );

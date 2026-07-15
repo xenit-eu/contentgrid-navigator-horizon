@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
-import { EntityItem } from "../accessors/entity-item";
-import { addIfMatchHeader, fetchVoid } from "../api/hal-client";
-import { queryKeys } from "../query-keys";
-import { useNavigatorData } from "./context";
+import { EntityItem } from "../../accessors/entity-item";
+import { addIfMatchHeader, fetchVoid } from "../../api/hal-client";
+import { queryKeys } from "../../query-keys";
+import { useNavigatorData } from "../context";
 
 export interface UseDeleteEntityItemOptions {
   readonly mutationOptions?: Omit<UseMutationOptions<EntityItem, Error, EntityItem>, "mutationFn">;

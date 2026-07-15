@@ -14,6 +14,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  createContentClient,
   entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
@@ -37,11 +38,16 @@ export function createTestRouter(initialEntry = "/") {
     defaultOptions: { queries: { retry: false } },
   });
   const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
 
   function Providers({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          profileUrl={PROFILE_URL}
+        >
           {children}
         </NavigatorDataProvider>
       </QueryClientProvider>

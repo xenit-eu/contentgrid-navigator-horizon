@@ -180,3 +180,81 @@ export function createProblemHandler(config: ProblemHandlerConfig): HttpHandler 
     });
   });
 }
+
+// ---- Relation add handler (POST text/uri-list -> 204) ----
+
+export interface RelationAddHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+}
+
+export function createRelationAddHandler(config: RelationAddHandlerConfig): HttpHandler {
+  const { url, status = 204 } = config;
+  return http.post(url, () => {
+    return new HttpResponse(null, { status });
+  });
+}
+
+// ---- Content upload handler (PUT binary -> 204) ----
+
+export interface ContentUploadHandlerConfig {
+  url: string;
+  /** HTTP status code. Defaults to 204. */
+  status?: number;
+  /** Optional ETag to return in the response. */
+  etag?: string;
+}
+
+export function createContentUploadHandler(config: ContentUploadHandlerConfig): HttpHandler {
+  const { url, status = 204, etag } = config;
+  return http.put(url, () => {
+    const headers: Record<string, string> = {};
+    if (etag) headers["ETag"] = etag;
+    return new HttpResponse(null, { status, headers });
+  });
+}
+
+// ---- Content download handler (GET binary -> 200 or 206) ----
+
+export interface ContentDownloadHandlerConfig {
+  url: string;
+  /** The binary content to return. Defaults to an empty Uint8Array. */
+  body?: Uint8Array | string;
+  /** MIME type for the Content-Type header. Defaults to "application/octet-stream". */
+  contentType?: string;
+  /** Optional filename for the Content-Disposition header. */
+  filename?: string;
+  /**
+   * When provided, returns 206 Partial Content with a Content-Range header.
+   * Format: "bytes start-end/total" e.g. "bytes 0-99/1000".
+   */
+  contentRange?: string;
+}
+
+export function createContentDownloadHandler(config: ContentDownloadHandlerConfig): HttpHandler {
+  const {
+    url,
+    body = new Uint8Array(),
+    contentType = "application/octet-stream",
+    filename,
+    contentRange,
+  } = config;
+
+  return http.get(url, () => {
+    const status = contentRange ? 206 : 200;
+    const headers: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+    if (filename) {
+      headers["Content-Disposition"] = `attachment; filename="${filename}"`;
+    }
+    if (contentRange) {
+      headers["Content-Range"] = contentRange;
+    }
+    if (typeof body !== "string") {
+      headers["Content-Length"] = String(body.length);
+    }
+    return new HttpResponse(body, { status, headers });
+  });
+}

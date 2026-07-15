@@ -1,7 +1,7 @@
 import { createValues } from "@contentgrid/hal-forms/values";
-import type ProfileEntity from "../accessors/entity-profile";
-import { useEntityItemCollection } from "./use-entity-item-collection";
-import type { UseEntityItemCollectionOptions } from "./use-entity-item-collection";
+import type ProfileEntity from "../../accessors/entity-profile";
+import { useEntityItemCollection } from "../collection/use-entity-item-collection";
+import type { UseEntityItemCollectionOptions } from "../collection/use-entity-item-collection";
 
 /**
  * Fetches the most recently created items for an entity, sorted by created-date descending.

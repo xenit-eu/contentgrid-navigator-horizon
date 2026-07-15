@@ -2,6 +2,7 @@ export * from "./entity-card";
 export * from "./data-table";
 export * from "./loading-page";
 export * from "./error-page";
+export * from "./filter-chips";
 export * from "./filter-sidebar";
 export * from "./relation-section";
 export * from "./entity-picker";

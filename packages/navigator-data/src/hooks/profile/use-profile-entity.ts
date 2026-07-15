@@ -1,10 +1,10 @@
 import { type QueryClient, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Link } from "@contentgrid/hal";
-import ProfileEntity, { profileRootQuery } from "../accessors/entity-profile";
-import { cgRels } from "../api";
-import type { TypedFetch } from "../api/client";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
+import ProfileEntity, { profileRootQuery } from "../../accessors/entity-profile";
+import { cgRels } from "../../api";
+import type { TypedFetch } from "../../api/client";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
 
 interface UseProfileEntitiesOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<ProfileEntity, Error>>;

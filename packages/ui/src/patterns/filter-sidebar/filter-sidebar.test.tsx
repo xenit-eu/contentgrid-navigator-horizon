@@ -20,11 +20,11 @@ const DATE_LT_PROP: SearchProperty = {
   type: "string",
 };
 const DATE_GTE_PROP: SearchProperty = {
-  name: "due~greater-than-or-equal-to",
+  name: "due~greater-than-or-equal",
   type: "string",
 };
 const DATE_LTE_PROP: SearchProperty = {
-  name: "due~less-than-or-equal-to",
+  name: "due~less-than-or-equal",
   type: "string",
 };
 
@@ -184,12 +184,12 @@ describe("FilterSidebar — date suffix filters (DateFilter with direction)", ()
     expect(screen.getByText(/created at before/i)).toBeInTheDocument();
   });
 
-  it("renders date inputs for greater-than-or-equal-to suffix", () => {
+  it("renders date inputs for greater-than-or-equal suffix", () => {
     renderSidebar([DATE_GTE_PROP]);
     expect(screen.getByText(/due after/i)).toBeInTheDocument();
   });
 
-  it("renders date inputs for less-than-or-equal-to suffix", () => {
+  it("renders date inputs for less-than-or-equal suffix", () => {
     renderSidebar([DATE_LTE_PROP]);
     expect(screen.getByText(/due before/i)).toBeInTheDocument();
   });
@@ -211,7 +211,7 @@ describe("FilterSidebar — date group filter (multiple date props for same fiel
 
   it("renders From/Until direction labels for gte/lte suffixes", () => {
     renderSidebar([DATE_GTE_PROP, DATE_LTE_PROP]);
-    // greater-than-or-equal-to → "from" → label "After" (maps from→after in DateGroupFilter)
+    // greater-than-or-equal → "from" → label "After" (maps from→after in DateGroupFilter)
     // Check that we have date inputs
     const inputs = screen.getAllByDisplayValue("");
     expect(inputs.length).toBeGreaterThanOrEqual(2);

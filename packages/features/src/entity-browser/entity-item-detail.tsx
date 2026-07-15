@@ -12,6 +12,7 @@ import {
 } from "@contentgrid/ui";
 import { formatAttributeValue } from "./attribute-format";
 import type { AnyNavigateFn } from "./navigate";
+import { RelationToManySection, RelationToOneSection } from "./relation-sections";
 
 // ---------------------------------------------------------------------------
 // EntityItemDetailPage — $entity/$itemId route component
@@ -87,18 +88,36 @@ function EntityItemDetailView({
       {item.isError && <ErrorPage message={`Failed to load item: ${item.error.message}`} />}
 
       {item.isSuccess && (
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {item.data.userDefinedAttributes.map((attr) => {
-            const label =
-              profile.attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name;
-            return (
-              <div key={attr.value.name} className="rounded-lg border p-4">
-                <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-                <dd className="mt-1 truncate text-sm">{formatAttributeValue(attr)}</dd>
+        <>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {item.data.userDefinedAttributes.map((attr) => {
+              const label =
+                profile.attributes.find((a) => a.name === attr.value.name)?.title ??
+                attr.value.name;
+              return (
+                <div key={attr.value.name} className="rounded-lg border p-4">
+                  <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                  <dd className="mt-1 truncate text-sm">{formatAttributeValue(attr)}</dd>
+                </div>
+              );
+            })}
+          </dl>
+
+          {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">Relations</h2>
+                {item.data.toOneRelations.map((rel) => (
+                  <RelationToOneSection key={rel.name} relation={rel} />
+                ))}
+                {item.data.toManyRelations.map((rel) => (
+                  <RelationToManySection key={rel.name} relation={rel} />
+                ))}
               </div>
-            );
-          })}
-        </dl>
+            </>
+          )}
+        </>
       )}
     </div>
   );

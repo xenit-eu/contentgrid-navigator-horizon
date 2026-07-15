@@ -15,6 +15,7 @@ import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
   createApiClient,
+  createContentClient,
 } from "@contentgrid/navigator-data";
 import { server } from "../../test-setup";
 import { EntityProfileGate } from "./entity-profile-gate";
@@ -25,11 +26,16 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
 function renderGate(initialEntry: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
 
   const rootRoute = createRootRoute({
     component: () => (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          profileUrl={PROFILE_URL}
+        >
           <Outlet />
         </NavigatorDataProvider>
       </QueryClientProvider>

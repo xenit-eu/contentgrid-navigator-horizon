@@ -1,15 +1,14 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { SimpleLink } from "@contentgrid/hal";
-import type { EntityItem } from "../accessors/entity-item";
-import { EntityItem as EntityItemClass } from "../accessors/entity-item";
-import type ProfileEntity from "../accessors/entity-profile";
-import type { TypedFetch } from "../api/client";
-import { fetchHal } from "../api/hal-client";
-import { queryKeys } from "../query-keys";
-import type { EntityItemShape } from "../shapes";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
-import { useProfileEntities } from "./use-profile-entity";
+import { EntityItem } from "../../accessors/entity-item";
+import type ProfileEntity from "../../accessors/entity-profile";
+import type { TypedFetch } from "../../api/client";
+import { fetchHal } from "../../api/hal-client";
+import { queryKeys } from "../../query-keys";
+import type { EntityItemShape } from "../../shapes";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
+import { useProfileEntities } from "../profile/use-profile-entity";
 
 export interface UseEntityItemOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItem, Error>>;
@@ -80,7 +79,7 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
     queryKey: profileEntity && url ? queryKeys.entityItem.byUrl(profileEntity, url) : [],
     queryFn: async () => {
       const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, new Request(url!));
-      return new EntityItemClass(object, profileEntity!, etag);
+      return new EntityItem(object, profileEntity!, etag);
     },
     enabled: !!url && !!profileEntity,
     ...options?.queryOptionsOverride,
@@ -99,5 +98,5 @@ export async function ensureEntityItem(
   entityId: string,
 ): Promise<void> {
   const url = profileEntity.itemUrl(entityId);
-  await queryClient.ensureQueryData(EntityItemClass.fetchByUrlQuery(apiFetch, url, profileEntity));
+  await queryClient.ensureQueryData(EntityItem.fetchByUrlQuery(apiFetch, url, profileEntity));
 }
