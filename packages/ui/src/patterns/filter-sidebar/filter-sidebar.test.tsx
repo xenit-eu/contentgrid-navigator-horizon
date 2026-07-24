@@ -173,25 +173,14 @@ describe("FilterSidebar — single date filter (type=date)", () => {
 });
 
 describe("FilterSidebar — date suffix filters (DateFilter with direction)", () => {
-  it("renders date inputs for greater-than suffix", () => {
-    renderSidebar([DATE_GT_PROP]);
-    const label = screen.getByText(/created at after/i);
-    expect(label).toBeInTheDocument();
-  });
-
-  it("renders date inputs for less-than suffix", () => {
-    renderSidebar([DATE_LT_PROP]);
-    expect(screen.getByText(/created at before/i)).toBeInTheDocument();
-  });
-
-  it("renders date inputs for greater-than-or-equal suffix", () => {
-    renderSidebar([DATE_GTE_PROP]);
-    expect(screen.getByText(/due after/i)).toBeInTheDocument();
-  });
-
-  it("renders date inputs for less-than-or-equal suffix", () => {
-    renderSidebar([DATE_LTE_PROP]);
-    expect(screen.getByText(/due before/i)).toBeInTheDocument();
+  it.each([
+    { suffix: "greater-than", prop: DATE_GT_PROP, labelRegex: /created at after/i },
+    { suffix: "less-than", prop: DATE_LT_PROP, labelRegex: /created at before/i },
+    { suffix: "greater-than-or-equal", prop: DATE_GTE_PROP, labelRegex: /due after/i },
+    { suffix: "less-than-or-equal", prop: DATE_LTE_PROP, labelRegex: /due before/i },
+  ])("renders date inputs for $suffix suffix", ({ prop, labelRegex }) => {
+    renderSidebar([prop]);
+    expect(screen.getByText(labelRegex)).toBeInTheDocument();
   });
 });
 
@@ -273,20 +262,17 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     expect(screen.getByText("Before")).toBeInTheDocument();
   });
 
-  it("encodes ~from value as plain yyyy-MM-dd (no ISO time suffix)", () => {
+  it.each([
+    { prop: DATE_FROM_PROP, key: "created.~from", input: "2026-01-01", expected: "2026-01-01" },
+    { prop: DATE_UNTIL_PROP, key: "created.~until", input: "2026-12-31", expected: "2026-12-31" },
+    { prop: NUM_GTE_PROP, key: "amount.~gte", input: "100", expected: "100" },
+    { prop: NUM_LTE_PROP, key: "amount.~lte", input: "500", expected: "500" },
+  ])("encodes $key value in onFilterChange", ({ prop, key, input, expected }) => {
     const onFilterChange = vi.fn();
-    renderSidebar([DATE_FROM_PROP], {}, { onFilterChange });
-    const input = screen.getByDisplayValue("");
-    fireEvent.change(input, { target: { value: "2026-01-01" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-01-01");
-  });
-
-  it("encodes ~until value as plain yyyy-MM-dd (no ISO time suffix)", () => {
-    const onFilterChange = vi.fn();
-    renderSidebar([DATE_UNTIL_PROP], {}, { onFilterChange });
-    const input = screen.getByDisplayValue("");
-    fireEvent.change(input, { target: { value: "2026-12-31" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~until", "2026-12-31");
+    renderSidebar([prop], {}, { onFilterChange });
+    const field = screen.getByDisplayValue("");
+    fireEvent.change(field, { target: { value: input } });
+    expect(onFilterChange).toHaveBeenCalledWith(key, expected);
   });
 
   it("decodes plain yyyy-MM-dd value back into the date input (lossless round-trip)", () => {
@@ -314,22 +300,6 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP]);
     expect(screen.getByLabelText(/amount after/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/amount before/i)).toBeInTheDocument();
-  });
-
-  it("encodes ~gte value in onFilterChange", () => {
-    const onFilterChange = vi.fn();
-    renderSidebar([NUM_GTE_PROP], {}, { onFilterChange });
-    const input = screen.getByLabelText(/amount after/i);
-    fireEvent.change(input, { target: { value: "100" } });
-    expect(onFilterChange).toHaveBeenCalledWith("amount.~gte", "100");
-  });
-
-  it("encodes ~lte value in onFilterChange", () => {
-    const onFilterChange = vi.fn();
-    renderSidebar([NUM_LTE_PROP], {}, { onFilterChange });
-    const input = screen.getByLabelText(/amount before/i);
-    fireEvent.change(input, { target: { value: "500" } });
-    expect(onFilterChange).toHaveBeenCalledWith("amount.~lte", "500");
   });
 });
 

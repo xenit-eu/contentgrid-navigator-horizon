@@ -144,37 +144,18 @@ describe("EntityItem — attributes", () => {
     expect(names).not.toContain("_templates");
   });
 
-  it("returns plain string attribute with correct kind", () => {
-    const hal = makeEntityItemHal({ id: "inv-001", number: "INV-001" });
+  it.each([
+    ["string", "number", "INV-001"],
+    ["numeric", "total", 1250.0],
+    ["boolean", "active", true],
+    ["null", "deletedAt", null],
+  ])("returns plain %s attribute with correct kind", (_kind, attrName, attrValue) => {
+    const hal = makeEntityItemHal({ id: "inv-001", [attrName]: attrValue });
     const item = new EntityItem(hal, makeProfileEntity());
-    const numberAttr = item.attributes.find((a) => a.value.name === "number");
-    expect(numberAttr).toBeDefined();
-    expect(numberAttr!.value.kind).toBe(AttributeKind.PLAIN);
-    expect((numberAttr!.value as EntityItemAttributePlain).value).toBe("INV-001");
-  });
-
-  it("returns plain numeric attribute with correct kind", () => {
-    const hal = makeEntityItemHal({ id: "inv-001", total: 1250.0 });
-    const item = new EntityItem(hal, makeProfileEntity());
-    const totalAttr = item.attributes.find((a) => a.value.name === "total");
-    expect(totalAttr!.value.kind).toBe(AttributeKind.PLAIN);
-    expect((totalAttr!.value as EntityItemAttributePlain).value).toBe(1250.0);
-  });
-
-  it("returns plain boolean attribute with correct kind", () => {
-    const hal = makeEntityItemHal({ id: "inv-001", active: true });
-    const item = new EntityItem(hal, makeProfileEntity());
-    const activeAttr = item.attributes.find((a) => a.value.name === "active");
-    expect(activeAttr!.value.kind).toBe(AttributeKind.PLAIN);
-    expect((activeAttr!.value as EntityItemAttributePlain).value).toBe(true);
-  });
-
-  it("returns plain null attribute with correct kind", () => {
-    const hal = makeEntityItemHal({ id: "inv-001", deletedAt: null });
-    const item = new EntityItem(hal, makeProfileEntity());
-    const deletedAttr = item.attributes.find((a) => a.value.name === "deletedAt");
-    expect(deletedAttr!.value.kind).toBe(AttributeKind.PLAIN);
-    expect((deletedAttr!.value as EntityItemAttributePlain).value).toBeNull();
+    const attr = item.attributes.find((a) => a.value.name === attrName);
+    expect(attr).toBeDefined();
+    expect(attr!.value.kind).toBe(AttributeKind.PLAIN);
+    expect((attr!.value as EntityItemAttributePlain).value).toBe(attrValue);
   });
 
   it("returns content attribute when cg:content link is present", () => {
@@ -347,6 +328,7 @@ describe("EntityItem — defaultTemplate", () => {
 describe("EntityItemAttributeNested — attributes", () => {
   it("returns empty array when value is null", () => {
     const nested = new EntityItemAttributeNested("address", null, undefined);
+    expect(nested.kind).toBe(AttributeKind.NESTED);
     expect(nested.attributes).toHaveLength(0);
   });
 
@@ -391,12 +373,6 @@ describe("EntityItemAttributeNested — attributes", () => {
     const nested = new EntityItemAttributeUnknown("weird");
     expect(nested.kind).toBe(AttributeKind.UNKNOWN);
     expect(nested.name).toBe("weird");
-  });
-
-  it("handles nested null value giving empty attributes", () => {
-    const nested = new EntityItemAttributeNested("obj", null, undefined);
-    expect(nested.kind).toBe(AttributeKind.NESTED);
-    expect(nested.attributes).toEqual([]);
   });
 });
 

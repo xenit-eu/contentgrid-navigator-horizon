@@ -308,7 +308,13 @@ function makeProfile(json: Record<string, unknown>): ProfileEntity {
 
 describe("useRecentlyCreated", () => {
   it("fetches the collection sorted by created-date desc when audit attr + sort exist", async () => {
-    server.use(http.get(ENTITY_COLLECTION_URL, () => HttpResponse.json(logCollectionBody)));
+    let requestedUrl: string | undefined;
+    server.use(
+      http.get(ENTITY_COLLECTION_URL, ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json(logCollectionBody);
+      }),
+    );
     const profileEntity = makeProfile(logProfileWithAudit);
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useRecentlyCreated(profileEntity), { wrapper });
@@ -316,6 +322,9 @@ describe("useRecentlyCreated", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data?.items).toHaveLength(1);
+    // The hook must actually send the created-date descending sort — verify the
+    // outgoing request's `_sort` query param, not just that some fixed body came back.
+    expect(new URL(requestedUrl!).searchParams.get("_sort")).toBe("created_at,desc");
   });
 
   it("query is disabled (isPending, no fetch) when entity has no created-at audit attribute", async () => {
@@ -375,7 +384,13 @@ describe("useRecentlyCreated", () => {
 
 describe("useRecentlyModified", () => {
   it("fetches the collection sorted by modified-date desc when audit attr + sort exist", async () => {
-    server.use(http.get(ENTITY_COLLECTION_URL, () => HttpResponse.json(logCollectionBody)));
+    let requestedUrl: string | undefined;
+    server.use(
+      http.get(ENTITY_COLLECTION_URL, ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json(logCollectionBody);
+      }),
+    );
     const profileEntity = makeProfile(logProfileWithAudit);
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useRecentlyModified(profileEntity), { wrapper });
@@ -383,6 +398,9 @@ describe("useRecentlyModified", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data?.items).toHaveLength(1);
+    // The hook must actually send the modified-date descending sort — verify the
+    // outgoing request's `_sort` query param, not just that some fixed body came back.
+    expect(new URL(requestedUrl!).searchParams.get("_sort")).toBe("modified_at,desc");
   });
 
   it("query is disabled when entity has no modified-at audit attribute", async () => {

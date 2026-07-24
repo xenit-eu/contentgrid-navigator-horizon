@@ -116,9 +116,11 @@ export function DataTable({
   function getSortIcon(key: string) {
     const isAsc = currentSort === `${key},asc`;
     const isDesc = currentSort === `${key},desc`;
-    if (isAsc) return <ArrowUp className="ml-1 size-3.5" />;
-    if (isDesc) return <ArrowDown className="ml-1 size-3.5" />;
-    return <ArrowsDownUp className="ml-1 size-3.5 text-muted-foreground/50" />;
+    if (isAsc) return <ArrowUp className="ml-1 size-3.5" data-sort-direction="asc" />;
+    if (isDesc) return <ArrowDown className="ml-1 size-3.5" data-sort-direction="desc" />;
+    return (
+      <ArrowsDownUp className="ml-1 size-3.5 text-muted-foreground/50" data-sort-direction="none" />
+    );
   }
 
   function getSortTooltip(key: string): string | undefined {
@@ -160,6 +162,7 @@ export function DataTable({
                             variant="ghost"
                             size="sm"
                             className="-ml-3 h-8"
+                            title={getSortTooltip(col.key)}
                             onClick={() => onSort(col.key)}
                           >
                             {col.header}

@@ -156,19 +156,6 @@ describe("useProfileEntities", () => {
     expect(result.current).toHaveLength(2);
   });
 
-  it("each result has isLoading/isError/data fields", async () => {
-    setupHandlers();
-    const wrapper = makeWrapper();
-    const { result } = renderHook(() => useProfileEntities(), { wrapper });
-
-    await waitFor(() => expect(result.current.some((r) => r.isSuccess)).toBe(true));
-
-    for (const r of result.current) {
-      expect(typeof r.isLoading).toBe("boolean");
-      expect(typeof r.isError).toBe("boolean");
-    }
-  });
-
   it("isError is true when profile fetch fails (profileByLinkQuery has retry:3)", async () => {
     vi.useFakeTimers();
 

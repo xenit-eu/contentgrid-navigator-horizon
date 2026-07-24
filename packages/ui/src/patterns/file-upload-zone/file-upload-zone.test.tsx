@@ -131,10 +131,16 @@ describe("FileUploadZone — file selected view", () => {
     expect(screen.getByText("report.pdf")).toBeInTheDocument();
   });
 
-  it("renders formatted file size", () => {
-    const file = makeFile("report.pdf", "application/pdf", 2048);
+  it.each([
+    { bytes: 0, expected: "0 B" },
+    { bytes: 2048, expected: "2.0 KB" },
+    { bytes: 1024 * 1024, expected: "1.0 MB" },
+    { bytes: 1024 * 1024 * 1024, expected: "1.0 GB" },
+  ])("formats a $bytes byte file size as $expected", ({ bytes, expected }) => {
+    const file = makeFile("report.pdf", "application/pdf", 1);
+    Object.defineProperty(file, "size", { value: bytes });
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
+    expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
   it("renders the MIME type badge", () => {
@@ -162,24 +168,5 @@ describe("FileUploadZone — file selected view", () => {
     const file = makeFile("doc.pdf", "application/pdf");
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
     expect(screen.queryByRole("img", { name: "Preview" })).not.toBeInTheDocument();
-  });
-
-  it("renders '0 B' for a file with size 0", () => {
-    const file = makeFile("empty.txt", "text/plain", 0);
-    render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("0 B")).toBeInTheDocument();
-  });
-
-  it("renders GB formatted size for large files", () => {
-    const file = makeFile("big.bin", "application/octet-stream", 1);
-    Object.defineProperty(file, "size", { value: 1024 * 1024 * 1024 });
-    render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("1.0 GB")).toBeInTheDocument();
-  });
-
-  it("renders MB formatted size", () => {
-    const file = makeFile("medium.bin", "application/octet-stream", 1024 * 1024);
-    render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("1.0 MB")).toBeInTheDocument();
   });
 });

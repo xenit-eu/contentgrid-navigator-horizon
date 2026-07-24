@@ -59,20 +59,4 @@ describe("BrandingHeader", () => {
     const { container } = render(<BrandingHeader title="My App" />);
     expect(container.querySelector("header")).toBeInTheDocument();
   });
-
-  it("renders all parts together: logo, subtitle, and actions", () => {
-    render(
-      <BrandingHeader
-        title="Full App"
-        subtitle="Full subtitle"
-        logoUrl="/full.png"
-        logoAlt="Full logo"
-        actions={<span>action content</span>}
-      />,
-    );
-    expect(screen.getByText("Full App")).toBeInTheDocument();
-    expect(screen.getByText("Full subtitle")).toBeInTheDocument();
-    expect(screen.getByRole("img")).toHaveAttribute("alt", "Full logo");
-    expect(screen.getByText("action content")).toBeInTheDocument();
-  });
 });

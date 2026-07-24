@@ -98,6 +98,17 @@ describe("fetchHal", () => {
       ProblemDetailError,
     );
   });
+
+  it("rejects rather than returning garbage data when a 2xx response body isn't valid JSON", async () => {
+    // Realistic case: an intermediary proxy/gateway returns a 200 with an HTML
+    // body instead of the expected HAL+JSON (e.g. a captive portal or misrouted request).
+    server.use(
+      http.get(TEST_URL, () => new HttpResponse("<html>not json</html>", { status: 200 })),
+    );
+
+    const apiFetch = createApiClient(noopSupplier);
+    await expect(fetchHal(apiFetch, new Request(TEST_URL))).rejects.toThrow();
+  });
 });
 
 describe("fetchHalSlice", () => {

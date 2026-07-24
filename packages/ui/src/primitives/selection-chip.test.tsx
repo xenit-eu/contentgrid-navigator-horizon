@@ -32,10 +32,20 @@ describe("SelectionChip", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it("does not throw when clicked without onClick handler", async () => {
+  it("does not throw when clicked without onClick handler, and state is unaffected", async () => {
     const user = userEvent.setup();
-    render(<SelectionChip label="All" />);
-    await user.click(screen.getByRole("button"));
+    render(<SelectionChip label="All" selected={false} />);
+    const button = screen.getByRole("button", { name: "All" });
+
+    await user.click(button);
+
+    // Component is still mounted/rendered correctly after the click, and its
+    // selected state (which is only driven by the `selected` prop) didn't
+    // spuriously flip as a side effect of the click.
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("aria-pressed", "false");
+    expect(button.className).toContain("font-normal");
+    expect(button.className).not.toContain("font-semibold");
   });
 
   it("selected styling is applied when selected is true", () => {

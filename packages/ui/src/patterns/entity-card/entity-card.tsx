@@ -43,9 +43,15 @@ export function EntityCard({
               onClick={() => onTitleClick?.(name)}
             >
               {hasContent ? (
-                <FileText className="h-5 w-5 text-muted-foreground" />
+                <FileText
+                  className="h-5 w-5 text-muted-foreground"
+                  data-testid="entity-icon-content"
+                />
               ) : (
-                <Database className="h-5 w-5 text-muted-foreground" />
+                <Database
+                  className="h-5 w-5 text-muted-foreground"
+                  data-testid="entity-icon-database"
+                />
               )}
               {title}
             </button>

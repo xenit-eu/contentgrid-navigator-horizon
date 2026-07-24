@@ -107,7 +107,14 @@ function renderEntityList(initialEntry = "/") {
 // MSW handlers
 // ----------------------------------------------------------------
 
-function profileRootHandler() {
+interface ProfileRootEntity {
+  readonly href: string;
+  readonly name: string;
+  readonly title: string;
+}
+
+/** GET /profile — root profile listing the given `cg:entity` links. */
+function makeProfileRoot(entities: ProfileRootEntity[]) {
   return http.get(PROFILE_URL, () =>
     HttpResponse.json({
       _links: {
@@ -119,50 +126,72 @@ function profileRootHandler() {
             templated: true,
           },
         ],
-        "cg:entity": [{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }],
+        "cg:entity": entities,
       },
     }),
   );
+}
+
+function profileRootHandler() {
+  return makeProfileRoot([{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }]);
 }
 
 function profileRootWithTwoEntitiesHandler() {
-  return http.get(PROFILE_URL, () =>
-    HttpResponse.json({
-      _links: {
-        self: { href: PROFILE_URL },
-        curies: [
-          {
-            name: "cg",
-            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
-            templated: true,
-          },
-        ],
-        "cg:entity": [
-          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
-          { href: `${PROFILE_URL}/customers`, name: "customer", title: "Customer" },
-        ],
-      },
-    }),
-  );
+  return makeProfileRoot([
+    { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+    { href: `${PROFILE_URL}/customers`, name: "customer", title: "Customer" },
+  ]);
+}
+
+const DEFAULT_INVOICE_ATTRIBUTES = [
+  {
+    name: "id",
+    title: "ID",
+    type: "string",
+    readOnly: true,
+    _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+    _links: {},
+  },
+  {
+    name: "number",
+    title: "Invoice Number",
+    type: "string",
+    readOnly: false,
+    _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+    _links: {},
+  },
+];
+
+interface MakeInvoiceProfileOptions {
+  readonly description?: string;
+  readonly attributes?: unknown[];
+  readonly relations?: unknown[];
+  readonly withCreate?: boolean;
 }
 
 /**
- * Per-entity profile handler for /profile/invoices.
- * The rewritten hook fetches each entity profile individually via
- * GET /profile/{plural}, so tests that exercise the overview or detail
- * views must stub this endpoint in addition to the profile root.
- * Notes:
+ * GET /profile/invoices — parameterized over the bits individual tests vary:
+ * description text, the embedded attribute/relation list, and whether a
+ * create-form template is present.
+ *
+ * Notes (apply regardless of the options passed):
  * - The collection describes link has no title so that ProfileEntity.pluralName
  *   falls back to the cg:entity link title ("Invoice").
  * - The search template is required: useEntityItemCollection with only
  *   { profileEntity } builds its request from the search template. Without it
  *   the query is disabled and the EntityCard count never resolves.
  */
-function invoiceProfileHandler() {
+function makeInvoiceProfile({
+  description,
+  attributes = DEFAULT_INVOICE_ATTRIBUTES,
+  relations = [],
+  withCreate = true,
+}: MakeInvoiceProfileOptions = {}) {
   return http.get(`${PROFILE_URL}/invoices`, () =>
     HttpResponse.json({
       name: "invoice",
       title: "Invoice",
+      ...(description !== undefined ? { description } : {}),
       _links: {
         self: { href: `${PROFILE_URL}/invoices` },
         describes: [
@@ -178,25 +207,8 @@ function invoiceProfileHandler() {
         ],
       },
       _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "id",
-            title: "ID",
-            type: "string",
-            readOnly: true,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-          {
-            name: "number",
-            title: "Invoice Number",
-            type: "string",
-            readOnly: false,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
+        "blueprint:attribute": attributes,
+        "blueprint:relation": relations,
       },
       _templates: {
         search: {
@@ -204,49 +216,26 @@ function invoiceProfileHandler() {
           target: `${API_URL}/invoices`,
           properties: [],
         },
-        "create-form": {
-          method: "POST",
-          target: `${API_URL}/invoices`,
-          properties: [{ name: "number", type: "text", required: true }],
-        },
+        ...(withCreate
+          ? {
+              "create-form": {
+                method: "POST",
+                target: `${API_URL}/invoices`,
+                properties: [{ name: "number", type: "text", required: true }],
+              },
+            }
+          : {}),
       },
     }),
   );
 }
 
+function invoiceProfileHandler() {
+  return makeInvoiceProfile();
+}
+
 function invoiceProfileHandlerNoCreate() {
-  return http.get(`${PROFILE_URL}/invoices`, () =>
-    HttpResponse.json({
-      name: "invoice",
-      title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: `${API_URL}/invoices`,
-          properties: [],
-        },
-        // no create-form
-      },
-    }),
-  );
+  return makeInvoiceProfile({ attributes: [], withCreate: false });
 }
 
 function customerProfileHandler() {
@@ -442,75 +431,63 @@ describe("EntityList", () => {
     expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
   });
 
-  it("does not offer a reset when the collection fails without an active cursor", async () => {
-    vi.useFakeTimers();
+  // A same-origin cursor survives the data layer's origin guard, so the
+  // request reaches the server and gets rejected as a stale/invalid cursor.
+  const staleCursor = `${API_URL}/invoices?_cursor=stale`;
 
+  /** GET /invoices handler: 400 for the stale cursor, empty success otherwise. */
+  function staleCursorInvoicesHandler() {
+    return http.get(`${API_URL}/invoices`, ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get("_cursor");
+      if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
+      return HttpResponse.json({
+        _links: { self: { href: `${API_URL}/invoices` } },
+        _embedded: { item: [] },
+        page: { size: 0, total_items_exact: 0 },
+      });
+    });
+  }
+
+  /**
+   * Shared by the three stale-cursor/reset-action tests below: enables fake
+   * timers so the collection query's retry backoff resolves synchronously,
+   * renders, then restores real timers. Each test still registers its own
+   * handlers and makes its own assertions — this only hoists the timer
+   * boilerplate.
+   */
+  async function renderAndFlushRetries(initialEntry: string) {
+    vi.useFakeTimers();
+    renderEntityList(initialEntry);
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+  }
+
+  it("does not offer a reset when the collection fails without an active cursor", async () => {
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
       http.get(`${API_URL}/invoices`, () => HttpResponse.json(null, { status: 500 })),
     );
 
-    renderEntityList("/invoice");
-
-    await vi.runAllTimersAsync();
-    vi.useRealTimers();
+    await renderAndFlushRetries("/invoice");
 
     expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /back to first page/i })).not.toBeInTheDocument();
   });
 
   it("offers a reset to the first page when a stale cursor fails to load", async () => {
-    vi.useFakeTimers();
+    server.use(profileRootHandler(), invoiceProfileHandler(), staleCursorInvoicesHandler());
 
-    // A same-origin cursor survives the data layer's origin guard, so the
-    // request reaches the server and gets rejected as a stale/invalid cursor.
-    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.get(`${API_URL}/invoices`, ({ request }) => {
-        const cursor = new URL(request.url).searchParams.get("_cursor");
-        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
-        return HttpResponse.json({
-          _links: { self: { href: `${API_URL}/invoices` } },
-          _embedded: { item: [] },
-          page: { size: 0, total_items_exact: 0 },
-        });
-      }),
-    );
-
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
-
-    await vi.runAllTimersAsync();
-    vi.useRealTimers();
+    await renderAndFlushRetries(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
 
     expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /back to first page/i })).toBeInTheDocument();
   });
 
   it("recovers to the first page when the reset action is clicked", async () => {
-    vi.useFakeTimers();
+    server.use(profileRootHandler(), invoiceProfileHandler(), staleCursorInvoicesHandler());
 
-    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.get(`${API_URL}/invoices`, ({ request }) => {
-        const cursor = new URL(request.url).searchParams.get("_cursor");
-        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
-        return HttpResponse.json({
-          _links: { self: { href: `${API_URL}/invoices` } },
-          _embedded: { item: [] },
-          page: { size: 0, total_items_exact: 0 },
-        });
-      }),
-    );
-
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
-
-    await vi.runAllTimersAsync();
-    vi.useRealTimers();
+    await renderAndFlushRetries(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
 
     const resetButton = await screen.findByRole("button", { name: /back to first page/i });
 
@@ -585,18 +562,29 @@ describe("EntityList", () => {
   it("clicking Next pagination button is clickable and triggers navigation", async () => {
     const user = userEvent.setup();
     const nextPageUrl = `${API_URL}/invoices?_cursor=nexttoken`;
+    const invoicePage2Item = {
+      id: "inv-004",
+      number: "INV-2024-004",
+      _links: { self: { href: `${API_URL}/invoices/inv-004` } },
+    };
 
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
-      createListHandler({
-        url: `${API_URL}/invoices`,
-        items: sampleInvoiceItems,
-        page: { size: 3, total_items_exact: 4 },
-        links: {
-          self: { href: `${API_URL}/invoices` },
-          next: { href: nextPageUrl },
-        },
+      // Single dynamic handler on the pathname, branching on `_cursor` — MSW
+      // matches paths, not query strings, so a createListHandler registered
+      // per-URL would answer identically for the base page and nextPageUrl
+      // and could never prove navigation actually advanced the page (see the
+      // identical pattern used for the to-many relation pagination test below).
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const isPage2 = new URL(request.url).searchParams.get("_cursor") === "nexttoken";
+        return HttpResponse.json({
+          _links: isPage2
+            ? { self: { href: nextPageUrl }, previous: { href: `${API_URL}/invoices` } }
+            : { self: { href: `${API_URL}/invoices` }, next: { href: nextPageUrl } },
+          _embedded: { item: isPage2 ? [invoicePage2Item] : sampleInvoiceItems },
+          page: { size: isPage2 ? 1 : 3, total_items_exact: 4 },
+        });
       }),
     );
 
@@ -609,11 +597,16 @@ describe("EntityList", () => {
     // Previous is disabled (no prev on first page), Next is enabled
     expect(prevButton).toBeDisabled();
     expect(nextButton).not.toBeDisabled();
+    expect(await screen.findByText("INV-2024-001")).toBeInTheDocument();
 
-    // Clicking Next triggers router navigation — the button stays in the DOM
-    // because the component re-renders in place rather than unmounting
     await user.click(nextButton);
-    expect(nextButton).toBeInTheDocument();
+
+    // The second page's distinct item renders and the first page's items are
+    // gone, and Previous is now enabled — confirms the click actually
+    // advanced the page rather than merely re-rendering the same data.
+    expect(await screen.findByText("INV-2024-004")).toBeInTheDocument();
+    expect(screen.queryByText("INV-2024-001")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).not.toBeDisabled();
   });
 
   it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
@@ -683,53 +676,12 @@ describe("EntityDetailPage", () => {
 
   it("shows entity description when available", async () => {
     server.use(
-      http.get(PROFILE_URL, () =>
-        HttpResponse.json({
-          _links: {
-            self: { href: PROFILE_URL },
-            curies: [
-              {
-                name: "cg",
-                href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
-                templated: true,
-              },
-            ],
-            "cg:entity": [{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }],
-          },
-        }),
-      ),
-      http.get(`${PROFILE_URL}/invoices`, () =>
-        HttpResponse.json({
-          name: "invoice",
-          title: "Invoice",
-          description: "All billing invoices",
-          _links: {
-            self: { href: `${PROFILE_URL}/invoices` },
-            describes: [
-              { href: `${API_URL}/invoices`, name: "collection" },
-              { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-            ],
-            curies: [
-              {
-                name: "blueprint",
-                href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-                templated: true,
-              },
-            ],
-          },
-          _embedded: {
-            "blueprint:attribute": [],
-            "blueprint:relation": [],
-          },
-          _templates: {
-            search: {
-              method: "GET",
-              target: `${API_URL}/invoices`,
-              properties: [],
-            },
-          },
-        }),
-      ),
+      profileRootHandler(),
+      makeInvoiceProfile({
+        description: "All billing invoices",
+        attributes: [],
+        withCreate: false,
+      }),
       emptyInvoicesList,
     );
 
@@ -819,15 +771,16 @@ describe("EntityItemDetailPage", () => {
 
     // Wait for item detail page to load (breadcrumb with entity)
     await screen.findByText("All entities");
+    await screen.findByText("inv-001");
 
-    // Click "Invoice" breadcrumb button to go back to entity list
-    const invoiceButtons = screen
-      .getAllByText("Invoice")
-      .filter((el) => el.closest("button") !== null);
-    if (invoiceButtons.length > 0) {
-      await user.click(invoiceButtons[0]);
-      expect(await screen.findByText("All entities")).toBeInTheDocument();
-    }
+    // Click the "Invoice" breadcrumb button to go back to the entity list.
+    // getByRole throws if the breadcrumb button is missing, so a structural
+    // regression fails the test loudly instead of silently no-oping.
+    await user.click(screen.getByRole("button", { name: "Invoice" }));
+
+    expect(await screen.findByText("All entities")).toBeInTheDocument();
+    // The item-id breadcrumb is gone — we've actually left the item detail page.
+    expect(screen.queryByText("inv-001")).not.toBeInTheDocument();
   });
 
   it("navigates back to root via all entities breadcrumb", async () => {
@@ -860,8 +813,10 @@ describe("EntityItemDetailPage", () => {
 
     renderEntityList("/invoice/inv-001");
 
-    // Heading shows entity plural name + " detail"
-    expect(await screen.findByText(/detail/)).toBeInTheDocument();
+    // Heading is "<pluralName> detail" — pluralName is "Invoice" here because
+    // invoiceProfileHandler's collection describes link has no title, so
+    // ProfileEntity.pluralName falls back to the cg:entity link title.
+    expect(await screen.findByText("Invoice detail")).toBeInTheDocument();
   });
 });
 
@@ -876,101 +831,66 @@ const SUPPLIERS_COLLECTION_URL = `${API_URL}/suppliers`;
 const LINE_ITEMS_COLLECTION_URL = `${API_URL}/line-items`;
 
 const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
-const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
 const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
 
 function profileRootWithRelationsHandler() {
-  return http.get(PROFILE_URL, () =>
-    HttpResponse.json({
-      _links: {
-        self: { href: PROFILE_URL },
-        curies: [
-          {
-            name: "cg",
-            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
-            templated: true,
-          },
-        ],
-        "cg:entity": [
-          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
-          { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
-          { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
-        ],
-      },
-    }),
-  );
+  return makeProfileRoot([
+    { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+    { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+    { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
+  ]);
 }
 
+const INVOICE_RELATIONS_WITH_SUPPLIER_AND_LINE_ITEMS = [
+  {
+    name: "supplier",
+    title: "Supplier",
+    description: "",
+    required: false,
+    many_source_per_target: false,
+    many_target_per_source: false,
+    _links: {
+      self: { href: `${PROFILE_URL}/invoices/relations/supplier` },
+      [BLUEPRINT_TARGET_ENTITY_REL]: {
+        href: SUPPLIER_PROFILE_URL,
+        name: "supplier",
+        title: "Supplier",
+      },
+    },
+  },
+  {
+    name: "lineItems",
+    title: "Line Items",
+    description: "",
+    required: false,
+    many_source_per_target: false,
+    many_target_per_source: true,
+    _links: {
+      self: { href: `${PROFILE_URL}/invoices/relations/lineItems` },
+      [BLUEPRINT_TARGET_ENTITY_REL]: {
+        href: LINE_ITEM_PROFILE_URL,
+        name: "lineItem",
+        title: "Line Item",
+      },
+    },
+  },
+];
+
 function invoiceProfileHandlerWithRelations() {
-  return http.get(`${PROFILE_URL}/invoices`, () =>
-    HttpResponse.json({
-      name: "invoice",
-      title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
+  return makeInvoiceProfile({
+    attributes: [
+      {
+        name: "number",
+        title: "Invoice Number",
+        type: "string",
+        readOnly: false,
+        _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+        _links: {},
       },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "number",
-            title: "Invoice Number",
-            type: "string",
-            readOnly: false,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-        ],
-        [BLUEPRINT_RELATION_REL]: [
-          {
-            name: "supplier",
-            title: "Supplier",
-            description: "",
-            required: false,
-            many_source_per_target: false,
-            many_target_per_source: false,
-            _links: {
-              self: { href: `${PROFILE_URL}/invoices/relations/supplier` },
-              [BLUEPRINT_TARGET_ENTITY_REL]: {
-                href: SUPPLIER_PROFILE_URL,
-                name: "supplier",
-                title: "Supplier",
-              },
-            },
-          },
-          {
-            name: "lineItems",
-            title: "Line Items",
-            description: "",
-            required: false,
-            many_source_per_target: false,
-            many_target_per_source: true,
-            _links: {
-              self: { href: `${PROFILE_URL}/invoices/relations/lineItems` },
-              [BLUEPRINT_TARGET_ENTITY_REL]: {
-                href: LINE_ITEM_PROFILE_URL,
-                name: "lineItem",
-                title: "Line Item",
-              },
-            },
-          },
-        ],
-      },
-      _templates: {
-        search: { method: "GET", target: `${API_URL}/invoices`, properties: [] },
-      },
-    }),
-  );
+    ],
+    relations: INVOICE_RELATIONS_WITH_SUPPLIER_AND_LINE_ITEMS,
+    withCreate: false,
+  });
 }
 
 function supplierProfileHandler() {

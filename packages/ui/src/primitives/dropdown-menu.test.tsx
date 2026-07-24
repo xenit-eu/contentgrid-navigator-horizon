@@ -5,6 +5,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
 
@@ -36,18 +39,30 @@ describe("DropdownMenu", () => {
   });
 
   it("renders Phosphor CaretRight icon (svg) in SubTrigger", async () => {
-    // Just verify the SubTrigger icon renders — open menu first
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem>Item</DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>More options</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem>Nested item</DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>,
     );
+
     await user.click(screen.getByText("Open"));
-    // After open, container should contain the portal with svg icons
-    expect(container).toBeInTheDocument();
+
+    const subTrigger = screen
+      .getByText("More options")
+      .closest("[data-slot='dropdown-menu-sub-trigger']");
+    expect(subTrigger).not.toBeNull();
+    // CaretRight is the only icon rendered inside SubTrigger, appended after
+    // its children with a fixed "ml-auto size-4" class.
+    const icon = subTrigger?.querySelector("svg.ml-auto.size-4");
+    expect(icon).toBeInTheDocument();
   });
 });

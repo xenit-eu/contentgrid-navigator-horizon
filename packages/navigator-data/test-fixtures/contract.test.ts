@@ -14,7 +14,7 @@
  * template (default), and Phase 0.5 entity-profile fixtures (halforms/*.json).
  */
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { type ZodType, z } from "zod";
 import {
   invoiceAddLineItemTemplate,
   invoiceClearSupplierTemplate,
@@ -190,101 +190,72 @@ const ProfileRootSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Shared assertion helper — replaces the repeated
+// `safeParse` + `expect(success).toBe(true)` + optional-checks boilerplate.
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses `fixture` against `schema`, asserts the parse succeeded (with the
+ * Zod issues surfaced in the failure message), and then runs any additional
+ * `checks` against the parsed data.
+ */
+function assertParses<T>(schema: ZodType<T>, fixture: unknown, checks?: (parsed: T) => void) {
+  const result = schema.safeParse(fixture);
+  expect(
+    result.success,
+    `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
+  ).toBe(true);
+  if (result.success) {
+    checks?.(result.data);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Contract tests — parse known-good fixtures; expect success.
 // ---------------------------------------------------------------------------
 
 describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
   describe("HalObject shape", () => {
-    it("sampleInvoice matches HalObjectSchema", () => {
-      const result = HalObjectSchema.safeParse(sampleInvoice);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("sampleInvoice._links.self has an href", () => {
-      const result = HalObjectSchema.safeParse(sampleInvoice);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data._links?.self).toMatchObject({ href: expect.any(String) });
-      }
+    it("sampleInvoice matches HalObjectSchema, self link has an href", () => {
+      assertParses(HalObjectSchema, sampleInvoice, (data) => {
+        expect(data._links?.self).toMatchObject({ href: expect.any(String) });
+      });
     });
   });
 
   describe("HalSlice shape", () => {
-    it("sampleInvoiceList matches HalSliceSchema", () => {
-      const result = HalSliceSchema.safeParse(sampleInvoiceList);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("sampleInvoiceList._embedded.item is an array", () => {
-      const result = HalSliceSchema.safeParse(sampleInvoiceList);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(Array.isArray(result.data._embedded?.item)).toBe(true);
-      }
+    it("sampleInvoiceList matches HalSliceSchema, _embedded.item is an array", () => {
+      assertParses(HalSliceSchema, sampleInvoiceList, (data) => {
+        expect(Array.isArray(data._embedded?.item)).toBe(true);
+      });
     });
   });
 
   describe("HAL-Forms create-form template shape", () => {
-    it("invoiceCreateTemplate matches HalFormsTemplateSchema", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceCreateTemplate);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("invoiceCreateTemplate has method POST and properties array", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceCreateTemplate);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.method).toBe("POST");
-        expect(Array.isArray(result.data.properties)).toBe(true);
-        expect(result.data.properties.length).toBeGreaterThan(0);
-      }
+    it("invoiceCreateTemplate matches HalFormsTemplateSchema, has method POST and properties array", () => {
+      assertParses(HalFormsTemplateSchema, invoiceCreateTemplate, (data) => {
+        expect(data.method).toBe("POST");
+        expect(Array.isArray(data.properties)).toBe(true);
+        expect(data.properties.length).toBeGreaterThan(0);
+      });
     });
   });
 
   describe("HAL-Forms default (update) template shape", () => {
-    it("invoiceUpdateTemplate matches HalFormsTemplateSchema", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceUpdateTemplate);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("invoiceUpdateTemplate has method PATCH and properties array", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceUpdateTemplate);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.method).toBe("PATCH");
-        expect(Array.isArray(result.data.properties)).toBe(true);
-      }
+    it("invoiceUpdateTemplate matches HalFormsTemplateSchema, has method PATCH and properties array", () => {
+      assertParses(HalFormsTemplateSchema, invoiceUpdateTemplate, (data) => {
+        expect(data.method).toBe("PATCH");
+        expect(Array.isArray(data.properties)).toBe(true);
+      });
     });
   });
 
   describe("HAL-Forms delete template shape", () => {
-    it("invoiceDeleteTemplate matches HalFormsTemplateSchema", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceDeleteTemplate);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("invoiceDeleteTemplate has method DELETE and empty properties array", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceDeleteTemplate);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.method).toBe("DELETE");
-        expect(result.data.properties).toHaveLength(0);
-      }
+    it("invoiceDeleteTemplate matches HalFormsTemplateSchema, has method DELETE and empty properties array", () => {
+      assertParses(HalFormsTemplateSchema, invoiceDeleteTemplate, (data) => {
+        expect(data.method).toBe("DELETE");
+        expect(data.properties).toHaveLength(0);
+      });
     });
 
     it("delete template missing method fails HalFormsTemplateSchema", () => {
@@ -304,20 +275,10 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
   // -------------------------------------------------------------------------
 
   describe("Phase 0.5 entity-profile fixtures (ADR-014 AC#4)", () => {
-    it("_profile-root.json matches ProfileRootSchema", () => {
-      const result = ProfileRootSchema.safeParse(profileRootFixture);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("_profile-root.json has non-empty cg:entity list", () => {
-      const result = ProfileRootSchema.safeParse(profileRootFixture);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data._links["cg:entity"].length).toBeGreaterThan(0);
-      }
+    it("_profile-root.json matches ProfileRootSchema, has non-empty cg:entity list", () => {
+      assertParses(ProfileRootSchema, profileRootFixture, (data) => {
+        expect(data._links["cg:entity"].length).toBeGreaterThan(0);
+      });
     });
 
     // Table-driven: one row per entity fixture file (15 fixtures)
@@ -339,45 +300,27 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
       ["update-allowed.json", updateAllowedFixture],
     ];
 
-    it.each(entityFixtures)("%s matches EntityProfileSchema", (name, fixture) => {
-      const result = EntityProfileSchema.safeParse(fixture);
-      expect(
-        result.success,
-        `${name} parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
     it.each(entityFixtures)(
-      "%s: _links.describes has collection and item entries",
+      "%s matches EntityProfileSchema, describes has collection/item, _templates.default is HEAD",
       (name, fixture) => {
-        const result = EntityProfileSchema.safeParse(fixture);
-        expect(result.success).toBe(true);
-        if (result.success) {
-          const describes = result.data._links.describes;
+        assertParses(EntityProfileSchema, fixture, (data) => {
+          const describes = data._links.describes;
           const collection = describes.find((d) => d.name === "collection");
           const item = describes.find((d) => d.name === "item");
           expect(collection, `${name}: missing collection describes link`).toBeDefined();
           expect(item, `${name}: missing item describes link`).toBeDefined();
-        }
+
+          const defaultTemplate = data._templates["default"];
+          expect(defaultTemplate, `${name}: missing _templates.default`).toBeDefined();
+          expect(defaultTemplate?.method, `${name}: default template method`).toBe("HEAD");
+        });
       },
     );
 
-    it.each(entityFixtures)("%s: _templates.default exists with method HEAD", (name, fixture) => {
-      const result = EntityProfileSchema.safeParse(fixture);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const defaultTemplate = result.data._templates["default"];
-        expect(defaultTemplate, `${name}: missing _templates.default`).toBeDefined();
-        expect(defaultTemplate?.method, `${name}: default template method`).toBe("HEAD");
-      }
-    });
-
     // Spot-check: relation field (type=url + options.link) parses in customer.json
     it("customer.json create-form has relation field with options.link", () => {
-      const result = EntityProfileSchema.safeParse(customerFixture);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const createForm = result.data._templates["create-form"];
+      assertParses(EntityProfileSchema, customerFixture, (data) => {
+        const createForm = data._templates["create-form"];
         expect(createForm).toBeDefined();
         if (createForm) {
           const relationProp = createForm.properties.find(
@@ -389,21 +332,19 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
           ).toBeDefined();
           expect(relationProp?.options?.link?.href).toEqual(expect.any(String));
         }
-      }
+      });
     });
 
     // Spot-check: content/file field present in all-attribute.json create-form
     it("all-attribute.json create-form has content/file field", () => {
-      const result = EntityProfileSchema.safeParse(allAttributeFixture);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const createForm = result.data._templates["create-form"];
+      assertParses(EntityProfileSchema, allAttributeFixture, (data) => {
+        const createForm = data._templates["create-form"];
         expect(createForm).toBeDefined();
         if (createForm) {
           const fileProp = createForm.properties.find((p) => p.type === "file");
           expect(fileProp, "all-attribute create-form: missing file field").toBeDefined();
         }
-      }
+      });
     });
   });
 
@@ -483,97 +424,43 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
   });
 
   describe("HAL-Forms relation templates shape", () => {
-    it("invoiceSetSupplierTemplate matches HalFormsTemplateSchema", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceSetSupplierTemplate);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
+    it("invoiceSetSupplierTemplate matches HalFormsTemplateSchema, has method PUT and url property", () => {
+      assertParses(HalFormsTemplateSchema, invoiceSetSupplierTemplate, (data) => {
+        expect(data.method).toBe("PUT");
+        expect(data.contentType).toBe("text/uri-list");
+        expect(data.properties[0]?.type).toBe("url");
+      });
     });
 
-    it("invoiceSetSupplierTemplate has method PUT and url property", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceSetSupplierTemplate);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.method).toBe("PUT");
-        expect(result.data.contentType).toBe("text/uri-list");
-        expect(result.data.properties[0]?.type).toBe("url");
-      }
+    it("invoiceAddLineItemTemplate matches HalFormsTemplateSchema, has method POST and url property", () => {
+      assertParses(HalFormsTemplateSchema, invoiceAddLineItemTemplate, (data) => {
+        expect(data.method).toBe("POST");
+        expect(data.contentType).toBe("text/uri-list");
+        expect(data.properties[0]?.type).toBe("url");
+      });
     });
 
-    it("invoiceAddLineItemTemplate matches HalFormsTemplateSchema", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceAddLineItemTemplate);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("invoiceAddLineItemTemplate has method POST and url property", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceAddLineItemTemplate);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.method).toBe("POST");
-        expect(result.data.contentType).toBe("text/uri-list");
-        expect(result.data.properties[0]?.type).toBe("url");
-      }
-    });
-
-    it("invoiceClearSupplierTemplate matches HalFormsTemplateSchema", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceClearSupplierTemplate);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("invoiceClearSupplierTemplate has method DELETE and empty properties", () => {
-      const result = HalFormsTemplateSchema.safeParse(invoiceClearSupplierTemplate);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.method).toBe("DELETE");
-        expect(result.data.properties).toHaveLength(0);
-      }
+    it("invoiceClearSupplierTemplate matches HalFormsTemplateSchema, has method DELETE and empty properties", () => {
+      assertParses(HalFormsTemplateSchema, invoiceClearSupplierTemplate, (data) => {
+        expect(data.method).toBe("DELETE");
+        expect(data.properties).toHaveLength(0);
+      });
     });
 
     it("sampleInvoiceWithRelationTemplates matches HalObjectSchema", () => {
-      const result = HalObjectSchema.safeParse(sampleInvoiceWithRelationTemplates);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
+      assertParses(HalObjectSchema, sampleInvoiceWithRelationTemplates);
     });
 
-    it("sampleSupplierItem matches HalObjectSchema", () => {
-      const result = HalObjectSchema.safeParse(sampleSupplierItem);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
+    it("sampleSupplierItem matches HalObjectSchema, self link has an href", () => {
+      assertParses(HalObjectSchema, sampleSupplierItem, (data) => {
+        expect(data._links?.self).toMatchObject({ href: expect.any(String) });
+      });
     });
 
-    it("sampleSupplierItem._links.self has an href", () => {
-      const result = HalObjectSchema.safeParse(sampleSupplierItem);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data._links?.self).toMatchObject({ href: expect.any(String) });
-      }
-    });
-
-    it("sampleLineItemList matches HalSliceSchema", () => {
-      const result = HalSliceSchema.safeParse(sampleLineItemList);
-      expect(
-        result.success,
-        `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
-      ).toBe(true);
-    });
-
-    it("sampleLineItemList._embedded.item is an array", () => {
-      const result = HalSliceSchema.safeParse(sampleLineItemList);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(Array.isArray(result.data._embedded?.item)).toBe(true);
-      }
+    it("sampleLineItemList matches HalSliceSchema, _embedded.item is an array", () => {
+      assertParses(HalSliceSchema, sampleLineItemList, (data) => {
+        expect(Array.isArray(data._embedded?.item)).toBe(true);
+      });
     });
 
     it("relation template missing method fails HalFormsTemplateSchema", () => {

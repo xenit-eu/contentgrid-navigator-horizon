@@ -23,14 +23,22 @@ describe("ProvenanceTag", () => {
     expect(screen.getByText("Manually edited")).toBeInTheDocument();
   });
 
-  it("renders SVG icon for extracted kind", () => {
+  it("renders the Sparkle icon for extracted kind", () => {
     const { container } = render(<ProvenanceTag kind="extracted" />);
-    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-testid="provenance-icon-extracted"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-testid="provenance-icon-modified"]'),
+    ).not.toBeInTheDocument();
   });
 
-  it("renders SVG icon for modified kind", () => {
+  it("renders the PencilSimple icon for modified kind", () => {
     const { container } = render(<ProvenanceTag kind="modified" />);
-    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="provenance-icon-modified"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-testid="provenance-icon-extracted"]'),
+    ).not.toBeInTheDocument();
   });
 
   it("defaults to extracted when kind is omitted", () => {

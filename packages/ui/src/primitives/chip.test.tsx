@@ -33,13 +33,19 @@ describe("Chip", () => {
     expect(onRemove).toHaveBeenCalledOnce();
   });
 
-  it("renders with neutral tone by default without throwing", () => {
+  it("renders with neutral tone's background/border classes by default", () => {
     const { container } = render(<Chip label="Tag" />);
-    expect(container.querySelector("[data-slot='chip']")).toBeInTheDocument();
+    const chip = container.querySelector("[data-slot='chip']");
+    expect(chip?.className).toContain("bg-[#FAFDFF]");
+    expect(chip?.className).toContain("border-[#E3EAF0]");
+    expect(chip?.className).not.toContain("bg-[#E2F3FD]");
   });
 
-  it("renders with applied tone without throwing", () => {
+  it("renders with applied tone's background/border classes", () => {
     const { container } = render(<Chip label="Tag" tone="applied" />);
-    expect(container.querySelector("[data-slot='chip']")).toBeInTheDocument();
+    const chip = container.querySelector("[data-slot='chip']");
+    expect(chip?.className).toContain("bg-[#E2F3FD]");
+    expect(chip?.className).toContain("border-[#C4E6F9]");
+    expect(chip?.className).not.toContain("bg-[#FAFDFF]");
   });
 });

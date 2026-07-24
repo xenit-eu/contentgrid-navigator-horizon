@@ -65,29 +65,32 @@ describe("DataTable — sort icons", () => {
   ];
 
   it("shows asc sort icon when currentSort matches key,asc", () => {
-    // Arrow-up icon rendered (no easy text to check, just verify button renders without error)
-    renderTable({ onSort: vi.fn(), currentSort: "name,asc", sortOptions });
-    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+    const { container } = renderTable({ onSort: vi.fn(), currentSort: "name,asc", sortOptions });
+    expect(container.querySelector('[data-sort-direction="asc"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-sort-direction="desc"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-sort-direction="none"]')).not.toBeInTheDocument();
   });
 
   it("shows desc sort icon when currentSort matches key,desc", () => {
-    renderTable({ onSort: vi.fn(), currentSort: "name,desc", sortOptions });
-    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+    const { container } = renderTable({ onSort: vi.fn(), currentSort: "name,desc", sortOptions });
+    expect(container.querySelector('[data-sort-direction="desc"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-sort-direction="asc"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-sort-direction="none"]')).not.toBeInTheDocument();
   });
 
   it("shows default sort icon when currentSort does not match", () => {
-    renderTable({ onSort: vi.fn(), currentSort: "status,asc" });
-    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+    const { container } = renderTable({ onSort: vi.fn(), currentSort: "status,asc" });
+    expect(container.querySelector('[data-sort-direction="none"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-sort-direction="asc"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-sort-direction="desc"]')).not.toBeInTheDocument();
   });
 
   it("passes undefined sort tooltip when on the third (clear) transition from desc to unsorted", () => {
-    // Simulate the component computing a tooltip when currentSort === key,desc (next = undefined)
     // getSortTooltip returns nextPrompt ?? currentPrompt; when nextSort=undefined nextPrompt=undefined
-    // so it returns the currentPrompt for desc
+    // so it falls back to the currentPrompt for the desc option ("Sort Z→A")
     const onSort = vi.fn();
     renderTable({ onSort, currentSort: "name,desc", sortOptions });
-    // The sort button should still render correctly (no crash on the clear-sort path)
-    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /name/i })).toHaveAttribute("title", "Sort Z→A");
   });
 
   it("calls onSort with the column key on the third click (asc → desc → unsorted)", async () => {
@@ -102,10 +105,9 @@ describe("DataTable — sort icons", () => {
 
   it("computes the 'set asc' tooltip when no sort is currently active (else branch)", () => {
     // When currentSort is undefined/unrelated, getSortTooltip's else branch sets nextSort = key,asc
-    // and returns the prompt for the asc option
+    // and returns the prompt for the asc option ("Sort A→Z")
     renderTable({ onSort: vi.fn(), currentSort: undefined, sortOptions });
-    // The sort button renders without error — tooltip logic takes the else path (nextSort = key,asc)
-    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /name/i })).toHaveAttribute("title", "Sort A→Z");
   });
 });
 

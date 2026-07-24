@@ -15,214 +15,32 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { HalObject, type Link } from "@contentgrid/hal";
-import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
-import {
-  invoiceClearSupplierTemplate,
-  invoiceProfileBodyWithRelations,
-} from "../../../test-fixtures/hal/fixtures";
+import { invoiceClearSupplierTemplate } from "../../../test-fixtures/hal/fixtures";
 import {
   createProblemHandler,
   createRelationUnlinkHandler,
 } from "../../../test-fixtures/msw/handlers";
 import { server } from "../../../test-setup";
-import { EntityItem } from "../../accessors/entity-item";
+import type { EntityItem } from "../../accessors/entity-item";
 import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
 import type { EntityItemToOneRelation } from "../../accessors/entity-item-to-one-relation";
-import ProfileEntity from "../../accessors/entity-profile";
 import { queryKeys } from "../../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
-import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "../test-utils";
+import { makeQueryClient, makeWrapper } from "../test-utils";
+import {
+  LINE_ITEMS_RELATION_URL,
+  SUPPLIER_RELATION_URL,
+  createInvoiceRelationFixtures,
+  getToManyRelationOrThrow,
+  getToOneRelationOrThrow,
+} from "./relation-test-fixtures";
 import { useClearRelation } from "./use-clear-relation";
-
-// ---------------------------------------------------------------------------
-// Fixture URLs
-// ---------------------------------------------------------------------------
-
-const INVOICE_PROFILE_URL = `${BASE}/profile/invoices`;
-const SUPPLIER_PROFILE_URL = `${BASE}/profile/suppliers`;
-const LINE_ITEM_PROFILE_URL = `${BASE}/profile/line-items`;
-const INVOICE_ITEM_URL = `${BASE}/invoices/inv-001`;
-const SUPPLIER_RELATION_URL = `${INVOICE_ITEM_URL}/supplier`;
-const LINE_ITEMS_RELATION_URL = `${INVOICE_ITEM_URL}/lineItems`;
-
-const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
-const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
-const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
-
-// ---------------------------------------------------------------------------
-// Profile MSW bodies
-// ---------------------------------------------------------------------------
-
-/**
- * Profile root that exposes invoice, supplier, and line-item profiles.
- * Required so useProfileEntities() can discover all profile links and
- * the mutation base can resolve getTargetProfile() for both relations.
- */
-const profileRootBody = {
-  _links: {
-    self: { href: PROFILE_URL },
-    "cg:entity": [
-      { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" },
-      { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
-      { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
-    ],
-    curies: [
-      { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
-    ],
-  },
-  _templates: {},
-};
-
-/**
- * Supplier profile body.
- * The `describes` array includes the absolute profile URL as a non-templated entry
- * so ProfileEntity.describes() matches the blueprint:target-entity href.
- */
-const supplierProfileBody = {
-  name: "supplier",
-  title: "Supplier",
-  description: "",
-  _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
-  _links: {
-    self: { href: SUPPLIER_PROFILE_URL, title: "Supplier" },
-    describes: [
-      { href: SUPPLIER_PROFILE_URL },
-      { href: `${BASE}/suppliers`, name: "collection" },
-      { href: `${BASE}/suppliers/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _templates: {},
-};
-
-/**
- * Line item profile body.
- * The `describes` array includes the absolute profile URL as a non-templated entry
- * so ProfileEntity.describes() matches the blueprint:target-entity href.
- */
-const lineItemProfileBody = {
-  name: "lineItem",
-  title: "Line Item",
-  description: "",
-  _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
-  _links: {
-    self: { href: LINE_ITEM_PROFILE_URL, title: "Line Item" },
-    describes: [
-      { href: LINE_ITEM_PROFILE_URL },
-      { href: `${BASE}/line-items`, name: "collection" },
-      { href: `${BASE}/line-items/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _templates: {},
-};
-
-/**
- * Invoice profile body with absolute blueprint:target-entity hrefs for both relations.
- * Uses the same override pattern as the read-hook tests so
- * getTargetProfile() can resolve supplier and lineItem profiles from the loaded profiles.
- */
-const invoiceProfileBody = {
-  ...invoiceProfileBodyWithRelations,
-  _links: {
-    self: { href: INVOICE_PROFILE_URL },
-    describes: [
-      { href: `${BASE}/invoices`, name: "collection" },
-      { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _embedded: {
-    [BLUEPRINT_RELATION_REL]: [
-      {
-        name: "supplier",
-        title: "Supplier",
-        description: "",
-        required: false,
-        many_source_per_target: false,
-        many_target_per_source: false,
-        _links: {
-          self: { href: `${INVOICE_PROFILE_URL}/relations/supplier` },
-          [BLUEPRINT_TARGET_ENTITY_REL]: {
-            href: SUPPLIER_PROFILE_URL,
-            name: "supplier",
-            title: "Supplier",
-          },
-        },
-      },
-      {
-        name: "lineItems",
-        title: "Line Items",
-        description: "",
-        required: false,
-        many_source_per_target: false,
-        many_target_per_source: true,
-        _links: {
-          self: { href: `${INVOICE_PROFILE_URL}/relations/lineItems` },
-          [BLUEPRINT_TARGET_ENTITY_REL]: {
-            href: LINE_ITEM_PROFILE_URL,
-            name: "lineItem",
-            title: "Line Item",
-          },
-        },
-      },
-    ],
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Fixture factories
 // ---------------------------------------------------------------------------
 
-function makeInvoiceProfile(): ProfileEntity {
-  const hal = new HalObject<ProfileEntityShape>(
-    invoiceProfileBody as unknown as HalObjectShape<ProfileEntityShape>,
-  );
-  return new ProfileEntity(
-    { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" } as unknown as Link,
-    hal,
-  );
-}
-
-function makeEntityItemWithTemplates(
-  etag: string | null = '"v1"',
-  templates: Record<string, unknown> = {},
-): EntityItem {
-  const itemProfile = makeInvoiceProfile();
-  const itemBody = {
-    id: "inv-001",
-    _links: {
-      self: { href: INVOICE_ITEM_URL },
-      [CG_RELATION_REL]: [
-        { href: SUPPLIER_RELATION_URL, name: "supplier" },
-        { href: LINE_ITEMS_RELATION_URL, name: "lineItems" },
-      ],
-    },
-    _templates: templates,
-  };
-  const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
-  return new EntityItem(hal, itemProfile, etag);
-}
+const { makeEntityItemWithTemplates, setupProfileHandlers } = createInvoiceRelationFixtures();
 
 function makeEntityItemWithClearSupplierTemplate(etag: string | null = '"v1"'): EntityItem {
   return makeEntityItemWithTemplates(etag, {
@@ -246,26 +64,12 @@ function makeEntityItemWithClearLineItemsTemplate(etag: string | null = '"v1"'):
 
 /** Get the to-one supplier relation (needs a clear template) */
 function getSupplierToOneRelation(entityItem: EntityItem): EntityItemToOneRelation {
-  const rel = entityItem.getToOneRelation("supplier");
-  if (!rel) throw new Error("supplier to-one relation not found on item");
-  return rel;
+  return getToOneRelationOrThrow(entityItem, "supplier");
 }
 
 /** Get the to-many lineItems relation (needs a clear template) */
 function getLineItemsToManyRelation(entityItem: EntityItem): EntityItemToManyRelation {
-  const rel = entityItem.getToManyRelation("lineItems");
-  if (!rel) throw new Error("lineItems to-many relation not found on item");
-  return rel;
-}
-
-/** Register MSW handlers for the profile root + invoice + supplier + lineItem profiles. */
-function setupProfileHandlers() {
-  server.use(
-    http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
-    http.get(INVOICE_PROFILE_URL, () => HttpResponse.json(invoiceProfileBody)),
-    http.get(SUPPLIER_PROFILE_URL, () => HttpResponse.json(supplierProfileBody)),
-    http.get(LINE_ITEM_PROFILE_URL, () => HttpResponse.json(lineItemProfileBody)),
-  );
+  return getToManyRelationOrThrow(entityItem, "lineItems");
 }
 
 // ===========================================================================

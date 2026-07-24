@@ -38,14 +38,14 @@ describe("EntityCard", () => {
 
   it("renders Database icon when hasContent is false/undefined", () => {
     const { container } = render(<EntityCard {...baseProps} />);
-    // The SVG is rendered — we can check no FileText and a Database icon via aria/title
-    // lucide renders svg elements; we just verify one icon is present
-    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="entity-icon-database"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="entity-icon-content"]')).not.toBeInTheDocument();
   });
 
   it("renders FileText icon when hasContent is true", () => {
     const { container } = render(<EntityCard {...baseProps} hasContent />);
-    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="entity-icon-content"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="entity-icon-database"]')).not.toBeInTheDocument();
   });
 
   it("calls onTitleClick with entity name when title button is clicked", async () => {

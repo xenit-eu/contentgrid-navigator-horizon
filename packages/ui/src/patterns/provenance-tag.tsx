@@ -18,7 +18,12 @@ function ProvenanceTag({ kind = "extracted", label, className }: ProvenanceTagPr
           className,
         )}
       >
-        <Sparkle size={14} className="text-[#019BE3] dark:text-[#5AC4F2]" aria-hidden />
+        <Sparkle
+          size={14}
+          className="text-[#019BE3] dark:text-[#5AC4F2]"
+          aria-hidden
+          data-testid="provenance-icon-extracted"
+        />
         {displayLabel}
       </span>
     );
@@ -33,7 +38,12 @@ function ProvenanceTag({ kind = "extracted", label, className }: ProvenanceTagPr
         className,
       )}
     >
-      <PencilSimple size={14} className="text-[#D4682A] dark:text-[#E89A63]" aria-hidden />
+      <PencilSimple
+        size={14}
+        className="text-[#D4682A] dark:text-[#E89A63]"
+        aria-hidden
+        data-testid="provenance-icon-modified"
+      />
       {displayLabel}
     </span>
   );

@@ -28,14 +28,16 @@ export function extractFieldErrors(error: unknown): FieldError[] {
     const pd = error.problemDetail as ProblemDetail & {
       errors?: Array<ProblemDetail & { property?: string; invalid_value?: unknown }>;
     };
-    return pd.errors ?? [];
+    return Array.isArray(pd.errors) ? pd.errors : [];
   }
   return [];
 }
 
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ProblemDetailError) {
-    return error.problemDetail.detail ?? error.problemDetail.title;
+    return (
+      error.problemDetail.detail ?? error.problemDetail.title ?? "An unexpected error occurred"
+    );
   }
   if (error instanceof Error) {
     return error.message;

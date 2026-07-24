@@ -14,10 +14,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { HalObject, type Link } from "@contentgrid/hal";
+import { HalObject } from "@contentgrid/hal";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
-import { invoiceProfileBodyWithRelations } from "../../../test-fixtures/hal/fixtures";
 import {
   createProblemHandler,
   createRelationUnlinkHandler,
@@ -25,145 +24,36 @@ import {
 import { server } from "../../../test-setup";
 import { EntityItem } from "../../accessors/entity-item";
 import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
-import ProfileEntity from "../../accessors/entity-profile";
 import { queryKeys } from "../../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
-import { BASE, PROFILE_URL, makeQueryClient, makeWrapper } from "../test-utils";
+import type { EntityItemShape } from "../../shapes";
+import { makeQueryClient, makeWrapper } from "../test-utils";
+import {
+  LINE_ITEMS_RELATION_URL,
+  LINE_ITEM_ITEM_URL,
+  createInvoiceRelationFixtures,
+  getToManyRelationOrThrow,
+} from "./relation-test-fixtures";
 import { useUnlinkRelation } from "./use-unlink-relation";
 
 // ---------------------------------------------------------------------------
 // Fixture URLs
 // ---------------------------------------------------------------------------
 
-const INVOICE_PROFILE_URL = `${BASE}/profile/invoices`;
-const LINE_ITEM_PROFILE_URL = `${BASE}/profile/line-items`;
-const INVOICE_ITEM_URL = `${BASE}/invoices/inv-001`;
-const LINE_ITEM_ITEM_URL = `${BASE}/line-items/li-001`;
-const LINE_ITEMS_RELATION_URL = `${INVOICE_ITEM_URL}/lineItems`;
 // URL the hook actually sends DELETE to: relation.link.href + "/" + item.id
 const UNLINK_URL = `${LINE_ITEMS_RELATION_URL}/li-001`;
 
-const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
-const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
-const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
-
-// ---------------------------------------------------------------------------
-// Profile MSW bodies
-// ---------------------------------------------------------------------------
-
-const profileRootBody = {
-  _links: {
-    self: { href: PROFILE_URL },
-    "cg:entity": [
-      { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" },
-      { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
-    ],
-    curies: [
-      { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
-    ],
-  },
-  _templates: {},
-};
-
-const lineItemProfileBody = {
-  name: "lineItem",
-  title: "Line Item",
-  description: "",
-  _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
-  _links: {
-    self: { href: LINE_ITEM_PROFILE_URL, title: "Line Item" },
-    describes: [
-      { href: LINE_ITEM_PROFILE_URL },
-      { href: `${BASE}/line-items`, name: "collection" },
-      { href: `${BASE}/line-items/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _templates: {},
-};
-
-const invoiceProfileBody = {
-  ...invoiceProfileBodyWithRelations,
-  _links: {
-    self: { href: INVOICE_PROFILE_URL },
-    describes: [
-      { href: `${BASE}/invoices`, name: "collection" },
-      { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _embedded: {
-    [BLUEPRINT_RELATION_REL]: [
-      {
-        name: "lineItems",
-        title: "Line Items",
-        description: "",
-        required: false,
-        many_source_per_target: false,
-        many_target_per_source: true,
-        _links: {
-          self: { href: `${INVOICE_PROFILE_URL}/relations/lineItems` },
-          [BLUEPRINT_TARGET_ENTITY_REL]: {
-            href: LINE_ITEM_PROFILE_URL,
-            name: "lineItem",
-            title: "Line Item",
-          },
-        },
-      },
-    ],
-  },
-};
-
 // ---------------------------------------------------------------------------
 // Fixture factories
+//
+// Only the lineItems relation is modeled — this suite has no supplier
+// relation at all, matching the original (smaller) fixture.
 // ---------------------------------------------------------------------------
 
-function makeInvoiceProfile(): ProfileEntity {
-  const hal = new HalObject<ProfileEntityShape>(
-    invoiceProfileBody as unknown as HalObjectShape<ProfileEntityShape>,
-  );
-  return new ProfileEntity(
-    { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" } as unknown as Link,
-    hal,
-  );
-}
-
-function makeLineItemProfile(): ProfileEntity {
-  const hal = new HalObject<ProfileEntityShape>(
-    lineItemProfileBody as unknown as HalObjectShape<ProfileEntityShape>,
-  );
-  return new ProfileEntity(
-    { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" } as unknown as Link,
-    hal,
-  );
-}
-
-/** Source invoice item (the entity owning the to-many relation). */
-function makeInvoiceItem(etag: string | null = '"v1"'): EntityItem {
-  const profile = makeInvoiceProfile();
-  const body = {
-    id: "inv-001",
-    _links: {
-      self: { href: INVOICE_ITEM_URL },
-      [CG_RELATION_REL]: [{ href: LINE_ITEMS_RELATION_URL, name: "lineItems" }],
-    },
-    _templates: {},
-  };
-  const hal = new HalObject(body as unknown as HalObjectShape<EntityItemShape>);
-  return new EntityItem(hal, profile, etag);
-}
+const {
+  makeLineItemProfile,
+  makeEntityItemWithTemplates: makeInvoiceItem,
+  setupProfileHandlers,
+} = createInvoiceRelationFixtures({ relations: ["lineItems"] });
 
 /** Line item to unlink — only needs an id; no delete template required for unlink. */
 function makeLineItem(): EntityItem {
@@ -178,17 +68,7 @@ function makeLineItem(): EntityItem {
 }
 
 function getLineItemsRelation(invoiceItem: EntityItem): EntityItemToManyRelation {
-  const rel = invoiceItem.getToManyRelation("lineItems");
-  if (!rel) throw new Error("lineItems to-many relation not found on item");
-  return rel;
-}
-
-function setupProfileHandlers() {
-  server.use(
-    http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
-    http.get(INVOICE_PROFILE_URL, () => HttpResponse.json(invoiceProfileBody)),
-    http.get(LINE_ITEM_PROFILE_URL, () => HttpResponse.json(lineItemProfileBody)),
-  );
+  return getToManyRelationOrThrow(invoiceItem, "lineItems");
 }
 
 // ===========================================================================

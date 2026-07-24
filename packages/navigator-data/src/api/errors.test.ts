@@ -43,6 +43,11 @@ describe("extractFieldErrors", () => {
       },
     ]);
   });
+
+  it("returns an empty array when the server sends a malformed errors field (not an array)", () => {
+    const pd = { status: 400, title: "Bad Request", errors: { property: "name" } };
+    expect(extractFieldErrors(new ProblemDetailError(pd))).toEqual([]);
+  });
 });
 
 describe("getErrorMessage", () => {
@@ -58,6 +63,11 @@ describe("getErrorMessage", () => {
   it("falls back to title when detail is absent", () => {
     const pd: ProblemDetail = { status: 400, title: "Bad Request" };
     expect(getErrorMessage(new ProblemDetailError(pd))).toBe("Bad Request");
+  });
+
+  it("falls back to a generic message when both detail and title are absent (malformed problem detail)", () => {
+    const pd = { status: 500 } as ProblemDetail;
+    expect(getErrorMessage(new ProblemDetailError(pd))).toBe("An unexpected error occurred");
   });
 
   it("returns the message from a plain Error", () => {

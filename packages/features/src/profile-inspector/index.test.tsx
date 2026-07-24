@@ -203,6 +203,24 @@ function customerProfileHandler() {
   );
 }
 
+/**
+ * Shared setup for the "opens the X collapsible" tests below: renders the
+ * ProfileInspector with the standard invoice/customer profile handlers, waits
+ * for the Invoice card to load, then clicks the first matching collapsible
+ * trigger (the Invoice card's, since it renders before the Customer card).
+ */
+async function openInvoiceCollapsible(triggerLabel: string) {
+  const user = userEvent.setup();
+  server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
+
+  renderProfileInspector();
+
+  await screen.findByText("Invoice");
+
+  const triggers = screen.getAllByText(triggerLabel);
+  await user.click(triggers[0]);
+}
+
 describe("ProfileInspector", () => {
   it("renders all profiles with their details", async () => {
     server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
@@ -268,18 +286,7 @@ describe("ProfileInspector", () => {
   });
 
   it("opens the Attributes collapsible to show attribute details", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    // Wait for profile to load
-    await screen.findByText("Invoice");
-
-    // Find and click the Attributes trigger on the Invoice card
-    const triggers = screen.getAllByText("Attributes");
-    // Each ProfileCard has one "Attributes" trigger; Invoice is first
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("Attributes");
 
     // Inside the collapsible: attribute names appear in font-mono spans
     expect(screen.getAllByText("invoice_number").length).toBeGreaterThan(0);
@@ -288,15 +295,7 @@ describe("ProfileInspector", () => {
   });
 
   it("opens the User-Defined Attributes collapsible", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    await screen.findByText("Invoice");
-
-    const triggers = screen.getAllByText("User-Defined Attributes");
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("User-Defined Attributes");
 
     // invoice_number is a user-defined attribute (id is readOnly)
     // Both are in the invoice profile; invoice_number is user-defined
@@ -304,16 +303,7 @@ describe("ProfileInspector", () => {
   });
 
   it("opens the Relations collapsible to show relation details", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    await screen.findByText("Invoice");
-
-    // Click the Relations trigger on the Invoice card
-    const triggers = screen.getAllByText("Relations");
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("Relations");
 
     // Invoice has a "customer" relation — "customer" may appear multiple times
     // (relation name + Customer profile card); use getAllByText
@@ -323,30 +313,14 @@ describe("ProfileInspector", () => {
   });
 
   it("opens the Audit Attributes collapsible", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    await screen.findByText("Invoice");
-
-    const triggers = screen.getAllByText("Audit Attributes");
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("Audit Attributes");
 
     // Invoice has no audit attributes — shows "No audit attributes configured"
     expect(screen.getAllByText("No audit attributes configured").length).toBeGreaterThan(0);
   });
 
   it("opens the Search Template collapsible to show search properties", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    await screen.findByText("Invoice");
-
-    const triggers = screen.getAllByText("Search Template");
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("Search Template");
 
     // Search template method and target appear in the content area
     expect(screen.getAllByText(/Method: GET/).length).toBeGreaterThan(0);
@@ -412,15 +386,7 @@ describe("ProfileInspector", () => {
   });
 
   it("opens the Create Template collapsible to show create properties", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    await screen.findByText("Invoice");
-
-    const triggers = screen.getAllByText("Create Template");
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("Create Template");
 
     // Create template content appears
     expect(screen.getAllByText(/Method: POST/).length).toBeGreaterThan(0);
@@ -429,15 +395,7 @@ describe("ProfileInspector", () => {
   });
 
   it("opens the Raw Link Object collapsible", async () => {
-    const user = userEvent.setup();
-    server.use(profileRootHandler(), invoiceProfileHandler(), customerProfileHandler());
-
-    renderProfileInspector();
-
-    await screen.findByText("Invoice");
-
-    const triggers = screen.getAllByText("Raw Link Object");
-    await user.click(triggers[0]);
+    await openInvoiceCollapsible("Raw Link Object");
 
     // Raw link shows JSON with "href"
     const preElements = document.querySelectorAll("pre");
