@@ -122,17 +122,17 @@ network cost in known-profile mode.
 
 Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query factories:
 
-| Class                      | Wraps                                       | Static query factory                                                                                              |
-| -------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `ProfileEntity`            | `/profile/{plural}` HAL-FORMS profile       | `profileByLinkQuery(apiFetch, link)`                                                                              |
-| `ProfileAttribute`         | `blueprint:attribute` embedded resource     | —                                                                                                                 |
-| `ProfileRelation`          | `blueprint:relation` embedded resource      | —                                                                                                                 |
-| `SearchHalFormTemplate`    | `_templates.search` HAL-FORMS template      | —                                                                                                                 |
-| `CreateHalFormTemplate`    | `_templates.create-form` HAL-FORMS template | —                                                                                                                 |
-| `EntityItem`               | `/{plural}/{id}` HAL entity-item resource   | `fetchByUrlQuery(apiFetch, url, profileEntity)`                                                                   |
-| `EntityItemCollection`     | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)`                    |
-| `EntityItemToOneRelation`  | to-one relation link on an entity item      | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItem \| null` (null = empty slot; 404 → null)           |
-| `EntityItemToManyRelation` | to-many relation link on an entity item     | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItemCollection` (keys under `toManyRelation` namespace) |
+| Class                      | Wraps                                       | Static query factory                                                                                                            |
+| -------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `ProfileEntity`            | `/profile/{plural}` HAL-FORMS profile       | `profileByLinkQuery(apiFetch, link)`                                                                                            |
+| `ProfileAttribute`         | `blueprint:attribute` embedded resource     | —                                                                                                                               |
+| `ProfileRelation`          | `blueprint:relation` embedded resource      | —                                                                                                                               |
+| `SearchHalFormTemplate`    | `_templates.search` HAL-FORMS template      | —                                                                                                                               |
+| `CreateHalFormTemplate`    | `_templates.create-form` HAL-FORMS template | —                                                                                                                               |
+| `EntityItem`               | `/{plural}/{id}` HAL entity-item resource   | `fetchByUrlQuery(apiFetch, url, profileEntity)`                                                                                 |
+| `EntityItemCollection`     | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)`                                  |
+| `EntityItemToOneRelation`  | to-one relation link on an entity item      | `fetchQuery(apiFetch, url, targetProfileEntity, relationName)` → `EntityItem \| null` (null = empty slot; 404 → null)           |
+| `EntityItemToManyRelation` | to-many relation link on an entity item     | `fetchQuery(apiFetch, url, targetProfileEntity, relationName)` → `EntityItemCollection` (keys under `toManyRelation` namespace) |
 
 Standalone query factories (system-level, not tied to one entity):
 
@@ -329,7 +329,7 @@ Each class carries:
 - `canSet / canClear` — boolean capability flags derived from `set-<rel>` / `clear-<rel>` template presence (ABAC gate)
 - `setRelationRequest(uri)` — throws `Error` if `setTemplate` is null (ABAC deny)
 - `clearRelationRequest()` — throws `Error` if `clearTemplate` is null
-- Static `fetchQuery(apiFetch, url, targetProfileEntity)` → 404 maps to `null` (empty slot); cached under `queryKeys.toOneRelation.byUrl(targetProfile, url)`
+- Static `fetchQuery(apiFetch, url, targetProfileEntity, relationName)` → 404 maps to `null` (empty slot); cached under `queryKeys.toOneRelation.byUrl(relationName, url)`
 
 `EntityItemToManyRelation` key members:
 
@@ -388,11 +388,13 @@ return `UseMutationResult<void, Error, TInput>`.
 **Relation query-key namespaces:**
 
 ```ts
-queryKeys.toOneRelation.byUrl(targetProfile, url); // exact key for a to-one relation read
-queryKeys.toOneRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-one reads for that entity type
-queryKeys.toManyRelation.byUrl(targetProfile, url); // exact key for a to-many relation read
-queryKeys.toManyRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-many reads for that entity type
+queryKeys.toOneRelation.byUrl(relationName, relationUrl); // exact key for a to-one relation read
+queryKeys.toOneRelation.forRelationName(relationName); // prefix — invalidates all to-one reads for that relation name
+queryKeys.toManyRelation.byUrl(relationName, relationUrl); // exact key for a to-many relation read
+queryKeys.toManyRelation.forRelationName(relationName); // prefix — invalidates all to-many reads for that relation name
 ```
+
+Both factories are keyed by the relation **name** string (e.g. `"supplier"`, `"lineItems"`), not by a `ProfileEntity` instance — unlike `entityItem`/`entityItemCollection`, which key by `ProfileEntity`. This is intentional: a relation read is scoped to a specific relation on a specific source item's link, not to the target entity type as a whole. Multiple relations can also target the same `ProfileEntity`, which would make a profile-keyed relation cache ambiguous.
 
 Root strings are `"ToOneRelation"` / `"ToManyRelation"` — distinct from `"EntityItem"`, so there is
 no prefix collision with `entityItem.forEntityName`.

@@ -24,9 +24,11 @@ export type UseAddToManyRelationOptions = {
  *
  * Cache behaviour on settled:
  * - `onSettled`: Invalidates the to-many relation read key
- *   (`toManyRelation.byUrl(targetProfile, relation.link.href)`) so the read hook
- *   refetches. Does NOT invalidate the source item or source collection — entity
- *   items do not change when a relation is added.
+ *   (`toManyRelation.byUrl(relation.name, relation.link.href)`) so the read hook
+ *   refetches. ALSO invalidates the source item's `entityItem.byUrl` entry —
+ *   the mutation is gated on the source item's ETag, which the server may bump,
+ *   so the cached ETag is refreshed to avoid a spurious 412 on the next mutation.
+ *   Does NOT invalidate the source collection or the target item.
  * - Caller's `onSuccess` / `onSettled` run last (after cache is consistent).
  *
  * On HTTP 412 (ETag mismatch) or 409, the error surfaces as `ProblemDetailError` to
