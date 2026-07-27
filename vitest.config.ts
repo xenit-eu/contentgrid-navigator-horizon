@@ -26,6 +26,15 @@ export default defineConfig({
       {
         plugins: [react()],
         test: {
+          name: "dev-tools",
+          root: "./packages/dev-tools",
+          environment: "jsdom",
+          setupFiles: ["./test-setup.ts"],
+        },
+      },
+      {
+        plugins: [react()],
+        test: {
           name: "navigator-data",
           root: "./packages/navigator-data",
           environment: "jsdom",

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @import "@contentgrid/ui/styles/preset.css";
+/* Scan the dev-tools package so its Tailwind classes are generated. Note: this
+   also emits a few dev-tools-only utility rules into the production CSS even
+   though the component JS is tree-shaken out — an accepted, negligible
+   tradeoff (needed so the DEV-gated /config route is styled in local dev). */
+@source "../../../packages/dev-tools/src";
 /* Keep packages/ui story-only utilities out of the app bundle (they are
    needed only by Storybook, which imports the same preset). */
 @source not "../../../packages/ui/src/**/*.stories.tsx";

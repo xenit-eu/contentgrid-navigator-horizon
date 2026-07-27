@@ -15,4 +15,12 @@ describe("SignInGate", () => {
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     expect(onSignIn).toHaveBeenCalledOnce();
   });
+
+  it("renders the error message when provided and hides it when cleared", () => {
+    const { rerender } = render(<SignInGate onSignIn={() => {}} error="Something went wrong" />);
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+
+    rerender(<SignInGate onSignIn={() => {}} />);
+    expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+  });
 });

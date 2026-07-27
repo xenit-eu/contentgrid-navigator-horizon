@@ -31,7 +31,19 @@ export interface RuntimeAppConfig {
   authority: string;
   clientId: string;
   apiBaseUrl: string;
+  extractServiceUrl?: string;
+  renditionUri?: string;
 }
+
+export const DEV_CONFIG_STORAGE_KEY = "contentgrid-navigator:dev-config";
+
+const DevConfigOverrideSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  authority: z.string().min(1),
+  clientId: z.string().min(1),
+  extractServiceUrl: z.string().optional(),
+  renditionUri: z.string().optional(),
+});
 
 let cachedConfig: RuntimeAppConfig | null = null;
 
@@ -56,6 +68,21 @@ async function fetchConfigJs(): Promise<unknown> {
 export async function loadAppConfig(): Promise<RuntimeAppConfig> {
   if (cachedConfig) return cachedConfig;
 
+  // Dev override: check localStorage first — set by the app-selector settings page.
+  // Only active in local development; Liaison-served deployments do not use this path.
+  try {
+    const overrideRaw = localStorage.getItem(DEV_CONFIG_STORAGE_KEY);
+    if (overrideRaw) {
+      const parsed = DevConfigOverrideSchema.safeParse(JSON.parse(overrideRaw));
+      if (parsed.success) {
+        cachedConfig = parsed.data;
+        return cachedConfig;
+      }
+    }
+  } catch {
+    // localStorage unavailable or malformed — fall through
+  }
+
   try {
     const raw = await fetchConfigJs();
     const parsed = ContentGridConfigSchema.safeParse(raw);
@@ -64,6 +91,8 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
         authority: parsed.data.v1.oidc.authority,
         clientId: parsed.data.v1.oidc.client_id,
         apiBaseUrl: parsed.data.v1.apiBaseUrl,
+        extractServiceUrl: import.meta.env.VITE_EXTRACT_SERVICE_URL || undefined,
+        renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
       };
       return cachedConfig;
     }
@@ -89,8 +118,24 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
     );
   }
 
-  cachedConfig = { authority, clientId, apiBaseUrl };
+  cachedConfig = {
+    authority,
+    clientId,
+    apiBaseUrl,
+    extractServiceUrl: import.meta.env.VITE_EXTRACT_SERVICE_URL || undefined,
+    renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
+  };
   return cachedConfig;
+}
+
+export function storeDevConfig(config: RuntimeAppConfig): void {
+  localStorage.setItem(DEV_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  cachedConfig = null;
+}
+
+export function clearDevConfig(): void {
+  localStorage.removeItem(DEV_CONFIG_STORAGE_KEY);
+  cachedConfig = null;
 }
 
 export function getAppConfig(): RuntimeAppConfig {
@@ -100,15 +145,28 @@ export function getAppConfig(): RuntimeAppConfig {
   return cachedConfig;
 }
 
-export function getOidcConfig(config: RuntimeAppConfig): AuthProviderProps {
+function buildOidcBase(config: RuntimeAppConfig) {
   return {
     authority: config.authority,
     client_id: config.clientId,
     redirect_uri: window.location.origin,
-    post_logout_redirect_uri: window.location.origin,
     scope: "openid profile email",
-    automaticSilentRenew: true,
     userStore: new WebStorageStateStore({ store: localStorage }),
+  };
+}
+
+export async function signinWithNewConfig(config: RuntimeAppConfig): Promise<void> {
+  storeDevConfig(config);
+  const userManager = new (await import("oidc-client-ts")).UserManager(buildOidcBase(config));
+  await userManager.removeUser();
+  return userManager.signinRedirect();
+}
+
+export function getOidcConfig(config: RuntimeAppConfig): AuthProviderProps {
+  return {
+    ...buildOidcBase(config),
+    post_logout_redirect_uri: window.location.origin,
+    automaticSilentRenew: true,
     onSigninCallback: () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     },
