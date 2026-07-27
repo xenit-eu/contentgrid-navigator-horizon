@@ -616,11 +616,23 @@ function TypeaheadTextFilter({
                   id={optionId(index)}
                   role="option"
                   aria-selected={index === activeIndex}
+                  tabIndex={-1}
                   className={`cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-accent ${index === activeIndex ? "bg-accent" : ""}`}
                   // Prevent the input's onBlur from firing before onClick fires
                   onMouseDown={(e) => e.preventDefault()}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectSuggestion(s)}
+                  // This element is never focused in normal use — real keyboard navigation
+                  // happens on the input via handleInputKeyDown, which never moves focus here.
+                  // Mirrored defensively so Enter/Space do the right thing in the unlikely
+                  // event this option ever does receive focus (e.g. a screen reader's virtual
+                  // cursor), instead of a click-only handler silently doing nothing.
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      selectSuggestion(s);
+                    }
+                  }}
                 >
                   {s}
                 </li>
