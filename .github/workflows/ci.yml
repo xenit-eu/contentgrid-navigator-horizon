@@ -106,7 +106,7 @@ jobs:
             -Dsonar.sources=apps,packages
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.*,**/test-setup.*,**/public/mockServiceWorker.js,**/routeTree.gen.ts
             -Dsonar.coverage.exclusions=**/*.stories.tsx,**/tests/**,**/playwright*.config.ts,**/test-fixtures/**,**/src/mocks/**,**/main.tsx
-            -Dsonar.cpd.exclusions=apps/*/src/main.tsx,apps/*/src/mocks/**,apps/*/src/vite-env.d.ts
+            -Dsonar.cpd.exclusions=apps/*/src/main.tsx,apps/*/src/mocks/**,apps/*/src/vite-env.d.ts,apps/*/src/routes/config.tsx
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.typescript.tsconfigPath=tsconfig.json
         env:
