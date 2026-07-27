@@ -296,8 +296,12 @@ function ReviewPanel({
           </div>
         )}
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-accent/50">
+        <label
+          htmlFor="use-mock-extract"
+          className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-accent/50"
+        >
           <input
+            id="use-mock-extract"
             type="checkbox"
             checked={useMockExtract}
             onChange={(e) => onMockExtractChange(e.target.checked)}
