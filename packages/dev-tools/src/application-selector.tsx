@@ -298,6 +298,7 @@ function ReviewPanel({
 
         <label
           htmlFor="use-mock-extract"
+          aria-label="Use mock extract service"
           className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-accent/50"
         >
           <input
