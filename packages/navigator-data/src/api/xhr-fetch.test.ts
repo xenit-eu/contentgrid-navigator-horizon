@@ -9,7 +9,10 @@
  * - A non-2xx resolves a Response carrying that status rather than throwing.
  * - onerror / ontimeout reject with a TypeError.
  * - Abort via an already-aborted signal rejects with AbortError without opening the request.
- * - Abort mid-flight rejects with AbortError.
+ * - Abort mid-flight (after send) rejects with AbortError.
+ * - Abort before send (while the async body read is still pending) rejects with AbortError
+ *   and never calls send() — the OPENED-but-not-SENT window where XHR's abort() fires no event.
+ * - A response status of 0 rejects with a TypeError rather than throwing a RangeError out of onload.
  * - GET sends a null body.
  * - createContentUploadClient turns a non-2xx XHR response into a ProblemDetailError
  *   (regression guard for the dropped problem-details layer).
@@ -176,6 +179,20 @@ describe("createXhrFetch — transport-level failures", () => {
     xhr.ontimeout?.();
     await expect(promise).rejects.toThrow(TypeError);
   });
+
+  it("rejects with a TypeError when the response status is 0, without throwing a RangeError out of onload", async () => {
+    const { getLastXhr } = stubXhr();
+    const xhrFetch = createXhrFetch();
+
+    const promise = xhrFetch(new Request("https://api.example.com/x"));
+    const xhr = getLastXhr();
+    await waitFor(() => expect(xhr.send).toHaveBeenCalled());
+
+    xhr.status = 0;
+    xhr.onload?.();
+
+    await expect(promise).rejects.toThrow(TypeError);
+  });
 });
 
 describe("createXhrFetch — abort", () => {
@@ -213,6 +230,32 @@ describe("createXhrFetch — abort", () => {
 
     await expect(promise).rejects.toMatchObject({ name: "AbortError" });
     expect(xhr.abort).toHaveBeenCalled();
+  });
+
+  it("rejects with AbortError when aborted before send() has run, and never calls send", async () => {
+    const { getLastXhr } = stubXhr();
+    const xhrFetch = createXhrFetch();
+
+    const controller = new AbortController();
+    const promise = xhrFetch(
+      new Request("https://api.example.com/x", {
+        method: "PUT",
+        body: "hello",
+        signal: controller.signal,
+      }),
+    );
+
+    // xhr.open() runs synchronously inside xhrFetch above, but send() only happens
+    // after the async request.blob() read resolves. Aborting synchronously here —
+    // in the same tick, before that read has had a chance to settle — exercises the
+    // OPENED-but-not-SENT window where XHR's abort() fires no abort event at all.
+    controller.abort();
+
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+
+    const xhr = getLastXhr();
+    expect(xhr).toBeDefined();
+    expect(xhr.send).not.toHaveBeenCalled();
   });
 });
 

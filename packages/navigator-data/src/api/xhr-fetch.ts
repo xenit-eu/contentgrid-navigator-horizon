@@ -59,12 +59,23 @@ export function createXhrFetch(onProgress?: (percentage: number) => void): BaseF
 
       const xhr = new XMLHttpRequest();
 
-      const onAbortSignal = () => {
-        xhr.abort();
-      };
+      // Tracks whether xhr.send() has actually run. Per the XHR spec, abort() on an
+      // OPENED-but-not-SENT request resets to UNSENT and fires NO abort event — so
+      // before send() we must settle the promise ourselves; after send(), abort()
+      // reliably fires onabort, which settles it instead.
+      let sent = false;
 
       const cleanup = () => {
         request.signal.removeEventListener("abort", onAbortSignal);
+      };
+
+      const onAbortSignal = () => {
+        if (sent) {
+          xhr.abort();
+        } else {
+          cleanup();
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        }
       };
 
       request.signal.addEventListener("abort", onAbortSignal);
@@ -77,10 +88,11 @@ export function createXhrFetch(onProgress?: (percentage: number) => void): BaseF
         xhr.setRequestHeader(name, value);
       }
 
-      // "arraybuffer" rather than "blob": we only need the raw bytes to build a Response,
-      // and MSW's XMLHttpRequest interceptor (used in tests) has a known Blob/undici
-      // interop bug in its own internal response reconstruction when responseType is
-      // "blob" — "arraybuffer" avoids that code path entirely and is simpler besides.
+      // "arraybuffer" rather than "blob": this transport only ever carries upload PUTs —
+      // a 204 with no body on success, or a small problem+json body on error — so raw
+      // bytes are all `new Response()` below ever needs; no Blob is required. As a
+      // secondary benefit this also sidesteps a Blob/undici interop bug in MSW's
+      // XMLHttpRequest interceptor's own internal response reconstruction (used in tests).
       xhr.responseType = "arraybuffer";
 
       xhr.upload.onprogress = (e) => {
@@ -91,6 +103,16 @@ export function createXhrFetch(onProgress?: (percentage: number) => void): BaseF
 
       xhr.onload = () => {
         cleanup();
+
+        // status 0 means the request never really reached a server (network error,
+        // CORS failure, etc. surfaced via onload instead of onerror in some environments).
+        // `new Response(body, { status: 0 })` throws a RangeError (valid range 200–599)
+        // synchronously here, outside any promise chain — treat it as a transport failure.
+        if (xhr.status === 0) {
+          reject(new TypeError("Network request failed"));
+          return;
+        }
+
         const headers = parseXhrResponseHeaders(xhr.getAllResponseHeaders());
         const hasBody = !NULL_BODY_STATUSES.has(xhr.status) && xhr.response != null;
         const body = hasBody ? (xhr.response as ArrayBuffer) : null;
@@ -116,7 +138,14 @@ export function createXhrFetch(onProgress?: (percentage: number) => void): BaseF
         ? Promise.resolve(null)
         : request.blob()
       ).then(
-        (body) => xhr.send(body),
+        (body) => {
+          // Aborted while the body was still being read — onAbortSignal already
+          // rejected (send() never ran, so no abort event would ever settle this).
+          // Don't call send() on an UNSENT xhr that's no longer wanted.
+          if (request.signal.aborted) return;
+          sent = true;
+          xhr.send(body);
+        },
         (err: unknown) => {
           cleanup();
           reject(err instanceof Error ? err : new Error(String(err)));
