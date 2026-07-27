@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { format } from "date-fns";
 import { describe, expect, it, vi } from "vitest";
 import { FilterSidebar } from "./filter-sidebar";
 import type { SearchFilterProperty } from "./filter-sidebar";
@@ -77,6 +78,17 @@ const DATE_LTE_PROP: SearchFilterProperty = {
   dateEncoding: "iso",
 };
 
+// A second exact-match-shaped property sharing DATE_PROP's groupKey — mirrors a search
+// template that exposes more than one undirected param for the same date attribute.
+const DATE_EXACT2_PROP: SearchFilterProperty = {
+  name: "created_at~eq",
+  label: "Created At",
+  inputKind: "date",
+  searchOperator: "exact-match",
+  groupKey: "created_at",
+  dateEncoding: "iso",
+};
+
 const PREFIX_PROP: SearchFilterProperty = {
   name: "number~prefix",
   label: "Number",
@@ -91,6 +103,51 @@ const EXACT_PROP: SearchFilterProperty = {
   inputKind: "text",
   searchOperator: "exact-match",
   groupKey: "number",
+};
+
+const BOOLEAN_PROP: SearchFilterProperty = {
+  name: "active",
+  label: "Active",
+  inputKind: "boolean",
+  searchOperator: "exact-match",
+  groupKey: "active",
+};
+
+const NUMBER_PROP: SearchFilterProperty = {
+  name: "amount",
+  label: "Amount",
+  inputKind: "number",
+  searchOperator: "exact-match",
+  groupKey: "amount",
+};
+
+const DATETIME_PROP: SearchFilterProperty = {
+  name: "due_at",
+  label: "Due At",
+  inputKind: "datetime",
+  searchOperator: "exact-match",
+  groupKey: "due_at",
+  dateEncoding: "iso",
+};
+
+const DATETIME_GT_PROP: SearchFilterProperty = {
+  name: "due_at~greater-than",
+  label: "Due At",
+  inputKind: "datetime",
+  searchOperator: "greater-than",
+  groupKey: "due_at",
+  directionLabel: "After",
+  dateEncoding: "iso",
+};
+
+const DATETIME_LT_PROP: SearchFilterProperty = {
+  name: "due_at~less-than",
+  label: "Due At",
+  inputKind: "datetime",
+  searchOperator: "less-than",
+  groupKey: "due_at",
+  directionLabel: "Before",
+  dateEncoding: "iso",
 };
 
 function renderSidebar(
@@ -216,6 +273,96 @@ describe("FilterSidebar — enum filter", () => {
   });
 });
 
+// Clear-button and text-input wiring are already covered by the "text filter" describe
+// block above — number reuses that same component, so only the kind-specific behavior
+// (the number input type) is tested here.
+
+describe("FilterSidebar — boolean filter (inputKind=boolean)", () => {
+  it("renders as an unchecked checkbox by default and reports 'true' when checked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar([BOOLEAN_PROP], {}, { onFilterChange });
+    const checkbox = screen.getByRole("checkbox", { name: /active/i });
+    expect(checkbox).not.toBeChecked();
+
+    await user.click(checkbox);
+    expect(onFilterChange).toHaveBeenCalledWith("active", "true");
+  });
+
+  it("reports 'false' (not undefined) when an already-true filter is unchecked", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderSidebar([BOOLEAN_PROP], { active: "true" }, { onFilterChange });
+    const checkbox = screen.getByRole("checkbox", { name: /active/i });
+    expect(checkbox).toBeChecked();
+
+    await user.click(checkbox);
+    expect(onFilterChange).toHaveBeenCalledWith("active", "false");
+  });
+});
+
+describe("FilterSidebar — number filter (inputKind=number)", () => {
+  it("renders a number input and forwards the typed value", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([NUMBER_PROP], {}, { onFilterChange });
+    const input = screen.getByLabelText("Amount");
+    expect(input).toHaveAttribute("type", "number");
+    fireEvent.change(input, { target: { value: "42" } });
+    expect(onFilterChange).toHaveBeenCalledWith("amount", "42");
+  });
+});
+
+// The datetime-local input has no timezone marker, so encoding must convert the entered
+// local wall-clock time to a true UTC instant. Expected values are computed the same way
+// (rather than hardcoded) so the test is correct under any runner timezone.
+function localDatetimeToUtcIso(raw: string): string {
+  return `${new Date(raw).toISOString().split(".")[0]}Z`;
+}
+
+describe("FilterSidebar — datetime filter (inputKind=datetime)", () => {
+  it("renders a datetime-local input and encodes the entered local time as a UTC instant", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATETIME_PROP], {}, { onFilterChange });
+    const input = screen.getByLabelText("Due At");
+    expect(input).toHaveAttribute("type", "datetime-local");
+    fireEvent.change(input, { target: { value: "2024-01-15T10:30" } });
+    expect(onFilterChange).toHaveBeenCalledWith(
+      "due_at",
+      localDatetimeToUtcIso("2024-01-15T10:30"),
+    );
+  });
+
+  it("decodes a stored ISO value back into the datetime-local input (timezone-safe round trip)", () => {
+    const iso = "2024-01-15T10:30:00Z";
+    renderSidebar([DATETIME_PROP], { due_at: iso });
+    const expected = format(new Date(iso), "yyyy-MM-dd'T'HH:mm");
+    expect(screen.getByDisplayValue(expected)).toHaveAttribute("type", "datetime-local");
+  });
+
+  it("renders paired datetime-local inputs in a group and encodes the correct param", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([DATETIME_GT_PROP, DATETIME_LT_PROP], {}, { onFilterChange });
+    const after = screen.getByLabelText(/due at after/i);
+    expect(after).toHaveAttribute("type", "datetime-local");
+    fireEvent.change(after, { target: { value: "2024-03-01T08:00" } });
+    expect(onFilterChange).toHaveBeenCalledWith(
+      "due_at~greater-than",
+      localDatetimeToUtcIso("2024-03-01T08:00"),
+    );
+  });
+
+  it("suppresses a bare exact-match datetime field when After/Before range siblings share its groupKey", () => {
+    // Same shape as a "created_at" audit field: the server exposes an exact-match param
+    // alongside the range pair. Filtering a timestamp to the exact millisecond is useless,
+    // so only the two range inputs should render — not three.
+    renderSidebar([DATETIME_PROP, DATETIME_GT_PROP, DATETIME_LT_PROP]);
+
+    expect(screen.getByLabelText(/due at after/i)).toHaveAttribute("type", "datetime-local");
+    expect(screen.getByLabelText(/due at before/i)).toHaveAttribute("type", "datetime-local");
+    expect(screen.getAllByLabelText(/due at/i)).toHaveLength(2);
+  });
+});
+
 describe("FilterSidebar — single date filter (inputKind=date)", () => {
   it("renders a date input for date props", () => {
     renderSidebar([DATE_PROP]);
@@ -270,7 +417,7 @@ describe("FilterSidebar — date direction filters (single props with directionL
 });
 
 describe("FilterSidebar — date group filter (multiple date props for same groupKey)", () => {
-  it("renders DateGroupFilter with group label and direction labels when multiple date props share the same groupKey", () => {
+  it("renders RangeGroupFilter with group label and direction labels when multiple date props share the same groupKey", () => {
     renderSidebar([DATE_GT_PROP, DATE_LT_PROP]);
     expect(screen.getByText("Created At")).toBeInTheDocument();
     expect(screen.getByText("After")).toBeInTheDocument();
@@ -281,6 +428,60 @@ describe("FilterSidebar — date group filter (multiple date props for same grou
     renderSidebar([DATE_GTE_PROP, DATE_LTE_PROP]);
     expect(screen.getByText("From")).toBeInTheDocument();
     expect(screen.getByText("Until")).toBeInTheDocument();
+  });
+
+  it("suppresses a bare exact-match date field when After/Before range siblings share its groupKey", () => {
+    // Same shape as "invoice_date": the server exposes an exact-match param alongside the
+    // range pair. Only the two range inputs should render — not three.
+    renderSidebar([DATE_PROP, DATE_GT_PROP, DATE_LT_PROP]);
+
+    expect(screen.getByLabelText(/created at after/i)).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText(/created at before/i)).toHaveAttribute("type", "date");
+    expect(screen.getAllByLabelText(/created at/i)).toHaveLength(2);
+  });
+
+  it("suppresses every undirected sibling when more than one shares a groupKey with a range pair", () => {
+    renderSidebar([DATE_PROP, DATE_EXACT2_PROP, DATE_GT_PROP, DATE_LT_PROP]);
+    expect(screen.getAllByLabelText(/created at/i)).toHaveLength(2);
+  });
+
+  it("applies the same suppression to a relation-traversal date group (e.g. 'Included in invoices: Invoice date')", () => {
+    // Same shape as the bug report: a relation-traversal date group ("invoices.invoice_date")
+    // with a bare exact-match plus a redundant second undirected sibling alongside After/Before.
+    const RELATION_DATE_PROP: SearchFilterProperty = {
+      name: "invoices.invoice_date",
+      label: "Included in invoices: Invoice date",
+      inputKind: "date",
+      searchOperator: "exact-match",
+      groupKey: "invoices.invoice_date",
+      relationKey: "invoices",
+      dateEncoding: "iso",
+    };
+    const RELATION_DATE_EXACT2_PROP: SearchFilterProperty = {
+      ...RELATION_DATE_PROP,
+      name: "invoices.invoice_date~eq",
+    };
+    const RELATION_DATE_GT_PROP: SearchFilterProperty = {
+      ...RELATION_DATE_PROP,
+      name: "invoices.invoice_date~after",
+      searchOperator: "greater-than",
+      directionLabel: "After",
+    };
+    const RELATION_DATE_LT_PROP: SearchFilterProperty = {
+      ...RELATION_DATE_PROP,
+      name: "invoices.invoice_date~before",
+      searchOperator: "less-than",
+      directionLabel: "Before",
+    };
+
+    renderSidebar([
+      RELATION_DATE_PROP,
+      RELATION_DATE_EXACT2_PROP,
+      RELATION_DATE_GT_PROP,
+      RELATION_DATE_LT_PROP,
+    ]);
+
+    expect(screen.getAllByLabelText(/included in invoices: invoice date/i)).toHaveLength(2);
   });
 
   it("calls onFilterChange for the correct param when the After date input changes", () => {
@@ -345,7 +546,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
   const NUM_GTE_PROP: SearchFilterProperty = {
     name: "amount.~gte",
     label: "Amount",
-    inputKind: "text",
+    inputKind: "number",
     searchOperator: "greater-than-or-equal",
     groupKey: "amount",
     directionLabel: "From",
@@ -353,9 +554,50 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
   const NUM_LTE_PROP: SearchFilterProperty = {
     name: "amount.~lte",
     label: "Amount",
-    inputKind: "text",
+    inputKind: "number",
     searchOperator: "less-than-or-equal",
     groupKey: "amount",
+    directionLabel: "Until",
+  };
+
+  // Reproduces a real bug report: the backend's own prompt for each range operator can
+  // already contain operator wording (e.g. "Total amount: Greater than", "Total amount:
+  // Min"). Rendered standalone (pre-fix), each field concatenated that with our own
+  // directionLabel too, producing "Total amount: Greater than after". Grouped, only the
+  // clean directionLabel ("From"/"Until") should show per item — and, matching the legacy
+  // Navigator's range-pairing behavior (RangedJsfFormConvertor/NestedRange), the strict
+  // gt/lt bound is dropped once the inclusive gte/lte bound covering the same direction
+  // exists, leaving exactly two inputs instead of four. Covered by the three tests below.
+  const GT_PROP: SearchFilterProperty = {
+    name: "total.~gt",
+    label: "Total amount: Greater than",
+    inputKind: "number",
+    searchOperator: "greater-than",
+    groupKey: "total",
+    directionLabel: "After",
+  };
+  const GTE_PROP: SearchFilterProperty = {
+    name: "total.~gte",
+    label: "Total amount: Min",
+    inputKind: "number",
+    searchOperator: "greater-than-or-equal",
+    groupKey: "total",
+    directionLabel: "From",
+  };
+  const LT_PROP: SearchFilterProperty = {
+    name: "total.~lt",
+    label: "Total amount: Less than",
+    inputKind: "number",
+    searchOperator: "less-than",
+    groupKey: "total",
+    directionLabel: "Before",
+  };
+  const LTE_PROP: SearchFilterProperty = {
+    name: "total.~lte",
+    label: "Total amount: Max",
+    inputKind: "number",
+    searchOperator: "less-than-or-equal",
+    groupKey: "total",
     directionLabel: "Until",
   };
 
@@ -399,24 +641,99 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     expect(onFilterChange).toHaveBeenCalledWith("created.~from", undefined);
   });
 
-  it("encodes grouped ~from value as plain date (no ISO) in DateGroupFilter", () => {
+  it("encodes grouped ~from value as plain date (no ISO) in RangeGroupFilter", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText(/created from/i), { target: { value: "2026-03-01" } });
     expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-03-01");
   });
 
-  it("encodes grouped ~until value as plain date (no ISO) in DateGroupFilter", () => {
+  it("encodes grouped ~until value as plain date (no ISO) in RangeGroupFilter", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText(/created until/i), { target: { value: "2026-12-31" } });
     expect(onFilterChange).toHaveBeenCalledWith("created.~until", "2026-12-31");
   });
 
-  it("renders ~gte and ~lte text fields with From/Until direction labels", () => {
+  it("renders ~gte and ~lte number fields with From/Until direction labels", () => {
     renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP]);
-    expect(screen.getByLabelText(/amount from/i)).toHaveAttribute("type", "text");
-    expect(screen.getByLabelText(/amount until/i)).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText(/amount from/i)).toHaveAttribute("type", "number");
+    expect(screen.getByLabelText(/amount until/i)).toHaveAttribute("type", "number");
+  });
+
+  it("renders the number group heading exactly once (not once per number input)", () => {
+    renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP]);
+    expect(screen.getAllByText("Amount")).toHaveLength(1);
+    expect(screen.getByText("From")).toBeInTheDocument();
+    expect(screen.getByText("Until")).toBeInTheDocument();
+  });
+
+  it("groups all four range operators under one heading, not four separate compound labels", () => {
+    renderSidebar([GT_PROP, GTE_PROP, LT_PROP, LTE_PROP]);
+
+    expect(screen.getAllByText("Total amount: Greater than")).toHaveLength(1);
+    expect(screen.queryByText(/total amount: min/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/total amount: less than/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/total amount: max/i)).not.toBeInTheDocument();
+  });
+
+  it("suppresses the strict After/Before bound once the inclusive From/Until bound exists", () => {
+    renderSidebar([GT_PROP, GTE_PROP, LT_PROP, LTE_PROP]);
+
+    expect(screen.queryByText("After")).not.toBeInTheDocument();
+    expect(screen.queryByText("Before")).not.toBeInTheDocument();
+    expect(screen.getByText("From")).toBeInTheDocument();
+    expect(screen.getByText("Until")).toBeInTheDocument();
+  });
+
+  it("renders exactly 2 inputs (not 4) once the strict bound is suppressed", () => {
+    renderSidebar([GT_PROP, GTE_PROP, LT_PROP, LTE_PROP]);
+
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(2);
+  });
+
+  it("suppresses a bare exact-match number field and the strict gt/lt pair, leaving 2 inputs", () => {
+    // Same shape as "Price"/"Total amount": the server exposes an exact-match param
+    // alongside gt/gte/lt/lte. Only the inclusive From/Until pair should render — not five,
+    // not four.
+    const PRICE_EXACT_PROP: SearchFilterProperty = {
+      name: "price",
+      label: "Products: Price",
+      inputKind: "number",
+      searchOperator: "exact-match",
+      groupKey: "price",
+    };
+    const PRICE_GT_PROP: SearchFilterProperty = {
+      ...PRICE_EXACT_PROP,
+      name: "price~gt",
+      searchOperator: "greater-than",
+      directionLabel: "After",
+    };
+    const PRICE_GTE_PROP: SearchFilterProperty = {
+      ...PRICE_EXACT_PROP,
+      name: "price~gte",
+      searchOperator: "greater-than-or-equal",
+      directionLabel: "From",
+    };
+    const PRICE_LT_PROP: SearchFilterProperty = {
+      ...PRICE_EXACT_PROP,
+      name: "price~lt",
+      searchOperator: "less-than",
+      directionLabel: "Before",
+    };
+    const PRICE_LTE_PROP: SearchFilterProperty = {
+      ...PRICE_EXACT_PROP,
+      name: "price~lte",
+      searchOperator: "less-than-or-equal",
+      directionLabel: "Until",
+    };
+
+    renderSidebar([PRICE_EXACT_PROP, PRICE_GT_PROP, PRICE_GTE_PROP, PRICE_LT_PROP, PRICE_LTE_PROP]);
+
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(2);
+    expect(screen.queryByText("After")).not.toBeInTheDocument();
+    expect(screen.queryByText("Before")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Products: Price")).toHaveLength(1);
   });
 
   it("encodes ~gte value in onFilterChange", () => {
@@ -436,7 +753,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
   });
 });
 
-describe("FilterSidebar — apiToDate conversion", () => {
+describe("FilterSidebar — isoToDateInputValue conversion", () => {
   it("strips the time component from ISO date strings for the date input", () => {
     renderSidebar([DATE_PROP], { created_at: "2024-06-15T00:00:00Z" });
     expect(screen.getByDisplayValue("2024-06-15")).toHaveAttribute("type", "date");
@@ -470,7 +787,7 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
   });
 });
 
-describe("FilterSidebar — exact-match suppression when a prefix-match sibling exists", () => {
+describe("FilterSidebar — exact-match suppression when a more specific sibling exists", () => {
   it("hides the exact-match field when a prefix-match sibling exists in the same group", () => {
     renderSidebar([EXACT_PROP, PREFIX_PROP]);
     const inputs = screen.getAllByRole("textbox");
@@ -502,6 +819,25 @@ describe("FilterSidebar — exact-match suppression when a prefix-match sibling 
     };
     renderSidebar([A, B]);
     expect(screen.getAllByRole("textbox")).toHaveLength(2);
+  });
+
+  it("hides the exact-match field when a full-text sibling exists in the same group (no prefix-match involved)", () => {
+    const NOTE_EXACT_PROP: SearchFilterProperty = {
+      name: "note",
+      label: "Note",
+      inputKind: "text",
+      searchOperator: "exact-match",
+      groupKey: "note",
+    };
+    const NOTE_FTS_PROP: SearchFilterProperty = {
+      name: "note~fts",
+      label: "Note",
+      inputKind: "text",
+      searchOperator: "full-text",
+      groupKey: "note",
+    };
+    renderSidebar([NOTE_EXACT_PROP, NOTE_FTS_PROP]);
+    expect(screen.getAllByRole("textbox")).toHaveLength(1);
   });
 });
 
@@ -647,8 +983,8 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
   });
 });
 
-describe("FilterSidebar — DateGroupFilter clear button (grouped date props)", () => {
-  it("calls onFilterChange with undefined when the clear button is clicked in a DateGroupFilter with a value", async () => {
+describe("FilterSidebar — RangeGroupFilter clear button (grouped date props)", () => {
+  it("calls onFilterChange with undefined when the clear button is clicked in a RangeGroupFilter with a value", async () => {
     const user = userEvent.setup();
     const onFilterChange = vi.fn();
     renderSidebar(

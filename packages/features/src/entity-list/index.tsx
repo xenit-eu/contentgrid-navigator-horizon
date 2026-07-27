@@ -9,9 +9,11 @@ import {
   type EntityItemToOneRelation,
   type EntitySearchState,
   ProblemDetailError,
+  type ProfileAttribute,
   ProfileAttributeSearchType,
   ProfileAttributeType,
   type ProfileEntity,
+  applyFilterValues,
   buildFilterProperties,
   createValues,
   extractFieldErrors,
@@ -104,8 +106,8 @@ export function EntityListLayout() {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
 
   const profileResults = useProfileEntities();
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoadingProfiles = isProfileListPending(profileResults);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
   const selectedProfile = activeEntity
     ? loadedProfiles.find((p) => p.name === activeEntity)
     : undefined;
@@ -200,8 +202,8 @@ export function EntityDetailPage() {
   const go = navigate as unknown as AnyNavigateFn;
 
   const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
+  const isLoadingProfiles = isProfileListPending(profileResults);
 
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
@@ -265,8 +267,8 @@ function EntityOverview({
 }: Readonly<{ onSelectEntity: (profile: ProfileEntity) => void }>) {
   const profileResults = useProfileEntities();
 
-  const isLoading = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoading = isProfileListPending(profileResults);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
 
   if (isLoading) {
     return (
@@ -368,25 +370,24 @@ function EntityDetailView({
 
   const searchTemplate = profile.searchTemplate;
 
-  const activeFilterEntries = Object.entries(filters).filter(([, v]) => !!v);
+  const filterProperties = searchTemplate ? buildFilterProperties(searchTemplate) : [];
 
   // Shared with the collection query below so typeahead suggestions are scoped to the
   // SAME active filters as the table — otherwise the dropdown could suggest a value that
   // yields zero rows once combined with the other active filters.
+  // applyFilterValues coerces each raw string to the JS type its inputKind requires (number,
+  // boolean, Date) — the HAL-FORMS codec throws for a raw string on those property types.
   const filterSearchValues = searchTemplate
-    ? activeFilterEntries.reduce(
-        (vals, [key, value]) => vals.withValue(key, value),
-        createValues(searchTemplate.template),
-      )
+    ? applyFilterValues(createValues(searchTemplate.template), filterProperties, filters)
     : undefined;
 
   const typeahead = useTypeahead({
     profileEntity: profile,
     searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
     searchValues: filterSearchValues,
+    // No artificial minimum — suggestions should appear as soon as the user types anything.
+    minLength: 1,
   });
-
-  const filterProperties = searchTemplate ? buildFilterProperties(searchTemplate) : [];
 
   function handleFilterChange(key: string, value: string | undefined) {
     setFilters((prev) => {
@@ -471,11 +472,7 @@ function EntityDetailView({
         </div>
         <div className="flex items-center gap-2">
           {collection.isSuccess && collection.data.totalItems && (
-            <Badge variant="secondary">
-              {collection.data.totalItems.count.toLocaleString()} item
-              {collection.data.totalItems.count === 1 ? "" : "s"}
-              {collection.data.totalItems.isEstimated && " (est.)"}
-            </Badge>
+            <Badge variant="secondary">{formatItemCountLabel(collection.data.totalItems)}</Badge>
           )}
           {collection.isPending && <Skeleton className="h-6 w-20 rounded-full" />}
           <CreateEntityButton profile={profile} />
@@ -620,8 +617,8 @@ export function EntityItemDetailPage() {
   };
 
   const profileResults = useProfileEntities();
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoadingProfiles = isProfileListPending(profileResults);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
   if (isLoadingProfiles || (!profile && profileResults.length > 0)) {
@@ -700,9 +697,7 @@ function EntityItemDetailView({
         <>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {item.data.userDefinedAttributes.map((attr) => {
-              const label =
-                profile.attributes.find((a) => a.name === attr.value.name)?.title ??
-                attr.value.name;
+              const label = resolveAttributeLabel(attr, profile.attributes);
               return (
                 <div key={attr.value.name} className="rounded-lg border p-4">
                   <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
@@ -752,9 +747,8 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
   const mutationError = clearError ?? setError;
   const [linkOpen, setLinkOpen] = useState(false);
   const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
-  const title = relation.profileRelation.title ?? relation.name;
+  const loadedProfiles = selectLoadedProfiles(profileResults);
+  const { targetProfile, title } = getRelationDisplay(relation, loadedProfiles);
 
   return (
     <div className="rounded-lg border p-4 space-y-3">
@@ -825,9 +819,7 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
         >
           <dl className="grid grid-cols-2 gap-2">
             {result.data.userDefinedAttributes.slice(0, 4).map((attr) => {
-              const label =
-                result.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
-                  ?.title ?? attr.value.name;
+              const label = resolveAttributeLabel(attr, result.data!.profileEntity.attributes);
               return (
                 <div key={attr.value.name}>
                   <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -871,11 +863,10 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
   const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
   const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
-  const title = relation.profileRelation.title ?? relation.name;
+  const loadedProfiles = selectLoadedProfiles(profileResults);
+  const { targetProfile, title } = getRelationDisplay(relation, loadedProfiles);
 
-  const columns = targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }];
+  const columns = targetProfile ? buildColumns(targetProfile) : ID_ONLY_COLUMNS;
   const rows = result.isSuccess ? buildRows(result.data.items, columns) : [];
   const total = result.isSuccess ? result.data.totalItems : undefined;
 
@@ -889,12 +880,7 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
         <div className="flex items-center gap-2">
-          {total !== undefined && (
-            <Badge variant="secondary">
-              {total.count.toLocaleString()} item{total.count === 1 ? "" : "s"}
-              {total.isEstimated && " (est.)"}
-            </Badge>
-          )}
+          {total !== undefined && <Badge variant="secondary">{formatItemCountLabel(total)}</Badge>}
           {relation.canAdd && targetProfile && (
             <>
               <Button
@@ -1100,9 +1086,7 @@ function RelationItemSearchDialog({
               >
                 <div className="grid grid-cols-2 gap-2">
                   {item.userDefinedAttributes.slice(0, 4).map((attr) => {
-                    const label =
-                      targetProfile.attributes.find((a) => a.name === attr.value.name)?.title ??
-                      attr.value.name;
+                    const label = resolveAttributeLabel(attr, targetProfile.attributes);
                     return (
                       <div key={attr.value.name}>
                         <p className="text-xs text-muted-foreground">{label}</p>
@@ -1159,17 +1143,63 @@ function MutationErrorDisplay({ error }: Readonly<{ error: Error }>) {
 
 const MAX_COLUMNS = 5;
 
+// Fallback column set for a table with no user-defined attributes to show (either the
+// entity itself has none, or the target profile of a relation hasn't resolved yet).
+const ID_ONLY_COLUMNS: DataTableColumn[] = [{ key: "id", header: "ID" }];
+
 function buildColumns(profile: ProfileEntity): DataTableColumn[] {
   const userAttrs = profile.userDefinedAttributes.slice(0, MAX_COLUMNS);
 
   if (userAttrs.length === 0) {
-    return [{ key: "id", header: "ID" }];
+    return ID_ONLY_COLUMNS;
   }
 
   return userAttrs.map((attr) => ({
     key: attr.name,
     header: attr.title ?? attr.name,
   }));
+}
+
+/** Profiles that have finished loading from a `useProfileEntities()` result array. */
+function selectLoadedProfiles(
+  profileResults: ReturnType<typeof useProfileEntities>,
+): ProfileEntity[] {
+  return profileResults.filter((r) => r.data).map((r) => r.data!);
+}
+
+/** True while every query in a `useProfileEntities()` result array is still pending. */
+function isProfileListPending(profileResults: ReturnType<typeof useProfileEntities>): boolean {
+  return profileResults.length > 0 && profileResults.every((r) => r.isPending);
+}
+
+/**
+ * Resolves the target profile and display title shared by RelationToOneSection and
+ * RelationToManySection. `profileRelation.title` already falls back to the relation's
+ * own name internally, so no further fallback is needed here.
+ */
+function getRelationDisplay(
+  relation: EntityItemToOneRelation | EntityItemToManyRelation,
+  loadedProfiles: readonly ProfileEntity[],
+): { targetProfile: ProfileEntity | undefined; title: string } {
+  return {
+    targetProfile: relation.profileRelation.getTargetProfile(loadedProfiles),
+    title: relation.profileRelation.title,
+  };
+}
+
+/** Resolves the display label for a user-defined attribute value from its profile definition. */
+function resolveAttributeLabel(
+  attr: EntityItemAttribute,
+  attributes: readonly ProfileAttribute[],
+): string {
+  return attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name;
+}
+
+/** Formats a collection's total item count, e.g. "3 items (est.)". */
+function formatItemCountLabel(total: { count: number; isEstimated: boolean }): string {
+  return `${total.count.toLocaleString()} item${total.count === 1 ? "" : "s"}${
+    total.isEstimated ? " (est.)" : ""
+  }`;
 }
 
 function buildRows(items: readonly EntityItem[], columns: DataTableColumn[]): DataTableRow[] {

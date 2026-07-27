@@ -12,26 +12,51 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// ---------------------------------------------------------------------------
+// Fixtures reused verbatim across the stories below (status appears in 5
+// stories, the issued-date After/Before pair in 4) — see filter-sidebar.test.tsx
+// for the same convention.
+// ---------------------------------------------------------------------------
+
+const STATUS_PROP: SearchFilterProperty = {
+  name: "status",
+  label: "Status",
+  inputKind: "select",
+  searchOperator: "exact-match",
+  groupKey: "status",
+  options: ["draft", "pending", "paid"],
+};
+
+const STATUS_PROP_WITH_CANCELLED: SearchFilterProperty = {
+  ...STATUS_PROP,
+  options: ["draft", "pending", "paid", "cancelled"],
+};
+
+const ISSUED_DATE_AFTER_PROP: SearchFilterProperty = {
+  name: "issued_date~greater-than",
+  label: "Issued Date",
+  inputKind: "date",
+  searchOperator: "greater-than",
+  groupKey: "issued_date",
+  directionLabel: "After",
+  dateEncoding: "iso",
+};
+
+const ISSUED_DATE_BEFORE_PROP: SearchFilterProperty = {
+  name: "issued_date~less-than",
+  label: "Issued Date",
+  inputKind: "date",
+  searchOperator: "less-than",
+  groupKey: "issued_date",
+  directionLabel: "Before",
+  dateEncoding: "iso",
+};
+
 export const Default: Story = {
   args: {
     filterProperties: [
-      {
-        name: "status",
-        label: "Status",
-        inputKind: "select",
-        searchOperator: "exact-match",
-        groupKey: "status",
-        options: ["draft", "pending", "paid", "cancelled"],
-      },
-      {
-        name: "issued_date~greater-than",
-        label: "Issued Date",
-        inputKind: "date",
-        searchOperator: "greater-than",
-        groupKey: "issued_date",
-        directionLabel: "After",
-        dateEncoding: "iso",
-      },
+      STATUS_PROP_WITH_CANCELLED,
+      ISSUED_DATE_AFTER_PROP,
     ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
@@ -40,25 +65,7 @@ export const Default: Story = {
 
 export const WithActiveFilters: Story = {
   args: {
-    filterProperties: [
-      {
-        name: "status",
-        label: "Status",
-        inputKind: "select",
-        searchOperator: "exact-match",
-        groupKey: "status",
-        options: ["draft", "pending", "paid"],
-      },
-      {
-        name: "issued_date~greater-than",
-        label: "Issued Date",
-        inputKind: "date",
-        searchOperator: "greater-than",
-        groupKey: "issued_date",
-        directionLabel: "After",
-        dateEncoding: "iso",
-      },
-    ] satisfies SearchFilterProperty[],
+    filterProperties: [STATUS_PROP, ISSUED_DATE_AFTER_PROP] satisfies SearchFilterProperty[],
     filters: { status: "paid" },
     onFilterChange: fn(),
     onClearAll: fn(),
@@ -67,16 +74,7 @@ export const WithActiveFilters: Story = {
 
 export const WithEnumFilter: Story = {
   args: {
-    filterProperties: [
-      {
-        name: "status",
-        label: "Status",
-        inputKind: "select",
-        searchOperator: "exact-match",
-        groupKey: "status",
-        options: ["draft", "pending", "paid", "cancelled"],
-      },
-    ] satisfies SearchFilterProperty[],
+    filterProperties: [STATUS_PROP_WITH_CANCELLED] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
   },
@@ -85,24 +83,8 @@ export const WithEnumFilter: Story = {
 export const WithDateRangeFilter: Story = {
   args: {
     filterProperties: [
-      {
-        name: "issued_date~greater-than",
-        label: "Issued Date",
-        inputKind: "date",
-        searchOperator: "greater-than",
-        groupKey: "issued_date",
-        directionLabel: "After",
-        dateEncoding: "iso",
-      },
-      {
-        name: "issued_date~less-than",
-        label: "Issued Date",
-        inputKind: "date",
-        searchOperator: "less-than",
-        groupKey: "issued_date",
-        directionLabel: "Before",
-        dateEncoding: "iso",
-      },
+      ISSUED_DATE_AFTER_PROP,
+      ISSUED_DATE_BEFORE_PROP,
     ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
@@ -112,32 +94,9 @@ export const WithDateRangeFilter: Story = {
 export const WithMixedFilters: Story = {
   args: {
     filterProperties: [
-      {
-        name: "status",
-        label: "Status",
-        inputKind: "select",
-        searchOperator: "exact-match",
-        groupKey: "status",
-        options: ["draft", "pending", "paid"],
-      },
-      {
-        name: "issued_date~greater-than",
-        label: "Issued Date",
-        inputKind: "date",
-        searchOperator: "greater-than",
-        groupKey: "issued_date",
-        directionLabel: "After",
-        dateEncoding: "iso",
-      },
-      {
-        name: "issued_date~less-than",
-        label: "Issued Date",
-        inputKind: "date",
-        searchOperator: "less-than",
-        groupKey: "issued_date",
-        directionLabel: "Before",
-        dateEncoding: "iso",
-      },
+      STATUS_PROP,
+      ISSUED_DATE_AFTER_PROP,
+      ISSUED_DATE_BEFORE_PROP,
     ] satisfies SearchFilterProperty[],
     filters: { status: "pending" },
     onFilterChange: fn(),
@@ -178,7 +137,7 @@ export const WithRangePairNumericFilter: Story = {
       {
         name: "amount.~gte",
         label: "Amount",
-        inputKind: "text",
+        inputKind: "number",
         searchOperator: "greater-than-or-equal",
         groupKey: "amount",
         directionLabel: "From",
@@ -186,7 +145,7 @@ export const WithRangePairNumericFilter: Story = {
       {
         name: "amount.~lte",
         label: "Amount",
-        inputKind: "text",
+        inputKind: "number",
         searchOperator: "less-than-or-equal",
         groupKey: "amount",
         directionLabel: "Until",
@@ -194,6 +153,124 @@ export const WithRangePairNumericFilter: Story = {
     ] satisfies SearchFilterProperty[],
     filters: {},
     onFilterChange: fn(),
+  },
+};
+
+export const WithBooleanFilter: Story = {
+  args: {
+    filterProperties: [
+      {
+        name: "active",
+        label: "Active",
+        inputKind: "boolean",
+        searchOperator: "exact-match",
+        groupKey: "active",
+      },
+    ] satisfies SearchFilterProperty[],
+    filters: {},
+    onFilterChange: fn(),
+  },
+};
+
+export const WithNumberFilter: Story = {
+  args: {
+    filterProperties: [
+      {
+        name: "amount",
+        label: "Amount",
+        inputKind: "number",
+        searchOperator: "exact-match",
+        groupKey: "amount",
+      },
+    ] satisfies SearchFilterProperty[],
+    filters: {},
+    onFilterChange: fn(),
+  },
+};
+
+export const WithDatetimeFilter: Story = {
+  args: {
+    filterProperties: [
+      {
+        name: "due_at~greater-than",
+        label: "Due At",
+        inputKind: "datetime",
+        searchOperator: "greater-than",
+        groupKey: "due_at",
+        directionLabel: "After",
+        dateEncoding: "iso",
+      },
+      {
+        name: "due_at~less-than",
+        label: "Due At",
+        inputKind: "datetime",
+        searchOperator: "less-than",
+        groupKey: "due_at",
+        directionLabel: "Before",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
+    filters: {},
+    onFilterChange: fn(),
+  },
+};
+
+// Reproduces an audit field like "created_at": the server exposes an exact-match param
+// alongside the After/Before range for the same attribute. Only the range pair should
+// render — a bare exact-match instant filter is redundant and was showing as a third field.
+export const WithDatetimeExactMatchSuppressed: Story = {
+  args: {
+    filterProperties: [
+      {
+        name: "created_at",
+        label: "Created At",
+        inputKind: "datetime",
+        searchOperator: "exact-match",
+        groupKey: "created_at",
+      },
+      {
+        name: "created_at~greater-than",
+        label: "Created At",
+        inputKind: "datetime",
+        searchOperator: "greater-than",
+        groupKey: "created_at",
+        directionLabel: "After",
+        dateEncoding: "iso",
+      },
+      {
+        name: "created_at~less-than",
+        label: "Created At",
+        inputKind: "datetime",
+        searchOperator: "less-than",
+        groupKey: "created_at",
+        directionLabel: "Before",
+        dateEncoding: "iso",
+      },
+    ] satisfies SearchFilterProperty[],
+    filters: {},
+    onFilterChange: fn(),
+  },
+};
+
+export const WithTypeaheadFilter: Story = {
+  args: {
+    filterProperties: [
+      {
+        name: "number~prefix",
+        label: "Invoice number",
+        inputKind: "text",
+        searchOperator: "prefix-match",
+        groupKey: "number",
+      },
+    ] satisfies SearchFilterProperty[],
+    filters: { "number~prefix": "INV" },
+    onFilterChange: fn(),
+    onTypeaheadSearch: fn(),
+    typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002", "INV-003"] },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox", { name: /invoice number/i }));
   },
 };
 
@@ -224,16 +301,7 @@ export const WithInteraction: Story = {
 export const ClearAllInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
-    filterProperties: [
-      {
-        name: "status",
-        label: "Status",
-        inputKind: "select",
-        searchOperator: "exact-match",
-        groupKey: "status",
-        options: ["draft", "pending", "paid"],
-      },
-    ] satisfies SearchFilterProperty[],
+    filterProperties: [STATUS_PROP] satisfies SearchFilterProperty[],
     filters: { status: "paid" },
     onFilterChange: fn(),
     onClearAll: fn(),

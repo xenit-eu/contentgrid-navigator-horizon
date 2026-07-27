@@ -24,6 +24,11 @@ export interface UseTypeaheadOptions {
    * Provides the filter parameter name and the attribute to extract from each result.
    * Obtain via `searchTemplate.getSearchPropertiesByType(...)` or `getSearchPropertyByName(...)`.
    * When undefined (e.g. no field is active yet), the hook returns empty results without fetching.
+   *
+   * Must be a string-typed property (e.g. prefix-match or full-text) — the query text is
+   * passed to `withValue()` as a raw string, which the HAL-FORMS codec rejects for
+   * number/checkbox/datetime-typed properties. Not enforced here; callers currently only
+   * wire this to text-kind FilterSidebar fields.
    */
   searchProperty?: SearchHalFormTemplateProperty;
   /** Minimum query length before a fetch fires. Defaults to 2. */

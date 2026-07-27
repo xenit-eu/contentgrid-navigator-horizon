@@ -1,7 +1,9 @@
-import { ProfileAttributeSearchType, ProfileAttributeType } from "../attribute-profile";
+import type { HalFormValues } from "@contentgrid/hal-forms/values";
+import type { SearchRequestSpec } from "../../api/requests";
+import { ProfileAttributeSearchType } from "../attribute-profile";
 import type { SearchHalFormTemplate, SearchHalFormTemplateProperty } from "./search-form";
 
-export type FilterInputKind = "text" | "date" | "select";
+export type FilterInputKind = "text" | "number" | "date" | "datetime" | "boolean" | "select";
 
 export type SearchOperator =
   | "exact-match"
@@ -40,10 +42,10 @@ export interface SearchFilterProperty {
    */
   directionLabel?: "After" | "Before" | "From" | "Until";
   /**
-   * For date inputs: how to encode the yyyy-MM-dd value from the input element.
-   * "iso"   → append T00:00:00Z  (legacy ~greater-than style operators)
+   * For date/datetime inputs: how to encode the value from the input element.
+   * "iso"   → append the time suffix (legacy ~greater-than style operators)
    * "plain" → pass as-is         (range-pair .~from / .~until operators)
-   * Omit for non-date inputs.
+   * Omit for non-date/datetime inputs.
    */
   dateEncoding?: "iso" | "plain";
   /** For select inputs: the available option values */
@@ -62,11 +64,17 @@ export interface SearchFilterProperty {
  * Converts a search template's properties into pre-computed view models for FilterSidebar.
  * All HAL naming conventions (~prefix, ~gte, .~from, etc.) and type mapping are resolved here
  * so the UI layer has no knowledge of HAL search property name conventions.
+ *
+ * Properties with the "hidden" wire type are excluded — they carry a fixed/internal value
+ * (e.g. relation-scoping params injected via withHiddenParams) and were never meant to be a
+ * user-facing filter control.
  */
 export function buildFilterProperties(
   searchTemplate: SearchHalFormTemplate,
 ): SearchFilterProperty[] {
-  return searchTemplate.searchProperties.map(buildFilterProperty);
+  return searchTemplate.searchProperties
+    .filter((sp) => sp.property.type !== "hidden")
+    .map(buildFilterProperty);
 }
 
 function buildFilterProperty(sp: SearchHalFormTemplateProperty): SearchFilterProperty {
@@ -86,14 +94,16 @@ function buildFilterProperty(sp: SearchHalFormTemplateProperty): SearchFilterPro
 
   const inputKind: FilterInputKind = inlineOptions?.length
     ? "select"
-    : isDateAttribute(sp)
-      ? "date"
-      : "text";
+    : mapWireTypeToInputKind(sp.property.type);
 
   const searchOperator = computeSearchOperator(sp);
   const directionLabel = computeDirectionLabel(searchOperator);
   const dateEncoding: "iso" | "plain" | undefined =
-    inputKind === "date" ? (name.includes(".~") ? "plain" : "iso") : undefined;
+    inputKind === "date" || inputKind === "datetime"
+      ? name.includes(".~")
+        ? "plain"
+        : "iso"
+      : undefined;
 
   return {
     name,
@@ -112,9 +122,78 @@ function buildFilterProperty(sp: SearchHalFormTemplateProperty): SearchFilterPro
   };
 }
 
-function isDateAttribute(sp: SearchHalFormTemplateProperty): boolean {
-  const type = sp.profileAttribute?.type;
-  return type === ProfileAttributeType.date || type === ProfileAttributeType.datetime;
+/**
+ * Maps a search property's raw HAL-FORMS wire type (`HalFormsPropertyType` from
+ * @contentgrid/hal-forms — e.g. "checkbox", "date", "datetime-local", "number") to a
+ * FilterInputKind. This is the type the server actually declares on the template property,
+ * so it's read directly rather than cross-referenced via the entity's blueprint attribute
+ * (which may not resolve at all for some relation-traversal search params).
+ */
+function mapWireTypeToInputKind(propertyType: string): FilterInputKind {
+  switch (propertyType) {
+    case "checkbox":
+      return "boolean";
+    case "datetime":
+    case "datetime-local":
+      return "datetime";
+    case "date":
+      return "date";
+    case "number":
+    case "range":
+      return "number";
+    default:
+      return "text";
+  }
+}
+
+/**
+ * Coerces a raw FilterSidebar string value into the JS type the HAL-FORMS codec requires for
+ * the given input kind (`DefinedHalFormValue["value"]` in @contentgrid/hal-forms/values):
+ * `number`/`range` require a real `number`, `checkbox` requires a real `boolean`, and
+ * `datetime`/`datetime-local` require a real `Date` — passing a string for any of these
+ * throws `HalFormValueTypeError`, or for datetime, an unvalidated `new Date(...)` that only
+ * fails later, deep inside the request encoder, as `RangeError: Invalid time value`.
+ * Returns `undefined` when the value can't be safely coerced, so the caller can omit the
+ * filter rather than send a request that would throw.
+ */
+export function coerceFilterValue(
+  inputKind: FilterInputKind,
+  rawValue: string,
+): string | number | boolean | Date | undefined {
+  switch (inputKind) {
+    case "number": {
+      const parsed = Number(rawValue);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    case "boolean":
+      if (rawValue === "true") return true;
+      if (rawValue === "false") return false;
+      return undefined;
+    case "datetime": {
+      const parsed = new Date(rawValue);
+      return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    }
+    default:
+      return rawValue;
+  }
+}
+
+/**
+ * Applies a FilterSidebar `filters` map onto a HAL-FORMS values object, coercing each raw
+ * string via `coerceFilterValue` based on the matching property's inputKind. Filters that
+ * fail to coerce are silently omitted rather than sent.
+ */
+export function applyFilterValues(
+  values: HalFormValues<SearchRequestSpec>,
+  filterProperties: readonly SearchFilterProperty[],
+  filters: Record<string, string>,
+): HalFormValues<SearchRequestSpec> {
+  const inputKindByName = new Map(filterProperties.map((p) => [p.name, p.inputKind]));
+  return Object.entries(filters).reduce((vals, [key, rawValue]) => {
+    if (!rawValue) return vals;
+    const coerced = coerceFilterValue(inputKindByName.get(key) ?? "text", rawValue);
+    return coerced === undefined ? vals : vals.withValue(key, coerced);
+  }, values);
 }
 
 /**

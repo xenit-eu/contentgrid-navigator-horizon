@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
+import { createValues } from "@contentgrid/hal-forms/values";
 import type { ProfileEntityShape } from "../../shapes";
 import ProfileEntity from "../entity-profile";
-import { buildFilterProperties } from "./filter-properties";
+import { applyFilterValues, buildFilterProperties, coerceFilterValue } from "./filter-properties";
 import { SearchHalFormTemplate } from "./search-form";
 
 // ---------------------------------------------------------------------------
@@ -159,6 +160,34 @@ const profileJson = {
         },
         _links: {},
       },
+      {
+        name: "active",
+        title: "Active",
+        type: "boolean",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [{ name: "active", title: "Active", type: "exact-match" }],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
+      {
+        name: "rating",
+        title: "Rating",
+        type: "double",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [{ name: "rating", title: "Rating", type: "exact-match" }],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
     ],
     "blueprint:relation": [],
   },
@@ -186,6 +215,10 @@ const profileJson = {
         { name: "created_at.~from", type: "date" },
         { name: "created_at.~until", type: "date" },
         { name: "note~fts", type: "text" },
+        { name: "active", type: "checkbox" },
+        { name: "rating", type: "number" },
+        { name: "score", type: "range" },
+        { name: "expires_at", type: "datetime-local" },
         {
           name: "_sort",
           type: "text",
@@ -249,10 +282,10 @@ describe("buildFilterProperties — select fields", () => {
 });
 
 describe("buildFilterProperties — date fields with iso encoding", () => {
-  it("produces date inputKind for datetime attribute", () => {
+  it("produces datetime inputKind for datetime attribute", () => {
     const after = sharedProps.find((p) => p.name === "due_date~after")!;
 
-    expect(after.inputKind).toBe("date");
+    expect(after.inputKind).toBe("datetime");
     expect(after.searchOperator).toBe("greater-than");
     expect(after.directionLabel).toBe("After");
     expect(after.dateEncoding).toBe("iso");
@@ -288,22 +321,40 @@ describe("buildFilterProperties — range-pair operators (.~from / .~until)", ()
     expect(until.groupKey).toBe("created_at");
   });
 
-  it("maps non-date .~gte to text inputKind with From direction and no dateEncoding", () => {
+  it("maps long .~gte to number inputKind with From direction and no dateEncoding", () => {
     const gte = sharedProps.find((p) => p.name === "amount.~gte")!;
 
-    expect(gte.inputKind).toBe("text");
+    expect(gte.inputKind).toBe("number");
     expect(gte.searchOperator).toBe("greater-than-or-equal");
     expect(gte.directionLabel).toBe("From");
     expect(gte.dateEncoding).toBeUndefined();
     expect(gte.groupKey).toBe("amount");
   });
 
-  it("maps non-date .~lte to text inputKind with Until direction", () => {
+  it("maps long .~lte to number inputKind with Until direction", () => {
     const lte = sharedProps.find((p) => p.name === "amount.~lte")!;
 
-    expect(lte.inputKind).toBe("text");
+    expect(lte.inputKind).toBe("number");
     expect(lte.searchOperator).toBe("less-than-or-equal");
     expect(lte.directionLabel).toBe("Until");
+  });
+});
+
+describe("buildFilterProperties — wire-type mapping (boolean, number, datetime aliases)", () => {
+  it("maps the 'checkbox' wire type to boolean inputKind", () => {
+    expect(sharedProps.find((p) => p.name === "active")!.inputKind).toBe("boolean");
+  });
+
+  it("maps the 'number' wire type to number inputKind", () => {
+    expect(sharedProps.find((p) => p.name === "rating")!.inputKind).toBe("number");
+  });
+
+  it("maps the 'range' wire type to number inputKind", () => {
+    expect(sharedProps.find((p) => p.name === "score")!.inputKind).toBe("number");
+  });
+
+  it("maps the 'datetime-local' wire type to datetime inputKind", () => {
+    expect(sharedProps.find((p) => p.name === "expires_at")!.inputKind).toBe("datetime");
   });
 });
 
@@ -352,6 +403,28 @@ describe("buildFilterProperties — _sort excluded", () => {
   });
 });
 
+describe("buildFilterProperties — hidden properties excluded", () => {
+  it("excludes a 'hidden' wire-type property from the result", () => {
+    // Hidden properties carry a fixed/internal value (e.g. relation-scoping params
+    // injected via withHiddenParams) and were never meant to be a user-facing filter.
+    const hiddenJson = {
+      ...profileJson,
+      _templates: {
+        ...profileJson._templates,
+        search: {
+          ...profileJson._templates.search,
+          properties: [
+            ...profileJson._templates.search.properties,
+            { name: "_internal_scope", type: "hidden", value: "abc" },
+          ],
+        },
+      },
+    };
+    const props = buildFilterProperties(makeSearchTemplate(hiddenJson));
+    expect(props.find((p) => p.name === "_internal_scope")).toBeUndefined();
+  });
+});
+
 describe("buildFilterProperties — _sort-only template", () => {
   it("returns empty array when the search template contains only the _sort control property", () => {
     const sortOnlyJson = {
@@ -367,5 +440,56 @@ describe("buildFilterProperties — _sort-only template", () => {
       },
     };
     expect(buildFilterProperties(makeSearchTemplate(sortOnlyJson))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// coerceFilterValue / applyFilterValues — the HAL-FORMS codec requires a real
+// number/boolean/Date for these kinds and throws on a raw string (see
+// packages/features/src/entity-list/index.tsx for where this is applied).
+// ---------------------------------------------------------------------------
+
+describe("coerceFilterValue", () => {
+  it("'number' kind: coerces a numeric string, returns undefined for a non-numeric one", () => {
+    expect(coerceFilterValue("number", "42")).toBe(42);
+    expect(coerceFilterValue("number", "abc")).toBeUndefined();
+  });
+
+  it("'boolean' kind: coerces 'true'/'false', returns undefined for anything else", () => {
+    expect(coerceFilterValue("boolean", "true")).toBe(true);
+    expect(coerceFilterValue("boolean", "false")).toBe(false);
+    expect(coerceFilterValue("boolean", "yes")).toBeUndefined();
+  });
+
+  it("'datetime' kind: coerces a valid ISO string to a Date, returns undefined if unparseable", () => {
+    expect(coerceFilterValue("datetime", "2024-01-15T10:30:00Z")).toBeInstanceOf(Date);
+    expect(coerceFilterValue("datetime", "not-a-date")).toBeUndefined();
+  });
+
+  it("'text' kind (and any other kind): passes the value through unchanged", () => {
+    expect(coerceFilterValue("text", "hello")).toBe("hello");
+  });
+});
+
+describe("applyFilterValues", () => {
+  it("coerces each filter by its inputKind and omits values that fail to coerce", () => {
+    const result = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+      title: "hello",
+      "amount.~gte": "100",
+      "amount.~lte": "not-a-number",
+      "due_date~after": "2024-01-15T10:30:00Z",
+    });
+
+    expect(result.value("title").value).toBe("hello");
+    expect(result.value("amount.~gte").value).toBe(100);
+    expect(result.value("amount.~lte").value).toBeUndefined();
+    expect(result.value("due_date~after").value).toBeInstanceOf(Date);
+  });
+
+  it("skips empty-string filter values entirely", () => {
+    const result = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+      title: "",
+    });
+    expect(result.value("title").value).toBeUndefined();
   });
 });

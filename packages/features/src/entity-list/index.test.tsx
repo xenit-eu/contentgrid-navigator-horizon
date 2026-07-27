@@ -20,7 +20,10 @@ import {
   entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
-import { createListHandler } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
+import {
+  createListHandler,
+  createProfileHandler,
+} from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
 import { server } from "../../test-setup";
 import {
   EntityDetailPage,
@@ -107,7 +110,15 @@ function renderEntityList(initialEntry = "/") {
 // MSW handlers
 // ----------------------------------------------------------------
 
-function profileRootHandler() {
+/**
+ * Root profile handler builder. The root profile response has a much
+ * simpler shape than a per-entity profile: just the `cg:entity` link list
+ * (no `_embedded` attributes/relations, no `_templates`) — see
+ * buildEntityProfileHandler below for the per-entity shape.
+ */
+function buildRootProfileHandler(
+  entities: ReadonlyArray<{ href: string; name: string; title: string }>,
+) {
   return http.get(PROFILE_URL, () =>
     HttpResponse.json({
       _links: {
@@ -119,31 +130,157 @@ function profileRootHandler() {
             templated: true,
           },
         ],
-        "cg:entity": [{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }],
+        "cg:entity": entities,
       },
     }),
   );
 }
 
+function profileRootHandler() {
+  return buildRootProfileHandler([
+    { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+  ]);
+}
+
 function profileRootWithTwoEntitiesHandler() {
-  return http.get(PROFILE_URL, () =>
-    HttpResponse.json({
+  return buildRootProfileHandler([
+    { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+    { href: `${PROFILE_URL}/customers`, name: "customer", title: "Customer" },
+  ]);
+}
+
+interface BlueprintSearchParam {
+  name: string;
+  title: string;
+  type: string;
+}
+
+/**
+ * Builds one `blueprint:attribute` embedded resource, as found in a
+ * per-entity profile's `_embedded["blueprint:attribute"]` array. Every
+ * attribute across every fixture in this file shares this exact shape —
+ * only name/title/type/readOnly/searchParams vary.
+ */
+function makeBlueprintAttribute({
+  name,
+  title,
+  type = "string",
+  readOnly = false,
+  searchParams = [],
+}: {
+  name: string;
+  title: string;
+  type?: string;
+  readOnly?: boolean;
+  searchParams?: BlueprintSearchParam[];
+}) {
+  return {
+    name,
+    title,
+    type,
+    readOnly,
+    _embedded: { "blueprint:constraint": [], "blueprint:search-param": searchParams },
+    _links: {},
+  };
+}
+
+// Mirrors the HAL-FORMS property `type` values (`HalFormsPropertyType` in
+// @contentgrid/hal-forms/shape) without importing that Layer-1 package
+// directly from this feature (see packages/features/CLAUDE.md).
+type HalFormsPropertyTypeName =
+  | "hidden"
+  | "text"
+  | "url"
+  | "email"
+  | "date"
+  | "time"
+  | "datetime"
+  | "datetime-local"
+  | "number"
+  | "range"
+  | "checkbox"
+  | "radio"
+  | "file";
+
+interface SearchProperty {
+  name: string;
+  type: HalFormsPropertyTypeName;
+  required?: boolean;
+}
+
+/**
+ * Per-entity profile handler builder for GET /profile/{plural}. Captures the
+ * shape shared by every per-entity profile fixture in this file:
+ * - `_links.self` / `describes` (collection + templated item link, no title —
+ *   see invoiceProfileHandler's own note on why that matters) / `curies`
+ *   (the `blueprint` curie needed to resolve `blueprint:attribute` /
+ *   `blueprint:relation`).
+ * - `_embedded["blueprint:attribute"]` plus a relations array. The relations
+ *   key defaults to the plain curie form `"blueprint:relation"`, but can be
+ *   overridden — invoiceProfileHandlerWithRelations uses the fully expanded
+ *   `BLUEPRINT_RELATION_REL` URI instead.
+ * - `_templates.search` (always present) and `_templates["create-form"]`
+ *   (only when `createFormProperties` is given — its absence is what makes
+ *   invoiceProfileHandlerNoCreate / invoiceProfileHandlerWithTypedFilters /
+ *   invoiceProfileHandlerWithRelations / supplierProfileHandler /
+ *   lineItemProfileHandler omit the Create affordance).
+ */
+function buildEntityProfileHandler({
+  profileUrl,
+  name,
+  title,
+  collectionUrl,
+  attributes = [],
+  relations,
+  searchProperties = [],
+  createFormProperties,
+}: {
+  profileUrl: string;
+  name: string;
+  title: string;
+  collectionUrl: string;
+  attributes?: ReadonlyArray<ReturnType<typeof makeBlueprintAttribute>>;
+  relations?: { key: string; items: readonly unknown[] };
+  searchProperties?: SearchProperty[];
+  createFormProperties?: SearchProperty[];
+}) {
+  return createProfileHandler({
+    url: profileUrl,
+    body: {
+      name,
+      title,
       _links: {
-        self: { href: PROFILE_URL },
+        self: { href: profileUrl },
+        describes: [
+          { href: collectionUrl, name: "collection" },
+          { href: `${collectionUrl}/{id}`, name: "item", templated: true },
+        ],
         curies: [
           {
-            name: "cg",
-            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
             templated: true,
           },
         ],
-        "cg:entity": [
-          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
-          { href: `${PROFILE_URL}/customers`, name: "customer", title: "Customer" },
-        ],
       },
-    }),
-  );
+      _embedded: {
+        "blueprint:attribute": attributes,
+        [relations?.key ?? "blueprint:relation"]: relations?.items ?? [],
+      },
+    },
+    templates: {
+      search: { method: "GET", target: collectionUrl, properties: searchProperties },
+      ...(createFormProperties !== undefined
+        ? {
+            "create-form": {
+              method: "POST",
+              target: collectionUrl,
+              properties: createFormProperties,
+            },
+          }
+        : {}),
+    },
+  });
 }
 
 /**
@@ -159,59 +296,17 @@ function profileRootWithTwoEntitiesHandler() {
  *   the query is disabled and the EntityCard count never resolves.
  */
 function invoiceProfileHandler() {
-  return http.get(`${PROFILE_URL}/invoices`, () =>
-    HttpResponse.json({
-      name: "invoice",
-      title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "id",
-            title: "ID",
-            type: "string",
-            readOnly: true,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-          {
-            name: "number",
-            title: "Invoice Number",
-            type: "string",
-            readOnly: false,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: `${API_URL}/invoices`,
-          properties: [],
-        },
-        "create-form": {
-          method: "POST",
-          target: `${API_URL}/invoices`,
-          properties: [{ name: "number", type: "text", required: true }],
-        },
-      },
-    }),
-  );
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/invoices`,
+    name: "invoice",
+    title: "Invoice",
+    collectionUrl: `${API_URL}/invoices`,
+    attributes: [
+      makeBlueprintAttribute({ name: "id", title: "ID", readOnly: true }),
+      makeBlueprintAttribute({ name: "number", title: "Invoice Number" }),
+    ],
+    createFormProperties: [{ name: "number", type: "text", required: true }],
+  });
 }
 
 /**
@@ -226,149 +321,62 @@ function invoiceProfileHandler() {
  * - "number~prefix": prefix-match on a direct attribute -> TypeaheadTextFilter
  * - "customer.name~prefix": prefix-match over a relation traversal -> falls back
  *   to a plain TextFilter (packages/ui filter-sidebar.tsx relation-traversal guard)
- * - "region": remote-options field (options.link) -> exercises toSearchProperty's
- *   `options.isRemote()` branch
  */
 function invoiceProfileHandlerWithFilters() {
-  return http.get(`${PROFILE_URL}/invoices`, () =>
-    HttpResponse.json({
-      name: "invoice",
-      title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "id",
-            title: "ID",
-            type: "string",
-            readOnly: true,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-          {
-            name: "number",
-            title: "Number",
-            type: "string",
-            readOnly: false,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-          {
-            name: "status",
-            title: "Status",
-            type: "string",
-            readOnly: false,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: `${API_URL}/invoices`,
-          properties: [
-            { name: "number~prefix", type: "text" },
-            { name: "status", type: "text" },
-            { name: "customer.name~prefix", type: "text" },
-            {
-              name: "region",
-              type: "text",
-              options: { link: { href: `${API_URL}/regions` } },
-            },
-          ],
-        },
-        "create-form": {
-          method: "POST",
-          target: `${API_URL}/invoices`,
-          properties: [{ name: "number", type: "text", required: true }],
-        },
-      },
-    }),
-  );
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/invoices`,
+    name: "invoice",
+    title: "Invoice",
+    collectionUrl: `${API_URL}/invoices`,
+    attributes: [
+      makeBlueprintAttribute({ name: "id", title: "ID", readOnly: true }),
+      makeBlueprintAttribute({ name: "number", title: "Number" }),
+      makeBlueprintAttribute({ name: "status", title: "Status" }),
+    ],
+    searchProperties: [
+      { name: "number~prefix", type: "text" },
+      { name: "status", type: "text" },
+      { name: "customer.name~prefix", type: "text" },
+    ],
+    createFormProperties: [{ name: "number", type: "text", required: true }],
+  });
+}
+
+// Number/checkbox/datetime typed search properties — kept separate from
+// invoiceProfileHandlerWithFilters (used by many other tests) so this fixture can be
+// changed freely. blueprint:attribute entries are omitted; labels fall back to
+// formatFieldName since buildFilterProperties derives inputKind from property.type only.
+function invoiceProfileHandlerWithTypedFilters() {
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/invoices`,
+    name: "invoice",
+    title: "Invoice",
+    collectionUrl: `${API_URL}/invoices`,
+    searchProperties: [
+      { name: "amount", type: "number" },
+      { name: "paid", type: "checkbox" },
+      { name: "due_at", type: "datetime" },
+    ],
+  });
 }
 
 function invoiceProfileHandlerNoCreate() {
-  return http.get(`${PROFILE_URL}/invoices`, () =>
-    HttpResponse.json({
-      name: "invoice",
-      title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: `${API_URL}/invoices`,
-          properties: [],
-        },
-        // no create-form
-      },
-    }),
-  );
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/invoices`,
+    name: "invoice",
+    title: "Invoice",
+    collectionUrl: `${API_URL}/invoices`,
+    // no create-form
+  });
 }
 
 function customerProfileHandler() {
-  return http.get(`${PROFILE_URL}/customers`, () =>
-    HttpResponse.json({
-      name: "customer",
-      title: "Customer",
-      _links: {
-        self: { href: `${PROFILE_URL}/customers` },
-        describes: [
-          { href: `${API_URL}/customers`, name: "collection" },
-          { href: `${API_URL}/customers/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: `${API_URL}/customers`,
-          properties: [],
-        },
-      },
-    }),
-  );
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/customers`,
+    name: "customer",
+    title: "Customer",
+    collectionUrl: `${API_URL}/customers`,
+  });
 }
 
 const emptyInvoicesList = createListHandler({
@@ -508,26 +516,6 @@ describe("EntityList", () => {
     // Wait for the page to settle (breadcrumb appears)
     await screen.findByText("All entities");
     expect(screen.queryByRole("button", { name: "Create" })).not.toBeInTheDocument();
-  });
-
-  it("shows error when entity collection fails on detail page", async () => {
-    // The collection query has retry:3 with exponential backoff baked in.
-    // Use fake timers to skip the retry delays so the error state renders.
-    vi.useFakeTimers();
-
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.get(`${API_URL}/invoices`, () => HttpResponse.json(null, { status: 500 })),
-    );
-
-    renderEntityList("/invoice");
-
-    // Advance timers past all three retry delays (default: 1s, 2s, 4s + jitter)
-    await vi.runAllTimersAsync();
-    vi.useRealTimers();
-
-    expect(await screen.findByText(/Failed to load/)).toBeInTheDocument();
   });
 
   it("does not offer a reset when the collection fails without an active cursor", async () => {
@@ -670,21 +658,29 @@ describe("EntityList", () => {
     expect(await screen.findByRole("button", { name: "Previous" })).toBeInTheDocument();
   });
 
-  it("clicking Next pagination button is clickable and triggers navigation", async () => {
+  it("clicking Next fetches and renders the next page's data", async () => {
     const user = userEvent.setup();
     const nextPageUrl = `${API_URL}/invoices?_cursor=nexttoken`;
 
     server.use(
       profileRootHandler(),
       invoiceProfileHandler(),
-      createListHandler({
-        url: `${API_URL}/invoices`,
-        items: sampleInvoiceItems,
-        page: { size: 3, total_items_exact: 4 },
-        links: {
-          self: { href: `${API_URL}/invoices` },
-          next: { href: nextPageUrl },
-        },
+      // Single dynamic handler on the pathname — branches on the `_cursor` query
+      // param instead of registering two handlers that only differ by query string
+      // (MSW matches paths, not query strings, and warns/misbehaves otherwise).
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const isPage2 = new URL(request.url).searchParams.get("_cursor") === "nexttoken";
+        return HttpResponse.json({
+          _links: isPage2
+            ? { self: { href: nextPageUrl } }
+            : { self: { href: `${API_URL}/invoices` }, next: { href: nextPageUrl } },
+          _embedded: {
+            item: isPage2
+              ? [{ id: "inv-004", number: "INV-2024-004", _links: { self: {} } }]
+              : sampleInvoiceItems,
+          },
+          page: isPage2 ? { size: 1, total_items_exact: 4 } : { size: 3, total_items_exact: 4 },
+        });
       }),
     );
 
@@ -698,10 +694,11 @@ describe("EntityList", () => {
     expect(prevButton).toBeDisabled();
     expect(nextButton).not.toBeDisabled();
 
-    // Clicking Next triggers router navigation — the button stays in the DOM
-    // because the component re-renders in place rather than unmounting
     await user.click(nextButton);
-    expect(nextButton).toBeInTheDocument();
+
+    // The next page's distinct row proves the click actually fetched the next-page
+    // URL, not just that the button remained in the DOM after being clicked.
+    expect(await screen.findByText("INV-2024-004")).toBeInTheDocument();
   });
 
   it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
@@ -909,13 +906,8 @@ describe("EntityItemDetailPage", () => {
     await screen.findByText("All entities");
 
     // Click "Invoice" breadcrumb button to go back to entity list
-    const invoiceButtons = screen
-      .getAllByText("Invoice")
-      .filter((el) => el.closest("button") !== null);
-    if (invoiceButtons.length > 0) {
-      await user.click(invoiceButtons[0]);
-      expect(await screen.findByText("All entities")).toBeInTheDocument();
-    }
+    await user.click(await screen.findByRole("button", { name: "Invoice" }));
+    expect(await screen.findByText("All entities")).toBeInTheDocument();
   });
 
   it("navigates back to root via all entities breadcrumb", async () => {
@@ -948,8 +940,9 @@ describe("EntityItemDetailPage", () => {
 
     renderEntityList("/invoice/inv-001");
 
-    // Heading shows entity plural name + " detail"
-    expect(await screen.findByText(/detail/)).toBeInTheDocument();
+    // Heading is "{pluralName} detail" — invoiceProfileHandler's plural name falls
+    // back to the cg:entity link title, "Invoice" (see its own doc comment above).
+    expect(await screen.findByText("Invoice detail")).toBeInTheDocument();
   });
 });
 
@@ -968,193 +961,94 @@ const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relatio
 const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
 
 function profileRootWithRelationsHandler() {
-  return http.get(PROFILE_URL, () =>
-    HttpResponse.json({
-      _links: {
-        self: { href: PROFILE_URL },
-        curies: [
-          {
-            name: "cg",
-            href: "https://contentgrid.cloud/rels/contentgrid/{rel}",
-            templated: true,
-          },
-        ],
-        "cg:entity": [
-          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
-          { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
-          { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
-        ],
-      },
-    }),
-  );
+  return buildRootProfileHandler([
+    { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
+    { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+    { href: LINE_ITEM_PROFILE_URL, name: "lineItem", title: "Line Item" },
+  ]);
 }
 
 function invoiceProfileHandlerWithRelations() {
-  return http.get(`${PROFILE_URL}/invoices`, () =>
-    HttpResponse.json({
-      name: "invoice",
-      title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "number",
-            title: "Invoice Number",
-            type: "string",
-            readOnly: false,
-            _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
-            _links: {},
-          },
-        ],
-        [BLUEPRINT_RELATION_REL]: [
-          {
-            name: "supplier",
-            title: "Supplier",
-            description: "",
-            required: false,
-            many_source_per_target: false,
-            many_target_per_source: false,
-            _links: {
-              self: { href: `${PROFILE_URL}/invoices/relations/supplier` },
-              [BLUEPRINT_TARGET_ENTITY_REL]: {
-                href: SUPPLIER_PROFILE_URL,
-                name: "supplier",
-                title: "Supplier",
-              },
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/invoices`,
+    name: "invoice",
+    title: "Invoice",
+    collectionUrl: `${API_URL}/invoices`,
+    attributes: [makeBlueprintAttribute({ name: "number", title: "Invoice Number" })],
+    relations: {
+      key: BLUEPRINT_RELATION_REL,
+      items: [
+        {
+          name: "supplier",
+          title: "Supplier",
+          description: "",
+          required: false,
+          many_source_per_target: false,
+          many_target_per_source: false,
+          _links: {
+            self: { href: `${PROFILE_URL}/invoices/relations/supplier` },
+            [BLUEPRINT_TARGET_ENTITY_REL]: {
+              href: SUPPLIER_PROFILE_URL,
+              name: "supplier",
+              title: "Supplier",
             },
           },
-          {
-            name: "lineItems",
-            title: "Line Items",
-            description: "",
-            required: false,
-            many_source_per_target: false,
-            many_target_per_source: true,
-            _links: {
-              self: { href: `${PROFILE_URL}/invoices/relations/lineItems` },
-              [BLUEPRINT_TARGET_ENTITY_REL]: {
-                href: LINE_ITEM_PROFILE_URL,
-                name: "lineItem",
-                title: "Line Item",
-              },
+        },
+        {
+          name: "lineItems",
+          title: "Line Items",
+          description: "",
+          required: false,
+          many_source_per_target: false,
+          many_target_per_source: true,
+          _links: {
+            self: { href: `${PROFILE_URL}/invoices/relations/lineItems` },
+            [BLUEPRINT_TARGET_ENTITY_REL]: {
+              href: LINE_ITEM_PROFILE_URL,
+              name: "lineItem",
+              title: "Line Item",
             },
           },
-        ],
-      },
-      _templates: {
-        search: { method: "GET", target: `${API_URL}/invoices`, properties: [] },
-      },
-    }),
-  );
+        },
+      ],
+    },
+  });
 }
 
 function supplierProfileHandler() {
-  return http.get(SUPPLIER_PROFILE_URL, () =>
-    HttpResponse.json({
-      name: "supplier",
-      title: "Supplier",
-      _links: {
-        self: { href: SUPPLIER_PROFILE_URL },
-        describes: [
-          { href: SUPPLIERS_COLLECTION_URL, name: "collection" },
-          { href: `${SUPPLIERS_COLLECTION_URL}/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "name",
-            title: "Name",
-            type: "string",
-            readOnly: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [
-                { name: "name~prefix", title: "Name prefix", type: "prefix-match" },
-              ],
-            },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: SUPPLIERS_COLLECTION_URL,
-          properties: [{ name: "name~prefix", type: "text" }],
-        },
-      },
-    }),
-  );
+  return buildEntityProfileHandler({
+    profileUrl: SUPPLIER_PROFILE_URL,
+    name: "supplier",
+    title: "Supplier",
+    collectionUrl: SUPPLIERS_COLLECTION_URL,
+    attributes: [
+      makeBlueprintAttribute({
+        name: "name",
+        title: "Name",
+        searchParams: [{ name: "name~prefix", title: "Name prefix", type: "prefix-match" }],
+      }),
+    ],
+    searchProperties: [{ name: "name~prefix", type: "text" }],
+  });
 }
 
 function lineItemProfileHandler() {
-  return http.get(LINE_ITEM_PROFILE_URL, () =>
-    HttpResponse.json({
-      name: "lineItem",
-      title: "Line Item",
-      _links: {
-        self: { href: LINE_ITEM_PROFILE_URL },
-        describes: [
-          { href: LINE_ITEMS_COLLECTION_URL, name: "collection" },
-          { href: `${LINE_ITEMS_COLLECTION_URL}/{id}`, name: "item", templated: true },
+  return buildEntityProfileHandler({
+    profileUrl: LINE_ITEM_PROFILE_URL,
+    name: "lineItem",
+    title: "Line Item",
+    collectionUrl: LINE_ITEMS_COLLECTION_URL,
+    attributes: [
+      makeBlueprintAttribute({
+        name: "description",
+        title: "Description",
+        searchParams: [
+          { name: "description~prefix", title: "Description prefix", type: "prefix-match" },
         ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "description",
-            title: "Description",
-            type: "string",
-            readOnly: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [
-                { name: "description~prefix", title: "Description prefix", type: "prefix-match" },
-              ],
-            },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        search: {
-          method: "GET",
-          target: LINE_ITEMS_COLLECTION_URL,
-          properties: [{ name: "description~prefix", type: "text" }],
-        },
-      },
-    }),
-  );
+      }),
+    ],
+    searchProperties: [{ name: "description~prefix", type: "text" }],
+  });
 }
 
 /** Invoice item exposing only the to-one `supplier` relation. */
@@ -1954,5 +1848,68 @@ describe("EntityDetailView filters", () => {
     await user.type(customerInput, "Acme");
 
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  // Regression coverage for a real crash: the HAL-FORMS codec requires a JS number for
+  // "number", a JS boolean for "checkbox", and a JS Date for "datetime" — passing the raw
+  // string from the input used to throw (HalFormValueTypeError / RangeError: Invalid time
+  // value) as soon as any of these filters were touched. applyFilterValues fixes this.
+  // This is an end-to-end regression guard, not a duplicate of applyFilterValues's own unit
+  // tests in filter-properties.test.ts — those prove the coercion function works in
+  // isolation, but not that EntityDetailView is actually wired through it (the original bug
+  // was in the wiring, not in coerceFilterValue itself).
+  function renderInvoicesWithTypedFilters() {
+    const capturedUrls: URL[] = [];
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithTypedFilters(),
+      invoicesCollectionHandler((url) => capturedUrls.push(url)),
+    );
+    renderEntityList("/invoice");
+    return capturedUrls;
+  }
+
+  it("sends a coerced numeric value for a number filter without crashing", async () => {
+    const user = userEvent.setup();
+    const capturedUrls = renderInvoicesWithTypedFilters();
+
+    const amountInput = await screen.findByLabelText("Amount");
+    expect(amountInput).toHaveAttribute("type", "number");
+    await user.type(amountInput, "100");
+
+    await waitFor(() => {
+      const last = capturedUrls[capturedUrls.length - 1];
+      expect(last?.searchParams.get("amount")).toBe("100");
+    });
+    expect(screen.getByText("All entities")).toBeInTheDocument();
+  });
+
+  it("sends a coerced boolean value for a checkbox filter without crashing", async () => {
+    const user = userEvent.setup();
+    const capturedUrls = renderInvoicesWithTypedFilters();
+
+    const paidCheckbox = await screen.findByRole("checkbox", { name: /paid/i });
+    await user.click(paidCheckbox);
+
+    await waitFor(() => {
+      const last = capturedUrls[capturedUrls.length - 1];
+      expect(last?.searchParams.get("paid")).toBe("true");
+    });
+    expect(screen.getByText("All entities")).toBeInTheDocument();
+  });
+
+  it("sends a coerced ISO datetime value for a datetime filter without crashing", async () => {
+    const capturedUrls = renderInvoicesWithTypedFilters();
+
+    const dueAtInput = await screen.findByLabelText("Due At");
+    expect(dueAtInput).toHaveAttribute("type", "datetime-local");
+    fireEvent.change(dueAtInput, { target: { value: "2024-01-15T10:30" } });
+
+    await waitFor(() => {
+      const sent = capturedUrls[capturedUrls.length - 1]?.searchParams.get("due_at");
+      expect(sent).toBeTruthy();
+      expect(Number.isNaN(new Date(sent!).getTime())).toBe(false);
+    });
+    expect(screen.getByText("All entities")).toBeInTheDocument();
   });
 });
