@@ -9,20 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as ConfigRouteImport } from './routes/config'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppEntityRouteImport } from './routes/_app/$entity'
 import { Route as AppEntityIndexRouteImport } from './routes/_app/$entity/index'
 import { Route as AppEntityItemIdRouteImport } from './routes/_app/$entity/$itemId'
 
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ConfigRoute = ConfigRouteImport.update({
   id: '/config',
   path: '/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -54,8 +54,8 @@ export interface FileRoutesByFullPath {
   '/$entity/': typeof AppEntityIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof AppIndexRoute
   '/config': typeof ConfigRoute
+  '/': typeof AppIndexRoute
   '/$entity/$itemId': typeof AppEntityItemIdRoute
   '/$entity': typeof AppEntityIndexRoute
 }
@@ -72,7 +72,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/config' | '/$entity' | '/$entity/$itemId' | '/$entity/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/config' | '/$entity/$itemId' | '/$entity'
+  to: '/config' | '/' | '/$entity/$itemId' | '/$entity'
   id:
     | '__root__'
     | '/_app'
@@ -90,18 +90,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_app': {
-      id: '/_app'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/config': {
       id: '/config'
       path: '/config'
       fullPath: '/config'
       preLoaderRoute: typeof ConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
