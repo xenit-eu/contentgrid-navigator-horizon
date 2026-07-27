@@ -2,8 +2,12 @@ import { useState } from "react";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { createValues } from "@contentgrid/hal-forms/values";
 import { AttributeKind } from "../../accessors/entity-item";
+import type { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
-import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
+import type {
+  SearchHalFormTemplate,
+  SearchHalFormTemplateProperty,
+} from "../../accessors/extended-forms/search-form";
 import type { SearchRequestSpec } from "../../api/requests";
 import { useProfileEntities } from "../profile/use-profile-entity";
 import { useDebouncedValue } from "../use-debounced-value";
@@ -48,6 +52,74 @@ export interface UseTypeaheadOptions {
   searchValues?: HalFormValues<SearchRequestSpec>;
 }
 
+/** The relation's target profile in relation mode; the source profile itself otherwise. */
+function resolveTargetProfile(
+  isRelation: boolean,
+  searchProperty: SearchHalFormTemplateProperty | undefined,
+  profileEntity: ProfileEntity,
+  allProfiles: readonly ProfileEntity[],
+): ProfileEntity | undefined {
+  if (!isRelation) return profileEntity;
+  return searchProperty?.profileRelation?.getTargetProfile(allProfiles);
+}
+
+/**
+ * Relation-traversal filter params live on the TARGET entity's own search template under
+ * their local (un-prefixed) name — e.g. "customer.first_name~prefix" on the invoice's
+ * template corresponds to "first_name~prefix" on the customer's own template.
+ */
+function resolveLocalPropertyName(
+  isRelation: boolean,
+  searchProperty: SearchHalFormTemplateProperty | undefined,
+  relationName: string | undefined,
+): string | undefined {
+  if (!isRelation || !searchProperty || !relationName) return searchProperty?.property.name;
+  return searchProperty.property.name.slice(relationName.length + 1);
+}
+
+/** The search property to actually query with — resolved against the target entity's own template in relation mode. */
+function resolveTargetSearchProperty(
+  isRelation: boolean,
+  localPropertyName: string | undefined,
+  targetSearchTemplate: SearchHalFormTemplate | null | undefined,
+  searchProperty: SearchHalFormTemplateProperty | undefined,
+): SearchHalFormTemplateProperty | undefined {
+  if (!isRelation) return searchProperty;
+  if (!localPropertyName) return undefined;
+  return targetSearchTemplate?.getSearchPropertyByName(localPropertyName);
+}
+
+/**
+ * Relation mode starts fresh: the parent's searchValues are encoded against the parent's
+ * template and don't apply to the related entity's own collection.
+ */
+function computeBaseSearchValues(
+  enabled: boolean,
+  targetSearchTemplate: SearchHalFormTemplate | null | undefined,
+  isRelation: boolean,
+  searchValues: HalFormValues<SearchRequestSpec> | undefined,
+): HalFormValues<SearchRequestSpec> | undefined {
+  if (!enabled || !targetSearchTemplate) return undefined;
+  if (isRelation) return createValues(targetSearchTemplate.template);
+  return searchValues ?? createValues(targetSearchTemplate.template);
+}
+
+/** Unique, non-empty plain string values of `attributeName` across the collection's items. */
+function extractSuggestions(
+  collection: EntityItemCollection | undefined,
+  attributeName: string | undefined,
+): string[] {
+  if (!collection || !attributeName) return [];
+  const found = new Set<string>();
+  for (const item of collection.items) {
+    const attribute = item.attributes.find((attr) => attr.value.name === attributeName);
+    if (attribute?.value.kind !== AttributeKind.PLAIN) continue;
+    const { value } = attribute.value;
+    if (typeof value === "string" && value.length > 0) found.add(value);
+  }
+  return [...found];
+}
+
 export function useTypeahead({
   profileEntity,
   searchProperty,
@@ -64,24 +136,20 @@ export function useTypeahead({
   const isRelation = !!searchProperty?.isOverRelation;
   const relationName = searchProperty?.profileRelation?.name;
 
-  const targetProfile: ProfileEntity | undefined = isRelation
-    ? searchProperty?.profileRelation?.getTargetProfile(profileResults.flatMap((r) => r.data ?? []))
-    : profileEntity;
-
-  // Relation-traversal filter params live on the TARGET entity's own search template under
-  // their local (un-prefixed) name — e.g. "customer.first_name~prefix" on the invoice's
-  // template corresponds to "first_name~prefix" on the customer's own template.
-  const localPropertyName =
-    isRelation && searchProperty && relationName
-      ? searchProperty.property.name.slice(relationName.length + 1)
-      : searchProperty?.property.name;
-
+  const targetProfile = resolveTargetProfile(
+    isRelation,
+    searchProperty,
+    profileEntity,
+    profileResults.flatMap((r) => r.data ?? []),
+  );
+  const localPropertyName = resolveLocalPropertyName(isRelation, searchProperty, relationName);
   const targetSearchTemplate = targetProfile?.searchTemplate;
-  const targetSearchProperty = isRelation
-    ? localPropertyName
-      ? targetSearchTemplate?.getSearchPropertyByName(localPropertyName)
-      : undefined
-    : searchProperty;
+  const targetSearchProperty = resolveTargetSearchProperty(
+    isRelation,
+    localPropertyName,
+    targetSearchTemplate,
+    searchProperty,
+  );
 
   // Both must meet minLength: query clears results instantly on empty; debouncedQuery gates the fetch.
   // Also disabled until a target property has resolved (relation mode: also needs targetProfile).
@@ -91,15 +159,12 @@ export function useTypeahead({
     query.length >= minLength &&
     debouncedQuery.length >= minLength;
 
-  const baseSearchValues =
-    !enabled || !targetSearchTemplate
-      ? undefined
-      : isRelation
-        ? // Relation mode starts fresh: the parent's searchValues are encoded against the
-          // parent's template and don't apply to the related entity's own collection.
-          createValues(targetSearchTemplate.template)
-        : (searchValues ?? createValues(targetSearchTemplate.template));
-
+  const baseSearchValues = computeBaseSearchValues(
+    enabled,
+    targetSearchTemplate,
+    isRelation,
+    searchValues,
+  );
   const collectionSearchValues =
     baseSearchValues && targetSearchProperty
       ? baseSearchValues.withValue(targetSearchProperty.property.name, debouncedQuery)
@@ -127,20 +192,7 @@ export function useTypeahead({
   );
 
   const attributeName = targetSearchProperty?.profileAttribute?.name;
-  const suggestions: string[] = [];
-  if (entityItemCollection && attributeName) {
-    const found = new Set<string>();
-    for (const item of entityItemCollection.items) {
-      const attribute = item.attributes.find((attr) => attr.value.name === attributeName);
-      if (
-        attribute?.value.kind === AttributeKind.PLAIN &&
-        typeof attribute.value.value === "string"
-      ) {
-        if (attribute.value.value.length > 0) found.add(attribute.value.value);
-      }
-    }
-    suggestions.push(...found);
-  }
+  const suggestions = extractSuggestions(entityItemCollection, attributeName);
 
   return {
     results: enabled ? suggestions : [],
