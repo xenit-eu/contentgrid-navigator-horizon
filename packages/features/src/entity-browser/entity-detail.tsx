@@ -1,10 +1,13 @@
 import { useCallback } from "react";
+import type { QueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   type EntityItem,
   type EntitySearchState,
   type ProfileEntity,
+  type TypedFetch,
   createValues,
+  ensureEntityItemCollection,
   extractCursorFromHref,
   useCreateEntityItem,
   useEntityItemCollection,
@@ -28,6 +31,34 @@ import {
 } from "@contentgrid/ui";
 import { formatAttributeValue } from "./attribute-format";
 import type { AnyNavigateFn } from "./navigate";
+
+// ---------------------------------------------------------------------------
+// Route loader — shared by both apps' $entity/index.tsx route files.
+// TanStack Router requires a per-app route file, but the prefetch logic itself
+// is identical, so it lives here once instead of being copy-pasted twice.
+// ---------------------------------------------------------------------------
+
+export async function ensureEntityDetailLoaderData(
+  queryClient: QueryClient,
+  apiFetch: TypedFetch,
+  profileUrl: string,
+  profileEntity: ProfileEntity,
+  cursor: string | undefined,
+): Promise<void> {
+  try {
+    const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
+    await ensureEntityItemCollection(
+      queryClient,
+      apiFetch,
+      { profileEntity, searchParams },
+      profileUrl,
+    );
+  } catch {
+    // Swallowed: an uncaught loader rejection would block EntityDetailPage
+    // from mounting at all. useEntityItemCollection's own isError handling
+    // takes over once the component renders.
+  }
+}
 
 // ---------------------------------------------------------------------------
 // EntityDetailPage — $entity route component (reads path + cursor search param)

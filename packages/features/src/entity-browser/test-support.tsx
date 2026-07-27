@@ -40,7 +40,7 @@ export function createTestRouter(initialEntry = "/") {
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
 
-  function Providers({ children }: { children: ReactNode }) {
+  function Providers({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
         <NavigatorDataProvider
