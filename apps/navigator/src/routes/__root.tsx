@@ -14,6 +14,10 @@ function RootComponent() {
     return null;
   }
 
+  if (auth.error) {
+    return <SignInGate onSignIn={() => auth.signinRedirect()} error={auth.error.message} />;
+  }
+
   if (!auth.isAuthenticated) {
     return <SignInGate onSignIn={() => auth.signinRedirect()} />;
   }
