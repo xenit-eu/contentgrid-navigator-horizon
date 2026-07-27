@@ -33,7 +33,7 @@ export interface MockXhr {
 
 export function makeFakeXhr(): {
   FakeXMLHttpRequest: new () => MockXhr;
-  getLastXhr: () => MockXhr;
+  getLastXhr: () => MockXhr | undefined;
 } {
   const instances: MockXhr[] = [];
 
@@ -60,7 +60,20 @@ export function makeFakeXhr(): {
     }
   }
 
-  return { FakeXMLHttpRequest: FakeXHR, getLastXhr: () => instances[instances.length - 1] };
+  return { FakeXMLHttpRequest: FakeXHR, getLastXhr: () => instances.at(-1) };
+}
+
+/**
+ * Narrows a `getLastXhr()` result from `MockXhr | undefined` to `MockXhr`.
+ * Use only once the test has already established that an instance must exist
+ * (e.g. after a `waitFor` on `.send`, or synchronously right after invoking an
+ * XHR-backed fetch) — throws with a clear message rather than masking a broken
+ * assumption behind a non-null assertion.
+ */
+export function assertXhrExists(xhr: MockXhr | undefined): asserts xhr is MockXhr {
+  if (xhr === undefined) {
+    throw new Error("Expected makeFakeXhr() to have recorded an XHR instance by now");
+  }
 }
 
 export const BASE = "https://api.example.com";

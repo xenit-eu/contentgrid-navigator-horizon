@@ -20,11 +20,11 @@
 import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
-import { type MockXhr, makeFakeXhr, noopSupplier } from "../hooks/test-utils";
+import { type MockXhr, assertXhrExists, makeFakeXhr, noopSupplier } from "../hooks/test-utils";
 import { createContentUploadClient } from "./client";
 import { createXhrFetch } from "./xhr-fetch";
 
-function stubXhr(): { getLastXhr: () => MockXhr } {
+function stubXhr(): { getLastXhr: () => MockXhr | undefined } {
   const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
   vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
   return { getLastXhr };
@@ -56,6 +56,7 @@ describe("createXhrFetch — header forwarding", () => {
 
     const promise = xhrFetch(request);
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.status = 204;
@@ -83,6 +84,7 @@ describe("createXhrFetch — upload progress", () => {
       new Request("https://api.example.com/x", { method: "PUT", body: "hello" }),
     );
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.upload.onprogress?.({ lengthComputable: true, loaded: 33, total: 100 });
@@ -102,6 +104,7 @@ describe("createXhrFetch — upload progress", () => {
       new Request("https://api.example.com/x", { method: "PUT", body: "hello" }),
     );
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.upload.onprogress?.({ lengthComputable: false, loaded: 33, total: 100 });
@@ -122,6 +125,7 @@ describe("createXhrFetch — response construction", () => {
       new Request("https://api.example.com/x", { method: "PUT", body: "hello" }),
     );
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.status = 204;
@@ -141,6 +145,7 @@ describe("createXhrFetch — response construction", () => {
 
     const promise = xhrFetch(new Request("https://api.example.com/x"));
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.status = 412;
@@ -162,6 +167,7 @@ describe("createXhrFetch — transport-level failures", () => {
 
     const promise = xhrFetch(new Request("https://api.example.com/x"));
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.onerror?.();
@@ -174,6 +180,7 @@ describe("createXhrFetch — transport-level failures", () => {
 
     const promise = xhrFetch(new Request("https://api.example.com/x"));
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.ontimeout?.();
@@ -186,6 +193,7 @@ describe("createXhrFetch — transport-level failures", () => {
 
     const promise = xhrFetch(new Request("https://api.example.com/x"));
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.status = 0;
@@ -224,6 +232,7 @@ describe("createXhrFetch — abort", () => {
       }),
     );
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     controller.abort();
@@ -254,7 +263,7 @@ describe("createXhrFetch — abort", () => {
     await expect(promise).rejects.toMatchObject({ name: "AbortError" });
 
     const xhr = getLastXhr();
-    expect(xhr).toBeDefined();
+    assertXhrExists(xhr);
     expect(xhr.send).not.toHaveBeenCalled();
   });
 });
@@ -266,6 +275,7 @@ describe("createXhrFetch — GET requests", () => {
 
     const promise = xhrFetch(new Request("https://api.example.com/x", { method: "GET" }));
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     expect(xhr.send).toHaveBeenCalledWith(null);
@@ -293,6 +303,7 @@ describe("createContentUploadClient — problem-details regression guard", () =>
     // XHR instance doesn't exist yet at this point — re-query inside waitFor.
     await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
 
     xhr.status = 412;
     xhr.statusText = "Precondition Failed";

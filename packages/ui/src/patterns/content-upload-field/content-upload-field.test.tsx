@@ -191,13 +191,12 @@ describe("ContentUploadField — upload progress", () => {
     expect(screen.getByRole("progressbar", { name: /upload progress/i })).toBeInTheDocument();
   });
 
-  it("sets aria-valuenow to the current progress percentage", () => {
+  it("sets the current progress percentage as the progress value", () => {
     const file = makeFile("doc.pdf", "application/pdf");
     render(<ContentUploadField file={file} onFileChange={vi.fn()} uploadProgress={65} />);
-    expect(screen.getByRole("progressbar", { name: /upload progress/i })).toHaveAttribute(
-      "aria-valuenow",
-      "65",
-    );
+    // Native <progress> maps `value` to the accessible aria-valuenow — it isn't
+    // reflected as a literal DOM attribute, so assert on the element property instead.
+    expect(screen.getByRole("progressbar", { name: /upload progress/i })).toHaveValue(65);
   });
 
   it("does not render a progress bar when uploadProgress is undefined", () => {

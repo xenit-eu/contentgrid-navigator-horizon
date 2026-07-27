@@ -28,7 +28,14 @@ import ProfileEntity from "../../accessors/entity-profile";
 import { type TypedFetch, createContentClient, createContentUploadClient } from "../../api/client";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
-import { BASE, makeFakeXhr, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
+import {
+  BASE,
+  assertXhrExists,
+  makeFakeXhr,
+  makeQueryClient,
+  makeWrapper,
+  noopSupplier,
+} from "../test-utils";
 import { useDownloadContent, useUploadContent } from "./use-content";
 
 afterEach(() => {
@@ -395,8 +402,9 @@ describe("useUploadContent — progress", () => {
       result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
     });
 
-    await waitFor(() => expect(getLastXhr().send).toHaveBeenCalled());
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
 
     act(() => {
       xhr.upload.onprogress?.({ lengthComputable: true, loaded: 40, total: 100 });
@@ -427,8 +435,9 @@ describe("useUploadContent — progress", () => {
       result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
     });
 
-    await waitFor(() => expect(getLastXhr().send).toHaveBeenCalled());
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
 
     act(() => {
       xhr.upload.onprogress?.({ lengthComputable: true, loaded: 25, total: 100 });
@@ -451,8 +460,9 @@ describe("useUploadContent — progress", () => {
       result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
     });
 
-    await waitFor(() => expect(getLastXhr().send).toHaveBeenCalled());
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
 
     act(() => {
       xhr.upload.onprogress?.({ lengthComputable: false, loaded: 999, total: 1000 });
@@ -476,8 +486,9 @@ describe("useUploadContent — cancel", () => {
       result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
     });
 
-    await waitFor(() => expect(getLastXhr().send).toHaveBeenCalled());
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
     const xhr = getLastXhr();
+    assertXhrExists(xhr);
 
     act(() => {
       xhr.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 100 });
