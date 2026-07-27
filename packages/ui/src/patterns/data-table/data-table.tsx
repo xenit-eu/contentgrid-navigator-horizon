@@ -5,6 +5,7 @@ import {
   ArrowsDownUpIcon as ArrowsDownUp,
   DotsThreeIcon as DotsThree,
   EyeIcon as Eye,
+  LinkBreakIcon as LinkBreak,
   PencilSimpleIcon as PencilSimple,
   TrashIcon as Trash,
   TrayIcon as Tray,
@@ -85,6 +86,10 @@ export interface DataTableProps {
   onDelete?: (id: string) => void;
   /** When true, the delete confirmation dialog shows a loading state */
   isDeleting?: boolean;
+  /** Called immediately when the user clicks the inline unlink icon on a row. If undefined the unlink button is hidden. */
+  onUnlink?: (id: string) => void;
+  /** When true, the unlink icon buttons are disabled */
+  isUnlinking?: boolean;
   /** Called when the user clicks the row itself (outside the action menu) */
   onRowClick?: (id: string) => void;
 }
@@ -102,6 +107,8 @@ export function DataTable({
   onEdit,
   onDelete,
   isDeleting,
+  onUnlink,
+  isUnlinking,
   onRowClick,
 }: Readonly<DataTableProps>) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -135,7 +142,7 @@ export function DataTable({
     return nextPrompt ?? currentPrompt;
   }
 
-  const hasActions = !!(onViewDetails || onEdit || onDelete);
+  const hasActions = !!(onViewDetails || onEdit || onDelete || onUnlink);
 
   return (
     <>
@@ -188,58 +195,82 @@ export function DataTable({
                     ))}
                     {hasActions && (
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <DotsThree className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {onViewDetails && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onViewDetails(row.id);
-                                }}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View details
-                              </DropdownMenuItem>
-                            )}
-                            {onEdit && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEdit(row.id);
-                                }}
-                              >
-                                <PencilSimple className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  variant="destructive"
+                        <div className="flex items-center justify-end gap-1">
+                          {onUnlink && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  disabled={isUnlinking}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setDeleteId(row.id);
+                                    onUnlink(row.id);
                                   }}
                                 >
-                                  <Trash className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                  <LinkBreak className="h-4 w-4" />
+                                  <span className="sr-only">Unlink</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Unlink</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {(onViewDetails || onEdit || onDelete) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <DotsThree className="h-4 w-4" />
+                                  <span className="sr-only">Open menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {onViewDetails && (
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onViewDetails(row.id);
+                                    }}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View details
+                                  </DropdownMenuItem>
+                                )}
+                                {onEdit && (
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onEdit(row.id);
+                                    }}
+                                  >
+                                    <PencilSimple className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {onDelete && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteId(row.id);
+                                      }}
+                                    >
+                                      <Trash className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

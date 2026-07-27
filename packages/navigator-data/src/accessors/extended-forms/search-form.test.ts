@@ -565,3 +565,33 @@ describe("SearchHalFormTemplate with allProfiles (relation attribute resolution)
     expect(customerProp?.profileAttribute?.name).toBe("name");
   });
 });
+
+describe("SearchHalFormTemplate.withHiddenParams", () => {
+  it("returns the same instance when params is empty", () => {
+    const tmpl = makeSearchTemplate();
+    expect(tmpl.withHiddenParams({})).toBe(tmpl);
+  });
+
+  it("bakes in hidden properties for each param and preserves existing properties", () => {
+    const tmpl = makeSearchTemplate();
+    const withParams = tmpl.withHiddenParams({ _internal_invoice__products: "019d" });
+
+    expect(withParams).not.toBe(tmpl);
+    const hiddenProp = withParams.template.properties.find(
+      (p) => p.name === "_internal_invoice__products",
+    );
+    expect(hiddenProp?.type).toBe("hidden");
+    expect(hiddenProp?.value).toBe("019d");
+    // Original search properties are still present on the new template
+    expect(withParams.template.properties.some((p) => p.name === "number")).toBe(true);
+  });
+
+  it("bakes in multiple hidden properties when given multiple params", () => {
+    const tmpl = makeSearchTemplate();
+    const withParams = tmpl.withHiddenParams({ _internal_a: "1", _internal_b: "2" });
+
+    const names = withParams.template.properties.map((p) => p.name);
+    expect(names).toContain("_internal_a");
+    expect(names).toContain("_internal_b");
+  });
+});

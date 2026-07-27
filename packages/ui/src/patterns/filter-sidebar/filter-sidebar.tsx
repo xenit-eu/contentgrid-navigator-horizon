@@ -11,22 +11,20 @@ import {
   SelectValue,
 } from "../../primitives/select";
 import { Separator } from "../../primitives/separator";
+import {
+  SEARCH_TYPE_LABELS,
+  type SearchProperty,
+  formatFieldLabel,
+  formatWords,
+  isDateProperty,
+  parseName,
+} from "../search-property-utils";
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
-/** A single filterable search parameter, as returned from the HAL-Forms profile. */
-export interface SearchProperty {
-  /** Parameter name; may use `field~op` (e.g. "created~greater-than") or `field.~op` (range-pair, e.g. "created.~from") format */
-  name: string;
-  /** Optional human-readable label */
-  prompt?: string;
-  /** Data type, e.g. "string", "date", "datetime" */
-  type: string;
-  /** Available values for enum-like fields */
-  options?: { inline?: string[] };
-}
+export type { SearchProperty } from "../search-property-utils";
 
 export interface FilterSidebarProps {
   /** All filterable search properties */
@@ -40,41 +38,8 @@ export interface FilterSidebarProps {
 }
 
 // ---------------------------------------------------------------------------
-// Internal helpers (no external deps beyond date-fns which is in package.json)
+// Internal helpers
 // ---------------------------------------------------------------------------
-
-const UPPERCASE_WORDS: Record<string, string> = {
-  id: "ID",
-  url: "URL",
-  uri: "URI",
-  api: "API",
-  uuid: "UUID",
-};
-
-function formatWords(text: string): string {
-  return text
-    .replace(/[._]/g, " ")
-    .split(" ")
-    .map((w) => UPPERCASE_WORDS[w.toLowerCase()] ?? w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-/**
- * Extract base field name and operator from `field~op` (legacy) or `field.~op` (range-pair) patterns.
- * Legacy: op is the bare operator name, e.g. "greater-than".
- * Range-pair: op includes the leading tilde, e.g. "~from" — SEARCH_TYPE_LABELS keys reflect this.
- */
-function parseName(name: string): { base: string; op: string | null } {
-  const dotTildeIdx = name.indexOf(".~");
-  if (dotTildeIdx !== -1) {
-    return { base: name.slice(0, dotTildeIdx), op: name.slice(dotTildeIdx + 1) };
-  }
-  const tildeIdx = name.indexOf("~");
-  if (tildeIdx !== -1) {
-    return { base: name.slice(0, tildeIdx), op: name.slice(tildeIdx + 1) };
-  }
-  return { base: name, op: null };
-}
 
 /** True for range-pair operator names like "created.~from" (dot before the tilde). */
 function isRangePair(name: string): boolean {
@@ -86,48 +51,17 @@ function encodeDateInputValue(rawValue: string, rangePair: boolean): string {
   return rangePair ? rawValue : dateToApi(rawValue);
 }
 
-function formatFieldLabel(prop: SearchProperty): string {
-  if (prop.prompt) return prop.prompt;
-  return formatWords(parseName(prop.name).base);
-}
-
-const SEARCH_TYPE_LABELS: Record<string, string> = {
-  prefix: "prefix",
-  "prefix-match": "prefix",
-  "exact-match": "exact",
-  "greater-than": "after",
-  "greater-than-or-equal-to": "from",
-  "less-than": "before",
-  "less-than-or-equal-to": "until",
-  // Range-pair operators (dot-prefixed, used with `field.~op` key format)
-  "~from": "from",
-  "~until": "until",
-  "~gte": "from",
-  "~lte": "until",
-};
-
 function getSearchType(prop: SearchProperty): string {
   const { op } = parseName(prop.name);
   if (!op) return "exact";
   return SEARCH_TYPE_LABELS[op] ?? op;
 }
 
-const DATE_FIELD_TYPES = new Set(["date", "datetime", "datetime-local", "time"]);
-const DATE_SUFFIXES = [
-  "~greater-than",
-  "~greater-than-or-equal-to",
-  "~less-than",
-  "~less-than-or-equal-to",
-  ".~from",
-  ".~until",
-];
-
 type InputType = "text" | "select" | "date";
 
 function getInputType(prop: SearchProperty): InputType {
   if (prop.options?.inline?.length) return "select";
-  if (DATE_FIELD_TYPES.has(prop.type)) return "date";
-  if (DATE_SUFFIXES.some((s) => prop.name.endsWith(s))) return "date";
+  if (isDateProperty(prop.name, prop.type)) return "date";
   return "text";
 }
 
@@ -280,12 +214,14 @@ function EnumFilter({
 }
 
 function DateFilter({
+  propName,
   label,
   searchType,
   value,
   onChange,
   rawDate = false,
 }: Readonly<{
+  propName: string;
   label: string;
   searchType: string;
   value: string;
@@ -294,7 +230,7 @@ function DateFilter({
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
-  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const inputId = `filter-${propName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -320,11 +256,13 @@ function DateFilter({
 }
 
 function TextFilter({
+  propName,
   label,
   value,
   onChange,
   searchType = "exact",
 }: Readonly<{
+  propName: string;
   label: string;
   value: string;
   onChange: (value: string | undefined) => void;
@@ -332,7 +270,7 @@ function TextFilter({
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
-  const inputId = `filter-${displayLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const inputId = `filter-${propName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -424,6 +362,7 @@ export function FilterSidebar({
                       return (
                         <DateFilter
                           key={prop.name}
+                          propName={prop.name}
                           label={label}
                           searchType={searchType}
                           value={value}
@@ -438,6 +377,7 @@ export function FilterSidebar({
                       return (
                         <TextFilter
                           key={prop.name}
+                          propName={prop.name}
                           label={label}
                           searchType={searchType}
                           value={value}

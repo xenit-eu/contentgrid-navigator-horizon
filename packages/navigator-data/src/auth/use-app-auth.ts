@@ -1,15 +1,25 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "react-oidc-context";
-import { createApiClient, createContentClient } from "../api/client";
+import { createApiClient, createContentClient, createContentUploadClient } from "../api/client";
 import type { TypedFetch } from "../api/client";
 import { getAppConfig } from "./auth-config";
 import { createOidcTokenSupplier } from "./token-supplier";
 
 export interface AppAuthResult {
   auth: ReturnType<typeof useAuth>;
+  /** Authenticated fetch client for HAL JSON requests (sets Accept: hal+json). */
   apiFetch: TypedFetch;
+  /**
+   * Authenticated fetch client for binary content requests (no Accept: hal+json header).
+   * Use exclusively for PUT/GET to cg:content links.
+   */
   contentFetch: TypedFetch;
-  getToken: () => Promise<string | null>;
+  /**
+   * Factory for a progress-reporting binary upload client — same bearer-auth +
+   * problem-details hook chain as `contentFetch`, backed by XHR instead of fetch
+   * so upload progress can be reported. See `createContentUploadClient`.
+   */
+  createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch;
   profileUrl: string;
 }
 
@@ -20,18 +30,13 @@ export function useAppAuth(): AppAuthResult {
   const authRef = useRef(auth);
   authRef.current = auth;
 
-  const { apiFetch, contentFetch, getToken } = useMemo(() => {
+  const { apiFetch, contentFetch, createContentUploadFetch } = useMemo(() => {
     const supplier = createOidcTokenSupplier(async () => authRef.current.user ?? null);
     return {
       apiFetch: createApiClient(supplier),
       contentFetch: createContentClient(supplier),
-      // Read directly from the ref — the supplier type requires HTTP-layer args and is not
-      // callable without them; the token is already available on the user object.
-      getToken: async (): Promise<string | null> => {
-        const user = authRef.current.user;
-        if (!user?.access_token || user.expired) return null;
-        return user.access_token;
-      },
+      createContentUploadFetch: (onProgress?: (percentage: number) => void) =>
+        createContentUploadClient(supplier, onProgress),
     };
   }, []); // created once; token is read via ref on each request
 
@@ -43,5 +48,11 @@ export function useAppAuth(): AppAuthResult {
     }
   }, [auth]);
 
-  return { auth, apiFetch, contentFetch, getToken, profileUrl: `${apiBaseUrl}/profile` };
+  return {
+    auth,
+    apiFetch,
+    contentFetch,
+    createContentUploadFetch,
+    profileUrl: `${apiBaseUrl}/profile`,
+  };
 }

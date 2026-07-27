@@ -6,10 +6,14 @@ import type { AppAuthResult } from "@contentgrid/navigator-data";
 import { useAppAuth } from "@contentgrid/navigator-data";
 import { routeTree } from "../routeTree.gen";
 
-vi.mock("@contentgrid/navigator-data", () => ({
-  useAppAuth: vi.fn(),
-  NavigatorDataProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
+vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
+  return {
+    ...actual,
+    useAppAuth: vi.fn(),
+    NavigatorDataProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  };
+});
 
 vi.mock("@contentgrid/ui", () => ({
   SignInGate: ({ onSignIn }: { onSignIn: () => void }) => (
@@ -32,7 +36,6 @@ vi.mock("@contentgrid/features/entity-list", async () => {
       return <div data-testid="entity-detail" data-entity={entity} />;
     },
     EntityItemDetailPage: () => <div data-testid="entity-item-detail" />,
-    entityDetailSearchValidator: (s: Record<string, unknown>) => s,
   };
 });
 

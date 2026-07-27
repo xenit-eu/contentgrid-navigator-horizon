@@ -6,11 +6,12 @@ import {
   type TypedFetch,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
 } from "../api/client";
 import { NavigatorDataProvider } from "./context";
 
 // ---------------------------------------------------------------------------
-// XHR stub — shared by api/content-upload.test.ts and use-content-upload.test.ts
+// XHR stub — shared by api/xhr-fetch.test.ts and hooks/item/use-content.test.tsx
 // ---------------------------------------------------------------------------
 
 export interface MockXhr {
@@ -18,11 +19,16 @@ export interface MockXhr {
   setRequestHeader: ReturnType<typeof vi.fn>;
   send: ReturnType<typeof vi.fn>;
   abort: ReturnType<typeof vi.fn>;
+  responseType: string;
+  response: unknown;
+  status: number;
+  statusText: string;
+  getAllResponseHeaders: ReturnType<typeof vi.fn>;
   upload: { onprogress: ((e: Partial<ProgressEvent>) => void) | null };
   onload: (() => void) | null;
   onerror: (() => void) | null;
   ontimeout: (() => void) | null;
-  status: number;
+  onabort: (() => void) | null;
 }
 
 export function makeFakeXhr(): {
@@ -35,12 +41,19 @@ export function makeFakeXhr(): {
     open = vi.fn();
     setRequestHeader = vi.fn();
     send = vi.fn();
-    abort = vi.fn();
+    abort = vi.fn(() => {
+      this.onabort?.();
+    });
+    responseType = "";
+    response: unknown = undefined;
+    status = 204;
+    statusText = "";
+    getAllResponseHeaders = vi.fn(() => "");
     upload: { onprogress: ((e: Partial<ProgressEvent>) => void) | null } = { onprogress: null };
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
     ontimeout: (() => void) | null = null;
-    status = 204;
+    onabort: (() => void) | null = null;
 
     constructor() {
       instances.push(this);
@@ -58,8 +71,6 @@ export const noopSupplier: AuthenticationTokenSupplier = async () => ({
   expiresAt: null,
 });
 
-const noopGetToken = async () => "test-token";
-
 export function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
@@ -67,16 +78,21 @@ export function makeQueryClient() {
 /**
  * Build a React wrapper for renderHook tests.
  *
- * @param queryClient  - TanStack QueryClient to use; defaults to a fresh one.
- * @param apiFetch     - Optional TypedFetch to inject (e.g. a spy for header assertions).
- *                       Defaults to a real client using noopSupplier so MSW intercepts requests.
- * @param contentFetch - Optional binary TypedFetch (no Accept: hal+json).
- *                       Defaults to a real content client using noopSupplier.
+ * @param queryClient             - TanStack QueryClient to use; defaults to a fresh one.
+ * @param apiFetch                - Optional TypedFetch to inject (e.g. a spy for header assertions).
+ *                                  Defaults to a real client using noopSupplier so MSW intercepts requests.
+ * @param contentFetch            - Optional TypedFetch for binary content (cg:content) requests.
+ *                                  Defaults to a real content client using noopSupplier.
+ * @param createContentUploadFetch - Optional factory for the progress-reporting upload client.
+ *                                  Defaults to `createContentUploadClient` built from noopSupplier.
  */
 export function makeWrapper(
   queryClient = makeQueryClient(),
   apiFetch: TypedFetch = createApiClient(noopSupplier),
   contentFetch: TypedFetch = createContentClient(noopSupplier),
+  createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch = (
+    onProgress,
+  ) => createContentUploadClient(noopSupplier, onProgress),
 ) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -84,7 +100,7 @@ export function makeWrapper(
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
-          getToken={noopGetToken}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

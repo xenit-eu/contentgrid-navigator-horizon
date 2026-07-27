@@ -5,6 +5,8 @@ const ENTITY_ITEM_KEY = "EntityItem";
 const ENTITY_COLLECTION_KEY = "EntitySearch";
 const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
+const TO_ONE_RELATION_KEY = "ToOneRelation";
+const TO_MANY_RELATION_KEY = "ToManyRelation";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -26,6 +28,17 @@ export const queryKeys = {
     /** Exact key for a single entity item by its self URL. */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [ENTITY_ITEM_KEY, profileEntity.name, url] as const,
+    /**
+     * Exact key for a single entity item by entity name string and URL.
+     * Use when only the entity name is known (e.g. derived from a relation's target profile link)
+     * and a full ProfileEntity is not available. Key shape is identical to `byUrl`.
+     */
+    byUrlForName: (entityName: string, url: string) => [ENTITY_ITEM_KEY, entityName, url] as const,
+    /**
+     * Prefix key — invalidates ALL cached entity items for one entity type by name string.
+     * Use when only the entity name is known. Key shape is identical to `forEntity`.
+     */
+    forEntityName: (entityName: string) => [ENTITY_ITEM_KEY, entityName] as const,
   },
 
   entityItemCollection: {
@@ -52,5 +65,21 @@ export const queryKeys = {
   profileRoot: {
     /** Exact key for the profile root at a given URL. */
     byUrl: (profileUrl: string) => [PROFILE_ROOT_KEY, profileUrl] as const,
+  },
+
+  toOneRelation: {
+    /** Prefix key — invalidates ALL cached to-one relation queries for a given relation name. */
+    forRelationName: (relationName: string) => [TO_ONE_RELATION_KEY, relationName] as const,
+    /** Exact key for a specific to-one relation by relation name and relation URL. */
+    byUrl: (relationName: string, relationUrl: string) =>
+      [TO_ONE_RELATION_KEY, relationName, relationUrl] as const,
+  },
+
+  toManyRelation: {
+    /** Prefix key — invalidates ALL cached to-many relation queries for a given relation name. */
+    forRelationName: (relationName: string) => [TO_MANY_RELATION_KEY, relationName] as const,
+    /** Exact key for a specific to-many relation by relation name and relation URL. */
+    byUrl: (relationName: string, relationUrl: string) =>
+      [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
   },
 };

@@ -51,39 +51,34 @@ describe("useAppAuth", () => {
     vi.clearAllMocks();
   });
 
-  it("returns auth, apiFetch, contentFetch, getToken, and profileUrl", () => {
+  it("returns auth, apiFetch, contentFetch, createContentUploadFetch, and profileUrl", () => {
     const ctx = makeAuthCtx();
     const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
 
     expect(result.current.auth).toBe(ctx);
     expect(typeof result.current.apiFetch).toBe("function");
     expect(typeof result.current.contentFetch).toBe("function");
-    expect(typeof result.current.getToken).toBe("function");
+    expect(typeof result.current.createContentUploadFetch).toBe("function");
     expect(result.current.profileUrl).toBe("https://api.example.com/profile");
   });
 
-  it("apiFetch and contentFetch references are stable across re-renders", () => {
+  it("apiFetch, contentFetch, and createContentUploadFetch references are stable across re-renders", () => {
     const ctx = makeAuthCtx();
     const { result, rerender } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
     const firstApiFetch = result.current.apiFetch;
     const firstContentFetch = result.current.contentFetch;
+    const firstCreateContentUploadFetch = result.current.createContentUploadFetch;
     rerender();
     expect(result.current.apiFetch).toBe(firstApiFetch);
     expect(result.current.contentFetch).toBe(firstContentFetch);
+    expect(result.current.createContentUploadFetch).toBe(firstCreateContentUploadFetch);
   });
 
-  it("getToken returns null when user is unauthenticated", async () => {
-    const ctx = makeAuthCtx({ user: null });
+  it("createContentUploadFetch builds a callable TypedFetch", () => {
+    const ctx = makeAuthCtx();
     const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
-    await expect(result.current.getToken()).resolves.toBeNull();
-  });
-
-  it("getToken returns the access token when user is authenticated", async () => {
-    const ctx = makeAuthCtx({
-      user: { access_token: "tok-abc", expired: false } as import("oidc-client-ts").User,
-    });
-    const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
-    await expect(result.current.getToken()).resolves.toBe("tok-abc");
+    const uploadFetch = result.current.createContentUploadFetch();
+    expect(typeof uploadFetch).toBe("function");
   });
 
   it("calls signinSilent when user is expired and not loading", async () => {
