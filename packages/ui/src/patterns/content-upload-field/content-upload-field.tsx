@@ -4,6 +4,7 @@ import { UploadSimpleIcon as UploadSimple, XIcon as X } from "@phosphor-icons/re
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
+import { Progress } from "../../primitives/progress";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -128,12 +129,7 @@ export function ContentUploadField({
             )}
           </div>
           {uploadProgress !== undefined && !uploadError && (
-            <progress
-              value={uploadProgress}
-              max={100}
-              aria-label="Upload progress"
-              className="mt-2 h-1.5 w-full appearance-none overflow-hidden rounded-full bg-muted [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-primary [&::-moz-progress-bar]:transition-all [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary [&::-webkit-progress-value]:transition-all"
-            />
+            <Progress value={uploadProgress} aria-label="Upload progress" className="mt-2" />
           )}
           {uploadError && <p className="mt-1 text-xs text-destructive">Upload failed</p>}
         </div>
