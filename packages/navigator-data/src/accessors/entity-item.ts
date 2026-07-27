@@ -6,7 +6,7 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels } from "../api";
+import { cgRels, contentDispositionAttachment } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
@@ -17,6 +17,8 @@ import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import type { ProfileAttribute } from "./attribute-profile";
+import { EntityItemToManyRelation } from "./entity-item-to-many-relation";
+import { EntityItemToOneRelation } from "./entity-item-to-one-relation";
 import type ProfileEntity from "./entity-profile";
 
 const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
@@ -247,7 +249,205 @@ export class EntityItem {
     return codec.encode(createValues(template));
   }
 
-  //TODO support relations
+  // ========================================
+  // Relation Accessors
+  // ========================================
+
+  /**
+   * All to-one relations visible on this item (i.e. the `cg:relation` link is present).
+   *
+   * Relations whose `cg:relation` link is absent (ABAC-hidden) are omitted — they cannot
+   * be navigated or mutated by the current user.
+   *
+   * Order matches `profileEntity.toOneRelations`.
+   */
+  public get toOneRelations(): readonly EntityItemToOneRelation[] {
+    return this.profileEntity.toOneRelations.flatMap((profileRelation) => {
+      const link = this.halItem.links.findLink(cgRels.relation, profileRelation.name);
+      if (!link) return [];
+      return [new EntityItemToOneRelation(profileRelation.name, link, profileRelation, this)];
+    });
+  }
+
+  /**
+   * All to-many relations visible on this item (i.e. the `cg:relation` link is present).
+   *
+   * Relations whose `cg:relation` link is absent (ABAC-hidden) are omitted — they cannot
+   * be navigated or mutated by the current user.
+   *
+   * Order matches `profileEntity.toManyRelations`.
+   */
+  public get toManyRelations(): readonly EntityItemToManyRelation[] {
+    return this.profileEntity.toManyRelations.flatMap((profileRelation) => {
+      const link = this.halItem.links.findLink(cgRels.relation, profileRelation.name);
+      if (!link) return [];
+      return [new EntityItemToManyRelation(profileRelation.name, link, profileRelation, this)];
+    });
+  }
+
+  /**
+   * Look up a to-one relation by name.
+   *
+   * Returns `undefined` when the profile has no matching to-one relation, or when the
+   * `cg:relation` link is absent (ABAC-hidden).
+   *
+   * @param name - The relation name (e.g. "supplier")
+   */
+  public getToOneRelation(name: string): EntityItemToOneRelation | undefined {
+    return this.toOneRelations.find((r) => r.name === name);
+  }
+
+  /**
+   * Look up a to-many relation by name.
+   *
+   * Returns `undefined` when the profile has no matching to-many relation, or when the
+   * `cg:relation` link is absent (ABAC-hidden).
+   *
+   * @param name - The relation name (e.g. "lineItems")
+   */
+  public getToManyRelation(name: string): EntityItemToManyRelation | undefined {
+    return this.toManyRelations.find((r) => r.name === name);
+  }
+
+  /**
+   * Look up any relation by name, regardless of cardinality.
+   *
+   * Returns `undefined` when no matching relation is present (unknown name, profile miss,
+   * or ABAC-hidden link). The return type is a union — narrow by `instanceof` to access
+   * cardinality-specific builders.
+   *
+   * @param name - The relation name (e.g. "supplier", "lineItems")
+   */
+  public getRelation(name: string): EntityItemToOneRelation | EntityItemToManyRelation | undefined {
+    return this.getToOneRelation(name) ?? this.getToManyRelation(name);
+  }
+
+  // ========================================
+  // Content Link Accessors (exception: no HAL-FORMS template)
+  // ========================================
+
+  /**
+   * Resolves the `cg:content` link for a named content attribute.
+   *
+   * The presence of this link is the ABAC gate for binary content operations —
+   * the platform omits it when the current user lacks permission to access the content.
+   * Returns `null` when the link is absent.
+   *
+   * @param attributeName - The name of the content attribute
+   * @returns The resolved Link, or null if absent
+   */
+  public contentLink(attributeName: string): Link | null {
+    return this.halItem.links.findLink(cgRels.content, attributeName) ?? null;
+  }
+
+  /**
+   * Whether the current user is permitted to upload (PUT) binary content for this attribute.
+   *
+   * Derived from `contentLink` presence — the platform omits the link when the
+   * ABAC policy denies content access for this item/user combination.
+   *
+   * @param attributeName - The name of the content attribute
+   * @returns true when upload is permitted
+   */
+  public canUploadContent(attributeName: string): boolean {
+    return this.contentLink(attributeName) !== null;
+  }
+
+  /**
+   * Builds a PUT Request for uploading binary content to a content attribute.
+   *
+   * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
+   * has no `_templates` entry, so the Request is constructed directly from the
+   * `cg:content` link href. The link presence is the ABAC gate.
+   *
+   * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
+   * `contentFetch` omits the `Accept: application/hal+json` header.
+   *
+   * If-Match is attached only when an ETag is available (omitted when null).
+   *
+   * @param attributeName - The name of the content attribute
+   * @param file - The file to upload
+   * @param opts - Optional overrides for Content-Type and filename
+   * @returns Request ready to be sent with contentFetch
+   * @throws Error if the cg:content link is absent (ABAC deny)
+   */
+  public uploadContentRequest(
+    attributeName: string,
+    file: Blob | File,
+    opts?: { contentType?: string; filename?: string },
+  ): Request {
+    const link = this.contentLink(attributeName);
+    if (link === null) {
+      throw new Error(
+        `Content upload not permitted for attribute '${attributeName}': cg:content link absent`,
+      );
+    }
+
+    const contentType =
+      opts?.contentType ??
+      (file instanceof File && file.type ? file.type : "application/octet-stream");
+
+    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
+
+    const headers: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+
+    if (filename) {
+      headers["Content-Disposition"] = contentDispositionAttachment(filename);
+    }
+
+    if (this.etag !== null) {
+      headers["If-Match"] = this.etag;
+    }
+
+    return new Request(link.href, {
+      method: "PUT",
+      body: file,
+      headers,
+    });
+  }
+
+  /**
+   * Builds a GET Request for downloading binary content from a content attribute.
+   *
+   * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
+   * has no `_templates` entry, so the Request is constructed directly from the
+   * `cg:content` link href. The link presence is the ABAC gate.
+   *
+   * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
+   * `contentFetch` omits the `Accept: application/hal+json` header.
+   *
+   * Optionally adds a `Range` header for partial content requests (206 Partial Content).
+   *
+   * @param attributeName - The name of the content attribute
+   * @param opts - Optional range for partial downloads
+   * @returns Request ready to be sent with contentFetch
+   * @throws Error if the cg:content link is absent (ABAC deny)
+   */
+  public downloadContentRequest(
+    attributeName: string,
+    opts?: { range?: { start: number; end?: number } },
+  ): Request {
+    const link = this.contentLink(attributeName);
+    if (link === null) {
+      throw new Error(
+        `Content download not permitted for attribute '${attributeName}': cg:content link absent`,
+      );
+    }
+
+    const headers: Record<string, string> = {};
+
+    if (opts?.range !== undefined) {
+      const { start, end } = opts.range;
+      headers["Range"] = end === undefined ? `bytes=${start}-` : `bytes=${start}-${end}`;
+    }
+
+    return new Request(link.href, {
+      method: "GET",
+      headers,
+    });
+  }
 }
 
 /**

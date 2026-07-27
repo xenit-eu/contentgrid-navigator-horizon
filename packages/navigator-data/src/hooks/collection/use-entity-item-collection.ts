@@ -1,12 +1,12 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { EntityItemCollection } from "../accessors/entity-item-collection";
-import type ProfileEntity from "../accessors/entity-profile";
-import type { SearchRequestSpec } from "../api/requests";
-import { resolveTrustedCollectionUrl } from "../search/cursor-trust";
-import type { QueryOptionsOverride } from "../utils/query-options-override";
-import { useNavigatorData } from "./context";
+import { EntityItemCollection } from "../../accessors/entity-item-collection";
+import type ProfileEntity from "../../accessors/entity-profile";
+import type { SearchRequestSpec } from "../../api/requests";
+import { resolveTrustedCollectionUrl } from "../../search/cursor-trust";
+import type { QueryOptionsOverride } from "../../utils/query-options-override";
+import { useNavigatorData } from "../context";
 
 export interface UseEntityItemCollectionOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItemCollection, Error>>;

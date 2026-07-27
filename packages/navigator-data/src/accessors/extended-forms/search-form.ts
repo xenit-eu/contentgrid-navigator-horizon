@@ -1,4 +1,5 @@
 import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
+import { HalFormsTemplateBuilder } from "@contentgrid/hal-forms/builder";
 import type { SearchRequestSpec } from "../../api/requests";
 import { ProfileAttributeSearchType } from "../attribute-profile";
 import type { ProfileAttribute } from "../attribute-profile";
@@ -279,6 +280,27 @@ export class SearchHalFormTemplate {
     if (propertyName.includes("~after")) return ProfileAttributeSearchType.greaterThan;
     if (propertyName.includes("~before")) return ProfileAttributeSearchType.lessThan;
     return ProfileAttributeSearchType.exactMatch;
+  }
+
+  /**
+   * Return a copy of this template with the given params baked in as hidden properties.
+   *
+   * **Workaround** — the HAL-FORMS codec only encodes declared template properties.
+   * To inject relation scoping params (e.g. `_internal_invoice__products`) into a
+   * search request, they must be added as hidden properties so the codec encodes them
+   * alongside the user's search input. Replace with a server-side mechanism when one
+   * is available.
+   *
+   * @param params - Params to inject (e.g. from `EntityItemCollection.internalRelationParams`)
+   * @returns A new `SearchHalFormTemplate` with the params baked in; returns `this` when empty
+   */
+  public withHiddenParams(params: Record<string, string>): SearchHalFormTemplate {
+    if (Object.keys(params).length === 0) return this;
+    let builder = HalFormsTemplateBuilder.fromTemplate(this.template);
+    for (const [name, value] of Object.entries(params)) {
+      builder = builder.addProperty(name, (prop) => prop.withType("hidden").withValue(value));
+    }
+    return new SearchHalFormTemplate(builder, this.profileEntity, this._allProfiles);
   }
 
   /**
