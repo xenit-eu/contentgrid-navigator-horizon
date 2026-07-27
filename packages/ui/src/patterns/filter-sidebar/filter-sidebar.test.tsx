@@ -78,30 +78,11 @@ const DATE_LTE_PROP: SearchFilterProperty = {
   dateEncoding: "iso",
 };
 
-// A second exact-match-shaped property sharing DATE_PROP's groupKey — mirrors a search
-// template that exposes more than one undirected param for the same date attribute.
-const DATE_EXACT2_PROP: SearchFilterProperty = {
-  name: "created_at~eq",
-  label: "Created At",
-  inputKind: "date",
-  searchOperator: "exact-match",
-  groupKey: "created_at",
-  dateEncoding: "iso",
-};
-
 const PREFIX_PROP: SearchFilterProperty = {
   name: "number~prefix",
   label: "Number",
   inputKind: "text",
   searchOperator: "prefix-match",
-  groupKey: "number",
-};
-
-const EXACT_PROP: SearchFilterProperty = {
-  name: "number",
-  label: "Number",
-  inputKind: "text",
-  searchOperator: "exact-match",
   groupKey: "number",
 };
 
@@ -157,8 +138,9 @@ function renderSidebar(
     onFilterChange: (key: string, value: string | undefined) => void;
     onClearAll: () => void;
     onTypeaheadSearch: (fieldParam: string, query: string) => void;
-    typeaheadSuggestions: Record<string, string[]>;
-    typeaheadIsLoading: Record<string, boolean>;
+    activeTypeaheadField: string;
+    typeaheadSuggestions: string[];
+    typeaheadIsLoading: boolean;
   }> = {},
 ) {
   const onFilterChange = overrides.onFilterChange ?? vi.fn();
@@ -172,6 +154,7 @@ function renderSidebar(
         onFilterChange={onFilterChange}
         onClearAll={onClearAll}
         onTypeaheadSearch={overrides.onTypeaheadSearch}
+        activeTypeaheadField={overrides.activeTypeaheadField}
         typeaheadSuggestions={overrides.typeaheadSuggestions}
         typeaheadIsLoading={overrides.typeaheadIsLoading}
       />,
@@ -350,17 +333,6 @@ describe("FilterSidebar — datetime filter (inputKind=datetime)", () => {
       localDatetimeToUtcIso("2024-03-01T08:00"),
     );
   });
-
-  it("suppresses a bare exact-match datetime field when After/Before range siblings share its groupKey", () => {
-    // Same shape as a "created_at" audit field: the server exposes an exact-match param
-    // alongside the range pair. Filtering a timestamp to the exact millisecond is useless,
-    // so only the two range inputs should render — not three.
-    renderSidebar([DATETIME_PROP, DATETIME_GT_PROP, DATETIME_LT_PROP]);
-
-    expect(screen.getByLabelText(/due at after/i)).toHaveAttribute("type", "datetime-local");
-    expect(screen.getByLabelText(/due at before/i)).toHaveAttribute("type", "datetime-local");
-    expect(screen.getAllByLabelText(/due at/i)).toHaveLength(2);
-  });
 });
 
 describe("FilterSidebar — single date filter (inputKind=date)", () => {
@@ -428,60 +400,6 @@ describe("FilterSidebar — date group filter (multiple date props for same grou
     renderSidebar([DATE_GTE_PROP, DATE_LTE_PROP]);
     expect(screen.getByText("From")).toBeInTheDocument();
     expect(screen.getByText("Until")).toBeInTheDocument();
-  });
-
-  it("suppresses a bare exact-match date field when After/Before range siblings share its groupKey", () => {
-    // Same shape as "invoice_date": the server exposes an exact-match param alongside the
-    // range pair. Only the two range inputs should render — not three.
-    renderSidebar([DATE_PROP, DATE_GT_PROP, DATE_LT_PROP]);
-
-    expect(screen.getByLabelText(/created at after/i)).toHaveAttribute("type", "date");
-    expect(screen.getByLabelText(/created at before/i)).toHaveAttribute("type", "date");
-    expect(screen.getAllByLabelText(/created at/i)).toHaveLength(2);
-  });
-
-  it("suppresses every undirected sibling when more than one shares a groupKey with a range pair", () => {
-    renderSidebar([DATE_PROP, DATE_EXACT2_PROP, DATE_GT_PROP, DATE_LT_PROP]);
-    expect(screen.getAllByLabelText(/created at/i)).toHaveLength(2);
-  });
-
-  it("applies the same suppression to a relation-traversal date group (e.g. 'Included in invoices: Invoice date')", () => {
-    // Same shape as the bug report: a relation-traversal date group ("invoices.invoice_date")
-    // with a bare exact-match plus a redundant second undirected sibling alongside After/Before.
-    const RELATION_DATE_PROP: SearchFilterProperty = {
-      name: "invoices.invoice_date",
-      label: "Included in invoices: Invoice date",
-      inputKind: "date",
-      searchOperator: "exact-match",
-      groupKey: "invoices.invoice_date",
-      relationKey: "invoices",
-      dateEncoding: "iso",
-    };
-    const RELATION_DATE_EXACT2_PROP: SearchFilterProperty = {
-      ...RELATION_DATE_PROP,
-      name: "invoices.invoice_date~eq",
-    };
-    const RELATION_DATE_GT_PROP: SearchFilterProperty = {
-      ...RELATION_DATE_PROP,
-      name: "invoices.invoice_date~after",
-      searchOperator: "greater-than",
-      directionLabel: "After",
-    };
-    const RELATION_DATE_LT_PROP: SearchFilterProperty = {
-      ...RELATION_DATE_PROP,
-      name: "invoices.invoice_date~before",
-      searchOperator: "less-than",
-      directionLabel: "Before",
-    };
-
-    renderSidebar([
-      RELATION_DATE_PROP,
-      RELATION_DATE_EXACT2_PROP,
-      RELATION_DATE_GT_PROP,
-      RELATION_DATE_LT_PROP,
-    ]);
-
-    expect(screen.getAllByLabelText(/included in invoices: invoice date/i)).toHaveLength(2);
   });
 
   it("calls onFilterChange for the correct param when the After date input changes", () => {
@@ -677,65 +595,6 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     expect(screen.queryByText(/total amount: max/i)).not.toBeInTheDocument();
   });
 
-  it("suppresses the strict After/Before bound once the inclusive From/Until bound exists", () => {
-    renderSidebar([GT_PROP, GTE_PROP, LT_PROP, LTE_PROP]);
-
-    expect(screen.queryByText("After")).not.toBeInTheDocument();
-    expect(screen.queryByText("Before")).not.toBeInTheDocument();
-    expect(screen.getByText("From")).toBeInTheDocument();
-    expect(screen.getByText("Until")).toBeInTheDocument();
-  });
-
-  it("renders exactly 2 inputs (not 4) once the strict bound is suppressed", () => {
-    renderSidebar([GT_PROP, GTE_PROP, LT_PROP, LTE_PROP]);
-
-    expect(screen.getAllByRole("spinbutton")).toHaveLength(2);
-  });
-
-  it("suppresses a bare exact-match number field and the strict gt/lt pair, leaving 2 inputs", () => {
-    // Same shape as "Price"/"Total amount": the server exposes an exact-match param
-    // alongside gt/gte/lt/lte. Only the inclusive From/Until pair should render — not five,
-    // not four.
-    const PRICE_EXACT_PROP: SearchFilterProperty = {
-      name: "price",
-      label: "Products: Price",
-      inputKind: "number",
-      searchOperator: "exact-match",
-      groupKey: "price",
-    };
-    const PRICE_GT_PROP: SearchFilterProperty = {
-      ...PRICE_EXACT_PROP,
-      name: "price~gt",
-      searchOperator: "greater-than",
-      directionLabel: "After",
-    };
-    const PRICE_GTE_PROP: SearchFilterProperty = {
-      ...PRICE_EXACT_PROP,
-      name: "price~gte",
-      searchOperator: "greater-than-or-equal",
-      directionLabel: "From",
-    };
-    const PRICE_LT_PROP: SearchFilterProperty = {
-      ...PRICE_EXACT_PROP,
-      name: "price~lt",
-      searchOperator: "less-than",
-      directionLabel: "Before",
-    };
-    const PRICE_LTE_PROP: SearchFilterProperty = {
-      ...PRICE_EXACT_PROP,
-      name: "price~lte",
-      searchOperator: "less-than-or-equal",
-      directionLabel: "Until",
-    };
-
-    renderSidebar([PRICE_EXACT_PROP, PRICE_GT_PROP, PRICE_GTE_PROP, PRICE_LT_PROP, PRICE_LTE_PROP]);
-
-    expect(screen.getAllByRole("spinbutton")).toHaveLength(2);
-    expect(screen.queryByText("After")).not.toBeInTheDocument();
-    expect(screen.queryByText("Before")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Products: Price")).toHaveLength(1);
-  });
-
   it("encodes ~gte value in onFilterChange", () => {
     const onFilterChange = vi.fn();
     renderSidebar([NUM_GTE_PROP], {}, { onFilterChange });
@@ -787,21 +646,11 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
   });
 });
 
-describe("FilterSidebar — exact-match suppression when a more specific sibling exists", () => {
-  it("hides the exact-match field when a prefix-match sibling exists in the same group", () => {
-    renderSidebar([EXACT_PROP, PREFIX_PROP]);
-    const inputs = screen.getAllByRole("textbox");
-    expect(inputs).toHaveLength(1);
-  });
-
-  it("the remaining input fires onFilterChange with the prefix-match param, not the exact-match param", () => {
-    const onFilterChange = vi.fn();
-    renderSidebar([EXACT_PROP, PREFIX_PROP], {}, { onFilterChange });
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "abc" } });
-    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "abc");
-    expect(onFilterChange).not.toHaveBeenCalledWith("number", expect.anything());
-  });
-
+describe("FilterSidebar — grouping by groupKey", () => {
+  // Redundant-sibling suppression (bare exact-match alongside a prefix/full-text/range
+  // variant) is decided in buildFilterProperties() (@contentgrid/navigator-data) — see
+  // filter-properties.test.ts — not in FilterSidebar, which just renders whatever list of
+  // properties it's given.
   it("renders both fields as separate inputs when they have different groupKeys", () => {
     const A: SearchFilterProperty = {
       name: "title",
@@ -819,25 +668,6 @@ describe("FilterSidebar — exact-match suppression when a more specific sibling
     };
     renderSidebar([A, B]);
     expect(screen.getAllByRole("textbox")).toHaveLength(2);
-  });
-
-  it("hides the exact-match field when a full-text sibling exists in the same group (no prefix-match involved)", () => {
-    const NOTE_EXACT_PROP: SearchFilterProperty = {
-      name: "note",
-      label: "Note",
-      inputKind: "text",
-      searchOperator: "exact-match",
-      groupKey: "note",
-    };
-    const NOTE_FTS_PROP: SearchFilterProperty = {
-      name: "note~fts",
-      label: "Note",
-      inputKind: "text",
-      searchOperator: "full-text",
-      groupKey: "note",
-    };
-    renderSidebar([NOTE_EXACT_PROP, NOTE_FTS_PROP]);
-    expect(screen.getAllByRole("textbox")).toHaveLength(1);
   });
 });
 
@@ -897,7 +727,8 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
       {},
       {
         onTypeaheadSearch,
-        typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002"] },
+        activeTypeaheadField: "number~prefix",
+        typeaheadSuggestions: ["INV-001", "INV-002"],
       },
     );
 
@@ -919,7 +750,8 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
       {
         onFilterChange,
         onTypeaheadSearch,
-        typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002"] },
+        activeTypeaheadField: "number~prefix",
+        typeaheadSuggestions: ["INV-001", "INV-002"],
       },
     );
 
@@ -957,7 +789,8 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
       {
         onFilterChange,
         onTypeaheadSearch,
-        typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002"] },
+        activeTypeaheadField: "number~prefix",
+        typeaheadSuggestions: ["INV-001", "INV-002"],
       },
     );
     const input = screen.getByRole("combobox");
@@ -974,12 +807,15 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV-002");
   });
 
-  it("falls back to a plain text input for a relation-traversal prefix-match field", () => {
+  it("renders a typeahead combobox for a relation-traversal prefix-match field too", () => {
+    // useTypeahead resolves the related entity's own profile/collection for relationKey
+    // properties (see use-typeahead.ts), so there's no reason to fall back to a plain text
+    // input here — the field param name (e.g. "customer.name~prefix") is all FilterSidebar
+    // needs to pass through to onTypeaheadSearch/typeaheadSuggestions.
     const onTypeaheadSearch = vi.fn();
     renderSidebar([RELATION_PREFIX_PROP], {}, { onTypeaheadSearch });
 
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 });
 

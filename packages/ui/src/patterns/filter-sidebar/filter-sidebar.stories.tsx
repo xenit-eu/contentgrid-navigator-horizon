@@ -32,8 +32,11 @@ const STATUS_PROP_WITH_CANCELLED: SearchFilterProperty = {
   options: ["draft", "pending", "paid", "cancelled"],
 };
 
+// Suffixes here match a live profile exactly (confirmed against a sandbox backend): every
+// operator uses a single plain tilde — "~after"/"~before" for strict date bounds, never a
+// spelled-out "~greater-than"/"~less-than" or a dotted "attribute.~op" range-pair form.
 const ISSUED_DATE_AFTER_PROP: SearchFilterProperty = {
-  name: "issued_date~greater-than",
+  name: "issued_date~after",
   label: "Issued Date",
   inputKind: "date",
   searchOperator: "greater-than",
@@ -43,7 +46,7 @@ const ISSUED_DATE_AFTER_PROP: SearchFilterProperty = {
 };
 
 const ISSUED_DATE_BEFORE_PROP: SearchFilterProperty = {
-  name: "issued_date~less-than",
+  name: "issued_date~before",
   label: "Issued Date",
   inputKind: "date",
   searchOperator: "less-than",
@@ -108,7 +111,7 @@ export const WithRangePairFilter: Story = {
   args: {
     filterProperties: [
       {
-        name: "created.~from",
+        name: "created~from",
         label: "Created",
         inputKind: "date",
         searchOperator: "greater-than-or-equal",
@@ -117,7 +120,7 @@ export const WithRangePairFilter: Story = {
         dateEncoding: "plain",
       },
       {
-        name: "created.~until",
+        name: "created~until",
         label: "Created",
         inputKind: "date",
         searchOperator: "less-than-or-equal",
@@ -135,7 +138,7 @@ export const WithRangePairNumericFilter: Story = {
   args: {
     filterProperties: [
       {
-        name: "amount.~gte",
+        name: "amount~gte",
         label: "Amount",
         inputKind: "number",
         searchOperator: "greater-than-or-equal",
@@ -143,7 +146,7 @@ export const WithRangePairNumericFilter: Story = {
         directionLabel: "From",
       },
       {
-        name: "amount.~lte",
+        name: "amount~lte",
         label: "Amount",
         inputKind: "number",
         searchOperator: "less-than-or-equal",
@@ -192,7 +195,7 @@ export const WithDatetimeFilter: Story = {
   args: {
     filterProperties: [
       {
-        name: "due_at~greater-than",
+        name: "due_at~after",
         label: "Due At",
         inputKind: "datetime",
         searchOperator: "greater-than",
@@ -201,48 +204,11 @@ export const WithDatetimeFilter: Story = {
         dateEncoding: "iso",
       },
       {
-        name: "due_at~less-than",
+        name: "due_at~before",
         label: "Due At",
         inputKind: "datetime",
         searchOperator: "less-than",
         groupKey: "due_at",
-        directionLabel: "Before",
-        dateEncoding: "iso",
-      },
-    ] satisfies SearchFilterProperty[],
-    filters: {},
-    onFilterChange: fn(),
-  },
-};
-
-// Reproduces an audit field like "created_at": the server exposes an exact-match param
-// alongside the After/Before range for the same attribute. Only the range pair should
-// render — a bare exact-match instant filter is redundant and was showing as a third field.
-export const WithDatetimeExactMatchSuppressed: Story = {
-  args: {
-    filterProperties: [
-      {
-        name: "created_at",
-        label: "Created At",
-        inputKind: "datetime",
-        searchOperator: "exact-match",
-        groupKey: "created_at",
-      },
-      {
-        name: "created_at~greater-than",
-        label: "Created At",
-        inputKind: "datetime",
-        searchOperator: "greater-than",
-        groupKey: "created_at",
-        directionLabel: "After",
-        dateEncoding: "iso",
-      },
-      {
-        name: "created_at~less-than",
-        label: "Created At",
-        inputKind: "datetime",
-        searchOperator: "less-than",
-        groupKey: "created_at",
         directionLabel: "Before",
         dateEncoding: "iso",
       },
@@ -266,7 +232,8 @@ export const WithTypeaheadFilter: Story = {
     filters: { "number~prefix": "INV" },
     onFilterChange: fn(),
     onTypeaheadSearch: fn(),
-    typeaheadSuggestions: { "number~prefix": ["INV-001", "INV-002", "INV-003"] },
+    activeTypeaheadField: "number~prefix",
+    typeaheadSuggestions: ["INV-001", "INV-002", "INV-003"],
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

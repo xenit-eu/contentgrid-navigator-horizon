@@ -3,11 +3,12 @@
  *
  * Tests cover:
  * - searchProperties: filtering out _sort, basic property linking
- * - extractSearchType: all suffix variants (~prefix, ~fts, ~gt, ~gte, ~lt, ~lte, ~after, ~before, exact)
+ * - search type resolution: primary path via blueprint:search-param, suffix-parsing fallback
  * - sortOptions: inline sort option parsing, profileAttribute linking, no-sort case
  * - getSearchPropertiesByType / getSearchPropertyByName / getSearchPropertiesByAttribute
  * - getRelationSearchProperties
- * - relation traversal: isOverRelation, profileRelation, profileAttribute from allProfiles
+ * - relation traversal: isOverRelation, profileRelation (profileAttribute never resolves here —
+ *   see the class-level doc on `enhanceSearchProperty` in search-form.ts)
  * - hasSort / sortProperty
  */
 import { describe, expect, it } from "vitest";
@@ -34,6 +35,10 @@ function makeProfileEntity(
 
 // ---------------------------------------------------------------------------
 // Base fixture: simple entity with search template and sort
+//
+// Property-name suffixes here match a live profile exactly (confirmed against a sandbox
+// backend): every operator uses a single plain tilde — including the inclusive range-pair
+// bounds ("~from" / "~until") — never a dotted "attribute.~op" form.
 // ---------------------------------------------------------------------------
 
 const PROFILE_URL = "https://example.com/profile/invoices";
@@ -135,6 +140,34 @@ const invoiceProfileJson = {
         },
         _links: {},
       },
+      {
+        name: "invoice_date",
+        title: "Invoice date",
+        type: "date",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            { name: "invoice_date", title: "Invoice date", type: "exact-match" },
+            { name: "invoice_date~after", title: "Invoice date: After", type: "greater-than" },
+            { name: "invoice_date~before", title: "Invoice date: Before", type: "less-than" },
+            {
+              name: "invoice_date~from",
+              title: "Invoice date: From",
+              type: "greater-than-or-equal",
+            },
+            {
+              name: "invoice_date~until",
+              title: "Invoice date: Until",
+              type: "less-than-or-equal",
+            },
+          ],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
     ],
     "blueprint:relation": [
       {
@@ -163,6 +196,11 @@ const invoiceProfileJson = {
         { name: "note~fts", type: "text" },
         { name: "due_date~after", type: "datetime" },
         { name: "due_date~before", type: "datetime" },
+        { name: "invoice_date", type: "date" },
+        { name: "invoice_date~after", type: "date" },
+        { name: "invoice_date~before", type: "date" },
+        { name: "invoice_date~from", type: "date" },
+        { name: "invoice_date~until", type: "date" },
         { name: "customer.name~prefix", type: "text" },
         {
           name: "_sort",
@@ -194,10 +232,10 @@ const invoiceProfileJson = {
   },
 };
 
-function makeSearchTemplate(profileJson = invoiceProfileJson, allProfiles?: ProfileEntity[]) {
+function makeSearchTemplate(profileJson = invoiceProfileJson) {
   const profile = makeProfileEntity(profileJson, PROFILE_URL, "invoice");
   const rawTemplate = resolveTemplate(profileJson as ProfileEntityShape, "search")!;
-  return new SearchHalFormTemplate(rawTemplate, profile, allProfiles);
+  return new SearchHalFormTemplate(rawTemplate, profile);
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +263,7 @@ describe("SearchHalFormTemplate.searchProperties", () => {
     expect(numberProp?.profileAttribute?.name).toBe("number");
   });
 
-  it("returns undefined profileAttribute for relation traversal when allProfiles not provided", () => {
+  it("never resolves profileAttribute for relation traversal (no access to the target profile)", () => {
     const tmpl = makeSearchTemplate();
     const customerProp = tmpl.searchProperties.find(
       (p) => p.property.name === "customer.name~prefix",
@@ -296,6 +334,18 @@ describe("SearchHalFormTemplate search type extraction", () => {
     const tmpl = makeSearchTemplate();
     const p = tmpl.searchProperties.find((x) => x.property.name === "due_date~before");
     expect(p?.searchType).toBe(ProfileAttributeSearchType.lessThan);
+  });
+
+  it("classifies greaterThanOrEqual for ~from suffix (inclusive range-pair lower bound)", () => {
+    const tmpl = makeSearchTemplate();
+    const p = tmpl.searchProperties.find((x) => x.property.name === "invoice_date~from");
+    expect(p?.searchType).toBe(ProfileAttributeSearchType.greaterThanOrEqual);
+  });
+
+  it("classifies lessThanOrEqual for ~until suffix (inclusive range-pair upper bound)", () => {
+    const tmpl = makeSearchTemplate();
+    const p = tmpl.searchProperties.find((x) => x.property.name === "invoice_date~until");
+    expect(p?.searchType).toBe(ProfileAttributeSearchType.lessThanOrEqual);
   });
 
   it("classifies prefix-match for relation traversal with ~prefix", () => {
@@ -492,80 +542,6 @@ describe("SearchHalFormTemplate.getRelationSearchProperties", () => {
   });
 });
 
-describe("SearchHalFormTemplate with allProfiles (relation attribute resolution)", () => {
-  it("resolves target attribute when allProfiles is provided", () => {
-    // Build a customer profile with a "name" attribute
-    const customerProfileJson = {
-      name: "customer",
-      description: "",
-      _links: {
-        self: { href: "https://example.com/profile/customers" },
-        describes: [
-          { href: "https://example.com/customers", name: "collection" },
-          { href: "https://example.com/customers/{id}", name: "item", templated: true },
-        ],
-        curies: [
-          {
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            name: "blueprint",
-            templated: true,
-          },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "id",
-            title: "id",
-            type: "string",
-            description: "",
-            readOnly: true,
-            required: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-          {
-            name: "name",
-            title: "Name",
-            type: "string",
-            description: "",
-            readOnly: false,
-            required: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        default: { method: "HEAD", target: "https://example.com/customers", properties: [] },
-      },
-    };
-
-    const customerProfile = makeProfileEntity(
-      customerProfileJson,
-      "https://example.com/profile/customers",
-      "customer",
-    );
-    const tmpl = makeSearchTemplate(invoiceProfileJson, [customerProfile]);
-
-    const customerProp = tmpl.searchProperties.find(
-      (p) => p.property.name === "customer.name~prefix",
-    );
-    expect(customerProp?.isOverRelation).toBe(true);
-    expect(customerProp?.profileRelation?.name).toBe("customer");
-    expect(customerProp?.profileAttribute?.name).toBe("name");
-  });
-});
-
 describe("SearchHalFormTemplate.withHiddenParams", () => {
   it("returns the same instance when params is empty", () => {
     const tmpl = makeSearchTemplate();
@@ -597,76 +573,51 @@ describe("SearchHalFormTemplate.withHiddenParams", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Range-pair operator properties (attribute.~from / attribute.~until)
+// Range-pair operator properties (attribute~from / attribute~until)
+//
+// Confirmed against a live profile dump: the inclusive range-pair bounds use a PLAIN single
+// tilde, exactly like every other operator (~prefix, ~gt, ~after, …) — never a dotted
+// "attribute.~op" form. `invoice_date` in the base fixture above already covers this; these
+// tests focus on the "not a relation" distinction a dot-based check would need to get right.
 // ---------------------------------------------------------------------------
 
-const rangePairProfileJson = {
-  ...invoiceProfileJson,
-  _embedded: {
-    ...invoiceProfileJson._embedded,
-    "blueprint:attribute": [
-      ...invoiceProfileJson._embedded["blueprint:attribute"],
-      {
-        name: "created_at",
-        title: "Created At",
-        type: "date",
-        description: "",
-        readOnly: false,
-        required: false,
-        _embedded: {
-          "blueprint:constraint": [],
-          "blueprint:search-param": [
-            { name: "created_at.~from", title: "Created at from", type: "greater-than-or-equal" },
-            { name: "created_at.~until", title: "Created at until", type: "less-than-or-equal" },
-          ],
-          "blueprint:attribute": [],
-        },
-        _links: {},
-      },
-    ],
-  },
-  _templates: {
-    ...invoiceProfileJson._templates,
-    search: {
-      ...invoiceProfileJson._templates.search,
-      properties: [
-        ...invoiceProfileJson._templates.search.properties,
-        { name: "created_at.~from", type: "date" },
-        { name: "created_at.~until", type: "date" },
-      ],
-    },
-  },
-};
-
-describe("SearchHalFormTemplate — range-pair operators (.~from / .~until)", () => {
-  it("does not treat attribute.~op as a relation traversal", () => {
-    const tmpl = makeSearchTemplate(rangePairProfileJson);
-    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~from")!;
+describe("SearchHalFormTemplate — range-pair operators (~from / ~until)", () => {
+  it("does not treat attribute~from as a relation traversal", () => {
+    const tmpl = makeSearchTemplate();
+    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "invoice_date~from")!;
     expect(fromProp.isOverRelation).toBe(false);
   });
 
-  it("links the direct profileAttribute for attribute.~from", () => {
-    const tmpl = makeSearchTemplate(rangePairProfileJson);
-    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~from")!;
-    expect(fromProp.profileAttribute?.name).toBe("created_at");
+  it("links the direct profileAttribute for attribute~from", () => {
+    const tmpl = makeSearchTemplate();
+    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "invoice_date~from")!;
+    expect(fromProp.profileAttribute?.name).toBe("invoice_date");
     expect(fromProp.profileAttribute?.type).toBe("date");
   });
 
-  it("links the direct profileAttribute for attribute.~until", () => {
-    const tmpl = makeSearchTemplate(rangePairProfileJson);
-    const untilProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~until")!;
-    expect(untilProp.profileAttribute?.name).toBe("created_at");
+  it("links the direct profileAttribute for attribute~until", () => {
+    const tmpl = makeSearchTemplate();
+    const untilProp = tmpl.searchProperties.find((p) => p.property.name === "invoice_date~until")!;
+    expect(untilProp.profileAttribute?.name).toBe("invoice_date");
     expect(untilProp.isOverRelation).toBe(false);
   });
 
   it("does not set profileRelation for range-pair operators", () => {
-    const tmpl = makeSearchTemplate(rangePairProfileJson);
-    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "created_at.~from")!;
+    const tmpl = makeSearchTemplate();
+    const fromProp = tmpl.searchProperties.find((p) => p.property.name === "invoice_date~from")!;
     expect(fromProp.profileRelation).toBeUndefined();
   });
 
+  it("groups the exact-match, after/before, and from/until variants under one groupKey", () => {
+    const tmpl = makeSearchTemplate();
+    const groupKeys = tmpl.searchProperties
+      .filter((p) => p.property.name.startsWith("invoice_date"))
+      .map((p) => p.groupKey);
+    expect(new Set(groupKeys)).toEqual(new Set(["invoice_date"]));
+  });
+
   it("still treats relation.attribute~suffix as isOverRelation", () => {
-    const tmpl = makeSearchTemplate(rangePairProfileJson);
+    const tmpl = makeSearchTemplate();
     const relProp = tmpl.searchProperties.find((p) => p.property.name === "customer.name~prefix")!;
     expect(relProp.isOverRelation).toBe(true);
   });

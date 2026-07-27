@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "../../primitives/select";
 import { Separator } from "../../primitives/separator";
+import { formatWords } from "../search-property-utils";
 
 export type FilterInputKind = "text" | "number" | "date" | "datetime" | "boolean" | "select";
 
@@ -38,6 +39,9 @@ export interface SearchFilterProperty {
   inputKind: FilterInputKind;
   searchOperator: SearchOperator;
   groupKey: string;
+  /** Heading for this property's group. Falls back to `label` when omitted (e.g. hand-built
+   * fixtures with a single item per group, where the two would be identical anyway). */
+  groupLabel?: string;
   directionLabel?: DirectionLabel;
   dateEncoding?: "iso" | "plain";
   options?: string[];
@@ -52,26 +56,16 @@ export interface FilterSidebarProps {
   onClearAll?: () => void;
   /** Called when user types in a prefix-match field; fieldParam is the full property name. */
   onTypeaheadSearch?: (fieldParam: string, query: string) => void;
-  /** Suggestions keyed by search property name; populated externally from useTypeahead. */
-  typeaheadSuggestions?: Record<string, string[]>;
-  /** Loading state per field, keyed by search property name. */
-  typeaheadIsLoading?: Record<string, boolean>;
-}
-
-const UPPERCASE_WORDS: Record<string, string> = {
-  id: "ID",
-  url: "URL",
-  uri: "URI",
-  api: "API",
-  uuid: "UUID",
-};
-
-function formatOptionLabel(optionValue: string): string {
-  return optionValue
-    .replace(/[._]/g, " ")
-    .split(" ")
-    .map((w) => UPPERCASE_WORDS[w.toLowerCase()] ?? w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+  /**
+   * The property name of the field currently being typeahead-searched (only one field can be
+   * active at a time — useTypeahead tracks a single query). `typeaheadSuggestions` /
+   * `typeaheadIsLoading` apply to this field only.
+   */
+  activeTypeaheadField?: string;
+  /** Suggestions for `activeTypeaheadField`; populated externally from useTypeahead. */
+  typeaheadSuggestions?: string[];
+  /** Loading state for `activeTypeaheadField`. */
+  typeaheadIsLoading?: boolean;
 }
 
 function isoToDateInputValue(isoString: string): string {
@@ -92,12 +86,12 @@ function isoToDatetimeLocalInputValue(isoString: string): string {
   return isoString;
 }
 
-/** Maps a FilterInputKind to the native <input type="..."> it renders as. */
 /** Appends a lowercased direction ("after"/"before"/"from"/"until") to a label, when present. */
 function withDirectionSuffix(label: string, directionLabel: DirectionLabel | undefined): string {
   return directionLabel ? `${label} ${directionLabel.toLowerCase()}` : label;
 }
 
+/** Maps a FilterInputKind to the native <input type="..."> it renders as. */
 function htmlInputType(inputKind: FilterInputKind): string {
   switch (inputKind) {
     case "datetime":
@@ -112,58 +106,18 @@ function htmlInputType(inputKind: FilterInputKind): string {
 }
 
 interface FilterGroup {
+  groupKey: string;
   label: string;
   items: SearchFilterProperty[];
 }
 
 /**
- * An exact-match property is redundant once a MORE SPECIFIC sibling exists for the same
- * attribute: a prefix-match or full-text variant (e.g. "number" alongside "number~prefix"),
- * or a range/direction variant (e.g. "invoice_date" alongside "invoice_date~after" /
- * "~before"). Suppress it — one broad "exact value" control adds nothing once a narrower or
- * range-based way to search the same field is already shown. Applies uniformly across kinds
- * (text, date, datetime, number); select/boolean never have such siblings in practice, since
- * prefix/full-text/range operators only apply to string or ordered-value attributes.
- * Suppresses every redundant sibling, not just one — some search templates expose more than
- * one exact-match-shaped param for the same attribute (see the "range-pair operators" tests).
+ * Groups properties sharing a groupKey under one heading. Redundant siblings (a bare
+ * exact-match alongside a prefix/full-text/range variant, or a strict range bound alongside
+ * its inclusive equivalent) are already excluded by `buildFilterProperties` in
+ * `@contentgrid/navigator-data` — that's model semantics, not a rendering concern, so this
+ * function only groups whatever list it's given.
  */
-function isRedundantExactMatch(
-  prop: SearchFilterProperty,
-  siblings: SearchFilterProperty[],
-): boolean {
-  if (prop.searchOperator !== "exact-match") return false;
-  return siblings.some(
-    (p) =>
-      p.groupKey === prop.groupKey &&
-      (p.searchOperator === "prefix-match" ||
-        p.searchOperator === "full-text" ||
-        !!p.directionLabel),
-  );
-}
-
-/**
- * A strict range bound ("greater-than" / "less-than", i.e. the "After"/"Before" direction)
- * is redundant once an inclusive sibling covering the same bound direction exists for the
- * same attribute ("greater-than-or-equal" / "less-than-or-equal", i.e. "From"/"Until").
- * Mirrors the legacy Navigator's range-pairing behavior (RangedJsfFormConvertor / NestedRange
- * in contentgrid-navigator's src/components/form/jsonforms.ts): it prefers the inclusive
- * suffix pair when both are present for the same base field, and never renders the strict
- * pair alongside it. Without this, a search template that exposes all four comparison
- * operators for one attribute (e.g. price~gt/~gte/~lt/~lte) would render four stacked inputs
- * instead of the two (From/Until) that cover the same range.
- */
-function isRedundantStrictRangeBound(
-  prop: SearchFilterProperty,
-  siblings: SearchFilterProperty[],
-): boolean {
-  if (prop.searchOperator !== "greater-than" && prop.searchOperator !== "less-than") return false;
-  const inclusiveEquivalent =
-    prop.searchOperator === "greater-than" ? "greater-than-or-equal" : "less-than-or-equal";
-  return siblings.some(
-    (p) => p.groupKey === prop.groupKey && p.searchOperator === inclusiveEquivalent,
-  );
-}
-
 function groupFilterProperties(props: SearchFilterProperty[]): FilterGroup[] {
   const itemsByGroupKey = new Map<string, SearchFilterProperty[]>();
   for (const prop of props) {
@@ -174,7 +128,11 @@ function groupFilterProperties(props: SearchFilterProperty[]): FilterGroup[] {
       itemsByGroupKey.set(prop.groupKey, [prop]);
     }
   }
-  return Array.from(itemsByGroupKey.values(), (items) => ({ label: items[0].label, items }));
+  return Array.from(itemsByGroupKey.values(), (items) => ({
+    groupKey: items[0].groupKey,
+    label: items[0].groupLabel ?? items[0].label,
+    items,
+  }));
 }
 
 function ClearButton({
@@ -225,7 +183,7 @@ function encodeDateInputValue(
 }
 
 /**
- * Renders a set of range-pair properties (e.g. Total.~gte/~lte, created_at~after/~before)
+ * Renders a set of range-pair properties (e.g. Total~gte/~lte, created_at~after/~before)
  * sharing a groupKey under ONE heading with a clean "After"/"Before"/"From"/"Until" label per
  * input — instead of each item rendering standalone via its own per-item label. That matters
  * because the backend's own prompt for each individual range property can already contain
@@ -318,7 +276,7 @@ function EnumFilter({
             <SelectContent>
               {options.map((opt) => (
                 <SelectItem key={opt} value={opt}>
-                  {formatOptionLabel(opt)}
+                  {formatWords(opt)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -649,8 +607,9 @@ interface FilterControlContext {
   value: string;
   onFilterChange: (key: string, value: string | undefined) => void;
   onTypeaheadSearch?: (fieldParam: string, query: string) => void;
-  typeaheadSuggestions?: Record<string, string[]>;
-  typeaheadIsLoading?: Record<string, boolean>;
+  activeTypeaheadField?: string;
+  typeaheadSuggestions?: string[];
+  typeaheadIsLoading?: boolean;
 }
 
 /**
@@ -666,6 +625,7 @@ function renderFilterControl(
     value,
     onFilterChange,
     onTypeaheadSearch,
+    activeTypeaheadField,
     typeaheadSuggestions,
     typeaheadIsLoading,
   }: FilterControlContext,
@@ -724,23 +684,21 @@ function renderFilterControl(
 
     case "text": {
       // A bare exact-match sibling (e.g. "number" alongside "number~prefix") is already
-      // dropped from group.items by isRedundantExactMatch before this runs.
+      // dropped from group.items by buildFilterProperties() before this runs.
 
-      // Relation-traversal prefix-match params (e.g. "customer.name~prefix") are rendered as
-      // a plain text filter — the source entity's profile has no attribute to resolve
-      // suggestions against for a related entity's field, so wiring a working typeahead here
-      // requires the related entity's own profile/collection. Deferred as out of scope for
-      // ACC-2889; falls back to TextFilter so the field stays usable instead of showing a
-      // dead "Loading…" popover that never resolves.
-      if (prop.searchOperator === "prefix-match" && onTypeaheadSearch && !prop.relationKey) {
+      // Relation-traversal prefix-match params (e.g. "customer.name~prefix") get a working
+      // typeahead too — useTypeahead resolves the related entity's own profile/collection via
+      // relationKey, so the field param name is all FilterSidebar needs to pass through here.
+      if (prop.searchOperator === "prefix-match" && onTypeaheadSearch) {
+        const isActiveField = prop.name === activeTypeaheadField;
         return (
           <TypeaheadTextFilter
             key={prop.name}
             label={prop.label}
             fieldParam={prop.name}
             value={value}
-            suggestions={typeaheadSuggestions?.[prop.name] ?? []}
-            isLoading={typeaheadIsLoading?.[prop.name] ?? false}
+            suggestions={isActiveField ? (typeaheadSuggestions ?? []) : []}
+            isLoading={isActiveField && (typeaheadIsLoading ?? false)}
             onChange={(v) => onFilterChange(prop.name, v)}
             onSearch={(q) => onTypeaheadSearch(prop.name, q)}
           />
@@ -788,23 +746,14 @@ export function FilterSidebar({
   onFilterChange,
   onClearAll,
   onTypeaheadSearch,
+  activeTypeaheadField,
   typeaheadSuggestions,
   typeaheadIsLoading,
 }: Readonly<FilterSidebarProps>) {
   const hasActiveFilters = Object.values(filters).some((v) => !!v);
-  // Groups can end up with zero visible items once redundant exact-match siblings are
-  // filtered out — drop those entirely so the separator-per-group logic below (index > 0)
-  // counts only groups that actually render something, instead of leaving a stray divider
-  // where an empty group used to sit.
-  const groups = groupFilterProperties(filterProperties)
-    .map((group) => ({
-      label: group.label,
-      items: group.items.filter(
-        (p) =>
-          !isRedundantExactMatch(p, group.items) && !isRedundantStrictRangeBound(p, group.items),
-      ),
-    }))
-    .filter((group) => group.items.length > 0);
+  // Redundant siblings (bare exact-match, redundant strict range bound) are already excluded
+  // by buildFilterProperties() before this list arrives — every group here has ≥1 item.
+  const groups = groupFilterProperties(filterProperties);
 
   return (
     <div className="w-56 shrink-0 rounded-lg bg-muted/40 p-4">
@@ -829,7 +778,7 @@ export function FilterSidebar({
               group.items.every((p) => p.inputKind === "number"));
 
           return (
-            <div key={group.label}>
+            <div key={group.groupKey}>
               {index > 0 && <Separator className="mb-4" />}
               <div className="space-y-2">
                 {isRangeGroup ? (
@@ -845,6 +794,7 @@ export function FilterSidebar({
                       value: filters[prop.name] ?? "",
                       onFilterChange,
                       onTypeaheadSearch,
+                      activeTypeaheadField,
                       typeaheadSuggestions,
                       typeaheadIsLoading,
                     }),

@@ -372,19 +372,30 @@ function EntityDetailView({
 
   const filterProperties = searchTemplate ? buildFilterProperties(searchTemplate) : [];
 
-  // Shared with the collection query below so typeahead suggestions are scoped to the
-  // SAME active filters as the table — otherwise the dropdown could suggest a value that
-  // yields zero rows once combined with the other active filters.
   // applyFilterValues coerces each raw string to the JS type its inputKind requires (number,
   // boolean, Date) — the HAL-FORMS codec throws for a raw string on those property types.
   const filterSearchValues = searchTemplate
     ? applyFilterValues(createValues(searchTemplate.template), filterProperties, filters)
     : undefined;
 
+  // Scoped to the OTHER active filters, same as the table — but excluding the field currently
+  // being typeahead-searched: useTypeahead adds its own debounced value for that one key, and
+  // TypeaheadTextFilter writes into `filters` on every keystroke (not just on commit), so
+  // including the table's own value here would make this query and the table's query resolve
+  // to the exact same encoded URL — and therefore the same TanStack query key — as soon as the
+  // debounce catches up, silently merging two logically distinct queries into one.
+  const typeaheadSearchValues = searchTemplate
+    ? applyFilterValues(
+        createValues(searchTemplate.template),
+        filterProperties,
+        Object.fromEntries(Object.entries(filters).filter(([key]) => key !== activeTypeaheadParam)),
+      )
+    : undefined;
+
   const typeahead = useTypeahead({
     profileEntity: profile,
     searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
-    searchValues: filterSearchValues,
+    searchValues: typeaheadSearchValues,
     // No artificial minimum — suggestions should appear as soon as the user types anything.
     minLength: 1,
   });
@@ -405,13 +416,17 @@ function EntityDetailView({
   function handleClearAll() {
     setFilters({});
     onPageUrlChange(undefined);
+    // Otherwise the typeahead popover would still be "active" for whichever field the user
+    // was last searching, holding a stale query and suggestions from before the clear.
+    setActiveTypeaheadParam("");
+    typeahead.setQuery("");
   }
 
   function handleTypeaheadSearch(fieldParam: string, query: string) {
     if (fieldParam !== activeTypeaheadParam) {
       setActiveTypeaheadParam(fieldParam);
     }
-    typeahead.search(query);
+    typeahead.setQuery(query);
   }
 
   let collectionRequest;
@@ -488,12 +503,9 @@ function EntityDetailView({
             onFilterChange={handleFilterChange}
             onClearAll={handleClearAll}
             onTypeaheadSearch={handleTypeaheadSearch}
-            typeaheadSuggestions={
-              activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.results } : undefined
-            }
-            typeaheadIsLoading={
-              activeTypeaheadParam ? { [activeTypeaheadParam]: typeahead.isLoading } : undefined
-            }
+            activeTypeaheadField={activeTypeaheadParam || undefined}
+            typeaheadSuggestions={typeahead.results}
+            typeaheadIsLoading={typeahead.isLoading}
           />
         )}
 

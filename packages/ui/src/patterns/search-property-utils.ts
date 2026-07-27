@@ -6,8 +6,6 @@ export interface SearchProperty {
   prompt?: string;
   /** Data type, e.g. "string", "date", "datetime" */
   type: string;
-  /** True when this property supports prefix-match typeahead. Set by the data layer; not derived here. */
-  prefixSearchable?: boolean;
   /** Available values for enum-like fields */
   options?: { inline?: string[]; link?: { href: string } };
 }
@@ -48,11 +46,6 @@ export function parseName(name: string): { base: string; op: string | null } {
 export function formatFieldLabel(prop: SearchProperty): string {
   if (prop.prompt) return prop.prompt;
   return formatWords(parseName(prop.name).base);
-}
-
-/** True when a property name traverses a relation (e.g. "customer.name~prefix-match"). */
-export function isRelationProperty(name: string): boolean {
-  return parseName(name).base.includes(".");
 }
 
 export const SEARCH_TYPE_LABELS: Record<string, string> = {

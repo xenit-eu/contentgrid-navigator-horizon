@@ -21,7 +21,6 @@ export type {
 } from "./item/use-entity-item";
 export { useTypeahead } from "./collection/use-typeahead";
 export type { UseTypeaheadOptions } from "./collection/use-typeahead";
-export { useDebouncedValue } from "./use-debounced-value";
 export { useEntityItemToOneRelation } from "./relation/use-entity-item-to-one-relation";
 export type { UseEntityItemToOneRelationOptions } from "./relation/use-entity-item-to-one-relation";
 export { useEntityItemToManyRelation } from "./relation/use-entity-item-to-many-relation";
