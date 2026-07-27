@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { GearIcon } from "@phosphor-icons/react";
 import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
@@ -56,6 +57,7 @@ import {
   Separator,
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -129,6 +131,24 @@ export function EntityListLayout() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+
+        {import.meta.env.DEV && (
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  {/* `as string` bypasses TanStack Router's typed-route check: this shared
+                      feature package can't see either app's generated route tree, but
+                      /config exists in both apps. */}
+                  <Link to={"/config" as string}>
+                    <GearIcon aria-hidden />
+                    <span>App selector</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        )}
       </Sidebar>
 
       <SidebarInset>

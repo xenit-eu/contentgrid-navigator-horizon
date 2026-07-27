@@ -15,6 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.clear();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
@@ -127,6 +128,97 @@ describe("getAppConfig", () => {
     const { loadAppConfig, getAppConfig } = await import("./auth-config");
     await loadAppConfig();
     expect(getAppConfig().apiBaseUrl).toBe("https://api.example.com");
+  });
+});
+
+describe("loadAppConfig — localStorage dev override", () => {
+  it("returns the stored dev override when the key is present and valid", async () => {
+    const { loadAppConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    const override = {
+      apiBaseUrl: "https://dev.api.com",
+      authority: "https://dev.auth.com",
+      clientId: "dev-client",
+    };
+    localStorage.setItem(DEV_CONFIG_STORAGE_KEY, JSON.stringify(override));
+    const cfg = await loadAppConfig();
+    expect(cfg.apiBaseUrl).toBe("https://dev.api.com");
+    expect(cfg.authority).toBe("https://dev.auth.com");
+    expect(cfg.clientId).toBe("dev-client");
+  });
+
+  it("falls through to window config when the stored override fails schema validation", async () => {
+    const { loadAppConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    localStorage.setItem(DEV_CONFIG_STORAGE_KEY, JSON.stringify({ bad: "data" }));
+    window.contentGridConfig = VALID_WINDOW_CONFIG;
+    const cfg = await loadAppConfig();
+    expect(cfg.apiBaseUrl).toBe("https://api.example.com");
+  });
+
+  it("falls through to window config when the stored override is malformed JSON", async () => {
+    const { loadAppConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    localStorage.setItem(DEV_CONFIG_STORAGE_KEY, "not-json");
+    window.contentGridConfig = VALID_WINDOW_CONFIG;
+    const cfg = await loadAppConfig();
+    expect(cfg.apiBaseUrl).toBe("https://api.example.com");
+  });
+});
+
+describe("storeDevConfig", () => {
+  it("writes the config to localStorage at the dev-config key", async () => {
+    const { storeDevConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    storeDevConfig({ apiBaseUrl: "https://a.com", authority: "https://b.com", clientId: "c" });
+    const stored = localStorage.getItem(DEV_CONFIG_STORAGE_KEY);
+    expect(stored).not.toBeNull();
+    expect(JSON.parse(stored!).apiBaseUrl).toBe("https://a.com");
+  });
+
+  it("resets the cached config so the next getAppConfig call throws", async () => {
+    window.contentGridConfig = VALID_WINDOW_CONFIG;
+    const { loadAppConfig, storeDevConfig, getAppConfig } = await import("./auth-config");
+    await loadAppConfig();
+    storeDevConfig({ apiBaseUrl: "https://a.com", authority: "https://b.com", clientId: "c" });
+    expect(() => getAppConfig()).toThrow("App config not loaded");
+  });
+});
+
+describe("clearDevConfig", () => {
+  it("removes the dev-config key from localStorage", async () => {
+    const { clearDevConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    localStorage.setItem(DEV_CONFIG_STORAGE_KEY, "{}");
+    clearDevConfig();
+    expect(localStorage.getItem(DEV_CONFIG_STORAGE_KEY)).toBeNull();
+  });
+
+  it("resets the cached config so the next getAppConfig call throws", async () => {
+    window.contentGridConfig = VALID_WINDOW_CONFIG;
+    const { loadAppConfig, clearDevConfig, getAppConfig } = await import("./auth-config");
+    await loadAppConfig();
+    clearDevConfig();
+    expect(() => getAppConfig()).toThrow("App config not loaded");
+  });
+});
+
+describe("signinWithNewConfig", () => {
+  it("stores the config in localStorage, removes the existing session, and redirects", async () => {
+    const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);
+    const mockRemoveUser = vi.fn().mockResolvedValue(undefined);
+    vi.doMock("oidc-client-ts", () => ({
+      UserManager: class {
+        removeUser = mockRemoveUser;
+        signinRedirect = mockSigninRedirect;
+      },
+      WebStorageStateStore: class {},
+    }));
+
+    const { signinWithNewConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    const config = { apiBaseUrl: "https://a.com", authority: "https://b.com", clientId: "c" };
+    await signinWithNewConfig(config);
+
+    const stored = localStorage.getItem(DEV_CONFIG_STORAGE_KEY);
+    expect(stored).not.toBeNull();
+    expect(JSON.parse(stored!).apiBaseUrl).toBe("https://a.com");
+    expect(mockRemoveUser).toHaveBeenCalledOnce();
+    expect(mockSigninRedirect).toHaveBeenCalledOnce();
   });
 });
 

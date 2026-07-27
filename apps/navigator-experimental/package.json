@@ -12,6 +12,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
+    "@contentgrid/dev-tools": "workspace:*",
     "@contentgrid/features": "workspace:*",
     "@contentgrid/fetch-hook-authentication": "^0.4.0",
     "@contentgrid/fetch-hooks": "^0.4.0",
