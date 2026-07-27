@@ -27,6 +27,9 @@ export type SearchOperator =
   | "less-than"
   | "less-than-or-equal";
 
+/** Sub-label for a range-pair input, indicating which bound it represents. */
+export type DirectionLabel = "After" | "Before" | "From" | "Until";
+
 /** Pre-computed view model produced by buildFilterProperties() in @contentgrid/navigator-data. */
 export interface SearchFilterProperty {
   name: string;
@@ -35,7 +38,7 @@ export interface SearchFilterProperty {
   inputKind: FilterInputKind;
   searchOperator: SearchOperator;
   groupKey: string;
-  directionLabel?: "After" | "Before" | "From" | "Until";
+  directionLabel?: DirectionLabel;
   dateEncoding?: "iso" | "plain";
   options?: string[];
   relationKey?: string;
@@ -90,6 +93,11 @@ function isoToDatetimeLocalInputValue(isoString: string): string {
 }
 
 /** Maps a FilterInputKind to the native <input type="..."> it renders as. */
+/** Appends a lowercased direction ("after"/"before"/"from"/"until") to a label, when present. */
+function withDirectionSuffix(label: string, directionLabel: DirectionLabel | undefined): string {
+  return directionLabel ? `${label} ${directionLabel.toLowerCase()}` : label;
+}
+
 function htmlInputType(inputKind: FilterInputKind): string {
   switch (inputKind) {
     case "datetime":
@@ -260,9 +268,7 @@ function RangeGroupFilter({
                 <div className="min-w-0 flex-1">
                   <Input
                     type={htmlInputType(prop.inputKind)}
-                    aria-label={
-                      prop.directionLabel ? `${label} ${prop.directionLabel.toLowerCase()}` : label
-                    }
+                    aria-label={withDirectionSuffix(label, prop.directionLabel)}
                     className="h-8 text-sm"
                     value={isDateLike ? dateInputValue(prop.inputKind, value) : value}
                     onChange={(e) => {
@@ -278,7 +284,7 @@ function RangeGroupFilter({
                 <ClearButton
                   onClick={() => onFilterChange(prop.name, undefined)}
                   visible={!!value}
-                  ariaLabel={`Clear ${label}${prop.directionLabel ? ` ${prop.directionLabel.toLowerCase()}` : ""}`}
+                  ariaLabel={`Clear ${withDirectionSuffix(label, prop.directionLabel)}`}
                 />
               </div>
             </div>
@@ -357,6 +363,37 @@ function BooleanFilter({
   );
 }
 
+/**
+ * Shared wrapper for a single labeled input + ClearButton: a heading Label above a row
+ * containing the field itself and its clear affordance. DateFilter and TextFilter differ
+ * only in what `<Input>` they render inside this shell.
+ */
+function LabeledFilterField({
+  label,
+  inputId,
+  value,
+  onClear,
+  children,
+}: Readonly<{
+  label: string;
+  inputId: string;
+  value: string;
+  onClear: () => void;
+  children: React.ReactNode;
+}>) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
+        {label}
+      </Label>
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">{children}</div>
+        <ClearButton onClick={onClear} visible={!!value} />
+      </div>
+    </div>
+  );
+}
+
 function DateFilter({
   label,
   directionLabel,
@@ -366,35 +403,32 @@ function DateFilter({
   onChange,
 }: Readonly<{
   label: string;
-  directionLabel?: "After" | "Before" | "From" | "Until";
+  directionLabel?: DirectionLabel;
   dateEncoding?: "iso" | "plain";
   inputKind: "date" | "datetime";
   value: string;
   onChange: (value: string | undefined) => void;
 }>) {
-  const displayLabel = directionLabel ? `${label} ${directionLabel.toLowerCase()}` : label;
+  const displayLabel = withDirectionSuffix(label, directionLabel);
   const inputId = toInputId(displayLabel);
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
-        {displayLabel}
-      </Label>
-      <div className="flex items-center gap-1">
-        <div className="min-w-0 flex-1">
-          <Input
-            id={inputId}
-            type={htmlInputType(inputKind)}
-            className="h-8 text-sm"
-            value={dateInputValue(inputKind, value)}
-            onChange={(e) => {
-              onChange(encodeDateInputValue(inputKind, dateEncoding, e.target.value));
-            }}
-          />
-        </div>
-        <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
-      </div>
-    </div>
+    <LabeledFilterField
+      label={displayLabel}
+      inputId={inputId}
+      value={value}
+      onClear={() => onChange(undefined)}
+    >
+      <Input
+        id={inputId}
+        type={htmlInputType(inputKind)}
+        className="h-8 text-sm"
+        value={dateInputValue(inputKind, value)}
+        onChange={(e) => {
+          onChange(encodeDateInputValue(inputKind, dateEncoding, e.target.value));
+        }}
+      />
+    </LabeledFilterField>
   );
 }
 
@@ -406,32 +440,29 @@ function TextFilter({
   onChange,
 }: Readonly<{
   label: string;
-  directionLabel?: "After" | "Before" | "From" | "Until";
+  directionLabel?: DirectionLabel;
   inputType?: "text" | "number";
   value: string;
   onChange: (value: string | undefined) => void;
 }>) {
-  const displayLabel = directionLabel ? `${label} ${directionLabel.toLowerCase()}` : label;
+  const displayLabel = withDirectionSuffix(label, directionLabel);
   const inputId = toInputId(displayLabel);
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={inputId} className="text-sm font-medium text-muted-foreground">
-        {displayLabel}
-      </Label>
-      <div className="flex items-center gap-1">
-        <div className="min-w-0 flex-1">
-          <Input
-            id={inputId}
-            type={inputType}
-            className="h-8 text-sm"
-            value={value}
-            onChange={(e) => onChange(e.target.value || undefined)}
-          />
-        </div>
-        <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
-      </div>
-    </div>
+    <LabeledFilterField
+      label={displayLabel}
+      inputId={inputId}
+      value={value}
+      onClear={() => onChange(undefined)}
+    >
+      <Input
+        id={inputId}
+        type={inputType}
+        className="h-8 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value || undefined)}
+      />
+    </LabeledFilterField>
   );
 }
 
@@ -567,32 +598,31 @@ function TypeaheadTextFilter({
             // (debounced typeahead fetch) and must keep shadcn styling consistent across
             // browsers. role="combobox" + aria-activedescendant above wires this listbox
             // into the standard WAI-ARIA combobox pattern with full keyboard support.
-            // NOSONAR: no native-element alternative for an async, custom-styled combobox popup.
             <ul
               id={listboxId}
-              role="listbox"
+              role="listbox" // NOSONAR: no native-element alternative for an async, custom-styled combobox popup
               aria-label={`${label} suggestions`}
               className="max-h-48 overflow-y-auto"
             >
               {suggestions.map((s, index) => (
+                // Not a <button>: keyboard navigation is already handled via
+                // aria-activedescendant on the input (focus never leaves it), so a nested
+                // focusable/interactive element here would only duplicate that path while
+                // tripping axe's "nested-interactive" rule (a focusable descendant inside an
+                // element that already carries interactive ARIA semantics). Mouse
+                // interaction goes directly on the option element instead.
                 <li
                   key={s}
                   id={optionId(index)}
                   role="option"
                   aria-selected={index === activeIndex}
+                  className={`cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-accent ${index === activeIndex ? "bg-accent" : ""}`}
+                  // Prevent the input's onBlur from firing before onClick fires
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectSuggestion(s)}
                 >
-                  <button
-                    type="button"
-                    className={`w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent ${
-                      index === activeIndex ? "bg-accent" : ""
-                    }`}
-                    // Prevent the input's onBlur from firing before onClick fires
-                    onMouseDown={(e) => e.preventDefault()}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => selectSuggestion(s)}
-                  >
-                    {s}
-                  </button>
+                  {s}
                 </li>
               ))}
             </ul>

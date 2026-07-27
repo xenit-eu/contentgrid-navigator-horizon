@@ -98,12 +98,7 @@ function buildFilterProperty(sp: SearchHalFormTemplateProperty): SearchFilterPro
 
   const searchOperator = computeSearchOperator(sp);
   const directionLabel = computeDirectionLabel(searchOperator);
-  const dateEncoding: "iso" | "plain" | undefined =
-    inputKind === "date" || inputKind === "datetime"
-      ? name.includes(".~")
-        ? "plain"
-        : "iso"
-      : undefined;
+  const dateEncoding = computeDateEncoding(inputKind, name);
 
   return {
     name,
@@ -244,6 +239,19 @@ function computeDirectionLabel(
     default:
       return undefined;
   }
+}
+
+/**
+ * "iso" for a plain suffix (e.g. `~after`), which the UI encodes with a full ISO timestamp;
+ * "plain" for a dotted range-pair suffix (e.g. `.~from`), which the UI encodes as a bare
+ * yyyy-MM-dd value with no time component. Only applies to date/datetime inputs.
+ */
+function computeDateEncoding(
+  inputKind: FilterInputKind,
+  name: string,
+): "iso" | "plain" | undefined {
+  if (inputKind !== "date" && inputKind !== "datetime") return undefined;
+  return name.includes(".~") ? "plain" : "iso";
 }
 
 function formatFieldName(name: string): string {
