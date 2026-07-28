@@ -51,6 +51,22 @@ export function useProfileEntities(options?: UseProfileEntitiesOptions) {
 }
 
 /**
+ * Convenience wrapper over `useProfileEntities()` for consumers that only
+ * need the successfully-loaded profiles plus a single loading flag, instead
+ * of the raw per-entity query-result array.
+ */
+export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
+  readonly profiles: readonly ProfileEntity[];
+  readonly isLoading: boolean;
+} {
+  const results = useProfileEntities(options);
+  return {
+    profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
+    isLoading: results.length > 0 && results.every((r) => r.isPending),
+  };
+}
+
+/**
  * Filter criteria for finding a specific entity profile.
  * At least one property must be specified.
  */

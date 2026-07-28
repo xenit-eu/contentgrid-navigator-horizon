@@ -1,5 +1,13 @@
-import { useNavigate, useParams } from "@tanstack/react-router";
-import { type ProfileEntity, useEntityItem, useProfileEntity } from "@contentgrid/navigator-data";
+import type { QueryClient } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
+import {
+  type ProfileEntity,
+  type TypedFetch,
+  ensureEntityItem,
+  useEntityItem,
+  useLoadedProfileEntities,
+  useProfileEntity,
+} from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,8 +19,46 @@ import {
   Separator,
 } from "@contentgrid/ui";
 import { formatAttributeValue } from "./attribute-format";
-import type { AnyNavigateFn } from "./navigate";
+import { useTypedNavigate } from "./navigate";
 import { RelationToManySection, RelationToOneSection } from "./relation-sections";
+
+// ---------------------------------------------------------------------------
+// Route loader — shared by both apps' $entity/$itemId.tsx route files.
+// TanStack Router requires a per-app route file, but the prefetch logic itself
+// is identical, so it lives here once instead of being copy-pasted twice.
+// ---------------------------------------------------------------------------
+
+/**
+ * The router-context slice this loader reads. Declared structurally rather than
+ * importing either app's own `AppRouterContext` — `packages/features` must not
+ * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
+ * satisfy this shape.
+ */
+export interface EntityItemDetailLoaderContext {
+  queryClient: QueryClient;
+  apiFetch: TypedFetch | null;
+  /**
+   * `null` when the parent `$entity` beforeLoad prefetch resolved to no profile,
+   * absent entirely when it bailed out early — both mean "not prefetched".
+   */
+  profileEntity?: ProfileEntity | null;
+}
+
+export async function ensureEntityItemDetailLoaderData(
+  context: EntityItemDetailLoaderContext,
+  itemId: string,
+): Promise<void> {
+  const { queryClient, apiFetch, profileEntity } = context;
+  if (!apiFetch || !profileEntity) return;
+
+  try {
+    await ensureEntityItem(queryClient, apiFetch, profileEntity, itemId);
+  } catch {
+    // Swallowed: an uncaught loader rejection would block EntityItemDetailPage
+    // from mounting at all. useEntityItem's own isError handling takes over
+    // once the component renders.
+  }
+}
 
 // ---------------------------------------------------------------------------
 // EntityItemDetailPage — $entity/$itemId route component
@@ -37,9 +83,9 @@ function EntityItemDetailView({
   profile,
   itemId,
 }: Readonly<{ profile: ProfileEntity; itemId: string }>) {
-  const navigate = useNavigate();
-  const go = navigate as unknown as AnyNavigateFn;
+  const go = useTypedNavigate();
   const item = useEntityItem({ profileEntity: profile, entityId: itemId });
+  const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
   return (
     <div className="space-y-6">
@@ -109,10 +155,10 @@ function EntityItemDetailView({
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold">Relations</h2>
                 {item.data.toOneRelations.map((rel) => (
-                  <RelationToOneSection key={rel.name} relation={rel} />
+                  <RelationToOneSection key={rel.name} relation={rel} profiles={loadedProfiles} />
                 ))}
                 {item.data.toManyRelations.map((rel) => (
-                  <RelationToManySection key={rel.name} relation={rel} />
+                  <RelationToManySection key={rel.name} relation={rel} profiles={loadedProfiles} />
                 ))}
               </div>
             </>

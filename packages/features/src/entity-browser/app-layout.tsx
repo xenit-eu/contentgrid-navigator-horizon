@@ -1,6 +1,6 @@
 import { GearIcon } from "@phosphor-icons/react";
 import { Link, Outlet, useParams } from "@tanstack/react-router";
-import { useProfileEntities } from "@contentgrid/navigator-data";
+import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   BrandingHeader,
   Sidebar,
@@ -25,9 +25,7 @@ import {
 export function EntityListLayout() {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
 
-  const profileResults = useProfileEntities();
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const { profiles: loadedProfiles, isLoading: isLoadingProfiles } = useLoadedProfileEntities();
   const selectedProfile = activeEntity
     ? loadedProfiles.find((p) => p.name === activeEntity)
     : undefined;

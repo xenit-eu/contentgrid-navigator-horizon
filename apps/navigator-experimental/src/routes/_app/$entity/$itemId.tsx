@@ -1,19 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EntityItemDetailPage } from "@contentgrid/features/entity-browser";
-import { ensureEntityItem } from "@contentgrid/navigator-data";
+import {
+  EntityItemDetailPage,
+  ensureEntityItemDetailLoaderData,
+} from "@contentgrid/features/entity-browser";
 
 export const Route = createFileRoute("/_app/$entity/$itemId")({
-  loader: async ({ context, params }) => {
-    const { apiFetch, profileEntity, queryClient } = context;
-    if (!apiFetch || !profileEntity) return;
-
-    try {
-      await ensureEntityItem(queryClient, apiFetch, profileEntity, params.itemId);
-    } catch {
-      // Swallowed: an uncaught loader rejection would block EntityItemDetailPage
-      // from mounting at all. useEntityItem's own isError handling takes over
-      // once the component renders.
-    }
-  },
+  loader: ({ context, params }) => ensureEntityItemDetailLoaderData(context, params.itemId),
   component: EntityItemDetailPage,
 });

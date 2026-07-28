@@ -1,6 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { QueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useParams, useSearch } from "@tanstack/react-router";
 import {
   type EntityItem,
   type EntitySearchState,
@@ -30,7 +30,7 @@ import {
   Skeleton,
 } from "@contentgrid/ui";
 import { formatAttributeValue } from "./attribute-format";
-import type { AnyNavigateFn } from "./navigate";
+import { useTypedNavigate } from "./navigate";
 
 // ---------------------------------------------------------------------------
 // Route loader — shared by both apps' $entity/index.tsx route files.
@@ -38,13 +38,34 @@ import type { AnyNavigateFn } from "./navigate";
 // is identical, so it lives here once instead of being copy-pasted twice.
 // ---------------------------------------------------------------------------
 
+/**
+ * The router-context slice this loader reads. Declared structurally rather than
+ * importing either app's own `AppRouterContext` — `packages/features` must not
+ * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
+ * satisfy this shape.
+ */
+export interface EntityDetailLoaderContext {
+  queryClient: QueryClient;
+  apiFetch: TypedFetch | null;
+  profileUrl: string | null;
+  /**
+   * `null` when the parent `$entity` beforeLoad prefetch resolved to no profile,
+   * absent entirely when it bailed out early — both mean "not prefetched".
+   */
+  profileEntity?: ProfileEntity | null;
+}
+
 export async function ensureEntityDetailLoaderData(
-  queryClient: QueryClient,
-  apiFetch: TypedFetch,
-  profileUrl: string,
-  profileEntity: ProfileEntity,
+  context: EntityDetailLoaderContext,
   cursor: string | undefined,
 ): Promise<void> {
+  const { queryClient, apiFetch, profileUrl, profileEntity } = context;
+  // apiFetch/profileUrl stay null until the auth-gated router-context bridge in
+  // main.tsx fires; profileEntity is absent when the parent $entity beforeLoad
+  // prefetch was skipped or failed. In each case skip prefetching and let
+  // EntityDetailPage's own useEntityItemCollection() fetch normally.
+  if (!apiFetch || !profileUrl || !profileEntity) return;
+
   try {
     const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
     await ensureEntityItemCollection(
@@ -67,8 +88,7 @@ export async function ensureEntityDetailLoaderData(
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
   const searchState = useSearch({ strict: false }) as EntitySearchState;
-  const navigate = useNavigate();
-  const go = navigate as unknown as AnyNavigateFn;
+  const go = useTypedNavigate();
 
   // EntityProfileGate (the parent /$entity route) already resolved and
   // validated the profile before this renders — this is a cached read.
@@ -89,7 +109,7 @@ export function EntityDetailPage() {
         },
       });
     },
-    [navigate],
+    [go],
   );
 
   function onRowClick(id: string) {
@@ -141,8 +161,11 @@ function EntityDetailView({
   const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
   const collection = useEntityItemCollection({ profileEntity: profile, searchParams });
 
-  const columns = buildColumns(profile);
-  const rows = collection.data ? buildRows(collection.data.items, columns) : [];
+  const columns = useMemo(() => buildColumns(profile), [profile]);
+  const rows = useMemo(
+    () => (collection.data ? buildRows(collection.data.items, columns) : []),
+    [collection.data, columns],
+  );
 
   return (
     <div className="space-y-6">

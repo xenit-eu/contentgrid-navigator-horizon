@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type EntityItem,
@@ -15,7 +15,6 @@ import {
   useEntityItemCollection,
   useEntityItemToManyRelation,
   useEntityItemToOneRelation,
-  useProfileEntities,
   useSetToOneRelation,
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
@@ -50,7 +49,8 @@ import type { AnyNavigateFn } from "./navigate";
 
 export function RelationToOneSection({
   relation,
-}: Readonly<{ relation: EntityItemToOneRelation }>) {
+  profiles,
+}: Readonly<{ relation: EntityItemToOneRelation; profiles: readonly ProfileEntity[] }>) {
   const go = useNavigate() as unknown as AnyNavigateFn;
   const result = useEntityItemToOneRelation(relation);
   const {
@@ -65,9 +65,7 @@ export function RelationToOneSection({
   } = useSetToOneRelation(relation);
   const mutationError = clearError ?? setError;
   const [linkOpen, setLinkOpen] = useState(false);
-  const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
+  const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
   return (
@@ -158,7 +156,8 @@ export function RelationToOneSection({
 
 export function RelationToManySection({
   relation,
-}: Readonly<{ relation: EntityItemToManyRelation }>) {
+  profiles,
+}: Readonly<{ relation: EntityItemToManyRelation; profiles: readonly ProfileEntity[] }>) {
   const go = useNavigate() as unknown as AnyNavigateFn;
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
   const result = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
@@ -186,13 +185,17 @@ export function RelationToManySection({
   } = useDeleteRelationItem(relation);
   const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
-  const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
+  const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
-  const columns = targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }];
-  const rows = result.isSuccess ? buildRows(result.data.items, columns) : [];
+  const columns = useMemo(
+    () => (targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }]),
+    [targetProfile],
+  );
+  const rows = useMemo(
+    () => (result.isSuccess ? buildRows(result.data.items, columns) : []),
+    [result.isSuccess, result.data, columns],
+  );
   const total = result.isSuccess ? result.data.totalItems : undefined;
 
   function onRowClick(id: string) {

@@ -1,19 +1,17 @@
-import { useNavigate } from "@tanstack/react-router";
 import {
   type ProfileEntity,
   useEntityItemCollection,
-  useProfileEntities,
+  useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { EntityCard, Skeleton } from "@contentgrid/ui";
-import type { AnyNavigateFn } from "./navigate";
+import { useTypedNavigate } from "./navigate";
 
 // ---------------------------------------------------------------------------
 // EntityOverviewPage — index route component (grid of entity cards)
 // ---------------------------------------------------------------------------
 
 export function EntityOverviewPage() {
-  const navigate = useNavigate();
-  const go = navigate as unknown as AnyNavigateFn;
+  const go = useTypedNavigate();
 
   return (
     <EntityOverview
@@ -29,10 +27,7 @@ export function EntityOverviewPage() {
 function EntityOverview({
   onSelectEntity,
 }: Readonly<{ onSelectEntity: (profile: ProfileEntity) => void }>) {
-  const profileResults = useProfileEntities();
-
-  const isLoading = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const { profiles: loadedProfiles, isLoading } = useLoadedProfileEntities();
 
   if (isLoading) {
     return (

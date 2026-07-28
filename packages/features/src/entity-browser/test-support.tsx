@@ -30,10 +30,60 @@ export const PROFILE_URL = `${API_URL}/profile`;
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
 // ----------------------------------------------------------------
+// Shared profile-response building blocks
+//
+// Every entity-profile handler below returns the same HAL envelope, differing
+// only in URLs, attributes and templates. These two builders hold the parts
+// that are byte-identical across all of them so each handler states just what
+// makes it distinct.
+// ----------------------------------------------------------------
+
+/** The `_links` block every entity-profile response carries. */
+function profileLinks(profileUrl: string, collectionUrl: string) {
+  return {
+    self: { href: profileUrl },
+    describes: [
+      { href: collectionUrl, name: "collection" },
+      { href: `${collectionUrl}/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        name: "blueprint",
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        templated: true,
+      },
+    ],
+  };
+}
+
+/** One `blueprint:attribute` embedded entry, with the empty-embeds boilerplate filled in. */
+function profileAttribute(opts: {
+  name: string;
+  title: string;
+  type?: string;
+  readOnly?: boolean;
+  searchParams?: { name: string; title: string; type: string }[];
+}) {
+  return {
+    name: opts.name,
+    title: opts.title,
+    type: opts.type ?? "string",
+    description: null,
+    readOnly: opts.readOnly ?? false,
+    _embedded: {
+      "blueprint:constraint": [],
+      "blueprint:search-param": opts.searchParams ?? [],
+      "blueprint:attribute": [],
+    },
+    _links: {},
+  };
+}
+
+// ----------------------------------------------------------------
 // Router + provider factories
 // ----------------------------------------------------------------
 
-export function createTestRouter(initialEntry = "/") {
+function createTestRouter(initialEntry = "/") {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -169,48 +219,11 @@ export function invoiceProfileHandler(opts: { description?: string } = {}) {
       name: "invoice",
       title: "Invoice",
       ...(opts.description ? { description: opts.description } : {}),
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
+      _links: profileLinks(`${PROFILE_URL}/invoices`, `${API_URL}/invoices`),
       _embedded: {
         "blueprint:attribute": [
-          {
-            name: "id",
-            title: "ID",
-            type: "string",
-            description: null,
-            readOnly: true,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-          {
-            name: "number",
-            title: "Invoice Number",
-            type: "string",
-            description: null,
-            readOnly: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
+          profileAttribute({ name: "id", title: "ID", readOnly: true }),
+          profileAttribute({ name: "number", title: "Invoice Number" }),
         ],
         "blueprint:relation": [],
       },
@@ -235,31 +248,18 @@ export function invoiceProfileHandlerNoCreate() {
     HttpResponse.json({
       name: "invoice",
       title: "Invoice",
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
+      _links: profileLinks(`${PROFILE_URL}/invoices`, `${API_URL}/invoices`),
       _embedded: {
         "blueprint:attribute": [],
         "blueprint:relation": [],
       },
       _templates: {
+        // no create-form
         search: {
           method: "GET",
           target: `${API_URL}/invoices`,
           properties: [],
         },
-        // no create-form
       },
     }),
   );
@@ -270,20 +270,7 @@ export function customerProfileHandler() {
     HttpResponse.json({
       name: "customer",
       title: "Customer",
-      _links: {
-        self: { href: `${PROFILE_URL}/customers` },
-        describes: [
-          { href: `${API_URL}/customers`, name: "collection" },
-          { href: `${API_URL}/customers/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
+      _links: profileLinks(`${PROFILE_URL}/customers`, `${API_URL}/customers`),
       _embedded: {
         "blueprint:attribute": [],
         "blueprint:relation": [],
@@ -317,8 +304,8 @@ export const sampleItem = {
 // Relation fixtures — invoice -> supplier (to-one), invoice -> lineItems (to-many)
 // ----------------------------------------------------------------
 
-export const SUPPLIER_PROFILE_URL = `${PROFILE_URL}/suppliers`;
-export const LINE_ITEM_PROFILE_URL = `${PROFILE_URL}/line-items`;
+const SUPPLIER_PROFILE_URL = `${PROFILE_URL}/suppliers`;
+const LINE_ITEM_PROFILE_URL = `${PROFILE_URL}/line-items`;
 export const SUPPLIERS_COLLECTION_URL = `${API_URL}/suppliers`;
 export const LINE_ITEMS_COLLECTION_URL = `${API_URL}/line-items`;
 
@@ -355,36 +342,9 @@ export function invoiceProfileHandlerWithRelations() {
       name: "invoice",
       title: "Invoice",
       description: null,
-      _links: {
-        self: { href: `${PROFILE_URL}/invoices` },
-        describes: [
-          { href: `${API_URL}/invoices`, name: "collection" },
-          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
+      _links: profileLinks(`${PROFILE_URL}/invoices`, `${API_URL}/invoices`),
       _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "number",
-            title: "Invoice Number",
-            type: "string",
-            description: null,
-            readOnly: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-        ],
+        "blueprint:attribute": [profileAttribute({ name: "number", title: "Invoice Number" })],
         [BLUEPRINT_RELATION_REL]: [
           {
             name: "supplier",
@@ -433,37 +393,14 @@ export function supplierProfileHandler() {
       name: "supplier",
       title: "Supplier",
       description: null,
-      _links: {
-        self: { href: SUPPLIER_PROFILE_URL },
-        describes: [
-          { href: SUPPLIERS_COLLECTION_URL, name: "collection" },
-          { href: `${SUPPLIERS_COLLECTION_URL}/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
+      _links: profileLinks(SUPPLIER_PROFILE_URL, SUPPLIERS_COLLECTION_URL),
       _embedded: {
         "blueprint:attribute": [
-          {
+          profileAttribute({
             name: "name",
             title: "Name",
-            type: "string",
-            description: null,
-            readOnly: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [
-                { name: "name~prefix", title: "Name prefix", type: "prefix-match" },
-              ],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
+            searchParams: [{ name: "name~prefix", title: "Name prefix", type: "prefix-match" }],
+          }),
         ],
         "blueprint:relation": [],
       },
@@ -484,37 +421,16 @@ export function lineItemProfileHandler() {
       name: "lineItem",
       title: "Line Item",
       description: null,
-      _links: {
-        self: { href: LINE_ITEM_PROFILE_URL },
-        describes: [
-          { href: LINE_ITEMS_COLLECTION_URL, name: "collection" },
-          { href: `${LINE_ITEMS_COLLECTION_URL}/{id}`, name: "item", templated: true },
-        ],
-        curies: [
-          {
-            name: "blueprint",
-            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-            templated: true,
-          },
-        ],
-      },
+      _links: profileLinks(LINE_ITEM_PROFILE_URL, LINE_ITEMS_COLLECTION_URL),
       _embedded: {
         "blueprint:attribute": [
-          {
+          profileAttribute({
             name: "description",
             title: "Description",
-            type: "string",
-            description: null,
-            readOnly: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [
-                { name: "description~prefix", title: "Description prefix", type: "prefix-match" },
-              ],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
+            searchParams: [
+              { name: "description~prefix", title: "Description prefix", type: "prefix-match" },
+            ],
+          }),
         ],
         "blueprint:relation": [],
       },

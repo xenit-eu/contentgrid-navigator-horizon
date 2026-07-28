@@ -8,17 +8,6 @@ import { entitySearchStateValidator } from "@contentgrid/navigator-data";
 export const Route = createFileRoute("/_app/$entity/")({
   validateSearch: entitySearchStateValidator,
   loaderDeps: ({ search }) => ({ cursor: search.cursor }),
-  loader: async ({ context, deps }) => {
-    const { apiFetch, profileUrl, profileEntity, queryClient } = context;
-    if (!apiFetch || !profileUrl || !profileEntity) return;
-
-    await ensureEntityDetailLoaderData(
-      queryClient,
-      apiFetch,
-      profileUrl,
-      profileEntity,
-      deps.cursor,
-    );
-  },
+  loader: ({ context, deps }) => ensureEntityDetailLoaderData(context, deps.cursor),
   component: EntityDetailPage,
 });

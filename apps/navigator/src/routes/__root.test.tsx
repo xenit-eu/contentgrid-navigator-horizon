@@ -36,6 +36,12 @@ vi.mock("@contentgrid/features/entity-browser", async () => {
       return <div data-testid="entity-detail" data-entity={entity} />;
     },
     EntityItemDetailPage: () => <div data-testid="entity-item-detail" />,
+    // The $entity/index, $entity, and $entity/$itemId route loaders call these
+    // unconditionally — the null-context guard lives inside the real
+    // implementation, so the mocks must provide them.
+    ensureEntityDetailLoaderData: vi.fn(),
+    ensureEntityProfileGateLoaderData: vi.fn().mockResolvedValue({}),
+    ensureEntityItemDetailLoaderData: vi.fn(),
   };
 });
 
