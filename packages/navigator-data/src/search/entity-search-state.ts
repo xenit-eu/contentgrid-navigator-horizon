@@ -17,7 +17,10 @@ export function entitySearchStateValidator(search: Record<string, unknown>): Ent
 export function extractCursorFromHref(href: string | undefined): string | undefined {
   if (!href) return undefined;
   try {
-    return new URL(href).searchParams.get("_cursor") ?? undefined;
+    // `href` (from EntityItemCollection.nextHref/prevHref) may be relative —
+    // a placeholder base lets URL parse it without needing the real origin,
+    // since only the query string is read here.
+    return new URL(href, "https://placeholder").searchParams.get("_cursor") ?? undefined;
   } catch {
     return undefined;
   }

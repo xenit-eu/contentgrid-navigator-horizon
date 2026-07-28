@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   type EntityItem,
   type EntityItemToManyRelation,
@@ -9,6 +8,7 @@ import {
   type ProfileEntity,
   createValues,
   extractFieldErrors,
+  getErrorMessage,
   useAddToManyRelation,
   useClearRelation,
   useDeleteRelationItem,
@@ -41,7 +41,7 @@ import {
 } from "@contentgrid/ui";
 import { formatAttributeValue } from "./attribute-format";
 import { buildColumns, buildRows } from "./entity-detail";
-import type { AnyNavigateFn } from "./navigate";
+import { useTypedNavigate } from "./navigate";
 
 // ---------------------------------------------------------------------------
 // Relation section components — each owns its own hook call (Rules of Hooks)
@@ -51,8 +51,8 @@ export function RelationToOneSection({
   relation,
   profiles,
 }: Readonly<{ relation: EntityItemToOneRelation; profiles: readonly ProfileEntity[] }>) {
-  const go = useNavigate() as unknown as AnyNavigateFn;
-  const result = useEntityItemToOneRelation(relation);
+  const go = useTypedNavigate();
+  const linkedItem = useEntityItemToOneRelation(relation);
   const {
     mutate: clearRelation,
     isPending: isClearing,
@@ -73,7 +73,7 @@ export function RelationToOneSection({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
         <div className="flex items-center gap-2">
-          {relation.canSet && targetProfile && result.isSuccess && result.data === null && (
+          {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
             <>
               <Button
                 variant="outline"
@@ -91,7 +91,7 @@ export function RelationToOneSection({
               />
             </>
           )}
-          {relation.canClear && result.isSuccess && result.data !== null && (
+          {relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isClearing}>
@@ -115,19 +115,21 @@ export function RelationToOneSection({
         </div>
       </div>
       {mutationError && <MutationErrorDisplay error={mutationError} />}
-      {result.isPending && <Skeleton className="h-12 w-full rounded-md" />}
-      {result.isError && (
-        <p className="text-xs text-destructive">Failed to load: {result.error.message}</p>
+      {linkedItem.isPending && <Skeleton className="h-12 w-full rounded-md" />}
+      {linkedItem.isError && (
+        <p className="text-xs text-destructive">
+          Failed to load: {getErrorMessage(linkedItem.error)}
+        </p>
       )}
-      {result.isSuccess && result.data === null && (
+      {linkedItem.isSuccess && linkedItem.data === null && (
         <p className="text-sm text-muted-foreground">No item linked</p>
       )}
-      {result.isSuccess && result.data !== null && (
+      {linkedItem.isSuccess && linkedItem.data !== null && (
         <button
           type="button"
           className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
           onClick={() => {
-            const linked = result.data;
+            const linked = linkedItem.data;
             if (!linked) return;
             go({
               to: "/$entity/$itemId",
@@ -136,9 +138,9 @@ export function RelationToOneSection({
           }}
         >
           <dl className="grid grid-cols-2 gap-2">
-            {result.data.userDefinedAttributes.slice(0, 4).map((attr) => {
+            {linkedItem.data.userDefinedAttributes.slice(0, 4).map((attr) => {
               const label =
-                result.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
+                linkedItem.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
                   ?.title ?? attr.value.name;
               return (
                 <div key={attr.value.name}>
@@ -158,9 +160,9 @@ export function RelationToManySection({
   relation,
   profiles,
 }: Readonly<{ relation: EntityItemToManyRelation; profiles: readonly ProfileEntity[] }>) {
-  const go = useNavigate() as unknown as AnyNavigateFn;
+  const go = useTypedNavigate();
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
-  const result = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
+  const collection = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
   const {
     mutate: clearRelation,
     isPending: isClearing,
@@ -193,10 +195,10 @@ export function RelationToManySection({
     [targetProfile],
   );
   const rows = useMemo(
-    () => (result.isSuccess ? buildRows(result.data.items, columns) : []),
-    [result.isSuccess, result.data, columns],
+    () => (collection.isSuccess ? buildRows(collection.data.items, columns) : []),
+    [collection.isSuccess, collection.data, columns],
   );
-  const total = result.isSuccess ? result.data.totalItems : undefined;
+  const total = collection.isSuccess ? collection.data.totalItems : undefined;
 
   function onRowClick(id: string) {
     if (!targetProfile) return;
@@ -232,7 +234,7 @@ export function RelationToManySection({
               />
             </>
           )}
-          {relation.canClear && result.isSuccess && result.data.items.length > 0 && (
+          {relation.canClear && collection.isSuccess && collection.data.items.length > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isClearing}>
@@ -257,14 +259,16 @@ export function RelationToManySection({
         </div>
       </div>
       {mutationError && <MutationErrorDisplay error={mutationError} />}
-      {result.isPending && <Skeleton className="h-12 w-full rounded-md" />}
-      {result.isError && (
-        <p className="text-xs text-destructive">Failed to load: {result.error.message}</p>
+      {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
+      {collection.isError && (
+        <p className="text-xs text-destructive">
+          Failed to load: {getErrorMessage(collection.error)}
+        </p>
       )}
-      {result.isSuccess && result.data.isEmpty && (
+      {collection.isSuccess && collection.data.isEmpty && (
         <p className="text-sm text-muted-foreground">No items linked</p>
       )}
-      {result.isSuccess && !result.data.isEmpty && (
+      {collection.isSuccess && !collection.data.isEmpty && (
         <div className="space-y-3">
           <DataTable
             entityName={relation.name}
@@ -275,40 +279,40 @@ export function RelationToManySection({
             onUnlink={
               relation.canUnlinkItem
                 ? (id) => {
-                    const item = result.data.findById(id);
+                    const item = collection.data.findById(id);
                     if (item) unlinkItem(item);
                   }
                 : undefined
             }
             isUnlinking={isUnlinking}
             onDelete={
-              result.data.items.some((i) => i.canDelete)
+              collection.data.items.some((i) => i.canDelete)
                 ? (id) => {
-                    const item = result.data.findById(id);
+                    const item = collection.data.findById(id);
                     if (item?.canDelete) deleteItem(item);
                   }
                 : undefined
             }
             isDeleting={isDeleting}
           />
-          {(result.data.hasNext || result.data.hasPrevious) && (
+          {(collection.data.hasNext || collection.data.hasPrevious) && (
             <div className="flex items-center justify-between pt-1">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!result.data.hasPrevious}
-                onClick={() => setPageUrl(result.data.prevHref)}
+                disabled={!collection.data.hasPrevious}
+                onClick={() => setPageUrl(collection.data.prevHref)}
               >
                 Previous
               </Button>
               <span className="text-xs text-muted-foreground">
-                {result.data.pageSize} items on this page
+                {collection.data.pageSize} items on this page
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!result.data.hasNext}
-                onClick={() => setPageUrl(result.data.nextHref)}
+                disabled={!collection.data.hasNext}
+                onClick={() => setPageUrl(collection.data.nextHref)}
               >
                 Next
               </Button>
@@ -387,7 +391,9 @@ function RelationItemSearchDialog({
         />
         {collection.isPending && <Skeleton className="h-40 w-full rounded-md" />}
         {collection.isError && (
-          <p className="text-sm text-destructive">Failed to load: {collection.error.message}</p>
+          <p className="text-sm text-destructive">
+            Failed to load: {getErrorMessage(collection.error)}
+          </p>
         )}
         {collection.isSuccess && collection.data.items.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">No items found</p>
@@ -432,7 +438,7 @@ function RelationItemSearchDialog({
 
 function MutationErrorDisplay({ error }: Readonly<{ error: Error }>) {
   if (!(error instanceof ProblemDetailError)) {
-    return <p className="text-xs text-destructive">{error.message}</p>;
+    return <p className="text-xs text-destructive">{getErrorMessage(error)}</p>;
   }
   const { status, title, detail, type } = error.problemDetail;
   const fieldErrors = extractFieldErrors(error);

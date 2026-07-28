@@ -4,6 +4,7 @@ import {
   type ProfileEntity,
   type TypedFetch,
   ensureEntityItem,
+  getErrorMessage,
   useEntityItem,
   useLoadedProfileEntities,
   useProfileEntity,
@@ -34,7 +35,7 @@ import { RelationToManySection, RelationToOneSection } from "./relation-sections
  * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
  * satisfy this shape.
  */
-export interface EntityItemDetailLoaderContext {
+interface EntityItemDetailLoaderContext {
   queryClient: QueryClient;
   apiFetch: TypedFetch | null;
   /**
@@ -131,7 +132,9 @@ function EntityItemDetailView({
 
       {item.isPending && <LoadingPage rows={4} />}
 
-      {item.isError && <ErrorPage message={`Failed to load item: ${item.error.message}`} />}
+      {item.isError && (
+        <ErrorPage message={`Failed to load item: ${getErrorMessage(item.error)}`} />
+      )}
 
       {item.isSuccess && (
         <>

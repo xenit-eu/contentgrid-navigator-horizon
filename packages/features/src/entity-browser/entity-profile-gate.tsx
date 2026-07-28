@@ -4,6 +4,7 @@ import {
   type ProfileEntity,
   type TypedFetch,
   ensureProfileEntity,
+  getErrorMessage,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { ErrorPage, LoadingPage } from "@contentgrid/ui";
@@ -21,7 +22,7 @@ import { useTypedNavigate } from "./navigate";
  * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
  * satisfy this shape.
  */
-export interface EntityProfileGateLoaderContext {
+interface EntityProfileGateLoaderContext {
   queryClient: QueryClient;
   apiFetch: TypedFetch | null;
   profileUrl: string | null;
@@ -77,7 +78,7 @@ export function EntityProfileGate() {
   if (isError) {
     return (
       <ErrorPage
-        message={`Failed to load "${entityName}": ${error.message}`}
+        message={`Failed to load "${entityName}": ${getErrorMessage(error)}`}
         onRetry={() => refetch()}
         retryLabel="Retry"
       />

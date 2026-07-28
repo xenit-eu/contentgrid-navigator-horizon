@@ -31,7 +31,7 @@ describe("extractCursorFromHref", () => {
     expect(extractCursorFromHref("https://api.example.com/invoices")).toBeUndefined();
   });
 
-  it("returns undefined (not throwing) when href is unparsable", () => {
-    expect(extractCursorFromHref("/relative-no-base")).toBeUndefined();
+  it("extracts the _cursor param from a relative href", () => {
+    expect(extractCursorFromHref("/invoices?_cursor=abc123")).toBe("abc123");
   });
 });

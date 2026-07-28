@@ -9,6 +9,7 @@ import {
   createValues,
   ensureEntityItemCollection,
   extractCursorFromHref,
+  getErrorMessage,
   useCreateEntityItem,
   useEntityItemCollection,
   useProfileEntity,
@@ -44,7 +45,7 @@ import { useTypedNavigate } from "./navigate";
  * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
  * satisfy this shape.
  */
-export interface EntityDetailLoaderContext {
+interface EntityDetailLoaderContext {
   queryClient: QueryClient;
   apiFetch: TypedFetch | null;
   profileUrl: string | null;
@@ -218,7 +219,7 @@ function EntityDetailView({
           reset to the first page whenever a cursor was active. */}
       {collection.isError && (
         <ErrorPage
-          message={`Failed to load ${profile.pluralName}: ${collection.error.message}`}
+          message={`Failed to load ${profile.pluralName}: ${getErrorMessage(collection.error)}`}
           onRetry={cursor ? () => onSearchStateChange({ cursor: undefined }) : undefined}
           retryLabel="Back to first page"
         />
@@ -290,7 +291,7 @@ function CreateEntityButton({ profile }: Readonly<{ profile: ProfileEntity }>) {
       <Button size="sm" disabled={isPending} onClick={handleCreate}>
         {isPending ? "Creating…" : "Create"}
       </Button>
-      {error && <p className="text-xs text-destructive">{error.message}</p>}
+      {error && <p className="text-xs text-destructive">{getErrorMessage(error)}</p>}
     </div>
   );
 }
@@ -324,7 +325,7 @@ export function buildRows(
     const data: Record<string, unknown> = {};
 
     if (columnKeys.has("id")) {
-      data["id"] = item.halItem.data.id;
+      data["id"] = item.id;
     }
 
     for (const attr of item.userDefinedAttributes) {
@@ -332,6 +333,6 @@ export function buildRows(
       data[attr.value.name] = formatAttributeValue(attr);
     }
 
-    return { id: String(item.halItem.data.id), data };
+    return { id: item.id, data };
   });
 }

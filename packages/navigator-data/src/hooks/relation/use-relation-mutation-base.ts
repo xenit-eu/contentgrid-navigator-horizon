@@ -77,10 +77,17 @@ export function useRelationMutationBase<
       // Invalidate the relation read key so the read hook refetches after mutation.
       // Runs on BOTH success and error so stale caches are always busted.
       // relation.name is always available — no profile lookup needed.
+      //
+      // to-many uses the forRelationName prefix (all cached pages), not byUrl for
+      // just the base link: once a caller has paged past page 1 (useAddToManyRelation)
+      // or is about to reset back to page 1 (useClearRelation), the currently-viewed
+      // page's cache key is a different URL than relation.link.href, so a byUrl-only
+      // invalidation would silently miss it — same rationale as useUnlinkRelation /
+      // useDeleteRelationItem, which already invalidate this way for to-many.
       const readKey =
         relation instanceof EntityItemToOneRelation
           ? queryKeys.toOneRelation.byUrl(relation.name, relation.link.href)
-          : queryKeys.toManyRelation.byUrl(relation.name, relation.link.href);
+          : queryKeys.toManyRelation.forRelationName(relation.name);
       await queryClient.invalidateQueries({ queryKey: readKey });
 
       // Invalidate the source item's entityItem cache entry unconditionally.

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { NavigatorDataProvider, isAuthReady, useAppAuth } from "@contentgrid/navigator-data";
 import { SignInGate } from "@contentgrid/ui";
 
-export interface AuthShellProps {
+interface AuthShellProps {
   children: ReactNode;
 }
 
