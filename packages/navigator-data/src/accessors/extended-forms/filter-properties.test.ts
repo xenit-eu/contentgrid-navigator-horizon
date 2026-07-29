@@ -1,25 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { HalObject, type Link } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { ProfileEntityShape } from "../../shapes";
-import ProfileEntity from "../entity-profile";
-import { applyFilterValues, buildFilterProperties, coerceFilterValue } from "./filter-properties";
+import {
+  applyFilterValues,
+  buildFilterProperties,
+  coerceFilterValue,
+  findInvalidFilterKeys,
+} from "./filter-properties";
 import { SearchHalFormTemplate } from "./search-form";
-
-// ---------------------------------------------------------------------------
-// Helpers (mirror pattern from search-form.test.ts)
-// ---------------------------------------------------------------------------
-
-function makeProfileEntity(
-  json: Record<string, unknown>,
-  linkHref = "https://example.com/profile/things",
-  linkName = "thing",
-): ProfileEntity {
-  const hal = new HalObject(json as unknown as ProfileEntityShape);
-  const link = { href: linkHref, name: linkName } as unknown as Link;
-  return new ProfileEntity(link, hal as HalObject<ProfileEntityShape>);
-}
+import { makeProfileEntity } from "./test-utils";
 
 function makeSearchTemplate(json: Record<string, unknown>): SearchHalFormTemplate {
   const profile = makeProfileEntity(json, "https://example.com/profile/items", "item");
@@ -30,9 +20,11 @@ function makeSearchTemplate(json: Record<string, unknown>): SearchHalFormTemplat
 // ---------------------------------------------------------------------------
 // Base profile fixture
 //
-// Operator suffixes match a live profile exactly (confirmed against a sandbox backend):
-// every operator — including the inclusive range-pair bounds "~from"/"~until" — uses a
-// single plain tilde, never a dotted "attribute.~op" form.
+// Operator suffixes use a single plain tilde, never a dotted "attribute.~op" form — verified
+// against the committed profile dump for ~prefix/~gt/~gte/~lt/~lte/~after/~before. The
+// inclusive range-pair bounds ("~from"/"~until") aren't in that dump, but are real and
+// plain-tilde per the legacy Navigator's NestedRange pairing
+// (contentgrid-navigator/src/components/form/jsonforms.ts:325).
 // ---------------------------------------------------------------------------
 
 const profileJson = {
@@ -505,6 +497,14 @@ describe("buildFilterProperties — redundant exact-match suppression", () => {
     expect(sharedProps.find((p) => p.name === "status")).toBeDefined();
     expect(sharedProps.find((p) => p.name === "active")).toBeDefined();
   });
+
+  it("keeps a bare exact-match NUMBER property even when range siblings exist", () => {
+    // Mirrors the legacy Navigator (RangedJsfFormConvertor.createJsonProperty in
+    // contentgrid-navigator's src/components/form/jsonforms.ts), which only drops the lone
+    // base property for a datetime/datetime-local attribute — a numeric attribute like
+    // "amount" keeps its bare exact-match filter alongside its range siblings.
+    expect(sharedProps.find((p) => p.name === "amount")).toBeDefined();
+  });
 });
 
 describe("buildFilterProperties — redundant strict range bound suppression", () => {
@@ -638,5 +638,41 @@ describe("applyFilterValues", () => {
       title: "",
     });
     expect(result.value("title").value).toBeUndefined();
+  });
+});
+
+describe("findInvalidFilterKeys", () => {
+  it("flags a key whose raw value fails to coerce for its wire type", () => {
+    const invalid = findInvalidFilterKeys(sharedProps, { "amount~gte": "not-a-number" });
+    expect(invalid).toEqual(["amount~gte"]);
+  });
+
+  it("does not flag a key whose value coerces successfully", () => {
+    const invalid = findInvalidFilterKeys(sharedProps, { "amount~gte": "100" });
+    expect(invalid).toEqual([]);
+  });
+
+  it("does not flag an empty-string value — that's 'no filter', not an invalid one", () => {
+    const invalid = findInvalidFilterKeys(sharedProps, { "amount~gte": "" });
+    expect(invalid).toEqual([]);
+  });
+
+  it("flags every failing key, not just the first", () => {
+    const invalid = findInvalidFilterKeys(sharedProps, {
+      "amount~gte": "not-a-number",
+      "due_date~after": "not-a-date",
+    });
+    expect(invalid).toContain("amount~gte");
+    expect(invalid).toContain("due_date~after");
+    expect(invalid).toHaveLength(2);
+  });
+
+  it("matches exactly the keys applyFilterValues silently omits", () => {
+    const filters = { title: "hello", "amount~gte": "not-a-number" };
+    const values = applyFilterValues(createValues(sharedTmpl.template), sharedProps, filters);
+    const invalid = findInvalidFilterKeys(sharedProps, filters);
+
+    expect(values.value("amount~gte").value).toBeUndefined();
+    expect(invalid).toEqual(["amount~gte"]);
   });
 });

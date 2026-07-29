@@ -17,6 +17,7 @@ import {
   buildFilterProperties,
   createValues,
   extractFieldErrors,
+  findInvalidFilterKeys,
   resolveTrustedCollectionUrl,
   useAddToManyRelation,
   useClearRelation,
@@ -77,14 +78,6 @@ import {
   SidebarTrigger,
   Skeleton,
 } from "@contentgrid/ui";
-
-// ---------------------------------------------------------------------------
-// Search param validator — export for use in the $entity route's validateSearch
-// ---------------------------------------------------------------------------
-
-export function entityDetailSearchValidator(search: Record<string, unknown>): { q?: string } {
-  return { q: typeof search.q === "string" ? search.q : undefined };
-}
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -378,24 +371,20 @@ function EntityDetailView({
     ? applyFilterValues(createValues(searchTemplate.template), filterProperties, filters)
     : undefined;
 
-  // Scoped to the OTHER active filters, same as the table — but excluding the field currently
-  // being typeahead-searched: useTypeahead adds its own debounced value for that one key, and
-  // TypeaheadTextFilter writes into `filters` on every keystroke (not just on commit), so
-  // including the table's own value here would make this query and the table's query resolve
-  // to the exact same encoded URL — and therefore the same TanStack query key — as soon as the
-  // debounce catches up, silently merging two logically distinct queries into one.
-  const typeaheadSearchValues = searchTemplate
-    ? applyFilterValues(
-        createValues(searchTemplate.template),
-        filterProperties,
-        Object.fromEntries(Object.entries(filters).filter(([key]) => key !== activeTypeaheadParam)),
-      )
-    : undefined;
+  // findInvalidFilterKeys mirrors applyFilterValues' own coercion check — it flags the exact
+  // same keys applyFilterValues silently omits from the request, so FilterSidebar can show the
+  // user why a typed value isn't taking effect instead of the table just quietly ignoring it.
+  const invalidFilterKeys = findInvalidFilterKeys(filterProperties, filters);
 
+  // useTypeahead always overwrites the active field's own value with its live debounced query
+  // (see use-typeahead.ts), so passing the full committed `filterSearchValues` here is safe —
+  // TypeaheadTextFilter only commits into `filters` on selection/Enter/blur (not per keystroke),
+  // so the committed value for the active field is never the in-flight query text, and the two
+  // queries stay genuinely distinct while the user is typing.
   const typeahead = useTypeahead({
     profileEntity: profile,
     searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
-    searchValues: typeaheadSearchValues,
+    searchValues: filterSearchValues,
     // No artificial minimum — suggestions should appear as soon as the user types anything.
     minLength: 1,
   });
@@ -506,6 +495,7 @@ function EntityDetailView({
             activeTypeaheadField={activeTypeaheadParam || undefined}
             typeaheadSuggestions={typeahead.results}
             typeaheadIsLoading={typeahead.isLoading}
+            invalidFilterKeys={invalidFilterKeys}
           />
         )}
 

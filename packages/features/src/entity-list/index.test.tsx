@@ -206,6 +206,9 @@ interface SearchProperty {
   name: string;
   type: HalFormsPropertyTypeName;
   required?: boolean;
+  /** Inline enumeration — makes buildFilterProperties render a "select" inputKind regardless
+   * of `type` (see filter-properties.ts's buildFilterProperty). */
+  options?: { inline: string[] };
 }
 
 /**
@@ -330,9 +333,47 @@ function invoiceProfileHandlerWithFilters() {
     collectionUrl: `${API_URL}/invoices`,
     attributes: [
       makeBlueprintAttribute({ name: "id", title: "ID", readOnly: true }),
-      makeBlueprintAttribute({ name: "number", title: "Number" }),
-      makeBlueprintAttribute({ name: "status", title: "Status" }),
+      // searchParams mirror _templates.search below so resolveSearchType (search-form.ts) resolves
+      // via the real blueprint:search-param path instead of falling back to suffix parsing —
+      // "customer.name~prefix" is a relation-traversal property and can't resolve a profileAttribute
+      // on the invoice profile at all (see enhanceSearchProperty's class-level doc comment), so it's
+      // left on suffix parsing as that's the only path available for it in production too.
+      makeBlueprintAttribute({
+        name: "number",
+        title: "Number",
+        searchParams: [{ name: "number~prefix", title: "Number prefix", type: "prefix-match" }],
+      }),
+      makeBlueprintAttribute({
+        name: "status",
+        title: "Status",
+        searchParams: [{ name: "status", title: "Status", type: "exact-match" }],
+      }),
     ],
+    // Needed so profileEntity.getRelation("customer") resolves for the "customer.name~prefix"
+    // search property below — without it, ProfileRelation stays undefined and the relation
+    // typeahead can never resolve a target profile, regardless of what the test registers for
+    // GET /profile/customers.
+    relations: {
+      key: "blueprint:relation",
+      items: [
+        {
+          name: "customer",
+          title: "Customer",
+          description: "",
+          required: false,
+          many_source_per_target: false,
+          many_target_per_source: false,
+          _links: {
+            self: { href: `${PROFILE_URL}/invoices/relations/customer` },
+            "https://contentgrid.cloud/rels/blueprint/target-entity": {
+              href: `${PROFILE_URL}/customers`,
+              name: "customer",
+              title: "Customer",
+            },
+          },
+        },
+      ],
+    },
     searchProperties: [
       { name: "number~prefix", type: "text" },
       { name: "status", type: "text" },
@@ -352,10 +393,56 @@ function invoiceProfileHandlerWithTypedFilters() {
     name: "invoice",
     title: "Invoice",
     collectionUrl: `${API_URL}/invoices`,
+    // Titles match formatFieldName's own fallback output for these names exactly ("Amount",
+    // "Paid", "Due At"), so adding real blueprint:attribute entries — which makes
+    // resolveSearchType (search-form.ts) resolve via blueprint:search-param instead of falling
+    // back to suffix parsing — doesn't change any dependent test's expected label.
+    attributes: [
+      makeBlueprintAttribute({
+        name: "amount",
+        title: "Amount",
+        type: "long",
+        searchParams: [{ name: "amount", title: "Amount", type: "exact-match" }],
+      }),
+      makeBlueprintAttribute({
+        name: "paid",
+        title: "Paid",
+        type: "boolean",
+        searchParams: [{ name: "paid", title: "Paid", type: "exact-match" }],
+      }),
+      makeBlueprintAttribute({
+        name: "due_at",
+        title: "Due At",
+        type: "datetime",
+        searchParams: [{ name: "due_at", title: "Due At", type: "exact-match" }],
+      }),
+    ],
     searchProperties: [
       { name: "amount", type: "number" },
       { name: "paid", type: "checkbox" },
       { name: "due_at", type: "datetime" },
+    ],
+  });
+}
+
+// Kept separate from invoiceProfileHandlerWithTypedFilters (used by three other tests) so this
+// fixture can be changed freely — same convention as invoiceProfileHandlerWithFilters vs.
+// invoiceProfileHandlerWithTypedFilters above.
+//
+// "priority" is number-typed but carries inline options that are NOT numeric strings — an
+// unusual but real-world-possible backend data shape (nothing stops a backend from declaring
+// allowed-values on a number attribute using non-numeric labels). buildFilterProperties renders
+// this as a "select" inputKind (inline options present) while propertyType stays "number" (see
+// coerceFilterValue's own doc comment on exactly this case) — so picking "low" produces a value
+// Number() can't coerce, THROUGH a real user interaction (a Select pick), not a forced DOM value.
+function invoiceProfileHandlerWithBadEnumOptions() {
+  return buildEntityProfileHandler({
+    profileUrl: `${PROFILE_URL}/invoices`,
+    name: "invoice",
+    title: "Invoice",
+    collectionUrl: `${API_URL}/invoices`,
+    searchProperties: [
+      { name: "priority", type: "number", options: { inline: ["low", "medium", "high"] } },
     ],
   });
 }
@@ -370,12 +457,19 @@ function invoiceProfileHandlerNoCreate() {
   });
 }
 
-function customerProfileHandler() {
+function customerProfileHandler(
+  overrides: {
+    attributes?: ReadonlyArray<ReturnType<typeof makeBlueprintAttribute>>;
+    searchProperties?: SearchProperty[];
+  } = {},
+) {
   return buildEntityProfileHandler({
     profileUrl: `${PROFILE_URL}/customers`,
     name: "customer",
     title: "Customer",
     collectionUrl: `${API_URL}/customers`,
+    attributes: overrides.attributes ?? [],
+    searchProperties: overrides.searchProperties ?? [],
   });
 }
 
@@ -1833,13 +1927,34 @@ describe("EntityDetailView filters", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a plain text input (no typeahead popover) for a relation-traversal prefix filter", async () => {
+  it("opens a typeahead popover for a relation-traversal prefix filter, querying the related entity's own collection", async () => {
     const user = userEvent.setup();
+    const customerRequestUrls: URL[] = [];
 
     server.use(
-      profileRootHandler(),
+      profileRootWithTwoEntitiesHandler(),
       invoiceProfileHandlerWithFilters(),
+      customerProfileHandler({
+        attributes: [makeBlueprintAttribute({ name: "name", title: "Name" })],
+        searchProperties: [{ name: "name~prefix", type: "text" }],
+      }),
       invoicesCollectionHandler(() => {}),
+      http.get(`${API_URL}/customers`, ({ request }) => {
+        customerRequestUrls.push(new URL(request.url));
+        return HttpResponse.json({
+          _links: { self: { href: `${API_URL}/customers` } },
+          _embedded: {
+            item: [
+              {
+                id: "cust-001",
+                name: "Acme Corp",
+                _links: { self: { href: `${API_URL}/customers/cust-001` } },
+              },
+            ],
+          },
+          page: { size: 1, total_items_exact: 1 },
+        });
+      }),
     );
 
     renderEntityList("/invoice");
@@ -1847,7 +1962,14 @@ describe("EntityDetailView filters", () => {
     const customerInput = await screen.findByLabelText("Customer Name");
     await user.type(customerInput, "Acme");
 
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    // Proves the relation typeahead actually resolves the target profile and queries ITS
+    // collection (useTypeahead's relation mode) rather than never opening at all — the
+    // suggestion text ("Acme Corp") only exists on the customer fixture, not on any invoice.
+    const listbox = await screen.findByRole("listbox", { name: /customer name suggestions/i });
+    expect(await within(listbox).findByText("Acme Corp")).toBeInTheDocument();
+    expect(customerRequestUrls.some((u) => u.searchParams.get("name~prefix") === "Acme")).toBe(
+      true,
+    );
   });
 
   // Regression coverage for a real crash: the HAL-FORMS codec requires a JS number for
@@ -1882,6 +2004,48 @@ describe("EntityDetailView filters", () => {
       expect(last?.searchParams.get("amount")).toBe("100");
     });
     expect(screen.getByText("All entities")).toBeInTheDocument();
+  });
+
+  // Regression coverage for ACC-2889's follow-up: a value the codec can't take used to be
+  // dropped from the request with no visible sign — the user had no idea why the table wasn't
+  // actually filtering. findInvalidFilterKeys + FilterSidebar's invalidFilterKeys prop now
+  // surface it.
+  //
+  // This can't be reached by typing into a real <input type="number">: the browser's own
+  // constraint validation (jsdom included, verified directly) sanitises anything it doesn't
+  // recognise as a valid floating-point string back to "" before an onChange handler ever sees
+  // it — even bypassing React via the native value setter doesn't get an invalid string
+  // through, since jsdom enforces the same constraint on read. The realistic path is a
+  // "select" control on a number-typed attribute whose own declared allowed-values aren't
+  // numeric strings (see invoiceProfileHandlerWithBadEnumOptions) — a real click, not a forced
+  // DOM value.
+  it("shows an inline error for a select value that fails to coerce for its number wire type", async () => {
+    const user = userEvent.setup();
+    const capturedUrls: URL[] = [];
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithBadEnumOptions(),
+      invoicesCollectionHandler((url) => capturedUrls.push(url)),
+    );
+    renderEntityList("/invoice");
+
+    await user.click(await screen.findByRole("combobox", { name: /priority/i }));
+    await user.click(await screen.findByRole("option", { name: "Low" }));
+
+    // Re-query rather than reuse the earlier reference: EnumFilter's <Select key={value}>
+    // remounts the trigger when the value changes, so a captured-before-the-click node would
+    // be a stale, detached element by this point.
+    expect(await screen.findByText("Enter a valid number")).toBeInTheDocument();
+    expect(await screen.findByRole("combobox", { name: /priority/i })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
+    // The invalid value must never reach the request — same guarantee applyFilterValues
+    // already gave, now paired with a visible reason instead of a silent omission.
+    await waitFor(() => {
+      expect(capturedUrls.some((u) => u.searchParams.has("priority"))).toBe(false);
+    });
   });
 
   it("sends a coerced boolean value for a checkbox filter without crashing", async () => {

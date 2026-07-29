@@ -45,10 +45,7 @@ function rewriteDumpHost(value: unknown, targetBase: string): unknown {
  * backend actually exercises. Available entity names: see `profiles` in the dump (`customer`,
  * `order`, `supplier`, `product`, `employee`, `many-relation`, `related-item`, etc.).
  */
-export function loadDumpProfile(
-  entityName: string,
-  targetBase: string = BASE,
-): Record<string, unknown> {
+export function loadDumpProfile(entityName: string, targetBase: string = BASE): ProfileEntityShape {
   const profiles = (entityProfilesDump as { profiles: Record<string, unknown> }).profiles;
   const profile = profiles[entityName];
   if (!profile) {
@@ -56,7 +53,7 @@ export function loadDumpProfile(
       `No "${entityName}" profile in entity-profiles-dump.json. Available: ${Object.keys(profiles).join(", ")}`,
     );
   }
-  return rewriteDumpHost(profile, targetBase) as Record<string, unknown>;
+  return rewriteDumpHost(profile, targetBase) as unknown as ProfileEntityShape;
 }
 
 export const noopSupplier: AuthenticationTokenSupplier = async () => ({
@@ -64,15 +61,21 @@ export const noopSupplier: AuthenticationTokenSupplier = async () => ({
   expiresAt: null,
 });
 
-/** Build a ProfileEntity from raw HAL JSON for use in hook tests. */
+/**
+ * Build a ProfileEntity from raw HAL JSON for use in hook tests.
+ *
+ * `link` is built as a plain object, not a real `Link` instance (that class carries private
+ * fields no object literal can satisfy structurally) — `ProfileEntity` only ever reads its
+ * `.href`/`.name` getters at runtime, which this plain shape provides, so the cast is safe.
+ */
 export function makeProfileEntity(
-  json: Record<string, unknown>,
+  json: ProfileEntityShape,
   collectionName: string,
   entityName: string,
 ): ProfileEntity {
-  const hal = new HalObject(json as unknown as ProfileEntityShape);
+  const hal = new HalObject(json);
   const link = { href: `${BASE}/profile/${collectionName}`, name: entityName } as unknown as Link;
-  return new ProfileEntity(link, hal as HalObject<ProfileEntityShape>);
+  return new ProfileEntity(link, hal);
 }
 
 export function makeQueryClient() {

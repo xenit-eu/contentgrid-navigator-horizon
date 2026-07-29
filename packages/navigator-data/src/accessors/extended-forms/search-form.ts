@@ -97,10 +97,19 @@ function isRawSortOption(opt: unknown): opt is RawSortOption {
 /**
  * The bare attribute/relation path of a property name, with its trailing operator
  * suffix removed (e.g. "name~prefix" → "name", "invoice_date~from" → "invoice_date").
- * The server only ever uses a single, plain tilde for every operator — range-pair
- * bounds included (confirmed against a live profile: "invoice_date~from" /
- * "invoice_date~until", not a dotted "invoice_date.~from" form) — so splitting at
- * the first "~" is always correct; no dot-aware special case is needed here.
+ * The server only ever uses a single, plain tilde for every operator — range-pair bounds
+ * included (e.g. "invoice_date~from" / "invoice_date~until", never a dotted
+ * "invoice_date.~from" form) — so splitting at the first "~" is always correct; no
+ * dot-aware special case is needed here.
+ *
+ * `~from`/`~until` themselves aren't in the committed profile dump (it only has
+ * `~prefix`/`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before` — verified: `git grep "~from\|~until"
+ * -- "*test-fixtures*"` is empty), but they're real: the legacy Navigator's
+ * `RangedJsfFormConvertor` pairs exactly those suffixes with `~after`/`~before` as fallbacks
+ * (`contentgrid-navigator/src/components/form/jsonforms.ts:325`,
+ * `NestedRange("~from", "~until", "~after", "~before")`). The plain-tilde claim above is what
+ * the dump DOES back directly — every operator suffix it contains uses a single tilde, no
+ * dotted form.
  */
 function basePropertyName(propertyName: string): string {
   const tildeIdx = propertyName.indexOf("~");
@@ -132,9 +141,14 @@ const SEARCH_TYPE_BY_SUFFIX: ReadonlyArray<readonly [string, ProfileAttributeSea
   ["~before", ProfileAttributeSearchType.lessThan],
 ];
 
-/** Extract the search type encoded in a property name's suffix (defaults to exact-match). */
+/**
+ * Extract the search type encoded in a property name's suffix (defaults to exact-match).
+ * Matches on `endsWith`, not `includes` — the suffix is always the tail of the (possibly
+ * relation-prefixed) segment passed in, and `endsWith` avoids a false match from one suffix
+ * appearing as a substring of another as the suffix table grows (e.g. "~gte" containing "~gt").
+ */
 function extractSearchType(propertyName: string): ProfileAttributeSearchType {
-  const match = SEARCH_TYPE_BY_SUFFIX.find(([suffix]) => propertyName.includes(suffix));
+  const match = SEARCH_TYPE_BY_SUFFIX.find(([suffix]) => propertyName.endsWith(suffix));
   return match?.[1] ?? ProfileAttributeSearchType.exactMatch;
 }
 
@@ -298,9 +312,11 @@ export class SearchHalFormTemplate {
   private enhanceSearchProperty(property: HalFormsProperty): SearchHalFormTemplateProperty {
     const propertyName = property.name;
     // A dot always separates a relation name from its target attribute (e.g.
-    // "customer.first_name~prefix") — confirmed against a live profile, no operator on this
-    // codebase's real backend ever uses a dot (range-pair bounds are plain "~from"/"~until",
-    // not "~.from"). So "any dot" is a sufficient and correct relation-traversal check.
+    // "customer.first_name~prefix"). None of the operator suffixes the committed profile dump
+    // actually contains (~prefix, ~gt/~gte/~lt/~lte, ~after/~before) use a dot; ~from/~until
+    // aren't in the dump but are real per the legacy Navigator's NestedRange pairing (see
+    // basePropertyName's doc comment) and, per that same source, are also plain-tilde, never
+    // dotted. So "any dot" is a sufficient and correct relation-traversal check.
     const parts = propertyName.split(".");
     const isOverRelation = parts.length > 1;
 

@@ -14,16 +14,20 @@ const TEXT_PROP: SearchFilterProperty = {
   name: "title",
   label: "Title",
   inputKind: "text",
+  propertyType: "text",
   searchOperator: "exact-match",
   groupKey: "title",
+  groupLabel: "Title",
 };
 
 const ENUM_PROP: SearchFilterProperty = {
   name: "status",
   label: "Status",
   inputKind: "select",
+  propertyType: "text",
   searchOperator: "exact-match",
   groupKey: "status",
+  groupLabel: "Status",
   options: ["active", "inactive", "pending"],
 };
 
@@ -31,29 +35,37 @@ const DATE_PROP: SearchFilterProperty = {
   name: "created_at",
   label: "Created At",
   inputKind: "date",
+  propertyType: "date",
   searchOperator: "exact-match",
   groupKey: "created_at",
-  dateEncoding: "iso",
+  groupLabel: "Created At",
+  // A "date"-kind property is always "plain" — computeDateEncoding() in @contentgrid/navigator-data
+  // never emits "iso" for inputKind "date" (only for "datetime"). Keep these fixtures in sync with it.
+  dateEncoding: "plain",
 };
 
 const DATE_GT_PROP: SearchFilterProperty = {
   name: "created_at~greater-than",
   label: "Created At",
   inputKind: "date",
+  propertyType: "date",
   searchOperator: "greater-than",
   groupKey: "created_at",
+  groupLabel: "Created At",
   directionLabel: "After",
-  dateEncoding: "iso",
+  dateEncoding: "plain",
 };
 
 const DATE_LT_PROP: SearchFilterProperty = {
   name: "created_at~less-than",
   label: "Created At",
   inputKind: "date",
+  propertyType: "date",
   searchOperator: "less-than",
   groupKey: "created_at",
+  groupLabel: "Created At",
   directionLabel: "Before",
-  dateEncoding: "iso",
+  dateEncoding: "plain",
 };
 
 // greater-than-or-equal → "From" direction (inclusive lower bound)
@@ -61,10 +73,12 @@ const DATE_GTE_PROP: SearchFilterProperty = {
   name: "due~greater-than-or-equal-to",
   label: "Due",
   inputKind: "date",
+  propertyType: "date",
   searchOperator: "greater-than-or-equal",
   groupKey: "due",
+  groupLabel: "Due",
   directionLabel: "From",
-  dateEncoding: "iso",
+  dateEncoding: "plain",
 };
 
 // less-than-or-equal → "Until" direction (inclusive upper bound)
@@ -72,42 +86,52 @@ const DATE_LTE_PROP: SearchFilterProperty = {
   name: "due~less-than-or-equal-to",
   label: "Due",
   inputKind: "date",
+  propertyType: "date",
   searchOperator: "less-than-or-equal",
   groupKey: "due",
+  groupLabel: "Due",
   directionLabel: "Until",
-  dateEncoding: "iso",
+  dateEncoding: "plain",
 };
 
 const PREFIX_PROP: SearchFilterProperty = {
   name: "number~prefix",
   label: "Number",
   inputKind: "text",
+  propertyType: "text",
   searchOperator: "prefix-match",
   groupKey: "number",
+  groupLabel: "Number",
 };
 
 const BOOLEAN_PROP: SearchFilterProperty = {
   name: "active",
   label: "Active",
   inputKind: "boolean",
+  propertyType: "checkbox",
   searchOperator: "exact-match",
   groupKey: "active",
+  groupLabel: "Active",
 };
 
 const NUMBER_PROP: SearchFilterProperty = {
   name: "amount",
   label: "Amount",
   inputKind: "number",
+  propertyType: "number",
   searchOperator: "exact-match",
   groupKey: "amount",
+  groupLabel: "Amount",
 };
 
 const DATETIME_PROP: SearchFilterProperty = {
   name: "due_at",
   label: "Due At",
   inputKind: "datetime",
+  propertyType: "datetime",
   searchOperator: "exact-match",
   groupKey: "due_at",
+  groupLabel: "Due At",
   dateEncoding: "iso",
 };
 
@@ -115,8 +139,10 @@ const DATETIME_GT_PROP: SearchFilterProperty = {
   name: "due_at~greater-than",
   label: "Due At",
   inputKind: "datetime",
+  propertyType: "datetime",
   searchOperator: "greater-than",
   groupKey: "due_at",
+  groupLabel: "Due At",
   directionLabel: "After",
   dateEncoding: "iso",
 };
@@ -125,8 +151,10 @@ const DATETIME_LT_PROP: SearchFilterProperty = {
   name: "due_at~less-than",
   label: "Due At",
   inputKind: "datetime",
+  propertyType: "datetime",
   searchOperator: "less-than",
   groupKey: "due_at",
+  groupLabel: "Due At",
   directionLabel: "Before",
   dateEncoding: "iso",
 };
@@ -141,6 +169,7 @@ function renderSidebar(
     activeTypeaheadField: string;
     typeaheadSuggestions: string[];
     typeaheadIsLoading: boolean;
+    invalidFilterKeys: string[];
   }> = {},
 ) {
   const onFilterChange = overrides.onFilterChange ?? vi.fn();
@@ -157,6 +186,7 @@ function renderSidebar(
         activeTypeaheadField={overrides.activeTypeaheadField}
         typeaheadSuggestions={overrides.typeaheadSuggestions}
         typeaheadIsLoading={overrides.typeaheadIsLoading}
+        invalidFilterKeys={overrides.invalidFilterKeys}
       />,
     ),
   };
@@ -341,11 +371,11 @@ describe("FilterSidebar — single date filter (inputKind=date)", () => {
     expect(screen.getByLabelText("Created At")).toHaveAttribute("type", "date");
   });
 
-  it("calls onFilterChange with ISO format when date input changes", () => {
+  it("calls onFilterChange with a bare yyyy-MM-dd string when date input changes (dateEncoding: plain)", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText("Created At"), { target: { value: "2024-01-15" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created_at", "2024-01-15T00:00:00Z");
+    expect(onFilterChange).toHaveBeenCalledWith("created_at", "2024-01-15");
   });
 
   it("calls onFilterChange with undefined when date input is cleared", () => {
@@ -408,7 +438,7 @@ describe("FilterSidebar — date group filter (multiple date props for same grou
     fireEvent.change(screen.getByLabelText(/created at after/i), {
       target: { value: "2024-03-01" },
     });
-    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", "2024-03-01T00:00:00Z");
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", "2024-03-01");
   });
 
   it("calls onFilterChange for the correct param when the Before date input changes", () => {
@@ -417,7 +447,7 @@ describe("FilterSidebar — date group filter (multiple date props for same grou
     fireEvent.change(screen.getByLabelText(/created at before/i), {
       target: { value: "2024-06-30" },
     });
-    expect(onFilterChange).toHaveBeenCalledWith("created_at~less-than", "2024-06-30T00:00:00Z");
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~less-than", "2024-06-30");
   });
 });
 
@@ -427,8 +457,10 @@ describe("FilterSidebar — label rendering", () => {
       name: "complex_field",
       label: "My Label",
       inputKind: "select",
+      propertyType: "text",
       searchOperator: "exact-match",
       groupKey: "complex_field",
+      groupLabel: "My Label",
       options: ["a"],
     };
     renderSidebar([prop]);
@@ -447,8 +479,10 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     name: "created.~from",
     label: "Created",
     inputKind: "date",
+    propertyType: "date",
     searchOperator: "greater-than-or-equal",
     groupKey: "created",
+    groupLabel: "Created",
     directionLabel: "From",
     dateEncoding: "plain",
   };
@@ -456,8 +490,10 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     name: "created.~until",
     label: "Created",
     inputKind: "date",
+    propertyType: "date",
     searchOperator: "less-than-or-equal",
     groupKey: "created",
+    groupLabel: "Created",
     directionLabel: "Until",
     dateEncoding: "plain",
   };
@@ -465,16 +501,20 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     name: "amount.~gte",
     label: "Amount",
     inputKind: "number",
+    propertyType: "number",
     searchOperator: "greater-than-or-equal",
     groupKey: "amount",
+    groupLabel: "Amount",
     directionLabel: "From",
   };
   const NUM_LTE_PROP: SearchFilterProperty = {
     name: "amount.~lte",
     label: "Amount",
     inputKind: "number",
+    propertyType: "number",
     searchOperator: "less-than-or-equal",
     groupKey: "amount",
+    groupLabel: "Amount",
     directionLabel: "Until",
   };
 
@@ -490,32 +530,40 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     name: "total.~gt",
     label: "Total amount: Greater than",
     inputKind: "number",
+    propertyType: "number",
     searchOperator: "greater-than",
     groupKey: "total",
+    groupLabel: "Total amount: Greater than",
     directionLabel: "After",
   };
   const GTE_PROP: SearchFilterProperty = {
     name: "total.~gte",
     label: "Total amount: Min",
     inputKind: "number",
+    propertyType: "number",
     searchOperator: "greater-than-or-equal",
     groupKey: "total",
+    groupLabel: "Total amount: Min",
     directionLabel: "From",
   };
   const LT_PROP: SearchFilterProperty = {
     name: "total.~lt",
     label: "Total amount: Less than",
     inputKind: "number",
+    propertyType: "number",
     searchOperator: "less-than",
     groupKey: "total",
+    groupLabel: "Total amount: Less than",
     directionLabel: "Before",
   };
   const LTE_PROP: SearchFilterProperty = {
     name: "total.~lte",
     label: "Total amount: Max",
     inputKind: "number",
+    propertyType: "number",
     searchOperator: "less-than-or-equal",
     groupKey: "total",
+    groupLabel: "Total amount: Max",
     directionLabel: "Until",
   };
 
@@ -656,18 +704,75 @@ describe("FilterSidebar — grouping by groupKey", () => {
       name: "title",
       label: "Title",
       inputKind: "text",
+      propertyType: "text",
       searchOperator: "exact-match",
       groupKey: "title",
+      groupLabel: "Title",
     };
     const B: SearchFilterProperty = {
       name: "code",
       label: "Code",
       inputKind: "text",
+      propertyType: "text",
       searchOperator: "exact-match",
       groupKey: "code",
+      groupLabel: "Code",
     };
     renderSidebar([A, B]);
     expect(screen.getAllByRole("textbox")).toHaveLength(2);
+  });
+
+  // Regression: a numeric groupKey can legitimately hold a bare exact-match sibling alongside
+  // its ~gte/~lte pair (buildFilterProperties only suppresses the bare exact-match for
+  // date/datetime, matching legacy behavior — see isRedundantExactMatch). Before this test
+  // existed, isRangeGroup swept ALL same-inputKind items into RangeGroupFilter regardless of
+  // whether they had a directionLabel, so the exact-match sibling rendered with no visible
+  // label at all (RangeGroupFilter only ever shows directionLabel, never a field's own label).
+  it("renders a bare exact-match sibling as its own labeled field, separate from its range-pair siblings", () => {
+    // EXACT's own label deliberately differs from the shared groupLabel — if it were
+    // (incorrectly) swept into RangeGroupFilter, that component always derives its
+    // aria-label from the shared group `label` param (via withDirectionSuffix), never from
+    // the individual item's own `label`. So an incorrect implementation would expose an
+    // "Item Price" input with NO accessible name (RangeGroupFilter's shared heading is
+    // "Price", not "Item Price"), catching the regression via a real query failure rather
+    // than a coincidental name match.
+    const EXACT: SearchFilterProperty = {
+      name: "price",
+      label: "Item Price",
+      inputKind: "number",
+      propertyType: "number",
+      searchOperator: "exact-match",
+      groupKey: "price",
+      groupLabel: "Price",
+    };
+    const GTE: SearchFilterProperty = {
+      name: "price~gte",
+      label: "Price",
+      inputKind: "number",
+      propertyType: "number",
+      searchOperator: "greater-than-or-equal",
+      groupKey: "price",
+      groupLabel: "Price",
+      directionLabel: "From",
+    };
+    const LTE: SearchFilterProperty = {
+      name: "price~lte",
+      label: "Price",
+      inputKind: "number",
+      propertyType: "number",
+      searchOperator: "less-than-or-equal",
+      groupKey: "price",
+      groupLabel: "Price",
+      directionLabel: "Until",
+    };
+    renderSidebar([EXACT, GTE, LTE]);
+
+    // The exact-match field keeps its OWN accessible name — it isn't swallowed into the range
+    // box under the shared group label.
+    expect(screen.getByLabelText("Item Price")).toHaveAttribute("type", "number");
+    expect(screen.getByLabelText(/price from/i)).toHaveAttribute("type", "number");
+    expect(screen.getByLabelText(/price until/i)).toHaveAttribute("type", "number");
+    expect(screen.getAllByDisplayValue("")).toHaveLength(3);
   });
 });
 
@@ -676,8 +781,10 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     name: "customer.name~prefix",
     label: "Customer Name",
     inputKind: "text",
+    propertyType: "text",
     searchOperator: "prefix-match",
     groupKey: "customer.name",
+    groupLabel: "Customer Name",
     relationKey: "customer",
   };
 
@@ -698,26 +805,80 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     expect(screen.getByRole("combobox")).toHaveValue("INV-001");
   });
 
-  it("calls onTypeaheadSearch and onFilterChange when user types", () => {
+  // Typing only drives the debounced suggestions query (onTypeaheadSearch) — the table's own
+  // filter (onFilterChange) is committed separately, on blur/Enter/selection. Committing on
+  // every keystroke would make the table's collection query and the typeahead's suggestions
+  // query resolve to the same encoded URL — and therefore the same TanStack query key — as
+  // soon as the debounce caught up, silently merging two logically distinct queries into one.
+  it("calls onTypeaheadSearch but does not commit onFilterChange while typing", () => {
     const onFilterChange = vi.fn();
     const onTypeaheadSearch = vi.fn();
     renderSidebar([PREFIX_PROP], {}, { onFilterChange, onTypeaheadSearch });
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "INV" } });
 
-    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV");
     expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "INV");
+    expect(onFilterChange).not.toHaveBeenCalled();
   });
 
-  it("calls onFilterChange with undefined and onTypeaheadSearch with empty when input is cleared", () => {
+  it("commits the typed value to onFilterChange on blur", () => {
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar([PREFIX_PROP], {}, { onFilterChange, onTypeaheadSearch });
+
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "INV" } });
+    fireEvent.blur(input);
+
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV");
+  });
+
+  it("commits the typed value to onFilterChange on Enter when no suggestion is highlighted", () => {
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar([PREFIX_PROP], {}, { onFilterChange, onTypeaheadSearch });
+
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "INV" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV");
+  });
+
+  it("calls onTypeaheadSearch with empty when input is cleared, without committing onFilterChange until blur", () => {
     const onFilterChange = vi.fn();
     const onTypeaheadSearch = vi.fn();
     renderSidebar([PREFIX_PROP], { "number~prefix": "INV" }, { onFilterChange, onTypeaheadSearch });
 
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "" } });
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "" } });
 
-    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", undefined);
     expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
+    expect(onFilterChange).not.toHaveBeenCalled();
+
+    fireEvent.blur(input);
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", undefined);
+  });
+
+  it("resets the draft to the committed value when it changes externally (e.g. Clear all)", () => {
+    const onTypeaheadSearch = vi.fn();
+    const { rerender } = renderSidebar(
+      [PREFIX_PROP],
+      { "number~prefix": "INV" },
+      { onTypeaheadSearch },
+    );
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "INV-2024" } });
+    expect(screen.getByRole("combobox")).toHaveValue("INV-2024");
+
+    rerender(
+      <FilterSidebar
+        filterProperties={[PREFIX_PROP]}
+        filters={{}}
+        onFilterChange={vi.fn()}
+        onTypeaheadSearch={onTypeaheadSearch}
+      />,
+    );
+    expect(screen.getByRole("combobox")).toHaveValue("");
   });
 
   it("shows all suggestions as selectable options when typeaheadSuggestions are provided and input is typed", () => {
@@ -832,5 +993,61 @@ describe("FilterSidebar — RangeGroupFilter clear button (grouped date props)",
     const clearBtn = screen.getByRole("button", { name: /clear created at after/i });
     await user.click(clearBtn);
     expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
+  });
+});
+
+describe("FilterSidebar — invalidFilterKeys", () => {
+  it("does not mark a field invalid when its name is absent from invalidFilterKeys", () => {
+    renderSidebar([NUMBER_PROP], { amount: "not-a-number" }, { invalidFilterKeys: [] });
+    expect(screen.getByLabelText("Amount")).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/enter a valid/i)).not.toBeInTheDocument();
+  });
+
+  it("marks a number field invalid and shows an inline error", () => {
+    renderSidebar([NUMBER_PROP], { amount: "not-a-number" }, { invalidFilterKeys: ["amount"] });
+    expect(screen.getByLabelText("Amount")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Enter a valid number")).toBeInTheDocument();
+  });
+
+  it("marks a date field invalid and shows a date-specific inline error", () => {
+    renderSidebar([DATE_PROP], { created_at: "garbage" }, { invalidFilterKeys: ["created_at"] });
+    expect(screen.getByLabelText("Created At")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
+  });
+
+  it("marks a datetime field invalid and shows a datetime-specific inline error", () => {
+    renderSidebar([DATETIME_PROP], { due_at: "garbage" }, { invalidFilterKeys: ["due_at"] });
+    expect(screen.getByLabelText("Due At")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Enter a valid date and time")).toBeInTheDocument();
+  });
+
+  it("marks only the failing item within a RangeGroupFilter, not its sibling", () => {
+    renderSidebar(
+      [DATE_GT_PROP, DATE_LT_PROP],
+      { "created_at~greater-than": "garbage" },
+      { invalidFilterKeys: ["created_at~greater-than"] },
+    );
+    expect(screen.getByLabelText(/created at after/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/created at before/i)).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
+  });
+
+  it("clears the error once the field's value is no longer in invalidFilterKeys", () => {
+    const { rerender } = renderSidebar(
+      [NUMBER_PROP],
+      { amount: "not-a-number" },
+      { invalidFilterKeys: ["amount"] },
+    );
+    expect(screen.getByText("Enter a valid number")).toBeInTheDocument();
+
+    rerender(
+      <FilterSidebar
+        filterProperties={[NUMBER_PROP]}
+        filters={{ amount: "42" }}
+        onFilterChange={vi.fn()}
+        invalidFilterKeys={[]}
+      />,
+    );
+    expect(screen.queryByText(/enter a valid/i)).not.toBeInTheDocument();
   });
 });

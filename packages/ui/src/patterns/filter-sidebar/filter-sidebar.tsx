@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { Button } from "../../primitives/button";
@@ -31,17 +31,31 @@ export type SearchOperator =
 /** Sub-label for a range-pair input, indicating which bound it represents. */
 export type DirectionLabel = "After" | "Before" | "From" | "Until";
 
-/** Pre-computed view model produced by buildFilterProperties() in @contentgrid/navigator-data. */
+/**
+ * Pre-computed view model produced by buildFilterProperties() in @contentgrid/navigator-data
+ * (`packages/navigator-data/src/accessors/extended-forms/filter-properties.ts`).
+ *
+ * This is a HAND-MAINTAINED MIRROR, not an import: packages/ui may not import
+ * @contentgrid/navigator-data (see packages/ui/CLAUDE.md's forbidden-imports list), so this
+ * type has to be redeclared here. Keep every field name, optionality, and type in sync with
+ * the producer — a field that's required there but optional (or missing) here is structurally
+ * still assignable, so a drift won't show up as a compile error on either side.
+ */
 export interface SearchFilterProperty {
   name: string;
   label: string;
   description?: string;
   inputKind: FilterInputKind;
+  /**
+   * The raw HAL-FORMS wire type (e.g. "number", "checkbox"). Not read anywhere in this file —
+   * it exists only so this type accurately mirrors the producer's shape (see the class doc
+   * comment above); `coerceFilterValue`, the only consumer, lives in the data layer.
+   */
+  propertyType: string;
   searchOperator: SearchOperator;
   groupKey: string;
-  /** Heading for this property's group. Falls back to `label` when omitted (e.g. hand-built
-   * fixtures with a single item per group, where the two would be identical anyway). */
-  groupLabel?: string;
+  /** Heading for this property's group. Always set by the producer for every real property. */
+  groupLabel: string;
   directionLabel?: DirectionLabel;
   dateEncoding?: "iso" | "plain";
   options?: string[];
@@ -66,6 +80,14 @@ export interface FilterSidebarProps {
   typeaheadSuggestions?: string[];
   /** Loading state for `activeTypeaheadField`. */
   typeaheadIsLoading?: boolean;
+  /**
+   * Names of properties whose current `filters` value could not be coerced for its
+   * propertyType (e.g. non-numeric text in a number field) and was therefore silently omitted
+   * from the request — see `findInvalidFilterKeys` in `@contentgrid/navigator-data`. Rendered
+   * as an inline error under the affected field instead of the table just quietly not
+   * filtering by it.
+   */
+  invalidFilterKeys?: readonly string[];
 }
 
 function isoToDateInputValue(isoString: string): string {
@@ -105,6 +127,30 @@ function htmlInputType(inputKind: FilterInputKind): string {
   }
 }
 
+/**
+ * Error text for a field whose current value is in `invalidFilterKeys` (see
+ * FilterSidebarProps). Switches on `propertyType` (the wire type), not `inputKind` — a
+ * "select" control on a number-typed attribute with non-numeric inline options (see
+ * coerceFilterValue's own doc comment on exactly this case) is the realistic way a "select"
+ * kind reaches this at all: a plain "text" propertyType always coerces (raw string
+ * passthrough), and "checkbox" is driven by a controlled checkbox that never emits a raw value
+ * outside "true"/"false".
+ */
+function invalidValueMessage(propertyType: string): string {
+  switch (propertyType) {
+    case "number":
+    case "range":
+      return "Enter a valid number";
+    case "date":
+      return "Enter a valid date";
+    case "datetime":
+    case "datetime-local":
+      return "Enter a valid date and time";
+    default:
+      return "Enter a valid value";
+  }
+}
+
 interface FilterGroup {
   groupKey: string;
   label: string;
@@ -130,7 +176,7 @@ function groupFilterProperties(props: SearchFilterProperty[]): FilterGroup[] {
   }
   return Array.from(itemsByGroupKey.values(), (items) => ({
     groupKey: items[0].groupKey,
-    label: items[0].groupLabel ?? items[0].label,
+    label: items[0].groupLabel,
     items,
   }));
 }
@@ -203,11 +249,13 @@ function RangeGroupFilter({
   items,
   filters,
   onFilterChange,
+  invalidFilterKeys,
 }: Readonly<{
   label: string;
   items: SearchFilterProperty[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string | undefined) => void;
+  invalidFilterKeys: ReadonlySet<string>;
 }>) {
   const isNumeric = items.every((p) => p.inputKind === "number");
   return (
@@ -217,6 +265,7 @@ function RangeGroupFilter({
         {items.map((prop) => {
           const value = filters[prop.name] ?? "";
           const isDateLike = prop.inputKind === "date" || prop.inputKind === "datetime";
+          const isInvalid = invalidFilterKeys.has(prop.name);
           return (
             <div key={prop.name} className="min-w-0 flex-1 space-y-1">
               {prop.directionLabel && (
@@ -227,6 +276,7 @@ function RangeGroupFilter({
                   <Input
                     type={htmlInputType(prop.inputKind)}
                     aria-label={withDirectionSuffix(label, prop.directionLabel)}
+                    aria-invalid={isInvalid}
                     className="h-8 text-sm"
                     value={isDateLike ? dateInputValue(prop.inputKind, value) : value}
                     onChange={(e) => {
@@ -245,6 +295,9 @@ function RangeGroupFilter({
                   ariaLabel={`Clear ${withDirectionSuffix(label, prop.directionLabel)}`}
                 />
               </div>
+              {isInvalid && (
+                <p className="text-xs text-destructive">{invalidValueMessage(prop.inputKind)}</p>
+              )}
             </div>
           );
         })}
@@ -258,11 +311,15 @@ function EnumFilter({
   options,
   value,
   onChange,
+  invalid = false,
+  errorMessage,
 }: Readonly<{
   label: string;
   options: string[];
   value: string;
   onChange: (value: string | undefined) => void;
+  invalid?: boolean;
+  errorMessage?: string;
 }>) {
   return (
     <div className="space-y-1.5">
@@ -270,7 +327,7 @@ function EnumFilter({
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
           <Select key={value || "empty"} value={value || undefined} onValueChange={onChange}>
-            <SelectTrigger aria-label={label} className="h-8 w-full text-sm">
+            <SelectTrigger aria-label={label} aria-invalid={invalid} className="h-8 w-full text-sm">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -284,6 +341,7 @@ function EnumFilter({
         </div>
         <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
       </div>
+      {invalid && errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
     </div>
   );
 }
@@ -323,20 +381,22 @@ function BooleanFilter({
 
 /**
  * Shared wrapper for a single labeled input + ClearButton: a heading Label above a row
- * containing the field itself and its clear affordance. DateFilter and TextFilter differ
- * only in what `<Input>` they render inside this shell.
+ * containing the field itself and its clear affordance, with an optional error line below.
+ * DateFilter and TextFilter differ only in what `<Input>` they render inside this shell.
  */
 function LabeledFilterField({
   label,
   inputId,
   value,
   onClear,
+  error,
   children,
 }: Readonly<{
   label: string;
   inputId: string;
   value: string;
   onClear: () => void;
+  error?: string;
   children: React.ReactNode;
 }>) {
   return (
@@ -348,6 +408,7 @@ function LabeledFilterField({
         <div className="min-w-0 flex-1">{children}</div>
         <ClearButton onClick={onClear} visible={!!value} />
       </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -359,6 +420,7 @@ function DateFilter({
   inputKind,
   value,
   onChange,
+  invalid = false,
 }: Readonly<{
   label: string;
   directionLabel?: DirectionLabel;
@@ -366,6 +428,7 @@ function DateFilter({
   inputKind: "date" | "datetime";
   value: string;
   onChange: (value: string | undefined) => void;
+  invalid?: boolean;
 }>) {
   const displayLabel = withDirectionSuffix(label, directionLabel);
   const inputId = toInputId(displayLabel);
@@ -376,10 +439,12 @@ function DateFilter({
       inputId={inputId}
       value={value}
       onClear={() => onChange(undefined)}
+      error={invalid ? invalidValueMessage(inputKind) : undefined}
     >
       <Input
         id={inputId}
         type={htmlInputType(inputKind)}
+        aria-invalid={invalid}
         className="h-8 text-sm"
         value={dateInputValue(inputKind, value)}
         onChange={(e) => {
@@ -396,12 +461,14 @@ function TextFilter({
   inputType = "text",
   value,
   onChange,
+  invalid = false,
 }: Readonly<{
   label: string;
   directionLabel?: DirectionLabel;
   inputType?: "text" | "number";
   value: string;
   onChange: (value: string | undefined) => void;
+  invalid?: boolean;
 }>) {
   const displayLabel = withDirectionSuffix(label, directionLabel);
   const inputId = toInputId(displayLabel);
@@ -412,10 +479,12 @@ function TextFilter({
       inputId={inputId}
       value={value}
       onClear={() => onChange(undefined)}
+      error={invalid ? invalidValueMessage(inputType === "number" ? "number" : "text") : undefined}
     >
       <Input
         id={inputId}
         type={inputType}
+        aria-invalid={invalid}
         className="h-8 text-sm"
         value={value}
         onChange={(e) => onChange(e.target.value || undefined)}
@@ -427,6 +496,20 @@ function TextFilter({
 /**
  * Text input with a typeahead suggestions dropdown for prefix-match search fields.
  * Suggestions are supplied externally (from useTypeahead via FilterSidebarProps).
+ *
+ * `typedValue` holds whatever is currently in the input box, updated on every keystroke.
+ * It is intentionally NOT the same as `value` (the committed filter, owned by the parent's
+ * `filters` state) — `typedValue` is only ever pushed into the committed filter by
+ * `commitFilterValue`, which runs on three triggers: selecting a suggestion, pressing Enter,
+ * or blurring the input. Plain typing only updates `typedValue` and calls `onSearch` (which
+ * drives the debounced suggestions query) — it never calls `commitFilterValue`.
+ *
+ * This split exists to keep two queries genuinely separate: the table's own collection query
+ * (built from the committed `filters`) and the typeahead's suggestions query (built from the
+ * debounced search text). If every keystroke committed straight to `filters`, both queries
+ * would end up requesting the exact same encoded URL — and therefore the same TanStack query
+ * key — as soon as the debounce caught up, silently merging two logically distinct queries
+ * into one (wrong retry/staleTime/gcTime behavior for whichever query registered second).
  */
 function TypeaheadTextFilter({
   label,
@@ -450,6 +533,15 @@ function TypeaheadTextFilter({
   // Drives aria-activedescendant per the WAI-ARIA combobox-with-listbox-popup pattern —
   // focus stays on the input, and this index is the only signal of "current" option.
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [typedValue, setTypedValue] = useState(value);
+
+  // Sync typedValue when the committed value changes from OUTSIDE this component (e.g.
+  // "Clear all", or a programmatic filter reset) — not on every keystroke, since typing only
+  // ever updates typedValue directly, until commitFilterValue pushes it into `filters`.
+  useEffect(() => {
+    setTypedValue(value);
+  }, [value]);
+
   const inputId = toInputId(fieldParam);
   const listboxId = `${inputId}-listbox`;
   const optionId = (index: number) => `${listboxId}-option-${index}`;
@@ -461,29 +553,38 @@ function TypeaheadTextFilter({
     setActiveIndex(-1);
   }
 
+  function commitFilterValue(v: string) {
+    onChange(v || undefined);
+  }
+
   function selectSuggestion(s: string) {
-    onChange(s);
+    setTypedValue(s);
+    commitFilterValue(s);
     onSearch("");
     closePopover();
   }
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!hasSuggestions) return;
     switch (e.key) {
       case "ArrowDown":
+        if (!hasSuggestions) return;
         e.preventDefault();
         setOpen(true);
         setActiveIndex((i) => (i + 1) % suggestions.length);
         break;
       case "ArrowUp":
+        if (!hasSuggestions) return;
         e.preventDefault();
         setOpen(true);
         setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
         break;
       case "Enter":
-        if (activeIndex >= 0) {
-          e.preventDefault();
+        e.preventDefault();
+        if (hasSuggestions && activeIndex >= 0) {
           selectSuggestion(suggestions[activeIndex]);
+        } else {
+          commitFilterValue(typedValue);
+          closePopover();
         }
         break;
       case "Escape":
@@ -512,11 +613,11 @@ function TypeaheadTextFilter({
                 aria-autocomplete="list"
                 aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
                 className="h-8 text-sm"
-                value={value}
+                value={typedValue}
                 autoComplete="off"
                 onChange={(e) => {
                   const v = e.target.value;
-                  onChange(v || undefined);
+                  setTypedValue(v);
                   onSearch(v);
                   setOpen(!!v);
                   setActiveIndex(-1);
@@ -525,16 +626,20 @@ function TypeaheadTextFilter({
                 onFocus={() => {
                   if (hasSuggestions) setOpen(true);
                 }}
-                onBlur={closePopover}
+                onBlur={() => {
+                  commitFilterValue(typedValue);
+                  closePopover();
+                }}
               />
             </div>
             <ClearButton
               onClick={() => {
-                onChange(undefined);
+                setTypedValue("");
+                commitFilterValue("");
                 onSearch("");
                 closePopover();
               }}
-              visible={!!value}
+              visible={!!typedValue}
             />
           </div>
         </PopoverAnchor>
@@ -610,6 +715,7 @@ interface FilterControlContext {
   activeTypeaheadField?: string;
   typeaheadSuggestions?: string[];
   typeaheadIsLoading?: boolean;
+  invalidFilterKeys: ReadonlySet<string>;
 }
 
 /**
@@ -628,8 +734,10 @@ function renderFilterControl(
     activeTypeaheadField,
     typeaheadSuggestions,
     typeaheadIsLoading,
+    invalidFilterKeys,
   }: FilterControlContext,
 ): React.ReactNode {
+  const invalid = invalidFilterKeys.has(prop.name);
   switch (prop.inputKind) {
     case "select":
       // buildFilterProperties() only ever sets inputKind "select" alongside populated
@@ -643,6 +751,8 @@ function renderFilterControl(
           options={prop.options}
           value={value}
           onChange={(v) => onFilterChange(prop.name, v)}
+          invalid={invalid}
+          errorMessage={invalidValueMessage(prop.propertyType)}
         />
       );
 
@@ -667,6 +777,7 @@ function renderFilterControl(
           inputKind={prop.inputKind}
           value={value}
           onChange={(v) => onFilterChange(prop.name, v)}
+          invalid={invalid}
         />
       );
 
@@ -679,6 +790,7 @@ function renderFilterControl(
           inputType="number"
           value={value}
           onChange={(v) => onFilterChange(prop.name, v)}
+          invalid={invalid}
         />
       );
 
@@ -749,11 +861,13 @@ export function FilterSidebar({
   activeTypeaheadField,
   typeaheadSuggestions,
   typeaheadIsLoading,
+  invalidFilterKeys,
 }: Readonly<FilterSidebarProps>) {
   const hasActiveFilters = Object.values(filters).some((v) => !!v);
   // Redundant siblings (bare exact-match, redundant strict range bound) are already excluded
   // by buildFilterProperties() before this list arrives — every group here has ≥1 item.
   const groups = groupFilterProperties(filterProperties);
+  const invalidKeySet = new Set(invalidFilterKeys ?? []);
 
   return (
     <div className="w-56 shrink-0 rounded-lg bg-muted/40 p-4">
@@ -772,31 +886,53 @@ export function FilterSidebar({
       </div>
       <div className="space-y-4">
         {groups.map((group, index) => {
+          // Only directional items (~gt/~gte/~lt/~lte/~after/~before, i.e. those carrying a
+          // directionLabel) belong in the shared RangeGroupFilter box. A group can also contain
+          // a bare exact-match sibling now (e.g. "price" alongside "price~gte"/"price~lte" for
+          // a NUMBER attribute — isRedundantExactMatch only suppresses that for date/datetime,
+          // matching legacy behavior) — that standalone item has no directionLabel and needs
+          // its own labeled control via renderFilterControl, or it would render inside
+          // RangeGroupFilter with no visible label at all (RangeGroupFilter only ever shows
+          // directionLabel, never a plain field label).
+          const rangeItems = group.items.filter((p) => p.directionLabel);
+          const standaloneItems = group.items.filter((p) => !p.directionLabel);
           const isRangeGroup =
-            group.items.length > 1 &&
-            (group.items.every((p) => p.inputKind === "date" || p.inputKind === "datetime") ||
-              group.items.every((p) => p.inputKind === "number"));
+            rangeItems.length > 1 &&
+            (rangeItems.every((p) => p.inputKind === "date" || p.inputKind === "datetime") ||
+              rangeItems.every((p) => p.inputKind === "number"));
+
+          const controlContext = {
+            onFilterChange,
+            onTypeaheadSearch,
+            activeTypeaheadField,
+            typeaheadSuggestions,
+            typeaheadIsLoading,
+            invalidFilterKeys: invalidKeySet,
+          };
 
           return (
             <div key={group.groupKey}>
               {index > 0 && <Separator className="mb-4" />}
               <div className="space-y-2">
+                {standaloneItems.map((prop) =>
+                  renderFilterControl(prop, {
+                    value: filters[prop.name] ?? "",
+                    ...controlContext,
+                  }),
+                )}
                 {isRangeGroup ? (
                   <RangeGroupFilter
                     label={group.label}
-                    items={group.items}
+                    items={rangeItems}
                     filters={filters}
                     onFilterChange={onFilterChange}
+                    invalidFilterKeys={invalidKeySet}
                   />
                 ) : (
-                  group.items.map((prop) =>
+                  rangeItems.map((prop) =>
                     renderFilterControl(prop, {
                       value: filters[prop.name] ?? "",
-                      onFilterChange,
-                      onTypeaheadSearch,
-                      activeTypeaheadField,
-                      typeaheadSuggestions,
-                      typeaheadIsLoading,
+                      ...controlContext,
                     }),
                   )
                 )}

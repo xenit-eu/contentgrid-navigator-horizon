@@ -108,6 +108,8 @@ export function buildFilterProperties(
     }
   }
 
+  // Non-null assertion below is safe: the loop above sets an entry for every sp.groupKey
+  // unconditionally, before this map() runs over the same `sps` array.
   const properties = sps.map((sp) =>
     buildFilterProperty(sp, groupLabelByGroupKey.get(sp.groupKey)!),
   );
@@ -120,6 +122,9 @@ export function buildFilterProperties(
   }
 
   return properties.filter((prop) => {
+    // Safe for the same reason: the loop above adds every prop.groupKey (each prop pushes
+    // into its own group's array or seeds a new one), before this filter() runs over the
+    // same `properties` array.
     const siblings = propertiesByGroupKey.get(prop.groupKey)!;
     return !isRedundantExactMatch(prop, siblings) && !isRedundantStrictRangeBound(prop, siblings);
   });
@@ -173,11 +178,20 @@ function buildFilterProperty(
 /**
  * An exact-match property is redundant once a MORE SPECIFIC sibling exists for the same
  * attribute: a prefix-match or full-text variant (e.g. "number" alongside "number~prefix"),
- * or a range/direction variant (e.g. "invoice_date" alongside "invoice_date~after" /
- * "~before"). Suppress it — one broad "exact value" control adds nothing once a narrower or
- * range-based way to search the same field is already shown. Applies uniformly across kinds
- * (text, date, datetime, number); select/boolean never have such siblings in practice, since
- * prefix/full-text/range operators only apply to string or ordered-value attributes.
+ * or — for a datetime/datetime-local attribute only — a range/direction variant (e.g.
+ * "invoice_date" alongside "invoice_date~after" / "~before"). Suppress it — one broad "exact
+ * value" control adds nothing once a narrower or range-based way to search the same field is
+ * already shown.
+ *
+ * The prefix/full-text half applies uniformly across kinds (select/boolean never have such
+ * siblings in practice, since prefix/full-text operators only apply to string attributes). The
+ * range/direction half is intentionally narrower — mirrors the legacy Navigator's
+ * RangedJsfFormConvertor.createJsonProperty (contentgrid-navigator's
+ * src/components/form/jsonforms.ts:354-357), which only drops the lone base property when it is
+ * datetime/datetime-local. A numeric attribute (e.g. "amount" alongside "amount~gte"/"~lte")
+ * keeps its bare exact-match filter alongside the range inputs — dropping it there would be a
+ * user-facing behavior change beyond what the legacy app did.
+ *
  * Suppresses every redundant sibling, not just one — some search templates expose more than
  * one exact-match-shaped param for the same attribute (see the "range-pair operators" tests).
  */
@@ -191,7 +205,7 @@ function isRedundantExactMatch(
       p.groupKey === prop.groupKey &&
       (p.searchOperator === "prefix-match" ||
         p.searchOperator === "full-text" ||
-        !!p.directionLabel),
+        (!!p.directionLabel && (prop.inputKind === "date" || prop.inputKind === "datetime"))),
   );
 }
 
@@ -285,7 +299,7 @@ export function coerceFilterValue(
 
 /**
  * Applies a FilterSidebar `filters` map onto a HAL-FORMS values object, coercing each raw
- * string via `coerceFilterValue` based on the matching property's inputKind. Filters that
+ * string via `coerceFilterValue` based on the matching property's propertyType. Filters that
  * fail to coerce are silently omitted rather than sent.
  */
 export function applyFilterValues(
@@ -299,6 +313,26 @@ export function applyFilterValues(
     const coerced = coerceFilterValue(propertyTypeByName.get(key) ?? "text", rawValue);
     return coerced === undefined ? vals : vals.withValue(key, coerced);
   }, values);
+}
+
+/**
+ * Names of filter keys whose current raw value fails to coerce for the matching property's
+ * propertyType (e.g. non-numeric text typed into a number field). `applyFilterValues` silently
+ * omits exactly these same keys from the encoded request — this is its read-only companion, so
+ * a caller (FilterSidebar, via `invalidFilterKeys`) can surface a visible error instead of the
+ * request just quietly not filtering by that field.
+ */
+export function findInvalidFilterKeys(
+  filterProperties: readonly SearchFilterProperty[],
+  filters: Record<string, string>,
+): string[] {
+  const propertyTypeByName = new Map(filterProperties.map((p) => [p.name, p.propertyType]));
+  return Object.entries(filters)
+    .filter(([key, rawValue]) => {
+      if (!rawValue) return false;
+      return coerceFilterValue(propertyTypeByName.get(key) ?? "text", rawValue) === undefined;
+    })
+    .map(([key]) => key);
 }
 
 /**
@@ -351,10 +385,15 @@ function computeDirectionLabel(
 /**
  * "plain" for a "date"-typed property, which the UI encodes as a bare yyyy-MM-dd value with
  * no time component; "iso" for "datetime"/"datetime-local", which needs a full ISO timestamp.
- * Keyed off the property's own wire type via `inputKind` (not the operator suffix) — a
- * "date"-typed attribute uses the bare-date encoding for every operator that applies to it
- * (~after, ~before, ~from, ~until alike), confirmed against a live profile where all of them
- * carry `"type": "date"` on the same attribute.
+ * Keyed off the property's own wire type via `inputKind` (not the operator suffix): every
+ * operator variant of one attribute (~after, ~before, ~from, ~until, …) shares that attribute's
+ * single declared wire type in the search template — the suffix only changes the comparison,
+ * never the type — so whichever operator fires, the encoding for that attribute is the same.
+ *
+ * Not verified against a live "date"-typed example: the committed profile dump has no
+ * attribute of wire type "date" at all (every date-like attribute there is "datetime", using
+ * `~after`/`~before`). This branch and its "date" inputKind are exercised by unit tests with a
+ * hand-built fixture, not by anything traceable to a real backend response.
  */
 function computeDateEncoding(inputKind: FilterInputKind): "iso" | "plain" | undefined {
   if (inputKind === "date") return "plain";

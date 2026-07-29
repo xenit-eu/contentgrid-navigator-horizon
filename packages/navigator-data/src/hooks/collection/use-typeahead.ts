@@ -52,55 +52,53 @@ export interface UseTypeaheadOptions {
   searchValues?: HalFormValues<SearchRequestSpec>;
 }
 
-/** The relation's target profile in relation mode; the source profile itself otherwise. */
-function resolveTargetProfile(
-  isRelation: boolean,
+interface ResolvedTarget {
+  profile: ProfileEntity | undefined;
+  property: SearchHalFormTemplateProperty | undefined;
+}
+
+/**
+ * Resolves the profile and search property to actually query against.
+ *
+ * Direct (non-relation) properties: the given profile/property, unchanged.
+ *
+ * Relation-traversal properties (e.g. "customer.name~prefix"): resolves the relation's target
+ * profile via `profileRelation.getTargetProfile()`, then looks up the LOCAL (un-prefixed)
+ * property name on THAT profile's own search template — relation-traversal filter params live
+ * on the target entity's own template under their local name (e.g. "customer.first_name~prefix"
+ * on the invoice's template corresponds to "first_name~prefix" on the customer's own template).
+ */
+function resolveTarget(
   searchProperty: SearchHalFormTemplateProperty | undefined,
   profileEntity: ProfileEntity,
   allProfiles: readonly ProfileEntity[],
-): ProfileEntity | undefined {
-  if (!isRelation) return profileEntity;
-  return searchProperty?.profileRelation?.getTargetProfile(allProfiles);
+): ResolvedTarget {
+  if (!searchProperty) return { profile: profileEntity, property: undefined };
+  if (!searchProperty.isOverRelation) return { profile: profileEntity, property: searchProperty };
+
+  const relation = searchProperty.profileRelation;
+  const profile = relation?.getTargetProfile(allProfiles);
+  const localName = relation
+    ? searchProperty.property.name.slice(relation.name.length + 1)
+    : undefined;
+  const property = localName
+    ? profile?.searchTemplate?.getSearchPropertyByName(localName)
+    : undefined;
+  return { profile, property };
 }
 
 /**
- * Relation-traversal filter params live on the TARGET entity's own search template under
- * their local (un-prefixed) name — e.g. "customer.first_name~prefix" on the invoice's
- * template corresponds to "first_name~prefix" on the customer's own template.
- */
-function resolveLocalPropertyName(
-  isRelation: boolean,
-  searchProperty: SearchHalFormTemplateProperty | undefined,
-  relationName: string | undefined,
-): string | undefined {
-  if (!isRelation || !searchProperty || !relationName) return searchProperty?.property.name;
-  return searchProperty.property.name.slice(relationName.length + 1);
-}
-
-/** The search property to actually query with — resolved against the target entity's own template in relation mode. */
-function resolveTargetSearchProperty(
-  isRelation: boolean,
-  localPropertyName: string | undefined,
-  targetSearchTemplate: SearchHalFormTemplate | null | undefined,
-  searchProperty: SearchHalFormTemplateProperty | undefined,
-): SearchHalFormTemplateProperty | undefined {
-  if (!isRelation) return searchProperty;
-  if (!localPropertyName) return undefined;
-  return targetSearchTemplate?.getSearchPropertyByName(localPropertyName);
-}
-
-/**
- * Relation mode starts fresh: the parent's searchValues are encoded against the parent's
- * template and don't apply to the related entity's own collection.
+ * `searchValues` here is already resolved by the caller to `undefined` in relation mode — the
+ * parent's searchValues are encoded against the parent's template and don't apply to the
+ * related entity's own collection, so relation mode always starts fresh regardless of what
+ * the caller passed in.
  */
 function computeBaseSearchValues(
   enabled: boolean,
   targetSearchTemplate: SearchHalFormTemplate | null | undefined,
-  isRelation: boolean,
   searchValues: HalFormValues<SearchRequestSpec> | undefined,
 ): HalFormValues<SearchRequestSpec> | undefined {
   if (!enabled || !targetSearchTemplate) return undefined;
-  if (isRelation) return createValues(targetSearchTemplate.template);
   return searchValues ?? createValues(targetSearchTemplate.template);
 }
 
@@ -134,22 +132,13 @@ export function useTypeahead({
   const profileResults = useProfileEntities();
 
   const isRelation = !!searchProperty?.isOverRelation;
-  const relationName = searchProperty?.profileRelation?.name;
 
-  const targetProfile = resolveTargetProfile(
-    isRelation,
+  const { profile: targetProfile, property: targetSearchProperty } = resolveTarget(
     searchProperty,
     profileEntity,
     profileResults.flatMap((r) => r.data ?? []),
   );
-  const localPropertyName = resolveLocalPropertyName(isRelation, searchProperty, relationName);
   const targetSearchTemplate = targetProfile?.searchTemplate;
-  const targetSearchProperty = resolveTargetSearchProperty(
-    isRelation,
-    localPropertyName,
-    targetSearchTemplate,
-    searchProperty,
-  );
 
   // Both must meet minLength: query clears results instantly on empty; debouncedQuery gates the fetch.
   // Also disabled until a target property has resolved (relation mode: also needs targetProfile).
@@ -159,11 +148,13 @@ export function useTypeahead({
     query.length >= minLength &&
     debouncedQuery.length >= minLength;
 
+  // Relation mode ignores the caller's searchValues — they're encoded against the parent's
+  // template, not the related entity's own — so resolve that here, once, rather than passing
+  // isRelation into computeBaseSearchValues as a second decision point.
   const baseSearchValues = computeBaseSearchValues(
     enabled,
     targetSearchTemplate,
-    isRelation,
-    searchValues,
+    isRelation ? undefined : searchValues,
   );
   const collectionSearchValues =
     baseSearchValues && targetSearchProperty

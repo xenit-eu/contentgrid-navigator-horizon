@@ -12,33 +12,20 @@
  * - hasSort / sortProperty
  */
 import { describe, expect, it } from "vitest";
-import { HalObject, type Link } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import type { ProfileEntityShape } from "../../shapes";
 import { ProfileAttributeSearchType } from "../attribute-profile";
-import ProfileEntity from "../entity-profile";
 import { SearchHalFormTemplate } from "./search-form";
-
-// ---------------------------------------------------------------------------
-// Minimal helpers to build ProfileEntity from inline JSON
-// ---------------------------------------------------------------------------
-
-function makeProfileEntity(
-  json: Record<string, unknown>,
-  linkHref = "https://example.com/profile/things",
-  linkName = "thing",
-): ProfileEntity {
-  const hal = new HalObject(json as unknown as ProfileEntityShape);
-  const link = { href: linkHref, name: linkName } as unknown as Link;
-  return new ProfileEntity(link, hal as HalObject<ProfileEntityShape>);
-}
+import { makeProfileEntity } from "./test-utils";
 
 // ---------------------------------------------------------------------------
 // Base fixture: simple entity with search template and sort
 //
-// Property-name suffixes here match a live profile exactly (confirmed against a sandbox
-// backend): every operator uses a single plain tilde — including the inclusive range-pair
-// bounds ("~from" / "~until") — never a dotted "attribute.~op" form.
+// Property-name suffixes here use a single plain tilde, never a dotted "attribute.~op" form —
+// verified against the committed profile dump for ~prefix/~gt/~gte/~lt/~lte/~after/~before.
+// The inclusive range-pair bounds ("~from" / "~until") aren't in that dump, but are real and
+// plain-tilde per the legacy Navigator's NestedRange pairing
+// (contentgrid-navigator/src/components/form/jsonforms.ts:325).
 // ---------------------------------------------------------------------------
 
 const PROFILE_URL = "https://example.com/profile/invoices";
@@ -575,10 +562,16 @@ describe("SearchHalFormTemplate.withHiddenParams", () => {
 // ---------------------------------------------------------------------------
 // Range-pair operator properties (attribute~from / attribute~until)
 //
-// Confirmed against a live profile dump: the inclusive range-pair bounds use a PLAIN single
-// tilde, exactly like every other operator (~prefix, ~gt, ~after, …) — never a dotted
-// "attribute.~op" form. `invoice_date` in the base fixture above already covers this; these
-// tests focus on the "not a relation" distinction a dot-based check would need to get right.
+// `~from`/`~until` aren't in the committed profile dump (its full operator set is ~prefix,
+// ~gt, ~gte, ~lt, ~lte, ~after, ~before), but they're real: the legacy Navigator's
+// RangedJsfFormConvertor pairs exactly those suffixes with ~after/~before as fallbacks
+// (contentgrid-navigator/src/components/form/jsonforms.ts:325,
+// NestedRange("~from", "~until", "~after", "~before")). The plain-single-tilde claim IS
+// dump-verified for every suffix the dump does contain, and `~from`/`~until` follow the same
+// "operator suffix, never a dotted attribute.~op form" pattern by construction (the server
+// only ever emits one tilde per property name — see basePropertyName's doc comment).
+// `invoice_date` in the base fixture above already covers this; these tests focus on the "not
+// a relation" distinction a dot-based check would need to get right.
 // ---------------------------------------------------------------------------
 
 describe("SearchHalFormTemplate — range-pair operators (~from / ~until)", () => {
