@@ -28,7 +28,11 @@ export function AuthShell({ children }: Readonly<AuthShellProps>) {
     );
   }
 
-  if (auth.isLoading || (auth.user?.expired && !auth.error)) {
+  if (auth.error) {
+    return <SignInGate error={auth.error.message} onSignIn={() => auth.signinRedirect()} />;
+  }
+
+  if (auth.isLoading || auth.user?.expired) {
     return null;
   }
 

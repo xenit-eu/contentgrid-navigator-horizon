@@ -348,6 +348,33 @@ describe("useEntityItemToManyRelation — { url } mode", () => {
     expect(result.current.data).toBeInstanceOf(EntityItemCollection);
     expect(result.current.data?.items.map((item) => item.id)).toEqual(["li-003"]);
   });
+
+  it("discards a cross-origin url and falls back to the relation's default link", async () => {
+    // A caller-supplied cross-origin URL must never reach apiFetch (which
+    // unconditionally attaches the bearer token) — only the relation's own
+    // default-link handler is registered, so a fetch to the evil origin
+    // would surface as an MSW error instead of a successful result.
+    setupProfileHandlers();
+    server.use(
+      createListHandler({
+        url: LINE_ITEMS_RELATION_URL,
+        items: sampleLineItemList._embedded!.item as Record<string, unknown>[],
+      }),
+    );
+
+    const relation = makeLineItemsRelation();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemToManyRelation(relation, { url: "https://evil.example/x" }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+
+    expect(result.current.data?.items).toHaveLength(
+      (sampleLineItemList._embedded!.item as unknown[]).length,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

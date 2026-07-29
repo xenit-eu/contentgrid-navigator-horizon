@@ -1,10 +1,16 @@
-import { type QueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { TypedFetch } from "../../api/client";
 import type { SearchRequestSpec } from "../../api/requests";
+import { resolveCursorHref } from "../../search/pagination-links";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
 
@@ -16,7 +22,9 @@ export interface UseEntityItemCollectionOptions {
  * Parameters for fetching a collection with the template's default empty search.
  * `searchParams` carries the route's `cursor` value (if present) as a standard
  * `URLSearchParams` — the caller builds it from the route's validated search
- * state; it's re-attached to the search URL as `_cursor`.
+ * state. `cursor` is an opaque token (e.g. `0p4jtvf1`), never a URL; it's
+ * resolved back to the literal href it was minted from via the cursor
+ * registry (`src/search/pagination-links.ts`) — never decoded or rebuilt.
  */
 export interface EntityCollectionDefault {
   /** Entity profile with search template */
@@ -76,13 +84,17 @@ function isBySearch(params: EntityCollectionParams): params is EntityCollectionB
  * without calling any hooks. Shared by both collection hooks so each can call
  * its TanStack hook exactly once, unconditionally (rules-of-hooks safe).
  *
- * `apiBaseUrl` (the absolute `profileUrl` from `useNavigatorData()`) is only a
- * resolution base for the `URL` constructor — `profileEntity.collectionUrl`
- * may be relative, which would otherwise make `new URL(...)` throw.
+ * Never constructs a URL: the first-page URL always comes verbatim from
+ * `profileEntity.searchEntityRequest(...)` (the template-driven request
+ * builder); a cursor page's URL always comes verbatim from the cursor
+ * registry — the exact `nextHref`/`prevHref` the server returned when the
+ * token was minted. An unrecognised token (bookmark, share, reload — the
+ * registry is session-scoped) falls back to the first-page URL rather than
+ * guessing at one.
  */
 function resolveCollectionRequest(
   params: EntityCollectionParams,
-  apiBaseUrl: string,
+  queryClient: QueryClient,
 ): {
   url: string;
   enabled: boolean;
@@ -105,9 +117,8 @@ function resolveCollectionRequest(
   const cursor = params.searchParams?.get("cursor");
   if (!cursor) return { url: request.url, enabled: true };
 
-  const url = new URL(request.url, apiBaseUrl);
-  url.searchParams.set("_cursor", cursor);
-  return { url: url.href, enabled: true };
+  const cursorHref = resolveCursorHref(queryClient, params.profileEntity.name, cursor);
+  return { url: cursorHref ?? request.url, enabled: true };
 }
 
 /**
@@ -119,9 +130,8 @@ export async function ensureEntityItemCollection(
   queryClient: QueryClient,
   apiFetch: TypedFetch,
   params: EntityCollectionParams,
-  apiBaseUrl: string,
 ): Promise<void> {
-  const { url, enabled } = resolveCollectionRequest(params, apiBaseUrl);
+  const { url, enabled } = resolveCollectionRequest(params, queryClient);
   if (!enabled) return;
 
   await queryClient.ensureQueryData(
@@ -133,8 +143,9 @@ export function useEntityItemCollection(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch, profileUrl } = useNavigatorData();
-  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
+  const { apiFetch } = useNavigatorData();
+  const queryClient = useQueryClient();
+  const { url, enabled } = resolveCollectionRequest(params, queryClient);
 
   return useQuery({
     ...EntityItemCollection.fetchByUrlQuery(
@@ -194,8 +205,9 @@ export function useEntityItemCollectionInfiniteScroll(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch, profileUrl } = useNavigatorData();
-  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
+  const { apiFetch } = useNavigatorData();
+  const queryClient = useQueryClient();
+  const { url, enabled } = resolveCollectionRequest(params, queryClient);
 
   return useInfiniteQuery({
     ...EntityItemCollection.infiniteQuery(

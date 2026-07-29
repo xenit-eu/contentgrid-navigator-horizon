@@ -27,6 +27,10 @@
     "./_experimental-placeholder": {
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
+    },
+    "./router-shell": {
+      "import": "./src/router-shell/index.ts",
+      "types": "./src/router-shell/index.ts"
     }
   },
   "scripts": {
@@ -38,14 +42,18 @@
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
     "@contentgrid/ui": "workspace:*",
     "@contentgrid/navigator-data": "workspace:*",
-    "@tanstack/react-router": "^1.170.10"
+    "@tanstack/react-router": "^1.170.10",
+    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query-devtools": "^5.0.0"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query-devtools": "5.101.0",
     "@tanstack/react-router": "1.170.15",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",

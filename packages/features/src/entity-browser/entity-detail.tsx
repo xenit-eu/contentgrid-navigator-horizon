@@ -1,15 +1,15 @@
 import { useCallback, useMemo } from "react";
-import type { QueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearch } from "@tanstack/react-router";
 import {
   type EntityItem,
   type EntitySearchState,
   type ProfileEntity,
-  type TypedFetch,
   createValues,
   ensureEntityItemCollection,
   extractCursorFromHref,
   getErrorMessage,
+  registerCursorHref,
   useCreateEntityItem,
   useEntityItemCollection,
   useProfileEntity,
@@ -30,6 +30,7 @@ import {
   Separator,
   Skeleton,
 } from "@contentgrid/ui";
+import type { AppRouterContext } from "../router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
 import { useTypedNavigate } from "./navigate";
 
@@ -39,16 +40,7 @@ import { useTypedNavigate } from "./navigate";
 // is identical, so it lives here once instead of being copy-pasted twice.
 // ---------------------------------------------------------------------------
 
-/**
- * The router-context slice this loader reads. Declared structurally rather than
- * importing either app's own `AppRouterContext` — `packages/features` must not
- * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
- * satisfy this shape.
- */
-interface EntityDetailLoaderContext {
-  queryClient: QueryClient;
-  apiFetch: TypedFetch | null;
-  profileUrl: string | null;
+interface EntityDetailLoaderContext extends AppRouterContext {
   /**
    * `null` when the parent `$entity` beforeLoad prefetch resolved to no profile,
    * absent entirely when it bailed out early — both mean "not prefetched".
@@ -69,12 +61,7 @@ export async function ensureEntityDetailLoaderData(
 
   try {
     const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
-    await ensureEntityItemCollection(
-      queryClient,
-      apiFetch,
-      { profileEntity, searchParams },
-      profileUrl,
-    );
+    await ensureEntityItemCollection(queryClient, apiFetch, { profileEntity, searchParams });
   } catch {
     // Swallowed: an uncaught loader rejection would block EntityDetailPage
     // from mounting at all. useEntityItemCollection's own isError handling
@@ -161,6 +148,21 @@ function EntityDetailView({
   const { cursor } = searchState;
   const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
   const collection = useEntityItemCollection({ profileEntity: profile, searchParams });
+  const queryClient = useQueryClient();
+
+  // Navigating to a next/prev page never constructs a URL: `cursorParam` (same
+  // name as the legacy navigator's CollectionSearch.tsx) is opaque route state
+  // only, and the literal href it was extracted from is remembered in the
+  // cursor registry (keyed by the same value) at the one moment it's actually
+  // in hand — right here, before it ever reaches the URL. The data layer
+  // resolves the cursor back to this href via the registry; it never rebuilds
+  // one from parts.
+  function onPageChange(href: string | undefined) {
+    const cursorParam = extractCursorFromHref(href);
+    if (cursorParam && href) registerCursorHref(queryClient, profile.name, cursorParam, href);
+    onSearchStateChange({ cursor: cursorParam });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   const columns = useMemo(() => buildColumns(profile), [profile]);
   const rows = useMemo(
@@ -241,10 +243,7 @@ function EntityDetailView({
                 variant="outline"
                 size="sm"
                 disabled={!collection.data.hasPrevious}
-                onClick={() => {
-                  onSearchStateChange({ cursor: extractCursorFromHref(collection.data.prevHref) });
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onClick={() => onPageChange(collection.data.prevHref)}
               >
                 Previous
               </Button>
@@ -255,10 +254,7 @@ function EntityDetailView({
                 variant="outline"
                 size="sm"
                 disabled={!collection.data.hasNext}
-                onClick={() => {
-                  onSearchStateChange({ cursor: extractCursorFromHref(collection.data.nextHref) });
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onClick={() => onPageChange(collection.data.nextHref)}
               >
                 Next
               </Button>

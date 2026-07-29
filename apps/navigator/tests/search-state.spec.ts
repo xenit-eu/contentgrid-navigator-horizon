@@ -4,6 +4,13 @@
  * stubbed HAL endpoint, and that browser back/forward correctly restores
  * prior search state.
  *
+ * The URL's `cursor` value is always an opaque token (e.g. "page2"), never a
+ * URL — the literal next/prev href it came from is remembered in an
+ * in-memory registry (`packages/navigator-data/src/search/cursor-registry.ts`)
+ * at the moment it's extracted, and resolved back through that registry when
+ * the token reappears. Nothing in the data layer ever constructs a URL from
+ * the token.
+ *
  * The entity list lives at /$entity (e.g. /invoice). `_app` is a *pathless*
  * layout route, so it never appears in the URL — navigating to `/_app/invoice`
  * would match the item-detail route ($entity/$itemId), not the list.
@@ -33,23 +40,27 @@ test("Next/Previous drive real cursor pagination, preserved through browser back
   await expect(page.getByText(PAGE_1_INVOICE_ID)).toBeVisible();
   expect(page.url()).not.toContain("cursor");
 
-  // Click Next — this issues a real fetch to the HAL next link and stores
-  // just the opaque `_cursor` token under `cursor`. If the cursor fetch were
-  // broken, this would either fall back to page 1 (page-2 text never
-  // appears) or throw (caught below via pageerror).
+  // Click Next — this issues a real fetch to the HAL next link, extracts the
+  // opaque `_cursor` token ("page2") from it, remembers the literal href in
+  // the in-memory cursor registry under that token, and writes only the
+  // token to `cursor` — never a URL. If the cursor fetch were broken, this
+  // would either fall back to page 1 (page-2 text never appears) or throw
+  // (caught below via pageerror).
   await page.getByRole("button", { name: /next/i }).click();
   await expect(page.getByText(PAGE_2_INVOICE_ID)).toBeVisible();
-  expect(page.url()).toContain("cursor=page2");
+  expect(new URL(page.url()).searchParams.get("cursor")).toBe("page2");
 
   // Browser back → first page (no cursor, page-1 row visible again).
   await page.goBack();
   await expect(page.getByText(PAGE_1_INVOICE_ID)).toBeVisible();
-  expect(page.url()).not.toContain("cursor");
+  expect(new URL(page.url()).searchParams.has("cursor")).toBe(false);
 
-  // Browser forward → second page (cursor restored, page-2 row visible again).
+  // Browser forward → second page. The cursor registry survives this
+  // same-session history navigation (it lives in the QueryClient, not the
+  // URL), so the token resolves back to the same href and page 2 reappears.
   await page.goForward();
   await expect(page.getByText(PAGE_2_INVOICE_ID)).toBeVisible();
-  expect(page.url()).toContain("cursor=page2");
+  expect(new URL(page.url()).searchParams.get("cursor")).toBe("page2");
 
   expect(errors).toEqual([]);
 });

@@ -1,13 +1,12 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { Outlet, useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
-  type TypedFetch,
   ensureProfileEntity,
   getErrorMessage,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { ErrorPage, LoadingPage } from "@contentgrid/ui";
+import type { AppRouterContext } from "../router-shell/router-context";
 import { useTypedNavigate } from "./navigate";
 
 // ---------------------------------------------------------------------------
@@ -16,20 +15,8 @@ import { useTypedNavigate } from "./navigate";
 // is identical, so it lives here once instead of being copy-pasted twice.
 // ---------------------------------------------------------------------------
 
-/**
- * The router-context slice this loader reads. Declared structurally rather than
- * importing either app's own `AppRouterContext` — `packages/features` must not
- * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
- * satisfy this shape.
- */
-interface EntityProfileGateLoaderContext {
-  queryClient: QueryClient;
-  apiFetch: TypedFetch | null;
-  profileUrl: string | null;
-}
-
 export async function ensureEntityProfileGateLoaderData(
-  context: EntityProfileGateLoaderContext,
+  context: AppRouterContext,
   entityName: string,
 ): Promise<{ profileEntity?: ProfileEntity | null }> {
   const { queryClient, apiFetch, profileUrl } = context;

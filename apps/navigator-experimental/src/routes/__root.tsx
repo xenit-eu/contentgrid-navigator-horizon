@@ -1,7 +1,7 @@
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { AuthShell } from "@contentgrid/features/auth-shell";
+import type { AppRouterContext } from "@contentgrid/features/router-shell";
 import { ExperimentalBanner } from "../components/experimental-banner";
-import type { AppRouterContext } from "../router-context";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
   component: RootComponent,

@@ -15,8 +15,11 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
 });
 
 vi.mock("@contentgrid/ui", () => ({
-  SignInGate: ({ onSignIn }: { onSignIn: () => void }) => (
-    <button onClick={onSignIn}>Sign in</button>
+  SignInGate: ({ onSignIn, error }: { onSignIn: () => void; error?: string }) => (
+    <>
+      {error && <p>{error}</p>}
+      <button onClick={onSignIn}>Sign in</button>
+    </>
   ),
 }));
 
@@ -56,6 +59,15 @@ describe("AuthShell", () => {
 
   it("renders SignInGate when the user is not authenticated", () => {
     renderAuthShell({ isAuthenticated: false });
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+  });
+
+  it("surfaces the error message on SignInGate when auth failed", () => {
+    renderAuthShell({
+      isAuthenticated: false,
+      error: new Error("Token exchange failed"),
+    });
+    expect(screen.getByText("Token exchange failed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 

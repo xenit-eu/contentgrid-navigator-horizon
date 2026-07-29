@@ -1,8 +1,6 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
-  type TypedFetch,
   ensureEntityItem,
   getErrorMessage,
   useEntityItem,
@@ -19,6 +17,7 @@ import {
   LoadingPage,
   Separator,
 } from "@contentgrid/ui";
+import type { AppRouterContext } from "../router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
 import { useTypedNavigate } from "./navigate";
 import { RelationToManySection, RelationToOneSection } from "./relation-sections";
@@ -29,15 +28,7 @@ import { RelationToManySection, RelationToOneSection } from "./relation-sections
 // is identical, so it lives here once instead of being copy-pasted twice.
 // ---------------------------------------------------------------------------
 
-/**
- * The router-context slice this loader reads. Declared structurally rather than
- * importing either app's own `AppRouterContext` — `packages/features` must not
- * depend on `apps/*` (see packages/features/CLAUDE.md) — and both apps' contexts
- * satisfy this shape.
- */
-interface EntityItemDetailLoaderContext {
-  queryClient: QueryClient;
-  apiFetch: TypedFetch | null;
+interface EntityItemDetailLoaderContext extends AppRouterContext {
   /**
    * `null` when the parent `$entity` beforeLoad prefetch resolved to no profile,
    * absent entirely when it bailed out early — both mean "not prefetched".

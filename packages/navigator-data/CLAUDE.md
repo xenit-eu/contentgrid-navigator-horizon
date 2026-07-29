@@ -156,19 +156,26 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 
 - `profileEntity.collectionUrl` — the entity collection URL (e.g. `/invoices`); read directly from the `describes` collection link.
 - `profileEntity.itemUrl(entityId)` — expands the item URI template (e.g. `/{plural}/{id}`) via `@contentgrid/uri-template`.
-- Follow HAL `next`/`prev`/`self` links directly for pagination. Cursor **values** stay opaque —
-  never decode or interpret them. The one exception: `_cursor` is a known, stable query-param
-  name in this platform's HAL API (every next/prev link uses it).
-  - `extractCursorFromHref` (`src/search/entity-search-state.ts`) extracts just that token from
-    `EntityItemCollection.nextHref`/`prevHref` for storage in browser URL state.
-  - The route boundary (`validateSearch`/`useSearch`) stays TanStack's typed search params —
-    see ADR-005. Past that boundary, wrap the token in a standard `URLSearchParams` before
-    calling into the data layer.
-  - `useEntityItemCollection({ profileEntity, searchParams })` reads `searchParams.get("cursor")`
-    and re-attaches it as `_cursor` to a URL built from the entity's own search template — never
-    to an arbitrary caller-supplied URL. `URLSearchParams`, not a bespoke object, is the
-    parameter type here, so any caller with a query string can call these hooks without shaping
-    a custom type.
+- Follow HAL `next`/`prev`/`self` links directly for pagination — never construct cursor URLs.
+  - Ephemeral, in-memory pagination (not reflected in the browser URL — e.g. the to-many
+    relation hook) uses `RelationCollectionByUrl` (`{ url }`): the caller passes
+    `collection.nextHref`/`prevHref` straight through, fetched verbatim. A caller-supplied
+    URL is only trusted when it resolves to the same origin as the API base
+    (`resolveTrustedCollectionUrl`, `src/search/pagination-links.ts`); otherwise the hook falls
+    back to the relation's default link. Never accept a caller-supplied full URL as a fetch
+    target without this check.
+  - Bookmarkable pagination (reflected in the browser URL — the entity list's `cursor` route
+    param) never carries a URL at all, in either direction. `extractCursorFromHref` pulls
+    just the opaque `_cursor` token out of the href for display/history purposes; the literal
+    href it came from is captured in the same moment (the Next/Previous click handler, before
+    the token ever reaches route state) and remembered in the cursor registry
+    (`registerCursorHref`/`resolveCursorHref`, `src/search/pagination-links.ts`), keyed by
+    entity name + token, backed by the `QueryClient` cache so it survives a route
+    unmount/remount within the session. `useEntityItemCollection({ profileEntity, searchParams })`
+    reads `searchParams.get("cursor")` and resolves it through the registry — it never decodes
+    the token or rebuilds a URL from it. An unregistered token (bookmarked, shared, or from a
+    fresh page load — the registry is session-scoped, not persisted) falls back to the
+    first-page request rather than guessing at a URL.
 
 **Return shape:**
 

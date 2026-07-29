@@ -4,7 +4,9 @@
  * Covers:
  * - EntityCollectionDefault mode { profileEntity }: fetches empty search collection
  * - EntityCollectionBySearch mode { profileEntity, searchValues }: fetches with values, disabled when undefined
- * - searchParams "cursor": appends the opaque token as `_cursor` onto the resolved search URL
+ * - searchParams "cursor": an opaque token, resolved to its registered href via the cursor
+ *   registry (never decoded, never used to construct a URL). An unregistered token
+ *   (bookmark/share/reload) falls back to the first-page request.
  * - Error state (EntityItemCollection.fetchByUrlQuery has hardcoded retry:3 — fake timers required)
  * - useEntityItemCollectionInfiniteScroll: success, disabled on undefined searchValues, default mode
  * - ensureEntityItemCollection: the non-hook, loader-safe equivalent
@@ -17,6 +19,7 @@ import { createValues } from "@contentgrid/hal-forms/values";
 import { server } from "../../../test-setup";
 import ProfileEntity from "../../accessors/entity-profile";
 import { createApiClient } from "../../api/client";
+import { registerCursorHref } from "../../search/pagination-links";
 import type { ProfileEntityShape } from "../../shapes";
 import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
 import {
@@ -120,6 +123,21 @@ function makeCustomerProfile(): ProfileEntity {
   );
 }
 
+/** Same profile, but with no `search` template — used by the "disabled" tests below. */
+function makeCustomerProfileWithoutSearchTemplate(): ProfileEntity {
+  const noSearchBody = {
+    ...customerProfileBody,
+    _templates: {
+      default: { method: "HEAD", target: CUSTOMER_COLLECTION_URL, properties: [] },
+    },
+  };
+  const hal = new HalObject(noSearchBody as unknown as ProfileEntityShape);
+  return new ProfileEntity(
+    { href: CUSTOMER_PROFILE_URL, name: "customer", title: "Customer" } as unknown as Link,
+    hal as HalObject<ProfileEntityShape>,
+  );
+}
+
 function setupCollectionHandler() {
   server.use(http.get(CUSTOMER_COLLECTION_URL, () => HttpResponse.json(customerCollectionBody)));
 }
@@ -148,18 +166,7 @@ describe("useEntityItemCollection — default mode { profileEntity }", () => {
   });
 
   it("is disabled (isPending) when profile has no search template", async () => {
-    // Profile with no search template
-    const noSearchBody = {
-      ...customerProfileBody,
-      _templates: {
-        default: { method: "HEAD", target: CUSTOMER_COLLECTION_URL, properties: [] },
-      },
-    };
-    const hal = new HalObject(noSearchBody as unknown as ProfileEntityShape);
-    const profile = new ProfileEntity(
-      { href: CUSTOMER_PROFILE_URL, name: "customer", title: "Customer" } as unknown as Link,
-      hal as HalObject<ProfileEntityShape>,
-    );
+    const profile = makeCustomerProfileWithoutSearchTemplate();
 
     // No collection URL registered — if fetch happens, MSW would error
     const wrapper = makeWrapper();
@@ -236,11 +243,15 @@ describe("useEntityItemCollection — search mode { profileEntity, searchValues 
 });
 
 // ---------------------------------------------------------------------------
-// searchParams "cursor" — opaque token appended to the resolved search URL
+// searchParams "cursor" — an opaque token resolved via the cursor registry
 // ---------------------------------------------------------------------------
 
 describe("useEntityItemCollection — searchParams cursor", () => {
-  it("appends the cursor as _cursor onto the default search URL", async () => {
+  it("fetches the href a registered cursor token was minted from, verbatim", async () => {
+    // The registered href intentionally carries params (_cursor AND _size)
+    // that a from-scratch rebuild would have no way to reproduce — proving
+    // the fetch is a verbatim lookup, not a reconstruction.
+    const registeredHref = `${CUSTOMER_COLLECTION_URL}?_cursor=0p4jtvf1&_size=5`;
     let capturedUrl: URL | undefined;
     server.use(
       http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
@@ -249,54 +260,47 @@ describe("useEntityItemCollection — searchParams cursor", () => {
       }),
     );
 
-    const wrapper = makeWrapper();
+    const queryClient = makeQueryClient();
+    registerCursorHref(queryClient, profileEntity.name, "0p4jtvf1", registeredHref);
+    const wrapper = makeWrapper(queryClient);
     const { result } = renderHook(
       () =>
         useEntityItemCollection({
           profileEntity,
-          searchParams: new URLSearchParams({ cursor: "abc123" }),
+          searchParams: new URLSearchParams({ cursor: "0p4jtvf1" }),
         }),
       { wrapper },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(capturedUrl?.searchParams.get("_cursor")).toBe("abc123");
+    expect(capturedUrl?.searchParams.get("_cursor")).toBe("0p4jtvf1");
+    expect(capturedUrl?.searchParams.get("_size")).toBe("5");
   });
 
-  it("appends the cursor onto a search-values URL too", async () => {
-    let capturedUrl: URL | undefined;
-    server.use(
-      http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
-        capturedUrl = new URL(request.url);
-        return HttpResponse.json(customerCollectionBody);
-      }),
-    );
+  it("falls back to the first page when the cursor token was never registered", async () => {
+    // Simulates a bookmarked/shared/reloaded cursor: the registry (scoped to
+    // this render's QueryClient) has no entry for the token, so the hook must
+    // NOT attempt to guess a URL from it — it silently serves the first page.
+    setupCollectionHandler();
 
-    const searchTemplate = profileEntity.searchTemplate!;
-    const searchValues = createValues(searchTemplate.template);
     const wrapper = makeWrapper();
     const { result } = renderHook(
       () =>
         useEntityItemCollection({
           profileEntity,
-          searchValues,
-          searchParams: new URLSearchParams({ cursor: "xyz789" }),
+          searchParams: new URLSearchParams({ cursor: "never-registered" }),
         }),
       { wrapper },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(capturedUrl?.searchParams.get("_cursor")).toBe("xyz789");
+    expect(result.current.data?.items).toHaveLength(2);
   });
 
   // "No cursor given" is already covered by the default-mode describe above
   // (useEntityItemCollection({ profileEntity }) with no searchParams at all).
-
-  // Error/retry behavior is generic to fetchByUrlQuery regardless of how the
-  // URL was built — already covered by the "search mode" describe above, so
-  // it isn't re-verified per param mode here.
 });
 
 // ---------------------------------------------------------------------------
@@ -304,7 +308,8 @@ describe("useEntityItemCollection — searchParams cursor", () => {
 // ---------------------------------------------------------------------------
 
 describe("ensureEntityItemCollection", () => {
-  it("resolves with a cursor", async () => {
+  it("resolves a registered cursor to its href", async () => {
+    const registeredHref = `${CUSTOMER_COLLECTION_URL}?_cursor=abc123`;
     let capturedUrl: URL | undefined;
     server.use(
       http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
@@ -313,14 +318,13 @@ describe("ensureEntityItemCollection", () => {
       }),
     );
     const queryClient = makeQueryClient();
+    registerCursorHref(queryClient, profileEntity.name, "abc123", registeredHref);
     const apiFetch = createApiClient(noopSupplier);
 
-    await ensureEntityItemCollection(
-      queryClient,
-      apiFetch,
-      { profileEntity, searchParams: new URLSearchParams({ cursor: "abc123" }) },
-      BASE,
-    );
+    await ensureEntityItemCollection(queryClient, apiFetch, {
+      profileEntity,
+      searchParams: new URLSearchParams({ cursor: "abc123" }),
+    });
 
     expect(capturedUrl?.searchParams.get("_cursor")).toBe("abc123");
   });
@@ -337,29 +341,19 @@ describe("ensureEntityItemCollection", () => {
     const queryClient = makeQueryClient();
     const apiFetch = createApiClient(noopSupplier);
 
-    await ensureEntityItemCollection(queryClient, apiFetch, { profileEntity }, BASE);
+    await ensureEntityItemCollection(queryClient, apiFetch, { profileEntity });
 
     expect(calls).toBe(1);
   });
 
   it("is a no-op when the request is disabled (no search template, no searchValues)", async () => {
-    const noSearchBody = {
-      ...customerProfileBody,
-      _templates: {
-        default: { method: "HEAD", target: CUSTOMER_COLLECTION_URL, properties: [] },
-      },
-    };
-    const hal = new HalObject(noSearchBody as unknown as ProfileEntityShape);
-    const profileEntity = new ProfileEntity(
-      { href: CUSTOMER_PROFILE_URL, name: "customer", title: "Customer" } as unknown as Link,
-      hal as HalObject<ProfileEntityShape>,
-    );
+    const profileEntity = makeCustomerProfileWithoutSearchTemplate();
     const queryClient = makeQueryClient();
     const apiFetch = createApiClient(noopSupplier);
 
     // No collection handler registered — if a fetch were attempted, MSW would error.
     await expect(
-      ensureEntityItemCollection(queryClient, apiFetch, { profileEntity }, BASE),
+      ensureEntityItemCollection(queryClient, apiFetch, { profileEntity }),
     ).resolves.toBeUndefined();
   });
 });
@@ -412,7 +406,8 @@ describe("useEntityItemCollectionInfiniteScroll", () => {
     expect(result.current.data?.pages[0].items).toHaveLength(2);
   });
 
-  it("infinite scroll starts from a given cursor", async () => {
+  it("infinite scroll starts from a registered cursor", async () => {
+    const registeredHref = `${CUSTOMER_COLLECTION_URL}?_cursor=abc123`;
     let capturedUrl: URL | undefined;
     server.use(
       http.get(CUSTOMER_COLLECTION_URL, ({ request }) => {
@@ -421,7 +416,9 @@ describe("useEntityItemCollectionInfiniteScroll", () => {
       }),
     );
 
-    const wrapper = makeWrapper();
+    const queryClient = makeQueryClient();
+    registerCursorHref(queryClient, profileEntity.name, "abc123", registeredHref);
+    const wrapper = makeWrapper(queryClient);
     const { result } = renderHook(
       () =>
         useEntityItemCollectionInfiniteScroll({
