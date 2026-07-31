@@ -17,6 +17,7 @@ import {
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
   entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
@@ -44,6 +45,8 @@ function createTestRouter(initialEntry = "/") {
   });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
 
   function Providers({ children }: { children: ReactNode }) {
     return (
@@ -51,6 +54,7 @@ function createTestRouter(initialEntry = "/") {
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

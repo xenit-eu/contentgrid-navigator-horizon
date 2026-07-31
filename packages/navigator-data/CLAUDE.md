@@ -598,7 +598,7 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 
 **Key invariants:**
 
-- `useNavigatorData()` provides both `apiFetch` (HAL client) and `contentFetch` (binary client, no `Accept: application/hal+json`). Use `apiFetch` for standard HAL mutations; use `contentFetch` only for binary content — see the Content exception section below.
+- `useNavigatorData()` provides `apiFetch` (HAL client), `contentFetch` (binary client, no `Accept: application/hal+json`), and `createContentUploadFetch` (factory for a progress-reporting binary upload client — same hook chain as `contentFetch`, XHR-backed). Use `apiFetch` for standard HAL mutations; use `contentFetch` for binary downloads; use `createContentUploadFetch` only for content uploads that need progress — see the Content exception section below. None of the three ever exposes a raw token to hook or feature code — auth stays inside the Layer-1 bearer-auth hook.
 - `onSuccess` composition order: cache → invalidate → caller. Never fire caller `onSuccess` before cache is consistent.
 - 412 must bubble to the caller (`onError`); the hook must not auto-retry.
   Check `error instanceof ProblemDetailError && error.problemDetail.status === 412`.
@@ -611,7 +611,7 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 Binary content operations (PUT/GET to `cg:content` links) have **no HAL-FORMS template or codec**.
 They are the one allowed case where a `Request` is constructed by hand.
 
-Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-content.ts`).
+Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/item/use-content.ts`).
 
 **Rules:**
 
@@ -621,18 +621,30 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
   string-built.
 - Build the `Request` via `entityItem.uploadContentRequest(attrName, file, opts)` or
   `entityItem.downloadContentRequest(attrName, opts)` — do NOT construct the Request by hand in
-  hook or feature code.
-- Use `contentFetch` (not `apiFetch`) for the binary PUT/GET — `contentFetch` omits the
+  hook or feature code. `opts.signal` on `uploadContentRequest` wires an `AbortController` through
+  to the transport for cancellation.
+- Download uses `contentFetch` (not `apiFetch`) — `contentFetch` omits the
   `Accept: application/hal+json` header that `apiFetch` adds.
-- `contentFetch` is wired into `NavigatorDataContextValue` alongside `apiFetch`; access it via
-  `useNavigatorData()`.
-- Upload (PUT) returns 204 No Content — the hook uses `fetchVoid(contentFetch, req)` then re-fetches
-  the parent item via `apiFetch` to capture the fresh ETag and update the item cache.
+- Upload uses `createContentUploadFetch(onProgress)` (not `contentFetch`) — a factory on
+  `NavigatorDataContextValue` that builds a client from the SAME bearer-auth + problem-details
+  hook chain as `contentFetch`, but backed by `XMLHttpRequest` instead of `fetch` (`src/api/xhr-fetch.ts`,
+  `createContentUploadClient` in `src/api/client.ts`) so upload progress can be reported — `fetch`
+  has no equivalent to `xhr.upload.onprogress`. Auth and error handling are NOT re-implemented for
+  this transport: raw tokens are never exposed to hook or feature code, only the two `NavigatorDataContextValue`
+  client factories (`apiFetch`/`contentFetch`/`createContentUploadFetch`).
+- `useUploadContent` returns the usual `UseMutationResult` PLUS `progress` (0–100, hook-local
+  `useState`, resets to 0 per upload, reaches 100 on success) and `cancel()` (aborts the in-flight
+  request and resets the mutation to idle rather than leaving it in an error state). Pass
+  `{ onProgress }` in the options to observe progress from outside the hook. There is no separate
+  `retry` — call `mutate` again with the same variables; the caller already holds the `File`.
+- Upload (PUT) returns 204 No Content — the hook uses `fetchVoid(uploadFetch, req)` then re-fetches
+  the parent item via `apiFetch` to capture the fresh ETag and update the item cache — unchanged
+  from before the progress/cancel additions.
 - Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
   response is 206 (Range request).
 - Content helpers live in `src/api/content-types.ts`: `contentDispositionAttachment(filename)`,
   `parseContentDisposition(header)`.
-- 412/415 surface as `ProblemDetailError`; the hook does not auto-retry.
+- 412/415 surface as `ProblemDetailError` on both upload and download; neither hook auto-retries.
 
 ---
 

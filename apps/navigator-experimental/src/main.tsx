@@ -27,12 +27,13 @@ const queryClient = new QueryClient();
 // apiFetch and the profile URL from the runtime config, so it must render
 // inside <AuthProvider> and after loadAppConfig() resolved.
 function DataProviders({ children }: Readonly<{ children: ReactNode }>) {
-  const { apiFetch, contentFetch, profileUrl } = useAppAuth();
+  const { apiFetch, contentFetch, createContentUploadFetch, profileUrl } = useAppAuth();
   return (
     <QueryClientProvider client={queryClient}>
       <NavigatorDataProvider
         apiFetch={apiFetch}
         contentFetch={contentFetch}
+        createContentUploadFetch={createContentUploadFetch}
         profileUrl={profileUrl}
       >
         {children}

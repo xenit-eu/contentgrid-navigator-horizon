@@ -11,13 +11,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// Operator suffixes match the platform's actual `blueprint:search-param` name suffixes
+// (~prefix, ~after, ~before, ~from, ~until, …) — see the committed profile dump and
+// SearchHalFormTemplate.extractSearchType in @contentgrid/navigator-data. There is no
+// dot-prefixed "range-pair" naming on this platform.
 const FILTER_PROPERTIES = [
-  { name: "status", prompt: "Status", type: "string", options: { inline: ["draft", "paid"] } },
-  { name: "number~prefix-match", prompt: "Number", type: "string" },
-  { name: "issued_date~greater-than", prompt: "Issued date", type: "date" },
-  { name: "issued_date~less-than", prompt: "Issued date", type: "date" },
-  { name: "amount.~from", prompt: "Amount", type: "string" },
-  { name: "amount.~until", prompt: "Amount", type: "string" },
+  { name: "status", prompt: "Status", type: "text", options: { inline: ["draft", "paid"] } },
+  { name: "number~prefix", prompt: "Number", type: "text" },
+  { name: "issued_date~after", prompt: "Issued date", type: "datetime" },
+  { name: "issued_date~before", prompt: "Issued date", type: "datetime" },
+  { name: "amount~from", prompt: "Amount", type: "text" },
+  { name: "amount~until", prompt: "Amount", type: "text" },
 ];
 
 export const SingleChip: Story = {
@@ -31,7 +35,7 @@ export const SingleChip: Story = {
 export const MultipleChips: Story = {
   args: {
     filterProperties: FILTER_PROPERTIES,
-    filters: { status: "draft", "number~prefix-match": "INV-001" },
+    filters: { status: "draft", "number~prefix": "INV-001" },
     onRemoveFilter: fn(),
     onClearAll: fn(),
   },
@@ -41,18 +45,21 @@ export const WithDateOperator: Story = {
   args: {
     filterProperties: FILTER_PROPERTIES,
     filters: {
-      "issued_date~greater-than": "2024-01-01T00:00:00Z",
-      "issued_date~less-than": "2024-12-31T00:00:00Z",
+      "issued_date~after": "2024-01-01T00:00:00Z",
+      "issued_date~before": "2024-12-31T00:00:00Z",
     },
     onRemoveFilter: fn(),
     onClearAll: fn(),
   },
 };
 
+// Story name kept as "WithRangePair" (not renamed) so this maps to the existing committed
+// visual baseline — only the fixture content changed from the fictional dot-tilde format
+// to the platform's real single-tilde suffixes. Renders identically.
 export const WithRangePair: Story = {
   args: {
     filterProperties: FILTER_PROPERTIES,
-    filters: { "amount.~from": "100", "amount.~until": "500" },
+    filters: { "amount~from": "100", "amount~until": "500" },
     onRemoveFilter: fn(),
     onClearAll: fn(),
   },
@@ -63,8 +70,8 @@ export const ManyFilters: Story = {
     filterProperties: FILTER_PROPERTIES,
     filters: {
       status: "paid",
-      "number~prefix-match": "INV",
-      "issued_date~greater-than": "2024-01-01T00:00:00Z",
+      "number~prefix": "INV",
+      "issued_date~after": "2024-01-01T00:00:00Z",
     },
     onRemoveFilter: fn(),
     onClearAll: fn(),

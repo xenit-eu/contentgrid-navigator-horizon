@@ -8,8 +8,9 @@ export {
 export { cgRels, blueprintRels } from "./contentgrid-rels";
 export { checkResponse, ProblemDetailError, extractFieldErrors, getErrorMessage } from "./errors";
 export type { ProblemDetail, FieldError } from "./errors";
-export { createApiClient, createContentClient } from "./client";
+export { createApiClient, createContentClient, createContentUploadClient } from "./client";
 export type { AuthenticationTokenSupplier, TypedFetch } from "./client";
+export type { BaseFetch } from "./xhr-fetch";
 export {
   fetchHal,
   fetchHalSlice,

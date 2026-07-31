@@ -15,6 +15,11 @@ type Story = StoryObj<typeof meta>;
 // type properties. Plain string properties without options fall through to null in the component
 // — confirmed by filter-sidebar.test.tsx. Text-based searching is typically handled elsewhere
 // (e.g. a top-level search bar).
+//
+// Operator suffixes below (~after, ~before, ~gt, ~gte, ~lt, ~lte, ~prefix) match the platform's
+// actual `blueprint:search-param` name suffixes — see packages/navigator-data's
+// SearchHalFormTemplate.extractSearchType and the committed profile dump. There is no
+// dot-prefixed "range-pair" naming on this platform.
 
 export const Default: Story = {
   args: {
@@ -22,10 +27,10 @@ export const Default: Story = {
       {
         name: "status",
         prompt: "Status",
-        type: "string",
+        type: "text",
         options: { inline: ["draft", "pending", "paid", "cancelled"] },
       },
-      { name: "issued_date~greater-than", type: "string" },
+      { name: "issued_date~after", type: "datetime" },
     ],
     filters: {},
     onFilterChange: fn(),
@@ -38,10 +43,10 @@ export const WithActiveFilters: Story = {
       {
         name: "status",
         prompt: "Status",
-        type: "string",
+        type: "text",
         options: { inline: ["draft", "pending", "paid"] },
       },
-      { name: "issued_date~greater-than", type: "string" },
+      { name: "issued_date~after", type: "datetime" },
     ],
     filters: { status: "paid" },
     onFilterChange: fn(),
@@ -55,7 +60,7 @@ export const WithEnumFilter: Story = {
       {
         name: "status",
         prompt: "Status",
-        type: "string",
+        type: "text",
         options: { inline: ["draft", "pending", "paid", "cancelled"] },
       },
     ],
@@ -67,8 +72,8 @@ export const WithEnumFilter: Story = {
 export const WithDateRangeFilter: Story = {
   args: {
     filterProperties: [
-      { name: "issued_date~greater-than", type: "string" },
-      { name: "issued_date~less-than", type: "string" },
+      { name: "issued_date~after", type: "datetime" },
+      { name: "issued_date~before", type: "datetime" },
     ],
     filters: {},
     onFilterChange: fn(),
@@ -81,11 +86,11 @@ export const WithMixedFilters: Story = {
       {
         name: "status",
         prompt: "Status",
-        type: "string",
+        type: "text",
         options: { inline: ["draft", "pending", "paid"] },
       },
-      { name: "issued_date~greater-than", type: "string" },
-      { name: "issued_date~less-than", type: "string" },
+      { name: "issued_date~after", type: "datetime" },
+      { name: "issued_date~before", type: "datetime" },
     ],
     filters: { status: "pending" },
     onFilterChange: fn(),
@@ -93,22 +98,26 @@ export const WithMixedFilters: Story = {
   },
 };
 
+// Story name kept as "WithRangePairFilter" (not renamed) so this maps to the existing
+// committed visual baseline — only the fixture content changed from the fictional
+// dot-tilde format to the platform's real single-tilde suffixes. Renders identically.
 export const WithRangePairFilter: Story = {
   args: {
     filterProperties: [
-      { name: "created.~from", type: "date" },
-      { name: "created.~until", type: "date" },
+      { name: "created~gte", type: "datetime" },
+      { name: "created~lte", type: "datetime" },
     ],
     filters: {},
     onFilterChange: fn(),
   },
 };
 
+// Story name kept as "WithRangePairNumericFilter" for the same reason as above.
 export const WithRangePairNumericFilter: Story = {
   args: {
     filterProperties: [
-      { name: "amount.~gte", type: "string" },
-      { name: "amount.~lte", type: "string" },
+      { name: "amount~gte", type: "number" },
+      { name: "amount~lte", type: "number" },
     ],
     filters: {},
     onFilterChange: fn(),
@@ -118,7 +127,7 @@ export const WithRangePairNumericFilter: Story = {
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
-    filterProperties: [{ name: "created_at", type: "date" }],
+    filterProperties: [{ name: "created_at", type: "datetime" }],
     filters: {},
     onFilterChange: fn(),
   },
@@ -140,7 +149,7 @@ export const ClearAllInteraction: Story = {
       {
         name: "status",
         prompt: "Status",
-        type: "string",
+        type: "text",
         options: { inline: ["draft", "pending", "paid"] },
       },
     ],

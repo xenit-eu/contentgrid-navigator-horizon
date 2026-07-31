@@ -14,43 +14,40 @@ describe("parseName", () => {
     expect(parseName("status")).toEqual({ base: "status", op: null });
   });
 
-  it("splits on first tilde for field~op format", () => {
-    expect(parseName("created_at~greater-than")).toEqual({
+  it("splits on the tilde for field~op format", () => {
+    expect(parseName("created_at~gt")).toEqual({
       base: "created_at",
-      op: "greater-than",
+      op: "gt",
     });
   });
 
-  it("splits on .~ for range-pair format and preserves leading tilde in op", () => {
-    expect(parseName("amount.~from")).toEqual({ base: "amount", op: "~from" });
+  it("handles the prefix operator suffix", () => {
+    expect(parseName("number~prefix")).toEqual({ base: "number", op: "prefix" });
   });
 
-  it("prefers .~ over bare ~ when both are present", () => {
-    expect(parseName("amount.~until")).toEqual({ base: "amount", op: "~until" });
+  it("handles the full-text operator suffix", () => {
+    expect(parseName("notes~fts")).toEqual({ base: "notes", op: "fts" });
   });
 
-  it("handles prefix-match operator suffix", () => {
-    expect(parseName("number~prefix-match")).toEqual({ base: "number", op: "prefix-match" });
+  it("handles the lte operator suffix", () => {
+    expect(parseName("due~lte")).toEqual({ base: "due", op: "lte" });
   });
 
-  it("handles full-text operator suffix", () => {
-    expect(parseName("notes~full-text")).toEqual({ base: "notes", op: "full-text" });
+  it("handles the gte operator suffix", () => {
+    expect(parseName("due~gte")).toEqual({ base: "due", op: "gte" });
   });
 
-  it("handles less-than-or-equal (no -to suffix)", () => {
-    expect(parseName("due~less-than-or-equal")).toEqual({ base: "due", op: "less-than-or-equal" });
+  it("handles the datetime after/before suffixes", () => {
+    expect(parseName("datetime~after")).toEqual({ base: "datetime", op: "after" });
+    expect(parseName("datetime~before")).toEqual({ base: "datetime", op: "before" });
   });
 
-  it("handles greater-than-or-equal (no -to suffix)", () => {
-    expect(parseName("due~greater-than-or-equal")).toEqual({
-      base: "due",
-      op: "greater-than-or-equal",
+  it("keeps a relation-traversal dotted base intact", () => {
+    // "products.product_name~prefix": the "." is part of the base, only "~" splits off the op
+    expect(parseName("products.product_name~prefix")).toEqual({
+      base: "products.product_name",
+      op: "prefix",
     });
-  });
-
-  it(".~ takes priority over a bare ~ earlier in the name", () => {
-    // "score~rank.~from": the ~ at index 5 must NOT be used as the split point
-    expect(parseName("score~rank.~from")).toEqual({ base: "score~rank", op: "~from" });
   });
 });
 
@@ -86,25 +83,29 @@ describe("formatWords", () => {
   it("uppercases known acronyms: uuid", () => {
     expect(formatWords("user_uuid")).toBe("User UUID");
   });
+
+  it("does not produce a leading/trailing space for a leading separator", () => {
+    expect(formatWords("_sort")).toBe("Sort");
+  });
 });
 
 describe("formatFieldLabel", () => {
   it("returns prompt when provided", () => {
     const prop: SearchProperty = {
-      name: "invoice_date~greater-than",
+      name: "invoice_date~gt",
       prompt: "Invoice date",
-      type: "date",
+      type: "datetime",
     };
     expect(formatFieldLabel(prop)).toBe("Invoice date");
   });
 
   it("derives label from base field name when prompt is absent", () => {
-    const prop: SearchProperty = { name: "invoice_date~greater-than", type: "date" };
+    const prop: SearchProperty = { name: "invoice_date~gt", type: "datetime" };
     expect(formatFieldLabel(prop)).toBe("Invoice Date");
   });
 
-  it("strips range-pair .~ suffix before formatting", () => {
-    const prop: SearchProperty = { name: "total.~from", type: "string" };
+  it("strips the operator suffix before formatting", () => {
+    const prop: SearchProperty = { name: "total~gte", type: "number" };
     expect(formatFieldLabel(prop)).toBe("Total");
   });
 });
@@ -118,83 +119,71 @@ describe("isDateProperty", () => {
     expect(isDateProperty("status", "datetime")).toBe(true);
   });
 
-  it("returns true when name ends with ~greater-than", () => {
-    expect(isDateProperty("due~greater-than", "string")).toBe(true);
+  it("returns true when name ends with ~after", () => {
+    expect(isDateProperty("due~after", "text")).toBe(true);
   });
 
-  it("returns true when name ends with ~less-than", () => {
-    expect(isDateProperty("due~less-than", "string")).toBe(true);
+  it("returns true when name ends with ~before", () => {
+    expect(isDateProperty("due~before", "text")).toBe(true);
   });
 
-  it("returns true when name ends with ~greater-than-or-equal", () => {
-    expect(isDateProperty("due~greater-than-or-equal", "string")).toBe(true);
+  it("returns false for plain text property with no date suffix", () => {
+    expect(isDateProperty("status", "text")).toBe(false);
   });
 
-  it("returns true when name ends with ~less-than-or-equal", () => {
-    expect(isDateProperty("due~less-than-or-equal", "string")).toBe(true);
+  it("returns false for numeric range suffixes — ~gt/~gte/~lt/~lte are also used for plain numbers", () => {
+    // e.g. "long~gt" in the platform's own all-attribute fixture is type "number", not a date
+    expect(isDateProperty("long~gt", "number")).toBe(false);
+    expect(isDateProperty("long~gte", "number")).toBe(false);
+    expect(isDateProperty("long~lt", "number")).toBe(false);
+    expect(isDateProperty("long~lte", "number")).toBe(false);
   });
 
-  it("returns true when name ends with .~from", () => {
-    expect(isDateProperty("amount.~from", "string")).toBe(true);
-  });
-
-  it("returns true when name ends with .~until", () => {
-    expect(isDateProperty("amount.~until", "string")).toBe(true);
-  });
-
-  it("returns false for plain string property with no date suffix", () => {
-    expect(isDateProperty("status", "string")).toBe(false);
-  });
-
-  it("does NOT recognise the wrong -to suffix variant as a date", () => {
-    expect(isDateProperty("due~greater-than-or-equal-to", "string")).toBe(false);
-    expect(isDateProperty("due~less-than-or-equal-to", "string")).toBe(false);
-  });
-
-  it("name-based detection overrides a non-date type: .~from with type 'string' is still a date", () => {
-    // range-pair props arrive from the HAL platform typed as "string" or "number" even when
-    // their value is always a date; the suffix is the authoritative signal
-    expect(isDateProperty("amount.~from", "string")).toBe(true);
-    expect(isDateProperty("amount.~until", "number")).toBe(true);
+  it("name-based detection overrides a non-date type: ~after/~before are still dates even when type is 'text'", () => {
+    // range props can arrive from the HAL platform typed loosely even when their value is
+    // always a date; the suffix is the authoritative signal for ~after/~before specifically
+    expect(isDateProperty("amount~after", "text")).toBe(true);
+    expect(isDateProperty("amount~before", "text")).toBe(true);
   });
 
   it("does not match a partial suffix embedded in a longer name", () => {
-    // "greater-than-or-equal-to" ends with "greater-than-or-equal" is FALSE as a substring,
-    // but we want to confirm the endsWith check is exact at the suffix boundary
-    expect(isDateProperty("field~greater-than-or-equal-to", "string")).toBe(false);
+    expect(isDateProperty("field~afterward", "text")).toBe(false);
   });
 });
 
 describe("SEARCH_TYPE_LABELS", () => {
-  it("maps all documented blueprint:search-param operator names (no -to suffix)", () => {
-    expect(SEARCH_TYPE_LABELS["greater-than"]).toBe("after");
-    expect(SEARCH_TYPE_LABELS["less-than"]).toBe("before");
-    expect(SEARCH_TYPE_LABELS["greater-than-or-equal"]).toBe("from");
-    expect(SEARCH_TYPE_LABELS["less-than-or-equal"]).toBe("until");
-    expect(SEARCH_TYPE_LABELS["prefix-match"]).toBe("prefix");
-    expect(SEARCH_TYPE_LABELS["exact-match"]).toBe("exact");
-    expect(SEARCH_TYPE_LABELS["full-text"]).toBe("contains");
+  it("maps the platform's actual short-suffix operator vocabulary", () => {
+    expect(SEARCH_TYPE_LABELS["gt"]).toBe("after");
+    expect(SEARCH_TYPE_LABELS["lt"]).toBe("before");
+    expect(SEARCH_TYPE_LABELS["gte"]).toBe("from");
+    expect(SEARCH_TYPE_LABELS["lte"]).toBe("until");
+    expect(SEARCH_TYPE_LABELS["after"]).toBe("after");
+    expect(SEARCH_TYPE_LABELS["before"]).toBe("before");
+    expect(SEARCH_TYPE_LABELS["from"]).toBe("from");
+    expect(SEARCH_TYPE_LABELS["until"]).toBe("until");
+    expect(SEARCH_TYPE_LABELS["prefix"]).toBe("prefix");
+    expect(SEARCH_TYPE_LABELS["fts"]).toBe("contains");
   });
 
-  it("does NOT contain the wrong -to suffix variants", () => {
-    expect(SEARCH_TYPE_LABELS["greater-than-or-equal-to"]).toBeUndefined();
-    expect(SEARCH_TYPE_LABELS["less-than-or-equal-to"]).toBeUndefined();
+  it("does NOT contain the long-form blueprint:search-param type vocabulary", () => {
+    // those long-form strings ("greater-than", "prefix-match", ...) are the values of the
+    // `type` field on `blueprint:search-param`, never a `name` suffix
+    expect(SEARCH_TYPE_LABELS["greater-than"]).toBeUndefined();
+    expect(SEARCH_TYPE_LABELS["prefix-match"]).toBeUndefined();
+    expect(SEARCH_TYPE_LABELS["exact-match"]).toBeUndefined();
+    expect(SEARCH_TYPE_LABELS["full-text"]).toBeUndefined();
   });
 });
 
 describe("IMPLICIT_OPS", () => {
-  it("suppresses prefix-match and exact-match labels", () => {
-    expect(IMPLICIT_OPS.has("prefix-match")).toBe(true);
-    expect(IMPLICIT_OPS.has("exact-match")).toBe(true);
+  it("suppresses the prefix operator", () => {
+    expect(IMPLICIT_OPS.has("prefix")).toBe(true);
   });
 
-  it("does not suppress bare prefix (platform emits prefix-match, not prefix)", () => {
-    expect(IMPLICIT_OPS.has("prefix")).toBe(false);
-  });
-
-  it("does not suppress greater-than, full-text, or range operators", () => {
-    expect(IMPLICIT_OPS.has("greater-than")).toBe(false);
-    expect(IMPLICIT_OPS.has("full-text")).toBe(false);
-    expect(IMPLICIT_OPS.has("~from")).toBe(false);
+  it("does not suppress greater-than/less-than/full-text/from/until operators", () => {
+    expect(IMPLICIT_OPS.has("gt")).toBe(false);
+    expect(IMPLICIT_OPS.has("fts")).toBe(false);
+    expect(IMPLICIT_OPS.has("from")).toBe(false);
+    expect(IMPLICIT_OPS.has("until")).toBe(false);
   });
 });
