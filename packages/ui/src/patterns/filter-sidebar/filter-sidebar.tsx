@@ -41,16 +41,6 @@ export interface FilterSidebarProps {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/** True for range-pair operator names like "created.~from" (dot before the tilde). */
-function isRangePair(name: string): boolean {
-  return name.includes(".~");
-}
-
-/** Convert a raw date input value to an API value. Range-pair operators use plain yyyy-MM-dd; legacy operators use ISO 8601. */
-function encodeDateInputValue(rawValue: string, rangePair: boolean): string {
-  return rangePair ? rawValue : dateToApi(rawValue);
-}
-
 function getSearchType(prop: SearchProperty): string {
   const { op } = parseName(prop.name);
   if (!op) return "exact";
@@ -162,9 +152,7 @@ function DateGroupFilter({
                   onChange={(e) =>
                     onFilterChange(
                       prop.name,
-                      e.target.value
-                        ? encodeDateInputValue(e.target.value, isRangePair(prop.name))
-                        : undefined,
+                      e.target.value ? dateToApi(e.target.value) : undefined,
                     )
                   }
                 />
@@ -219,14 +207,12 @@ function DateFilter({
   searchType,
   value,
   onChange,
-  rawDate = false,
 }: Readonly<{
   propName: string;
   label: string;
   searchType: string;
   value: string;
   onChange: (value: string | undefined) => void;
-  rawDate?: boolean;
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
@@ -244,9 +230,7 @@ function DateFilter({
             type="date"
             className="h-8 text-sm"
             value={value ? apiToDate(value) : ""}
-            onChange={(e) =>
-              onChange(e.target.value ? encodeDateInputValue(e.target.value, rawDate) : undefined)
-            }
+            onChange={(e) => onChange(e.target.value ? dateToApi(e.target.value) : undefined)}
           />
         </div>
         <ClearButton onClick={() => onChange(undefined)} visible={!!value} />
@@ -366,7 +350,6 @@ export function FilterSidebar({
                           label={label}
                           searchType={searchType}
                           value={value}
-                          rawDate={isRangePair(prop.name)}
                           onChange={(v) => onFilterChange(prop.name, v)}
                         />
                       );
