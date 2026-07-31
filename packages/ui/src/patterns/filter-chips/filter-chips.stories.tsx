@@ -53,7 +53,10 @@ export const WithDateOperator: Story = {
   },
 };
 
-export const WithFromUntilPair: Story = {
+// Story name kept as "WithRangePair" (not renamed) so this maps to the existing committed
+// visual baseline — only the fixture content changed from the fictional dot-tilde format
+// to the platform's real single-tilde suffixes. Renders identically.
+export const WithRangePair: Story = {
   args: {
     filterProperties: FILTER_PROPERTIES,
     filters: { "amount~from": "100", "amount~until": "500" },

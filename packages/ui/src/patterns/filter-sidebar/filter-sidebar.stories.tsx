@@ -98,7 +98,10 @@ export const WithMixedFilters: Story = {
   },
 };
 
-export const WithDatetimeFromUntilFilter: Story = {
+// Story name kept as "WithRangePairFilter" (not renamed) so this maps to the existing
+// committed visual baseline — only the fixture content changed from the fictional
+// dot-tilde format to the platform's real single-tilde suffixes. Renders identically.
+export const WithRangePairFilter: Story = {
   args: {
     filterProperties: [
       { name: "created~gte", type: "datetime" },
@@ -109,7 +112,8 @@ export const WithDatetimeFromUntilFilter: Story = {
   },
 };
 
-export const WithNumericRangeFilter: Story = {
+// Story name kept as "WithRangePairNumericFilter" for the same reason as above.
+export const WithRangePairNumericFilter: Story = {
   args: {
     filterProperties: [
       { name: "amount~gte", type: "number" },
