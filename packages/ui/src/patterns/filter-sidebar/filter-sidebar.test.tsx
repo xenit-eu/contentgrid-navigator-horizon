@@ -45,7 +45,7 @@ const DATE_PROP: SearchFilterProperty = {
 };
 
 const DATE_GT_PROP: SearchFilterProperty = {
-  name: "created_at~greater-than",
+  name: "created_at~after",
   label: "Created At",
   inputKind: "date",
   propertyType: "date",
@@ -57,7 +57,7 @@ const DATE_GT_PROP: SearchFilterProperty = {
 };
 
 const DATE_LT_PROP: SearchFilterProperty = {
-  name: "created_at~less-than",
+  name: "created_at~before",
   label: "Created At",
   inputKind: "date",
   propertyType: "date",
@@ -70,7 +70,7 @@ const DATE_LT_PROP: SearchFilterProperty = {
 
 // greater-than-or-equal → "From" direction (inclusive lower bound)
 const DATE_GTE_PROP: SearchFilterProperty = {
-  name: "due~greater-than-or-equal-to",
+  name: "due~gte",
   label: "Due",
   inputKind: "date",
   propertyType: "date",
@@ -83,7 +83,7 @@ const DATE_GTE_PROP: SearchFilterProperty = {
 
 // less-than-or-equal → "Until" direction (inclusive upper bound)
 const DATE_LTE_PROP: SearchFilterProperty = {
-  name: "due~less-than-or-equal-to",
+  name: "due~lte",
   label: "Due",
   inputKind: "date",
   propertyType: "date",
@@ -136,7 +136,7 @@ const DATETIME_PROP: SearchFilterProperty = {
 };
 
 const DATETIME_GT_PROP: SearchFilterProperty = {
-  name: "due_at~greater-than",
+  name: "due_at~after",
   label: "Due At",
   inputKind: "datetime",
   propertyType: "datetime",
@@ -148,7 +148,7 @@ const DATETIME_GT_PROP: SearchFilterProperty = {
 };
 
 const DATETIME_LT_PROP: SearchFilterProperty = {
-  name: "due_at~less-than",
+  name: "due_at~before",
   label: "Due At",
   inputKind: "datetime",
   propertyType: "datetime",
@@ -359,7 +359,7 @@ describe("FilterSidebar — datetime filter (inputKind=datetime)", () => {
     expect(after).toHaveAttribute("type", "datetime-local");
     fireEvent.change(after, { target: { value: "2024-03-01T08:00" } });
     expect(onFilterChange).toHaveBeenCalledWith(
-      "due_at~greater-than",
+      "due_at~after",
       localDatetimeToUtcIso("2024-03-01T08:00"),
     );
   });
@@ -438,7 +438,7 @@ describe("FilterSidebar — date group filter (multiple date props for same grou
     fireEvent.change(screen.getByLabelText(/created at after/i), {
       target: { value: "2024-03-01" },
     });
-    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", "2024-03-01");
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~after", "2024-03-01");
   });
 
   it("calls onFilterChange for the correct param when the Before date input changes", () => {
@@ -447,7 +447,7 @@ describe("FilterSidebar — date group filter (multiple date props for same grou
     fireEvent.change(screen.getByLabelText(/created at before/i), {
       target: { value: "2024-06-30" },
     });
-    expect(onFilterChange).toHaveBeenCalledWith("created_at~less-than", "2024-06-30");
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~before", "2024-06-30");
   });
 });
 
@@ -474,9 +474,9 @@ describe("FilterSidebar — label rendering", () => {
   });
 });
 
-describe("FilterSidebar — range-pair operators (field.~op)", () => {
+describe("FilterSidebar — range-pair operators (field~op)", () => {
   const DATE_FROM_PROP: SearchFilterProperty = {
-    name: "created.~from",
+    name: "created~from",
     label: "Created",
     inputKind: "date",
     propertyType: "date",
@@ -487,7 +487,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     dateEncoding: "plain",
   };
   const DATE_UNTIL_PROP: SearchFilterProperty = {
-    name: "created.~until",
+    name: "created~until",
     label: "Created",
     inputKind: "date",
     propertyType: "date",
@@ -498,7 +498,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     dateEncoding: "plain",
   };
   const NUM_GTE_PROP: SearchFilterProperty = {
-    name: "amount.~gte",
+    name: "amount~gte",
     label: "Amount",
     inputKind: "number",
     propertyType: "number",
@@ -508,7 +508,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     directionLabel: "From",
   };
   const NUM_LTE_PROP: SearchFilterProperty = {
-    name: "amount.~lte",
+    name: "amount~lte",
     label: "Amount",
     inputKind: "number",
     propertyType: "number",
@@ -527,7 +527,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
   // gt/lt bound is dropped once the inclusive gte/lte bound covering the same direction
   // exists, leaving exactly two inputs instead of four. Covered by the three tests below.
   const GT_PROP: SearchFilterProperty = {
-    name: "total.~gt",
+    name: "total~gt",
     label: "Total amount: Greater than",
     inputKind: "number",
     propertyType: "number",
@@ -537,7 +537,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     directionLabel: "After",
   };
   const GTE_PROP: SearchFilterProperty = {
-    name: "total.~gte",
+    name: "total~gte",
     label: "Total amount: Min",
     inputKind: "number",
     propertyType: "number",
@@ -547,7 +547,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     directionLabel: "From",
   };
   const LT_PROP: SearchFilterProperty = {
-    name: "total.~lt",
+    name: "total~lt",
     label: "Total amount: Less than",
     inputKind: "number",
     propertyType: "number",
@@ -557,7 +557,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     directionLabel: "Before",
   };
   const LTE_PROP: SearchFilterProperty = {
-    name: "total.~lte",
+    name: "total~lte",
     label: "Total amount: Max",
     inputKind: "number",
     propertyType: "number",
@@ -584,41 +584,41 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_FROM_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText(/created from/i), { target: { value: "2026-01-01" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-01-01");
+    expect(onFilterChange).toHaveBeenCalledWith("created~from", "2026-01-01");
   });
 
   it("encodes ~until value as plain yyyy-MM-dd (no ISO time suffix)", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_UNTIL_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText(/created until/i), { target: { value: "2026-12-31" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~until", "2026-12-31");
+    expect(onFilterChange).toHaveBeenCalledWith("created~until", "2026-12-31");
   });
 
   it("decodes plain yyyy-MM-dd value back into the date input (lossless round-trip)", () => {
-    renderSidebar([DATE_FROM_PROP], { "created.~from": "2026-06-15" });
+    renderSidebar([DATE_FROM_PROP], { "created~from": "2026-06-15" });
     expect(screen.getByDisplayValue("2026-06-15")).toHaveAttribute("type", "date");
   });
 
   it("calls onFilterChange with undefined when ~from input is cleared", () => {
     const onFilterChange = vi.fn();
-    renderSidebar([DATE_FROM_PROP], { "created.~from": "2026-01-01" }, { onFilterChange });
+    renderSidebar([DATE_FROM_PROP], { "created~from": "2026-01-01" }, { onFilterChange });
     const input = screen.getByDisplayValue("2026-01-01");
     fireEvent.change(input, { target: { value: "" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~from", undefined);
+    expect(onFilterChange).toHaveBeenCalledWith("created~from", undefined);
   });
 
   it("encodes grouped ~from value as plain date (no ISO) in RangeGroupFilter", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText(/created from/i), { target: { value: "2026-03-01" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~from", "2026-03-01");
+    expect(onFilterChange).toHaveBeenCalledWith("created~from", "2026-03-01");
   });
 
   it("encodes grouped ~until value as plain date (no ISO) in RangeGroupFilter", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP], {}, { onFilterChange });
     fireEvent.change(screen.getByLabelText(/created until/i), { target: { value: "2026-12-31" } });
-    expect(onFilterChange).toHaveBeenCalledWith("created.~until", "2026-12-31");
+    expect(onFilterChange).toHaveBeenCalledWith("created~until", "2026-12-31");
   });
 
   it("renders ~gte and ~lte number fields with From/Until direction labels", () => {
@@ -648,7 +648,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     renderSidebar([NUM_GTE_PROP], {}, { onFilterChange });
     const input = screen.getByLabelText(/amount from/i);
     fireEvent.change(input, { target: { value: "100" } });
-    expect(onFilterChange).toHaveBeenCalledWith("amount.~gte", "100");
+    expect(onFilterChange).toHaveBeenCalledWith("amount~gte", "100");
   });
 
   it("encodes ~lte value in onFilterChange", () => {
@@ -656,7 +656,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     renderSidebar([NUM_LTE_PROP], {}, { onFilterChange });
     const input = screen.getByLabelText(/amount until/i);
     fireEvent.change(input, { target: { value: "500" } });
-    expect(onFilterChange).toHaveBeenCalledWith("amount.~lte", "500");
+    expect(onFilterChange).toHaveBeenCalledWith("amount~lte", "500");
   });
 });
 
@@ -685,12 +685,12 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
     const onFilterChange = vi.fn();
     renderSidebar(
       [DATE_GT_PROP],
-      { "created_at~greater-than": "2024-01-01T00:00:00Z" },
+      { "created_at~after": "2024-01-01T00:00:00Z" },
       { onFilterChange },
     );
     const clearBtn = screen.getByRole("button", { name: /clear/i });
     await user.click(clearBtn);
-    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~after", undefined);
   });
 });
 
@@ -845,6 +845,24 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV");
   });
 
+  it("reverts the draft to the committed value on Escape without committing", () => {
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      { "number~prefix": "INV-001" },
+      { onFilterChange, onTypeaheadSearch },
+    );
+
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "INV-2024" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(input).toHaveValue("INV-001");
+    expect(onFilterChange).not.toHaveBeenCalled();
+    expect(onTypeaheadSearch).toHaveBeenLastCalledWith("number~prefix", "");
+  });
+
   it("calls onTypeaheadSearch with empty when input is cleared, without committing onFilterChange until blur", () => {
     const onFilterChange = vi.fn();
     const onTypeaheadSearch = vi.fn();
@@ -940,6 +958,15 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     expect(onTypeaheadSearch).toHaveBeenCalledWith("number~prefix", "");
   });
 
+  it("keeps the clear button visible when the draft is emptied but a committed value still applies", () => {
+    renderSidebar([PREFIX_PROP], { "number~prefix": "INV-001" }, { onTypeaheadSearch: vi.fn() });
+
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "" } });
+
+    expect(screen.getByRole("button", { name: /clear/i })).not.toHaveClass("invisible");
+  });
+
   it("navigates suggestions with arrow keys and selects the highlighted one on Enter", async () => {
     const user = userEvent.setup();
     const onFilterChange = vi.fn();
@@ -986,13 +1013,13 @@ describe("FilterSidebar — RangeGroupFilter clear button (grouped date props)",
     const onFilterChange = vi.fn();
     renderSidebar(
       [DATE_GT_PROP, DATE_LT_PROP],
-      { "created_at~greater-than": "2024-01-01T00:00:00Z" },
+      { "created_at~after": "2024-01-01T00:00:00Z" },
       { onFilterChange },
     );
     // Each date group item gets its own descriptive clear button label
     const clearBtn = screen.getByRole("button", { name: /clear created at after/i });
     await user.click(clearBtn);
-    expect(onFilterChange).toHaveBeenCalledWith("created_at~greater-than", undefined);
+    expect(onFilterChange).toHaveBeenCalledWith("created_at~after", undefined);
   });
 });
 
@@ -1024,8 +1051,8 @@ describe("FilterSidebar — invalidFilterKeys", () => {
   it("marks only the failing item within a RangeGroupFilter, not its sibling", () => {
     renderSidebar(
       [DATE_GT_PROP, DATE_LT_PROP],
-      { "created_at~greater-than": "garbage" },
-      { invalidFilterKeys: ["created_at~greater-than"] },
+      { "created_at~after": "garbage" },
+      { invalidFilterKeys: ["created_at~after"] },
     );
     expect(screen.getByLabelText(/created at after/i)).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByLabelText(/created at before/i)).not.toHaveAttribute("aria-invalid", "true");

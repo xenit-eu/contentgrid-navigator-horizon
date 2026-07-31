@@ -47,9 +47,10 @@ export interface SearchFilterProperty {
   description?: string;
   inputKind: FilterInputKind;
   /**
-   * The raw HAL-FORMS wire type (e.g. "number", "checkbox"). Not read anywhere in this file —
-   * it exists only so this type accurately mirrors the producer's shape (see the class doc
-   * comment above); `coerceFilterValue`, the only consumer, lives in the data layer.
+   * The raw HAL-FORMS wire type (e.g. "number", "checkbox"). Used by `invalidValueMessage`,
+   * whose case labels are keyed to the wire type (mirroring `coerceFilterValue` in the data
+   * layer) rather than `inputKind` — `inputKind` collapses to "select" whenever inline options
+   * are present, which would otherwise mask the underlying type this message is about.
    */
   propertyType: string;
   searchOperator: SearchOperator;
@@ -296,7 +297,7 @@ function RangeGroupFilter({
                 />
               </div>
               {isInvalid && (
-                <p className="text-xs text-destructive">{invalidValueMessage(prop.inputKind)}</p>
+                <p className="text-xs text-destructive">{invalidValueMessage(prop.propertyType)}</p>
               )}
             </div>
           );
@@ -413,11 +414,18 @@ function LabeledFilterField({
   );
 }
 
+/**
+ * Takes both `inputKind` and `propertyType` — not redundant, two different concerns:
+ * `inputKind` drives rendering (which native input type, how to format/parse the displayed
+ * value); `propertyType` only feeds `invalidValueMessage`, which is keyed to the wire type
+ * (see that function's doc comment for why).
+ */
 function DateFilter({
   label,
   directionLabel,
   dateEncoding,
   inputKind,
+  propertyType,
   value,
   onChange,
   invalid = false,
@@ -426,6 +434,7 @@ function DateFilter({
   directionLabel?: DirectionLabel;
   dateEncoding?: "iso" | "plain";
   inputKind: "date" | "datetime";
+  propertyType: string;
   value: string;
   onChange: (value: string | undefined) => void;
   invalid?: boolean;
@@ -439,7 +448,7 @@ function DateFilter({
       inputId={inputId}
       value={value}
       onClear={() => onChange(undefined)}
-      error={invalid ? invalidValueMessage(inputKind) : undefined}
+      error={invalid ? invalidValueMessage(propertyType) : undefined}
     >
       <Input
         id={inputId}
@@ -455,10 +464,17 @@ function DateFilter({
   );
 }
 
+/**
+ * Takes both `inputType` and `propertyType` — not redundant, two different concerns:
+ * `inputType` drives rendering (the native `<input type>`); `propertyType` only feeds
+ * `invalidValueMessage`, which is keyed to the wire type (see that function's doc comment
+ * for why).
+ */
 function TextFilter({
   label,
   directionLabel,
   inputType = "text",
+  propertyType,
   value,
   onChange,
   invalid = false,
@@ -466,6 +482,7 @@ function TextFilter({
   label: string;
   directionLabel?: DirectionLabel;
   inputType?: "text" | "number";
+  propertyType: string;
   value: string;
   onChange: (value: string | undefined) => void;
   invalid?: boolean;
@@ -479,7 +496,7 @@ function TextFilter({
       inputId={inputId}
       value={value}
       onClear={() => onChange(undefined)}
-      error={invalid ? invalidValueMessage(inputType === "number" ? "number" : "text") : undefined}
+      error={invalid ? invalidValueMessage(propertyType) : undefined}
     >
       <Input
         id={inputId}
@@ -553,14 +570,22 @@ function TypeaheadTextFilter({
     setActiveIndex(-1);
   }
 
+  /**
+   * Commits a value into the parent's `filters` state AND resets the live typeahead query.
+   * The reset matters: once `v` is committed, the next render passes it back down as this
+   * field's own `searchValues` entry (see `entity-list/index.tsx`) — if the debounced query
+   * were left holding that same text, `useTypeahead` would re-issue a request scoped to the
+   * exact value already committed, which encodes to the same URL (and therefore the same
+   * TanStack query key) as the table's own collection query.
+   */
   function commitFilterValue(v: string) {
     onChange(v || undefined);
+    onSearch("");
   }
 
   function selectSuggestion(s: string) {
     setTypedValue(s);
     commitFilterValue(s);
-    onSearch("");
     closePopover();
   }
 
@@ -588,6 +613,11 @@ function TypeaheadTextFilter({
         }
         break;
       case "Escape":
+        // Revert the in-progress edit rather than leaving it displayed uncommitted —
+        // conventional combobox behaviour, and keeps the input in sync with what the
+        // table is actually filtered by.
+        setTypedValue(value);
+        onSearch("");
         closePopover();
         break;
       default:
@@ -636,10 +666,13 @@ function TypeaheadTextFilter({
               onClick={() => {
                 setTypedValue("");
                 commitFilterValue("");
-                onSearch("");
                 closePopover();
               }}
-              visible={!!typedValue}
+              // Visible whenever there's a typed draft OR a committed value — not just
+              // typedValue alone, which would hide the affordance the moment the user
+              // deletes the text without blurring, even though the previous value is
+              // still the active filter until the input blurs.
+              visible={!!typedValue || !!value}
             />
           </div>
         </PopoverAnchor>
@@ -775,6 +808,7 @@ function renderFilterControl(
           directionLabel={prop.directionLabel}
           dateEncoding={prop.dateEncoding}
           inputKind={prop.inputKind}
+          propertyType={prop.propertyType}
           value={value}
           onChange={(v) => onFilterChange(prop.name, v)}
           invalid={invalid}
@@ -788,6 +822,7 @@ function renderFilterControl(
           label={prop.label}
           directionLabel={prop.directionLabel}
           inputType="number"
+          propertyType={prop.propertyType}
           value={value}
           onChange={(v) => onFilterChange(prop.name, v)}
           invalid={invalid}
@@ -822,6 +857,7 @@ function renderFilterControl(
           key={prop.name}
           label={prop.label}
           directionLabel={prop.directionLabel}
+          propertyType={prop.propertyType}
           value={value}
           onChange={(v) => onFilterChange(prop.name, v)}
         />

@@ -1,17 +1,19 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { createValues } from "@contentgrid/hal-forms/values";
 import { AttributeKind } from "../../accessors/entity-item";
-import type { EntityItemCollection } from "../../accessors/entity-item-collection";
+import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type {
   SearchHalFormTemplate,
   SearchHalFormTemplateProperty,
 } from "../../accessors/extended-forms/search-form";
 import type { SearchRequestSpec } from "../../api/requests";
+import { queryKeys } from "../../query-keys";
+import { useNavigatorData } from "../context";
 import { useProfileEntities } from "../profile/use-profile-entity";
 import { useDebouncedValue } from "../use-debounced-value";
-import { useEntityItemCollection } from "./use-entity-item-collection";
 
 export interface UseTypeaheadOptions {
   /**
@@ -126,6 +128,7 @@ export function useTypeahead({
 }: UseTypeaheadOptions) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
+  const { apiFetch } = useNavigatorData();
 
   // Always call unconditionally — Rules of Hooks. Only consulted for relation-traversal
   // properties; cached, so resolving a direct property costs nothing extra.
@@ -139,6 +142,7 @@ export function useTypeahead({
     profileResults.flatMap((r) => r.data ?? []),
   );
   const targetSearchTemplate = targetProfile?.searchTemplate;
+  const targetProfileEntity = targetProfile ?? profileEntity;
 
   // Both must meet minLength: query clears results instantly on empty; debouncedQuery gates the fetch.
   // Also disabled until a target property has resolved (relation mode: also needs targetProfile).
@@ -161,26 +165,41 @@ export function useTypeahead({
       ? baseSearchValues.withValue(targetSearchProperty.property.name, debouncedQuery)
       : undefined;
 
+  const request = collectionSearchValues
+    ? targetProfileEntity.searchEntityRequest(collectionSearchValues)
+    : null;
+  const url = request?.url ?? "";
+
+  /**
+   * Bypasses `useEntityItemCollection` and calls `useQuery` directly so this can be keyed
+   * under `queryKeys.typeaheadSuggestions.byUrl` instead of `queryKeys.entityItemCollection.byUrl`
+   * — `useEntityItemCollection`'s `queryOptionsOverride` deliberately can't override `queryKey`
+   * (see `QueryOptionsOverride`), and reusing the collection's own key here is exactly what
+   * caused this query and the table's own collection query to collide on an identical encoded
+   * URL (e.g. re-typing a value already committed for this field) with two different
+   * retry/staleTime/gcTime option sets fighting over one cache entry. A dedicated root makes
+   * that collision impossible regardless of whether the two URLs happen to match. Trade-off:
+   * see the doc comment on `queryKeys.typeaheadSuggestions` — this is NOT invalidated by
+   * `entityItemCollection.forEntity(...)` on mutations, unlike the table's own query.
+   */
   const {
     data: entityItemCollection,
     isFetching,
     isError,
     error,
-  } = useEntityItemCollection(
-    { profileEntity: targetProfile ?? profileEntity, searchValues: collectionSearchValues },
-    {
-      queryOptionsOverride: {
-        // staleTime: identical prefixes typed within 30s (e.g. backspace-then-retype) reuse the
-        // cached page instead of refetching. gcTime: keep it around briefly after the field
-        // blurs, in case the user comes right back. retry: 0 — a suggestions popover shouldn't
-        // hang retrying on a transient error; isError surfaces immediately and the user can just
-        // keep typing.
-        staleTime: 30_000,
-        gcTime: 60_000,
-        retry: 0,
-      },
-    },
-  );
+  } = useQuery({
+    ...EntityItemCollection.fetchByUrlQuery(apiFetch, url, targetProfileEntity),
+    queryKey: queryKeys.typeaheadSuggestions.byUrl(targetProfileEntity, url),
+    enabled: enabled && !!request,
+    // staleTime: identical prefixes typed within 30s (e.g. backspace-then-retype) reuse the
+    // cached page instead of refetching. gcTime: keep it around briefly after the field blurs,
+    // in case the user comes right back. retry: 0 — a suggestions popover shouldn't hang
+    // retrying on a transient error; isError surfaces immediately and the user can just keep
+    // typing.
+    staleTime: 30_000,
+    gcTime: 60_000,
+    retry: 0,
+  });
 
   const attributeName = targetSearchProperty?.profileAttribute?.name;
   const suggestions = extractSuggestions(entityItemCollection, attributeName);

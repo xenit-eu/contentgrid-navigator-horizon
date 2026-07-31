@@ -5,6 +5,7 @@ import { createValues } from "@contentgrid/hal-forms/values";
 import { server } from "../../../test-setup";
 import ProfileEntity from "../../accessors/entity-profile";
 import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
+import { queryKeys } from "../../query-keys";
 import {
   BASE,
   PROFILE_URL,
@@ -255,6 +256,37 @@ describe("useTypeahead", () => {
     await waitFor(() => expect(result.current.results).toHaveLength(2), { timeout: 3000 });
     expect(result.current.results).toContain("Acme Corp");
     expect(result.current.results).toContain("Acme Industries");
+  });
+
+  describe("query key isolation", () => {
+    /**
+     * Regression for a review finding: a typeahead request can encode to the exact same URL
+     * as the table's own collection query (e.g. re-typing a value already committed for this
+     * field elsewhere in the sidebar). If both cached under `entityItemCollection.byUrl`, they'd
+     * collide into ONE cache entry with two different retry/staleTime/gcTime option sets — the
+     * last `useQuery` to register would silently win for both. `useTypeahead` must cache under
+     * its own `typeaheadSuggestions` root instead, so this can never happen regardless of
+     * whether the two URLs coincide.
+     */
+    it("caches its result under typeaheadSuggestions.byUrl, not entityItemCollection.byUrl", async () => {
+      let capturedUrl: URL | undefined;
+      mockCustomerCollection([{ name: "Acme Corp" }], (url) => {
+        capturedUrl = url;
+      });
+
+      const qc = makeQueryClient();
+      const { result } = makeHook(profileEntity, searchProperty, qc);
+      act(() => result.current.setQuery("Acm"));
+      await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+
+      const url = capturedUrl!.toString();
+      expect(
+        qc.getQueryData(queryKeys.typeaheadSuggestions.byUrl(profileEntity, url)),
+      ).toBeDefined();
+      expect(
+        qc.getQueryData(queryKeys.entityItemCollection.byUrl(profileEntity, url)),
+      ).toBeUndefined();
+    });
   });
 
   describe("searchValues", () => {

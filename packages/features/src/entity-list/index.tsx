@@ -379,8 +379,14 @@ function EntityDetailView({
   // useTypeahead always overwrites the active field's own value with its live debounced query
   // (see use-typeahead.ts), so passing the full committed `filterSearchValues` here is safe —
   // TypeaheadTextFilter only commits into `filters` on selection/Enter/blur (not per keystroke),
-  // so the committed value for the active field is never the in-flight query text, and the two
-  // queries stay genuinely distinct while the user is typing.
+  // so a committed value is never left sitting in the live query afterward.
+  //
+  // Even in the remaining edge case — a user retypes, character by character, exactly the text
+  // already committed for this same field — the debounced query and the table's own request can
+  // still encode to the identical URL. That's fine: `useTypeahead` caches under its own
+  // `queryKeys.typeaheadSuggestions` root (see use-typeahead.ts), not
+  // `queryKeys.entityItemCollection`, so the two queries can never collide into one cache entry
+  // regardless of whether their URLs happen to match.
   const typeahead = useTypeahead({
     profileEntity: profile,
     searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
