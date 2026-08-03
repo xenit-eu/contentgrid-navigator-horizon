@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { EntityItem } from "../../accessors/entity-item";
@@ -32,6 +33,8 @@ export interface UseUploadContentOptions {
     UseMutationOptions<EntityItem, Error, UploadContentVariables>,
     "mutationFn"
   >;
+  /** Called with an integer 0–100 as upload bytes are sent. */
+  readonly onProgress?: (percentage: number) => void;
 }
 
 /**
@@ -80,12 +83,21 @@ export interface UseDownloadContentOptions {
  * template rule — they have no `_templates` entry. The `cg:content` link presence
  * is the ABAC gate. The Request is hand-built directly from the link href.
  *
- * Uses `contentFetch` (not `apiFetch`) — the binary client that omits the
- * `Accept: application/hal+json` header set by `createApiClient`.
+ * Uses `createContentUploadFetch` (not `apiFetch` / `contentFetch`) — a client built
+ * once per hook instance from the SAME bearer-auth + problem-details hook chain as
+ * `contentFetch`, backed by XHR instead of `fetch` so upload progress can be
+ * reported. See `createContentUploadClient` in `src/api/client.ts`.
  *
  * Attaches `If-Match` from the current ETag when available (included inside
  * `entityItem.uploadContentRequest`). On HTTP 412 (ETag mismatch), the error
- * surfaces as `ProblemDetailError` — the hook does NOT auto-retry.
+ * surfaces as `ProblemDetailError` — the hook does NOT auto-retry. To retry,
+ * call `mutate` again with the same variables — the caller already holds the `File`.
+ *
+ * `progress` (0–100) is hook-local UI state — it resets to 0 at the start of each
+ * upload, tracks XHR upload progress events, and reaches 100 on success (it is NOT
+ * server state, so `useState` rather than TanStack Query is the right tool here).
+ * `cancel()` aborts the in-flight request via `AbortController` and resets the
+ * mutation to idle rather than leaving it in an error state.
  *
  * Cache behaviour on success:
  * - Re-fetches the entity item via `apiFetch` to get fresh metadata + new ETag.
@@ -95,37 +107,70 @@ export interface UseDownloadContentOptions {
  *
  * @param entityItem     - The entity item whose content attribute is being uploaded.
  * @param attributeName  - The name of the content attribute (must have a cg:content link).
- * @param options        - Optional mutation options (onSuccess, onError, etc.)
- * @returns TanStack mutation result; `data` is the updated `EntityItem` (re-fetched).
+ * @param options        - Optional mutation options (onSuccess, onError, etc.) plus `onProgress`.
+ * @returns TanStack mutation result plus `progress` (0–100) and `cancel()`;
+ *          `data` is the updated `EntityItem` (re-fetched).
  */
 export function useUploadContent(
   entityItem: EntityItem,
   attributeName: string,
   options?: UseUploadContentOptions,
 ) {
-  const { apiFetch, contentFetch } = useNavigatorData();
+  const { apiFetch, createContentUploadFetch } = useNavigatorData();
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
 
-  const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
+  const [progress, setProgress] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
 
-  return useMutation({
+  // Stable dispatcher so the upload client (built once via useMemo) never needs
+  // recreating when the caller passes an inline onProgress arrow.
+  const onProgressRef = useRef(options?.onProgress);
+  onProgressRef.current = options?.onProgress;
+
+  const uploadFetch = useMemo(
+    () =>
+      createContentUploadFetch((pct) => {
+        setProgress(pct);
+        onProgressRef.current?.(pct);
+      }),
+    [createContentUploadFetch],
+  );
+
+  const { onSuccess, onError, ...restMutationOptions } = options?.mutationOptions ?? {};
+
+  const mutation = useMutation({
     mutationFn: async ({ file, contentType, filename }: UploadContentVariables) => {
-      // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
-      // uploadContentRequest() throws if the link is absent (ABAC deny).
-      const req = entityItem.uploadContentRequest(attributeName, file, { contentType, filename });
+      setProgress(0);
 
-      // PUT binary content — 204 No Content (discard body).
-      await fetchVoid(contentFetch, req);
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      // Re-fetch the entity item via apiFetch to get fresh metadata + new ETag.
-      const { object, etag } = await fetchHal<EntityItemShape>(
-        apiFetch,
-        new Request(entityItem.selfLink.href),
-      );
-      return new EntityItem(object, profileEntity, etag);
+      try {
+        // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
+        // uploadContentRequest() throws if the link is absent (ABAC deny).
+        const req = entityItem.uploadContentRequest(attributeName, file, {
+          contentType,
+          filename,
+          signal: controller.signal,
+        });
+
+        // PUT binary content via the progress-reporting XHR client — 204 No Content (discard body).
+        await fetchVoid(uploadFetch, req);
+
+        // Re-fetch the entity item via apiFetch to get fresh metadata + new ETag.
+        const { object, etag } = await fetchHal<EntityItemShape>(
+          apiFetch,
+          new Request(entityItem.selfLink.href),
+        );
+        return new EntityItem(object, profileEntity, etag);
+      } finally {
+        abortRef.current = null;
+      }
     },
     onSuccess: async (item, variables, onMutateResult, context) => {
+      setProgress(100);
+
       // Populate item cache with fresh data + ETag.
       queryClient.setQueryData(queryKeys.entityItem.byUrl(profileEntity, item.selfLink.href), item);
 
@@ -137,8 +182,23 @@ export function useUploadContent(
       // Compose caller's onSuccess LAST — after cache is consistent.
       await onSuccess?.(item, variables, onMutateResult, context);
     },
+    onError: async (error, variables, onMutateResult, context) => {
+      setProgress(0);
+      // 412/415 etc. must still surface to the caller — never swallowed.
+      await onError?.(error, variables, onMutateResult, context);
+    },
     ...restMutationOptions,
   });
+
+  const { reset } = mutation;
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setProgress(0);
+    reset();
+  }, [reset]);
+
+  return { ...mutation, progress, cancel };
 }
 
 // ---------------------------------------------------------------------------

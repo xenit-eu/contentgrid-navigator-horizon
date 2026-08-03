@@ -8,7 +8,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  const { auth, apiFetch, contentFetch, profileUrl } = useAppAuth();
+  const { auth, apiFetch, contentFetch, createContentUploadFetch, profileUrl } = useAppAuth();
 
   if (auth.isLoading || (auth.user?.expired && !auth.error)) {
     return null;
@@ -23,7 +23,12 @@ function RootComponent() {
   }
 
   return (
-    <NavigatorDataProvider apiFetch={apiFetch} contentFetch={contentFetch} profileUrl={profileUrl}>
+    <NavigatorDataProvider
+      apiFetch={apiFetch}
+      contentFetch={contentFetch}
+      createContentUploadFetch={createContentUploadFetch}
+      profileUrl={profileUrl}
+    >
       <AppLayout />
     </NavigatorDataProvider>
   );

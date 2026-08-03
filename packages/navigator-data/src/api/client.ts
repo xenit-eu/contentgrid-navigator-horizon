@@ -7,6 +7,7 @@ import { ValueProviderResolver } from "@contentgrid/fetch-hooks/value-provider";
 import { checkResponse } from "@contentgrid/problem-details";
 import { createTypedFetch } from "@contentgrid/typed-fetch";
 import { ACCEPT_HAL } from "./content-types";
+import { type BaseFetch, createXhrFetch } from "./xhr-fetch";
 
 // TypedFetch is defined in @contentgrid/typed-fetch's fetch.d.ts but not re-exported
 // from its index.d.ts — this alias bridges the gap until upstream adds the export.
@@ -41,5 +42,20 @@ export function createApiClient(tokenSupplier: AuthenticationTokenSupplier): Typ
 
 export function createContentClient(tokenSupplier: AuthenticationTokenSupplier): TypedFetch {
   const hookedFetch = compose(bearerHook(tokenSupplier), problemDetailsHook)(boundFetch);
+  return createTypedFetch(hookedFetch);
+}
+
+/**
+ * Same hook chain as `createContentClient` (bearer auth + problem-details, no
+ * `Accept: hal+json`) but backed by an XHR transport that can report upload
+ * progress — `fetch` has no equivalent to `xhr.upload.onprogress`. Use only for
+ * content PUTs that need progress reporting; use `createContentClient` otherwise.
+ */
+export function createContentUploadClient(
+  tokenSupplier: AuthenticationTokenSupplier,
+  onProgress?: (percentage: number) => void,
+): TypedFetch {
+  const xhrFetch: BaseFetch = createXhrFetch(onProgress);
+  const hookedFetch = compose(bearerHook(tokenSupplier), problemDetailsHook)(xhrFetch);
   return createTypedFetch(hookedFetch);
 }
