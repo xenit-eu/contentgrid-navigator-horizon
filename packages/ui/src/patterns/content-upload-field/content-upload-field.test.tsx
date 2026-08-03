@@ -293,7 +293,7 @@ describe("ContentUploadField — error and retry", () => {
     expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
   });
 
-  it("hides the Remove button when in error+retry state", () => {
+  it("still shows the Remove button in error+retry state — retry isn't a dead end", () => {
     const file = makeFile("doc.pdf", "application/pdf");
     render(
       <ContentUploadField
@@ -303,6 +303,22 @@ describe("ContentUploadField — error and retry", () => {
         onRetryUpload={vi.fn()}
       />,
     );
-    expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /remove file/i })).toBeInTheDocument();
+  });
+
+  it("calls onFileChange with null when Remove is clicked in error+retry state", async () => {
+    const user = userEvent.setup();
+    const onFileChange = vi.fn();
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(
+      <ContentUploadField
+        file={file}
+        onFileChange={onFileChange}
+        uploadError={true}
+        onRetryUpload={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /remove file/i }));
+    expect(onFileChange).toHaveBeenCalledWith(null);
   });
 });

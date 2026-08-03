@@ -109,7 +109,10 @@ export function ContentUploadField({
     const isImage = file.type.startsWith("image/");
     const showCancelButton = onCancelUpload !== undefined;
     const showRetryButton = onRetryUpload !== undefined && uploadError === true;
-    const showRemoveButton = !showCancelButton && !showRetryButton;
+    // Remove is available whenever the file isn't actively uploading (cancel covers
+    // that case instead) — including alongside Retry, so a failed upload isn't a
+    // dead end: the user can retry the same file or clear it and pick a different one.
+    const showRemoveButton = !showCancelButton;
 
     return (
       <div className="flex items-center gap-3 rounded-md border p-3">

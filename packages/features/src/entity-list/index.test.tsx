@@ -870,6 +870,192 @@ describe("EntityItemDetailPage", () => {
 });
 
 // ----------------------------------------------------------------
+// EntityItemDetailPage — content attribute upload (ContentAttributeField)
+// ----------------------------------------------------------------
+
+const CG_CONTENT_REL = "https://contentgrid.cloud/rels/contentgrid/content";
+const DOCUMENT_CONTENT_URL = `${API_URL}/invoices/inv-001/document`;
+
+function invoiceProfileHandlerWithDocument() {
+  return http.get(`${PROFILE_URL}/invoices`, () =>
+    HttpResponse.json({
+      name: "invoice",
+      title: "Invoice",
+      _links: {
+        self: { href: `${PROFILE_URL}/invoices` },
+        describes: [
+          { href: `${API_URL}/invoices`, name: "collection" },
+          { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
+        ],
+        curies: [
+          {
+            name: "blueprint",
+            href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+            templated: true,
+          },
+        ],
+      },
+      _embedded: {
+        "blueprint:attribute": [
+          {
+            name: "document",
+            title: "Document",
+            type: "object",
+            readOnly: false,
+            // A single embedded sub-attribute is all ProfileAttribute.isContent
+            // requires (type === "object" with >0 embedded blueprint:attribute) —
+            // the real mimetype/length siblings aren't exercised by these tests.
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [
+                {
+                  name: "filename",
+                  title: "Filename",
+                  type: "string",
+                  readOnly: false,
+                  _embedded: {
+                    "blueprint:constraint": [],
+                    "blueprint:search-param": [],
+                    "blueprint:attribute": [],
+                  },
+                  _links: {},
+                },
+              ],
+            },
+            _links: {},
+          },
+        ],
+        "blueprint:relation": [],
+      },
+      _templates: {
+        search: { method: "GET", target: `${API_URL}/invoices`, properties: [] },
+      },
+    }),
+  );
+}
+
+function invoiceWithDocumentItemHandler(
+  getDocument: () => { filename: string; mimetype: string; length: number } | null,
+) {
+  return http.get(`${API_URL}/invoices/inv-001`, () =>
+    HttpResponse.json({
+      id: "inv-001",
+      document: getDocument(),
+      _links: {
+        self: { href: `${API_URL}/invoices/inv-001` },
+        [CG_CONTENT_REL]: [{ href: DOCUMENT_CONTENT_URL, name: "document" }],
+      },
+    }),
+  );
+}
+
+function selectFile(file: File) {
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  Object.defineProperty(input, "files", { value: [file] });
+  fireEvent.change(input);
+}
+
+describe("EntityItemDetailPage — ContentAttributeField", () => {
+  it("shows the existing filename alongside the upload field", async () => {
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithDocument(),
+      invoiceWithDocumentItemHandler(() => ({
+        filename: "invoice.pdf",
+        mimetype: "application/pdf",
+        length: 1024,
+      })),
+    );
+
+    renderEntityList("/invoice/inv-001");
+
+    expect(await screen.findByText("Current: invoice.pdf")).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+  });
+
+  it("uploads a selected file and reflects the new filename once the upload succeeds", async () => {
+    let uploaded: { filename: string; mimetype: string; length: number } | null = null;
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithDocument(),
+      invoiceWithDocumentItemHandler(() => uploaded),
+      http.put(DOCUMENT_CONTENT_URL, () => {
+        uploaded = { filename: "report.pdf", mimetype: "application/pdf", length: 7 };
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderEntityList("/invoice/inv-001");
+    await screen.findByText(/drag & drop a file, or click to select/i);
+    // No existing content yet — the "Current: ..." caption must not render.
+    expect(screen.queryByText(/^Current:/)).not.toBeInTheDocument();
+
+    selectFile(new File(["content"], "report.pdf", { type: "application/pdf" }));
+
+    expect(await screen.findByText("Current: report.pdf")).toBeInTheDocument();
+    // Local file selection resets on success — the drop-zone prompt returns.
+    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+  });
+
+  it("surfaces a 412 ProblemDetailError from a failed upload and retries with the same file", async () => {
+    let putCount = 0;
+
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithDocument(),
+      invoiceWithDocumentItemHandler(() => null),
+      http.put(DOCUMENT_CONTENT_URL, () => {
+        putCount += 1;
+        return HttpResponse.json(
+          {
+            type: "https://contentgrid.cloud/problems/unsatisfied-version",
+            title: "Unsatisfied version",
+            status: 412,
+            detail: "The item was modified concurrently.",
+          },
+          { status: 412, headers: { "Content-Type": "application/problem+json" } },
+        );
+      }),
+    );
+
+    renderEntityList("/invoice/inv-001");
+    await screen.findByText(/drag & drop a file, or click to select/i);
+
+    selectFile(new File(["content"], "report.pdf", { type: "application/pdf" }));
+
+    expect(await screen.findByText("412")).toBeInTheDocument();
+    expect(screen.getByText("Unsatisfied version")).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /retry/i }));
+
+    await waitFor(() => expect(putCount).toBe(2));
+  });
+
+  it("falls back to a plain dash when the item has no cg:content link (ABAC deny)", async () => {
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandlerWithDocument(),
+      http.get(`${API_URL}/invoices/inv-001`, () =>
+        HttpResponse.json({
+          id: "inv-001",
+          document: { filename: "secret.pdf", mimetype: "application/pdf", length: 99 },
+          _links: { self: { href: `${API_URL}/invoices/inv-001` } },
+        }),
+      ),
+    );
+
+    renderEntityList("/invoice/inv-001");
+
+    await screen.findByText("Document");
+    expect(screen.queryByText(/drag & drop a file, or click to select/i)).not.toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+});
+
+// ----------------------------------------------------------------
 // EntityItemDetailPage — relations (RelationToOneSection, RelationToManySection,
 // RelationItemSearchDialog, MutationErrorDisplay)
 // ----------------------------------------------------------------
