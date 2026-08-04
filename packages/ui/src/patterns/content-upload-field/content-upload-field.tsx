@@ -4,6 +4,7 @@ import { UploadSimpleIcon as UploadSimple, XIcon as X } from "@phosphor-icons/re
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
+import { Progress } from "../../primitives/progress";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,7 +22,7 @@ function formatFileSize(bytes: number): string {
 // Public types
 // ---------------------------------------------------------------------------
 
-export interface FileUploadZoneProps {
+export interface ContentUploadFieldProps {
   /** Currently selected file, or null when no file is selected */
   file: File | null;
   /** Called when the user selects or removes a file */
@@ -31,13 +32,29 @@ export interface FileUploadZoneProps {
    * Passed to the hidden `<input>` accept attribute (only keys are used).
    */
   accept?: Record<string, string[]>;
+  /** Upload progress 0–100. When defined, renders a progress bar below the file name. */
+  uploadProgress?: number;
+  /** When true, shows an error indicator below the file name. */
+  uploadError?: boolean;
+  /** Replaces the Remove button with a Cancel button during upload. */
+  onCancelUpload?: () => void;
+  /** Shows a Retry button when combined with uploadError. */
+  onRetryUpload?: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
-export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUploadZoneProps>) {
+export function ContentUploadField({
+  file,
+  onFileChange,
+  accept,
+  uploadProgress,
+  uploadError,
+  onCancelUpload,
+  onRetryUpload,
+}: Readonly<ContentUploadFieldProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -90,6 +107,12 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
   // -------------------------------------------------------------------------
   if (file) {
     const isImage = file.type.startsWith("image/");
+    const showCancelButton = onCancelUpload !== undefined;
+    const showRetryButton = onRetryUpload !== undefined && uploadError === true;
+    // Remove is available whenever the file isn't actively uploading (cancel covers
+    // that case instead) — including alongside Retry, so a failed upload isn't a
+    // dead end: the user can retry the same file or clear it and pick a different one.
+    const showRemoveButton = !showCancelButton;
 
     return (
       <div className="flex items-center gap-3 rounded-md border p-3">
@@ -108,11 +131,28 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
               </Badge>
             )}
           </div>
+          {uploadProgress !== undefined && !uploadError && (
+            <Progress value={uploadProgress} aria-label="Upload progress" className="mt-2" />
+          )}
+          {uploadError && <p className="mt-1 text-xs text-destructive">Upload failed</p>}
         </div>
-        <Button variant="ghost" size="icon" onClick={() => onFileChange(null)} type="button">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Remove file</span>
-        </Button>
+        {showCancelButton && (
+          <Button variant="ghost" size="icon" onClick={onCancelUpload} type="button">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cancel upload</span>
+          </Button>
+        )}
+        {showRetryButton && (
+          <Button variant="ghost" size="sm" onClick={onRetryUpload} type="button">
+            Retry
+          </Button>
+        )}
+        {showRemoveButton && (
+          <Button variant="ghost" size="icon" onClick={() => onFileChange(null)} type="button">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Remove file</span>
+          </Button>
+        )}
       </div>
     );
   }

@@ -13,7 +13,7 @@
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
@@ -25,11 +25,22 @@ import {
 import { server } from "../../../test-setup";
 import { EntityItem } from "../../accessors/entity-item";
 import ProfileEntity from "../../accessors/entity-profile";
-import { createContentClient } from "../../api/client";
+import { type TypedFetch, createContentClient, createContentUploadClient } from "../../api/client";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
-import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
+import {
+  BASE,
+  assertXhrExists,
+  makeFakeXhr,
+  makeQueryClient,
+  makeWrapper,
+  noopSupplier,
+} from "../test-utils";
 import { useDownloadContent, useUploadContent } from "./use-content";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 // ---------------------------------------------------------------------------
 // Fixture URLs
@@ -255,17 +266,26 @@ describe("useUploadContent — If-Match header", () => {
     expect(capturedIfMatch).toBeNull();
   });
 
-  it("uses contentFetch (not apiFetch) for the PUT — confirms the binary client is used", async () => {
-    // We inject a spy as contentFetch; the PUT must be routed through it.
-    const realContentFetch = createContentClient(noopSupplier);
-    const contentFetchSpy = vi.fn(realContentFetch);
+  it("uses the createContentUploadFetch client (not contentFetch) for the PUT — confirms the progress-reporting client is used", async () => {
+    // We inject a spy as the createContentUploadFetch factory; the PUT must be routed through it,
+    // not through contentFetch — the upload client now differs from the plain binary client.
+    const uploadFetchSpy = vi.fn(createContentUploadClient(noopSupplier));
+    const createContentUploadFetchSpy = vi.fn(
+      (): TypedFetch => uploadFetchSpy as unknown as TypedFetch,
+    );
+    const contentFetchSpy = vi.fn(createContentClient(noopSupplier));
 
     server.use(createContentUploadHandler({ url: CONTENT_URL }));
     wireRefetchHandler();
 
     const entityItem = makeEntityItemWithContentLink('"v1"');
     const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(makeQueryClient(), undefined, contentFetchSpy as never),
+      wrapper: makeWrapper(
+        makeQueryClient(),
+        undefined,
+        contentFetchSpy as never,
+        createContentUploadFetchSpy,
+      ),
     });
 
     await act(async () => {
@@ -274,8 +294,9 @@ describe("useUploadContent — If-Match header", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // contentFetch was called at least once (for the PUT)
-    expect(contentFetchSpy).toHaveBeenCalled();
+    expect(createContentUploadFetchSpy).toHaveBeenCalled();
+    expect(uploadFetchSpy).toHaveBeenCalled();
+    expect(contentFetchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -352,6 +373,136 @@ describe("useUploadContent — 415 Unsupported Media Type", () => {
     expect((result.current.error as ProblemDetailError<ProblemDetail>).problemDetail.status).toBe(
       415,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useUploadContent — progress and cancel
+//
+// These drive the underlying XMLHttpRequest by hand (via the makeFakeXhr stub)
+// because progress events are a transport-level detail MSW cannot synthesize.
+// The stub replaces global.XMLHttpRequest only; the re-fetch after a successful
+// PUT still goes through the real (MSW-intercepted) apiFetch.
+// ---------------------------------------------------------------------------
+
+describe("useUploadContent — progress", () => {
+  it("starts at 0 and tracks XHR upload progress events, reaching 100 on success", async () => {
+    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
+    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
+    wireRefetchHandler();
+
+    const entityItem = makeEntityItemWithContentLink('"v1"');
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    expect(result.current.progress).toBe(0);
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
+    const xhr = getLastXhr();
+    assertXhrExists(xhr);
+
+    act(() => {
+      xhr.upload.onprogress?.({ lengthComputable: true, loaded: 40, total: 100 });
+    });
+    expect(result.current.progress).toBe(40);
+
+    act(() => {
+      xhr.status = 204;
+      xhr.onload?.();
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.progress).toBe(100);
+  });
+
+  it("invokes the caller's onProgress option", async () => {
+    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
+    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
+    wireRefetchHandler();
+
+    const onProgress = vi.fn();
+    const entityItem = makeEntityItemWithContentLink('"v1"');
+    const { result } = renderHook(() => useUploadContent(entityItem, "document", { onProgress }), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
+    const xhr = getLastXhr();
+    assertXhrExists(xhr);
+
+    act(() => {
+      xhr.upload.onprogress?.({ lengthComputable: true, loaded: 25, total: 100 });
+    });
+
+    expect(onProgress).toHaveBeenCalledWith(25);
+  });
+
+  it("does not advance progress when the upload event is not length-computable", async () => {
+    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
+    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
+    wireRefetchHandler();
+
+    const entityItem = makeEntityItemWithContentLink('"v1"');
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
+    const xhr = getLastXhr();
+    assertXhrExists(xhr);
+
+    act(() => {
+      xhr.upload.onprogress?.({ lengthComputable: false, loaded: 999, total: 1000 });
+    });
+
+    expect(result.current.progress).toBe(0);
+  });
+});
+
+describe("useUploadContent — cancel", () => {
+  it("aborts the in-flight upload and leaves the hook idle with progress back at 0", async () => {
+    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
+    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
+
+    const entityItem = makeEntityItemWithContentLink('"v1"');
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
+    const xhr = getLastXhr();
+    assertXhrExists(xhr);
+
+    act(() => {
+      xhr.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 100 });
+    });
+    expect(result.current.progress).toBe(10);
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    expect(xhr.abort).toHaveBeenCalled();
+    expect(result.current.isIdle).toBe(true);
+    expect(result.current.isError).toBe(false);
+    expect(result.current.progress).toBe(0);
   });
 });
 

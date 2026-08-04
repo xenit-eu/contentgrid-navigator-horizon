@@ -367,14 +367,15 @@ export class EntityItem {
    *
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
-   * @param opts - Optional overrides for Content-Type and filename
+   * @param opts - Optional overrides for Content-Type and filename, and an
+   *               AbortSignal to allow the caller to cancel an in-flight upload
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public uploadContentRequest(
     attributeName: string,
     file: Blob | File,
-    opts?: { contentType?: string; filename?: string },
+    opts?: { contentType?: string; filename?: string; signal?: AbortSignal },
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -405,6 +406,7 @@ export class EntityItem {
       method: "PUT",
       body: file,
       headers,
+      signal: opts?.signal,
     });
   }
 

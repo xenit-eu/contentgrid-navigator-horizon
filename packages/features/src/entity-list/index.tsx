@@ -25,6 +25,7 @@ import {
   useProfileEntities,
   useSetToOneRelation,
   useUnlinkRelation,
+  useUploadContent,
 } from "@contentgrid/navigator-data";
 import {
   AlertDialog,
@@ -44,6 +45,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   Button,
+  ContentUploadField,
   DataTable,
   type DataTableColumn,
   type DataTableRow,
@@ -619,7 +621,11 @@ function EntityItemDetailView({
               return (
                 <div key={attr.value.name} className="rounded-lg border p-4">
                   <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-                  <dd className="mt-1 truncate text-sm">{renderAttributeValue(attr)}</dd>
+                  {attr.profileAttribute?.isContent ? (
+                    <ContentAttributeField entityItem={item.data} attr={attr} />
+                  ) : (
+                    <dd className="mt-1 truncate text-sm">{renderAttributeValue(attr)}</dd>
+                  )}
                 </div>
               );
             })}
@@ -925,6 +931,72 @@ function renderAttributeValue(attr: EntityItemAttribute): string {
     default:
       return "—";
   }
+}
+
+// ---------------------------------------------------------------------------
+// ContentAttributeField — content-attribute cell on the entity detail page
+// ---------------------------------------------------------------------------
+
+function ContentAttributeField({
+  entityItem,
+  attr,
+}: Readonly<{ entityItem: EntityItem; attr: EntityItemAttribute }>) {
+  const attributeName = attr.value.name;
+  const [file, setFile] = useState<File | null>(null);
+  // Tracked separately from the hook's `error`: TanStack resets `error` to null
+  // the instant a retry's mutate() call starts (before it has even settled), which
+  // would otherwise unmount the error box mid-retry and shift everything below it.
+  // Keeping our own copy lets the box stay mounted (just dimmed) until the retry
+  // actually succeeds or fails again.
+  const [lastError, setLastError] = useState<Error | null>(null);
+  const { mutate, progress, cancel, isPending } = useUploadContent(entityItem, attributeName, {
+    mutationOptions: {
+      onSuccess: () => {
+        setFile(null);
+        setLastError(null);
+      },
+      onError: (uploadError) => setLastError(uploadError),
+    },
+  });
+
+  // canUploadContent mirrors the cg:content link presence that also drives
+  // AttributeKind.CONTENT — so once this passes, attr.value is guaranteed CONTENT.
+  if (!entityItem.canUploadContent(attributeName)) {
+    return <dd className="mt-1 truncate text-sm">—</dd>;
+  }
+
+  const filename =
+    attr.value.kind === AttributeKind.CONTENT ? attr.value.metadata?.filename : undefined;
+  const hasError = !isPending && lastError !== null;
+
+  return (
+    <dd className="mt-1 space-y-2">
+      {!file && filename && <p className="text-xs text-muted-foreground">Current: {filename}</p>}
+      <ContentUploadField
+        file={file}
+        onFileChange={(next) => {
+          setFile(next);
+          setLastError(null);
+          if (next) mutate({ file: next });
+        }}
+        uploadProgress={isPending ? progress : undefined}
+        uploadError={hasError}
+        onCancelUpload={isPending ? cancel : undefined}
+        onRetryUpload={
+          hasError
+            ? () => {
+                if (file) mutate({ file });
+              }
+            : undefined
+        }
+      />
+      {lastError !== null && (
+        <div className={isPending ? "opacity-50 transition-opacity" : undefined}>
+          <MutationErrorDisplay error={lastError} />
+        </div>
+      )}
+    </dd>
+  );
 }
 
 // ---------------------------------------------------------------------------
