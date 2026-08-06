@@ -196,9 +196,9 @@ describe("FilterSidebar — date suffix filters (DateFilter with direction)", ()
 });
 
 describe("FilterSidebar — date group filter (multiple date props for same field)", () => {
-  it("renders DateGroupFilter when multiple date-suffix props share the same base", () => {
+  it("renders RangeGroupFilter when multiple date-suffix props share the same base", () => {
     renderSidebar([DATE_GT_PROP, DATE_LT_PROP]);
-    // DateGroupFilter renders a span with the label
+    // RangeGroupFilter renders a span with the label
     const createdLabel = screen.getByText("Created At");
     expect(createdLabel).toBeInTheDocument();
   });
@@ -211,7 +211,7 @@ describe("FilterSidebar — date group filter (multiple date props for same fiel
 
   it("renders From/Until direction labels for gte/lte suffixes", () => {
     renderSidebar([DATE_GTE_PROP, DATE_LTE_PROP]);
-    // greater-than-or-equal → "from" → label "After" (maps from→after in DateGroupFilter)
+    // greater-than-or-equal → "from" → label "After" (maps from→after in RangeGroupFilter)
     // Check that we have date inputs
     const inputs = screen.getAllByDisplayValue("");
     expect(inputs.length).toBeGreaterThanOrEqual(2);
@@ -302,7 +302,7 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
     expect(onFilterChange).toHaveBeenCalledWith("created.~from", undefined);
   });
 
-  it("encodes grouped ~from value as plain date (no ISO) in DateGroupFilter", () => {
+  it("encodes grouped ~from value as plain date (no ISO) in RangeGroupFilter", () => {
     const onFilterChange = vi.fn();
     renderSidebar([DATE_FROM_PROP, DATE_UNTIL_PROP], {}, { onFilterChange });
     const inputs = screen.getAllByDisplayValue("");
@@ -333,7 +333,33 @@ describe("FilterSidebar — range-pair operators (field.~op)", () => {
   });
 });
 
-describe("FilterSidebar — apiToDate conversion", () => {
+describe("FilterSidebar — number range group filter (amount.~gte / amount.~lte)", () => {
+  const NUM_GTE_PROP: SearchProperty = { name: "amount.~gte", type: "string" };
+  const NUM_LTE_PROP: SearchProperty = { name: "amount.~lte", type: "string" };
+
+  it("groups ~gte/~lte under one label as number inputs", () => {
+    renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP]);
+    expect(screen.getByText("Amount")).toBeInTheDocument();
+    expect((screen.getByLabelText(/amount after/i) as HTMLInputElement).type).toBe("number");
+    expect((screen.getByLabelText(/amount before/i) as HTMLInputElement).type).toBe("number");
+  });
+
+  it("passes a raw number string through onFilterChange (no date encoding)", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP], {}, { onFilterChange });
+    fireEvent.change(screen.getByLabelText(/amount after/i), { target: { value: "100" } });
+    expect(onFilterChange).toHaveBeenCalledWith("amount.~gte", "100");
+  });
+
+  it("clears a bound to undefined when emptied", () => {
+    const onFilterChange = vi.fn();
+    renderSidebar([NUM_GTE_PROP, NUM_LTE_PROP], { "amount.~gte": "100" }, { onFilterChange });
+    fireEvent.change(screen.getByLabelText(/amount after/i), { target: { value: "" } });
+    expect(onFilterChange).toHaveBeenCalledWith("amount.~gte", undefined);
+  });
+});
+
+describe("FilterSidebar — decodeDateInputValue conversion", () => {
   it("shows existing ISO date value as yyyy-MM-dd in the input", () => {
     renderSidebar([DATE_PROP], { created_at: "2024-06-15T00:00:00Z" });
     expect(screen.getByDisplayValue("2024-06-15")).toBeInTheDocument();
@@ -344,7 +370,7 @@ describe("FilterSidebar — apiToDate conversion", () => {
     expect(screen.getByDisplayValue("2024-06-15")).toBeInTheDocument();
   });
 
-  it("renders without throwing when date value is a garbage/invalid string (apiToDate fallback)", () => {
+  it("renders without throwing when date value is a garbage/invalid string (decodeDateInputValue fallback)", () => {
     expect(() => renderSidebar([DATE_PROP], { created_at: "not-a-date-at-all" })).not.toThrow();
   });
 });
@@ -364,11 +390,11 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
   });
 });
 
-describe("FilterSidebar — DateGroupFilter clear button (grouped date props)", () => {
-  it("calls onFilterChange with undefined when the clear button is clicked in a DateGroupFilter with a value", async () => {
+describe("FilterSidebar — RangeGroupFilter clear button (grouped date props)", () => {
+  it("calls onFilterChange with undefined when the clear button is clicked in a RangeGroupFilter with a value", async () => {
     const user = userEvent.setup();
     const onFilterChange = vi.fn();
-    // Two props with the same base ("created_at") → DateGroupFilter renders (isDateGroup=true)
+    // Two props with the same base ("created_at") → RangeGroupFilter renders (groupInputType="date")
     renderSidebar(
       [DATE_GT_PROP, DATE_LT_PROP],
       { "created_at~greater-than": "2024-01-01T00:00:00Z" },

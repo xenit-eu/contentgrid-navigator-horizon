@@ -46,6 +46,11 @@ function isRangePair(name: string): boolean {
   return name.includes(".~");
 }
 
+/** True for numeric range-pair operators like "amount.~gte" — a range pair that isn't a date. */
+function isNumberRangeProperty(name: string, type: string): boolean {
+  return isRangePair(name) && !isDateProperty(name, type);
+}
+
 /** Convert a raw date input value to an API value. Range-pair operators use plain yyyy-MM-dd; legacy operators use ISO 8601. */
 function encodeDateInputValue(rawValue: string, rangePair: boolean): string {
   return rangePair ? rawValue : dateToApi(rawValue);
@@ -57,11 +62,12 @@ function getSearchType(prop: SearchProperty): string {
   return SEARCH_TYPE_LABELS[op] ?? op;
 }
 
-type InputType = "text" | "select" | "date";
+type InputType = "text" | "select" | "date" | "number";
 
 function getInputType(prop: SearchProperty): InputType {
   if (prop.options?.inline?.length) return "select";
   if (isDateProperty(prop.name, prop.type)) return "date";
+  if (isNumberRangeProperty(prop.name, prop.type)) return "number";
   return "text";
 }
 
@@ -77,8 +83,8 @@ function dateToApi(dateStr: string): string {
   return `${dateStr}T00:00:00Z`;
 }
 
-/** Convert an ISO 8601 date string back to input format (yyyy-MM-dd) */
-function apiToDate(apiStr: string): string {
+/** Convert a stored filter value (ISO 8601 or plain yyyy-MM-dd) to the <input type="date"> display format. */
+function decodeDateInputValue(apiStr: string): string {
   if (apiStr.includes("T")) {
     const date = new Date(apiStr);
     if (!Number.isNaN(date.getTime())) {
@@ -130,24 +136,28 @@ function ClearButton({
   );
 }
 
-function DateGroupFilter({
+function RangeGroupFilter({
   label,
   items,
   filters,
   onFilterChange,
+  inputType,
 }: Readonly<{
   label: string;
   items: SearchProperty[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string | undefined) => void;
+  inputType: "date" | "number";
 }>) {
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       {items.map((prop) => {
         const searchType = getSearchType(prop);
-        const value = filters[prop.name] ?? "";
+        const rawValue = filters[prop.name] ?? "";
         const direction = getDirectionLabel(searchType);
+        const displayValue =
+          inputType === "date" ? (rawValue ? decodeDateInputValue(rawValue) : "") : rawValue;
 
         return (
           <div key={prop.name} className="space-y-1">
@@ -155,21 +165,29 @@ function DateGroupFilter({
             <div className="flex items-center gap-1">
               <div className="min-w-0 flex-1">
                 <Input
-                  type="date"
+                  type={inputType}
                   aria-label={direction ? `${label} ${direction.toLowerCase()}` : label}
                   className="h-8 text-sm"
-                  value={value ? apiToDate(value) : ""}
-                  onChange={(e) =>
+                  value={displayValue}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (!raw) {
+                      onFilterChange(prop.name, undefined);
+                      return;
+                    }
                     onFilterChange(
                       prop.name,
-                      e.target.value
-                        ? encodeDateInputValue(e.target.value, isRangePair(prop.name))
-                        : undefined,
-                    )
-                  }
+                      inputType === "date"
+                        ? encodeDateInputValue(raw, isRangePair(prop.name))
+                        : raw,
+                    );
+                  }}
                 />
               </div>
-              <ClearButton onClick={() => onFilterChange(prop.name, undefined)} visible={!!value} />
+              <ClearButton
+                onClick={() => onFilterChange(prop.name, undefined)}
+                visible={!!rawValue}
+              />
             </div>
           </div>
         );
@@ -243,7 +261,7 @@ function DateFilter({
             id={inputId}
             type="date"
             className="h-8 text-sm"
-            value={value ? apiToDate(value) : ""}
+            value={value ? decodeDateInputValue(value) : ""}
             onChange={(e) =>
               onChange(e.target.value ? encodeDateInputValue(e.target.value, rawDate) : undefined)
             }
@@ -261,12 +279,14 @@ function TextFilter({
   value,
   onChange,
   searchType = "exact",
+  inputType = "text",
 }: Readonly<{
   propName: string;
   label: string;
   value: string;
   onChange: (value: string | undefined) => void;
   searchType?: string;
+  inputType?: "text" | "number";
 }>) {
   const direction = getDirectionLabel(searchType);
   const displayLabel = direction ? `${label} ${direction.toLowerCase()}` : label;
@@ -281,7 +301,7 @@ function TextFilter({
         <div className="min-w-0 flex-1">
           <Input
             id={inputId}
-            type="text"
+            type={inputType}
             className="h-8 text-sm"
             value={value}
             onChange={(e) => onChange(e.target.value || undefined)}
@@ -323,19 +343,24 @@ export function FilterSidebar({
       </div>
       <div className="space-y-4">
         {groups.map((group, index) => {
-          const isDateGroup =
-            group.items.length > 1 && group.items.every((p) => getInputType(p) === "date");
+          const groupInputType: "date" | "number" | null =
+            group.items.length > 1 && group.items.every((p) => getInputType(p) === "date")
+              ? "date"
+              : group.items.length > 1 && group.items.every((p) => getInputType(p) === "number")
+                ? "number"
+                : null;
 
           return (
             <div key={group.label}>
               {index > 0 && <Separator className="mb-4" />}
               <div className="space-y-2">
-                {isDateGroup ? (
-                  <DateGroupFilter
+                {groupInputType ? (
+                  <RangeGroupFilter
                     label={group.label}
                     items={group.items}
                     filters={filters}
                     onFilterChange={onFilterChange}
+                    inputType={groupInputType}
                   />
                 ) : (
                   group.items.map((prop) => {
@@ -372,7 +397,22 @@ export function FilterSidebar({
                       );
                     }
 
-                    // 3. Handle Text types
+                    // 3. Handle numeric range-pair types (lone bound, not grouped)
+                    if (type === "number") {
+                      return (
+                        <TextFilter
+                          key={prop.name}
+                          propName={prop.name}
+                          label={label}
+                          searchType={searchType}
+                          value={value}
+                          inputType="number"
+                          onChange={(v) => onFilterChange(prop.name, v)}
+                        />
+                      );
+                    }
+
+                    // 4. Handle Text types
                     if (type === "text") {
                       return (
                         <TextFilter
