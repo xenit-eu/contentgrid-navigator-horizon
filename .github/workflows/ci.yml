@@ -374,8 +374,10 @@ jobs:
   visual-rebaseline:
     name: Re-baseline visual snapshots
     # Manual-only: never runs on push/pull_request. ADR-009 requires baselines to be
-    # generated in this pinned container, never on a contributor's machine.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    # generated in this pinned container, never on a contributor's machine. Also
+    # excludes main: the commit step pushes directly to the triggering ref, which
+    # would bypass PR review on main if branch protection ever exempted this token.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.60.0-noble
     permissions:
@@ -383,7 +385,7 @@ jobs:
       # every other job stays read-only per the repo's least-privilege default.
       contents: write
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Enable pnpm via corepack
         # Version comes from the root package.json "packageManager" field.
