@@ -25,14 +25,15 @@ export function ProblemAlertFrame({
   className?: string;
   children?: ReactNode;
 }>) {
-  const [opened, setOpened] = useState(true);
+  const identity = `${status ?? ""}|${title}|${detail ?? ""}`;
+  const [dismissedIdentity, setDismissedIdentity] = useState<string | null>(null);
 
-  if (!opened) {
+  if (dismissedIdentity === identity) {
     return null;
   }
 
   function handleClose() {
-    setOpened(false);
+    setDismissedIdentity(identity);
     onClose?.();
   }
 
