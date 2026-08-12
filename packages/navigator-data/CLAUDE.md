@@ -253,14 +253,14 @@ const { data: collection } = useEntityItemCollection({
 
 **Error handling:**
 
-- All non-2xx responses throw `ProblemDetailError` (`src/api/errors.ts`). Read the RFC 9457 detail
-  via `error.problemDetail` (`{ type, title, detail, status, ... }`). Do NOT manually inspect raw
-  `response.status`.
+- All non-2xx responses throw `ProblemDetailError` (re-exported from `@contentgrid/problem-details`
+  via `src/api/problem-details/index.ts`). Read the RFC 9457 detail via `error.problemDetail`
+  (`{ type, title, detail, status, ... }`). Do NOT manually inspect raw `response.status`.
 - Surface the parsed problem detail via TanStack Query's `error` field.
 - 412 (ETag mismatch) must be handled at the call site: re-fetch, re-apply, retry. The hook must
-  not swallow or auto-retry 412. Detect via `error instanceof ProblemDetailError &&
-error.problemDetail.status === 412`. `PreconditionFailedError` is exported but never thrown in
-  the current codebase — do not depend on it.
+  not swallow or auto-retry 412. Detect via `isProblemWithStatus(error, 412)` (see
+  [Problem-detail handling](#problem-detail-handling) below) rather than a raw `instanceof` +
+  `.problemDetail.status` check.
 
 **HAL contract tests (ADR-014):**
 
@@ -470,6 +470,73 @@ Do NOT narrow the bridge output to a lossy subset of the template shape.
 
 ---
 
+## Problem-detail handling
+
+Location: `src/api/problem-details/` — `constants.ts` (problem `type` URIs),
+`index.ts` (typed problem shapes + barrel), `guards.ts` (narrowing helpers),
+`display-model.ts` (UI-facing bridge). Everything is re-exported from the
+package barrel (`@contentgrid/navigator-data`) — consumers never import the
+subfolder path directly, and never import `@contentgrid/problem-details`
+themselves (this package re-exports `ProblemDetailError`, `ProblemDetail`,
+`checkResponse` from it so there is a single import surface).
+
+**Typed problem shapes (`constants.ts` + `index.ts`):**
+
+- `ContentGridProblemType` — string-literal constants for every ContentGrid
+  problem `type` URI (e.g. `ContentGridProblemType.INTEGRITY_REQUIRED_RELATION`).
+  Use these as the discriminant — never hardcode a `type` URI inline.
+- `ContentGridProblemDetail` — a discriminated union (on `type`) covering every
+  known problem: `ValidationProblemDetail` (400, wraps `errors[]`), the four
+  query-parameter problems (400), the four request-body problems (400), the
+  three header problems (400), `UnsatisfiedVersionProblem` (412), the four
+  not-found problems (404), `BlindRelationOverwriteProblem` and
+  `RequiredRelationProblem` (409).
+- **Opaque responses carry no `type`** — a masked `403` (deny-by-default
+  gateway hides unknown endpoints/relations/methods this way) and a Spring
+  Boot default `500` error page are NOT `application/problem+json`. They
+  surface as the bare `ProblemDetail` base with `type: undefined`. Never
+  assume a `403` carries a typed problem body.
+- `ValidationFieldError` — the per-entry shape inside `ValidationProblemDetail.errors[]`.
+  Uses `field` (not `property`) — an earlier Navigator generation used
+  `property` + `invalid_value`; that shape is intentionally NOT modelled here.
+
+**Guards (`guards.ts`) — narrow an unknown caught error:**
+
+| Guard                                | Narrows to                                                      | Use when                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `isProblemDetailError(error)`        | `ProblemDetailError<ProblemDetail>`                             | Distinguishing a `ProblemDetailError` from a plain `Error` (pre-fetch ABAC/affordance guards throw plain `Error`) |
+| `isProblemOfType(error, type)`       | `ProblemDetailError<Extract<ContentGridProblemDetail, {type}>>` | Narrowing to one specific typed member                                                                            |
+| `isProblemWithStatus(error, status)` | `ProblemDetailError<ProblemDetail>`                             | Status-based checks that must also work for opaque (typeless) problems, e.g. 412, 403                             |
+| `isValidationProblem(error)`         | `ProblemDetailError<ValidationProblemDetail>`                   | Any `input/validation` problem                                                                                    |
+| `getValidationFieldErrors(error)`    | `readonly ValidationFieldError[]`                               | Extracting per-field errors for a form; returns `[]` for any non-validation error                                 |
+
+Mutation/query functions in this package reject with either a `ProblemDetailError`
+(every non-2xx HTTP response) or a plain `Error` (pre-fetch affordance/ABAC
+guards, network failures) — the accurate common supertype is `Error`. Do NOT
+type a hook's error as `ProblemDetailError` directly; keep it `Error` and
+narrow at the call site with these guards.
+
+**Display-model bridge (`display-model.ts`) — for UI consumers:**
+
+- `toProblemDisplayModel(error: unknown): ProblemDisplayModel` maps ANY caught
+  error — plain `Error`, opaque problem, or any `ContentGridProblemDetail`
+  member — to a flat, presentation-ready `ProblemDisplayModel` (plain object,
+  discriminated on `kind`, no HAL objects or class instances). It groups
+  related problem types (e.g. all four not-found problems → `kind: "notFound"`)
+  and preserves the raw `type` URI on every variant so a UI can offer a
+  "view problem type" documentation link (RFC 9457 §3.1.1: dereferencing
+  `type` should show human-readable docs).
+- Unrecognized problem `type`s (a future addition this module hasn't been
+  updated for) and unrecognized `errors[]` field-error `type`s fall back to
+  `kind: "unknown"` / `kind: "unknownField"` rather than throwing — forward-compat
+  by design.
+- This is what `packages/features/src/problem-details` (`ProblemAlert` and the
+  kind-specific `*Alert` components) consumes to render errors generically.
+  Do NOT hand-roll problem-detail rendering in a feature from the raw
+  `ContentGridProblemDetail` — build a `ProblemDisplayModel` first.
+
+---
+
 ## ETag / conditional-request pattern
 
 The platform uses ETags for optimistic concurrency (RFC 9110).
@@ -525,10 +592,10 @@ Send the stored ETag verbatim — quotes included. Skip the header only when `et
 
 **Error class for 412:**
 
-All non-2xx responses surface as `ProblemDetailError` (`src/api/errors.ts`). Check status via
-`error.problemDetail.status === 412`. `PreconditionFailedError` is exported from this package but
-is **never thrown** anywhere in the current source — do not add a `catch (e instanceof
-PreconditionFailedError)` branch; catch `ProblemDetailError` and inspect `.problemDetail.status`.
+All non-2xx responses surface as `ProblemDetailError` (see
+[Problem-detail handling](#problem-detail-handling) above, `src/api/problem-details/`). Check the
+status with `isProblemWithStatus(error, 412)` rather than a raw `instanceof` + `.problemDetail.status`
+check — it also works for opaque (typeless) 412s.
 
 ---
 

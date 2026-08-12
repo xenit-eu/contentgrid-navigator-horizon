@@ -6,8 +6,7 @@ export {
   parseContentDisposition,
 } from "./content-types";
 export { cgRels, blueprintRels } from "./contentgrid-rels";
-export { checkResponse, ProblemDetailError, extractFieldErrors, getErrorMessage } from "./errors";
-export type { ProblemDetail, FieldError } from "./errors";
+export * from "./problem-details";
 export { createApiClient, createContentClient } from "./client";
 export type { AuthenticationTokenSupplier, TypedFetch } from "./client";
 export {

@@ -147,7 +147,7 @@ export function useEntityItemCollection(
   const { apiFetch, profileUrl } = useNavigatorData();
   const { url, enabled } = resolveCollectionRequest(params, profileUrl);
 
-  return useQuery({
+  return useQuery<EntityItemCollection, Error>({
     ...EntityItemCollection.fetchByUrlQuery(
       apiFetch,
       url,
