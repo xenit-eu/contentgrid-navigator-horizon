@@ -1,8 +1,7 @@
-import { type QueryClient, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Link } from "@contentgrid/hal";
 import ProfileEntity, { profileRootQuery } from "../../accessors/entity-profile";
 import { cgRels } from "../../api";
-import type { TypedFetch } from "../../api/client";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
 
@@ -144,24 +143,4 @@ export function useProfileEntity(filter: ProfileFilter, options?: UseProfileEnti
         }),
     enabled: !!entityLink || rootQuery.isSuccess || rootQuery.isError,
   });
-}
-
-/**
- * Non-hook counterpart to `useProfileEntity`, for use in route `loader`s
- * (which run before any component mounts, so hooks aren't available).
- * Ensures the profile root and the matching entity profile are both loaded
- * into the query cache, returning `null` when no entity matches the filter.
- */
-export async function ensureProfileEntity(
-  queryClient: QueryClient,
-  apiFetch: TypedFetch,
-  profileUrl: string,
-  filter: ProfileFilter,
-): Promise<ProfileEntity | null> {
-  const rootProfile = await queryClient.ensureQueryData(profileRootQuery(apiFetch, profileUrl));
-  const entityLink = findEntityLink(rootProfile, filter);
-
-  if (!entityLink) return null;
-
-  return queryClient.ensureQueryData(ProfileEntity.profileByLinkQuery(apiFetch, entityLink));
 }

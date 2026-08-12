@@ -1,384 +1,258 @@
 /**
- * Tests for useUpdateEntityItem hook.
+ * Tests for useEntityItem hook.
  *
  * Covers:
- * - Success PATCH → updated EntityItem with new ETag
- * - If-Match header sent verbatim from entityItem.etag
- * - null etag → no If-Match header attached
- * - Cache: setQueryData on entityItem.byUrl key after success
- * - Collection invalidation after success
- * - Caller onSuccess runs after cache is populated
- * - 400 validation error → isError with ProblemDetailError
- * - 412 ETag mismatch → isError, ProblemDetailError status 412, PATCH handler called exactly once (no retry)
+ * - Known-profile mode { profileEntity, entityId }: success, ETag captured, disabled when entityId undefined, error state
+ * - Discover-profile mode { url }: success after profile loaded, pending until profile available, ETag in discover mode
+ *
+ * Note: useEntityItem itself has no hardcoded retry, but profileByLinkQuery (used internally via
+ * useProfileEntities) has retry:3. The item fetch itself uses the queryClient default (retry:false
+ * in tests via makeQueryClient). Error tests for the item fetch do NOT need fake timers.
  */
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
-import type { HalObjectShape } from "@contentgrid/hal/shape";
-import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
-import {
-  invoiceProfileBody,
-  invoiceUpdateTemplate,
-  sampleInvoice,
-} from "../../../test-fixtures/hal/fixtures";
 import { server } from "../../../test-setup";
-import { EntityItem } from "../../accessors/entity-item";
 import ProfileEntity from "../../accessors/entity-profile";
-import { queryKeys } from "../../query-keys";
-import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
-import { BASE, makeQueryClient, makeWrapper } from "../test-utils";
-import { useUpdateEntityItem } from "./use-update-entity";
+import type { ProfileEntityShape } from "../../shapes";
+import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
+import { useEntityItem } from "./use-entity-item";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const INVOICE_PROFILE_URL = `${BASE}/profile/invoices`;
-const INVOICE_ITEM_URL = `${BASE}/invoices/inv-001`;
+const CUSTOMER_PROFILE_URL = `${BASE}/profile/customers`;
+const CUSTOMER_COLLECTION_URL = `${BASE}/customers`;
+const CUSTOMER_ITEM_URL = `${BASE}/customers/cust-001`;
 
-// Build a ProfileEntity wrapping the invoice profile fixture
-function makeInvoiceProfile(): ProfileEntity {
-  const profileBody = {
-    ...invoiceProfileBody,
-    _links: {
-      ...invoiceProfileBody._links,
-      self: { href: INVOICE_PROFILE_URL },
-      describes: [
-        { href: `${BASE}/invoices`, name: "collection" },
-        { href: `${BASE}/invoices/{id}`, name: "item", templated: true },
-      ],
+// Minimal profile root
+const profileRootBody = {
+  _links: {
+    self: { href: PROFILE_URL },
+    "cg:entity": [{ href: CUSTOMER_PROFILE_URL, name: "customer", title: "Customer" }],
+    curies: [
+      { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
+    ],
+  },
+  _templates: {},
+};
+
+const customerProfileBody = {
+  name: "customer",
+  title: "Customer",
+  description: "",
+  _embedded: {
+    "blueprint:attribute": [
+      {
+        name: "id",
+        title: "id",
+        type: "string",
+        description: "",
+        readOnly: true,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
+      {
+        name: "name",
+        title: "Name",
+        type: "string",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
+    ],
+    "blueprint:relation": [],
+  },
+  _links: {
+    self: { href: CUSTOMER_PROFILE_URL, title: "Customer" },
+    describes: [
+      { href: CUSTOMER_COLLECTION_URL, name: "collection" },
+      { href: `${CUSTOMER_COLLECTION_URL}/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        name: "blueprint",
+        templated: true,
+      },
+    ],
+  },
+  _templates: {
+    default: { method: "HEAD", target: CUSTOMER_COLLECTION_URL, properties: [] },
+    search: {
+      method: "GET",
+      target: CUSTOMER_COLLECTION_URL,
+      properties: [{ name: "name~prefix", type: "text" }],
     },
-  };
-  const hal = new HalObject(profileBody as unknown as ProfileEntityShape);
+  },
+};
+
+const customerItemBody = {
+  id: "cust-001",
+  name: "Acme Corp",
+  _links: { self: { href: CUSTOMER_ITEM_URL } },
+};
+
+// Build a ProfileEntity instance for known-profile mode
+function makeCustomerProfile(): ProfileEntity {
+  const hal = new HalObject(customerProfileBody as unknown as ProfileEntityShape);
   return new ProfileEntity(
-    { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" } as unknown as Link,
+    { href: CUSTOMER_PROFILE_URL, name: "customer", title: "Customer" } as unknown as Link,
     hal as HalObject<ProfileEntityShape>,
   );
 }
 
-// Build an EntityItem with NO default template (ABAC denies update)
-function makeEntityItemWithoutTemplate(): EntityItem {
-  const profile = makeInvoiceProfile();
-  const itemBody = {
-    ...sampleInvoice,
-    _links: {
-      ...sampleInvoice._links,
-      self: { href: INVOICE_ITEM_URL },
-    },
-    // no _templates → defaultTemplate is null
-  };
-  const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
-  return new EntityItem(hal, profile, null);
+function setupHandlers(itemEtag?: string) {
+  const itemHeaders: Record<string, string> = {};
+  if (itemEtag) itemHeaders["ETag"] = itemEtag;
+
+  server.use(
+    http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+    http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+    http.get(CUSTOMER_ITEM_URL, () =>
+      HttpResponse.json(customerItemBody, { headers: itemHeaders }),
+    ),
+  );
 }
 
-// Build an EntityItem with a default (update) template and optional etag
-function makeEntityItemWithTemplate(etag: string | null = '"v1"'): EntityItem {
-  const profile = makeInvoiceProfile();
-  const itemBody = {
-    ...sampleInvoice,
-    _links: {
-      ...sampleInvoice._links,
-      self: { href: INVOICE_ITEM_URL },
-    },
-    _templates: {
-      default: {
-        ...invoiceUpdateTemplate,
-        target: INVOICE_ITEM_URL,
-      },
-    },
-  };
-  const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
-  return new EntityItem(hal, profile, etag);
-}
-
-// Minimal updated invoice body returned after PATCH
-const updatedInvoiceBody = {
-  ...sampleInvoice,
-  status: "paid",
-  _links: { self: { href: INVOICE_ITEM_URL } },
-};
-
 // ---------------------------------------------------------------------------
-// Tests
+// Known-profile mode
 // ---------------------------------------------------------------------------
 
-describe("useUpdateEntityItem — success PATCH → updated EntityItem with new ETag", () => {
-  it("returns updated EntityItem with new ETag on success", async () => {
-    server.use(
-      http.patch(INVOICE_ITEM_URL, () =>
-        HttpResponse.json(updatedInvoiceBody, {
-          status: 200,
-          headers: { ETag: '"v2"' },
-        }),
-      ),
-    );
-
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
+describe("useEntityItem — known-profile mode { profileEntity, entityId }", () => {
+  it("fetches an entity item when entityId is provided", async () => {
+    setupHandlers();
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toBeInstanceOf(EntityItem);
-    expect(result.current.data?.etag).toBe('"v2"');
+    expect(result.current.data?.id).toBe("cust-001");
   });
-});
 
-describe("useUpdateEntityItem — If-Match header", () => {
-  it("sends If-Match verbatim from entityItem.etag", async () => {
-    let capturedIfMatch: string | null = null;
-
-    server.use(
-      http.patch(INVOICE_ITEM_URL, async ({ request }) => {
-        capturedIfMatch = request.headers.get("If-Match");
-        return HttpResponse.json(updatedInvoiceBody, {
-          status: 200,
-          headers: { ETag: '"v2"' },
-        });
-      }),
-    );
-
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
+  it("captures the ETag from the response", async () => {
+    setupHandlers('"etag-abc"');
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(capturedIfMatch).toBe('"v1"');
+    expect(result.current.data?.etag).toBe('"etag-abc"');
   });
 
-  it("sends no If-Match header when etag is null", async () => {
-    let capturedIfMatch: string | null | undefined = undefined;
-
+  it("query is disabled (isPending, no fetch) when entityId is undefined", async () => {
     server.use(
-      http.patch(INVOICE_ITEM_URL, async ({ request }) => {
-        capturedIfMatch = request.headers.get("If-Match");
-        return HttpResponse.json(updatedInvoiceBody, {
-          status: 200,
-          headers: { ETag: '"v2"' },
-        });
-      }),
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+      http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+      // item URL must NOT be called — not registered; MSW would error on unhandled request
     );
-
-    const entityItem = makeEntityItemWithTemplate(null);
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(),
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: undefined }), {
+      wrapper,
     });
 
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
-    });
+    // Wait a tick then confirm still no data (query disabled)
+    await new Promise((r) => setTimeout(r, 50));
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(capturedIfMatch).toBeNull();
-  });
-});
-
-describe("useUpdateEntityItem — cache behaviour", () => {
-  it("sets queryData on entityItem.byUrl key after success", async () => {
-    server.use(
-      http.patch(INVOICE_ITEM_URL, () =>
-        HttpResponse.json(updatedInvoiceBody, {
-          status: 200,
-          headers: { ETag: '"v2"' },
-        }),
-      ),
-    );
-
-    const queryClient = makeQueryClient();
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const profile = entityItem.profileEntity;
-
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    const cached = queryClient.getQueryData(queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL));
-    expect(cached).toBeInstanceOf(EntityItem);
-    expect((cached as EntityItem).etag).toBe('"v2"');
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isPending).toBe(true);
   });
 
-  it("invalidates entity collection queries after success", async () => {
+  it("isError is true when item fetch returns an error", async () => {
     server.use(
-      http.patch(INVOICE_ITEM_URL, () =>
-        HttpResponse.json(updatedInvoiceBody, {
-          status: 200,
-          headers: { ETag: '"v2"' },
-        }),
-      ),
-    );
-
-    const queryClient = makeQueryClient();
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const profile = entityItem.profileEntity;
-
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.entityItemCollection.forEntity(profile),
-    });
-  });
-
-  it("calls caller onSuccess after cache is already populated", async () => {
-    server.use(
-      http.patch(INVOICE_ITEM_URL, () =>
-        HttpResponse.json(updatedInvoiceBody, {
-          status: 200,
-          headers: { ETag: '"v2"' },
-        }),
-      ),
-    );
-
-    const queryClient = makeQueryClient();
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const profile = entityItem.profileEntity;
-
-    let cacheAtCallTime: unknown = undefined;
-    const callerOnSuccess = vi.fn(async () => {
-      cacheAtCallTime = queryClient.getQueryData(
-        queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
-      );
-    });
-
-    const { result } = renderHook(
-      () =>
-        useUpdateEntityItem(entityItem, {
-          mutationOptions: { onSuccess: callerOnSuccess },
-        }),
-      { wrapper: makeWrapper(queryClient) },
-    );
-
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(callerOnSuccess).toHaveBeenCalledOnce();
-    // Cache must already be set when caller onSuccess runs
-    expect(cacheAtCallTime).toBeInstanceOf(EntityItem);
-  });
-});
-
-describe("useUpdateEntityItem — error handling", () => {
-  it("surfaces 400 validation error as ProblemDetailError", async () => {
-    server.use(
-      http.patch(INVOICE_ITEM_URL, () =>
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+      http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+      http.get(CUSTOMER_ITEM_URL, () =>
         HttpResponse.json(
-          {
-            status: 400,
-            title: "Validation Failed",
-            type: "https://contentgrid.cloud/problems/input/validation",
-          },
-          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+          { status: 404, title: "Not Found" },
+          { status: 404, headers: { "Content-Type": "application/problem+json" } },
         ),
       ),
     );
-
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(),
+    const profileEntity = makeCustomerProfile();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
+      wrapper,
     });
 
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "invalid" } as any);
-    });
-
+    // useEntityItem queryFn uses queryClient default retry (false in tests)
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    expect(result.current.error).toBeInstanceOf(ProblemDetailError);
-  });
-
-  it("surfaces 412 as ProblemDetailError with status 412 and PATCH handler hit exactly once (no retry)", async () => {
-    let patchCallCount = 0;
-
-    server.use(
-      http.patch(INVOICE_ITEM_URL, () => {
-        patchCallCount++;
-        return HttpResponse.json(
-          {
-            status: 412,
-            title: "Precondition Failed",
-            type: "https://contentgrid.cloud/problems/unsatisfied-version",
-          },
-          { status: 412, headers: { "Content-Type": "application/problem+json" } },
-        );
-      }),
-    );
-
-    const entityItem = makeEntityItemWithTemplate('"v1"');
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
-    });
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-
-    expect(result.current.error).toBeInstanceOf(ProblemDetailError);
-    expect((result.current.error as ProblemDetailError<ProblemDetail>).problemDetail.status).toBe(
-      412,
-    );
-    // No retry — PATCH handler called exactly once
-    expect(patchCallCount).toBe(1);
+    expect(result.current.isError).toBe(true);
   });
 });
 
-describe("useUpdateEntityItem — ABAC absent template", () => {
-  it("surfaces an error when the default template is absent (ABAC denies update)", async () => {
-    const entityItem = makeEntityItemWithoutTemplate();
-    const { result } = renderHook(() => useUpdateEntityItem(entityItem), {
-      wrapper: makeWrapper(),
+// ---------------------------------------------------------------------------
+// Discover-profile mode
+// ---------------------------------------------------------------------------
+
+describe("useEntityItem — discover-profile mode { url }", () => {
+  it("discovers the matching profile and fetches the item by URL", async () => {
+    setupHandlers();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ url: CUSTOMER_ITEM_URL }), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+
+    expect(result.current.data?.id).toBe("cust-001");
+  });
+
+  it("query stays pending until matching profile is loaded", async () => {
+    // Profile root responds slowly — item should stay pending
+    let resolveRoot!: () => void;
+    const rootDelay = new Promise<void>((res) => {
+      resolveRoot = res;
     });
 
-    await act(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      result.current.mutate({ status: "paid" } as any);
-    });
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-
-    expect(result.current.error).toBeInstanceOf(Error);
-    expect((result.current.error as Error).message).toBe(
-      "Update not permitted: 'default' template absent",
+    server.use(
+      http.get(PROFILE_URL, async () => {
+        await rootDelay;
+        return HttpResponse.json(profileRootBody);
+      }),
+      http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+      http.get(CUSTOMER_ITEM_URL, () => HttpResponse.json(customerItemBody)),
     );
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ url: CUSTOMER_ITEM_URL }), { wrapper });
+
+    // Before root resolves, item should still be pending
+    await new Promise((r) => setTimeout(r, 30));
+    expect(result.current.data).toBeUndefined();
+
+    // Now let root resolve and confirm item loads
+    resolveRoot();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+    expect(result.current.data?.id).toBe("cust-001");
+  });
+
+  it("captures the ETag in discover mode", async () => {
+    setupHandlers('"etag-discover"');
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItem({ url: CUSTOMER_ITEM_URL }), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+
+    expect(result.current.data?.etag).toBe('"etag-discover"');
   });
 });

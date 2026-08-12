@@ -1,8 +1,7 @@
-import { type QueryClient, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { SimpleLink } from "@contentgrid/hal";
 import { EntityItem } from "../../accessors/entity-item";
 import type ProfileEntity from "../../accessors/entity-profile";
-import type { TypedFetch } from "../../api/client";
 import { fetchHal } from "../../api/hal-client";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape } from "../../shapes";
@@ -84,19 +83,4 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
     enabled: !!url && !!profileEntity,
     ...options?.queryOptionsOverride,
   });
-}
-
-/**
- * Non-hook counterpart to `useEntityItem`'s known-profile mode, for use in
- * route `loader`s (which run before any component mounts, so hooks aren't
- * available). Mirrors `ensureProfileEntity` (`use-profile-entity.ts`).
- */
-export async function ensureEntityItem(
-  queryClient: QueryClient,
-  apiFetch: TypedFetch,
-  profileEntity: ProfileEntity,
-  entityId: string,
-): Promise<void> {
-  const url = profileEntity.itemUrl(entityId);
-  await queryClient.ensureQueryData(EntityItem.fetchByUrlQuery(apiFetch, url, profileEntity));
 }

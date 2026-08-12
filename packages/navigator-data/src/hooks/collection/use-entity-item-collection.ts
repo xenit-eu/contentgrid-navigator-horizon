@@ -1,16 +1,10 @@
-import {
-  type QueryClient,
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
-import type { TypedFetch } from "../../api/client";
 import type { SearchRequestSpec } from "../../api/requests";
-import { resolveCursorHref } from "../../search/pagination-links";
+import { resolveTrustedCollectionUrl } from "../../search/pagination-links";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
 
@@ -19,18 +13,21 @@ export interface UseEntityItemCollectionOptions {
 }
 
 /**
+ * Parameters for fetching a collection by URL.
+ */
+export interface EntityCollectionByUrl {
+  /** Full collection URL (from search Request or next/prev links) */
+  url: string;
+  /** Entity profile for schema metadata */
+  profileEntity: ProfileEntity;
+}
+
+/**
  * Parameters for fetching a collection with the template's default empty search.
- * `searchParams` carries the route's `cursor` value (if present) as a standard
- * `URLSearchParams` — the caller builds it from the route's validated search
- * state. `cursor` is an opaque token (e.g. `0p4jtvf1`), never a URL; it's
- * resolved back to the literal href it was minted from via the cursor
- * registry (`src/search/pagination-links.ts`) — never decoded or rebuilt.
  */
 export interface EntityCollectionDefault {
   /** Entity profile with search template */
   profileEntity: ProfileEntity;
-  /** URLSearchParams carrying `cursor`, or undefined for the first page */
-  searchParams?: URLSearchParams;
 }
 
 /**
@@ -42,16 +39,26 @@ export interface EntityCollectionBySearch {
   profileEntity: ProfileEntity;
   /** Search parameters (filters, sort, pagination). Query is disabled when undefined. */
   searchValues: HalFormValues<SearchRequestSpec> | undefined;
-  /** URLSearchParams carrying `cursor`, or undefined for the first page */
-  searchParams?: URLSearchParams;
 }
 
 /**
  * Parameters for useEntityCollection hook.
  */
-export type EntityCollectionParams = EntityCollectionDefault | EntityCollectionBySearch;
+export type EntityCollectionParams =
+  | EntityCollectionByUrl
+  | EntityCollectionDefault
+  | EntityCollectionBySearch;
 
-function isBySearch(params: EntityCollectionParams): params is EntityCollectionBySearch {
+/**
+ * Type guard to check if params specify URL-based fetching.
+ */
+function isByUrl(params: EntityCollectionParams): params is EntityCollectionByUrl {
+  return "url" in params;
+}
+
+function isBySearch(
+  params: EntityCollectionDefault | EntityCollectionBySearch,
+): params is EntityCollectionBySearch {
   return "searchValues" in params;
 }
 
@@ -59,23 +66,29 @@ function isBySearch(params: EntityCollectionParams): params is EntityCollectionB
  * React hook to fetch and manage an entity collection.
  *
  * Supports two modes:
- * - **Default**: Fetch the template's empty search, optionally paginated via `searchParams.get("cursor")`
- * - **By Search**: Transform search values to a Request URL, optionally paginated via `searchParams.get("cursor")`
+ * - **By URL**: Fetch a specific page using a cursor URL (from next/prev links or router params)
+ * - **By Search**: Transform search values to a Request URL, then fetch (defaults to empty search)
  *
- * @param params - `{ profileEntity, searchParams? }` or `{ profileEntity, searchValues, searchParams? }`
+ * @param params - Either `{ url, profileEntity }` or `{ profileEntity, searchValues? }`
  * @returns TanStack Query result with EntityItemCollection data
  *
  * @example
  * ```typescript
- * // Default collection (empty search), optionally on a given page
+ * // Default collection (empty search)
  * const { data: profile } = useProfileEntity({ name: "invoice" });
- * const { data: collection } = useEntityItemCollection({ profileEntity: profile!, searchParams });
+ * const { data: collection } = useEntityCollection({ profileEntity: profile! });
  *
  * // With search filters
  * const searchValues = createValues(profile.searchTemplate.template);
- * const { data: filtered } = useEntityItemCollection({
+ * const { data: filtered } = useEntityCollection({
  *   profileEntity: profile!,
  *   searchValues
+ * });
+ *
+ * // By URL (pagination)
+ * const { data: nextPage } = useEntityCollection({
+ *   url: collection.nextHref!,
+ *   profileEntity: profile!
  * });
  * ```
  */
@@ -84,21 +97,32 @@ function isBySearch(params: EntityCollectionParams): params is EntityCollectionB
  * without calling any hooks. Shared by both collection hooks so each can call
  * its TanStack hook exactly once, unconditionally (rules-of-hooks safe).
  *
- * Never constructs a URL: the first-page URL always comes verbatim from
- * `profileEntity.searchEntityRequest(...)` (the template-driven request
- * builder); a cursor page's URL always comes verbatim from the cursor
- * registry — the exact `nextHref`/`prevHref` the server returned when the
- * token was minted. An unrecognised token (bookmark, share, reload — the
- * registry is session-scoped) falls back to the first-page URL rather than
- * guessing at one.
+ * @param apiBaseUrl - Absolute API base URL (the trusted `profileUrl` from
+ *   `useNavigatorData()`), used as the trust anchor for by-url requests. It is
+ *   always absolute, unlike `profileEntity.collectionUrl` which may be a
+ *   relative path — anchoring on a relative URL would make `new URL(...)`
+ *   throw for every cursor and silently disable pagination entirely.
  */
 function resolveCollectionRequest(
   params: EntityCollectionParams,
-  queryClient: QueryClient,
+  apiBaseUrl: string,
 ): {
   url: string;
   enabled: boolean;
 } {
+  // URL-based fetch: only trust URLs that resolve to the same origin as the
+  // trusted API base. A caller-supplied cursor (e.g. from bookmarked or
+  // crafted URL state) could otherwise point apiFetch — which unconditionally
+  // attaches the bearer token — at an attacker-controlled origin. Discard and
+  // fall back to the normal first-page request instead of throwing.
+  if (isByUrl(params)) {
+    const trustedUrl = resolveTrustedCollectionUrl(params.url, apiBaseUrl);
+    if (trustedUrl !== null) {
+      return { url: trustedUrl, enabled: true };
+    }
+    return resolveCollectionRequest({ profileEntity: params.profileEntity }, apiBaseUrl);
+  }
+
   let request: ReturnType<ProfileEntity["searchEntityRequest"]> | null;
   if (isBySearch(params)) {
     // Search-based fetch: undefined → disabled, explicit values → fetch.
@@ -113,41 +137,17 @@ function resolveCollectionRequest(
       : null;
   }
 
-  if (!request) return { url: "", enabled: false };
-  const cursor = params.searchParams?.get("cursor");
-  if (!cursor) return { url: request.url, enabled: true };
-
-  const cursorHref = resolveCursorHref(queryClient, params.profileEntity.name, cursor);
-  return { url: cursorHref ?? request.url, enabled: true };
-}
-
-/**
- * Non-hook counterpart to `useEntityItemCollection`, for use in route
- * `loader`s (which run before any component mounts, so hooks aren't
- * available). Mirrors `ensureProfileEntity` (`use-profile-entity.ts`).
- */
-export async function ensureEntityItemCollection(
-  queryClient: QueryClient,
-  apiFetch: TypedFetch,
-  params: EntityCollectionParams,
-): Promise<void> {
-  const { url, enabled } = resolveCollectionRequest(params, queryClient);
-  if (!enabled) return;
-
-  await queryClient.ensureQueryData(
-    EntityItemCollection.fetchByUrlQuery(apiFetch, url, params.profileEntity),
-  );
+  return { url: request?.url ?? "", enabled: !!request };
 }
 
 export function useEntityItemCollection(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch } = useNavigatorData();
-  const queryClient = useQueryClient();
-  const { url, enabled } = resolveCollectionRequest(params, queryClient);
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
 
-  return useQuery({
+  return useQuery<EntityItemCollection, Error>({
     ...EntityItemCollection.fetchByUrlQuery(
       apiFetch,
       url,
@@ -162,13 +162,13 @@ export function useEntityItemCollection(
  * React hook for infinite scroll / "load more" pattern.
  *
  * Supports two modes:
- * - **Default**: Start infinite scroll from the template's empty search
+ * - **By URL**: Start infinite scroll from a specific URL
  * - **By Search**: Transform search values to initial URL (defaults to empty search)
  *
  * Fetches pages progressively using HAL next links. Each page is appended
  * to the previous pages, building up a continuous list.
  *
- * @param params - `{ profileEntity, searchParams? }` or `{ profileEntity, searchValues, searchParams? }`
+ * @param params - Either `{ url, profileEntity }` or `{ profileEntity, searchValues? }`
  * @returns TanStack Infinite Query result with pages array
  *
  * @example
@@ -184,6 +184,12 @@ export function useEntityItemCollection(
  * const { data } = useEntityItemCollectionInfiniteScroll({
  *   profileEntity: profile!,
  *   searchValues
+ * });
+ *
+ * // Start from specific URL
+ * const { data } = useEntityItemCollectionInfiniteScroll({
+ *   url: someUrl,
+ *   profileEntity: profile!
  * });
  *
  * // Render all pages
@@ -205,9 +211,8 @@ export function useEntityItemCollectionInfiniteScroll(
   params: EntityCollectionParams,
   options?: UseEntityItemCollectionOptions,
 ) {
-  const { apiFetch } = useNavigatorData();
-  const queryClient = useQueryClient();
-  const { url, enabled } = resolveCollectionRequest(params, queryClient);
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const { url, enabled } = resolveCollectionRequest(params, profileUrl);
 
   return useInfiniteQuery({
     ...EntityItemCollection.infiniteQuery(

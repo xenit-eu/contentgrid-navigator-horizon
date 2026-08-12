@@ -4,13 +4,11 @@ export {
   useProfileEntities,
   useLoadedProfileEntities,
   useProfileEntity,
-  ensureProfileEntity,
 } from "./profile/use-profile-entity";
 export type { ProfileFilter } from "./profile/use-profile-entity";
 export {
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,
-  ensureEntityItemCollection,
 } from "./collection/use-entity-item-collection";
 export type {
   EntityCollectionParams,
@@ -18,7 +16,7 @@ export type {
   UseEntityItemCollectionOptions,
 } from "./collection/use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./collection/use-recent-items";
-export { useEntityItem, ensureEntityItem } from "./item/use-entity-item";
+export { useEntityItem } from "./item/use-entity-item";
 export type {
   UseEntityItemOptions,
   UseEntityItemParams,

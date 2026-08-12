@@ -6,7 +6,6 @@ import {
   type EntitySearchState,
   type ProfileEntity,
   createValues,
-  ensureEntityItemCollection,
   extractCursorFromHref,
   getErrorMessage,
   registerCursorHref,
@@ -50,7 +49,6 @@ interface EntityDetailLoaderContext extends AppRouterContext {
 
 export async function ensureEntityDetailLoaderData(
   context: EntityDetailLoaderContext,
-  cursor: string | undefined,
 ): Promise<void> {
   const { queryClient, apiFetch, profileUrl, profileEntity } = context;
   // apiFetch/profileUrl stay null until the auth-gated router-context bridge in
@@ -60,8 +58,7 @@ export async function ensureEntityDetailLoaderData(
   if (!apiFetch || !profileUrl || !profileEntity) return;
 
   try {
-    const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
-    await ensureEntityItemCollection(queryClient, apiFetch, { profileEntity, searchParams });
+    await queryClient.ensureQueryData(queryClient, apiFetch, { profileEntity, searchParams });
   } catch {
     // Swallowed: an uncaught loader rejection would block EntityDetailPage
     // from mounting at all. useEntityItemCollection's own isError handling
