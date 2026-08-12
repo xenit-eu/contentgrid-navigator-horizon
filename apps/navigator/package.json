@@ -35,7 +35,7 @@
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
-    "@playwright/test": "1.60.0",
+    "@playwright/test": "1.61.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query-devtools": "5.101.0",
     "@tanstack/router-plugin": "^1.114.0",

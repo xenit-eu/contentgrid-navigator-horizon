@@ -35,6 +35,14 @@
     "./entity-profile-gate": {
       "import": "./src/shells/entity-profile-gate/index.ts",
       "types": "./src/shells/entity-profile-gate/index.ts"
+    },
+    "./navigator-header": {
+      "import": "./src/navigator-header/index.ts",
+      "types": "./src/navigator-header/index.ts"
+    },
+    "./problem-details": {
+      "import": "./src/problem-details/index.ts",
+      "types": "./src/problem-details/index.ts"
     }
   },
   "scripts": {
