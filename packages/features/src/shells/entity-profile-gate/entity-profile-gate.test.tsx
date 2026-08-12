@@ -17,9 +17,13 @@ import {
   createApiClient,
   createContentClient,
 } from "@contentgrid/navigator-data";
-import { server } from "../../test-setup";
+import { server } from "../../../test-setup";
+import {
+  PROFILE_URL,
+  invoiceProfileHandler,
+  profileRootHandler,
+} from "../../entity-browser/test-support";
 import { EntityProfileGate } from "./entity-profile-gate";
-import { PROFILE_URL, invoiceProfileHandler, profileRootHandler } from "./test-support";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 

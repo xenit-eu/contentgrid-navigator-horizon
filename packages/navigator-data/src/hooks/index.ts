@@ -4,6 +4,7 @@ export {
   useProfileEntities,
   useLoadedProfileEntities,
   useProfileEntity,
+  ensureProfileEntity,
 } from "./profile/use-profile-entity";
 export type { ProfileFilter } from "./profile/use-profile-entity";
 export {

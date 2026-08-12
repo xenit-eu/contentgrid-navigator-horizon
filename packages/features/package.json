@@ -12,10 +12,6 @@
       "import": "./src/entity-browser/index.ts",
       "types": "./src/entity-browser/index.ts"
     },
-    "./auth-shell": {
-      "import": "./src/auth-shell/index.ts",
-      "types": "./src/auth-shell/index.ts"
-    },
     "./recently-created": {
       "import": "./src/recently-created/index.tsx",
       "types": "./src/recently-created/index.tsx"
@@ -29,8 +25,16 @@
       "types": "./src/_experimental-placeholder/index.tsx"
     },
     "./router-shell": {
-      "import": "./src/router-shell/index.ts",
-      "types": "./src/router-shell/index.ts"
+      "import": "./src/shells/router-shell/index.ts",
+      "types": "./src/shells/router-shell/index.ts"
+    },
+    "./auth-shell": {
+      "import": "./src/shells/auth-shell/index.tsx",
+      "types": "./src/shells/auth-shell/index.tsx"
+    },
+    "./entity-profile-gate": {
+      "import": "./src/shells/entity-profile-gate/index.ts",
+      "types": "./src/shells/entity-profile-gate/index.ts"
     }
   },
   "scripts": {

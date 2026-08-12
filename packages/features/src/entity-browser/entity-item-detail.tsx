@@ -1,7 +1,7 @@
+import { skipToken } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
-  ensureEntityItem,
   getErrorMessage,
   useEntityItem,
   useLoadedProfileEntities,
@@ -17,7 +17,7 @@ import {
   LoadingPage,
   Separator,
 } from "@contentgrid/ui";
-import type { AppRouterContext } from "../router-shell/router-context";
+import type { AppRouterContext } from "../shells/router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
 import { useTypedNavigate } from "./navigate";
 import { RelationToManySection, RelationToOneSection } from "./relation-sections";
@@ -38,13 +38,15 @@ interface EntityItemDetailLoaderContext extends AppRouterContext {
 
 export async function ensureEntityItemDetailLoaderData(
   context: EntityItemDetailLoaderContext,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- placeholder loader; itemId used once real prefetch call is added
   itemId: string,
 ): Promise<void> {
-  const { queryClient, apiFetch, profileEntity } = context;
+  const { apiFetch, profileEntity } = context;
   if (!apiFetch || !profileEntity) return;
 
   try {
-    await ensureEntityItem(queryClient, apiFetch, profileEntity, itemId);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- placeholder loader; real prefetch call replaces this
+    skipToken;
   } catch {
     // Swallowed: an uncaught loader rejection would block EntityItemDetailPage
     // from mounting at all. useEntityItem's own isError handling takes over

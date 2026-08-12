@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppAuthResult } from "@contentgrid/navigator-data";
 import { useAppAuth } from "@contentgrid/navigator-data";
-import { AuthShell } from "./auth-shell";
+import { AuthShell } from ".";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();

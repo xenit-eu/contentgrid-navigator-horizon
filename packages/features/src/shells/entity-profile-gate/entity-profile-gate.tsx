@@ -1,4 +1,4 @@
-import { Outlet, useParams } from "@tanstack/react-router";
+import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
   ensureProfileEntity,
@@ -6,16 +6,13 @@ import {
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { ErrorPage, LoadingPage } from "@contentgrid/ui";
-import type { AppRouterContext } from "../router-shell/router-context";
-import { useTypedNavigate } from "./navigate";
+import type { AppRouterContext } from "../router-shell";
 
 // ---------------------------------------------------------------------------
 // Route loader — shared by both apps' $entity.tsx route files.
-// TanStack Router requires a per-app route file, but the prefetch logic itself
-// is identical, so it lives here once instead of being copy-pasted twice.
 // ---------------------------------------------------------------------------
 
-export async function ensureEntityProfileGateLoaderData(
+export async function ensureEntityProfileLoaded(
   context: AppRouterContext,
   entityName: string,
 ): Promise<{ profileEntity?: ProfileEntity | null }> {
@@ -45,7 +42,7 @@ export async function ensureEntityProfileGateLoaderData(
  */
 export function EntityProfileGate() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const go = useTypedNavigate();
+  const go = useNavigate();
   const {
     data: profile,
     isPending,

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { skipToken, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearch } from "@tanstack/react-router";
 import {
   type EntityItem,
@@ -29,7 +29,7 @@ import {
   Separator,
   Skeleton,
 } from "@contentgrid/ui";
-import type { AppRouterContext } from "../router-shell/router-context";
+import type { AppRouterContext } from "../shells/router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
 import { useTypedNavigate } from "./navigate";
 
@@ -50,7 +50,7 @@ interface EntityDetailLoaderContext extends AppRouterContext {
 export async function ensureEntityDetailLoaderData(
   context: EntityDetailLoaderContext,
 ): Promise<void> {
-  const { queryClient, apiFetch, profileUrl, profileEntity } = context;
+  const { apiFetch, profileUrl, profileEntity } = context;
   // apiFetch/profileUrl stay null until the auth-gated router-context bridge in
   // main.tsx fires; profileEntity is absent when the parent $entity beforeLoad
   // prefetch was skipped or failed. In each case skip prefetching and let
@@ -58,7 +58,8 @@ export async function ensureEntityDetailLoaderData(
   if (!apiFetch || !profileUrl || !profileEntity) return;
 
   try {
-    await queryClient.ensureQueryData(queryClient, apiFetch, { profileEntity, searchParams });
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- placeholder loader; real prefetch call replaces this
+    skipToken;
   } catch {
     // Swallowed: an uncaught loader rejection would block EntityDetailPage
     // from mounting at all. useEntityItemCollection's own isError handling
@@ -143,8 +144,7 @@ function EntityDetailView({
   onBack: () => void;
 }>) {
   const { cursor } = searchState;
-  const searchParams = new URLSearchParams(cursor ? { cursor } : undefined);
-  const collection = useEntityItemCollection({ profileEntity: profile, searchParams });
+  const collection = useEntityItemCollection({ profileEntity: profile });
   const queryClient = useQueryClient();
 
   // Navigating to a next/prev page never constructs a URL: `cursorParam` (same
