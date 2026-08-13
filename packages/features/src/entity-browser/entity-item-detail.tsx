@@ -2,7 +2,7 @@ import { skipToken } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
-  getErrorMessage,
+  toProblemDisplayModel,
   useEntityItem,
   useLoadedProfileEntities,
   useProfileEntity,
@@ -13,10 +13,10 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  ErrorPage,
   LoadingPage,
   Separator,
 } from "@contentgrid/ui";
+import { ProblemAlert } from "../problem-details";
 import type { AppRouterContext } from "../shells/router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
 import { useTypedNavigate } from "./navigate";
@@ -125,9 +125,7 @@ function EntityItemDetailView({
 
       {item.isPending && <LoadingPage rows={4} />}
 
-      {item.isError && (
-        <ErrorPage message={`Failed to load item: ${getErrorMessage(item.error)}`} />
-      )}
+      {item.isError && <ProblemAlert model={toProblemDisplayModel(item.error)}></ProblemAlert>}
 
       {item.isSuccess && (
         <>

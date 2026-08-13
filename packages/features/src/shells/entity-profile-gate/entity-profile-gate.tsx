@@ -2,10 +2,11 @@ import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
   ensureProfileEntity,
-  getErrorMessage,
+  toProblemDisplayModel,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { ErrorPage, LoadingPage } from "@contentgrid/ui";
+import { ProblemAlert } from "../../problem-details";
 import type { AppRouterContext } from "../router-shell";
 
 // ---------------------------------------------------------------------------
@@ -48,7 +49,6 @@ export function EntityProfileGate() {
     isPending,
     isError,
     error,
-    refetch,
   } = useProfileEntity({
     name: entityName,
   });
@@ -60,13 +60,7 @@ export function EntityProfileGate() {
   // A fetch failure (network/server error) is distinct from "not found" —
   // the former is retriable, the latter is a dead end pointing the user home.
   if (isError) {
-    return (
-      <ErrorPage
-        message={`Failed to load "${entityName}": ${getErrorMessage(error)}`}
-        onRetry={() => refetch()}
-        retryLabel="Retry"
-      />
-    );
+    return <ProblemAlert model={toProblemDisplayModel(error)} />;
   }
 
   if (!profile) {

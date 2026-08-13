@@ -7,8 +7,8 @@ import {
   type ProfileEntity,
   createValues,
   extractCursorFromHref,
-  getErrorMessage,
   registerCursorHref,
+  toProblemDisplayModel,
   useCreateEntityItem,
   useEntityItemCollection,
   useProfileEntity,
@@ -29,6 +29,7 @@ import {
   Separator,
   Skeleton,
 } from "@contentgrid/ui";
+import { ProblemAlert } from "../problem-details";
 import type { AppRouterContext } from "../shells/router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
 import { useTypedNavigate } from "./navigate";
@@ -218,7 +219,7 @@ function EntityDetailView({
           reset to the first page whenever a cursor was active. */}
       {collection.isError && (
         <ErrorPage
-          message={`Failed to load ${profile.pluralName}: ${getErrorMessage(collection.error)}`}
+          message={`Failed to load ${profile.pluralName}: ${toProblemDisplayModel(collection.error)}`}
           onRetry={cursor ? () => onSearchStateChange({ cursor: undefined }) : undefined}
           retryLabel="Back to first page"
         />
@@ -284,7 +285,7 @@ function CreateEntityButton({ profile }: Readonly<{ profile: ProfileEntity }>) {
       <Button size="sm" disabled={isPending} onClick={handleCreate}>
         {isPending ? "Creating…" : "Create"}
       </Button>
-      {error && <p className="text-xs text-destructive">{getErrorMessage(error)}</p>}
+      {error && <ProblemAlert model={toProblemDisplayModel(error)}></ProblemAlert>}
     </div>
   );
 }
