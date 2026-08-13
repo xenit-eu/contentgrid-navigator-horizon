@@ -18,10 +18,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { PROFILE_URL } from "@contentgrid/navigator-data/test-fixtures/msw/entity-browser-fixtures";
 import { EntityListLayout } from "./app-layout";
-import { EntityDetailPage } from "./entity-detail";
 import { EntityItemDetailPage } from "./entity-item-detail";
-import { EntityOverviewPage } from "./entity-overview";
-import { EntityProfileGate } from "./entity-profile-gate";
 
 // Hand-authored profile HAL envelopes and their MSW handlers live in
 // navigator-data/test-fixtures/msw/entity-browser-fixtures — shared scaffolding

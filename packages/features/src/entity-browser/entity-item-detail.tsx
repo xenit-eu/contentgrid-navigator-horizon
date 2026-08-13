@@ -13,9 +13,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  LoadingPage,
   Separator,
 } from "@contentgrid/ui";
+import { LoadingPage } from "../app-info-pages/loading-page";
 import { ProblemAlert } from "../problem-details";
 import type { AppRouterContext } from "../shells/router-shell/router-context";
 import { formatAttributeValue } from "./attribute-format";
@@ -123,7 +123,7 @@ function EntityItemDetailView({
 
       <h1 className="text-2xl font-bold tracking-tight">{profile.pluralName} detail</h1>
 
-      {item.isPending && <LoadingPage rows={4} />}
+      {item.isPending && <LoadingPage />}
 
       {item.isError && <ProblemAlert model={toProblemDisplayModel(item.error)}></ProblemAlert>}
 

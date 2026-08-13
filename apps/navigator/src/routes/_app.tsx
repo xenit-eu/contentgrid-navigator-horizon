@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EntityListLayout } from "@contentgrid/features/entity-browser";
+import { SideBarLayout } from "@contentgrid/features/layout";
 
 export const Route = createFileRoute("/_app")({
-  component: EntityListLayout,
+  component: SideBarLayout,
 });

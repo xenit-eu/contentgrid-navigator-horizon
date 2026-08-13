@@ -37,9 +37,9 @@ import {
   Input,
   Skeleton,
 } from "@contentgrid/ui";
+import { buildColumns, buildRows } from "../preferences";
 import { ProblemAlert } from "../problem-details";
 import { formatAttributeValue } from "./attribute-format";
-import { buildColumns, buildRows } from "./entity-detail";
 import { useTypedNavigate } from "./navigate";
 
 // ---------------------------------------------------------------------------

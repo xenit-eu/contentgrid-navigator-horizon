@@ -47,6 +47,18 @@
     "./app-info-pages": {
       "import": "./src/app-info-pages/index.ts",
       "types": "./src/app-info-pages/index.ts"
+    },
+    "./dashboard": {
+      "import": "./src/dashboard/index.ts",
+      "types": "./src/dashboard/index.ts"
+    },
+    "./layout": {
+      "import": "./src/layout/index.ts",
+      "types": "./src/layout/index.ts"
+    },
+    "./entity-item-collection": {
+      "import": "./src/entity-item-collection/index.ts",
+      "types": "./src/entity-item-collection/index.ts"
     }
   },
   "scripts": {

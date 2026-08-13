@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExperimentalSandbox } from "@contentgrid/features/_experimental-placeholder";
 import { EntityOverviewPage } from "@contentgrid/features/entity-browser";
+import { PageLayout } from "@contentgrid/features/layout";
 import { RecentlyCreatedList } from "@contentgrid/features/recently-created";
 import { useProfileEntities } from "@contentgrid/navigator-data";
 
@@ -10,11 +11,13 @@ export const Route = createFileRoute("/_app/")({
 
 function IndexPage() {
   return (
-    <div className="space-y-8">
-      <EntityOverviewPage />
-      <RecentlyCreatedSection />
-      <ExperimentalSandbox />
-    </div>
+    <PageLayout>
+      <div className="space-y-8">
+        <EntityOverviewPage />
+        <RecentlyCreatedSection />
+        <ExperimentalSandbox />
+      </div>
+    </PageLayout>
   );
 }
 

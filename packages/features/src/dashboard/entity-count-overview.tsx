@@ -1,17 +1,17 @@
+import { useNavigate } from "@tanstack/react-router";
 import {
   type ProfileEntity,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { EntityCard, Skeleton } from "@contentgrid/ui";
-import { useTypedNavigate } from "./navigate";
 
 // ---------------------------------------------------------------------------
 // EntityOverviewPage — index route component (grid of entity cards)
 // ---------------------------------------------------------------------------
 
-export function EntityOverviewPage() {
-  const go = useTypedNavigate();
+export function EntityCountOverview() {
+  const go = useNavigate();
 
   return (
     <EntityOverview
