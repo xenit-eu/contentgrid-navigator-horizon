@@ -9,7 +9,7 @@ import {
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
-import { NotFoundPage } from "./not-found-page";
+import { NotFoundPage } from "../app-info-pages/not-found-page";
 
 function renderNotFound(initialEntry = "/does-not-exist") {
   const rootRoute = createRootRoute({ component: () => <Outlet /> });

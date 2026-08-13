@@ -43,6 +43,10 @@
     "./problem-details": {
       "import": "./src/problem-details/index.ts",
       "types": "./src/problem-details/index.ts"
+    },
+    "./app-info-pages": {
+      "import": "./src/app-info-pages/index.ts",
+      "types": "./src/app-info-pages/index.ts"
     }
   },
   "scripts": {

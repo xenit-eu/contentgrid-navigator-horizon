@@ -5,8 +5,7 @@ import {
   toProblemDisplayModel,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
-import { ErrorPage, LoadingPage } from "@contentgrid/ui";
-import { ProblemAlert } from "../../problem-details";
+import { ErrorPage, LoadingPage } from "../../app-info-pages";
 import type { AppRouterContext } from "../router-shell";
 
 // ---------------------------------------------------------------------------
@@ -54,19 +53,19 @@ export function EntityProfileGate() {
   });
 
   if (isPending) {
-    return <LoadingPage rows={5} />;
+    return <LoadingPage />;
   }
 
   // A fetch failure (network/server error) is distinct from "not found" —
   // the former is retriable, the latter is a dead end pointing the user home.
   if (isError) {
-    return <ProblemAlert model={toProblemDisplayModel(error)} />;
+    return <ErrorPage model={toProblemDisplayModel(error)} />;
   }
 
   if (!profile) {
     return (
       <ErrorPage
-        message={`"${entityName}" is not a known entity.`}
+        model={toProblemDisplayModel(`Profile ${entityName} does not exist.`)}
         onRetry={() => go({ to: "/", search: {} })}
         retryLabel="Back to home"
       />

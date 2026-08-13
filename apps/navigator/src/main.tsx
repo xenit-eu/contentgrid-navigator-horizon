@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { NotFoundPage } from "@contentgrid/features/app-info-pages";
 import { mountNavigatorApp } from "../../../packages/features/src/shells/router-shell";
 import type { AppRouterContext } from "../../../packages/features/src/shells/router-shell";
 import "./index.css";
@@ -10,7 +11,7 @@ const queryClient = new QueryClient();
 const router = createRouter({
   routeTree,
   context: { queryClient, apiFetch: null, profileUrl: null } satisfies AppRouterContext,
-  // defaultNotFoundComponent: NotFoundPage,
+  defaultNotFoundComponent: NotFoundPage,
 });
 
 declare module "@tanstack/react-router" {
