@@ -1427,7 +1427,6 @@ describe("EntityItemDetailPage — RelationToOneSection", () => {
 
     expect(await screen.findByText("Conflict")).toBeInTheDocument();
     expect(screen.getByText("This supplier is still referenced elsewhere.")).toBeInTheDocument();
-    expect(screen.getByText("required-relation")).toBeInTheDocument();
   });
 
   it("shows field-level validation errors when linking fails", async () => {
@@ -1461,7 +1460,7 @@ describe("EntityItemDetailPage — RelationToOneSection", () => {
             type: "https://contentgrid.cloud/problems/input/validation",
             errors: [
               {
-                property: "supplier",
+                field: "supplier",
                 title: "Invalid value",
                 detail: "must be a valid supplier",
               },
@@ -1684,7 +1683,7 @@ describe("EntityItemDetailPage — RelationToManySection", () => {
             type: "https://contentgrid.cloud/problems/input/validation",
             errors: [
               {
-                property: "lineItem",
+                field: "lineItem",
                 title: "Invalid value",
                 detail: "must reference an existing line item",
               },

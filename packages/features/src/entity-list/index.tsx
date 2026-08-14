@@ -9,7 +9,6 @@ import {
   type EntityItemToManyRelation,
   type EntityItemToOneRelation,
   type EntitySearchState,
-  ProblemDetailError,
   type ProfileAttribute,
   ProfileAttributeSearchType,
   ProfileAttributeType,
@@ -17,10 +16,10 @@ import {
   applyFilterValues,
   buildFilterProperties,
   createValues,
-  extractFieldErrors,
   findInvalidFilterKeys,
   mintHrefToken,
   resolveHrefToken,
+  toProblemDisplayModel,
   useAddToManyRelation,
   useClearRelation,
   useCreateEntityItem,
@@ -80,6 +79,7 @@ import {
   SidebarTrigger,
   Skeleton,
 } from "@contentgrid/ui";
+import { ProblemAlert } from "../problem-details";
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -616,7 +616,7 @@ function CreateEntityButton({ profile }: Readonly<{ profile: ProfileEntity }>) {
       <Button size="sm" disabled={isPending} onClick={handleCreate}>
         {isPending ? "Creating…" : "Create"}
       </Button>
-      {error && <p className="text-xs text-destructive">{error.message}</p>}
+      {error && <ProblemAlert model={toProblemDisplayModel(error)} />}
     </div>
   );
 }
@@ -811,7 +811,7 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
           )}
         </div>
       </div>
-      {mutationError && <MutationErrorDisplay error={mutationError} />}
+      {mutationError && <ProblemAlert model={toProblemDisplayModel(mutationError)} />}
       {result.isPending && <Skeleton className="h-12 w-full rounded-md" />}
       {result.isError && (
         <p className="text-xs text-destructive">Failed to load: {result.error.message}</p>
@@ -938,7 +938,7 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
           )}
         </div>
       </div>
-      {mutationError && <MutationErrorDisplay error={mutationError} />}
+      {mutationError && <ProblemAlert model={toProblemDisplayModel(mutationError)} />}
       {result.isPending && <Skeleton className="h-12 w-full rounded-md" />}
       {result.isError && (
         <p className="text-xs text-destructive">Failed to load: {result.error.message}</p>
@@ -1122,39 +1122,6 @@ function RelationItemSearchDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// MutationErrorDisplay — structured error from a failed relation mutation
-// ---------------------------------------------------------------------------
-
-function MutationErrorDisplay({ error }: Readonly<{ error: Error }>) {
-  if (!(error instanceof ProblemDetailError)) {
-    return <p className="text-xs text-destructive">{error.message}</p>;
-  }
-  const { status, title, detail, type } = error.problemDetail;
-  const fieldErrors = extractFieldErrors(error);
-  const problemTypeLabel = type ? type.split("/").findLast(Boolean) : undefined;
-  return (
-    <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive space-y-1">
-      <div className="flex items-baseline gap-2">
-        <span className="font-semibold tabular-nums">{status}</span>
-        <span className="font-medium">{title}</span>
-        {detail && detail !== title && <span>{detail}</span>}
-      </div>
-      {problemTypeLabel && <p className="font-mono text-muted-foreground">{problemTypeLabel}</p>}
-      {fieldErrors.length > 0 && (
-        <ul className="mt-1 list-inside list-disc space-y-0.5">
-          {fieldErrors.map((fe) => (
-            <li key={`${fe.property ?? ""}-${fe.detail ?? fe.title}`}>
-              {fe.property && <span className="font-medium">{fe.property}: </span>}
-              {fe.detail ?? fe.title}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
 

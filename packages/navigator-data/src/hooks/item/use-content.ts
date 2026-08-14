@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
+import { checkResponse } from "@contentgrid/problem-details";
 import { EntityItem } from "../../accessors/entity-item";
 import { parseContentDisposition } from "../../api/content-types";
-import { checkResponse } from "../../api/errors";
 import { fetchHal, fetchVoid } from "../../api/hal-client";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape } from "../../shapes";
