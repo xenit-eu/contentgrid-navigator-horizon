@@ -8,10 +8,6 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./entity-browser": {
-      "import": "./src/entity-browser/index.ts",
-      "types": "./src/entity-browser/index.ts"
-    },
     "./recently-created": {
       "import": "./src/recently-created/index.tsx",
       "types": "./src/recently-created/index.tsx"

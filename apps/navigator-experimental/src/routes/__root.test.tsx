@@ -24,24 +24,6 @@ vi.mock("@contentgrid/dev-tools", () => ({
   ApplicationSelectorPage: () => <div>Application Selector</div>,
 }));
 
-vi.mock("@contentgrid/features/entity-browser", async () => {
-  const router =
-    await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
-  return {
-    EntityListLayout: () => <router.Outlet />,
-    EntityOverviewPage: () => <div data-testid="entity-overview" />,
-    EntityProfileGate: () => <router.Outlet />,
-    EntityDetailPage: () => {
-      const { entity } = router.useParams({ strict: false }) as { entity: string };
-      return <div data-testid="entity-detail" data-entity={entity} />;
-    },
-    EntityItemDetailPage: () => <div data-testid="entity-item-detail" />,
-    ensureEntityDetailLoaderData: vi.fn(),
-    ensureEntityProfileGateLoaderData: vi.fn().mockResolvedValue({}),
-    ensureEntityItemDetailLoaderData: vi.fn(),
-  };
-});
-
 vi.mock("@contentgrid/features/_experimental-placeholder", () => ({
   ExperimentalSandbox: () => null,
 }));

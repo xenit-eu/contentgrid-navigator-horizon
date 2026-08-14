@@ -24,27 +24,6 @@ vi.mock("@contentgrid/ui", () => ({
   ),
 }));
 
-vi.mock("@contentgrid/features/entity-browser", async () => {
-  const router =
-    await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
-  return {
-    EntityListLayout: () => <router.Outlet />,
-    EntityOverviewPage: () => <div data-testid="entity-overview" />,
-    EntityProfileGate: () => <router.Outlet />,
-    EntityDetailPage: () => {
-      const { entity } = router.useParams({ strict: false }) as { entity: string };
-      return <div data-testid="entity-detail" data-entity={entity} />;
-    },
-    EntityItemDetailPage: () => <div data-testid="entity-item-detail" />,
-    // The $entity/index, $entity, and $entity/$itemId route loaders call these
-    // unconditionally — the null-context guard lives inside the real
-    // implementation, so the mocks must provide them.
-    ensureEntityDetailLoaderData: vi.fn(),
-    ensureEntityProfileGateLoaderData: vi.fn().mockResolvedValue({}),
-    ensureEntityItemDetailLoaderData: vi.fn(),
-  };
-});
-
 afterEach(cleanup);
 
 function makeAuthResult(overrides: Record<string, unknown> = {}): AppAuthResult {
