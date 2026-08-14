@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { GearIcon } from "@phosphor-icons/react";
-import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import {
   AttributeKind,
   type EntityItem,
   type EntityItemAttribute,
   type EntityItemToManyRelation,
   type EntityItemToOneRelation,
-  type EntitySearchState,
+  type ProfileAttribute,
+  ProfileAttributeSearchType,
+  ProfileAttributeType,
   type ProfileEntity,
   createValues,
-  resolveTrustedCollectionUrl,
   toProblemDisplayModel,
   useAddToManyRelation,
   useClearRelation,
@@ -20,9 +21,9 @@ import {
   useEntityItemCollection,
   useEntityItemToManyRelation,
   useEntityItemToOneRelation,
-  useNavigatorData,
   useProfileEntities,
   useSetToOneRelation,
+  useTypeahead,
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import {
@@ -52,6 +53,7 @@ import {
   DialogHeader,
   DialogTitle,
   EntityCard,
+  FilterSidebar,
   Input,
   Separator,
   Sidebar,
@@ -69,11 +71,13 @@ import {
   SidebarTrigger,
   Skeleton,
 } from "@contentgrid/ui";
-import {
-  ProfileAttributeSearchType,
-  ProfileAttributeType,
-} from "../../../navigator-data/src/accessors/attribute-profile";
 import { ProblemAlert } from "../problem-details";
+import {
+  applyFilterValues,
+  buildFilterProperties,
+  findInvalidFilterKeys,
+  useDebouncedValue,
+} from "../search";
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -95,8 +99,8 @@ export function EntityListLayout() {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
 
   const profileResults = useProfileEntities();
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoadingProfiles = isProfileListPending(profileResults);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
   const selectedProfile = activeEntity
     ? loadedProfiles.find((p) => p.name === activeEntity)
     : undefined;
@@ -181,38 +185,19 @@ export function EntityOverviewPage() {
 }
 
 // ---------------------------------------------------------------------------
-// EntityDetailPage — $entity route component (reads path + s.cursor search param)
+// EntityDetailPage — $entity route component
 // ---------------------------------------------------------------------------
 
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const cursor = (useSearch({ strict: false }) as EntitySearchState)["s.cursor"];
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
 
   const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
+  const isLoadingProfiles = isProfileListPending(profileResults);
 
   const profile = loadedProfiles.find((p) => p.name === entityName);
-
-  const onCursorChange = useCallback(
-    (url: string | undefined) => {
-      const go = navigate as unknown as AnyNavigateFn;
-      if (url) {
-        go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
-      } else {
-        go({
-          search: (prev) => {
-            const next = { ...prev };
-            delete next["s.cursor"];
-            return next;
-          },
-        });
-      }
-    },
-    [navigate],
-  );
 
   function onRowClick(id: string) {
     go({ to: "/$entity/$itemId", params: { entity: entityName, itemId: id } });
@@ -236,13 +221,7 @@ export function EntityDetailPage() {
   if (!profile) return null;
 
   return (
-    <EntityDetailView
-      profile={profile}
-      pageUrl={cursor}
-      onPageUrlChange={onCursorChange}
-      onRowClick={onRowClick}
-      onBack={onBack}
-    />
+    <EntityDetailView key={entityName} profile={profile} onRowClick={onRowClick} onBack={onBack} />
   );
 }
 
@@ -255,8 +234,8 @@ function EntityOverview({
 }: Readonly<{ onSelectEntity: (profile: ProfileEntity) => void }>) {
   const profileResults = useProfileEntities();
 
-  const isLoading = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoading = isProfileListPending(profileResults);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
 
   if (isLoading) {
     return (
@@ -342,32 +321,102 @@ function EntityCardConnected({
 
 function EntityDetailView({
   profile,
-  pageUrl,
-  onPageUrlChange,
   onRowClick,
   onBack,
 }: Readonly<{
   profile: ProfileEntity;
-  pageUrl: string | undefined;
-  onPageUrlChange: (url: string | undefined) => void;
   onRowClick: (id: string) => void;
   onBack: () => void;
 }>) {
-  const collection = useEntityItemCollection(
-    pageUrl ? { url: pageUrl, profileEntity: profile } : { profileEntity: profile },
-  );
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [activeTypeaheadParam, setActiveTypeaheadParam] = useState<string>("");
+  // The current page's href, held as local component state — not derived from or
+  // synced to the URL. See ACC-2889 remarks: pagination is not driven by the URL.
+  const [pageHref, setPageHref] = useState<string | undefined>(undefined);
 
-  // The data layer's origin guard (use-entity-item-collection.ts) silently
-  // falls back to the first page when pageUrl is not same-origin with the
-  // API base — it never throws. Without this effect, a stale/tampered
-  // s.cursor would keep showing up in the URL forever even though it's being
-  // ignored. Clear it so the URL reflects what is actually being fetched.
-  const { profileUrl: apiBaseUrl } = useNavigatorData();
-  useEffect(() => {
-    if (pageUrl && resolveTrustedCollectionUrl(pageUrl, apiBaseUrl) === null) {
-      onPageUrlChange(undefined);
+  const searchTemplate = profile.searchTemplate;
+
+  const filterProperties = searchTemplate ? buildFilterProperties(searchTemplate) : [];
+
+  // applyFilterValues coerces each raw string to the JS type its inputKind requires (number,
+  // boolean, Date) — the HAL-FORMS codec throws for a raw string on those property types.
+  const filterSearchValues = searchTemplate
+    ? applyFilterValues(createValues(searchTemplate.template), filterProperties, filters)
+    : undefined;
+
+  // findInvalidFilterKeys mirrors applyFilterValues' own coercion check — it flags the exact
+  // same keys applyFilterValues silently omits from the request, so FilterSidebar can show the
+  // user why a typed value isn't taking effect instead of the table just quietly ignoring it.
+  const invalidFilterKeys = findInvalidFilterKeys(filterProperties, filters);
+
+  // useTypeahead always overwrites the active field's own value with its live debounced query
+  // (see use-typeahead.ts), so passing the full committed `filterSearchValues` here is safe —
+  // TypeaheadTextFilter only commits into `filters` on selection/Enter/blur (not per keystroke),
+  // so a committed value is never left sitting in the live query afterward.
+  //
+  // Even in the remaining edge case — a user retypes, character by character, exactly the text
+  // already committed for this same field — the debounced query and the table's own request can
+  // still encode to the identical URL. That's fine: `useTypeahead` caches under its own
+  // `queryKeys.typeaheadSuggestions` root (see use-typeahead.ts), not
+  // `queryKeys.entityItemCollection`, so the two queries can never collide into one cache entry
+  // regardless of whether their URLs happen to match.
+  const typeahead = useTypeahead({
+    profileEntity: profile,
+    searchProperty: searchTemplate?.getSearchPropertyByName(activeTypeaheadParam),
+    searchValues: filterSearchValues,
+    // No artificial minimum — suggestions should appear as soon as the user types anything.
+    minLength: 1,
+  });
+
+  // A filter or clear-all changes what the collection request encodes, so any page position
+  // held for the previous request is no longer valid — always reset back to the first page.
+  function resetPage() {
+    setPageHref(undefined);
+  }
+
+  function handleFilterChange(key: string, value: string | undefined) {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value === undefined) {
+        delete next[key];
+      } else {
+        next[key] = value;
+      }
+      return next;
+    });
+    resetPage();
+  }
+
+  function handleClearAll() {
+    setFilters({});
+    resetPage();
+    // Otherwise the typeahead popover would still be "active" for whichever field the user
+    // was last searching, holding a stale query and suggestions from before the clear.
+    setActiveTypeaheadParam("");
+    typeahead.setQuery("");
+  }
+
+  function handleTypeaheadSearch(fieldParam: string, query: string) {
+    if (fieldParam !== activeTypeaheadParam) {
+      setActiveTypeaheadParam(fieldParam);
     }
-  }, [pageUrl, apiBaseUrl, onPageUrlChange]);
+    typeahead.setQuery(query);
+  }
+
+  let collectionRequest;
+  if (pageHref) {
+    collectionRequest = { url: pageHref, profileEntity: profile };
+  } else if (searchTemplate) {
+    collectionRequest = { profileEntity: profile, searchValues: filterSearchValues };
+  } else {
+    collectionRequest = { profileEntity: profile };
+  }
+  const collection = useEntityItemCollection(collectionRequest);
+
+  function onPageChange(href: string | undefined) {
+    setPageHref(href);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   const columns = buildColumns(profile);
   const rows = collection.data ? buildRows(collection.data.items, columns) : [];
@@ -405,93 +454,96 @@ function EntityDetailView({
         </div>
         <div className="flex items-center gap-2">
           {collection.isSuccess && collection.data.totalItems && (
-            <Badge variant="secondary">
-              {collection.data.totalItems.count.toLocaleString()} item
-              {collection.data.totalItems.count === 1 ? "" : "s"}
-              {collection.data.totalItems.isEstimated && " (est.)"}
-            </Badge>
+            <Badge variant="secondary">{formatItemCountLabel(collection.data.totalItems)}</Badge>
           )}
           {collection.isPending && <Skeleton className="h-6 w-20 rounded-full" />}
           <CreateEntityButton profile={profile} />
         </div>
       </div>
 
-      {/* Table skeleton */}
-      {collection.isPending && (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full rounded-md" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-md" />
-          ))}
-        </div>
-      )}
-
-      {/* Error */}
-      {collection.isError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <p>
-            Failed to load {profile.pluralName}: {collection.error.message}
-          </p>
-          {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
-              shared or expired s.cursor makes the server reject the request
-              and would otherwise strand the user on an unrecoverable URL.
-              Offer a reset to the first page whenever a cursor was active. */}
-          {pageUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => onPageUrlChange(undefined)}
-            >
-              Back to first page
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Table */}
-      {collection.isSuccess && (
-        <div className="space-y-4">
-          <DataTable
-            entityName={profile.name}
-            entityTitle={profile.pluralName}
-            columns={columns}
-            rows={rows}
-            onRowClick={onRowClick}
+      {/* Filters + Table */}
+      <div className="flex gap-6 items-start">
+        {filterProperties.length > 0 && (
+          <FilterSidebar
+            filterProperties={filterProperties}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onClearAll={handleClearAll}
+            onTypeaheadSearch={handleTypeaheadSearch}
+            activeTypeaheadField={activeTypeaheadParam || undefined}
+            typeaheadSuggestions={typeahead.results.map((r) => r.value)}
+            typeaheadIsLoading={typeahead.isLoading}
+            invalidFilterKeys={invalidFilterKeys}
           />
+        )}
 
-          {/* Pagination */}
-          {(collection.data.hasNext || collection.data.hasPrevious) && (
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!collection.data.hasPrevious}
-                onClick={() => {
-                  onPageUrlChange(collection.data.prevHref);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Previous
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                {collection.data.pageSize} items on this page
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!collection.data.hasNext}
-                onClick={() => {
-                  onPageUrlChange(collection.data.nextHref);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Next
-              </Button>
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Table skeleton */}
+          {collection.isPending && (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full rounded-md" />
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {collection.isError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <p>
+                Failed to load {profile.pluralName}: {collection.error.message}
+              </p>
+              {/* A page href can fail server-side (e.g. an expired cursor) after it was
+                  already fetched successfully once. Offer a reset to the first page
+                  whenever a non-default page was active. */}
+              {pageHref && (
+                <Button variant="outline" size="sm" className="mt-3" onClick={resetPage}>
+                  Back to first page
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Table */}
+          {collection.isSuccess && (
+            <div className="space-y-4">
+              <DataTable
+                entityName={profile.name}
+                entityTitle={profile.pluralName}
+                columns={columns}
+                rows={rows}
+                onRowClick={onRowClick}
+              />
+
+              {/* Pagination */}
+              {(collection.data.hasNext || collection.data.hasPrevious) && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!collection.data.hasPrevious}
+                    onClick={() => onPageChange(collection.data.prevHref)}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {collection.data.pageSize} items on this page
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!collection.data.hasNext}
+                    onClick={() => onPageChange(collection.data.nextHref)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -533,8 +585,8 @@ export function EntityItemDetailPage() {
   };
 
   const profileResults = useProfileEntities();
-  const isLoadingProfiles = profileResults.length > 0 && profileResults.every((r) => r.isPending);
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
+  const isLoadingProfiles = isProfileListPending(profileResults);
+  const loadedProfiles = selectLoadedProfiles(profileResults);
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
   if (isLoadingProfiles || (!profile && profileResults.length > 0)) {
@@ -613,9 +665,7 @@ function EntityItemDetailView({
         <>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {item.data.userDefinedAttributes.map((attr) => {
-              const label =
-                profile.attributes.find((a) => a.name === attr.value.name)?.title ??
-                attr.value.name;
+              const label = resolveAttributeLabel(attr, profile.attributes);
               return (
                 <div key={attr.value.name} className="rounded-lg border p-4">
                   <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
@@ -665,9 +715,8 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
   const mutationError = clearError ?? setError;
   const [linkOpen, setLinkOpen] = useState(false);
   const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
-  const title = relation.profileRelation.title ?? relation.name;
+  const loadedProfiles = selectLoadedProfiles(profileResults);
+  const { targetProfile, title } = getRelationDisplay(relation, loadedProfiles);
 
   return (
     <div className="rounded-lg border p-4 space-y-3">
@@ -738,9 +787,7 @@ function RelationToOneSection({ relation }: Readonly<{ relation: EntityItemToOne
         >
           <dl className="grid grid-cols-2 gap-2">
             {result.data.userDefinedAttributes.slice(0, 4).map((attr) => {
-              const label =
-                result.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
-                  ?.title ?? attr.value.name;
+              const label = resolveAttributeLabel(attr, result.data!.profileEntity.attributes);
               return (
                 <div key={attr.value.name}>
                   <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -784,11 +831,10 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
   const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
   const profileResults = useProfileEntities();
-  const loadedProfiles = profileResults.filter((r) => r.data).map((r) => r.data!);
-  const targetProfile = relation.profileRelation.getTargetProfile(loadedProfiles);
-  const title = relation.profileRelation.title ?? relation.name;
+  const loadedProfiles = selectLoadedProfiles(profileResults);
+  const { targetProfile, title } = getRelationDisplay(relation, loadedProfiles);
 
-  const columns = targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }];
+  const columns = targetProfile ? buildColumns(targetProfile) : ID_ONLY_COLUMNS;
   const rows = result.isSuccess ? buildRows(result.data.items, columns) : [];
   const total = result.isSuccess ? result.data.totalItems : undefined;
 
@@ -802,12 +848,7 @@ function RelationToManySection({ relation }: Readonly<{ relation: EntityItemToMa
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
         <div className="flex items-center gap-2">
-          {total !== undefined && (
-            <Badge variant="secondary">
-              {total.count.toLocaleString()} item{total.count === 1 ? "" : "s"}
-              {total.isEstimated && " (est.)"}
-            </Badge>
-          )}
+          {total !== undefined && <Badge variant="secondary">{formatItemCountLabel(total)}</Badge>}
           {relation.canAdd && targetProfile && (
             <>
               <Button
@@ -959,6 +1000,7 @@ function RelationItemSearchDialog({
   onSelect: (item: EntityItem) => void;
 }>) {
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query, 250);
 
   const searchTemplate = targetProfile.searchTemplate;
   const searchProperty =
@@ -966,7 +1008,7 @@ function RelationItemSearchDialog({
     searchTemplate?.getSearchPropertiesByType(ProfileAttributeSearchType.fullText)[0];
 
   const searchValues = searchTemplate
-    ? buildRelationSearchValues(searchTemplate, query, searchProperty)
+    ? buildRelationSearchValues(searchTemplate, debouncedQuery, searchProperty)
     : undefined;
 
   const collection = useEntityItemCollection(
@@ -992,41 +1034,44 @@ function RelationItemSearchDialog({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {collection.isPending && <Skeleton className="h-40 w-full rounded-md" />}
-        {collection.isError && (
-          <p className="text-sm text-destructive">Failed to load: {collection.error.message}</p>
-        )}
-        {collection.isSuccess && collection.data.items.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">No items found</p>
-        )}
-        {collection.isSuccess && collection.data.items.length > 0 && (
-          <div className="max-h-64 overflow-y-auto space-y-1">
-            {collection.data.items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
-                onClick={() => {
-                  onSelect(item);
-                  handleOpenChange(false);
-                }}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {item.userDefinedAttributes.slice(0, 4).map((attr) => {
-                    const label =
-                      targetProfile.attributes.find((a) => a.name === attr.value.name)?.title ??
-                      attr.value.name;
-                    return (
-                      <div key={attr.value.name}>
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-sm truncate">{renderAttributeValue(attr)}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </button>
-            ))}
-          </div>
+        {collection.isFetching ? (
+          <Skeleton className="h-40 w-full rounded-md" />
+        ) : (
+          <>
+            {collection.isError && (
+              <p className="text-sm text-destructive">Failed to load: {collection.error.message}</p>
+            )}
+            {collection.isSuccess && collection.data.items.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No items found</p>
+            )}
+            {collection.isSuccess && collection.data.items.length > 0 && (
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {collection.data.items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
+                    onClick={() => {
+                      onSelect(item);
+                      handleOpenChange(false);
+                    }}
+                  >
+                    <div className="grid grid-cols-2 gap-2">
+                      {item.userDefinedAttributes.slice(0, 4).map((attr) => {
+                        const label = resolveAttributeLabel(attr, targetProfile.attributes);
+                        return (
+                          <div key={attr.value.name}>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                            <p className="text-sm truncate">{renderAttributeValue(attr)}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>
@@ -1039,17 +1084,63 @@ function RelationItemSearchDialog({
 
 const MAX_COLUMNS = 5;
 
+// Fallback column set for a table with no user-defined attributes to show (either the
+// entity itself has none, or the target profile of a relation hasn't resolved yet).
+const ID_ONLY_COLUMNS: DataTableColumn[] = [{ key: "id", header: "ID" }];
+
 function buildColumns(profile: ProfileEntity): DataTableColumn[] {
   const userAttrs = profile.userDefinedAttributes.slice(0, MAX_COLUMNS);
 
   if (userAttrs.length === 0) {
-    return [{ key: "id", header: "ID" }];
+    return ID_ONLY_COLUMNS;
   }
 
   return userAttrs.map((attr) => ({
     key: attr.name,
     header: attr.title ?? attr.name,
   }));
+}
+
+/** Profiles that have finished loading from a `useProfileEntities()` result array. */
+function selectLoadedProfiles(
+  profileResults: ReturnType<typeof useProfileEntities>,
+): ProfileEntity[] {
+  return profileResults.filter((r) => r.data).map((r) => r.data!);
+}
+
+/** True while every query in a `useProfileEntities()` result array is still pending. */
+function isProfileListPending(profileResults: ReturnType<typeof useProfileEntities>): boolean {
+  return profileResults.length > 0 && profileResults.every((r) => r.isPending);
+}
+
+/**
+ * Resolves the target profile and display title shared by RelationToOneSection and
+ * RelationToManySection. `profileRelation.title` already falls back to the relation's
+ * own name internally, so no further fallback is needed here.
+ */
+function getRelationDisplay(
+  relation: EntityItemToOneRelation | EntityItemToManyRelation,
+  loadedProfiles: readonly ProfileEntity[],
+): { targetProfile: ProfileEntity | undefined; title: string } {
+  return {
+    targetProfile: relation.profileRelation.getTargetProfile(loadedProfiles),
+    title: relation.profileRelation.title,
+  };
+}
+
+/** Resolves the display label for a user-defined attribute value from its profile definition. */
+function resolveAttributeLabel(
+  attr: EntityItemAttribute,
+  attributes: readonly ProfileAttribute[],
+): string {
+  return attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name;
+}
+
+/** Formats a collection's total item count, e.g. "3 items (est.)". */
+function formatItemCountLabel(total: { count: number; isEstimated: boolean }): string {
+  return `${total.count.toLocaleString()} item${total.count === 1 ? "" : "s"}${
+    total.isEstimated ? " (est.)" : ""
+  }`;
 }
 
 function buildRows(items: readonly EntityItem[], columns: DataTableColumn[]): DataTableRow[] {
