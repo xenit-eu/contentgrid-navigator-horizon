@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
-import { NotFoundPage } from "@contentgrid/features/auth-shell";
+import { NotFoundPage } from "@contentgrid/features/app-info-pages";
 import { mountNavigatorApp } from "@contentgrid/features/router-shell";
 import type { AppRouterContext } from "@contentgrid/features/router-shell";
 import "./index.css";

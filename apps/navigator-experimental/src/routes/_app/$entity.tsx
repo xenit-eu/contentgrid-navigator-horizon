@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   EntityProfileGate,
-  ensureEntityProfileGateLoaderData,
-} from "@contentgrid/features/entity-browser";
+  ensureEntityProfileLoaded,
+} from "@contentgrid/features/entity-profile-gate";
 
 export const Route = createFileRoute("/_app/$entity")({
-  beforeLoad: ({ context, params }) => ensureEntityProfileGateLoaderData(context, params.entity),
+  beforeLoad: ({ context, params }) => ensureEntityProfileLoaded(context, params.entity),
   component: EntityProfileGate,
 });
