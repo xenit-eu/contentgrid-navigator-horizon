@@ -12,7 +12,7 @@ function PageTitle({ header, title, subtitle, className, ...props }: PageTitlePr
     <div data-slot="page-title" className={cn("space-y-1", className)} {...props}>
       <p
         data-slot="page-title-header"
-        className="text-sm font-medium uppercase tracking-wide text-blue-400 dark:text-blue-400"
+        className="text-sm font-medium uppercase tracking-wide text-sky-700 dark:text-blue-300"
       >
         {header}
       </p>
