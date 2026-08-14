@@ -59,6 +59,10 @@
     "./entity-item-collection": {
       "import": "./src/entity-item-collection/index.ts",
       "types": "./src/entity-item-collection/index.ts"
+    },
+    "./entity-item": {
+      "import": "./src/entity-item/index.ts",
+      "types": "./src/entity-item/index.ts"
     }
   },
   "scripts": {

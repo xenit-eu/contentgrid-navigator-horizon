@@ -80,7 +80,12 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
 
   const actions = (
     <div>
-      <Button variant={"default"}>Create {profile.singularName}</Button>
+      <Button
+        variant="default"
+        onClick={() => go({ to: "/$entity/~create", params: { entity: profile.name }, search: {} })}
+      >
+        Create {profile.singularName}
+      </Button>
     </div>
   );
 
