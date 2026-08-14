@@ -17,7 +17,6 @@ import {
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
-  entitySearchStateValidator,
 } from "@contentgrid/navigator-data";
 import { sampleInvoiceItems } from "@contentgrid/navigator-data/test-fixtures/hal/fixtures";
 import {
@@ -85,7 +84,6 @@ function createTestRouter(initialEntry = "/") {
     getParentRoute: () => appRoute,
     path: "/$entity",
     component: EntityDetailPage,
-    validateSearch: entitySearchStateValidator,
   });
   // Item detail route: /$entity/$itemId — FLAT sibling of entityRoute so
   // EntityDetailPage doesn't need to render <Outlet>
@@ -773,7 +771,7 @@ describe("EntityList", () => {
       }),
     );
 
-    const { router } = renderEntityList("/invoice");
+    renderEntityList("/invoice");
 
     // Next and Previous pagination buttons appear
     const nextButton = await screen.findByRole("button", { name: "Next" });
@@ -788,10 +786,6 @@ describe("EntityList", () => {
     // The next page's distinct row proves the click actually fetched the next-page
     // URL, not just that the button remained in the DOM after being clicked.
     expect(await screen.findByText("INV-2024-004")).toBeInTheDocument();
-
-    // The browser URL must carry only the opaque `_cursor` token from
-    // nextHref — never the href itself — under the `cursor` search param.
-    expect(router.state.location.search).toEqual({ cursor: "nexttoken" });
   });
 });
 
@@ -1895,15 +1889,16 @@ describe("EntityDetailView filters", () => {
       }),
     );
 
-    const { router } = renderEntityList("/invoice");
+    renderEntityList("/invoice");
 
-    // Start with an active, registered cursor (via a real Next click): typing in a
-    // filter must reset it (handleFilterChange calls onCursorChange(undefined)), so
-    // the request that follows hits the base collection URL rather than the
-    // now-stale cursor href.
+    // Start on a non-default page (via a real Next click): typing in a filter must
+    // reset pagination (handleFilterChange resets pageHref), so the request that
+    // follows hits the base collection URL rather than the now-stale page href.
     const nextButton = await screen.findByRole("button", { name: "Next" });
     await user.click(nextButton);
-    expect(router.state.location.search).toEqual({ cursor: "stale" });
+    await waitFor(() => {
+      expect(capturedUrls[capturedUrls.length - 1]?.searchParams.get("_cursor")).toBe("stale");
+    });
 
     const statusInput = await screen.findByLabelText("Status");
     await user.type(statusInput, "open");
@@ -1914,7 +1909,7 @@ describe("EntityDetailView filters", () => {
     });
 
     expect(statusInput).toHaveValue("open");
-    expect(router.state.location.search).toEqual({});
+    expect(capturedUrls[capturedUrls.length - 1]?.searchParams.has("_cursor")).toBe(false);
   });
 
   it("shows Clear all once a filter is active and clears it on click", async () => {

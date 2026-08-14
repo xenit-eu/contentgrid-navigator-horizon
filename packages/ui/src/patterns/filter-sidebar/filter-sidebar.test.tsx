@@ -7,7 +7,7 @@ import type { SearchFilterProperty } from "./filter-sidebar";
 
 // ---------------------------------------------------------------------------
 // Fixtures — pre-computed SearchFilterProperty objects as buildFilterProperties
-// in @contentgrid/navigator-data would produce them.
+// in @contentgrid/features/search would produce them.
 // ---------------------------------------------------------------------------
 
 const TEXT_PROP: SearchFilterProperty = {
@@ -39,7 +39,7 @@ const DATE_PROP: SearchFilterProperty = {
   searchOperator: "exact-match",
   groupKey: "created_at",
   groupLabel: "Created At",
-  // A "date"-kind property is always "plain" — computeDateEncoding() in @contentgrid/navigator-data
+  // A "date"-kind property is always "plain" — computeDateEncoding() in @contentgrid/features/search
   // never emits "iso" for inputKind "date" (only for "datetime"). Keep these fixtures in sync with it.
   dateEncoding: "plain",
 };
@@ -696,7 +696,7 @@ describe("FilterSidebar — DateFilter clear button (single date prop)", () => {
 
 describe("FilterSidebar — grouping by groupKey", () => {
   // Redundant-sibling suppression (bare exact-match alongside a prefix/full-text/range
-  // variant) is decided in buildFilterProperties() (@contentgrid/navigator-data) — see
+  // variant) is decided in buildFilterProperties() (@contentgrid/features/search) — see
   // filter-properties.test.ts — not in FilterSidebar, which just renders whatever list of
   // properties it's given.
   it("renders both fields as separate inputs when they have different groupKeys", () => {

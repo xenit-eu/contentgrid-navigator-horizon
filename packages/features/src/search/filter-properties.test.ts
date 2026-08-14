@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { resolveTemplate } from "@contentgrid/hal-forms";
-import { createValues } from "@contentgrid/hal-forms/values";
-import type { ProfileEntityShape } from "../../shapes";
+import { SearchHalFormTemplate, createValues, resolveTemplate } from "@contentgrid/navigator-data";
+import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import {
   applyFilterValues,
   buildFilterProperties,
   coerceFilterValue,
   findInvalidFilterKeys,
 } from "./filter-properties";
-import { SearchHalFormTemplate } from "./search-form";
-import { makeProfileEntity } from "./test-utils";
 
 function makeSearchTemplate(json: Record<string, unknown>): SearchHalFormTemplate {
   const profile = makeProfileEntity(json, "https://example.com/profile/items", "item");
-  const rawTemplate = resolveTemplate(json as unknown as ProfileEntityShape, "search")!;
+  const rawTemplate = resolveTemplate(
+    json as unknown as Parameters<typeof resolveTemplate>[0],
+    "search",
+  )!;
   return new SearchHalFormTemplate(rawTemplate, profile);
 }
 

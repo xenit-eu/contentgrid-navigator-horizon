@@ -117,6 +117,11 @@ function mockProfileRoot(entityLinks: { href: string; name: string }[]) {
   );
 }
 
+/** Plain suggestion values, for assertions that only care about membership, not counts. */
+function suggestionValues(results: { value: string; count: number }[]): string[] {
+  return results.map((r) => r.value);
+}
+
 function makeHook(
   profileEntity: ProfileEntity,
   searchProperty: SearchHalFormTemplateProperty,
@@ -183,6 +188,26 @@ describe("useTypeahead", () => {
     });
   });
 
+  describe("string-searchable guard", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("does not fire for an exact-match property — withValue() would reject the raw query string", () => {
+      // "email" is customer's other direct search property (exact-match, not prefix/full-text).
+      const exactMatchProperty = profileEntity.searchTemplate!.getSearchPropertyByName("email")!;
+      let requestCount = 0;
+      mockCustomerCollection([{ email: "contact@acme.example" }], () => requestCount++);
+
+      const { result } = makeHook(profileEntity, exactMatchProperty);
+      act(() => result.current.setQuery("contact"));
+      act(() => vi.advanceTimersByTime(1000));
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.results).toEqual([]);
+      expect(requestCount).toBe(0);
+    });
+  });
+
   it("fires only once when search is called rapidly", async () => {
     let requestCount = 0;
     mockCustomerCollection([{ name: "Acme Corp" }], () => requestCount++);
@@ -192,7 +217,9 @@ describe("useTypeahead", () => {
     act(() => result.current.setQuery("Ac"));
     act(() => result.current.setQuery("Acm"));
 
-    await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+    await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+      timeout: 3000,
+    });
     expect(requestCount).toBe(1);
   });
 
@@ -203,8 +230,10 @@ describe("useTypeahead", () => {
 
     act(() => result.current.setQuery("Acm"));
 
-    await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
-    expect(result.current.results).toContain("Acme Industries");
+    await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+      timeout: 3000,
+    });
+    expect(suggestionValues(result.current.results)).toContain("Acme Industries");
   });
 
   it("clears results immediately when query is reset to empty", async () => {
@@ -213,7 +242,9 @@ describe("useTypeahead", () => {
     const { result } = makeHook(profileEntity, searchProperty);
 
     act(() => result.current.setQuery("Acm"));
-    await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+    await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+      timeout: 3000,
+    });
 
     act(() => result.current.setQuery(""));
     expect(result.current.results).toEqual([]);
@@ -238,12 +269,14 @@ describe("useTypeahead", () => {
     const { result } = makeHook(profileEntity, searchProperty);
     act(() => result.current.setQuery("Acm"));
 
-    await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+    await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+      timeout: 3000,
+    });
 
     expect(capturedUrl?.searchParams.get("name~prefix")).toBe("Acm");
   });
 
-  it("deduplicates identical attribute values from multiple items", async () => {
+  it("counts duplicate attribute values from multiple items instead of collapsing them", async () => {
     mockCustomerCollection([
       { name: "Acme Corp" },
       { name: "Acme Corp" },
@@ -254,8 +287,8 @@ describe("useTypeahead", () => {
     act(() => result.current.setQuery("Acm"));
 
     await waitFor(() => expect(result.current.results).toHaveLength(2), { timeout: 3000 });
-    expect(result.current.results).toContain("Acme Corp");
-    expect(result.current.results).toContain("Acme Industries");
+    expect(result.current.results).toContainEqual({ value: "Acme Corp", count: 2 });
+    expect(result.current.results).toContainEqual({ value: "Acme Industries", count: 1 });
   });
 
   describe("query key isolation", () => {
@@ -277,7 +310,9 @@ describe("useTypeahead", () => {
       const qc = makeQueryClient();
       const { result } = makeHook(profileEntity, searchProperty, qc);
       act(() => result.current.setQuery("Acm"));
-      await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+      await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+        timeout: 3000,
+      });
 
       const url = capturedUrl!.toString();
       expect(
@@ -310,7 +345,9 @@ describe("useTypeahead", () => {
       );
 
       act(() => result.current.setQuery("Acm"));
-      await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+      await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+        timeout: 3000,
+      });
 
       expect(capturedUrl?.searchParams.get("name~prefix")).toBe("Acm");
       expect(capturedUrl?.searchParams.get("email")).toBe("contact@acme.example");
@@ -347,7 +384,9 @@ describe("useTypeahead", () => {
       );
 
       act(() => result.current.setQuery("Ac"));
-      await waitFor(() => expect(result.current.results).toContain("Acme Corp"), { timeout: 3000 });
+      await waitFor(() => expect(suggestionValues(result.current.results)).toContain("Acme Corp"), {
+        timeout: 3000,
+      });
 
       expect(orderRequests).toBe(0);
       // The local (un-prefixed) property name is used against the customer's own template.

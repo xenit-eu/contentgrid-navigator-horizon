@@ -35,6 +35,10 @@
     "./problem-details": {
       "import": "./src/problem-details/index.ts",
       "types": "./src/problem-details/index.ts"
+    },
+    "./search": {
+      "import": "./src/search/index.ts",
+      "types": "./src/search/index.ts"
     }
   },
   "scripts": {

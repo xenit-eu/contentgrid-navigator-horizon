@@ -1,86 +1,21 @@
-import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import type { SearchRequestSpec } from "../../api/requests";
-import { ProfileAttributeSearchType } from "../attribute-profile";
-import type { SearchHalFormTemplate, SearchHalFormTemplateProperty } from "./search-form";
-
-export type FilterInputKind = "text" | "number" | "date" | "datetime" | "boolean" | "select";
-
-export type SearchOperator =
-  | "exact-match"
-  | "prefix-match"
-  | "full-text"
-  | "greater-than"
-  | "greater-than-or-equal"
-  | "less-than"
-  | "less-than-or-equal";
+import type {
+  HalFormValues,
+  SearchHalFormTemplate,
+  SearchHalFormTemplateProperty,
+  SearchRequestSpec,
+} from "@contentgrid/navigator-data";
+import type {
+  DirectionLabel,
+  FilterInputKind,
+  SearchFilterProperty,
+  SearchOperator,
+} from "@contentgrid/ui";
 
 /**
- * Pre-computed view model for a single filterable search property.
- * All display decisions (label, inputKind, directionLabel, dateEncoding) are resolved
- * in the data layer so FilterSidebar in packages/ui can render without any HAL knowledge.
- */
-export interface SearchFilterProperty {
-  /** HAL parameter name — used as the key when writing filter values */
-  name: string;
-  /** Fully resolved human-readable label; no name parsing needed in the UI */
-  label: string;
-  /** Optional description sourced from the profile attribute or relation */
-  description?: string;
-  /** Pre-computed input kind — no type/suffix cross-referencing in the UI */
-  inputKind: FilterInputKind;
-  /**
-   * The raw HAL-FORMS wire type (`sp.property.type`, e.g. "number", "checkbox"), carried
-   * through separately from `inputKind` because `inputKind` collapses to "select" whenever
-   * inline options are present — losing the underlying type `coerceFilterValue` needs to
-   * encode the value correctly (see `coerceFilterValue`'s doc comment).
-   */
-  propertyType: string;
-  /** The operator this parameter represents */
-  searchOperator: SearchOperator;
-  /**
-   * Groups range-pair properties (e.g. date~from + date~until) under one heading.
-   * Properties with the same groupKey render together.
-   */
-  groupKey: string;
-  /**
-   * Heading for the group this property belongs to. Identical for every property sharing a
-   * groupKey — derived from the shared attribute (`profileAttribute.title`, falling back to a
-   * formatted groupKey), NOT from any one sibling's own `label` — a sibling's `label` can carry
-   * operator wording from its own prompt (e.g. "Total amount: Greater than") and, for a
-   * suppressed exact-match sibling, may not even survive into the final list.
-   */
-  groupLabel: string;
-  /**
-   * Direction sub-label for range fields.
-   * "After" / "Before" for strict (gt / lt); "From" / "Until" for inclusive (gte / lte).
-   * Undefined for non-directional fields.
-   */
-  directionLabel?: "After" | "Before" | "From" | "Until";
-  /**
-   * For date/datetime inputs: how to encode the value from the input element.
-   * "iso"   → append the time component ("datetime"/"datetime-local" wire type)
-   * "plain" → pass as-is, a bare yyyy-MM-dd string ("date" wire type)
-   * Keyed off the property's own wire type, not the operator suffix — every operator
-   * (~after, ~from, ~gte, …) on a "date"-typed attribute uses the same bare-date encoding.
-   * Omit for non-date/datetime inputs.
-   */
-  dateEncoding?: "iso" | "plain";
-  /** For select inputs: the available option values */
-  options?: string[];
-  /**
-   * Set when this property searches across a relation boundary.
-   * Value is the relation name (e.g. "supplier").
-   * The feature layer uses this to wire typeahead to the related entity's collection.
-   */
-  relationKey?: string;
-  /** Description of the relation being traversed, when isOverRelation is true. */
-  relationDescription?: string;
-}
-
-/**
- * Converts a search template's properties into pre-computed view models for FilterSidebar.
- * All HAL naming conventions (~prefix, ~gte, ~from, etc.) and type mapping are resolved here
- * so the UI layer has no knowledge of HAL search property name conventions.
+ * Converts a search template's properties into pre-computed view models for FilterSidebar
+ * (`SearchFilterProperty`, defined in `@contentgrid/ui`). All HAL naming conventions (~prefix,
+ * ~gte, ~from, etc.) and type mapping are resolved here so the UI layer has no knowledge of HAL
+ * search property name conventions.
  *
  * Properties with the "hidden" wire type are excluded — they carry a fixed/internal value
  * (e.g. relation-scoping params injected via withHiddenParams) and were never meant to be a
@@ -336,38 +271,42 @@ export function findInvalidFilterKeys(
 }
 
 /**
+ * Every `ProfileAttributeSearchType` (navigator-data) member is defined to equal a
+ * `SearchOperator` (@contentgrid/ui) literal (see attribute-profile.ts) — the two are the same
+ * set of runtime strings under two different type names, one nominal (the domain enum) and one
+ * structural (the UI's plain string union). This is the known-good set, checked at runtime
+ * rather than assumed, so a value outside it (e.g. `sp.searchType` falling through
+ * `resolveSearchType`'s own unchecked cast in search-form.ts for a search-param `type` the
+ * server reports that isn't one of the seven known values) doesn't silently pass through as a
+ * bogus `SearchOperator` — see `computeSearchOperator`'s fallback below.
+ */
+const KNOWN_SEARCH_OPERATORS: ReadonlySet<SearchOperator> = new Set<SearchOperator>([
+  "exact-match",
+  "prefix-match",
+  "full-text",
+  "greater-than",
+  "greater-than-or-equal",
+  "less-than",
+  "less-than-or-equal",
+]);
+
+/**
  * Compute the SearchOperator for a property. `sp.searchType` is resolved in SearchHalFormTemplate
  * from the attribute's `blueprint:search-param` embeds (falling back to suffix parsing only when
  * unresolved), so range-pair operators (~from, ~until) already come through correctly here —
  * no name inspection needed.
+ *
+ * Falls back to "exact-match" for any value outside the known set — the same fallback the old
+ * switch-based mapping's `default` case provided — so an unrecognized search type still gets
+ * treated as an (redundancy-suppressible) exact-match property instead of silently rendering an
+ * extra, unlabeled filter control alongside its real sibling.
  */
 function computeSearchOperator(sp: SearchHalFormTemplateProperty): SearchOperator {
-  return mapSearchOperator(sp.searchType);
+  const searchType = sp.searchType as SearchOperator;
+  return KNOWN_SEARCH_OPERATORS.has(searchType) ? searchType : "exact-match";
 }
 
-function mapSearchOperator(searchType: ProfileAttributeSearchType): SearchOperator {
-  switch (searchType) {
-    case ProfileAttributeSearchType.prefixMatch:
-      return "prefix-match";
-    case ProfileAttributeSearchType.fullText:
-      return "full-text";
-    case ProfileAttributeSearchType.greaterThan:
-      return "greater-than";
-    case ProfileAttributeSearchType.greaterThanOrEqual:
-      return "greater-than-or-equal";
-    case ProfileAttributeSearchType.lessThan:
-      return "less-than";
-    case ProfileAttributeSearchType.lessThanOrEqual:
-      return "less-than-or-equal";
-    case ProfileAttributeSearchType.exactMatch:
-    default:
-      return "exact-match";
-  }
-}
-
-function computeDirectionLabel(
-  op: SearchOperator,
-): "After" | "Before" | "From" | "Until" | undefined {
+function computeDirectionLabel(op: SearchOperator): DirectionLabel | undefined {
   switch (op) {
     case "greater-than":
       return "After";

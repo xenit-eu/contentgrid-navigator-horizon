@@ -46,7 +46,7 @@ const ISSUED_DATE_AFTER_PROP: SearchFilterProperty = {
   groupKey: "issued_date",
   groupLabel: "Issued Date",
   directionLabel: "After",
-  // A "date"-kind property is always "plain" — computeDateEncoding() in @contentgrid/navigator-data
+  // A "date"-kind property is always "plain" — computeDateEncoding() in @contentgrid/features/search
   // never emits "iso" for inputKind "date" (only for "datetime"). Keep this in sync with it.
   dateEncoding: "plain",
 };

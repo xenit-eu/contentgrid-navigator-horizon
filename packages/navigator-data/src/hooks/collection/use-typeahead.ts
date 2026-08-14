@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { createValues } from "@contentgrid/hal-forms/values";
+import { ProfileAttributeSearchType } from "../../accessors/attribute-profile";
 import { AttributeKind } from "../../accessors/entity-item";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
@@ -35,8 +36,9 @@ export interface UseTypeaheadOptions {
    *
    * Must be a string-typed property (e.g. prefix-match or full-text) — the query text is
    * passed to `withValue()` as a raw string, which the HAL-FORMS codec rejects for
-   * number/checkbox/datetime-typed properties. Not enforced here; callers currently only
-   * wire this to text-kind FilterSidebar fields.
+   * number/checkbox/datetime-typed properties. Enforced via `enabled`: a property whose
+   * `searchType` isn't `prefixMatch`/`fullText` disables the hook rather than firing a
+   * request the codec would reject.
    */
   searchProperty?: SearchHalFormTemplateProperty;
   /** Minimum query length before a fetch fires. Defaults to 2. */
@@ -104,20 +106,25 @@ function computeBaseSearchValues(
   return searchValues ?? createValues(targetSearchTemplate.template);
 }
 
-/** Unique, non-empty plain string values of `attributeName` across the collection's items. */
+/**
+ * Non-empty plain string values of `attributeName` across the collection's items, with
+ * duplicate occurrences counted rather than collapsed.
+ */
 function extractSuggestions(
   collection: EntityItemCollection | undefined,
   attributeName: string | undefined,
-): string[] {
+): { value: string; count: number }[] {
   if (!collection || !attributeName) return [];
-  const found = new Set<string>();
+  const counts = new Map<string, number>();
   for (const item of collection.items) {
     const attribute = item.attributes.find((attr) => attr.value.name === attributeName);
     if (attribute?.value.kind !== AttributeKind.PLAIN) continue;
     const { value } = attribute.value;
-    if (typeof value === "string" && value.length > 0) found.add(value);
+    if (typeof value === "string" && value.length > 0) {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
   }
-  return [...found];
+  return [...counts.entries()].map(([value, count]) => ({ value, count }));
 }
 
 export function useTypeahead({
@@ -144,11 +151,29 @@ export function useTypeahead({
   const targetSearchTemplate = targetProfile?.searchTemplate;
   const targetProfileEntity = targetProfile ?? profileEntity;
 
+  // Only a string-searchable property accepts a raw query string via withValue() — anything
+  // else (exact-match, numeric/date range operators, etc.) would throw HalFormValueTypeError
+  // deep in the codec. Disabled rather than allowed to fail at request time.
+  //
+  // Checked on the caller-supplied `searchProperty`, not `targetSearchProperty` — for a
+  // relation-traversal property, `targetSearchProperty` is re-resolved against the TARGET
+  // entity's own template (see resolveTarget), which relies on that target's own
+  // `blueprint:search-param` embeds and can disagree with the parent's suffix-based
+  // resolution when those embeds are absent or incomplete for the same logical property.
+  // `searchProperty` is exactly what the caller (FilterSidebar, via buildFilterProperties'
+  // computeSearchOperator on the PARENT template) already validated as prefix/full-text —
+  // re-deriving the answer from the target's template can produce a false negative for a
+  // property that genuinely is string-searchable.
+  const isStringSearchable =
+    searchProperty?.searchType === ProfileAttributeSearchType.prefixMatch ||
+    searchProperty?.searchType === ProfileAttributeSearchType.fullText;
+
   // Both must meet minLength: query clears results instantly on empty; debouncedQuery gates the fetch.
   // Also disabled until a target property has resolved (relation mode: also needs targetProfile).
   const enabled =
     !!targetSearchProperty &&
     !!targetSearchTemplate &&
+    isStringSearchable &&
     query.length >= minLength &&
     debouncedQuery.length >= minLength;
 

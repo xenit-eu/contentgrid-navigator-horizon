@@ -32,14 +32,11 @@ export type SearchOperator =
 export type DirectionLabel = "After" | "Before" | "From" | "Until";
 
 /**
- * Pre-computed view model produced by buildFilterProperties() in @contentgrid/navigator-data
- * (`packages/navigator-data/src/accessors/extended-forms/filter-properties.ts`).
- *
- * This is a HAND-MAINTAINED MIRROR, not an import: packages/ui may not import
- * @contentgrid/navigator-data (see packages/ui/CLAUDE.md's forbidden-imports list), so this
- * type has to be redeclared here. Keep every field name, optionality, and type in sync with
- * the producer — a field that's required there but optional (or missing) here is structurally
- * still assignable, so a drift won't show up as a compile error on either side.
+ * Pre-computed view model consumed by FilterSidebar. This type is the canonical definition —
+ * `buildFilterProperties()` in `packages/features/src/search/filter-properties.ts` imports it
+ * from here (features may import @contentgrid/ui; packages/ui may not import back from
+ * features or navigator-data — see packages/ui/CLAUDE.md's forbidden-imports list), rather than
+ * this being a second, independently maintained copy.
  */
 export interface SearchFilterProperty {
   name: string;
@@ -84,7 +81,7 @@ export interface FilterSidebarProps {
   /**
    * Names of properties whose current `filters` value could not be coerced for its
    * propertyType (e.g. non-numeric text in a number field) and was therefore silently omitted
-   * from the request — see `findInvalidFilterKeys` in `@contentgrid/navigator-data`. Rendered
+   * from the request — see `findInvalidFilterKeys` in `@contentgrid/features/search`. Rendered
    * as an inline error under the affected field instead of the table just quietly not
    * filtering by it.
    */
@@ -162,7 +159,7 @@ interface FilterGroup {
  * Groups properties sharing a groupKey under one heading. Redundant siblings (a bare
  * exact-match alongside a prefix/full-text/range variant, or a strict range bound alongside
  * its inclusive equivalent) are already excluded by `buildFilterProperties` in
- * `@contentgrid/navigator-data` — that's model semantics, not a rendering concern, so this
+ * `@contentgrid/features/search` — that's model semantics, not a rendering concern, so this
  * function only groups whatever list it's given.
  */
 function groupFilterProperties(props: SearchFilterProperty[]): FilterGroup[] {

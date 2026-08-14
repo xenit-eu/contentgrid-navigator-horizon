@@ -1,29 +1,21 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { GearIcon } from "@phosphor-icons/react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import {
   AttributeKind,
   type EntityItem,
   type EntityItemAttribute,
   type EntityItemToManyRelation,
   type EntityItemToOneRelation,
-  type EntitySearchState,
   type ProfileAttribute,
   ProfileAttributeSearchType,
   ProfileAttributeType,
   type ProfileEntity,
-  applyFilterValues,
-  buildFilterProperties,
   createValues,
-  findInvalidFilterKeys,
-  mintHrefToken,
-  resolveHrefToken,
   toProblemDisplayModel,
   useAddToManyRelation,
   useClearRelation,
   useCreateEntityItem,
-  useDebouncedValue,
   useDeleteRelationItem,
   useEntityItem,
   useEntityItemCollection,
@@ -80,6 +72,12 @@ import {
   Skeleton,
 } from "@contentgrid/ui";
 import { ProblemAlert } from "../problem-details";
+import {
+  applyFilterValues,
+  buildFilterProperties,
+  findInvalidFilterKeys,
+  useDebouncedValue,
+} from "../search";
 
 // ---------------------------------------------------------------------------
 // Cross-package navigate cast
@@ -187,15 +185,11 @@ export function EntityOverviewPage() {
 }
 
 // ---------------------------------------------------------------------------
-// EntityDetailPage — $entity route component (reads path + cursor search param)
+// EntityDetailPage — $entity route component
 // ---------------------------------------------------------------------------
 
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  // `cursor` is an opaque token (e.g. "0p4jtvf1"), never a URL — the literal
-  // href it stands for lives in the cursor registry, keyed by entity + token.
-  // See EntityDetailView's onPageChange for where a token is minted.
-  const cursorParam = (useSearch({ strict: false }) as EntitySearchState).cursor;
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
 
@@ -204,24 +198,6 @@ export function EntityDetailPage() {
   const isLoadingProfiles = isProfileListPending(profileResults);
 
   const profile = loadedProfiles.find((p) => p.name === entityName);
-
-  const onCursorChange = useCallback(
-    (cursor: string | undefined) => {
-      const go = navigate as unknown as AnyNavigateFn;
-      if (cursor) {
-        go({ search: (prev) => ({ ...prev, cursor }) });
-      } else {
-        go({
-          search: (prev) => {
-            const next = { ...prev };
-            delete next.cursor;
-            return next;
-          },
-        });
-      }
-    },
-    [navigate],
-  );
 
   function onRowClick(id: string) {
     go({ to: "/$entity/$itemId", params: { entity: entityName, itemId: id } });
@@ -245,14 +221,7 @@ export function EntityDetailPage() {
   if (!profile) return null;
 
   return (
-    <EntityDetailView
-      key={entityName}
-      profile={profile}
-      cursorParam={cursorParam}
-      onCursorChange={onCursorChange}
-      onRowClick={onRowClick}
-      onBack={onBack}
-    />
+    <EntityDetailView key={entityName} profile={profile} onRowClick={onRowClick} onBack={onBack} />
   );
 }
 
@@ -352,20 +321,18 @@ function EntityCardConnected({
 
 function EntityDetailView({
   profile,
-  cursorParam,
-  onCursorChange,
   onRowClick,
   onBack,
 }: Readonly<{
   profile: ProfileEntity;
-  cursorParam: string | undefined;
-  onCursorChange: (cursor: string | undefined) => void;
   onRowClick: (id: string) => void;
   onBack: () => void;
 }>) {
-  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [activeTypeaheadParam, setActiveTypeaheadParam] = useState<string>("");
+  // The current page's href, held as local component state — not derived from or
+  // synced to the URL. See ACC-2889 remarks: pagination is not driven by the URL.
+  const [pageHref, setPageHref] = useState<string | undefined>(undefined);
 
   const searchTemplate = profile.searchTemplate;
 
@@ -401,6 +368,12 @@ function EntityDetailView({
     minLength: 1,
   });
 
+  // A filter or clear-all changes what the collection request encodes, so any page position
+  // held for the previous request is no longer valid — always reset back to the first page.
+  function resetPage() {
+    setPageHref(undefined);
+  }
+
   function handleFilterChange(key: string, value: string | undefined) {
     setFilters((prev) => {
       const next = { ...prev };
@@ -411,12 +384,12 @@ function EntityDetailView({
       }
       return next;
     });
-    onCursorChange(undefined);
+    resetPage();
   }
 
   function handleClearAll() {
     setFilters({});
-    onCursorChange(undefined);
+    resetPage();
     // Otherwise the typeahead popover would still be "active" for whichever field the user
     // was last searching, holding a stale query and suggestions from before the clear.
     setActiveTypeaheadParam("");
@@ -430,14 +403,6 @@ function EntityDetailView({
     typeahead.setQuery(query);
   }
 
-  // `cursorParam` is only ever an opaque token — resolve it back to the
-  // literal href it was minted from via resolveHrefToken. An unrecognised
-  // token (bookmark, share, reload — the registry is session-scoped) falls
-  // back to the first-page request below rather than guessing at a URL.
-  const pageHref = cursorParam
-    ? resolveHrefToken(queryClient, profile.name, "_cursor", cursorParam)
-    : undefined;
-
   let collectionRequest;
   if (pageHref) {
     collectionRequest = { url: pageHref, profileEntity: profile };
@@ -448,14 +413,8 @@ function EntityDetailView({
   }
   const collection = useEntityItemCollection(collectionRequest);
 
-  // Navigating to a next/prev page never constructs a URL: the cursor token
-  // is opaque route state only, and mintHrefToken remembers the literal href
-  // it was extracted from (keyed by the same token) at the one moment it's
-  // actually in hand — right here, before it ever reaches the URL.
-  // resolveHrefToken above resolves the token back to this href; it never
-  // rebuilds one from parts.
   function onPageChange(href: string | undefined) {
-    onCursorChange(mintHrefToken(queryClient, profile.name, "_cursor", href));
+    setPageHref(href);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -512,7 +471,7 @@ function EntityDetailView({
             onClearAll={handleClearAll}
             onTypeaheadSearch={handleTypeaheadSearch}
             activeTypeaheadField={activeTypeaheadParam || undefined}
-            typeaheadSuggestions={typeahead.results}
+            typeaheadSuggestions={typeahead.results.map((r) => r.value)}
             typeaheadIsLoading={typeahead.isLoading}
             invalidFilterKeys={invalidFilterKeys}
           />
@@ -535,17 +494,11 @@ function EntityDetailView({
               <p>
                 Failed to load {profile.pluralName}: {collection.error.message}
               </p>
-              {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
-                  shared or expired cursor makes the server reject the request
-                  and would otherwise strand the user on an unrecoverable URL.
-                  Offer a reset to the first page whenever a cursor was active. */}
-              {cursorParam && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => onCursorChange(undefined)}
-                >
+              {/* A page href can fail server-side (e.g. an expired cursor) after it was
+                  already fetched successfully once. Offer a reset to the first page
+                  whenever a non-default page was active. */}
+              {pageHref && (
+                <Button variant="outline" size="sm" className="mt-3" onClick={resetPage}>
                   Back to first page
                 </Button>
               )}

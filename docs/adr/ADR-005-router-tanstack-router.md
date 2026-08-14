@@ -4,6 +4,8 @@
 **Status:** Accepted
 **Phase:** 0 — Alignment & decisions
 
+> **Amendment (2026-08-14, ADR-018):** pagination cursor is no longer part of the URL-state requirements below — it's local component state. Filter/sort search-param state and the rest of this decision are unaffected. See [ADR-018](ADR-018-pagination-cursor-not-url-encoded.md).
+
 ---
 
 ## Context
