@@ -353,12 +353,13 @@ describe("EntityItemCollection — static infiniteQuery", () => {
   it("queryFn uses pageParam url when provided", async () => {
     const PAGE2_URL = "https://api.example.com/invoices?cursor=page2";
     server.use(
-      http.get(PAGE2_URL, () =>
-        HttpResponse.json({
+      http.get("https://api.example.com/invoices", ({ request }) => {
+        expect(new URL(request.url).searchParams.get("cursor")).toBe("page2");
+        return HttpResponse.json({
           _links: { self: { href: PAGE2_URL } },
           _embedded: { item: [] },
-        }),
-      ),
+        });
+      }),
     );
     const apiFetch = createApiClient(noopSupplier);
     const profile = makeProfileEntity();
