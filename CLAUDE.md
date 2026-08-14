@@ -52,7 +52,6 @@ Read in this order before writing any code:
    - [ADR-013](docs/adr/ADR-013-custom-track-private-repo-model.md) — Custom-track delivery: private per-customer repos.
    - [ADR-014](docs/adr/ADR-014-hal-contract-tests-msw.md) — HAL contract tests with MSW.
    - [ADR-015](docs/adr/ADR-015-documentation-surface-split.md) — Documentation surface split.
-   - [ADR-018](docs/adr/ADR-018-pagination-cursor-not-url-encoded.md) — Pagination cursor: local component state, not URL-encoded (amends ADR-001, ADR-005).
 4. **[`docs/contentgrid-navigator-migration-analysis.md`](docs/contentgrid-navigator-migration-analysis.md)** — feature gap, architectural verdict, delivery model detail.
 5. **[`docs/contentgrid-navigator-migration-roadmap.md`](docs/contentgrid-navigator-migration-roadmap.md)** — phase plan, estimates, three-track delivery detail, promotion workflow.
 

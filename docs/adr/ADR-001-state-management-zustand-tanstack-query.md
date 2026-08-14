@@ -5,8 +5,6 @@
 **Phase:** 0 — Alignment & decisions
 **Companion docs:** `../contentgrid-navigator-migration-analysis.md`, `../contentgrid-navigator-migration-roadmap.md`
 
-> **Amendment (2026-08-14, ADR-018):** the "pagination cursor" item below — in both "TanStack Router owns navigational state" and "No URL state in Zustand" — no longer holds. Pagination cursor is local component state, not URL-encoded. Filters, sort, and other navigational state are unaffected. See [ADR-018](ADR-018-pagination-cursor-not-url-encoded.md) for the reasoning and trade-offs.
-
 ---
 
 ## Context
