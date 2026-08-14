@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { GearIcon } from "@phosphor-icons/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   AttributeKind,
@@ -18,16 +19,17 @@ import {
   createValues,
   extractFieldErrors,
   findInvalidFilterKeys,
-  resolveTrustedCollectionUrl,
+  mintHrefToken,
+  resolveHrefToken,
   useAddToManyRelation,
   useClearRelation,
   useCreateEntityItem,
+  useDebouncedValue,
   useDeleteRelationItem,
   useEntityItem,
   useEntityItemCollection,
   useEntityItemToManyRelation,
   useEntityItemToOneRelation,
-  useNavigatorData,
   useProfileEntities,
   useSetToOneRelation,
   useTypeahead,
@@ -185,12 +187,15 @@ export function EntityOverviewPage() {
 }
 
 // ---------------------------------------------------------------------------
-// EntityDetailPage — $entity route component (reads path + s.cursor search param)
+// EntityDetailPage — $entity route component (reads path + cursor search param)
 // ---------------------------------------------------------------------------
 
 export function EntityDetailPage() {
   const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const cursor = (useSearch({ strict: false }) as EntitySearchState)["s.cursor"];
+  // `cursor` is an opaque token (e.g. "0p4jtvf1"), never a URL — the literal
+  // href it stands for lives in the cursor registry, keyed by entity + token.
+  // See EntityDetailView's onPageChange for where a token is minted.
+  const cursorParam = (useSearch({ strict: false }) as EntitySearchState).cursor;
   const navigate = useNavigate();
   const go = navigate as unknown as AnyNavigateFn;
 
@@ -201,15 +206,15 @@ export function EntityDetailPage() {
   const profile = loadedProfiles.find((p) => p.name === entityName);
 
   const onCursorChange = useCallback(
-    (url: string | undefined) => {
+    (cursor: string | undefined) => {
       const go = navigate as unknown as AnyNavigateFn;
-      if (url) {
-        go({ search: (prev) => ({ ...prev, "s.cursor": url }) });
+      if (cursor) {
+        go({ search: (prev) => ({ ...prev, cursor }) });
       } else {
         go({
           search: (prev) => {
             const next = { ...prev };
-            delete next["s.cursor"];
+            delete next.cursor;
             return next;
           },
         });
@@ -243,8 +248,8 @@ export function EntityDetailPage() {
     <EntityDetailView
       key={entityName}
       profile={profile}
-      pageUrl={cursor}
-      onPageUrlChange={onCursorChange}
+      cursorParam={cursorParam}
+      onCursorChange={onCursorChange}
       onRowClick={onRowClick}
       onBack={onBack}
     />
@@ -347,17 +352,18 @@ function EntityCardConnected({
 
 function EntityDetailView({
   profile,
-  pageUrl,
-  onPageUrlChange,
+  cursorParam,
+  onCursorChange,
   onRowClick,
   onBack,
 }: Readonly<{
   profile: ProfileEntity;
-  pageUrl: string | undefined;
-  onPageUrlChange: (url: string | undefined) => void;
+  cursorParam: string | undefined;
+  onCursorChange: (cursor: string | undefined) => void;
   onRowClick: (id: string) => void;
   onBack: () => void;
 }>) {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [activeTypeaheadParam, setActiveTypeaheadParam] = useState<string>("");
 
@@ -405,12 +411,12 @@ function EntityDetailView({
       }
       return next;
     });
-    onPageUrlChange(undefined);
+    onCursorChange(undefined);
   }
 
   function handleClearAll() {
     setFilters({});
-    onPageUrlChange(undefined);
+    onCursorChange(undefined);
     // Otherwise the typeahead popover would still be "active" for whichever field the user
     // was last searching, holding a stale query and suggestions from before the clear.
     setActiveTypeaheadParam("");
@@ -424,9 +430,17 @@ function EntityDetailView({
     typeahead.setQuery(query);
   }
 
+  // `cursorParam` is only ever an opaque token — resolve it back to the
+  // literal href it was minted from via resolveHrefToken. An unrecognised
+  // token (bookmark, share, reload — the registry is session-scoped) falls
+  // back to the first-page request below rather than guessing at a URL.
+  const pageHref = cursorParam
+    ? resolveHrefToken(queryClient, profile.name, "_cursor", cursorParam)
+    : undefined;
+
   let collectionRequest;
-  if (pageUrl) {
-    collectionRequest = { url: pageUrl, profileEntity: profile };
+  if (pageHref) {
+    collectionRequest = { url: pageHref, profileEntity: profile };
   } else if (searchTemplate) {
     collectionRequest = { profileEntity: profile, searchValues: filterSearchValues };
   } else {
@@ -434,17 +448,16 @@ function EntityDetailView({
   }
   const collection = useEntityItemCollection(collectionRequest);
 
-  // The data layer's origin guard (use-entity-item-collection.ts) silently
-  // falls back to the first page when pageUrl is not same-origin with the
-  // API base — it never throws. Without this effect, a stale/tampered
-  // s.cursor would keep showing up in the URL forever even though it's being
-  // ignored. Clear it so the URL reflects what is actually being fetched.
-  const { profileUrl: apiBaseUrl } = useNavigatorData();
-  useEffect(() => {
-    if (pageUrl && resolveTrustedCollectionUrl(pageUrl, apiBaseUrl) === null) {
-      onPageUrlChange(undefined);
-    }
-  }, [pageUrl, apiBaseUrl, onPageUrlChange]);
+  // Navigating to a next/prev page never constructs a URL: the cursor token
+  // is opaque route state only, and mintHrefToken remembers the literal href
+  // it was extracted from (keyed by the same token) at the one moment it's
+  // actually in hand — right here, before it ever reaches the URL.
+  // resolveHrefToken above resolves the token back to this href; it never
+  // rebuilds one from parts.
+  function onPageChange(href: string | undefined) {
+    onCursorChange(mintHrefToken(queryClient, profile.name, "_cursor", href));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   const columns = buildColumns(profile);
   const rows = collection.data ? buildRows(collection.data.items, columns) : [];
@@ -523,15 +536,15 @@ function EntityDetailView({
                 Failed to load {profile.pluralName}: {collection.error.message}
               </p>
               {/* A cursor is opaque, ephemeral and filter-scoped: a bookmarked,
-                  shared or expired s.cursor makes the server reject the request
+                  shared or expired cursor makes the server reject the request
                   and would otherwise strand the user on an unrecoverable URL.
                   Offer a reset to the first page whenever a cursor was active. */}
-              {pageUrl && (
+              {cursorParam && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-3"
-                  onClick={() => onPageUrlChange(undefined)}
+                  onClick={() => onCursorChange(undefined)}
                 >
                   Back to first page
                 </Button>
@@ -557,10 +570,7 @@ function EntityDetailView({
                     variant="outline"
                     size="sm"
                     disabled={!collection.data.hasPrevious}
-                    onClick={() => {
-                      onPageUrlChange(collection.data.prevHref);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
+                    onClick={() => onPageChange(collection.data.prevHref)}
                   >
                     Previous
                   </Button>
@@ -571,10 +581,7 @@ function EntityDetailView({
                     variant="outline"
                     size="sm"
                     disabled={!collection.data.hasNext}
-                    onClick={() => {
-                      onPageUrlChange(collection.data.nextHref);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
+                    onClick={() => onPageChange(collection.data.nextHref)}
                   >
                     Next
                   </Button>
@@ -1040,6 +1047,7 @@ function RelationItemSearchDialog({
   onSelect: (item: EntityItem) => void;
 }>) {
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query, 250);
 
   const searchTemplate = targetProfile.searchTemplate;
   const searchProperty =
@@ -1047,7 +1055,7 @@ function RelationItemSearchDialog({
     searchTemplate?.getSearchPropertiesByType(ProfileAttributeSearchType.fullText)[0];
 
   const searchValues = searchTemplate
-    ? buildRelationSearchValues(searchTemplate, query, searchProperty)
+    ? buildRelationSearchValues(searchTemplate, debouncedQuery, searchProperty)
     : undefined;
 
   const collection = useEntityItemCollection(
@@ -1073,39 +1081,44 @@ function RelationItemSearchDialog({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {collection.isPending && <Skeleton className="h-40 w-full rounded-md" />}
-        {collection.isError && (
-          <p className="text-sm text-destructive">Failed to load: {collection.error.message}</p>
-        )}
-        {collection.isSuccess && collection.data.items.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">No items found</p>
-        )}
-        {collection.isSuccess && collection.data.items.length > 0 && (
-          <div className="max-h-64 overflow-y-auto space-y-1">
-            {collection.data.items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
-                onClick={() => {
-                  onSelect(item);
-                  handleOpenChange(false);
-                }}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {item.userDefinedAttributes.slice(0, 4).map((attr) => {
-                    const label = resolveAttributeLabel(attr, targetProfile.attributes);
-                    return (
-                      <div key={attr.value.name}>
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-sm truncate">{renderAttributeValue(attr)}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </button>
-            ))}
-          </div>
+        {collection.isFetching ? (
+          <Skeleton className="h-40 w-full rounded-md" />
+        ) : (
+          <>
+            {collection.isError && (
+              <p className="text-sm text-destructive">Failed to load: {collection.error.message}</p>
+            )}
+            {collection.isSuccess && collection.data.items.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No items found</p>
+            )}
+            {collection.isSuccess && collection.data.items.length > 0 && (
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {collection.data.items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
+                    onClick={() => {
+                      onSelect(item);
+                      handleOpenChange(false);
+                    }}
+                  >
+                    <div className="grid grid-cols-2 gap-2">
+                      {item.userDefinedAttributes.slice(0, 4).map((attr) => {
+                        const label = resolveAttributeLabel(attr, targetProfile.attributes);
+                        return (
+                          <div key={attr.value.name}>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                            <p className="text-sm truncate">{renderAttributeValue(attr)}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>

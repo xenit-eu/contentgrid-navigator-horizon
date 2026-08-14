@@ -4,4 +4,5 @@ export type {
   SearchFilterProperty,
   FilterInputKind,
   SearchOperator,
+  DirectionLabel,
 } from "./filter-sidebar";

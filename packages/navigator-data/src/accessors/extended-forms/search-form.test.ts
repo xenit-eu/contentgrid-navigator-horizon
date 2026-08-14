@@ -3,7 +3,8 @@
  *
  * Tests cover:
  * - searchProperties: filtering out _sort, basic property linking
- * - search type resolution: primary path via blueprint:search-param, suffix-parsing fallback
+ * - search type resolution: via blueprint:search-param for direct attributes, suffix-parsing
+ *   for relation-traversal attributes (no target-entity search-param available there)
  * - sortOptions: inline sort option parsing, profileAttribute linking, no-sort case
  * - getSearchPropertiesByType / getSearchPropertyByName / getSearchPropertiesByAttribute
  * - getRelationSearchProperties
@@ -122,7 +123,10 @@ const invoiceProfileJson = {
         required: false,
         _embedded: {
           "blueprint:constraint": [],
-          "blueprint:search-param": [],
+          "blueprint:search-param": [
+            { name: "due_date~after", title: "Due date: After", type: "greater-than" },
+            { name: "due_date~before", title: "Due date: Before", type: "less-than" },
+          ],
           "blueprint:attribute": [],
         },
         _links: {},

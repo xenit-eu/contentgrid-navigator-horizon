@@ -919,6 +919,54 @@ describe("FilterSidebar — TypeaheadTextFilter", () => {
     expect(options[1]).toHaveTextContent("INV-002");
   });
 
+  it("shows a loading indicator instead of stale suggestions while a new search is in flight", () => {
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      {},
+      {
+        onTypeaheadSearch,
+        activeTypeaheadField: "number~prefix",
+        // Simulates useTypeahead's underlying query still holding the PREVIOUS search's
+        // results (placeholderData: keepPreviousData) while a new search is in flight.
+        typeaheadSuggestions: ["INV-001", "INV-002"],
+        typeaheadIsLoading: true,
+      },
+    );
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "INV-2" } });
+
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+    expect(screen.queryByText("INV-001")).not.toBeInTheDocument();
+  });
+
+  it("ignores stale suggestions for keyboard navigation while a new search is loading", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    const onTypeaheadSearch = vi.fn();
+    renderSidebar(
+      [PREFIX_PROP],
+      {},
+      {
+        onFilterChange,
+        onTypeaheadSearch,
+        activeTypeaheadField: "number~prefix",
+        typeaheadSuggestions: ["INV-001", "INV-002"],
+        typeaheadIsLoading: true,
+      },
+    );
+    const input = screen.getByRole("combobox");
+    await user.click(input);
+    fireEvent.change(input, { target: { value: "INV-2" } });
+
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    // Enter falls through to committing the typed text itself — a stale suggestion
+    // from before the current search started must never be selectable while loading.
+    expect(onFilterChange).toHaveBeenCalledWith("number~prefix", "INV-2");
+  });
+
   it("calls onFilterChange with the suggestion and clears search when a suggestion is clicked", async () => {
     const user = userEvent.setup();
     const onFilterChange = vi.fn();

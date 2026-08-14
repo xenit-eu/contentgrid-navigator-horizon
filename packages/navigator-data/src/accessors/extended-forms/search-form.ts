@@ -153,12 +153,11 @@ function extractSearchType(propertyName: string): ProfileAttributeSearchType {
 }
 
 /**
- * Resolve the search type for a property from the attribute's own `blueprint:search-param`
- * embeds — the server states the type explicitly there (`searchParam.name` is the full
- * local property name, e.g. "name~prefix" or "invoice_date~from"), so it never needs to be
- * reconstructed from the name. Falls back to suffix parsing only when `profileAttribute` is
- * unresolved (always true today for relation-traversal properties — see the class-level note
- * on `enhanceSearchProperty`) or the server didn't emit a matching search-param entry.
+ * Resolve the search type for a direct-attribute property from the attribute's own
+ * `blueprint:search-param` embeds — the server always states the type explicitly there
+ * (`searchParam.name` is the full local property name, e.g. "name~prefix" or
+ * "invoice_date~from"), so it never needs to be reconstructed from the name. Defaults to
+ * exact-match on the rare case a resolved attribute has no matching entry.
  */
 function resolveSearchType(
   profileAttribute: ProfileAttribute | undefined,
@@ -166,7 +165,8 @@ function resolveSearchType(
 ): ProfileAttributeSearchType {
   const searchParam = profileAttribute?.searchParams.find((param) => param.name === localName);
   return (
-    (searchParam?.type as ProfileAttributeSearchType | undefined) ?? extractSearchType(localName)
+    (searchParam?.type as ProfileAttributeSearchType | undefined) ??
+    ProfileAttributeSearchType.exactMatch
   );
 }
 
@@ -338,9 +338,12 @@ export class SearchHalFormTemplate {
       // suffix parsing is the only signal available for relation-traversal properties.
       searchType = extractSearchType(attributeSegmentWithSuffix);
     } else {
-      // Direct attribute: "attribute~suffix"
-      // groupKey (computed above) IS the attribute name here — no relation prefix to strip.
-      profileAttribute = this.profileEntity.getAttribute(groupKey);
+      // Direct attribute: "attribute~suffix" — no relation prefix to strip, so groupKey
+      // (computed above via basePropertyName) IS the attribute name here. Aliased to
+      // attributeName below rather than re-splitting propertyName a second time, which
+      // would just duplicate what basePropertyName already did.
+      const attributeName = groupKey;
+      profileAttribute = this.profileEntity.getAttribute(attributeName);
       searchType = resolveSearchType(profileAttribute, propertyName);
     }
 

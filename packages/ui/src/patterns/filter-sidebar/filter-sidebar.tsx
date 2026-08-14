@@ -562,7 +562,12 @@ function TypeaheadTextFilter({
   const inputId = toInputId(fieldParam);
   const listboxId = `${inputId}-listbox`;
   const optionId = (index: number) => `${listboxId}-option-${index}`;
-  const hasSuggestions = suggestions.length > 0;
+  // While a new query is loading, `suggestions` can still hold the PREVIOUS query's results
+  // (useTypeahead's underlying query keeps previous data visible during a refetch) — treat
+  // them as not-yet-actionable so neither the rendered list nor keyboard nav can select a
+  // stale suggestion that doesn't match what the user just typed.
+  const visibleSuggestions = isLoading ? [] : suggestions;
+  const hasSuggestions = visibleSuggestions.length > 0;
   const showPopover = open && (hasSuggestions || isLoading);
 
   function closePopover() {
@@ -595,18 +600,18 @@ function TypeaheadTextFilter({
         if (!hasSuggestions) return;
         e.preventDefault();
         setOpen(true);
-        setActiveIndex((i) => (i + 1) % suggestions.length);
+        setActiveIndex((i) => (i + 1) % visibleSuggestions.length);
         break;
       case "ArrowUp":
         if (!hasSuggestions) return;
         e.preventDefault();
         setOpen(true);
-        setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+        setActiveIndex((i) => (i <= 0 ? visibleSuggestions.length - 1 : i - 1));
         break;
       case "Enter":
         e.preventDefault();
         if (hasSuggestions && activeIndex >= 0) {
-          selectSuggestion(suggestions[activeIndex]);
+          selectSuggestion(visibleSuggestions[activeIndex]);
         } else {
           commitFilterValue(typedValue);
           closePopover();
@@ -686,10 +691,8 @@ function TypeaheadTextFilter({
           // opens because it sees focus "outside" the content — causing the flash.
           onFocusOutside={(e) => e.preventDefault()}
         >
-          {isLoading && !hasSuggestions && (
-            <p className="py-2 text-center text-sm text-muted-foreground">Loading…</p>
-          )}
-          {hasSuggestions && (
+          {isLoading && <p className="py-2 text-center text-sm text-muted-foreground">Loading…</p>}
+          {!isLoading && hasSuggestions && (
             // Native <select>/<datalist> can't render this: suggestions arrive async
             // (debounced typeahead fetch) and must keep shadcn styling consistent across
             // browsers. role="combobox" + aria-activedescendant above wires this listbox
@@ -700,7 +703,7 @@ function TypeaheadTextFilter({
               aria-label={`${label} suggestions`}
               className="max-h-48 overflow-y-auto"
             >
-              {suggestions.map((s, index) => (
+              {visibleSuggestions.map((s, index) => (
                 // Not a <button>: keyboard navigation is already handled via
                 // aria-activedescendant on the input (focus never leaves it), so a nested
                 // focusable/interactive element here would only duplicate that path while

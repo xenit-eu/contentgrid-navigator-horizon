@@ -103,7 +103,7 @@ function createTestRouter(initialEntry = "/") {
 
 function renderEntityList(initialEntry = "/") {
   const router = createTestRouter(initialEntry);
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), router };
 }
 
 // ----------------------------------------------------------------
@@ -630,28 +630,36 @@ describe("EntityList", () => {
     expect(screen.queryByRole("button", { name: /back to first page/i })).not.toBeInTheDocument();
   });
 
-  it("offers a reset to the first page when a stale cursor fails to load", async () => {
+  // The second page's own href (registered via clicking Next below) fails
+  // server-side — e.g. the underlying cursor expired between the click and
+  // the fetch. The first-page request must keep succeeding.
+  function failingSecondPageHandler() {
+    const nextPageUrl = `${API_URL}/invoices?_cursor=nexttoken`;
+    return http.get(`${API_URL}/invoices`, ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get("_cursor");
+      if (cursor === "nexttoken") return HttpResponse.json(null, { status: 400 });
+      return HttpResponse.json({
+        _links: { self: { href: `${API_URL}/invoices` }, next: { href: nextPageUrl } },
+        _embedded: { item: sampleInvoiceItems },
+        page: { size: 3, total_items_exact: 4 },
+      });
+    });
+  }
+
+  it("offers a reset to the first page when a registered cursor's page fails to load", async () => {
+    server.use(profileRootHandler(), invoiceProfileHandler(), failingSecondPageHandler());
+
+    renderEntityList("/invoice");
+
+    const nextButton = await screen.findByRole("button", { name: "Next" });
+
+    // The failing second-page query still hardcodes retry: 3 (fetchByUrlQuery)
+    // regardless of the test QueryClient's retry: false default — flush the
+    // backoff with fake timers, as documented in navigator-data/CLAUDE.md.
+    // fireEvent (not userEvent) avoids racing its own internal real-timer waits
+    // against the fake ones.
     vi.useFakeTimers();
-
-    // A same-origin cursor survives the data layer's origin guard, so the
-    // request reaches the server and gets rejected as a stale/invalid cursor.
-    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.get(`${API_URL}/invoices`, ({ request }) => {
-        const cursor = new URL(request.url).searchParams.get("_cursor");
-        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
-        return HttpResponse.json({
-          _links: { self: { href: `${API_URL}/invoices` } },
-          _embedded: { item: [] },
-          page: { size: 0, total_items_exact: 0 },
-        });
-      }),
-    );
-
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
-
+    fireEvent.click(nextButton);
     await vi.runAllTimersAsync();
     vi.useRealTimers();
 
@@ -660,32 +668,19 @@ describe("EntityList", () => {
   });
 
   it("recovers to the first page when the reset action is clicked", async () => {
+    server.use(profileRootHandler(), invoiceProfileHandler(), failingSecondPageHandler());
+
+    renderEntityList("/invoice");
+
+    const nextButton = await screen.findByRole("button", { name: "Next" });
+
     vi.useFakeTimers();
-
-    const staleCursor = `${API_URL}/invoices?_cursor=stale`;
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.get(`${API_URL}/invoices`, ({ request }) => {
-        const cursor = new URL(request.url).searchParams.get("_cursor");
-        if (cursor === "stale") return HttpResponse.json(null, { status: 400 });
-        return HttpResponse.json({
-          _links: { self: { href: `${API_URL}/invoices` } },
-          _embedded: { item: [] },
-          page: { size: 0, total_items_exact: 0 },
-        });
-      }),
-    );
-
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(staleCursor)}`);
-
+    fireEvent.click(nextButton);
     await vi.runAllTimersAsync();
     vi.useRealTimers();
 
     const resetButton = await screen.findByRole("button", { name: /back to first page/i });
-
-    const user = userEvent.setup();
-    await user.click(resetButton);
+    fireEvent.click(resetButton);
 
     // Clearing the cursor switches the hook to the default (first-page) request,
     // which succeeds — the error and its reset action disappear.
@@ -778,7 +773,7 @@ describe("EntityList", () => {
       }),
     );
 
-    renderEntityList("/invoice");
+    const { router } = renderEntityList("/invoice");
 
     // Next and Previous pagination buttons appear
     const nextButton = await screen.findByRole("button", { name: "Next" });
@@ -793,27 +788,10 @@ describe("EntityList", () => {
     // The next page's distinct row proves the click actually fetched the next-page
     // URL, not just that the button remained in the DOM after being clicked.
     expect(await screen.findByText("INV-2024-004")).toBeInTheDocument();
-  });
 
-  it("fetches from s.cursor URL when s.cursor is present in the route", async () => {
-    const nextPageUrl = `${API_URL}/invoices?_cursor=page2token`;
-
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      // Only the cursor-page handler is registered — when s.cursor is set the component
-      // fetches that URL directly and never requests the base collection URL
-      createListHandler({
-        url: nextPageUrl,
-        items: [sampleItem],
-        page: { size: 1, total_items_exact: 4 },
-      }),
-    );
-
-    renderEntityList(`/invoice?s.cursor=${encodeURIComponent(nextPageUrl)}`);
-
-    // Data from the cursor page should be rendered
-    expect(await screen.findByText("INV-2024-001")).toBeInTheDocument();
+    // The browser URL must carry only the opaque `_cursor` token from
+    // nextHref — never the href itself — under the `cursor` search param.
+    expect(router.state.location.search).toEqual({ cursor: "nexttoken" });
   });
 });
 
@@ -1268,6 +1246,68 @@ describe("EntityItemDetailPage — RelationToOneSection", () => {
 
     await waitFor(() => expect(screen.queryByText("No item linked")).not.toBeInTheDocument());
     expect(await screen.findByText("Acme Corp")).toBeInTheDocument();
+  });
+
+  it("does not flash the previous search's results while a new search is loading", async () => {
+    const user = userEvent.setup();
+    const itemId = "inv-one-link-restale";
+    const itemUrl = `${API_URL}/invoices/${itemId}`;
+    const supplierRelationUrl = `${itemUrl}/supplier`;
+
+    // Gates the "Widget" response so the test can assert on the in-between state —
+    // while that search is in flight — before letting it resolve.
+    let releaseWidgetResponse = () => {};
+    const widgetResponseGate = new Promise<void>((resolve) => {
+      releaseWidgetResponse = resolve;
+    });
+
+    server.use(
+      profileRootWithRelationsHandler(),
+      invoiceProfileHandlerWithRelations(),
+      supplierProfileHandler(),
+      lineItemProfileHandler(),
+      http.get(itemUrl, () => HttpResponse.json(makeInvoiceItemWithSupplier(itemId))),
+      http.get(supplierRelationUrl, () => notFoundProblem()),
+      http.get(SUPPLIERS_COLLECTION_URL, async ({ request }) => {
+        const query = new URL(request.url).searchParams.get("name~prefix") ?? "";
+        const supplierResult = (id: string, name: string) => ({
+          id,
+          name,
+          _links: { self: { href: `${SUPPLIERS_COLLECTION_URL}/${id}` } },
+        });
+        if (query === "Widget") {
+          await widgetResponseGate;
+          return HttpResponse.json({
+            _embedded: { item: [supplierResult("sup-002", "Widget Co")] },
+            _links: { self: { href: SUPPLIERS_COLLECTION_URL } },
+            page: { size: 1, total_items_exact: 1 },
+          });
+        }
+        return HttpResponse.json({
+          _embedded: { item: [supplierResult("sup-001", "Acme Corp")] },
+          _links: { self: { href: SUPPLIERS_COLLECTION_URL } },
+          page: { size: 1, total_items_exact: 1 },
+        });
+      }),
+    );
+
+    renderEntityList(`/invoice/${itemId}`);
+    await screen.findByText("No item linked");
+    await user.click(screen.getByRole("button", { name: "Link" }));
+
+    const searchInput = await screen.findByPlaceholderText(/Search Supplier/);
+    await user.type(searchInput, "Acme");
+    expect(await screen.findByText("Acme Corp")).toBeInTheDocument();
+
+    await user.clear(searchInput);
+    await user.type(searchInput, "Widget");
+
+    // While the "Widget" search is in flight, the dialog must not keep showing the
+    // stale "Acme Corp" result from the previous search.
+    await waitFor(() => expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument());
+
+    releaseWidgetResponse();
+    expect(await screen.findByText("Widget Co")).toBeInTheDocument();
   });
 
   it("shows the linked item and navigates to its detail page when clicked", async () => {
@@ -1835,19 +1875,36 @@ describe("EntityDetailView filters", () => {
   it("updates active filters and refetches when typing in an exact-match filter, resetting the cursor", async () => {
     const user = userEvent.setup();
     const capturedUrls: URL[] = [];
+    const nextPageUrl = `${API_URL}/invoices?_cursor=stale`;
 
     server.use(
       profileRootHandler(),
       invoiceProfileHandlerWithFilters(),
-      invoicesCollectionHandler((url) => capturedUrls.push(url)),
+      // Single dynamic handler on the pathname — branches on the `_cursor` query
+      // param (MSW matches paths, not query strings).
+      http.get(`${API_URL}/invoices`, ({ request }) => {
+        const url = new URL(request.url);
+        capturedUrls.push(url);
+        const isPage2 = url.searchParams.get("_cursor") === "stale";
+        return HttpResponse.json({
+          _links: isPage2
+            ? { self: { href: nextPageUrl } }
+            : { self: { href: `${API_URL}/invoices` }, next: { href: nextPageUrl } },
+          _embedded: { item: isPage2 ? [] : sampleInvoiceItems },
+          page: isPage2 ? { size: 0, total_items_exact: 4 } : { size: 3, total_items_exact: 4 },
+        });
+      }),
     );
 
-    // Start with an active cursor: typing in a filter must reset it (handleFilterChange
-    // calls onPageUrlChange(undefined)), so the request that follows hits the base
-    // collection URL rather than the stale cursor URL.
-    renderEntityList(
-      `/invoice?s.cursor=${encodeURIComponent(`${API_URL}/invoices?_cursor=stale`)}`,
-    );
+    const { router } = renderEntityList("/invoice");
+
+    // Start with an active, registered cursor (via a real Next click): typing in a
+    // filter must reset it (handleFilterChange calls onCursorChange(undefined)), so
+    // the request that follows hits the base collection URL rather than the
+    // now-stale cursor href.
+    const nextButton = await screen.findByRole("button", { name: "Next" });
+    await user.click(nextButton);
+    expect(router.state.location.search).toEqual({ cursor: "stale" });
 
     const statusInput = await screen.findByLabelText("Status");
     await user.type(statusInput, "open");
@@ -1858,6 +1915,7 @@ describe("EntityDetailView filters", () => {
     });
 
     expect(statusInput).toHaveValue("open");
+    expect(router.state.location.search).toEqual({});
   });
 
   it("shows Clear all once a filter is active and clears it on click", async () => {
