@@ -1,7 +1,7 @@
-import { skipToken } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import {
   type ProfileEntity,
+  ensureEntityItem,
   toProblemDisplayModel,
   useEntityItem,
   useLoadedProfileEntities,
@@ -38,15 +38,13 @@ interface EntityItemDetailLoaderContext extends AppRouterContext {
 
 export async function ensureEntityItemDetailLoaderData(
   context: EntityItemDetailLoaderContext,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- placeholder loader; itemId used once real prefetch call is added
   itemId: string,
 ): Promise<void> {
-  const { apiFetch, profileEntity } = context;
+  const { queryClient, apiFetch, profileEntity } = context;
   if (!apiFetch || !profileEntity) return;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- placeholder loader; real prefetch call replaces this
-    skipToken;
+    await ensureEntityItem(queryClient, apiFetch, profileEntity, itemId);
   } catch {
     // Swallowed: an uncaught loader rejection would block EntityItemDetailPage
     // from mounting at all. useEntityItem's own isError handling takes over

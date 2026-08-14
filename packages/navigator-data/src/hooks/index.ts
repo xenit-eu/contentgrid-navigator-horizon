@@ -17,7 +17,7 @@ export type {
   UseEntityItemCollectionOptions,
 } from "./collection/use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./collection/use-recent-items";
-export { useEntityItem } from "./item/use-entity-item";
+export { useEntityItem, ensureEntityItem } from "./item/use-entity-item";
 export type {
   UseEntityItemOptions,
   UseEntityItemParams,

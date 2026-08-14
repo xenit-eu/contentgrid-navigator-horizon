@@ -1,4 +1,4 @@
-import { EntityItem, type ProfileEntity } from "@contentgrid/navigator-data";
+import { type ProfileEntity, ensureEntityItem } from "@contentgrid/navigator-data";
 import type { AppRouterContext } from "../shells/router-shell";
 
 /**
@@ -14,9 +14,9 @@ export interface EntityItemDetailLoaderContext extends AppRouterContext {
 /**
  * Route loader — shared by both apps' `$entity/$itemId.tsx` route files.
  * Prefetches the entity item into the `QueryClient` under the exact same key
- * `useEntityItem({ profileEntity, entityId })` reads (`EntityItem.fetchByUrlQuery`
- * builds it via `queryKeys.entityItem.byUrl`), so `EntityItemView` resolves
- * from cache instead of waterfalling a fetch after the profile gate settles.
+ * `useEntityItem({ profileEntity, entityId })` reads, so `EntityItemView`
+ * resolves from cache instead of waterfalling a fetch after the profile gate
+ * settles.
  */
 export async function ensureEntityItemDetailLoaderData(
   context: EntityItemDetailLoaderContext,
@@ -29,9 +29,7 @@ export async function ensureEntityItemDetailLoaderData(
   // useEntityItem() fetch normally, with its own isPending/isError handling.
   if (!apiFetch || !profileEntity) return;
   try {
-    await queryClient.ensureQueryData(
-      EntityItem.fetchByUrlQuery(apiFetch, profileEntity.itemUrl(itemId), profileEntity),
-    );
+    await ensureEntityItem(queryClient, apiFetch, profileEntity, itemId);
   } catch {
     // Swallowed: an uncaught loader rejection would block the route
     // component from mounting at all, skipping EntityItemView's own
