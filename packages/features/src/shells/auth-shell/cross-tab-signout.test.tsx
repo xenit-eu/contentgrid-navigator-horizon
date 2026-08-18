@@ -1,17 +1,14 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "@contentgrid/navigator-data";
+import { makeAppConfig } from "@contentgrid/navigator-data/test-fixtures/auth/app-config";
 import { useCrossTabSignOut } from "./cross-tab-signout";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
   return {
     ...actual,
-    getAppConfig: () => ({
-      apiBaseUrl: "https://api.example.com",
-      authority: "https://oidc.example.com",
-      clientId: "client",
-    }),
+    getAppConfig: () => makeAppConfig(),
     useAuth: vi.fn(),
   };
 });

@@ -9,6 +9,7 @@ import {
   signinWithNewConfig,
   useAuth,
 } from "@contentgrid/navigator-data";
+import { makeAppConfig } from "@contentgrid/navigator-data/test-fixtures/auth/app-config";
 import { ApplicationSelectorPage } from "./application-selector";
 
 // Not exported from the component; the value is confirmed by reading
@@ -65,11 +66,9 @@ describe("ApplicationSelectorPage", () => {
 
     it("pre-populates the config panel when a dev override is stored and getAppConfig succeeds", () => {
       localStorage.setItem(DEV_CONFIG_STORAGE_KEY, "{}");
-      vi.mocked(getAppConfig).mockReturnValue({
-        apiBaseUrl: "https://api.example.com",
-        authority: "https://auth.example.com",
-        clientId: "client-123",
-      });
+      vi.mocked(getAppConfig).mockReturnValue(
+        makeAppConfig({ authority: "https://auth.example.com", clientId: "client-123" }),
+      );
 
       render(<ApplicationSelectorPage />);
 
