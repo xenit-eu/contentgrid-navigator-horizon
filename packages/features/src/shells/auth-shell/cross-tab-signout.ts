@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useAuth } from "react-oidc-context";
-import { getAppConfig } from "./auth-config";
+import { getAppConfig, useAuth } from "@contentgrid/navigator-data";
 
 // Matches oidc-client-ts's WebStorageStateStore default key format
 // (prefix "oidc." + UserManager._userStoreKey "user:<authority>:<client_id>").

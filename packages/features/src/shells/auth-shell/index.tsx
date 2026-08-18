@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { NavigatorDataProvider, isAuthReady, useAppAuth } from "@contentgrid/navigator-data";
 import { SignInGate } from "@contentgrid/ui";
+import { useCrossTabSignOut } from "./cross-tab-signout";
 
 interface AuthShellProps {
   children: ReactNode;
@@ -12,9 +13,15 @@ interface AuthShellProps {
  * `isAuthReady` is the same check `RouterContextBridge` uses to decide when
  * it's safe to push `apiFetch`/`profileUrl` into router context — kept in
  * one place so the two can't silently drift out of sync.
+ *
+ * Also wires up `useCrossTabSignOut` here rather than in `AuthProvider`
+ * (`navigator-data`) — deciding to redirect this tab when another tab signs
+ * out is a UX policy, not a data-access concern, so it belongs alongside
+ * `AuthShell`'s other auth-reactive UI decisions.
  */
 export function AuthShell({ children }: Readonly<AuthShellProps>) {
   const { auth, apiFetch, contentFetch, profileUrl } = useAppAuth();
+  useCrossTabSignOut();
 
   if (isAuthReady(auth)) {
     return (
