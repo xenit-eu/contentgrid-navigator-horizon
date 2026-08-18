@@ -1,6 +1,8 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Link } from "@contentgrid/hal";
 import ProfileEntity, { profileRootQuery } from "../../accessors/entity-profile";
 import { cgRels } from "../../api";
+import type { TypedFetch } from "../../api/client";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
 
@@ -49,6 +51,22 @@ export function useProfileEntities(options?: UseProfileEntitiesOptions) {
 }
 
 /**
+ * Convenience wrapper over `useProfileEntities()` for consumers that only
+ * need the successfully-loaded profiles plus a single loading flag, instead
+ * of the raw per-entity query-result array.
+ */
+export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
+  readonly profiles: readonly ProfileEntity[];
+  readonly isLoading: boolean;
+} {
+  const results = useProfileEntities(options);
+  return {
+    profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
+    isLoading: results.length > 0 && results.every((r) => r.isPending),
+  };
+}
+
+/**
  * Filter criteria for finding a specific entity profile.
  * At least one property must be specified.
  */
@@ -57,6 +75,18 @@ export interface ProfileFilter {
   readonly name?: string;
   /** Full URL to the profile resource */
   readonly href?: string;
+}
+
+/** Shared by `useProfileEntity` and `ensureProfileEntity` — one matching rule, not two. */
+function findEntityLink(
+  rootProfile: { links: { findLinks: (rel: typeof cgRels.entity) => readonly Link[] } },
+  filter: ProfileFilter,
+): Link | undefined {
+  return rootProfile.links.findLinks(cgRels.entity).find((link) => {
+    if (filter.name && link.name === filter.name) return true;
+    if (filter.href && link.href === filter.href) return true;
+    return false;
+  });
 }
 
 interface UseProfileEntityOptions {
@@ -87,28 +117,51 @@ interface UseProfileEntityOptions {
  */
 export function useProfileEntity(filter: ProfileFilter, options?: UseProfileEntityOptions) {
   const { apiFetch, profileUrl } = useNavigatorData();
+  const queryClient = useQueryClient();
 
   // Fetch profile root to get the entity link (likely already cached)
-  const { data: rootProfile } = useQuery(profileRootQuery(apiFetch, profileUrl));
+  const rootQuery = useQuery(profileRootQuery(apiFetch, profileUrl));
+  const entityLink = rootQuery.data && findEntityLink(rootQuery.data, filter);
 
-  // Find the link for this entity by filter criteria
-  const entityLink = rootProfile?.links.findLinks(cgRels.entity).find((link) => {
-    if (filter.name && link.name === filter.name) return true;
-    if (filter.href && link.href === filter.href) return true;
-    return false;
-  });
-
-  // Fetch the specific profile using the same query pattern as useProfileEntities.
-  // Only fetch if we found the link in the profile root. When entityLink is undefined
-  // (profile root not yet loaded or entity not found), provide a placeholder queryKey
-  // so TanStack Query does not throw during key computation on initial renders.
+  // Four states: root still loading (wait), root failed (surface that error
+  // rather than hanging forever), root loaded with no matching link
+  // (definitively not found — resolve to null), or link found (fetch it).
   return useQuery({
     ...(entityLink
       ? ProfileEntity.profileByLinkQuery(apiFetch, entityLink, options?.queryOptionsOverride)
       : {
-          queryKey: ["ProfileEntity", null, null] as const,
-          queryFn: () => Promise.resolve(null as unknown as ProfileEntity),
+          queryKey: ["ProfileEntity", "not-found", filter.name ?? filter.href ?? null] as const,
+          // Re-fetches (not just re-reads) the profile root via the query
+          // client, so calling this query's own `refetch()` also retries a
+          // previously-failed root fetch — not just its own stale closure.
+          queryFn: async () => {
+            await queryClient.fetchQuery(profileRootQuery(apiFetch, profileUrl));
+            return null as unknown as ProfileEntity;
+          },
+          // The root fetch (above) already carries its own retry policy —
+          // retrying this wrapper on top would just double the backoff delay.
+          retry: false,
         }),
-    enabled: !!entityLink,
+    enabled: !!entityLink || rootQuery.isSuccess || rootQuery.isError,
   });
+}
+
+/**
+ * Non-hook counterpart to `useProfileEntity`, for use in route `loader`s
+ * (which run before any component mounts, so hooks aren't available).
+ * Ensures the profile root and the matching entity profile are both loaded
+ * into the query cache, returning `null` when no entity matches the filter.
+ */
+export async function ensureProfileEntity(
+  queryClient: QueryClient,
+  apiFetch: TypedFetch,
+  profileUrl: string,
+  filter: ProfileFilter,
+): Promise<ProfileEntity | null> {
+  const rootProfile = await queryClient.ensureQueryData(profileRootQuery(apiFetch, profileUrl));
+  const entityLink = findEntityLink(rootProfile, filter);
+
+  if (!entityLink) return null;
+
+  return queryClient.ensureQueryData(ProfileEntity.profileByLinkQuery(apiFetch, entityLink));
 }

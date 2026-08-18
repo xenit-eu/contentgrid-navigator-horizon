@@ -7,7 +7,7 @@
  * - 412 no retry
  * - 409 integrity/required-relation → isError
  * - Relation read key (toOneRelation.byUrl for to-one) is invalidated on settled
- * - Relation read key (toManyRelation.byUrl for to-many) is invalidated on settled
+ * - Relation read key (toManyRelation.forRelationName, all pages, for to-many) is invalidated on settled
  * - Source item (entityItem.byUrl) is invalidated on settled (ETag may be bumped)
  * - Target byUrlForName key and entityItemCollection keys are NOT invalidated
  * - Caller onSettled runs
@@ -452,8 +452,8 @@ describe("useClearRelation — relation read key invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // The key uses the relation name ("lineItems") + relation.link.href
-    const readKey = queryKeys.toManyRelation.byUrl("lineItems", LINE_ITEMS_RELATION_URL);
+    // All pages for this relation are busted — same rationale as add/unlink
+    const readKey = queryKeys.toManyRelation.forRelationName("lineItems");
     const calledWithReadKey = invalidateSpy.mock.calls.some((call) =>
       expect.objectContaining({ queryKey: readKey }).asymmetricMatch(call[0]),
     );

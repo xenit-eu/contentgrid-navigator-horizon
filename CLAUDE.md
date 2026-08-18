@@ -306,6 +306,11 @@ For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/nav
 - Prefer PATCH over PUT for partial updates.
 - Always include and validate ETags for mutable operations.
 - Never construct or parse pagination cursors — follow HAL `next`/`prev` links directly.
+  The one place a `_cursor` value is ever read out of a link is to use it as an opaque
+  lookup key (e.g. for browser URL state) into a registry that maps it back to the exact
+  link it came from — the value itself is never decoded, and no fetch URL is ever built by
+  hand from it. See [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md)
+  for the full pattern.
 - Send Bearer tokens in the `Authorization` header only.
 - Verify webhook signatures using the JWKS endpoint and a JWT library.
 - Extensions (external services/automations built on top of a ContentGrid application — see "Small Core & Extensibility") must authenticate via OIDC and use the same REST API as any other client.

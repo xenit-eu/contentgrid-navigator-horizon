@@ -6,7 +6,7 @@
  * - sends both hrefs in POST body (one per line)
  * - ABAC denial (missing template) throws before any fetch
  * - 412 no retry
- * - Relation read key (toManyRelation.byUrl) is invalidated on settled
+ * - Relation read key (toManyRelation.forRelationName, all pages) is invalidated on settled
  * - Source item (entityItem.byUrl) is invalidated on settled (ETag may be bumped)
  * - Target byUrlForName key and entityItemCollection keys are NOT invalidated
  * - Caller onSettled runs
@@ -399,8 +399,8 @@ describe("useAddToManyRelation — cache invalidation", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // The key uses the relation name ("lineItems") + relation.link.href
-    const readKey = queryKeys.toManyRelation.byUrl("lineItems", LINE_ITEMS_RELATION_URL);
+    // All pages for this relation are busted — a newly-added item can land on any page
+    const readKey = queryKeys.toManyRelation.forRelationName("lineItems");
     const calledWithReadKey = invalidateSpy.mock.calls.some((call) =>
       expect.objectContaining({ queryKey: readKey }).asymmetricMatch(call[0]),
     );

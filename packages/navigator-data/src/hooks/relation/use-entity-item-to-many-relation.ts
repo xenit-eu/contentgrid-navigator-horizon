@@ -7,6 +7,7 @@ import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { SearchRequestSpec } from "../../api/requests";
+import { resolveTrustedCollectionUrl } from "../../search/pagination-links";
 import type { QueryOptionsOverride } from "../../utils/query-options-override";
 import { useNavigatorData } from "../context";
 import { useProfileEntities } from "../profile/use-profile-entity";
@@ -54,7 +55,10 @@ const PLACEHOLDER = {
 /**
  * Resolves the URL for the main collection query, based on the requested mode.
  *
- * - By URL: the URL is used as-is.
+ * - By URL: only trusted (same-origin as `apiBaseUrl`) URLs are used as-is — a
+ *   caller-supplied URL from crafted state could otherwise point the
+ *   bearer-token-attaching `apiFetch` at an attacker-controlled origin.
+ *   Untrusted/unparsable URLs fall back to the relation's own link href.
  * - By search: the scoped search URL is encoded from `targetProfile.searchTemplate`
  *   with `internalRelationParams` injected as hidden params. Returns `undefined`
  *   while any prerequisite (target profile, internal params, codec) isn't ready.
@@ -65,9 +69,10 @@ function resolveMainUrl(
   relation: EntityItemToManyRelation,
   targetProfile: ProfileEntity | undefined,
   internalRelationParams: Record<string, string> | undefined,
+  apiBaseUrl: string,
 ): string | undefined {
   if (isByUrl(params)) {
-    return params.url;
+    return resolveTrustedCollectionUrl(params.url, apiBaseUrl) ?? relation.link.href;
   }
   if (isBySearch(params)) {
     if (!params.searchValues || !targetProfile || !internalRelationParams) {
@@ -121,7 +126,7 @@ export function useEntityItemToManyRelation(
   params?: RelationCollectionParams,
   options?: UseEntityItemToManyRelationOptions,
 ): UseQueryResult<EntityItemCollection, Error> {
-  const { apiFetch } = useNavigatorData();
+  const { apiFetch, profileUrl } = useNavigatorData();
 
   // Always call unconditionally — Rules of Hooks.
   const profileResults = useProfileEntities();
@@ -150,7 +155,13 @@ export function useEntityItemToManyRelation(
   const internalRelationParams = baseQuery.data?.internalRelationParams;
 
   // Resolve the main query URL.
-  const mainUrl = resolveMainUrl(params, relation, targetProfile, internalRelationParams);
+  const mainUrl = resolveMainUrl(
+    params,
+    relation,
+    targetProfile,
+    internalRelationParams,
+    profileUrl,
+  );
 
   const mainEnabled =
     !!targetProfile &&

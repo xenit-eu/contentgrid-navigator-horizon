@@ -11,13 +11,14 @@
  */
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
 import { server } from "../../../test-setup";
 import ProfileEntity from "../../accessors/entity-profile";
+import { createApiClient } from "../../api/client";
 import type { ProfileEntityShape } from "../../shapes";
-import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
-import { useEntityItem } from "./use-entity-item";
+import { BASE, PROFILE_URL, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
+import { ensureEntityItem, useEntityItem } from "./use-entity-item";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -42,14 +43,14 @@ const profileRootBody = {
 const customerProfileBody = {
   name: "customer",
   title: "Customer",
-  description: "",
+  description: null,
   _embedded: {
     "blueprint:attribute": [
       {
         name: "id",
         title: "id",
         type: "string",
-        description: "",
+        description: null,
         readOnly: true,
         required: false,
         _embedded: {
@@ -63,7 +64,7 @@ const customerProfileBody = {
         name: "name",
         title: "Name",
         type: "string",
-        description: "",
+        description: null,
         readOnly: false,
         required: false,
         _embedded: {
@@ -95,7 +96,7 @@ const customerProfileBody = {
     search: {
       method: "GET",
       target: CUSTOMER_COLLECTION_URL,
-      properties: [{ name: "name~prefix", type: "text" }],
+      properties: [{ name: "name~prefix", prompt: "Name", type: "text" }],
     },
   },
 };
@@ -128,6 +129,14 @@ function setupHandlers(itemEtag?: string) {
   );
 }
 
+// Shared across every test below that just needs "a normal customer profile"
+// — only tests exercising a different profile shape construct their own
+// local profile instead of using this.
+let profileEntity: ProfileEntity;
+beforeEach(() => {
+  profileEntity = makeCustomerProfile();
+});
+
 // ---------------------------------------------------------------------------
 // Known-profile mode
 // ---------------------------------------------------------------------------
@@ -135,7 +144,6 @@ function setupHandlers(itemEtag?: string) {
 describe("useEntityItem — known-profile mode { profileEntity, entityId }", () => {
   it("fetches an entity item when entityId is provided", async () => {
     setupHandlers();
-    const profileEntity = makeCustomerProfile();
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
       wrapper,
@@ -148,7 +156,6 @@ describe("useEntityItem — known-profile mode { profileEntity, entityId }", () 
 
   it("captures the ETag from the response", async () => {
     setupHandlers('"etag-abc"');
-    const profileEntity = makeCustomerProfile();
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
       wrapper,
@@ -165,7 +172,6 @@ describe("useEntityItem — known-profile mode { profileEntity, entityId }", () 
       http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
       // item URL must NOT be called — not registered; MSW would error on unhandled request
     );
-    const profileEntity = makeCustomerProfile();
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: undefined }), {
       wrapper,
@@ -189,7 +195,6 @@ describe("useEntityItem — known-profile mode { profileEntity, entityId }", () 
         ),
       ),
     );
-    const profileEntity = makeCustomerProfile();
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
       wrapper,
@@ -254,5 +259,27 @@ describe("useEntityItem — discover-profile mode { url }", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
 
     expect(result.current.data?.etag).toBe('"etag-discover"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ensureEntityItem — non-hook, loader-safe equivalent of known-profile mode
+// ---------------------------------------------------------------------------
+
+describe("ensureEntityItem", () => {
+  it("populates the query cache so a subsequent useEntityItem read is instant", async () => {
+    setupHandlers();
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
+
+    await ensureEntityItem(queryClient, apiFetch, profileEntity, "cust-001");
+
+    const wrapper = makeWrapper(queryClient, apiFetch);
+    const { result } = renderHook(() => useEntityItem({ profileEntity, entityId: "cust-001" }), {
+      wrapper,
+    });
+
+    expect(result.current.data?.id).toBe("cust-001");
+    expect(result.current.isSuccess).toBe(true);
   });
 });

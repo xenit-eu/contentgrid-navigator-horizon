@@ -19,5 +19,5 @@ export type { DevApp, DevAppConfig, AppCategory } from "./dev-apps";
 export { isDevTokenMode, getDevToken } from "./dev-token";
 export { createOidcTokenSupplier } from "./token-supplier";
 export { useAuth } from "react-oidc-context";
-export { useAppAuth } from "./use-app-auth";
+export { useAppAuth, isAuthReady } from "./use-app-auth";
 export type { AppAuthResult } from "./use-app-auth";

@@ -17,6 +17,23 @@ export interface AppAuthResult {
   profileUrl: string;
 }
 
+/**
+ * Whether auth has settled into a definite, usable state: not still loading,
+ * not silently refreshing an expired session, and actually authenticated.
+ * Shared by `AuthShell` (gates rendering children) and `RouterContextBridge`
+ * (gates pushing `apiFetch`/`profileUrl` into router context) so both agree
+ * on exactly when it's safe to start firing authenticated requests.
+ *
+ * Checks `user.expired` directly rather than trusting `isAuthenticated` alone —
+ * react-oidc-context only recomputes `isAuthenticated` on a `USER_LOADED`-type
+ * dispatch, so it stays stale (true) if a background silent-renewal attempt
+ * fails and never re-dispatches. Reading `user.expired` avoids depending on
+ * that staleness window.
+ */
+export function isAuthReady(auth: ReturnType<typeof useAuth>): boolean {
+  return !auth.isLoading && auth.isAuthenticated && !auth.user?.expired;
+}
+
 export function useAppAuth(): AppAuthResult {
   const auth = useAuth();
 
@@ -36,7 +53,13 @@ export function useAppAuth(): AppAuthResult {
 
   useEffect(() => {
     if (!auth.isLoading && !auth.error && auth.user?.expired) {
-      auth.signinSilent().catch(() => auth.removeUser());
+      // signinSilent() never rejects — on failure it resolves `null` after
+      // dispatching its own error internally (react-oidc-context), so a
+      // `.catch()` here would never run. Detect failure via the resolved
+      // value instead.
+      auth.signinSilent().then((user) => {
+        if (!user) auth.removeUser();
+      });
     }
   }, [auth]);
 

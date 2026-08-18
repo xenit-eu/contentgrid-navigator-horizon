@@ -1,44 +1,23 @@
-import { type ReactNode, StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
-import {
-  AppConfigProvider,
-  AuthProvider,
-  NavigatorDataProvider,
-  loadAppConfig,
-  useAppAuth,
-} from "@contentgrid/navigator-data";
+import { QueryClient } from "@tanstack/react-query";
+import { createRouter } from "@tanstack/react-router";
+import { NotFoundPage } from "@contentgrid/features/app-info-pages";
+import { mountNavigatorApp } from "@contentgrid/features/router-shell";
+import type { AppRouterContext } from "@contentgrid/features/router-shell";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
-const router = createRouter({ routeTree });
+const queryClient = new QueryClient();
+
+const router = createRouter({
+  routeTree,
+  context: { queryClient, apiFetch: null, profileUrl: null } satisfies AppRouterContext,
+  defaultNotFoundComponent: NotFoundPage,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
-}
-
-const queryClient = new QueryClient();
-
-// Bridges auth → data layer: useAppAuth derives an OIDC-token-supplied
-// apiFetch and the profile URL from the runtime config, so it must render
-// inside <AuthProvider> and after loadAppConfig() resolved.
-function DataProviders({ children }: Readonly<{ children: ReactNode }>) {
-  const { apiFetch, contentFetch, profileUrl } = useAppAuth();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <NavigatorDataProvider
-        apiFetch={apiFetch}
-        contentFetch={contentFetch}
-        profileUrl={profileUrl}
-      >
-        {children}
-      </NavigatorDataProvider>
-    </QueryClientProvider>
-  );
 }
 
 // Dev without a real backend: serve the stubbed HAL endpoint via MSW
@@ -52,21 +31,4 @@ async function enableMocking() {
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element not found");
 
-try {
-  await enableMocking();
-  await loadAppConfig();
-  createRoot(rootEl).render(
-    <StrictMode>
-      <AppConfigProvider>
-        <AuthProvider>
-          <DataProviders>
-            <RouterProvider router={router} />
-            <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-          </DataProviders>
-        </AuthProvider>
-      </AppConfigProvider>
-    </StrictMode>,
-  );
-} catch (err: unknown) {
-  rootEl.textContent = `Failed to load app configuration: ${err instanceof Error ? err.message : String(err)}`;
-}
+await mountNavigatorApp({ rootEl, router, queryClient, enableMocking });

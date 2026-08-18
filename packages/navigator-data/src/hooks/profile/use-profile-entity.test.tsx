@@ -1,16 +1,18 @@
 /**
- * Tests for useProfileEntities and useProfileEntity hooks.
+ * Tests for useProfileEntities, useProfileEntity, and ensureProfileEntity.
  *
  * Covers:
  * - useProfileEntities: fetches profile root + all entity profiles in parallel
  * - useProfileEntity: finds entity by name, finds entity by href, disabled when no match
+ * - ensureProfileEntity: the non-hook, loader-safe equivalent of useProfileEntity
  */
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../../test-setup";
-import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
-import { useProfileEntities, useProfileEntity } from "./use-profile-entity";
+import { createApiClient } from "../../api/client";
+import { BASE, PROFILE_URL, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
+import { ensureProfileEntity, useProfileEntities, useProfileEntity } from "./use-profile-entity";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -36,14 +38,14 @@ const profileRootBody = {
 const customerProfileBody = {
   name: "customer",
   title: "Customer",
-  description: "",
+  description: null,
   _embedded: {
     "blueprint:attribute": [
       {
         name: "id",
         title: "id",
         type: "string",
-        description: "",
+        description: null,
         readOnly: true,
         required: false,
         _embedded: {
@@ -78,14 +80,14 @@ const customerProfileBody = {
 const invoiceProfileBody = {
   name: "invoice",
   title: "Invoice",
-  description: "",
+  description: null,
   _embedded: {
     "blueprint:attribute": [
       {
         name: "id",
         title: "id",
         type: "string",
-        description: "",
+        description: null,
         readOnly: true,
         required: false,
         _embedded: {
@@ -223,17 +225,31 @@ describe("useProfileEntity", () => {
     expect(result.current.data?.name).toBe("invoice");
   });
 
-  it("query is disabled and returns no data when entity is not found in profile root", async () => {
+  it("settles to not-found (not stuck pending) when entity is not in the profile root", async () => {
     setupHandlers();
     const wrapper = makeWrapper();
     const { result } = renderHook(() => useProfileEntity({ name: "nonexistent" }), { wrapper });
 
-    // Wait for profile root to load (profile root has retry:false in makeQueryClient)
-    await new Promise((r) => setTimeout(r, 200));
+    // Once the profile root resolves, the query must settle — not stay
+    // pending forever — so callers can distinguish "still loading" from
+    // "definitively not found".
+    await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    // Query should be disabled — no data and no error
-    expect(result.current.data).toBeUndefined();
+    expect(result.current.data).toBeFalsy();
     expect(result.current.isError).toBe(false);
+  });
+
+  it("settles to an error (not stuck pending) when the profile root itself fails to load", async () => {
+    // profileRootQuery has no baked-in retry (per navigator-data/CLAUDE.md),
+    // so it settles immediately using the test QueryClient's retry: false.
+    server.use(http.get(PROFILE_URL, () => HttpResponse.json(null, { status: 500 })));
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useProfileEntity({ name: "customer" }), { wrapper });
+
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    expect(result.current.isError).toBe(true);
+    expect(result.current.data).toBeFalsy();
   });
 
   it("returns profile title via data.title", async () => {
@@ -266,5 +282,47 @@ describe("useProfileEntity", () => {
     await vi.runAllTimersAsync();
 
     expect(result.current.isError).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ensureProfileEntity — non-hook, loader-safe equivalent of useProfileEntity
+// ---------------------------------------------------------------------------
+
+describe("ensureProfileEntity", () => {
+  it("resolves the matching profile by name", async () => {
+    setupHandlers();
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
+
+    const profile = await ensureProfileEntity(queryClient, apiFetch, PROFILE_URL, {
+      name: "customer",
+    });
+
+    expect(profile?.name).toBe("customer");
+  });
+
+  it("resolves the matching profile by href", async () => {
+    setupHandlers();
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
+
+    const profile = await ensureProfileEntity(queryClient, apiFetch, PROFILE_URL, {
+      href: INVOICE_PROFILE_URL,
+    });
+
+    expect(profile?.name).toBe("invoice");
+  });
+
+  it("resolves to null when no entity matches", async () => {
+    setupHandlers();
+    const queryClient = makeQueryClient();
+    const apiFetch = createApiClient(noopSupplier);
+
+    const profile = await ensureProfileEntity(queryClient, apiFetch, PROFILE_URL, {
+      name: "nonexistent",
+    });
+
+    expect(profile).toBeNull();
   });
 });

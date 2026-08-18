@@ -34,7 +34,25 @@ export interface ListHandlerConfig {
 export function createListHandler(config: ListHandlerConfig): HttpHandler {
   const { url, items, page, links } = config;
 
-  return http.get(url, () => {
+  // MSW matches handlers by path only (query strings are ignored), so match
+  // against the path and check any query params from `url` explicitly. This
+  // lets callers pass a page-specific URL (e.g. with a `_cursor` param) and
+  // have it only respond for requests carrying that exact param, instead of
+  // registering a handler on a URL containing a query string (which MSW warns
+  // is redundant — see https://mswjs.io/docs/http/intercepting-requests#querysearch-parameters).
+  const target = new URL(url);
+  const path = `${target.origin}${target.pathname}`;
+  const expectedParams = [...target.searchParams.entries()];
+
+  return http.get(path, ({ request }) => {
+    if (expectedParams.length > 0) {
+      const requestParams = new URL(request.url).searchParams;
+      const matches = expectedParams.every(([key, value]) => requestParams.get(key) === value);
+      if (!matches) {
+        return new HttpResponse(null, { status: 404 });
+      }
+    }
+
     const body: HalSliceShape<Record<string, unknown>> & {
       page: { size: number; total_items_exact: number };
     } = {

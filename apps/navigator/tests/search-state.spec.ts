@@ -4,6 +4,13 @@
  * component state, not reflected in the URL (see ACC-2889 remarks) — this
  * test only covers the fetch behavior, not any URL round-trip.
  *
+ * The URL's `cursor` value is always an opaque token (e.g. "page2"), never a
+ * URL — the literal next/prev href it came from is remembered in an
+ * in-memory registry (`packages/navigator-data/src/search/cursor-registry.ts`)
+ * at the moment it's extracted, and resolved back through that registry when
+ * the token reappears. Nothing in the data layer ever constructs a URL from
+ * the token.
+ *
  * The entity list lives at /$entity (e.g. /invoice). `_app` is a *pathless*
  * layout route, so it never appears in the URL — navigating to `/_app/invoice`
  * would match the item-detail route ($entity/$itemId), not the list.
@@ -29,7 +36,6 @@ test("Next/Previous drive real pagination against the stubbed endpoint", async (
   await page.goto("/invoice");
   await expect(page.getByRole("table")).toBeVisible();
   await expect(page.getByText(PAGE_1_INVOICE_ID)).toBeVisible();
-
   // Click Next — issues a real fetch to the HAL next link. If it were broken,
   // this would either fall back to page 1 (page-2 text never appears) or
   // throw (caught below via pageerror).

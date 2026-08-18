@@ -8,14 +8,6 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./entity-list": {
-      "import": "./src/entity-list/index.tsx",
-      "types": "./src/entity-list/index.tsx"
-    },
-    "./entity-list-infinite": {
-      "import": "./src/entity-list/infinite-scroll-demo.tsx",
-      "types": "./src/entity-list/infinite-scroll-demo.tsx"
-    },
     "./recently-created": {
       "import": "./src/recently-created/index.tsx",
       "types": "./src/recently-created/index.tsx"
@@ -28,6 +20,18 @@
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
     },
+    "./router-shell": {
+      "import": "./src/shells/router-shell/index.ts",
+      "types": "./src/shells/router-shell/index.ts"
+    },
+    "./auth-shell": {
+      "import": "./src/shells/auth-shell/index.tsx",
+      "types": "./src/shells/auth-shell/index.tsx"
+    },
+    "./entity-profile-gate": {
+      "import": "./src/shells/entity-profile-gate/index.ts",
+      "types": "./src/shells/entity-profile-gate/index.ts"
+    },
     "./navigator-header": {
       "import": "./src/navigator-header/index.ts",
       "types": "./src/navigator-header/index.ts"
@@ -35,6 +39,26 @@
     "./problem-details": {
       "import": "./src/problem-details/index.ts",
       "types": "./src/problem-details/index.ts"
+    },
+    "./app-info-pages": {
+      "import": "./src/app-info-pages/index.ts",
+      "types": "./src/app-info-pages/index.ts"
+    },
+    "./dashboard": {
+      "import": "./src/dashboard/index.ts",
+      "types": "./src/dashboard/index.ts"
+    },
+    "./layout": {
+      "import": "./src/layout/index.ts",
+      "types": "./src/layout/index.ts"
+    },
+    "./entity-item-collection": {
+      "import": "./src/entity-item-collection/index.ts",
+      "types": "./src/entity-item-collection/index.ts"
+    },
+    "./entity-item": {
+      "import": "./src/entity-item/index.ts",
+      "types": "./src/entity-item/index.ts"
     },
     "./search": {
       "import": "./src/search/index.ts",
@@ -50,14 +74,18 @@
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
     "@contentgrid/ui": "workspace:*",
     "@contentgrid/navigator-data": "workspace:*",
-    "@tanstack/react-router": "^1.170.10"
+    "@tanstack/react-router": "^1.170.10",
+    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query-devtools": "^5.0.0"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query-devtools": "5.101.0",
     "@tanstack/react-router": "1.170.15",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
