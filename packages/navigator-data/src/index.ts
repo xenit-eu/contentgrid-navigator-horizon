@@ -3,6 +3,7 @@
 export * from "./api";
 export * from "./auth";
 export * from "./hooks";
+export * from "./accessors/attribute-profile";
 export * from "./accessors/extended-forms/search-form";
 export * from "./accessors/extended-forms/create-form";
 export * from "./accessors/entity-item";
@@ -17,3 +18,5 @@ export * from "./config";
 export { queryKeys } from "./query-keys";
 export * from "./search";
 export { createValues } from "@contentgrid/hal-forms/values";
+export type { HalFormValues } from "@contentgrid/hal-forms/values";
+export type { SearchRequestSpec } from "./api/requests";

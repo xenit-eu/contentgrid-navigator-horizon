@@ -67,6 +67,12 @@ export interface SearchHalFormTemplateProperty {
   profileRelation?: ProfileRelation;
   /** Pre-parsed search type based on property name suffix */
   searchType: ProfileAttributeSearchType;
+  /**
+   * Base key with the operator suffix stripped.
+   * Groups range-pair properties (e.g. "created_at~from" + "created_at~until" → "created_at").
+   * Computed once here so consumers never need to parse the raw property name.
+   */
+  groupKey: string;
 }
 
 /**
@@ -86,6 +92,82 @@ interface RawSortOption {
 
 function isRawSortOption(opt: unknown): opt is RawSortOption {
   return typeof opt === "object" && opt !== null && "property" in opt && "value" in opt;
+}
+
+/**
+ * The bare attribute/relation path of a property name, with its trailing operator
+ * suffix removed (e.g. "name~prefix" → "name", "invoice_date~from" → "invoice_date").
+ * The server only ever uses a single, plain tilde for every operator — range-pair bounds
+ * included (e.g. "invoice_date~from" / "invoice_date~until", never a dotted
+ * "invoice_date.~from" form) — so splitting at the first "~" is always correct; no
+ * dot-aware special case is needed here.
+ *
+ * `~from`/`~until` themselves aren't in the committed profile dump (it only has
+ * `~prefix`/`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before` — verified: `git grep "~from\|~until"
+ * -- "*test-fixtures*"` is empty), but they're real: the legacy Navigator's
+ * `RangedJsfFormConvertor` pairs exactly those suffixes with `~after`/`~before` as fallbacks
+ * (`contentgrid-navigator/src/components/form/jsonforms.ts:325`,
+ * `NestedRange("~from", "~until", "~after", "~before")`). The plain-tilde claim above is what
+ * the dump DOES back directly — every operator suffix it contains uses a single tilde, no
+ * dotted form.
+ */
+function basePropertyName(propertyName: string): string {
+  const tildeIdx = propertyName.indexOf("~");
+  return tildeIdx === -1 ? propertyName : propertyName.slice(0, tildeIdx);
+}
+
+/**
+ * The attribute name on the related entity, from a relation-traversal groupKey
+ * (e.g. "customer.name" → "name" — everything after the last dot is the relation's attribute).
+ */
+function relationAttributeName(groupKey: string): string {
+  return groupKey.slice(groupKey.lastIndexOf(".") + 1);
+}
+
+/** Property-name suffix → search type. Order matters: checked top to bottom, first match wins. */
+const SEARCH_TYPE_BY_SUFFIX: ReadonlyArray<readonly [string, ProfileAttributeSearchType]> = [
+  ["~prefix", ProfileAttributeSearchType.prefixMatch],
+  ["~fts", ProfileAttributeSearchType.fullText],
+  ["~gte", ProfileAttributeSearchType.greaterThanOrEqual],
+  ["~gt", ProfileAttributeSearchType.greaterThan],
+  ["~lte", ProfileAttributeSearchType.lessThanOrEqual],
+  ["~lt", ProfileAttributeSearchType.lessThan],
+  // Inclusive range-pair bounds — same suffix on both direct and relation-traversal
+  // attributes (e.g. "invoice_date~from", "products.price~lte").
+  ["~from", ProfileAttributeSearchType.greaterThanOrEqual],
+  ["~until", ProfileAttributeSearchType.lessThanOrEqual],
+  // datetime uses ~after/~before, which map to gt/lt semantically
+  ["~after", ProfileAttributeSearchType.greaterThan],
+  ["~before", ProfileAttributeSearchType.lessThan],
+];
+
+/**
+ * Extract the search type encoded in a property name's suffix (defaults to exact-match).
+ * Matches on `endsWith`, not `includes` — the suffix is always the tail of the (possibly
+ * relation-prefixed) segment passed in, and `endsWith` avoids a false match from one suffix
+ * appearing as a substring of another as the suffix table grows (e.g. "~gte" containing "~gt").
+ */
+function extractSearchType(propertyName: string): ProfileAttributeSearchType {
+  const match = SEARCH_TYPE_BY_SUFFIX.find(([suffix]) => propertyName.endsWith(suffix));
+  return match?.[1] ?? ProfileAttributeSearchType.exactMatch;
+}
+
+/**
+ * Resolve the search type for a direct-attribute property from the attribute's own
+ * `blueprint:search-param` embeds — the server always states the type explicitly there
+ * (`searchParam.name` is the full local property name, e.g. "name~prefix" or
+ * "invoice_date~from"), so it never needs to be reconstructed from the name. Defaults to
+ * exact-match on the rare case a resolved attribute has no matching entry.
+ */
+function resolveSearchType(
+  profileAttribute: ProfileAttribute | undefined,
+  localName: string,
+): ProfileAttributeSearchType {
+  const searchParam = profileAttribute?.searchParams.find((param) => param.name === localName);
+  return (
+    (searchParam?.type as ProfileAttributeSearchType | undefined) ??
+    ProfileAttributeSearchType.exactMatch
+  );
 }
 
 /**
@@ -117,8 +199,6 @@ export class SearchHalFormTemplate {
     public readonly template: HalFormsTemplate<SearchRequestSpec>,
     /** The profile accessor for attribute/relation linking */
     private readonly profileEntity: ProfileEntity,
-    /** Optional map of all profiles for cross-entity relation resolution */
-    private readonly _allProfiles?: ProfileEntity[],
   ) {}
 
   /**
@@ -194,17 +274,19 @@ export class SearchHalFormTemplate {
    */
   getSearchPropertiesByAttribute(attributeName: string): readonly SearchHalFormTemplateProperty[] {
     return this.searchProperties.filter((prop) => {
-      if (prop.isOverRelation) {
-        // For relation properties like "customer.name~prefix", extract the attribute part
-        const parts = prop.property.name.split(".");
-        const attributePart = parts.slice(1).join(".");
-        const attrName = attributePart.split("~")[0];
-        return attrName === attributeName;
-      } else {
-        // For direct properties like "name~prefix", extract attribute name
-        const attrName = prop.property.name.split("~")[0];
-        return attrName === attributeName;
+      // profileAttribute.name is the resolved attribute name on the owning entity. Only ever
+      // set for direct attributes — relation-traversal properties don't resolve a target
+      // ProfileAttribute here (see the class-level note on `enhanceSearchProperty`), so fall
+      // back to groupKey for them:
+      // - direct: groupKey IS the attribute name ("code" from "code~prefix")
+      // - relation: groupKey is "relation.attribute" ("customer.name") — take the last segment
+      if (prop.profileAttribute !== undefined) {
+        return prop.profileAttribute.name === attributeName;
       }
+      if (prop.isOverRelation) {
+        return relationAttributeName(prop.groupKey) === attributeName;
+      }
+      return prop.groupKey === attributeName;
     });
   }
 
@@ -219,11 +301,28 @@ export class SearchHalFormTemplate {
 
   /**
    * Enhance a single search property with profile metadata.
+   *
+   * Relation-traversal properties never resolve a target-entity `profileAttribute` here:
+   * doing so needs every other entity's profile, which this class has no access to (it wraps
+   * a single entity's search template). Resolving the target attribute — e.g. for typeahead —
+   * is the caller's job: resolve the target `ProfileEntity` via `profileRelation.getTargetProfile()`
+   * and look up the attribute on it directly, the same pattern `useEntityItemToManyRelation`
+   * already uses for relation reads.
    */
   private enhanceSearchProperty(property: HalFormsProperty): SearchHalFormTemplateProperty {
     const propertyName = property.name;
+    // A dot always separates a relation name from its target attribute (e.g.
+    // "customer.first_name~prefix"). None of the operator suffixes the committed profile dump
+    // actually contains (~prefix, ~gt/~gte/~lt/~lte, ~after/~before) use a dot; ~from/~until
+    // aren't in the dump but are real per the legacy Navigator's NestedRange pairing (see
+    // basePropertyName's doc comment) and, per that same source, are also plain-tilde, never
+    // dotted. So "any dot" is a sufficient and correct relation-traversal check.
     const parts = propertyName.split(".");
     const isOverRelation = parts.length > 1;
+
+    // groupKey: strip the operator suffix (~prefix, ~from, etc.) once here so consumers
+    // (filter-properties, getSearchPropertiesByAttribute, etc.) never re-parse.
+    const groupKey = basePropertyName(propertyName);
 
     let profileAttribute: ProfileAttribute | undefined;
     let profileRelation: ProfileRelation | undefined;
@@ -232,29 +331,20 @@ export class SearchHalFormTemplate {
     if (isOverRelation) {
       // Relation traversal: "relation.attribute~suffix"
       const relationName = parts[0];
-      const attributePart = parts.slice(1).join(".");
-      const attributeName = attributePart.split("~")[0];
+      const attributeSegmentWithSuffix = parts.slice(1).join(".");
 
       profileRelation = this.profileEntity.getRelation(relationName);
-
-      // Try to resolve the target attribute using allProfiles
-      if (profileRelation && this._allProfiles) {
-        const targetProfileHref = profileRelation.targetProfileHref;
-        // Find the target profile by matching its self link with the relation's target-entity link
-        const targetProfile = this._allProfiles.find(
-          (profile) => profile.link.href === targetProfileHref,
-        );
-        if (targetProfile) {
-          profileAttribute = targetProfile.getAttribute(attributeName);
-        }
-      }
-
-      searchType = this.extractSearchType(attributePart);
+      // No target-entity profileAttribute to consult here (see the method doc above) —
+      // suffix parsing is the only signal available for relation-traversal properties.
+      searchType = extractSearchType(attributeSegmentWithSuffix);
     } else {
-      // Direct attribute: "attribute~suffix"
-      const attributeName = propertyName.split("~")[0];
+      // Direct attribute: "attribute~suffix" — no relation prefix to strip, so groupKey
+      // (computed above via basePropertyName) IS the attribute name here. Aliased to
+      // attributeName below rather than re-splitting propertyName a second time, which
+      // would just duplicate what basePropertyName already did.
+      const attributeName = groupKey;
       profileAttribute = this.profileEntity.getAttribute(attributeName);
-      searchType = this.extractSearchType(propertyName);
+      searchType = resolveSearchType(profileAttribute, propertyName);
     }
 
     return {
@@ -263,23 +353,8 @@ export class SearchHalFormTemplate {
       isOverRelation,
       profileRelation,
       searchType,
+      groupKey,
     };
-  }
-
-  /**
-   * Extract search type from property name suffix.
-   */
-  private extractSearchType(propertyName: string): ProfileAttributeSearchType {
-    if (propertyName.includes("~prefix")) return ProfileAttributeSearchType.prefixMatch;
-    if (propertyName.includes("~fts")) return ProfileAttributeSearchType.fullText;
-    if (propertyName.includes("~gte")) return ProfileAttributeSearchType.greaterThanOrEqual;
-    if (propertyName.includes("~gt")) return ProfileAttributeSearchType.greaterThan;
-    if (propertyName.includes("~lte")) return ProfileAttributeSearchType.lessThanOrEqual;
-    if (propertyName.includes("~lt")) return ProfileAttributeSearchType.lessThan;
-    // Note: datetime uses ~after/~before which map to gt/lt semantically
-    if (propertyName.includes("~after")) return ProfileAttributeSearchType.greaterThan;
-    if (propertyName.includes("~before")) return ProfileAttributeSearchType.lessThan;
-    return ProfileAttributeSearchType.exactMatch;
   }
 
   /**
@@ -300,7 +375,7 @@ export class SearchHalFormTemplate {
     for (const [name, value] of Object.entries(params)) {
       builder = builder.addProperty(name, (prop) => prop.withType("hidden").withValue(value));
     }
-    return new SearchHalFormTemplate(builder, this.profileEntity, this._allProfiles);
+    return new SearchHalFormTemplate(builder, this.profileEntity);
   }
 
   /**

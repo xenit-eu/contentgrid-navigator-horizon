@@ -59,6 +59,10 @@
     "./entity-item": {
       "import": "./src/entity-item/index.ts",
       "types": "./src/entity-item/index.ts"
+    },
+    "./search": {
+      "import": "./src/search/index.ts",
+      "types": "./src/search/index.ts"
     }
   },
   "scripts": {

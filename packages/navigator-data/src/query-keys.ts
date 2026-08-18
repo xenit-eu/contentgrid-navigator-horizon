@@ -7,6 +7,7 @@ const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
 const TO_ONE_RELATION_KEY = "ToOneRelation";
 const TO_MANY_RELATION_KEY = "ToManyRelation";
+const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -81,5 +82,26 @@ export const queryKeys = {
     /** Exact key for a specific to-many relation by relation name and relation URL. */
     byUrl: (relationName: string, relationUrl: string) =>
       [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
+  },
+
+  typeaheadSuggestions: {
+    /**
+     * Exact key for a single typeahead suggestions query (`useTypeahead`), by URL.
+     *
+     * Deliberately its OWN root — not nested under `entityItemCollection` — even though a
+     * typeahead request and the table's own collection request can encode to the identical
+     * URL (e.g. re-typing a value that's already committed for the same field). Sharing
+     * `entityItemCollection.byUrl` in that case would put two `useQuery` observers with
+     * different retry/staleTime/gcTime on one cache entry, where the last one to register
+     * wins. A separate root makes that collision structurally impossible, regardless of
+     * whether the two URLs ever happen to match.
+     *
+     * Trade-off: unlike collection queries, these are NOT covered by
+     * `entityItemCollection.forEntity(...)` invalidation on create/update/delete mutations —
+     * suggestions rely on their own short `staleTime` (see `useTypeahead`) to pick up changes
+     * instead of being invalidated immediately.
+     */
+    byUrl: (profileEntity: ProfileEntity, url: string) =>
+      [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
   },
 };
