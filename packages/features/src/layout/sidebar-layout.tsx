@@ -16,6 +16,7 @@ import {
   SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
+  UserMenu,
 } from "@contentgrid/ui";
 
 // ---------------------------------------------------------------------------
@@ -33,8 +34,14 @@ export function SideBarLayout() {
       <BrandingHeader
         actions={
           <>
-            {auth.user?.profile.name}
             <SidebarTrigger />
+            {auth.user && (
+              <UserMenu
+                name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
+                email={auth.user.profile.email ?? ""}
+                onLogOut={() => auth.signoutRedirect()}
+              />
+            )}
           </>
         }
         className="sticky top-0 z-30 shrink-0"
