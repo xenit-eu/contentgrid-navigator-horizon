@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils";
 // ---------------------------------------------------------------------------
 
 export interface BrandingHeaderProps {
+  title?: string;
   /**
    * Optional slot for actions rendered at the trailing end of the header
    * (e.g. a user-menu button, theme toggle, or notification icon).
@@ -22,7 +23,12 @@ export interface BrandingHeaderProps {
 // Main export
 // ---------------------------------------------------------------------------
 
-export function BrandingHeader({ actions, className, onLogoClick }: Readonly<BrandingHeaderProps>) {
+export function BrandingHeader({
+  actions,
+  className,
+  title,
+  onLogoClick,
+}: Readonly<BrandingHeaderProps>) {
   return (
     <header className={cn("flex flex-col", className)}>
       {/* Content row */}
@@ -48,6 +54,8 @@ export function BrandingHeader({ actions, className, onLogoClick }: Readonly<Bra
             </span>
           </div>
         </button>
+
+        {title && <span className="font-semibold text-white">{title}</span>}
 
         {/* Spacer */}
         <div className="flex-1" />

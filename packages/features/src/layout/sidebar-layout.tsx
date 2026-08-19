@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { GearIcon } from "@phosphor-icons/react";
 import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
@@ -23,8 +24,11 @@ import {
 // ---------------------------------------------------------------------------
 // SideBarLayout — pathless layout route component (sidebar + BrandingHeader + Outlet)
 // ---------------------------------------------------------------------------
+type SideBarLayoutProps = {
+  topChildren?: ReactNode;
+};
 
-export function SideBarLayout() {
+export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
   const navigate = useNavigate();
   const { auth } = useAppAuth();
@@ -100,6 +104,7 @@ export function SideBarLayout() {
 
         <SidebarInset className="min-h-0 overflow-hidden">
           <div className="min-h-0 flex-1 overflow-auto">
+            {topChildren}
             <Outlet />
           </div>
         </SidebarInset>
