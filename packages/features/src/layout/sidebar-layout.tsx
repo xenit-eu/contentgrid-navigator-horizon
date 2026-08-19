@@ -26,20 +26,12 @@ export function SideBarLayout() {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
 
   const { profiles: loadedProfiles, isLoading: isLoadingProfiles } = useLoadedProfileEntities();
-  const selectedProfile = activeEntity
-    ? loadedProfiles.find((p) => p.name === activeEntity)
-    : undefined;
 
   return (
     <SidebarProvider className="h-svh flex-col">
-      <BrandingHeader
-        title="ContentGrid Navigator"
-        subtitle={selectedProfile?.pluralName ?? "Entity browser"}
-        actions={<SidebarTrigger />}
-        className="sticky top-0 z-30 shrink-0"
-      />
+      <BrandingHeader actions={<SidebarTrigger />} className="sticky top-0 z-30 shrink-0" />
       <div className="flex min-h-0 w-full flex-1">
-        <Sidebar style={{ top: "3.5rem", height: "calc(100svh - 3.5rem)" }}>
+        <Sidebar style={{ top: "3.75rem", height: "calc(100svh - 3.75rem)" }}>
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Entities</SidebarGroupLabel>
