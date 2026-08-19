@@ -16,6 +16,7 @@ import {
   SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
+  ThemeToggle,
   UserMenu,
 } from "@contentgrid/ui";
 
@@ -35,6 +36,7 @@ export function SideBarLayout() {
         actions={
           <>
             <SidebarTrigger />
+            <ThemeToggle />
             {auth.user && (
               <UserMenu
                 name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
