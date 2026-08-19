@@ -38,7 +38,7 @@ export function BrandingHeader({ actions, className, onLogoClick }: Readonly<Bra
             alt="ContentGrid logo"
             className="w-12 shrink-0 object-contain"
           />
-          <div className="flex min-w-0 flex-col justify-center -translate-y-0.5">
+          <div className="truncate flex min-w-0 flex-col justify-center -translate-y-0.5">
             <div className="leading-none">
               <span className="truncate text-lg font-bold text-[var(--sky)]">content</span>
               <span className="truncate text-lg font-bold text-white">grid</span>
