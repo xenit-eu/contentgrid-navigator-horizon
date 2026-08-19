@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { BrandingHeader } from "./branding-header";
 
 describe("BrandingHeader", () => {
@@ -33,5 +34,12 @@ describe("BrandingHeader", () => {
     render(<BrandingHeader actions={<span>action content</span>} />);
     expect(screen.getByRole("img", { name: "ContentGrid logo" })).toBeInTheDocument();
     expect(screen.getByText("action content")).toBeInTheDocument();
+  });
+
+  it("calls onLogoClick when the logo/brand button is clicked", async () => {
+    const onLogoClick = vi.fn();
+    render(<BrandingHeader onLogoClick={onLogoClick} />);
+    await userEvent.click(screen.getByRole("button", { name: /content.*grid.*by amexio/i }));
+    expect(onLogoClick).toHaveBeenCalledTimes(1);
   });
 });

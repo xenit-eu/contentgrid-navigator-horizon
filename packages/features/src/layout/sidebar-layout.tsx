@@ -1,6 +1,6 @@
 import { GearIcon } from "@phosphor-icons/react";
-import { Link, Outlet, useParams } from "@tanstack/react-router";
-import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   BrandingHeader,
   Sidebar,
@@ -24,12 +24,22 @@ import {
 
 export function SideBarLayout() {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
-
+  const navigate = useNavigate();
+  const { auth } = useAppAuth();
   const { profiles: loadedProfiles, isLoading: isLoadingProfiles } = useLoadedProfileEntities();
 
   return (
     <SidebarProvider className="h-svh flex-col">
-      <BrandingHeader actions={<SidebarTrigger />} className="sticky top-0 z-30 shrink-0" />
+      <BrandingHeader
+        actions={
+          <>
+            {auth.user?.profile.name}
+            <SidebarTrigger />
+          </>
+        }
+        className="sticky top-0 z-30 shrink-0"
+        onLogoClick={() => navigate({ to: "/" as string })}
+      />
       <div className="flex min-h-0 w-full flex-1">
         <Sidebar style={{ top: "3.75rem", height: "calc(100svh - 3.75rem)" }}>
           <SidebarContent>
