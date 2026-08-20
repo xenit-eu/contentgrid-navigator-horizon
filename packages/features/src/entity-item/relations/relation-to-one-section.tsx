@@ -35,6 +35,7 @@ export function RelationToOneSection({
   onItemClick,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
+  onReload,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
@@ -42,7 +43,7 @@ export function RelationToOneSection({
 }> &
   Pick<
     MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick"
+    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onReload"
   >) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
@@ -111,6 +112,7 @@ export function RelationToOneSection({
           error={mutationError}
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onReload={onReload}
         />
       )}
       {linkedItem.isPending && <Skeleton className="h-12 w-full rounded-md" />}
