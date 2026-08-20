@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type EntityItem,
   ProfileAttributeSearchType,
@@ -20,6 +20,7 @@ import {
   ProblemAlert,
   type RelationConflictAlertProps,
   type ValidationAlertProps,
+  notifyReloadOnUnsatisfiedVersion,
 } from "../../problem-details";
 import { formatAttributeValue } from "../attributes/attribute-format";
 
@@ -164,6 +165,14 @@ export interface MutationErrorDisplayProps {
    * the affected relation's href.
    */
   readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
+  /**
+   * Fires for an `unsatisfiedVersion` (HTTP 412) problem — the item was
+   * modified concurrently. Recovery is re-fetch, re-apply, retry: this
+   * should re-fetch the parent entity item so `relation` picks up the fresh
+   * ETag. Also drives the reload toast; without it, the 412 falls back to
+   * the plain inline alert with no action.
+   */
+  readonly onReload?: () => void;
 }
 
 export function MutationErrorDisplay({
@@ -171,13 +180,21 @@ export function MutationErrorDisplay({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  onReload,
 }: Readonly<MutationErrorDisplayProps>) {
+  useEffect(() => {
+    if (onReload) {
+      notifyReloadOnUnsatisfiedVersion(error, onReload);
+    }
+  }, [error, onReload]);
+
   return (
     <ProblemAlert
       model={toProblemDisplayModel(error)}
       onMissingRelationTargetClick={onMissingRelationTargetClick}
       onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
       onRequiredRelationClick={onRequiredRelationClick}
+      onRetryClick={onReload}
     ></ProblemAlert>
   );
 }

@@ -40,6 +40,7 @@ export function RelationToManySection({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  onReload,
 }: Readonly<{
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
@@ -47,7 +48,10 @@ export function RelationToManySection({
 }> &
   Pick<
     MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
+    | "onMissingRelationTargetClick"
+    | "onBlindRelationOverwriteClick"
+    | "onRequiredRelationClick"
+    | "onReload"
   >) {
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
   const collection = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
@@ -152,6 +156,7 @@ export function RelationToManySection({
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
           onRequiredRelationClick={onRequiredRelationClick}
+          onReload={onReload}
         />
       )}
       {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
