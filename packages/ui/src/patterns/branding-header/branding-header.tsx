@@ -1,5 +1,5 @@
 import * as React from "react";
-import contentGridLogo from "../../assets/icons/ContentgridLogo-07.svg";
+import contentGridLogo from "../../assets/icons/ContentgridLogo-blue-white.svg";
 import { cn } from "../../lib/utils";
 
 // ---------------------------------------------------------------------------
