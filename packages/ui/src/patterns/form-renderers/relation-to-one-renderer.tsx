@@ -1,31 +1,14 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/schema";
-import { EntityPicker, type EntityPickerOption } from "../entity-picker";
-import { type RelationColumn, type RelationItem, RelationSection } from "../relation-section";
+import { EntityPicker } from "../entity-picker";
+import { type RelationItem, RelationSection } from "../relation-section";
+import type { RelationRendererPickerProps } from "./relation-picker-props";
 
-export interface RelationToOneRendererProps {
+export interface RelationToOneRendererProps extends RelationRendererPickerProps {
   readonly field: Extract<RenderFieldDescriptor, { type: "relation-to-one" }>;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
-  /** Current page of candidates to link — fetched by the caller (packages/ui can't fetch). */
-  readonly options: EntityPickerOption[];
-  readonly isLoading: boolean;
-  readonly searchQuery: string;
-  readonly onSearch: (query: string) => void;
-  readonly hasPreviousPage: boolean;
-  readonly hasNextPage: boolean;
-  readonly onPreviousPage: () => void;
-  readonly onNextPage: () => void;
-  /** href -> full attribute data for anything already linked or just selected, so the
-   * linked item can be shown with its real attributes rather than a bare id. */
-  readonly selectedItemsData: Readonly<Record<string, Record<string, unknown>>>;
-  /** Columns to show for the linked item — attribute name/title pairs from the target profile. */
-  readonly columns?: RelationColumn[];
-  /** Called the moment a picker selection is made, so the caller can cache the item's data. */
-  readonly onItemResolved: (href: string, data: Record<string, unknown>) => void;
-  /** Rendered in the picker when provided — see EntityPicker's `createNewLink`. */
-  readonly createNewLink?: ReactNode;
 }
 
 /**
