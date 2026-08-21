@@ -9,10 +9,15 @@ export interface NumberRendererProps {
   readonly error?: string;
 }
 
+function displayValueFor(value: FieldValue): string {
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return value;
+  return "";
+}
+
 export function NumberRenderer({ field, value, onChange, error }: Readonly<NumberRendererProps>) {
   const { name, label, required, readOnly, description } = field;
-  const displayValue =
-    typeof value === "number" ? String(value) : typeof value === "string" ? value : "";
+  const displayValue = displayValueFor(value);
 
   return (
     <FieldShell

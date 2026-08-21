@@ -1,6 +1,5 @@
 import type { SimpleLink } from "@contentgrid/hal";
 import type { HalFormsProperty } from "@contentgrid/hal-forms";
-import type ProfileEntity from "../accessors/entity-profile";
 import type { ProfileRelation } from "../accessors/relation-profile";
 
 /**
@@ -70,13 +69,11 @@ export type RenderFieldDescriptor = RenderFieldDescriptorBase &
     | {
         readonly type: "relation-to-one";
         readonly profileRelation?: ProfileRelation;
-        readonly targetProfile?: ProfileEntity;
         readonly targetCollectionHref: string;
       }
     | {
         readonly type: "relation-to-many";
         readonly profileRelation?: ProfileRelation;
-        readonly targetProfile?: ProfileEntity;
         readonly targetCollectionHref: string;
       }
     | { readonly type: "typeahead" }

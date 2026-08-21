@@ -245,14 +245,47 @@ describe("createFormToRenderFields", () => {
     }
   });
 
-  it("maps a to-many relation to a relation-to-many descriptor that is never required", () => {
+  it("maps a to-many relation to a relation-to-many descriptor, required read from the template", () => {
     const descriptors = createFormToRenderFields(makeTemplate());
     const field = byName(descriptors, "line_items");
     expect(field.type).toBe("relation-to-many");
+    // The fixture's "line_items" create-form property has no `required` key — this
+    // asserts `false` came from that, not from a hardcoded cardinality-based rule.
     expect(field.required).toBe(false);
     if (field.type === "relation-to-many") {
       expect(field.targetCollectionHref).toBe("https://example.com/line-items");
     }
+  });
+
+  it("surfaces required: true for a to-many relation when the template says so", () => {
+    const requiredToManyProfile = {
+      ...invoiceProfileJson,
+      _templates: {
+        ...invoiceProfileJson._templates,
+        "create-form": {
+          method: "POST",
+          target: "https://example.com/invoices",
+          contentType: "application/json",
+          properties: [
+            {
+              name: "line_items",
+              type: "url",
+              required: true,
+              options: { link: { href: "https://example.com/line-items", title: "Line items" } },
+            },
+          ],
+        },
+      },
+    };
+    const profile = makeProfileEntity(requiredToManyProfile, PROFILE_URL, "invoice");
+    const rawTemplate = resolveTemplate(
+      requiredToManyProfile as ProfileEntityShape,
+      "create-form",
+    )!;
+    const descriptors = createFormToRenderFields(new CreateHalFormTemplate(rawTemplate, profile));
+    const field = byName(descriptors, "line_items");
+    expect(field.type).toBe("relation-to-many");
+    expect(field.required).toBe(true);
   });
 
   it("produces one descriptor per create-form property", () => {

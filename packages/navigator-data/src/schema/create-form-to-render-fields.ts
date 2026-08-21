@@ -90,7 +90,7 @@ function attributeFieldDescriptor(prop: CreateFormProperty): RenderFieldDescript
 function relationToOneFieldDescriptor(
   prop: CreateFormRelationToOneProperty,
 ): RenderFieldDescriptor {
-  const { property, profileRelation, targetProfile, targetCollectionHref, isRequired } = prop;
+  const { property, profileRelation, targetCollectionHref, isRequired } = prop;
   return {
     name: property.name,
     label: property.prompt ?? profileRelation?.title ?? formatFieldName(property.name),
@@ -100,7 +100,6 @@ function relationToOneFieldDescriptor(
     property,
     type: "relation-to-one",
     profileRelation,
-    targetProfile,
     targetCollectionHref,
   };
 }
@@ -108,18 +107,16 @@ function relationToOneFieldDescriptor(
 function relationToManyFieldDescriptor(
   prop: CreateFormRelationToManyProperty,
 ): RenderFieldDescriptor {
-  const { property, profileRelation, targetProfile, targetCollectionHref } = prop;
+  const { property, profileRelation, targetCollectionHref, isRequired } = prop;
   return {
     name: property.name,
     label: property.prompt ?? profileRelation?.title ?? formatFieldName(property.name),
-    // To-many relations are never required (see create-form.ts's own toManyRelationProperties doc).
-    required: false,
+    required: isRequired,
     readOnly: property.readOnly,
     description: profileRelation?.description || undefined,
     property,
     type: "relation-to-many",
     profileRelation,
-    targetProfile,
     targetCollectionHref,
   };
 }

@@ -97,7 +97,7 @@ export function ProfileInspector() {
 
       {/* Render loaded profiles */}
       {loadedProfiles.map((profile) => (
-        <ProfileCard key={profile.name} profile={profile} />
+        <ProfileCard key={profile.name} profile={profile} allProfiles={loadedProfiles} />
       ))}
 
       {/* Show loading placeholders for pending profiles */}
@@ -131,7 +131,10 @@ function ProfileInspectorMessage({ children }: Readonly<{ children: ReactNode }>
   );
 }
 
-function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
+function ProfileCard({
+  profile,
+  allProfiles,
+}: Readonly<{ profile: ProfileEntity; allProfiles: readonly ProfileEntity[] }>) {
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (section: string) => {
@@ -465,6 +468,7 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                             key={prop.property.name}
                             prop={prop}
                             kind="to-one"
+                            allProfiles={allProfiles}
                           />
                         ))}
                       </div>
@@ -482,6 +486,7 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
                             key={prop.property.name}
                             prop={prop}
                             kind="to-many"
+                            allProfiles={allProfiles}
                           />
                         ))}
                       </div>
@@ -518,11 +523,14 @@ function ProfileCard({ profile }: Readonly<{ profile: ProfileEntity }>) {
 function RelationPropertyCard({
   prop,
   kind,
+  allProfiles,
 }: Readonly<{
   prop: CreateFormRelationToOneProperty | CreateFormRelationToManyProperty;
   kind: "to-one" | "to-many";
+  allProfiles: readonly ProfileEntity[];
 }>) {
   const isRequired = kind === "to-one" && "isRequired" in prop && prop.isRequired;
+  const targetProfile = prop.profileRelation?.getTargetProfile(allProfiles);
   return (
     <div className="rounded border bg-muted p-2">
       <div className="mb-1 flex items-center gap-2">
@@ -539,10 +547,10 @@ function RelationPropertyCard({
       <div className="text-muted-foreground space-y-0.5 text-[10px]">
         <p>Prompt: {prop.property.prompt}</p>
         {prop.profileRelation && <RelationDetails relation={prop.profileRelation} />}
-        {prop.targetProfile && (
+        {targetProfile && (
           <>
-            <p>Target Entity: {prop.targetProfile.title}</p>
-            <p className="font-mono">Target Profile: {prop.targetProfile.link.href}</p>
+            <p>Target Entity: {targetProfile.title}</p>
+            <p className="font-mono">Target Profile: {targetProfile.link.href}</p>
           </>
         )}
         <p className="font-mono">Collection: {prop.targetCollectionHref}</p>

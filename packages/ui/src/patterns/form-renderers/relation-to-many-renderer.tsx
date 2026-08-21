@@ -66,6 +66,7 @@ export function RelationToManyRenderer({
     <>
       <RelationSection
         title={field.label}
+        required={field.required}
         items={items}
         columns={columns}
         onLink={field.readOnly ? undefined : () => setOpen(true)}

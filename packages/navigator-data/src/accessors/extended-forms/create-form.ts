@@ -23,9 +23,15 @@ import type { ProfileRelation } from "../relation-profile";
  *    - Renders as file upload controls
  *
  * 3. **Relations** - Entity references (type: "url")
- *    - To-one: maxItems === 1 (can be required)
- *    - To-many: !maxItems || maxItems > 1 (never required)
- *    - Linked to target Profile via _allProfiles for rich metadata
+ *    - To-one: maxItems === 1
+ *    - To-many: !maxItems || maxItems > 1
+ *    - Both read `required` straight off the create-form template property — cardinality
+ *      doesn't imply a required-ness rule of its own; the backend decides.
+ *    - Target Profile resolution is NOT done here — the profile list needed to resolve it
+ *      (`useProfileEntities()`) is only available async, after this template is already needed
+ *      for the create/permission gate. Callers resolve it themselves via
+ *      `profileRelation?.getTargetProfile(profiles)` once profiles have loaded (see
+ *      `CreateEntityItemForm` in packages/features/src/entity-item-create/).
  */
 
 /**
@@ -53,8 +59,6 @@ export interface CreateFormRelationToOneProperty {
   property: HalFormsProperty;
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
-  /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: ProfileEntity;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
   /** Whether this field is required */
@@ -63,24 +67,24 @@ export interface CreateFormRelationToOneProperty {
 
 /**
  * Enhanced create-form property for to-many relation fields.
- * To-many relations have !maxItems || maxItems > 1 and are never required.
+ * To-many relations have !maxItems || maxItems > 1.
  */
 export interface CreateFormRelationToManyProperty {
   /** The original HAL-FORMS property */
   property: HalFormsProperty;
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
-  /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: ProfileEntity;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
+  /** Whether this field is required (e.g. "at least one link") */
+  isRequired: boolean;
 }
 
 /**
  * Wrapper class for HAL-FORMS create templates with enhanced metadata.
  *
- * Lazily parses and enriches form properties with links to ProfileAttribute,
- * ProfileRelation, and target Profile objects.
+ * Lazily parses and enriches form properties with links to ProfileAttribute
+ * and ProfileRelation objects.
  */
 export class CreateHalFormTemplate {
   private _userDefinedProperties?: readonly CreateFormProperty[];
@@ -92,8 +96,6 @@ export class CreateHalFormTemplate {
     public readonly template: HalFormsTemplate<EntityInstanceCreateRequestSpec>,
     /** The profile accessor for attribute/relation linking */
     private readonly profileEntity: ProfileEntity,
-    /** Optional array of all profiles for target entity resolution */
-    private readonly _allProfiles?: ProfileEntity[],
   ) {}
 
   /**
@@ -105,13 +107,6 @@ export class CreateHalFormTemplate {
       .filter((property) => property.type !== "url")
       .map((property) => this.enhanceAttributeProperty(property));
     return this._userDefinedProperties;
-  }
-
-  /**
-   * Get all content/file upload properties.
-   */
-  get contentProperties(): readonly CreateFormProperty[] {
-    return this.userDefinedProperties.filter((prop) => prop.isContent);
   }
 
   /**
@@ -130,7 +125,6 @@ export class CreateHalFormTemplate {
 
   /**
    * Get to-many relation properties (!maxItems || maxItems > 1).
-   * To-many relations are never required.
    */
   get toManyRelationProperties(): readonly CreateFormRelationToManyProperty[] {
     this._toManyRelationProperties ??= (this.template.properties ?? [])
@@ -143,16 +137,6 @@ export class CreateHalFormTemplate {
   }
 
   /**
-   * Get all relation properties (to-one + to-many).
-   */
-  get relationProperties(): readonly (
-    | CreateFormRelationToOneProperty
-    | CreateFormRelationToManyProperty
-  )[] {
-    return [...this.toOneRelationProperties, ...this.toManyRelationProperties];
-  }
-
-  /**
    * Get all properties (user-defined + relations).
    */
   get allProperties(): readonly (
@@ -160,29 +144,11 @@ export class CreateHalFormTemplate {
     | CreateFormRelationToOneProperty
     | CreateFormRelationToManyProperty
   )[] {
-    return [...this.userDefinedProperties, ...this.relationProperties];
-  }
-
-  /**
-   * Get a property by its name.
-   */
-  getPropertyByName(
-    name: string,
-  ):
-    | CreateFormProperty
-    | CreateFormRelationToOneProperty
-    | CreateFormRelationToManyProperty
-    | undefined {
-    return this.allProperties.find((prop) => prop.property.name === name);
-  }
-
-  /**
-   * Get all required properties (user-defined attributes + to-one relations).
-   */
-  getRequiredProperties(): readonly (CreateFormProperty | CreateFormRelationToOneProperty)[] {
-    const requiredAttributes = this.userDefinedProperties.filter((prop) => prop.isRequired);
-    const requiredToOne = this.toOneRelationProperties.filter((prop) => prop.isRequired);
-    return [...requiredAttributes, ...requiredToOne];
+    return [
+      ...this.userDefinedProperties,
+      ...this.toOneRelationProperties,
+      ...this.toManyRelationProperties,
+    ];
   }
 
   /**
@@ -222,17 +188,9 @@ export class CreateHalFormTemplate {
     // To-one relations can be required
     const isRequired = property.required ?? false;
 
-    // Try to resolve target profile using _allProfiles
-    let targetProfile: ProfileEntity | undefined;
-    if (profileRelation && this._allProfiles) {
-      const targetProfileHref = profileRelation.targetProfileHref;
-      targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);
-    }
-
     return {
       property,
       profileRelation,
-      targetProfile,
       targetCollectionHref,
       isRequired,
     };
@@ -249,18 +207,13 @@ export class CreateHalFormTemplate {
     // Extract target collection href from options.link.href
     const targetCollectionHref = property.options?.isRemote() ? property.options.link.href : "";
 
-    // Try to resolve target profile using _allProfiles
-    let targetProfile: ProfileEntity | undefined;
-    if (profileRelation && this._allProfiles) {
-      const targetProfileHref = profileRelation.targetProfileHref;
-      targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);
-    }
+    const isRequired = property.required ?? false;
 
     return {
       property,
       profileRelation,
-      targetProfile,
       targetCollectionHref,
+      isRequired,
     };
   }
 }

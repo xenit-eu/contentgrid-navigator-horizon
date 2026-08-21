@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, type SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
@@ -201,7 +201,7 @@ function CreateEntityItemFormFields({
 
   const createMutation = useCreateEntityItem(profile);
 
-  function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setServerErrors({});
     if (!formFields.validate()) return;
