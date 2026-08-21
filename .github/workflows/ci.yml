@@ -5,6 +5,16 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      story_grep:
+        description: >-
+          Optional Playwright --grep pattern to scope re-baselining to a subset of
+          stories (e.g. "primitives-popover"). Leave empty to regenerate every
+          packages/ui baseline. Run this from the feature branch that needs new
+          baselines, not main — the re-baseline job pushes directly to the
+          triggering branch, which branch protection will reject on main.
+        required: false
+        type: string
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -360,6 +370,61 @@ jobs:
           name: playwright-report
           path: apps/storybook/playwright-report
           retention-days: 7
+
+  visual-rebaseline:
+    name: Re-baseline visual snapshots
+    # Manual-only: never runs on push/pull_request. ADR-009 requires baselines to be
+    # generated in this pinned container, never on a contributor's machine. Also
+    # excludes main: the commit step pushes directly to the triggering ref, which
+    # would bypass PR review on main if branch protection ever exempted this token.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.60.0-noble
+    permissions:
+      # Needed to push the re-baselined snapshots back to the triggering branch;
+      # every other job stays read-only per the repo's least-privilege default.
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Enable pnpm via corepack
+        # Version comes from the root package.json "packageManager" field.
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate visual baselines
+        env:
+          STORY_GREP: ${{ inputs.story_grep }}
+        run: |
+          if [ -n "$STORY_GREP" ]; then
+            pnpm --filter storybook run visual:update -- --grep "$STORY_GREP"
+          else
+            pnpm test:visual:update
+          fi
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-rebaseline-report
+          path: apps/storybook/playwright-report
+          retention-days: 7
+
+      - name: Commit updated baselines
+        env:
+          STORY_GREP: ${{ inputs.story_grep }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/storybook/tests/__snapshots__
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit."
+          else
+            git commit -m "chore: re-baseline visual snapshots${STORY_GREP:+ ($STORY_GREP)}"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
 
   accessibility:
     name: Accessibility audit (axe-core)

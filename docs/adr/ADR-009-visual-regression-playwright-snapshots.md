@@ -5,6 +5,7 @@
 **Amendment 2026-05-12:** Added story-tooling decision (Storybook 10 adopted, Ladle rejected).
 **Amendment 2026-05-12:** Narrowed VR scope to `packages/ui` only; page-level VR deferred.
 **Amendment 2026-05-30:** Replaced the default `maxDiffPixelRatio: 0.01` with an absolute `maxDiffPixels: 100`; full-page capture explicitly retained over per-element (see Flake mitigation).
+**Amendment 2026-08-07:** Added the `visual-rebaseline` job (`workflow_dispatch` on `.github/workflows/ci.yml`) — the dedicated CI workflow this ADR required but that did not exist until now. It runs `pnpm test:visual:update` in the pinned `mcr.microsoft.com/playwright:v1.60.0-noble` container and auto-commits the regenerated baselines to the triggering branch; an optional `story_grep` input scopes the run to a `--grep` pattern so a single changed component doesn't rewrite all baselines. See "Re-baselining is a normal, frictionless step" below.
 **Phase:** 0 — Alignment & decisions
 
 ---
@@ -73,7 +74,7 @@ Storybook 10's ESM-only design reduces the transitive dependency footprint compa
 
 Prior attempts at visual regression testing failed because trivial rendering differences — sub-pixel antialiasing, font hinting, OS-level rendering — produced false-positive diffs that the team learned to ignore, which defeats the purpose entirely. The mitigations below are mandatory, not optional.
 
-**Baselines are generated in CI, never on developer machines.** macOS and Linux render fonts differently in ways no threshold can paper over. CI runs on Linux (`ubuntu-latest` or a pinned Docker image). Updating a baseline means triggering the dedicated CI workflow with `--update-snapshots`, downloading the artefact, and committing it. Running locally is for diagnosing failures — not for authoring baselines.
+**Baselines are generated in CI, never on developer machines.** macOS and Linux render fonts differently in ways no threshold can paper over. CI runs on Linux (`ubuntu-latest` or a pinned Docker image). Updating a baseline means triggering the `visual-rebaseline` job (`workflow_dispatch` on `.github/workflows/ci.yml`) on the branch that needs new baselines; it runs `pnpm test:visual:update` in the pinned container and pushes a commit with the regenerated PNGs directly to that branch. Running locally is for diagnosing failures — not for authoring baselines.
 
 **Pin the rendering environment.** Use a pinned Playwright Docker image (`mcr.microsoft.com/playwright:v<version>-jammy`) for both the CI snapshot job and any local re-baselining. Fixed viewport: 1280×720 default, 390×844 for mobile-tagged stories. Fixed `deviceScaleFactor: 1`, fixed locale and timezone in the Playwright `use` config.
 
@@ -107,7 +108,7 @@ Application pages, console screens, dashboard layouts, and anything under active
 
 **Re-baselining is a normal, frictionless step.**
 
-A dedicated CI workflow (`pnpm test:visual:update`, triggered manually) generates updated baselines in the pinned environment, attaches the snapshot diff PNG as an artefact link in the PR, and produces a single commit. If the team treats re-baselining as a battle, the same failure mode as before will repeat. The workflow being painless is a non-negotiable part of this decision, not a nice-to-have.
+The `visual-rebaseline` job (`workflow_dispatch` on `.github/workflows/ci.yml`, running `pnpm test:visual:update`) generates updated baselines in the pinned environment, uploads the Playwright HTML report (with the diff PNGs) as a CI artefact, and pushes a single commit with the new baselines straight to the triggering branch — no manual download/commit step. Trigger it from the feature branch that needs new baselines, not `main`: the push targets whichever branch was selected when dispatching the workflow, and branch protection will reject a direct push to `main`. An optional `story_grep` input scopes the run to a `--grep` pattern (matched against story ids, e.g. `primitives-popover`) so re-baselining one changed component doesn't rewrite every baseline in the suite and mask unrelated drift. If the team treats re-baselining as a battle, the same failure mode as before will repeat. The workflow being painless is a non-negotiable part of this decision, not a nice-to-have.
 
 **When VR fires, the default question is "is this change intentional?" — not "is this a bug?"**
 
@@ -131,7 +132,7 @@ Story coverage and snapshot coverage are separate requirements:
 2. CI step: build Storybook static, serve it locally, run Playwright against it.
 3. Snapshot strategy: full-page screenshot per story at a fixed viewport (1280×720 default; mobile 390×844 for stories tagged `mobile`).
 4. Baselines committed; diffs surface in PR via Playwright's HTML report uploaded as a CI artefact.
-5. Re-baseline command: `pnpm test:visual --update-snapshots` — run locally, commit the diff, justify in PR description.
+5. Re-baseline command: trigger the `visual-rebaseline` job (`workflow_dispatch` on `.github/workflows/ci.yml`) on the branch that needs new baselines; it runs `pnpm test:visual:update` and pushes the resulting commit — justify the re-baseline in the PR description, but do not generate it locally.
 
 ## Consequences
 
