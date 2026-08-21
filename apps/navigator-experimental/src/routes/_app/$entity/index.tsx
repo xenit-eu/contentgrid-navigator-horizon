@@ -6,10 +6,10 @@ import { EntityItemCollectionSearchView } from "@contentgrid/features/entity-ite
 import {
   applyFiltersToSearchState,
   decodeFiltersFromSearchState,
+  entitySearchStateValidator,
 } from "@contentgrid/features/search";
 import {
   type ProfileEntity,
-  entitySearchStateValidator,
   recallCollectionPageHref,
   rememberCollectionPageHref,
   useProfileEntity,

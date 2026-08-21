@@ -1,4 +1,4 @@
-import type { EntitySearchState } from "@contentgrid/navigator-data";
+import type { EntitySearchState } from "./entity-search-state";
 
 /**
  * Namespaces filter keys within the route's generic `EntitySearchState` bag, so a filter (e.g.
