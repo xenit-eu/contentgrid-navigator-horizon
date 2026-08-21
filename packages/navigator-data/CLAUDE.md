@@ -3,7 +3,7 @@
 Package: `@contentgrid/navigator-data`
 Purpose: Navigator-side HAL data access layer. Composes the seven
 `@contentgrid/*` core packages (Layer 1) into TanStack Query hooks, an
-ETag/`If-Match` policy, the HAL-Forms → `FieldDescriptor[]` bridge, Zod-
+ETag/`If-Match` policy, the HAL-Forms → `RenderFieldDescriptor[]` bridge, Zod-
 validated app config, and MSW handler fixtures. This is Layer 2 of the
 two-layer dependency model.
 
@@ -445,9 +445,9 @@ Do NOT derive URLs via string transforms such as `href.replace(/\/profile\//, "/
 Read `item.id`. Do NOT call `selfHref.split("/").pop()` or any
 href-parsing idiom. URL structure is an implementation detail the server can change.
 
-**5. Carry full template property metadata through the FieldDescriptor bridge.**
+**5. Carry full template property metadata through the RenderFieldDescriptor bridge.**
 
-The HAL-Forms → `FieldDescriptor[]` bridge MUST propagate all of:
+The HAL-Forms → `RenderFieldDescriptor[]` bridge MUST propagate all of:
 
 - `options.inline` and `options.link` (remote enumerations) — dropping `options.link`
   silently removes remote-option fields from forms.
@@ -782,7 +782,7 @@ Belongs here:
 
 - TanStack Query hooks for HAL resources.
 - ETag / `If-Match` policy implementation.
-- HAL-Forms → `FieldDescriptor[]` bridge (ADR-004).
+- HAL-Forms → `RenderFieldDescriptor[]` bridge (ADR-004).
 - Zod-validated app config + presets.
 - MSW handler fixtures (exported for consumers).
 

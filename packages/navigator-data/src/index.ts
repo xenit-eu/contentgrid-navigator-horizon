@@ -25,6 +25,7 @@ export type {
 export * from "./config";
 export { queryKeys } from "./query-keys";
 export * from "./search";
+export * from "./schema";
 export { createValues } from "@contentgrid/hal-forms/values";
 export type { HalFormValues } from "@contentgrid/hal-forms/values";
 export type { SearchRequestSpec } from "./api/requests";

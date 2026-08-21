@@ -1,6 +1,9 @@
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { useState } from "react";
+import { Link, createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
+import { CreateEntityItemForm } from "@contentgrid/features/entity-item-create";
 import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
+import { useUnsavedChangesGuard } from "@contentgrid/features/unsaved-changes-guard";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
@@ -9,6 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   PageTitle,
+  UnsavedChangesDialog,
 } from "@contentgrid/ui";
 
 export const Route = createFileRoute("/_app/$entity/~create")({
@@ -29,6 +33,8 @@ function RouteComponent() {
 
 function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const go = useNavigate();
+  const [isDirty, setIsDirty] = useState(false);
+  const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
 
   const breadcrumbs = (
     <Breadcrumb>
@@ -62,7 +68,43 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
 
   return (
     <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs}>
-      <PageTitle header="Create" title={profile.singularName} subtitle="" />
+      <div className="space-y-6 p-4 pt-0">
+        <PageTitle header="Create" title={profile.singularName} subtitle="" />
+        <UnsavedChangesDialog
+          open={unsavedChangesGuard.isBlocked}
+          onConfirm={unsavedChangesGuard.confirmNavigation}
+          onCancel={unsavedChangesGuard.cancelNavigation}
+        />
+        <CreateEntityItemForm
+          profile={profile}
+          onDirtyChange={setIsDirty}
+          onCreated={(item) =>
+            unsavedChangesGuard.withoutBlocking(() =>
+              go({
+                to: "/$entity/$itemId",
+                params: { entity: profile.name, itemId: item.id },
+                search: {},
+              }),
+            )
+          }
+          onCancel={() =>
+            unsavedChangesGuard.withoutBlocking(() =>
+              go({ to: "/$entity", params: { entity: profile.name }, search: {} }),
+            )
+          }
+          renderCreateRelationTarget={(targetProfile) => (
+            <Link
+              to="/$entity/~create"
+              params={{ entity: targetProfile.name }}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              Create {targetProfile.singularName}
+            </Link>
+          )}
+        />
+      </div>
     </BreadCrumbsToolBarLayout>
   );
 }

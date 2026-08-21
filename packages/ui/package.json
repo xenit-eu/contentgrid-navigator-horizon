@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
+    "@contentgrid/navigator-data": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@storybook/react": "^10.0.0",
     "@types/react": "^19.1.5",

@@ -73,6 +73,13 @@ export interface EntityPickerProps {
   multiSelect?: boolean;
   /** Called with the selected href(s) and display label(s) when the user confirms */
   onSelect: (href: string, displayLabel: string) => void;
+  /**
+   * Rendered next to the search input when provided — e.g. a "Create new"
+   * link to the target's own create page. This component has no routing
+   * knowledge; the caller supplies the already-built node (see
+   * packages/ui/CLAUDE.md's "accept already-resolved... from the caller" rule).
+   */
+  createNewLink?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,6 +136,7 @@ export function EntityPicker({
   onNextPage,
   multiSelect = false,
   onSelect,
+  createNewLink,
 }: Readonly<EntityPickerProps>) {
   // Single-select state
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
@@ -269,17 +277,20 @@ export function EntityPicker({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative">
-          <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
-          <Input
-            placeholder={searchPlaceholder ?? "Search..."}
-            value={searchQuery}
-            onChange={(e) => {
-              onSearch(e.target.value);
-              if (!multiSelect) setSelectedHref(null);
-            }}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
+            <Input
+              placeholder={searchPlaceholder ?? "Search..."}
+              value={searchQuery}
+              onChange={(e) => {
+                onSearch(e.target.value);
+                if (!multiSelect) setSelectedHref(null);
+              }}
+              className="pl-9"
+            />
+          </div>
+          {createNewLink}
         </div>
 
         <div className="max-h-80 overflow-auto rounded-md border">{resultsBody}</div>
@@ -287,6 +298,7 @@ export function EntityPicker({
         {(hasPreviousPage || hasNextPage) && (
           <div className="flex items-center justify-between">
             <Button
+              type="button"
               variant="outline"
               size="sm"
               disabled={!hasPreviousPage}
@@ -294,17 +306,23 @@ export function EntityPicker({
             >
               Previous
             </Button>
-            <Button variant="outline" size="sm" disabled={!hasNextPage} onClick={onNextPage}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!hasNextPage}
+              onClick={onNextPage}
+            >
               Next
             </Button>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!hasSelection}>
+          <Button type="button" onClick={handleConfirm} disabled={!hasSelection}>
             {confirmLabel}
           </Button>
         </DialogFooter>

@@ -55,6 +55,8 @@ export interface RelationColumn {
 export interface RelationSectionProps {
   /** Human-readable relation title, e.g. "Invoices" */
   title: string;
+  /** Renders a destructive-styled required marker next to the title, matching FieldShell/BooleanRenderer. */
+  required?: boolean;
   /** When true the section renders the to-one (many-to-one) compact card layout */
   isManyToOne?: boolean;
   /** Loaded relation items; undefined while loading */
@@ -100,12 +102,22 @@ function getColumnTitle(key: string, columns?: RelationColumn[]): string {
   return key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Matches the required marker in FieldShell/BooleanRenderer. */
+function RequiredMarker() {
+  return (
+    <span aria-hidden="true" className="text-destructive">
+      *
+    </span>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
 export function RelationSection({
   title,
+  required,
   isManyToOne,
   items,
   columns,
@@ -159,9 +171,13 @@ export function RelationSection({
         <Card className="py-4 gap-3">
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{title}</h3>
+              <h3 className="text-sm font-semibold">
+                {title}
+                {required && <RequiredMarker />}
+              </h3>
               {hasItems && onLink && (
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground"
@@ -192,7 +208,7 @@ export function RelationSection({
                   </p>
                 </div>
                 {onLink && (
-                  <Button variant="outline" size="sm" onClick={onLink}>
+                  <Button type="button" variant="outline" size="sm" onClick={onLink}>
                     <Plus className="size-4" />
                     Link {title}
                   </Button>
@@ -222,6 +238,7 @@ export function RelationSection({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
+                              type="button"
                               variant="ghost"
                               size="icon-sm"
                               className="text-muted-foreground hover:text-foreground"
@@ -238,6 +255,7 @@ export function RelationSection({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
+                              type="button"
                               variant="ghost"
                               size="icon-sm"
                               className="text-muted-foreground hover:text-destructive"
@@ -273,7 +291,10 @@ export function RelationSection({
           <>
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{title}</h3>
+                <h3 className="text-sm font-semibold">
+                  {title}
+                  {required && <RequiredMarker />}
+                </h3>
               </div>
             </CardHeader>
             <CardContent>
@@ -288,7 +309,7 @@ export function RelationSection({
                   </p>
                 </div>
                 {onLink && (
-                  <Button variant="outline" size="sm" onClick={onLink}>
+                  <Button type="button" variant="outline" size="sm" onClick={onLink}>
                     <Plus className="size-4" />
                     Link {title}
                   </Button>
@@ -301,7 +322,10 @@ export function RelationSection({
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
                 <CollapsibleTrigger className="flex items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&[data-state=open]>svg.chevron]:rotate-180">
-                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <h3 className="text-sm font-semibold">
+                    {title}
+                    {required && <RequiredMarker />}
+                  </h3>
                   {!isLoading && !error && (
                     <Badge variant="secondary" className="text-xs">
                       {itemCount}
@@ -314,7 +338,7 @@ export function RelationSection({
                   />
                 </CollapsibleTrigger>
                 {hasItems && onLink && (
-                  <Button variant="outline" size="sm" onClick={onLink}>
+                  <Button type="button" variant="outline" size="sm" onClick={onLink}>
                     <Plus className="size-4" />
                     Link {title}
                   </Button>
@@ -358,6 +382,7 @@ export function RelationSection({
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
+                                      type="button"
                                       variant="ghost"
                                       size="icon-xs"
                                       className="text-muted-foreground hover:text-destructive"
