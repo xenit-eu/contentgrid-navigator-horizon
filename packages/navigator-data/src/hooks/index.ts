@@ -10,6 +10,7 @@ export type { ProfileFilter } from "./profile/use-profile-entity";
 export {
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,
+  useCachedEntityItemCollection,
 } from "./collection/use-entity-item-collection";
 export type {
   EntityCollectionParams,

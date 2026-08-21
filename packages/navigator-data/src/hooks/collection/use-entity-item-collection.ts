@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
@@ -155,6 +156,36 @@ export function useEntityItemCollection(
       options?.queryOptionsOverride,
     ),
     enabled,
+  });
+}
+
+/**
+ * Reads whatever is already cached for a profile entity's default (unfiltered,
+ * first-page) collection query — e.g. left behind by a previous visit to its
+ * collection page — without ever issuing a fetch itself.
+ *
+ * Intended for lightweight previews (like a sidebar item-count) where mounting
+ * alongside every other entity would otherwise mean firing one collection
+ * request per entity just to populate a number nobody asked to load yet.
+ * `data` stays `undefined` until some other query populates the same cache
+ * entry; this hook never transitions it out of that state on its own, and a
+ * remount never triggers a refetch.
+ *
+ * @example
+ * ```typescript
+ * const { data: collection } = useCachedEntityItemCollection(profile);
+ * const total = collection?.totalItems; // undefined until actually cached
+ * ```
+ */
+export function useCachedEntityItemCollection(
+  profileEntity: ProfileEntity,
+): UseQueryResult<EntityItemCollection, Error> {
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const { url } = resolveCollectionRequest({ profileEntity }, profileUrl);
+
+  return useQuery<EntityItemCollection, Error>({
+    ...EntityItemCollection.fetchByUrlQuery(apiFetch, url, profileEntity),
+    enabled: false,
   });
 }
 
