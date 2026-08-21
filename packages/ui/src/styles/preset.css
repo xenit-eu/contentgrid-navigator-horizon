@@ -144,14 +144,14 @@
   --chart-3: var(--steel);
   --chart-4: var(--green);
   --chart-5: var(--amber);
-  --sidebar: var(--ocean);
-  --sidebar-foreground: #ffffff;
+  --sidebar: var(--mist);
+  --sidebar-foreground: var(--text);
   --sidebar-primary: var(--sky);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--ocean-700);
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: var(--sky-extract);
+  --sidebar-accent-foreground: #000000;
   --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: var(--sky);
+  --sidebar-ring: var(--ocean);
 }
 
 /* -------------------------------------------------------------------------

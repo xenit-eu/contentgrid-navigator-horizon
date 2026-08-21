@@ -1,23 +1,13 @@
 import * as React from "react";
+import contentGridLogo from "../../assets/icons/ContentgridLogo-blue-white.svg";
 import { cn } from "../../lib/utils";
-import { Separator } from "../../primitives/separator";
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
 export interface BrandingHeaderProps {
-  /** Application / tenant name shown as the primary heading */
-  title: string;
-  /** Optional tagline or secondary line below the title */
-  subtitle?: string;
-  /**
-   * URL of the logo image. When provided the image is displayed to the left
-   * of the title. When omitted the title is shown without an icon.
-   */
-  logoUrl?: string;
-  /** Alt text for the logo image; defaults to `"${title} logo"` */
-  logoAlt?: string;
+  title?: string;
   /**
    * Optional slot for actions rendered at the trailing end of the header
    * (e.g. a user-menu button, theme toggle, or notification icon).
@@ -25,6 +15,8 @@ export interface BrandingHeaderProps {
   actions?: React.ReactNode;
   /** Extra class names applied to the root <header> element */
   className?: string;
+  /** Called when the logo or brand text is clicked (e.g. to navigate home) */
+  onLogoClick?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,42 +24,48 @@ export interface BrandingHeaderProps {
 // ---------------------------------------------------------------------------
 
 export function BrandingHeader({
-  title,
-  subtitle,
-  logoUrl,
-  logoAlt,
   actions,
   className,
+  title,
+  onLogoClick,
 }: Readonly<BrandingHeaderProps>) {
   return (
-    <header className={cn("flex h-14 items-center gap-3 border-b bg-background px-4", className)}>
-      {/* Logo */}
-      {logoUrl && (
-        <>
+    <header className={cn("flex flex-col", className)}>
+      {/* Content row */}
+      <div className="flex h-14 items-center gap-2 bg-gradient-to-r from-[var(--ocean-700)] to-[var(--sky)] px-4">
+        {/* Logo + brand text */}
+        <button
+          type="button"
+          onClick={onLogoClick}
+          className="flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left"
+        >
           <img
-            src={logoUrl}
-            alt={logoAlt ?? `${title} logo`}
-            className="h-8 w-8 shrink-0 rounded object-contain"
+            src={contentGridLogo}
+            alt="ContentGrid logo"
+            className="w-12 shrink-0 object-contain"
           />
-          <Separator orientation="vertical" className="h-6" />
-        </>
-      )}
+          <div className="truncate flex min-w-0 flex-col justify-center -translate-y-0.5">
+            <div className="leading-none">
+              <span className="truncate text-lg font-bold text-[var(--sky)]">content</span>
+              <span className="truncate text-lg font-bold text-white">grid</span>
+            </div>
+            <span className="truncate font-semibold text-[8px] tracking-[3px] text-white/80 leading-none">
+              BY AMEXIO
+            </span>
+          </div>
+        </button>
 
-      {/* Brand text */}
-      <div className="flex min-w-0 flex-col">
-        <span className="truncate text-sm font-semibold leading-none">{title}</span>
-        {subtitle && (
-          <span className="truncate text-xs text-muted-foreground leading-none mt-0.5">
-            {subtitle}
-          </span>
-        )}
+        {title && <span className="font-semibold text-white">{title}</span>}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Trailing actions slot */}
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Trailing actions slot */}
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {/* Accent line */}
+      <div className="h-1 bg-[var(--breeze)]" />
     </header>
   );
 }

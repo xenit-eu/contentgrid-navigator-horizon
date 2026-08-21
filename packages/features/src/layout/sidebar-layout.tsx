@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import { GearIcon } from "@phosphor-icons/react";
-import { Link, Outlet, useParams } from "@tanstack/react-router";
-import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   BrandingHeader,
   Sidebar,
@@ -16,30 +17,44 @@ import {
   SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
+  ThemeToggle,
+  UserMenu,
 } from "@contentgrid/ui";
 
 // ---------------------------------------------------------------------------
 // SideBarLayout — pathless layout route component (sidebar + BrandingHeader + Outlet)
 // ---------------------------------------------------------------------------
+type SideBarLayoutProps = {
+  topChildren?: ReactNode;
+};
 
-export function SideBarLayout() {
+export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
-
+  const navigate = useNavigate();
+  const { auth } = useAppAuth();
   const { profiles: loadedProfiles, isLoading: isLoadingProfiles } = useLoadedProfileEntities();
-  const selectedProfile = activeEntity
-    ? loadedProfiles.find((p) => p.name === activeEntity)
-    : undefined;
 
   return (
     <SidebarProvider className="h-svh flex-col">
       <BrandingHeader
-        title="ContentGrid Navigator"
-        subtitle={selectedProfile?.pluralName ?? "Entity browser"}
-        actions={<SidebarTrigger />}
+        actions={
+          <>
+            <SidebarTrigger />
+            <ThemeToggle />
+            {auth.user && (
+              <UserMenu
+                name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
+                email={auth.user.profile.email ?? ""}
+                onLogOut={() => auth.signoutRedirect()}
+              />
+            )}
+          </>
+        }
         className="sticky top-0 z-30 shrink-0"
+        onLogoClick={() => navigate({ to: "/" as string })}
       />
       <div className="flex min-h-0 w-full flex-1">
-        <Sidebar style={{ top: "3.5rem", height: "calc(100svh - 3.5rem)" }}>
+        <Sidebar style={{ top: "3.75rem", height: "calc(100svh - 3.75rem)" }}>
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Entities</SidebarGroupLabel>
@@ -89,6 +104,7 @@ export function SideBarLayout() {
 
         <SidebarInset className="min-h-0 overflow-hidden">
           <div className="min-h-0 flex-1 overflow-auto">
+            {topChildren}
             <Outlet />
           </div>
         </SidebarInset>
