@@ -226,6 +226,18 @@ describe("EntityPicker — multi-select mode", () => {
   });
 });
 
+describe("EntityPicker — createNewLink", () => {
+  it("does not render anything extra when createNewLink is omitted", () => {
+    renderPicker();
+    expect(screen.queryByText("Create new")).not.toBeInTheDocument();
+  });
+
+  it("renders the provided createNewLink node", () => {
+    renderPicker({ createNewLink: <a href="/suppliers/~create">Create new</a> });
+    expect(screen.getByText("Create new")).toBeInTheDocument();
+  });
+});
+
 describe("EntityPicker — column fallback (no columns prop)", () => {
   it("auto-resolves columns from option data keys", () => {
     render(

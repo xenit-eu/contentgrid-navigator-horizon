@@ -33,8 +33,8 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
 - **Pattern** — a composed component that encodes Navigator-domain semantics.
   Lives in `src/patterns/`. Examples: `EntityCard`, `DataTable`,
   `FilterSidebar`, HAL-Forms field renderers, `PdfHighlightOverlay`.
-  - Reads `FieldDescriptor[]` (the bridge type from `@contentgrid/navigator-data`
-    via HAL-Forms → FieldDescriptor bridge, ADR-004) — it does NOT import
+  - Reads `RenderFieldDescriptor[]` (the bridge type from `@contentgrid/navigator-data`
+    via HAL-Forms → RenderFieldDescriptor bridge, ADR-004) — it does NOT import
     `@contentgrid/hal` or `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
@@ -102,7 +102,7 @@ No CLI involved.
   `@contentgrid/typed-fetch`, `@contentgrid/fetch-hooks`,
   `@contentgrid/fetch-hook-authentication`, `@contentgrid/problem-details`,
   or `@contentgrid/uri-template` — those belong in `packages/navigator-data`.
-  Patterns read `FieldDescriptor[]`, not raw HAL types.
+  Patterns read `RenderFieldDescriptor[]`, not raw HAL types.
 - Do NOT import from `packages/features/*` — features depend on `packages/ui`,
   not the other way around.
 - Do NOT import Radix UI (`@radix-ui/*`) outside `packages/ui`. Inside
@@ -113,7 +113,7 @@ No CLI involved.
 ## HAL-FORMS metadata in pattern components
 
 - Pattern components that render HAL-FORMS-derived props MUST accept the full
-  `FieldDescriptor` shape, including `options.link` (remote enumerations) and
+  `RenderFieldDescriptor` shape, including `options.link` (remote enumerations) and
   all validation constraints (`required`, `regex`, `readOnly`, `allowed-values`).
   Do NOT narrow the prop type to a lossy subset — silent field drops degrade
   UX without compile-time errors.

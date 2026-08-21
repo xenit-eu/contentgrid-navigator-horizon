@@ -99,6 +99,25 @@ export const MultiSelect: Story = {
   },
 };
 
+export const WithCreateNewLink: Story = {
+  tags: ["axe-no-contrast"],
+  args: {
+    open: true,
+    onOpenChange: fn(),
+    relationTitle: "Supplier",
+    options: [],
+    columns: COLUMNS,
+    searchQuery: "unknown",
+    onSearch: fn(),
+    onSelect: fn(),
+    createNewLink: (
+      <a href="/suppliers/~create" target="_blank" rel="noopener noreferrer">
+        Create new
+      </a>
+    ),
+  },
+};
+
 export const WithInteraction: Story = {
   // axe-no-contrast: open dialog portal composites into axe background calc.
   tags: ["no-visual-test", "axe-no-contrast"],
