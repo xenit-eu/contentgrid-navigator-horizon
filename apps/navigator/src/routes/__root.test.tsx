@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppAuthResult } from "@contentgrid/navigator-data";
 import { useAppAuth } from "@contentgrid/navigator-data";
-import { makeAppConfig } from "@contentgrid/navigator-data/test-fixtures/auth/app-config";
+import { makeTestAppConfig } from "@contentgrid/navigator-data/test-fixtures/auth/app-config";
 import { routeTree } from "../routeTree.gen";
 
 // jsdom does not implement window.matchMedia; SideBarLayout renders the real
@@ -41,7 +41,7 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
     // AuthShell's real useCrossTabSignOut() calls this on mount — unmocked, it
     // throws ("App config not loaded") since this test never calls
     // loadAppConfig(), crashing the route into its error boundary.
-    getAppConfig: () => makeAppConfig(),
+    getAppConfig: () => makeTestAppConfig(),
     // SideBarLayout (real) renders the sidebar's entity list from this.
     useLoadedProfileEntities: () => ({ profiles: [], isLoading: false }),
     // EntityProfileGate and the $entity/index route (both real) resolve the

@@ -6,7 +6,7 @@ import type { RuntimeAppConfig } from "../../src/auth/auth-config";
  * call (e.g. `useCrossTabSignOut`'s effect), not to exercise config-loading
  * itself (see `auth-config.test.ts` for that).
  */
-export function makeAppConfig(overrides: Partial<RuntimeAppConfig> = {}): RuntimeAppConfig {
+export function makeTestAppConfig(overrides: Partial<RuntimeAppConfig> = {}): RuntimeAppConfig {
   return {
     apiBaseUrl: "https://api.example.com",
     authority: "https://oidc.example.com",
