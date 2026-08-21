@@ -108,6 +108,31 @@ function isEmpty(value: FieldValue): boolean {
 }
 
 /**
+ * Array-valued fields (`enum-multi`, `relation-to-many`) are always a freshly-built array —
+ * e.g. unlinking a relation produces a new `[]` — so plain `!==` would report a field as dirty
+ * forever after it's touched, even once its content matches the initial value again.
+ */
+function valuesEqual(a: FieldValue, b: FieldValue): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((value, index) => value === b[index]);
+  }
+  return a === b;
+}
+
+/**
+ * True for an `enum`/`enum-multi` field whose allowed values come from a remote link that
+ * `packages/ui` has no way to resolve (fetching stays out of the rendering layer — see
+ * packages/ui/CLAUDE.md). The renderer can't offer the user any value to pick for such a
+ * field, so client-side `required` validation must not block submission on it — the server's
+ * own validation still enforces it and reports back through the existing server-error path.
+ */
+function hasUnresolvableRemoteOptions(field: RenderFieldDescriptor): boolean {
+  return (
+    (field.type === "enum" || field.type === "enum-multi") && field.optionsSource.kind === "remote"
+  );
+}
+
+/**
  * Required-field descriptors as (name, label) pairs — `date-range` expands to its two
  * independently-named sub-properties, since required-ness is checked per encodable property,
  * not per descriptor.
@@ -116,7 +141,7 @@ function requiredFieldEntries(
   fields: readonly RenderFieldDescriptor[],
 ): readonly { name: string; label: string }[] {
   return fields
-    .filter((field) => field.required)
+    .filter((field) => field.required && !hasUnresolvableRemoteOptions(field))
     .flatMap((field) =>
       field.type === "date-range"
         ? [field.from, field.until]
@@ -154,7 +179,10 @@ export function useFormFields({
   const requiredFields = useMemo(() => requiredFieldEntries(fields), [fields]);
 
   const isDirty = useMemo(
-    () => Object.keys(values).some((name) => values[name] !== initialValuesRef.current[name]),
+    () =>
+      Object.keys(values).some(
+        (name) => !valuesEqual(values[name], initialValuesRef.current[name]),
+      ),
     [values],
   );
 

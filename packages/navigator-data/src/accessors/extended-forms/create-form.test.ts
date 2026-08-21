@@ -3,14 +3,9 @@
  *
  * Tests cover:
  * - userDefinedProperties: filters out url-type, links profileAttribute, isContent, isRequired, allowedValues
- * - contentProperties: derived from userDefinedProperties where isContent is true
  * - toOneRelationProperties: url with maxItems===1, isRequired, targetCollectionHref
  * - toManyRelationProperties: url with maxItems !== 1, targetCollectionHref
- * - relationProperties: union of toOne + toMany
  * - allProperties: union of all
- * - getPropertyByName
- * - getRequiredProperties
- * - target profile resolution via allProfiles
  */
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
@@ -191,10 +186,10 @@ const orderProfileJson = {
   },
 };
 
-function makeCreateTemplate(profileJson = orderProfileJson, allProfiles?: ProfileEntity[]) {
+function makeCreateTemplate(profileJson = orderProfileJson) {
   const profile = makeProfileEntity(profileJson, ORDER_PROFILE_URL, "order");
   const rawTemplate = resolveTemplate(profileJson as ProfileEntityShape, "create-form")!;
-  return new CreateHalFormTemplate(rawTemplate, profile, allProfiles);
+  return new CreateHalFormTemplate(rawTemplate, profile);
 }
 
 // ---------------------------------------------------------------------------
@@ -285,23 +280,6 @@ describe("CreateHalFormTemplate.userDefinedProperties", () => {
 });
 
 // ---------------------------------------------------------------------------
-// contentProperties
-// ---------------------------------------------------------------------------
-
-describe("CreateHalFormTemplate.contentProperties", () => {
-  it("returns only content properties", () => {
-    const tmpl = makeCreateTemplate();
-    expect(tmpl.contentProperties).toHaveLength(1);
-    expect(tmpl.contentProperties[0].property.name).toBe("document");
-  });
-
-  it("isContent is true on all returned properties", () => {
-    const tmpl = makeCreateTemplate();
-    expect(tmpl.contentProperties.every((p) => p.isContent)).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // toOneRelationProperties
 // ---------------------------------------------------------------------------
 
@@ -377,182 +355,48 @@ describe("CreateHalFormTemplate.toManyRelationProperties", () => {
     const tmpl = makeCreateTemplate();
     expect(tmpl.toManyRelationProperties[0].profileRelation?.name).toBe("products");
   });
-});
 
-// ---------------------------------------------------------------------------
-// relationProperties / allProperties
-// ---------------------------------------------------------------------------
-
-describe("CreateHalFormTemplate.relationProperties", () => {
-  it("returns all relations (to-one + to-many)", () => {
+  it("isRequired is false when the template property omits required", () => {
     const tmpl = makeCreateTemplate();
-    expect(tmpl.relationProperties).toHaveLength(2);
-    const names = tmpl.relationProperties.map((p) => p.property.name);
-    expect(names).toContain("customer");
-    expect(names).toContain("products");
+    expect(tmpl.toManyRelationProperties[0].isRequired).toBe(false);
+  });
+
+  it("isRequired is true when the template property sets required — cardinality alone must not override it", () => {
+    const requiredToMany = {
+      ...orderProfileJson,
+      _templates: {
+        ...orderProfileJson._templates,
+        "create-form": {
+          method: "POST",
+          target: "https://example.com/orders",
+          contentType: "application/json",
+          properties: [
+            {
+              name: "products",
+              type: "url",
+              required: true,
+              options: { link: { href: "https://example.com/products", title: "Products" } },
+            },
+          ],
+        },
+      },
+    };
+    const profile = makeProfileEntity(requiredToMany, ORDER_PROFILE_URL, "order");
+    const rawTemplate = resolveTemplate(requiredToMany as ProfileEntityShape, "create-form")!;
+    const tmpl = new CreateHalFormTemplate(rawTemplate, profile);
+    expect(tmpl.toManyRelationProperties[0].isRequired).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// allProperties
+// ---------------------------------------------------------------------------
 
 describe("CreateHalFormTemplate.allProperties", () => {
   it("returns user-defined + all relations", () => {
     const tmpl = makeCreateTemplate();
     // order_number, status, document + customer, products = 5
     expect(tmpl.allProperties).toHaveLength(5);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getPropertyByName
-// ---------------------------------------------------------------------------
-
-describe("CreateHalFormTemplate.getPropertyByName", () => {
-  it("finds a user-defined attribute property by name", () => {
-    const tmpl = makeCreateTemplate();
-    expect(tmpl.getPropertyByName("order_number")?.property.name).toBe("order_number");
-  });
-
-  it("finds a to-one relation property by name", () => {
-    const tmpl = makeCreateTemplate();
-    expect(tmpl.getPropertyByName("customer")?.property.name).toBe("customer");
-  });
-
-  it("finds a to-many relation property by name", () => {
-    const tmpl = makeCreateTemplate();
-    expect(tmpl.getPropertyByName("products")?.property.name).toBe("products");
-  });
-
-  it("returns undefined for unknown property name", () => {
-    const tmpl = makeCreateTemplate();
-    expect(tmpl.getPropertyByName("nonexistent")).toBeUndefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getRequiredProperties
-// ---------------------------------------------------------------------------
-
-describe("CreateHalFormTemplate.getRequiredProperties", () => {
-  it("returns required user-defined attributes", () => {
-    const tmpl = makeCreateTemplate();
-    const names = tmpl.getRequiredProperties().map((p) => p.property.name);
-    expect(names).toContain("order_number");
-  });
-
-  it("returns required to-one relations", () => {
-    const tmpl = makeCreateTemplate();
-    const names = tmpl.getRequiredProperties().map((p) => p.property.name);
-    expect(names).toContain("customer");
-  });
-
-  it("does not return non-required properties", () => {
-    const tmpl = makeCreateTemplate();
-    const names = tmpl.getRequiredProperties().map((p) => p.property.name);
-    expect(names).not.toContain("status");
-    expect(names).not.toContain("products");
-    expect(names).not.toContain("document");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// allProfiles target profile resolution
-// ---------------------------------------------------------------------------
-
-describe("CreateHalFormTemplate target profile resolution via allProfiles", () => {
-  it("resolves targetProfile for to-one relation when allProfiles is provided", () => {
-    const customerProfileJson = {
-      name: "customer",
-      description: "",
-      _links: {
-        self: { href: "https://example.com/profile/customers" },
-        describes: [
-          { href: "https://example.com/customers", name: "collection" },
-          { href: "https://example.com/customers/{id}", name: "item", templated: true },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "id",
-            title: "id",
-            type: "string",
-            description: "",
-            readOnly: true,
-            required: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        default: { method: "HEAD", target: "https://example.com/customers", properties: [] },
-      },
-    };
-    const customerProfile = makeProfileEntity(
-      customerProfileJson,
-      "https://example.com/profile/customers",
-      "customer",
-    );
-    const tmpl = makeCreateTemplate(orderProfileJson, [customerProfile]);
-
-    const customerProp = tmpl.toOneRelationProperties.find((p) => p.property.name === "customer");
-    expect(customerProp?.targetProfile).toBeDefined();
-    expect(customerProp?.targetProfile?.name).toBe("customer");
-  });
-
-  it("targetProfile is undefined when allProfiles does not have matching profile", () => {
-    const tmpl = makeCreateTemplate(); // no allProfiles
-    const customerProp = tmpl.toOneRelationProperties.find((p) => p.property.name === "customer");
-    expect(customerProp?.targetProfile).toBeUndefined();
-  });
-
-  it("resolves targetProfile for to-many relation when allProfiles is provided", () => {
-    const productProfileJson = {
-      name: "product",
-      description: "",
-      _links: {
-        self: { href: "https://example.com/profile/products" },
-        describes: [
-          { href: "https://example.com/products", name: "collection" },
-          { href: "https://example.com/products/{id}", name: "item", templated: true },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          {
-            name: "id",
-            title: "id",
-            type: "string",
-            description: "",
-            readOnly: true,
-            required: false,
-            _embedded: {
-              "blueprint:constraint": [],
-              "blueprint:search-param": [],
-              "blueprint:attribute": [],
-            },
-            _links: {},
-          },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        default: { method: "HEAD", target: "https://example.com/products", properties: [] },
-      },
-    };
-    const productProfile = makeProfileEntity(
-      productProfileJson,
-      "https://example.com/profile/products",
-      "product",
-    );
-    const tmpl = makeCreateTemplate(orderProfileJson, [productProfile]);
-
-    const productsProp = tmpl.toManyRelationProperties.find((p) => p.property.name === "products");
-    expect(productsProp?.targetProfile?.name).toBe("product");
   });
 });
 
@@ -581,6 +425,5 @@ describe("CreateHalFormTemplate with empty create-form", () => {
     expect(tmpl.toOneRelationProperties).toHaveLength(0);
     expect(tmpl.toManyRelationProperties).toHaveLength(0);
     expect(tmpl.allProperties).toHaveLength(0);
-    expect(tmpl.getRequiredProperties()).toHaveLength(0);
   });
 });

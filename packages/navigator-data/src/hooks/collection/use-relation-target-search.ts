@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { createValues } from "@contentgrid/hal-forms/values";
+import { type HalFormValues, createValues } from "@contentgrid/hal-forms/values";
 import { ProfileAttributeSearchType } from "../../accessors/attribute-profile";
 import type { EntityItem } from "../../accessors/entity-item";
 import type ProfileEntity from "../../accessors/entity-profile";
+import type { SearchRequestSpec } from "../../api/requests";
 import { useDebouncedValue } from "../use-debounced-value";
 import { useEntityItemCollection } from "./use-entity-item-collection";
 
@@ -45,16 +46,15 @@ export function useRelationTargetSearch({
   // A typed query with no matching search property must disable the query rather than fall
   // back to the template's default (unfiltered) values — otherwise the user's query is
   // silently ignored and the full, unfiltered collection is returned in its place.
-  const searchValues = searchTemplate
-    ? debouncedQuery
-      ? searchProperty
-        ? createValues(searchTemplate.template).withValue(
-            searchProperty.property.name,
-            debouncedQuery,
-          )
-        : undefined
-      : createValues(searchTemplate.template)
-    : undefined;
+  let searchValues: HalFormValues<SearchRequestSpec> | undefined;
+  if (searchTemplate && !debouncedQuery) {
+    searchValues = createValues(searchTemplate.template);
+  } else if (searchTemplate && debouncedQuery && searchProperty) {
+    searchValues = createValues(searchTemplate.template).withValue(
+      searchProperty.property.name,
+      debouncedQuery,
+    );
+  }
 
   const collection = useEntityItemCollection(
     pageUrl

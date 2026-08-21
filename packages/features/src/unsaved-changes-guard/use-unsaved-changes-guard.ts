@@ -24,9 +24,9 @@ export interface UseUnsavedChangesGuardResult {
 
 /**
  * Blocks in-app navigation while `isDirty` is true, until the user confirms leaving.
- * Also arms the browser's native `beforeunload` prompt for tab close / refresh — this
- * is `useBlocker`'s own `enableBeforeUnload` behaviour (on by default with the
- * `shouldBlockFn` form used here), not something this hook wires up itself.
+ * Also arms the browser's native `beforeunload` prompt for tab close / refresh, but only
+ * while dirty — `useBlocker`'s `enableBeforeUnload` defaults to `true` unconditionally, which
+ * would show the native prompt even on a pristine form, so it's explicitly gated here.
  *
  * `isDirty` is a plain boolean rather than a specific form library's dirty flag — this
  * repo doesn't use react-hook-form (see ADR-004); pass `useFormFields(...).isDirty`
@@ -37,6 +37,7 @@ export function useUnsavedChangesGuard(isDirty: boolean): UseUnsavedChangesGuard
 
   const blocker = useBlocker({
     shouldBlockFn: () => isDirty && !blockingSuspendedRef.current,
+    enableBeforeUnload: () => isDirty && !blockingSuspendedRef.current,
     withResolver: true,
   });
 
