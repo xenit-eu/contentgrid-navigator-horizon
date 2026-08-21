@@ -1,13 +1,17 @@
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { EntityItemCollectionView } from "@contentgrid/features/entity-item-collection";
+import { EntityItemCollectionSearchView } from "@contentgrid/features/entity-item-collection";
+import {
+  applyFiltersToSearchState,
+  decodeFiltersFromSearchState,
+} from "@contentgrid/features/search";
 import {
   type ProfileEntity,
   entitySearchStateValidator,
-  extractCursorFromHref,
-  registerCursorHref,
-  resolveCursorHref,
+  recallCollectionPageHref,
+  rememberCollectionPageHref,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import {
@@ -33,28 +37,38 @@ function EntityItemCollectionPage() {
 
   if (!profile) return <LoadingPage />;
 
-  return <EntityItemCollectionRoute profile={profile} />;
+  // Remounts EntityItemCollectionRoute on a genuine entity switch, so its pageUrl state (seeded
+  // once from the page-href memo on mount) doesn't leak the previous entity's remembered page.
+  return <EntityItemCollectionRoute key={profile.name} profile={profile} />;
 }
 
 function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const go = useNavigate();
   const queryClient = useQueryClient();
-  const { cursor } = useSearch({ strict: false });
+  const search = useSearch({ strict: false });
+  const filters = useMemo(() => decodeFiltersFromSearchState(search), [search]);
 
-  // The URL's opaque cursor is resolved back to the concrete page href it was
-  // registered with (never rebuilt from parts). Absent/unknown cursor → first
-  // page.
-  const pageUrl = cursor ? resolveCursorHref(queryClient, profile.name, cursor) : undefined;
+  // Pagination position is deliberately kept out of the URL — an opaque cursor only ever
+  // resolves back to a real page in the session that received it from the server, so there's
+  // nothing to gain from putting it there. It's remembered per entity in the QueryClient cache
+  // instead, purely to survive an unmount/remount within this session (e.g. item detail → back).
+  const [pageUrl, setPageUrl] = useState<string | undefined>(() =>
+    recallCollectionPageHref(queryClient, profile.name),
+  );
 
-  // Cursor navigation never builds a URL: remember the href a cursor came from
-  // in the registry, then carry the opaque cursor in the URL's search state.
-  function onPageChange(href: string | undefined) {
-    const nextCursor = extractCursorFromHref(href);
-    if (nextCursor && href) registerCursorHref(queryClient, profile.name, nextCursor, href);
+  function handlePageChange(href: string | undefined) {
+    setPageUrl(href);
+    rememberCollectionPageHref(queryClient, profile.name, href);
+  }
+
+  // Filters round-trip through the URL as individual, readable s.<property> params — shareable
+  // across sessions, unlike pagination position.
+  function handleFiltersChange(nextFilters: Record<string, string>) {
+    handlePageChange(undefined);
     go({
       to: "/$entity",
       params: { entity: profile.name },
-      search: (prev) => ({ ...prev, cursor: nextCursor }),
+      search: (prev) => applyFiltersToSearchState(prev, nextFilters),
     });
   }
 
@@ -90,20 +104,22 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
   );
 
   return (
-    <EntityItemCollectionView
+    <EntityItemCollectionSearchView
       profile={profile}
       pageUrl={pageUrl}
+      onPageChange={handlePageChange}
+      filters={filters}
+      onFiltersChange={handleFiltersChange}
       actions={actions}
       toolbar
       breadcrumbs={breadcrumbs}
-      onEntityItemClick={(itemId) =>
+      onEntityItemClick={(itemId: string) =>
         go({
           to: "/$entity/$itemId",
           params: { entity: profile.name, itemId },
           search: (prev) => prev,
         })
       }
-      onPageChange={onPageChange}
     />
   );
 }

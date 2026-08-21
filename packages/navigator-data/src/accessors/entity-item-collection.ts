@@ -235,6 +235,18 @@ export class EntityItemCollection {
   }
 
   /**
+   * URL of the current page of results.
+   *
+   * Contains the resolved `_internal_*` scoping params for a to-many relation
+   * collection — see `internalRelationParams`, which derives from this href.
+   *
+   * @returns Self page URL or undefined if the collection has no self link
+   */
+  public get selfHref(): string | undefined {
+    return this.halSlice.self.href;
+  }
+
+  /**
    * URL for the next page of results.
    *
    * Contains an opaque cursor — never parse or modify it. Pass directly to the

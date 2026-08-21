@@ -74,7 +74,7 @@ vi.mock("@contentgrid/features/dashboard", () => ({
 }));
 
 vi.mock("@contentgrid/features/entity-item-collection", () => ({
-  EntityItemCollectionView: ({ profile }: { profile: { name: string } }) => (
+  EntityItemCollectionSearchView: ({ profile }: { profile: { name: string } }) => (
     <div data-testid="entity-detail" data-entity={profile.name} />
   ),
 }));

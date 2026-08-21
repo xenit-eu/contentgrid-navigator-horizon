@@ -1,7 +1,7 @@
-export { entitySearchStateValidator, extractCursorFromHref } from "./entity-search-state";
+export { entitySearchStateValidator } from "./entity-search-state";
 export type { EntitySearchState } from "./entity-search-state";
 export {
-  registerCursorHref,
-  resolveCursorHref,
+  recallCollectionPageHref,
+  rememberCollectionPageHref,
   resolveTrustedCollectionUrl,
 } from "./pagination-links";

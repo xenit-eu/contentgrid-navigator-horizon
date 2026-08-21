@@ -1,8 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
-  registerCursorHref,
-  resolveCursorHref,
+  recallCollectionPageHref,
+  rememberCollectionPageHref,
   resolveTrustedCollectionUrl,
 } from "./pagination-links";
 
@@ -38,59 +38,56 @@ describe("resolveTrustedCollectionUrl", () => {
   });
 });
 
-describe("cursor registry (registerCursorHref / resolveCursorHref)", () => {
+describe("collection page-href memo (rememberCollectionPageHref / recallCollectionPageHref)", () => {
   function makeQueryClient(): QueryClient {
     return new QueryClient({ defaultOptions: { queries: { retry: false } } });
   }
 
-  it("resolves a href previously registered for the same entity + token", () => {
+  it("recalls a href previously remembered for the same entity", () => {
     const queryClient = makeQueryClient();
-    registerCursorHref(
+    rememberCollectionPageHref(
       queryClient,
       "invoice",
-      "0p4jtvf1",
       "https://api.example.com/invoices?_cursor=0p4jtvf1",
     );
 
-    expect(resolveCursorHref(queryClient, "invoice", "0p4jtvf1")).toBe(
+    expect(recallCollectionPageHref(queryClient, "invoice")).toBe(
       "https://api.example.com/invoices?_cursor=0p4jtvf1",
     );
   });
 
-  it("returns undefined for a token that was never registered (bookmark/reload/share)", () => {
+  it("returns undefined when nothing was ever remembered (bookmark/reload/share)", () => {
     const queryClient = makeQueryClient();
 
-    expect(resolveCursorHref(queryClient, "invoice", "never-seen")).toBeUndefined();
+    expect(recallCollectionPageHref(queryClient, "invoice")).toBeUndefined();
   });
 
-  it("scopes entries by entity name — same token, different entity, does not collide", () => {
+  it("scopes entries by entity name — same client, different entity, does not collide", () => {
     const queryClient = makeQueryClient();
-    registerCursorHref(
-      queryClient,
-      "invoice",
-      "abc",
-      "https://api.example.com/invoices?_cursor=abc",
-    );
-    registerCursorHref(
-      queryClient,
-      "customer",
-      "abc",
-      "https://api.example.com/customers?_cursor=abc",
-    );
+    rememberCollectionPageHref(queryClient, "invoice", "https://api.example.com/invoices?p=1");
+    rememberCollectionPageHref(queryClient, "customer", "https://api.example.com/customers?p=1");
 
-    expect(resolveCursorHref(queryClient, "invoice", "abc")).toBe(
-      "https://api.example.com/invoices?_cursor=abc",
+    expect(recallCollectionPageHref(queryClient, "invoice")).toBe(
+      "https://api.example.com/invoices?p=1",
     );
-    expect(resolveCursorHref(queryClient, "customer", "abc")).toBe(
-      "https://api.example.com/customers?_cursor=abc",
+    expect(recallCollectionPageHref(queryClient, "customer")).toBe(
+      "https://api.example.com/customers?p=1",
     );
   });
 
   it("is scoped to its own QueryClient instance — a fresh client has no entries", () => {
     const first = makeQueryClient();
-    registerCursorHref(first, "invoice", "abc", "https://api.example.com/invoices?_cursor=abc");
+    rememberCollectionPageHref(first, "invoice", "https://api.example.com/invoices?p=1");
 
     const second = makeQueryClient();
-    expect(resolveCursorHref(second, "invoice", "abc")).toBeUndefined();
+    expect(recallCollectionPageHref(second, "invoice")).toBeUndefined();
+  });
+
+  it("clears the remembered href when passed undefined, rather than leaving it stale", () => {
+    const queryClient = makeQueryClient();
+    rememberCollectionPageHref(queryClient, "invoice", "https://api.example.com/invoices?p=2");
+    rememberCollectionPageHref(queryClient, "invoice", undefined);
+
+    expect(recallCollectionPageHref(queryClient, "invoice")).toBeUndefined();
   });
 });
