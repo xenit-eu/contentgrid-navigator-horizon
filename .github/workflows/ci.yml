@@ -379,7 +379,7 @@ jobs:
     # would bypass PR review on main if branch protection ever exempted this token.
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/playwright:v1.60.0-noble
+    container: mcr.microsoft.com/playwright:v1.61.1-noble
     permissions:
       # Needed to push the re-baselined snapshots back to the triggering branch;
       # every other job stays read-only per the repo's least-privilege default.
@@ -416,6 +416,12 @@ jobs:
         env:
           STORY_GREP: ${{ inputs.story_grep }}
         run: |
+          # actions/checkout writes the workspace as one uid; this container's steps
+          # run as another, so git's post-CVE-2022-24765 ownership check refuses to
+          # touch the repo at all until told to trust it. Verified locally against
+          # this exact image (mcr.microsoft.com/playwright:v1.61.1-noble): git status
+          # failed with "detected dubious ownership" until this line was added.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add apps/storybook/tests/__snapshots__
