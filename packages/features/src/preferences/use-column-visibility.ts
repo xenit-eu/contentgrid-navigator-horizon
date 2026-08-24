@@ -1,5 +1,6 @@
 import { type EntityItem, type ProfileAttribute, ProfileEntity } from "@contentgrid/navigator-data";
 import { type DataTableColumn, type DataTableRow } from "@contentgrid/ui";
+import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface ColumnVisibilityConfig {
   visibleColumns: string[];
@@ -9,13 +10,15 @@ export interface ColumnVisibilityConfig {
 /**
  * Hook for determining which columns are visible in a collection view.
  *
- * Uses profileEntity.preferences if available, otherwise generates defaults:
- * - First 4 user-defined attributes for visibleColumns
- * - First text attribute as nameAttribute, or id if none found
+ * Reads the merged entity display preferences (user override > backend default > heuristic
+ * default — see `useEntityDisplayPreferences`) and falls back to no visible columns if
+ * `visibleColumns` was never set at any layer.
  *
- * Future: will integrate with the preferences feature for user customization.
+ * Accepts `profileEntity: undefined` (e.g. a relation's target profile that hasn't resolved
+ * yet) — call this unconditionally, every render; do not skip the call when the profile is
+ * still unresolved.
  *
- * @param profileEntity - The entity profile with optional preferences
+ * @param profileEntity - The entity profile, or `undefined` if not yet resolved
  * @returns Column visibility configuration
  *
  * @example
@@ -26,9 +29,11 @@ export interface ColumnVisibilityConfig {
  * );
  * ```
  */
-export function useColumnVisibility(profileEntity: ProfileEntity): ColumnVisibilityConfig {
-  const prefs = profileEntity.preferences ?? profileEntity.getDefaultPreferences();
-  const visibleColumns = prefs.visibleColumns;
+export function useColumnVisibility(
+  profileEntity: ProfileEntity | undefined,
+): ColumnVisibilityConfig {
+  const { preferences } = useEntityDisplayPreferences(profileEntity);
+  const visibleColumns = preferences.visibleColumns ?? [];
 
   return {
     visibleColumns,
@@ -53,13 +58,20 @@ export function filterVisibleAttributes(
 /**
  * Build table columns based on profile and visibility preferences.
  *
- * Includes id column plus filtered user-defined attributes.
+ * Includes id column plus filtered user-defined attributes. Pure function — takes the
+ * `ColumnVisibilityConfig` from `useColumnVisibility` as a parameter rather than calling the
+ * hook itself, so it's safe to call conditionally (e.g. inside `useMemo`, or only when a
+ * target profile has resolved) without violating the Rules of Hooks.
  *
  * @param profile - The entity profile
+ * @param visibility - Result of `useColumnVisibility(profile)`, called by the caller
  * @returns Array of table column definitions
  */
-export function buildColumns(profile: ProfileEntity): DataTableColumn[] {
-  const { isVisible } = useColumnVisibility(profile);
+export function buildColumns(
+  profile: ProfileEntity,
+  visibility: ColumnVisibilityConfig,
+): DataTableColumn[] {
+  const { isVisible } = visibility;
 
   const columns: DataTableColumn[] = [];
 

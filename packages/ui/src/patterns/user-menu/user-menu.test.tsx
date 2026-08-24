@@ -40,4 +40,25 @@ describe("UserMenu", () => {
     await user.click(screen.getByText("Log out"));
     expect(onLogOut).toHaveBeenCalledTimes(1);
   });
+
+  it("shows a Settings item above Log out after clicking the trigger", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu name="John Doe" email="john.doe@example.com" />);
+    await user.click(screen.getByRole("button", { name: /john doe/i }));
+
+    const items = screen.getAllByRole("menuitem");
+    const labels = items.map((item) => item.textContent);
+    expect(labels.indexOf("Settings")).toBeLessThan(labels.indexOf("Log out"));
+  });
+
+  it("calls onSettingsClick when Settings is selected", async () => {
+    const user = userEvent.setup();
+    const onSettingsClick = vi.fn();
+    render(
+      <UserMenu name="John Doe" email="john.doe@example.com" onSettingsClick={onSettingsClick} />,
+    );
+    await user.click(screen.getByRole("button", { name: /john doe/i }));
+    await user.click(screen.getByText("Settings"));
+    expect(onSettingsClick).toHaveBeenCalledTimes(1);
+  });
 });
