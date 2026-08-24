@@ -12,16 +12,12 @@ import { queryKeys } from "../query-keys";
 import type { ProfileAttributeShape, ProfileEntityShape, ProfileRelationShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import { ProfileAttribute } from "./attribute-profile";
+import type { EntityDisplayPreferences } from "./entity-display-preferences";
 import { CreateHalFormTemplate } from "./extended-forms/create-form";
 import { SearchHalFormTemplate } from "./extended-forms/search-form";
 import { ProfileRelation } from "./relation-profile";
 
 const PROFILE_STALE_TIME = 5 * 60 * 1000; // 5 minutes - profiles rarely change at runtime
-
-export interface EntityPreferences {
-  readonly visibleColumns: string[];
-  readonly nameAttribute?: ProfileAttribute;
-}
 
 export async function getProfileRoot(
   apiFetch: TypedFetch,
@@ -69,21 +65,22 @@ export default class ProfileEntity {
   public constructor(
     public readonly link: Link,
     private readonly profileEntity: HalObject<ProfileEntityShape>,
-    public readonly preferences?: EntityPreferences,
   ) {}
 
   /**
-   * Create default preferences based on the profile schema.
+   * Create default preferences based on the profile schema. This is the lowest-priority
+   * layer of `useEntityDisplayPreferences` (see packages/features/src/preferences) — backend
+   * automation defaults and user overrides take precedence when present.
    *
    * - visibleColumns: id plus first 4 user-defined attributes
-   * - nameAttribute: first text-type attribute, or id if none found
+   * - nameAttribute: name of the first text-type attribute, or id if none found
    */
-  public getDefaultPreferences(): EntityPreferences {
+  public getDefaultPreferences(): EntityDisplayPreferences {
     const userColumns = this.userDefinedAttributes.slice(0, 4).map((attr) => attr.name);
     const visibleColumns = ["id", ...userColumns];
 
     const textAttribute = this.userDefinedAttributes.find((attr) => attr.type === "string");
-    const nameAttribute = textAttribute ?? this.idAttribute;
+    const nameAttribute = (textAttribute ?? this.idAttribute).name;
 
     return {
       visibleColumns,

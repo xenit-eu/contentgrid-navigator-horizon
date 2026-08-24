@@ -1,11 +1,5 @@
 import { z } from "zod/v4";
 
-const entityOverrideSchema = z.object({
-  titleAttribute: z.string().nullable().optional(),
-  hiddenColumns: z.array(z.string()).nullable().optional(),
-  defaultSort: z.string().nullable().optional(),
-});
-
 export const appConfigSchema = z.object({
   version: z.number(),
   branding: z
@@ -24,7 +18,6 @@ export const appConfigSchema = z.object({
   display: z
     .object({
       defaultPageSize: z.number().optional(),
-      entityOverrides: z.record(z.string(), entityOverrideSchema).optional(),
     })
     .optional(),
   theme: z

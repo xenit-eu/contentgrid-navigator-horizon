@@ -22,6 +22,7 @@ export const Default: Story = {
   args: {
     name: "John Doe",
     email: "john.doe@example.com",
+    onSettingsClick: fn(),
     onLogOut: fn(),
   },
 };

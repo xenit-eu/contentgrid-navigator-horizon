@@ -24,7 +24,7 @@ import {
   DataTable,
   Skeleton,
 } from "@contentgrid/ui";
-import { buildColumns, buildRows } from "../../preferences";
+import { buildColumns, buildRows, useColumnVisibility } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
 import {
   MutationErrorDisplay,
@@ -78,9 +78,10 @@ export function RelationToManySection({
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
+  const visibility = useColumnVisibility(targetProfile);
   const columns = useMemo(
-    () => (targetProfile ? buildColumns(targetProfile) : [{ key: "id", header: "ID" }]),
-    [targetProfile],
+    () => (targetProfile ? buildColumns(targetProfile, visibility) : [{ key: "id", header: "ID" }]),
+    [targetProfile, visibility],
   );
   const rows = useMemo(
     () => (collection.isSuccess ? buildRows(collection.data.items, columns) : []),

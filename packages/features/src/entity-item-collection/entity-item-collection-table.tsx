@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { EntityItemCollection, ProfileEntity } from "@contentgrid/navigator-data";
 import { Button, DataTable } from "@contentgrid/ui";
-import { buildColumns, buildRows } from "../preferences";
+import { buildColumns, buildRows, useColumnVisibility } from "../preferences";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
@@ -27,7 +27,8 @@ export function EntityItemCollectionTable({
   onEntityItemClick,
   onPageChange,
 }: Readonly<EntityItemCollectionTableProps>) {
-  const columns = useMemo(() => buildColumns(profile), [profile]);
+  const visibility = useColumnVisibility(profile);
+  const columns = useMemo(() => buildColumns(profile, visibility), [profile, visibility]);
   const rows = useMemo(() => buildRows(collection.items, columns), [collection.items, columns]);
 
   return (
