@@ -70,7 +70,7 @@ function SidebarEntityNavItem({
   const tooltip = profile.description
     ? `${profile.pluralName}: ${profile.description}`
     : profile.pluralName;
-    
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
