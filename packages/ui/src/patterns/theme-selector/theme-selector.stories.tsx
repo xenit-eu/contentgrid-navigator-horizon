@@ -25,10 +25,22 @@ function ControlledThemeSelector() {
 }
 
 export const Default: Story = {
+  args: {
+    themes: ENTITY_COLOR_THEMES,
+    value: undefined,
+    onValueChange: fn(),
+    onApply: fn(),
+  },
   render: () => <ControlledThemeSelector />,
 };
 
 export const WithInteraction: Story = {
+  args: {
+    themes: ENTITY_COLOR_THEMES,
+    value: undefined,
+    onValueChange: fn(),
+    onApply: fn(),
+  },
   tags: ["no-visual-test"],
   render: () => <ControlledThemeSelector />,
   play: async ({ canvasElement }) => {
