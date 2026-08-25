@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { IconPicker } from "./icon-picker";
 
 const meta = {
@@ -18,14 +18,17 @@ function ControlledIconPicker({ initial }: { initial?: string }) {
 }
 
 export const Unset: Story = {
+  args: { value: undefined, onChange: fn() },
   render: () => <ControlledIconPicker />,
 };
 
 export const Preselected: Story = {
+  args: { value: "Database", onChange: fn() },
   render: () => <ControlledIconPicker initial="Database" />,
 };
 
 export const WithInteraction: Story = {
+  args: { value: undefined, onChange: fn() },
   tags: ["no-visual-test"],
   render: () => <ControlledIconPicker />,
   play: async ({ canvasElement }) => {
@@ -38,6 +41,7 @@ export const WithInteraction: Story = {
 };
 
 export const FilteredByCategory: Story = {
+  args: { value: undefined, onChange: fn() },
   tags: ["no-visual-test"],
   render: () => <ControlledIconPicker />,
   play: async ({ canvasElement }) => {
