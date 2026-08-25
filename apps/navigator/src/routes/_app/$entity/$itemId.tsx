@@ -134,7 +134,7 @@ function EntityItemDetailRoute({
           <button
             type="button"
             onClick={() => go({ to: "/", search: {} })}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             Home
           </button>
@@ -149,7 +149,7 @@ function EntityItemDetailRoute({
               // filters and page position from the QueryClient-remembered page href instead.
               go({ to: "/$entity", params: { entity: profile.name }, search: {} })
             }
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             {profile.pluralName}
           </button>

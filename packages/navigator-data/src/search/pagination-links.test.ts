@@ -1,7 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
+  recallCollectionFilters,
   recallCollectionPageHref,
+  rememberCollectionFilters,
   rememberCollectionPageHref,
   resolveTrustedCollectionUrl,
 } from "./pagination-links";
@@ -89,5 +91,60 @@ describe("collection page-href memo (rememberCollectionPageHref / recallCollecti
     rememberCollectionPageHref(queryClient, "invoice", undefined);
 
     expect(recallCollectionPageHref(queryClient, "invoice")).toBeUndefined();
+  });
+});
+
+describe("collection filters memo (rememberCollectionFilters / recallCollectionFilters)", () => {
+  function makeQueryClient(): QueryClient {
+    return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  }
+
+  it("recalls filters previously remembered for the same entity", () => {
+    const queryClient = makeQueryClient();
+    rememberCollectionFilters(queryClient, "invoice", { status: "open" });
+
+    expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ status: "open" });
+  });
+
+  it("returns undefined when nothing was ever remembered (bookmark/reload/share)", () => {
+    const queryClient = makeQueryClient();
+
+    expect(recallCollectionFilters(queryClient, "invoice")).toBeUndefined();
+  });
+
+  it("scopes entries by entity name — same client, different entity, does not collide", () => {
+    const queryClient = makeQueryClient();
+    rememberCollectionFilters(queryClient, "invoice", { status: "open" });
+    rememberCollectionFilters(queryClient, "customer", { name: "Acme" });
+
+    expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ status: "open" });
+    expect(recallCollectionFilters(queryClient, "customer")).toEqual({ name: "Acme" });
+  });
+
+  it("is scoped to its own QueryClient instance — a fresh client has no entries", () => {
+    const first = makeQueryClient();
+    rememberCollectionFilters(first, "invoice", { status: "open" });
+
+    const second = makeQueryClient();
+    expect(recallCollectionFilters(second, "invoice")).toBeUndefined();
+  });
+
+  it("clears the remembered filters when passed {}, rather than leaving them stale", () => {
+    const queryClient = makeQueryClient();
+    rememberCollectionFilters(queryClient, "invoice", { status: "open" });
+    rememberCollectionFilters(queryClient, "invoice", {});
+
+    expect(recallCollectionFilters(queryClient, "invoice")).toBeUndefined();
+  });
+
+  it("does not confuse the filters memo with the page-href memo for the same entity", () => {
+    const queryClient = makeQueryClient();
+    rememberCollectionPageHref(queryClient, "invoice", "https://api.example.com/invoices?p=2");
+    rememberCollectionFilters(queryClient, "invoice", { status: "open" });
+
+    expect(recallCollectionPageHref(queryClient, "invoice")).toBe(
+      "https://api.example.com/invoices?p=2",
+    );
+    expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ status: "open" });
   });
 });
