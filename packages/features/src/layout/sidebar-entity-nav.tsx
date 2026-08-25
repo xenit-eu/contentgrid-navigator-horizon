@@ -1,4 +1,4 @@
-import { BracketsSquareIcon, DatabaseIcon, FileTextIcon, StackIcon } from "@phosphor-icons/react";
+import { BracketsSquareIcon, StackIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { type ProfileEntity, useCachedEntityItemCollection } from "@contentgrid/navigator-data";
 import {
@@ -10,9 +10,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
-  resolveEntityIcon,
 } from "@contentgrid/ui";
-import { useEntityDisplayPreferences } from "../preferences";
+import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
 
 interface SidebarEntityNavProps {
   readonly profiles: readonly ProfileEntity[];
@@ -65,13 +64,8 @@ function SidebarEntityNavItem({
   const { data: collection } = useCachedEntityItemCollection(profile);
   const total = collection?.totalItems;
 
-  // User/backend display preferences (see packages/features/src/preferences) win over the
-  // hasContentAttributes heuristic below — that heuristic is only the icon fallback for
-  // entities with no chosen icon.
   const { preferences } = useEntityDisplayPreferences(profile);
-  const EntityIcon =
-    resolveEntityIcon(preferences.icon) ??
-    (profile.hasContentAttributes ? FileTextIcon : DatabaseIcon);
+  const EntityIcon = resolveEntityCardIcon(preferences.icon);
 
   const tooltip = profile.description
     ? `${profile.pluralName}: ${profile.description}`

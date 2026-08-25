@@ -96,6 +96,8 @@ describe("useEntityDisplayPreferences", () => {
     expect(result.current.preferences.nameAttribute).toBe("invoice_number");
     expect(result.current.nameAttribute?.name).toBe("invoice_number");
     expect(result.current.preferences.visibleColumns).toEqual(["id", "invoice_number"]);
+    // The invoice fixture has no content attribute, so the heuristic default is "Database".
+    expect(result.current.preferences.icon).toBe("Database");
   });
 
   it("a user override wins over the heuristic default", () => {
@@ -127,7 +129,8 @@ describe("useEntityDisplayPreferences", () => {
 
   it("setOverride persists a new override that a subsequent render picks up", () => {
     const { result, rerender } = renderUseEntityDisplayPreferences();
-    expect(result.current.preferences.icon).toBeUndefined();
+    // Heuristic default before any override — never undefined.
+    expect(result.current.preferences.icon).toBe("Database");
 
     act(() => result.current.setOverride({ icon: "file-text" }));
     rerender();

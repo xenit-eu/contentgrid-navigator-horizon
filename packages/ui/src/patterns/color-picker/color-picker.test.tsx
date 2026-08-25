@@ -40,4 +40,28 @@ describe("ColorPicker", () => {
 
     expect(onChange).toHaveBeenCalledWith("#f");
   });
+
+  it("renders custom trigger content instead of the default swatch when children are given", () => {
+    render(
+      <ColorPicker value={undefined} onChange={vi.fn()}>
+        <span data-testid="custom-trigger-icon" />
+      </ColorPicker>,
+    );
+
+    expect(screen.getByTestId("custom-trigger-icon")).toBeInTheDocument();
+    expect(screen.queryByText("Choose color")).not.toBeInTheDocument();
+  });
+
+  it("still opens the swatch grid when using a custom trigger", async () => {
+    const user = userEvent.setup();
+    render(
+      <ColorPicker value={undefined} onChange={vi.fn()}>
+        <span data-testid="custom-trigger-icon" />
+      </ColorPicker>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Choose color" }));
+
+    expect(screen.getByTitle("Green")).toBeInTheDocument();
+  });
 });
