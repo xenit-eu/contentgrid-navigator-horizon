@@ -77,16 +77,16 @@ function SidebarEntityNavItem({
           <span>{profile.pluralName}</span>
         </Link>
       </SidebarMenuButton>
-      {total !== undefined ? (
-        <SidebarMenuBadge className="text-sidebar-foreground/50">
-          {total.isEstimated ? "~" : ""}
-          {total.count}
-        </SidebarMenuBadge>
-      ) : (
-        <SidebarMenuBadge className="text-sidebar-foreground/50">
+      <SidebarMenuBadge className="text-sidebar-foreground/50">
+        {total !== undefined ? (
+          <>
+            {total.isEstimated ? "~" : ""}
+            {total.count}
+          </>
+        ) : (
           <BracketsSquareIcon />
-        </SidebarMenuBadge>
-      )}
+        )}
+      </SidebarMenuBadge>
     </SidebarMenuItem>
   );
 }
