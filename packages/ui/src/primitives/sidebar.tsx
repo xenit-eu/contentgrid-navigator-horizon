@@ -548,7 +548,7 @@ function SidebarLinkButton({
   );
 
   return (
-    <SidebarMenuItem className="">
+    <SidebarMenuItem>
       <SidebarMenuButton asChild={!!render} isActive={isActive} tooltip={label} {...props}>
         {render ? render(content) : content}
       </SidebarMenuButton>
