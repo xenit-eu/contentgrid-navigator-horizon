@@ -144,7 +144,10 @@ function EntityItemDetailRoute({
           <button
             type="button"
             onClick={() =>
-              go({ to: "/$entity", params: { entity: profile.name }, search: (prev) => prev })
+              // Empty search, not `(prev) => prev`: filters aren't carried in this page's URL
+              // (see the list route's `onEntityItemClick`) — the list restores its earlier
+              // filters and page position from the QueryClient-remembered page href instead.
+              go({ to: "/$entity", params: { entity: profile.name }, search: {} })
             }
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >

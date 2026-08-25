@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   applyFilterValues,
   buildFilterProperties,
+  extractFilterValuesFromCollectionUrl,
   findInvalidFilterKeys,
 } from "@contentgrid/features/search";
 import {
@@ -55,6 +56,17 @@ export function EntityItemCollectionView({
     () => (searchTemplate ? buildFilterProperties(searchTemplate) : []),
     [searchTemplate],
   );
+
+  // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
+  // that DIFFERS from the current `filters` (a deep link, or browser back/forward across a
+  // filter change), `pageUrl` belongs to a different search — discard it so `searchValues`
+  // drives page 1 of the CURRENT filters instead, rather than silently fetching the wrong page.
+  const pageUrlFilters = useMemo(
+    () => (pageUrl ? extractFilterValuesFromCollectionUrl(filterProperties, pageUrl) : {}),
+    [pageUrl, filterProperties],
+  );
+  const effectivePageUrl = recordsEqual(filters, pageUrlFilters) ? pageUrl : undefined;
+
   // undefined when there's no search template — same "disabled" signal the default (no
   // filters) mode already relied on before filtering existed, so an entity with no search
   // template behaves exactly as it did previously.
@@ -90,7 +102,9 @@ export function EntityItemCollectionView({
   }
 
   const collection = useEntityItemCollection(
-    pageUrl ? { profileEntity: profile, url: pageUrl } : { profileEntity: profile, searchValues },
+    effectivePageUrl
+      ? { profileEntity: profile, url: effectivePageUrl }
+      : { profileEntity: profile, searchValues },
   );
 
   // Pagination reset is the caller's responsibility here: a filter change is reported via
@@ -153,4 +167,9 @@ export function EntityItemCollectionView({
       </div>
     </>
   );
+}
+
+function recordsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+  const aKeys = Object.keys(a);
+  return aKeys.length === Object.keys(b).length && aKeys.every((key) => a[key] === b[key]);
 }

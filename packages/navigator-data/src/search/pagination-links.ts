@@ -88,3 +88,37 @@ export function recallCollectionPageHref(
 ): string | undefined {
   return queryClient.getQueryData(queryKeys.collectionPage.byEntityName(entityName));
 }
+
+/**
+ * Remembers an entity's currently active filter values — keyed by entity name in the
+ * `QueryClient` cache, mirroring `rememberCollectionPageHref` above. This is a SEPARATE memo,
+ * not derived from the page-href one: the page href is only ever written on an explicit
+ * next/prev click (see `EntityItemCollectionTable`), so a caller who applies a filter and
+ * navigates away before ever paging through the result would have nothing to recover filters
+ * from if they only relied on the page-href memo. Pass `filters: {}` to clear it (e.g. "clear
+ * all filters" — a genuinely empty filter set is not worth remembering).
+ */
+export function rememberCollectionFilters(
+  queryClient: QueryClient,
+  entityName: string,
+  filters: Record<string, string>,
+): void {
+  const queryKey = queryKeys.collectionFilters.byEntityName(entityName);
+  if (Object.keys(filters).length === 0) {
+    queryClient.removeQueries({ queryKey, exact: true });
+  } else {
+    queryClient.setQueryData(queryKey, filters);
+  }
+}
+
+/**
+ * Resolves the remembered active filter values for an entity. Returns `undefined` when nothing
+ * has been remembered in this session (first visit, a fresh reload, or a bookmarked/shared
+ * link) — callers fall back to no filters in that case.
+ */
+export function recallCollectionFilters(
+  queryClient: QueryClient,
+  entityName: string,
+): Record<string, string> | undefined {
+  return queryClient.getQueryData(queryKeys.collectionFilters.byEntityName(entityName));
+}
