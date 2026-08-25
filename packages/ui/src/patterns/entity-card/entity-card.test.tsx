@@ -11,19 +11,14 @@ describe("EntityCard", () => {
     expect(screen.getByText("Invoice")).toBeInTheDocument();
   });
 
-  it("renders count when provided", () => {
-    render(<EntityCard {...baseProps} count={42} />);
-    expect(screen.getByText("42")).toBeInTheDocument();
+  it("renders children in the card body", () => {
+    render(<EntityCard {...baseProps}>Body content</EntityCard>);
+    expect(screen.getByText("Body content")).toBeInTheDocument();
   });
 
-  it("renders '—' when count is undefined", () => {
-    render(<EntityCard {...baseProps} />);
-    expect(screen.getByText("—")).toBeInTheDocument();
-  });
-
-  it("renders '—' when count is 0 is not shown as falsy (count 0 is valid)", () => {
-    render(<EntityCard {...baseProps} count={0} />);
-    expect(screen.getByText("0")).toBeInTheDocument();
+  it("renders no body when children are omitted", () => {
+    const { container } = render(<EntityCard {...baseProps} />);
+    expect(container.querySelector('[data-slot="card-content"]')).not.toBeInTheDocument();
   });
 
   it("renders description when provided", () => {
@@ -36,19 +31,17 @@ describe("EntityCard", () => {
     expect(screen.queryByText("Entity description")).not.toBeInTheDocument();
   });
 
-  it("renders Database icon when hasContent is false/undefined", () => {
+  it("renders a default icon when none is provided", () => {
     const { container } = render(<EntityCard {...baseProps} />);
-    // The SVG is rendered — we can check no FileText and a Database icon via aria/title
-    // lucide renders svg elements; we just verify one icon is present
     expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
-  it("renders FileText icon when hasContent is true", () => {
-    const { container } = render(<EntityCard {...baseProps} hasContent />);
-    expect(container.querySelector("svg")).toBeInTheDocument();
+  it("renders a custom icon when provided", () => {
+    render(<EntityCard {...baseProps} icon={<span data-testid="custom-icon" />} />);
+    expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
   });
 
-  it("calls onTitleClick with entity name when title button is clicked", async () => {
+  it("calls onTitleClick with the entity name when the title button is clicked", async () => {
     const user = userEvent.setup();
     const onTitleClick = vi.fn();
     render(<EntityCard {...baseProps} onTitleClick={onTitleClick} />);
@@ -56,28 +49,74 @@ describe("EntityCard", () => {
     expect(onTitleClick).toHaveBeenCalledWith("invoice");
   });
 
-  it("does not throw when title button is clicked without onTitleClick", async () => {
+  it("does not throw when the title button is clicked without onTitleClick", async () => {
     const user = userEvent.setup();
     render(<EntityCard {...baseProps} />);
     await user.click(screen.getByText("Invoice"));
   });
 
-  it("calls onCreateClick with entity name when create button is clicked", async () => {
+  it("renders no action slot when omitted", () => {
+    render(<EntityCard {...baseProps} />);
+    expect(screen.queryByRole("button", { name: /create/i })).not.toBeInTheDocument();
+  });
+
+  it("renders and wires up an arbitrary action element", async () => {
     const user = userEvent.setup();
     const onCreateClick = vi.fn();
-    render(<EntityCard {...baseProps} onCreateClick={onCreateClick} />);
+    render(
+      <EntityCard
+        {...baseProps}
+        action={
+          <button type="button" onClick={onCreateClick}>
+            Create Invoice
+          </button>
+        }
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Create Invoice" }));
-    expect(onCreateClick).toHaveBeenCalledWith("invoice");
+    expect(onCreateClick).toHaveBeenCalledTimes(1);
   });
 
-  it("does not throw when create button is clicked without onCreateClick", async () => {
+  it("tints the icon badge background with color-mix when a color is provided", () => {
+    const { container } = render(<EntityCard {...baseProps} color="oklch(0.55 0.17 155)" />);
+    const badge = container.querySelector('[data-slot="entity-card-icon"]') as HTMLElement;
+    expect(badge.style.backgroundColor).toBe(
+      "color-mix(in oklch, oklch(0.55 0.17 155) 18%, transparent)",
+    );
+    expect(badge.style.borderColor).toBe("");
+  });
+
+  it("leaves the icon badge unstyled when no color is provided", () => {
+    const { container } = render(<EntityCard {...baseProps} />);
+    const badge = container.querySelector('[data-slot="entity-card-icon"]') as HTMLElement;
+    expect(badge.style.backgroundColor).toBe("");
+  });
+
+  it("does not tint the rest of the card, only the icon badge", () => {
+    const { container } = render(<EntityCard {...baseProps} color="oklch(0.55 0.17 155)" />);
+    const card = container.querySelector('[data-slot="card"]') as HTMLElement;
+    expect(card.style.backgroundColor).toBe("");
+  });
+
+  it("does not call onTitleClick when clicking interactive content inside the icon slot", async () => {
     const user = userEvent.setup();
-    render(<EntityCard {...baseProps} />);
-    await user.click(screen.getByRole("button", { name: "Create Invoice" }));
-  });
+    const onTitleClick = vi.fn();
+    const onIconClick = vi.fn();
+    render(
+      <EntityCard
+        {...baseProps}
+        onTitleClick={onTitleClick}
+        icon={
+          <button type="button" onClick={onIconClick}>
+            Icon action
+          </button>
+        }
+      />,
+    );
 
-  it("renders the 'items' label below the count", () => {
-    render(<EntityCard {...baseProps} />);
-    expect(screen.getByText("items")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Icon action" }));
+
+    expect(onIconClick).toHaveBeenCalledTimes(1);
+    expect(onTitleClick).not.toHaveBeenCalled();
   });
 });

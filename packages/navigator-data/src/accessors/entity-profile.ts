@@ -70,10 +70,16 @@ export default class ProfileEntity {
   /**
    * Create default preferences based on the profile schema. This is the lowest-priority
    * layer of `useEntityDisplayPreferences` (see packages/features/src/preferences) — backend
-   * automation defaults and user overrides take precedence when present.
+   * automation defaults and user overrides take precedence when present. Every field here is
+   * always populated (never `undefined`), so consumers never need a further fallback for the
+   * "nothing configured yet" case.
    *
    * - visibleColumns: id plus first 4 user-defined attributes
    * - nameAttribute: name of the first text-type attribute, or id if none found
+   * - icon: "FileText" for entities with content attributes, "Database" otherwise — these
+   *   names must stay in sync with `ENTITY_ICON_OPTIONS` in `@contentgrid/ui`'s icon picker.
+   *   This package cannot import `@contentgrid/ui` (see its CLAUDE.md forbidden imports), so
+   *   the two are only linked by convention, not a compile-time check.
    */
   public getDefaultPreferences(): EntityDisplayPreferences {
     const userColumns = this.userDefinedAttributes.slice(0, 4).map((attr) => attr.name);
@@ -82,9 +88,12 @@ export default class ProfileEntity {
     const textAttribute = this.userDefinedAttributes.find((attr) => attr.type === "string");
     const nameAttribute = (textAttribute ?? this.idAttribute).name;
 
+    const icon = this.hasContentAttributes ? "FileText" : "Database";
+
     return {
       visibleColumns,
       nameAttribute,
+      icon,
     };
   }
 

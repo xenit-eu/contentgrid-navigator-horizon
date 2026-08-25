@@ -1,10 +1,12 @@
+import { PlusIcon as Plus } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type ProfileEntity,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { EntityCard, Skeleton } from "@contentgrid/ui";
+import { Button, EntityCard, Skeleton } from "@contentgrid/ui";
+import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
 
 // ---------------------------------------------------------------------------
 // EntityOverviewPage — index route component (grid of entity cards)
@@ -33,8 +35,8 @@ function EntityOverview({
     return (
       <div className="space-y-6">
         <OverviewHeader count={0} loading />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-36 w-full rounded-xl" />
           ))}
         </div>
@@ -54,7 +56,7 @@ function EntityOverview({
   return (
     <div className="space-y-6">
       <OverviewHeader count={loadedProfiles.length} />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {loadedProfiles.map((profile) => (
           <EntityCardConnected
             key={profile.name}
@@ -93,15 +95,33 @@ function EntityCardConnected({
     { queryOptionsOverride: { refetchOnWindowFocus: false, refetchOnMount: false } },
   );
 
+  const { preferences } = useEntityDisplayPreferences(profile);
+  const EntityIcon = resolveEntityCardIcon(preferences.icon);
+
   return (
     <EntityCard
       name={profile.name}
       title={profile.pluralName}
       description={profile.description || undefined}
-      count={collection.data?.totalItems?.count}
-      hasContent={profile.hasContentAttributes}
+      icon={<EntityIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
+      color={preferences.color}
       onTitleClick={onSelect}
-      onCreateClick={onSelect}
-    />
+      action={
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect();
+          }}
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          <span className="sr-only">Create {profile.pluralName}</span>
+        </Button>
+      }
+    >
+      <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
+      <p className="text-xs text-muted-foreground">items</p>
+    </EntityCard>
   );
 }

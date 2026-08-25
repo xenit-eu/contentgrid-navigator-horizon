@@ -48,9 +48,10 @@ export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
                 email={auth.user.profile.email ?? ""}
                 // `as string` bypasses TanStack Router's typed-route check: this shared
                 // feature package can't see either app's generated route tree, but
-                // /~settings exists in both apps (same pattern as the dev-only "/config"
-                // link below).
-                onSettingsClick={() => navigate({ to: "/~settings" as string })}
+                // /~configuration exists in both apps (same pattern as the dev-only "/config"
+                // link below). The user menu keeps the "Settings" label — only the target
+                // route changed when ~settings was retired in favor of ~configuration.
+                onSettingsClick={() => navigate({ to: "/~configuration" as string })}
                 onLogOut={() => auth.signoutRedirect()}
               />
             )}

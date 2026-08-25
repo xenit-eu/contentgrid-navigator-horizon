@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";
@@ -43,25 +44,43 @@ export interface ColorPickerProps {
   /** Called with the new CSS color, from a preset swatch or the custom input. */
   readonly onChange: (color: string) => void;
   readonly className?: string;
+  /**
+   * Custom trigger visual (e.g. an entity's own icon) — replaces the default swatch-circle
+   * trigger entirely. The popover's swatch grid and custom-color input are unaffected.
+   */
+  readonly children?: ReactNode;
 }
 
-export function ColorPicker({ value, onChange, className }: Readonly<ColorPickerProps>) {
+export function ColorPicker({ value, onChange, className, children }: Readonly<ColorPickerProps>) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-xs"
-          aria-label={value ? `Color: ${value}` : "Choose color"}
-          className={cn("rounded-full p-0", className)}
-        >
-          <span
-            className="size-4 rounded-full border"
-            style={{ backgroundColor: value }}
-            aria-hidden
-          />
-        </Button>
+        {children ? (
+          <button
+            type="button"
+            aria-label={value ? `Color: ${value}` : "Choose color"}
+            className={cn(
+              "inline-flex cursor-pointer items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              className,
+            )}
+          >
+            {children}
+          </button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            aria-label={value ? `Color: ${value}` : "Choose color"}
+            className={cn("rounded-full p-0", className)}
+          >
+            <span
+              className="size-4 rounded-full border"
+              style={{ backgroundColor: value }}
+              aria-hidden
+            />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3">
         <div className="grid grid-cols-6 gap-2">

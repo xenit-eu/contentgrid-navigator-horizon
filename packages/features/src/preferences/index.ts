@@ -9,7 +9,10 @@
  * `useEntityDisplayPreferences` is the single entry point for reading and writing these
  * preferences; `useColumnVisibility` is a thin wrapper over it for the collection-view case.
  *
- * Currently experimental.
+ * `EntityConfigurationOverview` + `EntityConfigurationDetail` (`~configuration`,
+ * `~configuration/$entity`) are the entry point for users to edit these preferences — an
+ * entity-card selector page plus a growing per-entity detail page. (The earlier inline
+ * `~settings` page has been retired in favor of this pair.)
  */
 
 export {
@@ -22,4 +25,8 @@ export type { ColumnVisibilityConfig } from "./use-column-visibility";
 export { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 export type { UseEntityDisplayPreferencesResult } from "./use-entity-display-preferences";
 export { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
-export { EntityDisplaySettingsPage } from "./entity-display-settings-page";
+export { resolveEntityCardIcon } from "./resolve-entity-icon";
+export { EntityConfigurationOverview } from "./entity-configuration-overview";
+export type { EntityConfigurationOverviewProps } from "./entity-configuration-overview";
+export { EntityConfigurationDetail } from "./entity-configuration-detail";
+export type { EntityConfigurationDetailProps } from "./entity-configuration-detail";

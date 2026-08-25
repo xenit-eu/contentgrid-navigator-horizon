@@ -1,77 +1,81 @@
-import {
-  DatabaseIcon as Database,
-  FileTextIcon as FileText,
-  PlusIcon as Plus,
-} from "@phosphor-icons/react";
-import { Button } from "../../primitives/button";
+import type { ReactNode } from "react";
+import { DatabaseIcon as Database } from "@phosphor-icons/react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../primitives/card";
 
 export interface EntityCardProps {
-  /** Unique identifier / URL-safe name for this entity (used in callback) */
+  /** Unique identifier / URL-safe name for this entity (passed to `onTitleClick`) */
   name: string;
   /** Human-readable title */
   title: string;
-  /** Total item count; shown as "—" when undefined */
-  count?: number;
   /** Optional description shown below the title */
   description?: string;
-  /** When true a FileText icon is shown, otherwise a Database icon */
-  hasContent?: boolean;
-  /** Called when the user clicks the create-action button */
-  onCreateClick?: (entityName: string) => void;
-  /** Called when the user clicks the card title / entity link */
-  onTitleClick?: (entityName: string) => void;
+  /** Rendered left of the title. Defaults to a generic Database icon. */
+  icon?: ReactNode;
+  /**
+   * Tints the badge behind `icon` with a soft fill of this color (e.g. the entity's chosen
+   * display color). Only affects the icon's badge, not the rest of the card. Omitted
+   * entirely (no badge styling) when not provided.
+   */
+  color?: string;
+  /**
+   * Rendered in the header's top-right corner (e.g. a "create" button). Sits above the
+   * title button's full-card click overlay, so it stays independently clickable. Omitted
+   * entirely when not provided.
+   */
+  action?: ReactNode;
+  /** Card body — a stat, a preview, or anything else. Omitted entirely when not provided. */
+  children?: ReactNode;
+  /** Called when the user clicks the card title / the card itself */
+  onTitleClick?: (name: string) => void;
 }
 
 export function EntityCard({
   name,
   title,
-  count,
   description,
-  hasContent,
-  onCreateClick,
+  icon,
+  color,
+  action,
+  children,
   onTitleClick,
 }: Readonly<EntityCardProps>) {
   return (
     <Card className="group relative transition-colors hover:border-primary/50">
       <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div>
-          <CardTitle className="text-lg">
-            <button
-              type="button"
-              className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md text-left after:absolute after:inset-0 after:content-['']"
-              onClick={() => onTitleClick?.(name)}
-            >
-              {hasContent ? (
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <Database className="h-5 w-5 text-muted-foreground" />
-              )}
-              {title}
-            </button>
-          </CardTitle>
-          {description && (
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{description}</p>
-          )}
-        </div>
-        <div className="relative z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateClick?.(name);
-            }}
+        <div className="flex items-start gap-2">
+          {/* Sibling of the title button (not nested inside it) and raised via `relative
+              z-10`, same trick as `action` below — so this badge can host its own
+              interactive content (e.g. a ColorPicker) without also triggering the title
+              button's full-card click overlay. */}
+          <span
+            data-slot="entity-card-icon"
+            className="relative z-10 flex items-center justify-center rounded-md p-2"
+            style={
+              color
+                ? { backgroundColor: `color-mix(in oklch, ${color} 18%, transparent)` }
+                : undefined
+            }
           >
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">Create {title}</span>
-          </Button>
+            {icon ?? <Database className="h-5 w-5 text-muted-foreground" aria-hidden />}
+          </span>
+          <div>
+            <CardTitle className="text-lg">
+              <button
+                type="button"
+                className="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md after:absolute after:inset-0 after:content-['']"
+                onClick={() => onTitleClick?.(name)}
+              >
+                {title}
+              </button>
+            </CardTitle>
+            {description && (
+              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{description}</p>
+            )}
+          </div>
         </div>
+        {action && <div className="relative z-10">{action}</div>}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{count ?? "—"}</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </CardContent>
+      {children && <CardContent>{children}</CardContent>}
     </Card>
   );
 }
