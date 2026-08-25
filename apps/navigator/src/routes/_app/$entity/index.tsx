@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
@@ -71,6 +71,26 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
   useEffect(() => {
     if (Object.keys(urlFilters).length > 0) setFilters(urlFilters);
   }, [urlFilters]);
+
+  // The initial `filters` state above may have come from the cache rather than the URL (arrived
+  // via the item-detail breadcrumb with a clean URL, but a filter was remembered). Reflect that
+  // back into the URL once, so it's shareable/bookmarkable again and the address bar agrees
+  // with what the sidebar shows — mirrors what `handleFiltersChange` already does for an
+  // in-app filter edit, just for this one restore-from-cache case. Runs only once per mount
+  // (guarded by the ref) — this is a one-time reconciliation, not a continuous sync.
+  const didSyncUrlFromCacheRef = useRef(false);
+  useEffect(() => {
+    if (didSyncUrlFromCacheRef.current) return;
+    didSyncUrlFromCacheRef.current = true;
+    if (Object.keys(urlFilters).length === 0 && Object.keys(filters).length > 0) {
+      go({
+        to: "/$entity",
+        params: { entity: profile.name },
+        search: (prev) => applyFiltersToSearchState(prev, filters),
+        replace: true,
+      });
+    }
+  }, [urlFilters, filters, go, profile.name]);
 
   // Pagination position is deliberately kept out of the URL — an opaque cursor only ever
   // resolves back to a real page in the session that received it from the server, so there's
