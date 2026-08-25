@@ -63,7 +63,9 @@ function SidebarEntityNavItem({
   const { data: collection } = useCachedEntityItemCollection(profile);
   const total = collection?.totalItems;
 
-  const tooltip = profile.pluralName + `${profile.description ? ": " + profile.description : ""}`;
+  const tooltip = profile.description
+    ? `${profile.pluralName}: ${profile.description}`
+    : profile.pluralName;
 
   return (
     <SidebarMenuItem>
