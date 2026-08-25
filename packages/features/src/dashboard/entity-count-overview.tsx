@@ -99,7 +99,7 @@ function EntityCardConnected({
       title={profile.pluralName}
       description={profile.description || undefined}
       count={collection.data?.totalItems?.count}
-      hasContent={profile.attributes.some((a) => a.isContent)}
+      hasContent={profile.hasContentAttributes}
       onTitleClick={onSelect}
       onCreateClick={onSelect}
     />
