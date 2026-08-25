@@ -179,6 +179,10 @@ export default class ProfileEntity {
     return new Set(this.userDefinedAttributes.map((a) => a.name));
   }
 
+  public get hasContentAttributes(): boolean {
+    return this.userDefinedAttributes.some((attr) => attr.isContent);
+  }
+
   // ========================================
   // Relations
   // ========================================

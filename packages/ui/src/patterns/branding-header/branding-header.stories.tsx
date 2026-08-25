@@ -49,3 +49,14 @@ export const WithInteraction: Story = {
     await expect(canvas.getByRole("img", { name: "ContentGrid logo" })).toBeInTheDocument();
   },
 };
+
+export const WithMobileLeading: Story = {
+  tags: ["no-visual-test"],
+  args: {
+    mobileLeading: (
+      <Button variant="ghost" size="icon">
+        ☰
+      </Button>
+    ),
+  },
+};
