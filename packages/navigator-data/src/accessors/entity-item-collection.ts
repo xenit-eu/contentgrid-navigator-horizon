@@ -243,7 +243,11 @@ export class EntityItemCollection {
    * @returns Self page URL or undefined if the collection has no self link
    */
   public get selfHref(): string | undefined {
-    return this.halSlice.self.href;
+    try {
+      return this.halSlice.self.href;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
