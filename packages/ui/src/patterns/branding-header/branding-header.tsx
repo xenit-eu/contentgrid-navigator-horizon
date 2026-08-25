@@ -17,6 +17,12 @@ export interface BrandingHeaderProps {
   className?: string;
   /** Called when the logo or brand text is clicked (e.g. to navigate home) */
   onLogoClick?: () => void;
+  /**
+   * Optional slot rendered in place of the logo/brand text on narrow
+   * (mobile) viewports — e.g. a sidebar toggle, so it isn't lost when the
+   * sidebar itself collapses off-screen.
+   */
+  mobileLeading?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -28,16 +34,23 @@ export function BrandingHeader({
   className,
   title,
   onLogoClick,
+  mobileLeading,
 }: Readonly<BrandingHeaderProps>) {
   return (
     <header className={cn("flex flex-col", className)}>
       {/* Content row */}
       <div className="flex h-14 items-center gap-2 bg-gradient-to-r from-[var(--ocean-700)] to-[var(--sky)] px-4">
+        {/* Mobile leading slot (e.g. sidebar toggle) — replaces the logo below md */}
+        {mobileLeading && <div className="shrink-0 md:hidden">{mobileLeading}</div>}
+
         {/* Logo + brand text */}
         <button
           type="button"
           onClick={onLogoClick}
-          className="flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left"
+          className={cn(
+            "flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left",
+            mobileLeading && "hidden md:flex",
+          )}
         >
           <img
             src={contentGridLogo}

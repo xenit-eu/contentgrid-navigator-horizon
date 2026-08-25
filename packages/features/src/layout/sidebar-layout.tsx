@@ -38,6 +38,7 @@ export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
   return (
     <SidebarProvider className="h-svh flex-col">
       <BrandingHeader
+        mobileLeading={<SidebarTrigger className="text-white hover:bg-white/10 hover:text-white" />}
         actions={
           <>
             <ThemeToggle />
