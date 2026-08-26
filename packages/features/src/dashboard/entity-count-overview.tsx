@@ -116,7 +116,7 @@ function EntityCardConnected({
         </Button>
       }
     >
-      <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
+      <div className="text-2xl font-bold p-0">{collection.data?.totalItems?.count ?? "—"}</div>
       <p className="text-xs text-muted-foreground">items</p>
     </EntityCard>
   );

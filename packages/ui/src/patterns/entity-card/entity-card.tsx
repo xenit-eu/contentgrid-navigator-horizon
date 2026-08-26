@@ -28,6 +28,8 @@ export interface EntityCardProps {
   /** Called when the user clicks anywhere on the card outside `action`/interactive icon
    * content. Omitted entirely (a plain, non-interactive card) when not provided. */
   onCardClick?: (name: string) => void;
+
+  indentSubtitle?: boolean;
 }
 
 export function EntityCard({
@@ -39,6 +41,7 @@ export function EntityCard({
   action,
   children,
   onCardClick,
+  indentSubtitle = true,
   titleVariant = "compact",
 }: Readonly<EntityCardProps>) {
   return (
@@ -56,6 +59,7 @@ export function EntityCard({
           header={header}
           title={title}
           subtitle={description}
+          indentSubtitle={indentSubtitle}
           icon={
             icon && (
               <span role="presentation" onClick={(event) => event.stopPropagation()}>
