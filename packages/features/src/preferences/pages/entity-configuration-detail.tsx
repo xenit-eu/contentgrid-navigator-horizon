@@ -39,6 +39,7 @@ export function EntityConfigurationDetail({
       name={profile.singularName}
       title={profile.pluralName}
       header="Configure display"
+      indentSubtitle={false}
       description={`Change configuration settings for this entity. Changes in this page will reflect how ${profile.pluralName} are rendered.`}
       action={
         <Button variant="ghost" size="icon" onClick={() => onClose?.()}>

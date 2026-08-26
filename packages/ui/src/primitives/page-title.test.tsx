@@ -58,4 +58,31 @@ describe("PageTitle", () => {
       "compact",
     );
   });
+
+  it("renders subtitle outside the icon+title row by default", () => {
+    const { container } = render(<PageTitle title="Invoices" subtitle="200 items" />);
+    const heading = container.querySelector('[data-slot="page-title-heading"]');
+    const subtitle = container.querySelector('[data-slot="page-title-subtitle"]');
+    expect(heading?.contains(subtitle)).toBe(false);
+  });
+
+  it("renders subtitle inside the icon+title row when indentSubtitle is set", () => {
+    const { container } = render(
+      <PageTitle
+        title="Invoices"
+        subtitle="200 items"
+        icon={<span data-testid="icon" />}
+        indentSubtitle
+      />,
+    );
+    const heading = container.querySelector('[data-slot="page-title-heading"]');
+    const subtitle = container.querySelector('[data-slot="page-title-subtitle"]');
+    expect(heading?.contains(subtitle)).toBe(true);
+    expect(screen.getByText("200 items")).toBeInTheDocument();
+  });
+
+  it("does not render a subtitle element when indentSubtitle is set but subtitle is omitted", () => {
+    const { container } = render(<PageTitle title="Invoices" indentSubtitle />);
+    expect(container.querySelector('[data-slot="page-title-subtitle"]')).not.toBeInTheDocument();
+  });
 });

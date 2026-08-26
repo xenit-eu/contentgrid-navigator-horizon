@@ -9,6 +9,9 @@ interface PageTitleProps extends React.ComponentProps<"div"> {
   readonly icon?: React.ReactNode;
   /** Denser sizing for use inside a card or panel rather than as a full page title. */
   readonly size?: "default" | "compact";
+  /** Renders `subtitle` beneath the title, to the right of `icon`, instead of as a
+   * full-width block beneath the whole heading row. */
+  readonly indentSubtitle?: boolean;
 }
 
 function PageTitle({
@@ -17,11 +20,30 @@ function PageTitle({
   subtitle,
   icon,
   size = "default",
+  indentSubtitle = false,
   className,
   ...props
 }: Readonly<PageTitleProps>) {
   const compact = size === "compact";
   const Title = compact ? "h2" : "h1";
+
+  const titleElement = (
+    <Title
+      data-slot="page-title-title"
+      className={cn("tracking-tight", compact ? "text-lg font-semibold" : "text-3xl font-bold")}
+    >
+      {title}
+    </Title>
+  );
+
+  const subtitleElement = subtitle && (
+    <p
+      data-slot="page-title-subtitle"
+      className={cn("font-normal text-muted-foreground", compact ? "text-xs" : "text-sm")}
+    >
+      {subtitle}
+    </p>
+  );
 
   return (
     <div
@@ -43,24 +65,23 @@ function PageTitle({
       )}
       <div
         data-slot="page-title-heading"
-        className={cn("flex items-center", compact ? "gap-2" : "gap-3")}
+        className={cn(
+          "flex",
+          indentSubtitle ? "items-start" : "items-center",
+          compact ? "gap-2" : "gap-3",
+        )}
       >
         {icon}
-        <Title
-          data-slot="page-title-title"
-          className={cn("tracking-tight", compact ? "text-lg font-semibold" : "text-3xl font-bold")}
-        >
-          {title}
-        </Title>
+        {indentSubtitle ? (
+          <div>
+            {titleElement}
+            {subtitleElement}
+          </div>
+        ) : (
+          titleElement
+        )}
       </div>
-      {subtitle && (
-        <p
-          data-slot="page-title-subtitle"
-          className={cn("font-normal text-muted-foreground", compact ? "text-xs" : "text-sm")}
-        >
-          {subtitle}
-        </p>
-      )}
+      {!indentSubtitle && subtitleElement}
     </div>
   );
 }

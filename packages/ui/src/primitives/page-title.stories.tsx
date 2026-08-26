@@ -52,3 +52,13 @@ export const Compact: Story = {
     size: "compact",
   },
 };
+
+export const WithindentSubtitle: Story = {
+  args: {
+    header: "Entity Collection",
+    title: "Invoices",
+    subtitle: "200 items",
+    icon: <IconBadge icon={<DatabaseIcon aria-hidden />} color="oklch(0.6 0.2 30)" />,
+    indentSubtitle: true,
+  },
+};
