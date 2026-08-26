@@ -23,7 +23,7 @@ export function EntityIconBadge({
   profile,
   variant,
   onClick,
-  muted = true,
+  muted = false,
   "aria-label": ariaLabel,
 }: Readonly<EntityIconBadgeProps>) {
   const { preferences } = useEntityDisplayPreferences(profile);
