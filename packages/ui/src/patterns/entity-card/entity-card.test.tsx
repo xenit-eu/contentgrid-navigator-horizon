@@ -46,6 +46,22 @@ describe("EntityCard", () => {
     expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
   });
 
+  it("defaults the title to the compact PageTitle size", () => {
+    const { container } = render(<EntityCard {...baseProps} />);
+    expect(container.querySelector('[data-slot="page-title"]')).toHaveAttribute(
+      "data-size",
+      "compact",
+    );
+  });
+
+  it("forwards titleVariant to PageTitle's size", () => {
+    const { container } = render(<EntityCard {...baseProps} titleVariant="default" />);
+    expect(container.querySelector('[data-slot="page-title"]')).toHaveAttribute(
+      "data-size",
+      "default",
+    );
+  });
+
   it("calls onCardClick with the entity name when the card is clicked", async () => {
     const user = userEvent.setup();
     const onCardClick = vi.fn();
