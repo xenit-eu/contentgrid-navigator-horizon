@@ -8,7 +8,10 @@ import {
 } from "./relation-to-many-renderer";
 import { relationToManyField } from "./test-fixtures";
 
-const OPTIONS: EntityPickerOption[] = [{ id: "1", href: "/products/1", data: { name: "Widget" } }];
+const OPTIONS: EntityPickerOption[] = [
+  { id: "1", href: "/products/1", data: { name: "Widget" } },
+  { id: "3", href: "/products/3", data: { name: "Gizmo" } },
+];
 
 const BASE_PROPS: RelationToManyRendererProps = {
   field: relationToManyField(),
@@ -59,10 +62,24 @@ describe("RelationToManyRenderer", () => {
     await user.click(screen.getByRole("button", { name: /link products/i }));
     const dialog = screen.getByRole("dialog");
     await user.click(within(dialog).getByText("Widget").closest("tr")!);
-    await user.click(within(dialog).getByRole("button", { name: "Select" }));
+    await user.click(within(dialog).getByRole("button", { name: "Link" }));
 
     expect(onChange).toHaveBeenCalledWith(["/products/2", "/products/1"]);
     expect(onItemResolved).toHaveBeenCalledWith("/products/1", { name: "Widget" });
+  });
+
+  it("adds multiple items selected in one picker session", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderRenderer({ value: [], onChange });
+
+    await user.click(screen.getByRole("button", { name: /link products/i }));
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByText("Widget").closest("tr")!);
+    await user.click(within(dialog).getByText("Gizmo").closest("tr")!);
+    await user.click(within(dialog).getByRole("button", { name: "Link 2 items" }));
+
+    expect(onChange).toHaveBeenLastCalledWith(["/products/1", "/products/3"]);
   });
 
   it("removes one item by calling onChange with it filtered out", async () => {

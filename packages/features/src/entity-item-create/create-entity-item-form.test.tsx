@@ -129,7 +129,10 @@ function supplierProfileHandler() {
   );
 }
 
-function supplierCollectionHandler(items: { id: string; name: string; city?: string }[]) {
+function supplierCollectionHandler(
+  items: { id: string; name: string; city?: string }[],
+  opts: { nextHref?: string } = {},
+) {
   return http.get(`${API_URL}/suppliers`, () =>
     HttpResponse.json({
       _embedded: {
@@ -138,7 +141,10 @@ function supplierCollectionHandler(items: { id: string; name: string; city?: str
           _links: { self: { href: `${API_URL}/suppliers/${item.id}` } },
         })),
       },
-      _links: { self: { href: `${API_URL}/suppliers` } },
+      _links: {
+        self: { href: `${API_URL}/suppliers` },
+        ...(opts.nextHref ? { next: { href: opts.nextHref } } : {}),
+      },
     }),
   );
 }
@@ -374,6 +380,39 @@ describe("CreateEntityItemForm", () => {
       await user.click(screen.getByRole("button", { name: "Create" }));
 
       await vi.waitFor(() => expect(capturedBody).toContain(`${API_URL}/suppliers/1`));
+    });
+
+    it("paginates the picker via next/previous", async () => {
+      const user = userEvent.setup();
+      const nextPageUrl = `${API_URL}/suppliers/page2`;
+      server.use(
+        profileRootHandler(true),
+        invoiceProfileHandler(CREATE_FORM_WITH_SUPPLIER, [SUPPLIER_RELATION]),
+        supplierProfileHandler(),
+        supplierCollectionHandler([{ id: "1", name: "Acme Corp" }], { nextHref: nextPageUrl }),
+        http.get(nextPageUrl, () =>
+          HttpResponse.json({
+            _embedded: {
+              item: [
+                {
+                  id: "2",
+                  name: "Globex Inc",
+                  _links: { self: { href: `${API_URL}/suppliers/2` } },
+                },
+              ],
+            },
+            _links: { self: { href: nextPageUrl } },
+          }),
+        ),
+      );
+      renderForm();
+
+      await user.click(await screen.findByRole("button", { name: /link supplier/i }));
+      const dialog = await screen.findByRole("dialog");
+      await within(dialog).findByText("Acme Corp");
+
+      await user.click(within(dialog).getByRole("button", { name: "Next" }));
+      await within(dialog).findByText("Globex Inc");
     });
   });
 });

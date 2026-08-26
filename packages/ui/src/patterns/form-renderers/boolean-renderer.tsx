@@ -1,4 +1,5 @@
 import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/schema";
+import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
 
@@ -36,6 +37,15 @@ export function BooleanRenderer({ field, value, onChange, error }: Readonly<Bool
             </span>
           )}
         </Label>
+        {/* A boolean attribute can genuinely be unset (see use-form-fields.ts's isEmpty doc
+         * comment) — this is the only way back to that state once the checkbox has been
+         * touched, mirroring RelationToOneRenderer's "Unlink" affordance for its own
+         * undefined/unset value. */}
+        {!readOnly && value !== undefined && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>
+            Clear
+          </Button>
+        )}
       </div>
       {description && !error && <p className="text-sm text-muted-foreground">{description}</p>}
       {error && (

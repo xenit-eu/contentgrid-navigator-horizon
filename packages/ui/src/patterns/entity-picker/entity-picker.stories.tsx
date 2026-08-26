@@ -146,7 +146,7 @@ export const WithInteraction: Story = {
     const confirmBtn = within(dialog!).getByRole("button", { name: /^select$/i });
     await expect(confirmBtn).not.toBeDisabled();
     await userEvent.click(confirmBtn);
-    await expect(args.onSelect).toHaveBeenCalledWith("/suppliers/1", "Acme Corp");
+    await expect(args.onSelect).toHaveBeenCalledWith(["/suppliers/1"]);
   },
 };
 
@@ -178,6 +178,7 @@ export const MultiSelectWithInteraction: Story = {
     const confirmBtn = within(dialog!).getByRole("button", { name: /link 2 items/i });
     await expect(confirmBtn).not.toBeDisabled();
     await userEvent.click(confirmBtn);
-    await expect(args.onSelect).toHaveBeenCalledTimes(2);
+    await expect(args.onSelect).toHaveBeenCalledTimes(1);
+    await expect(args.onSelect).toHaveBeenCalledWith(["/suppliers/1", "/suppliers/2"]);
   },
 };

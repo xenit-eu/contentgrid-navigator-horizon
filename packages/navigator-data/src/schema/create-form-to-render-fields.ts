@@ -12,22 +12,14 @@ import type { FieldOptionsSource, RenderFieldDescriptor } from "./render-field-d
  * classified by packages/navigator-data/src/accessors/extended-forms/create-form.ts) into
  * `RenderFieldDescriptor[]` for `packages/ui`'s form-renderer registry (ADR-004).
  *
- * Scope note: this only covers the create-form path. It does NOT produce `date-range` or
- * `typeahead` descriptors — neither has a create-form-template equivalent to bridge from yet:
+ * Scope note: this only covers the create-form path. It does NOT produce a `typeahead`
+ * descriptor — an attribute field with a matching prefix/full-text search counterpart (e.g. via
+ * `useTypeahead` from `../hooks/collection/use-typeahead`) needs a search-template cross-lookup
+ * that has no place in a create-form-only bridge.
  *
- * - `date-range` only ever arises from a *search* template's `~from`/`~until` operator-pair
- *   convention (see `SearchHalFormTemplateProperty.groupKey` in extended-forms/search-form.ts).
- *   `packages/features/src/search/filter-properties.ts` already owns this exact mapping for
- *   `FilterSidebar` (as `SearchFilterProperty`) — a second, independently-maintained copy of that
- *   grouping logic under a different output type is exactly what that module's own doc comment
- *   warns against introducing.
- * - `typeahead` (an attribute field with a matching prefix/full-text search counterpart, e.g. via
- *   `useTypeahead` from `../hooks/collection/use-typeahead`) needs a search-template cross-lookup
- *   that has no place in a create-form-only bridge either.
- *
- * Both variants are still modelled on `RenderFieldDescriptor` (see render-field-descriptor.ts) so
- * the exhaustive dispatch registry has a real case for them once a search-form-aware bridge (or
- * an extension of this one) is built to produce them.
+ * `typeahead` is still modelled on `RenderFieldDescriptor` (see render-field-descriptor.ts) so
+ * the exhaustive dispatch registry has a real case for it once a search-form-aware bridge (or
+ * an extension of this one) is built to produce it.
  */
 export function createFormToRenderFields(
   createTemplate: CreateHalFormTemplate,

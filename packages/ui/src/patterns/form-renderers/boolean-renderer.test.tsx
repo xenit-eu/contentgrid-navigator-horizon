@@ -44,4 +44,23 @@ describe("BooleanRenderer", () => {
     );
     expect(screen.getByText("Must accept")).toBeInTheDocument();
   });
+
+  it("hides the Clear affordance when the value is already unset", () => {
+    render(<BooleanRenderer field={booleanField()} value={undefined} onChange={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+  });
+
+  it("shows Clear once the value is false, and resets it to undefined", () => {
+    const onChange = vi.fn();
+    render(<BooleanRenderer field={booleanField()} value={false} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+
+  it("hides the Clear affordance when the field is read-only", () => {
+    render(
+      <BooleanRenderer field={booleanField({ readOnly: true })} value={true} onChange={vi.fn()} />,
+    );
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+  });
 });

@@ -2,27 +2,17 @@ import { type ReactNode, type SubmitEvent, useCallback, useEffect, useMemo, useS
 import {
   type CreateHalFormTemplate,
   type EntityItem,
-  type FieldValue,
   type ProfileEntity,
-  type RenderFieldDescriptor,
   createFormToRenderFields,
   getValidationFieldErrors,
   toProblemDisplayModel,
   useCreateEntityItem,
   useFormFields,
   useProfileEntities,
-  useRelationTargetSearch,
 } from "@contentgrid/navigator-data";
-import {
-  Button,
-  type EntityPickerOption,
-  FieldRenderer,
-  type RelationColumn,
-  RelationToManyRenderer,
-  RelationToOneRenderer,
-  Skeleton,
-} from "@contentgrid/ui";
+import { Button, FieldRenderer, Skeleton } from "@contentgrid/ui";
 import { ProblemAlert } from "../problem-details";
+import { RelationField, isRelationField } from "./relation-field";
 
 export interface CreateEntityItemFormProps {
   readonly profile: ProfileEntity;
@@ -58,99 +48,16 @@ export function CreateEntityItemForm(props: Readonly<CreateEntityItemFormProps>)
 
   if (!createTemplate) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Creating a new {props.profile.singularName} is not permitted.
-      </p>
+      <ProblemAlert
+        model={{
+          kind: "unknown",
+          title: `Creating a new ${props.profile.singularName} is not permitted.`,
+        }}
+      />
     );
   }
 
   return <CreateEntityItemFormFields {...props} createTemplate={createTemplate} />;
-}
-
-type RelationRenderFieldDescriptor = Extract<
-  RenderFieldDescriptor,
-  { type: "relation-to-one" | "relation-to-many" }
->;
-
-function isRelationField(field: RenderFieldDescriptor): field is RelationRenderFieldDescriptor {
-  return field.type === "relation-to-one" || field.type === "relation-to-many";
-}
-
-/** Matches the same "preview a handful of attributes" convention already used for a
- * linked item elsewhere in this codebase (e.g. `RelationToOneSection`, `RelationItemSearchDialog`). */
-const RELATION_PREVIEW_ATTRIBUTE_COUNT = 4;
-
-/** First few user-defined attributes of the target profile, for previewing a linked item. */
-function relationPreviewColumns(targetProfile: ProfileEntity): RelationColumn[] {
-  return targetProfile.userDefinedAttributes
-    .slice(0, RELATION_PREVIEW_ATTRIBUTE_COUNT)
-    .map((attr) => ({ key: attr.name, title: attr.title ?? attr.name }));
-}
-
-/**
- * One instance per relation field — needed so `useRelationTargetSearch` (a
- * hook) can be called unconditionally per field, matching the existing
- * one-component-per-relation shape used by the detail-page relation sections.
- */
-function RelationField({
-  field,
-  targetProfile,
-  value,
-  onChange,
-  error,
-  relationItemsData,
-  onItemResolved,
-  renderCreateRelationTarget,
-}: Readonly<{
-  field: RelationRenderFieldDescriptor;
-  targetProfile: ProfileEntity;
-  value: FieldValue;
-  onChange: (value: FieldValue) => void;
-  error?: string;
-  relationItemsData: Readonly<Record<string, Record<string, unknown>>>;
-  onItemResolved: (href: string, data: Record<string, unknown>) => void;
-  renderCreateRelationTarget?: (targetProfile: ProfileEntity) => ReactNode;
-}>) {
-  const search = useRelationTargetSearch({ targetProfile });
-  const options: EntityPickerOption[] = search.items.map((item) => ({
-    id: item.id,
-    href: item.selfLink.href,
-    data: item.halItem.data,
-  }));
-  const columns = useMemo(() => relationPreviewColumns(targetProfile), [targetProfile]);
-
-  const sharedProps = {
-    options,
-    isLoading: search.isLoading,
-    searchQuery: search.searchQuery,
-    onSearch: search.setSearchQuery,
-    hasPreviousPage: search.hasPreviousPage,
-    hasNextPage: search.hasNextPage,
-    onPreviousPage: search.goToPreviousPage,
-    onNextPage: search.goToNextPage,
-    selectedItemsData: relationItemsData,
-    columns,
-    onItemResolved,
-    createNewLink: renderCreateRelationTarget?.(targetProfile),
-  };
-
-  return field.type === "relation-to-one" ? (
-    <RelationToOneRenderer
-      field={field}
-      value={value}
-      onChange={onChange}
-      error={error}
-      {...sharedProps}
-    />
-  ) : (
-    <RelationToManyRenderer
-      field={field}
-      value={value}
-      onChange={onChange}
-      error={error}
-      {...sharedProps}
-    />
-  );
 }
 
 function CreateEntityItemFormFields({

@@ -12,13 +12,10 @@ export interface RelationToManyRendererProps extends RelationRendererPickerProps
 }
 
 /**
- * Wraps `RelationSection` (display + link/unlink) and `EntityPicker` (search
- * dialog). One item is added per popover open — `EntityPicker` stays
- * single-select here, matching the existing detail-page "Add" flow, and
- * avoiding a stale-closure bug: `EntityPicker`'s multi-select path calls
- * `onSelect` once per item synchronously before any re-render, so
- * accumulating `[...value, href]` off the `value` prop across those calls
- * would drop all but the last href.
+ * Wraps `RelationSection` (display + link/unlink) and `EntityPicker` (search dialog), with
+ * `EntityPicker` in multi-select mode so several items can be linked from one popover open.
+ * `EntityPicker.onSelect` fires exactly once per confirm, with every selected item's href
+ * already collected — so the new hrefs are simply appended onto the current `value`.
  */
 export function RelationToManyRenderer({
   field,
@@ -71,10 +68,12 @@ export function RelationToManyRenderer({
         onPreviousPage={onPreviousPage}
         onNextPage={onNextPage}
         createNewLink={createNewLink}
-        onSelect={(href) => {
-          if (!hrefs.includes(href)) onChange([...hrefs, href]);
-          onItemResolved(href, options.find((o) => o.href === href)?.data ?? {});
-          setOpen(false);
+        multiSelect
+        onSelect={(selectedHrefs) => {
+          onChange([...hrefs, ...selectedHrefs]);
+          for (const href of selectedHrefs) {
+            onItemResolved(href, options.find((o) => o.href === href)?.data ?? {});
+          }
         }}
       />
     </>

@@ -33,23 +33,10 @@ export type FieldOptionsSource =
   | { readonly kind: "inline"; readonly options: readonly FieldOption[] }
   | { readonly kind: "remote"; readonly link: SimpleLink };
 
-/** One bound of a date-range field, pointing at its own independently-named HAL-FORMS property. */
-export interface RangeBound {
-  readonly name: string;
-  readonly label: string;
-}
-
 /**
  * RenderFieldDescriptor discriminated union (ADR-004's "FieldDescriptor switch" in place of a
  * JSONForms-style tester/rank registry). One variant per rendering shape a `packages/ui`
  * form-renderer needs to handle — see `packages/ui/src/patterns/form-renderers/`.
- *
- * `date-range` has no corresponding ContentGrid attribute type — it only ever arises from a
- * *search* template's `~from`/`~until` (or `~after`/`~before`) operator-pair convention, grouped
- * by `SearchHalFormTemplateProperty.groupKey` (see extended-forms/search-form.ts). `from`/`until`
- * point at the two independently-named HAL-FORMS properties, mirroring how FilterSidebar already
- * groups and renders this exact pair (packages/ui/src/patterns/filter-sidebar/filter-sidebar.tsx)
- * — never a single synthesized `{from, until}` value, since the wire protocol has no such object.
  */
 export type RenderFieldDescriptor = RenderFieldDescriptorBase &
   (
@@ -62,7 +49,6 @@ export type RenderFieldDescriptor = RenderFieldDescriptorBase &
     | { readonly type: "number" }
     | { readonly type: "boolean" }
     | { readonly type: "datetime"; readonly includesTime: boolean }
-    | { readonly type: "date-range"; readonly from: RangeBound; readonly until: RangeBound }
     | { readonly type: "enum"; readonly optionsSource: FieldOptionsSource }
     | { readonly type: "enum-multi"; readonly optionsSource: FieldOptionsSource }
     | { readonly type: "file"; readonly multiple: boolean }
