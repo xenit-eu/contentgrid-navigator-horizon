@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
-import { PageTitle } from "../../primitives";
+import { PageTitle, type PageTitleProps } from "../../primitives";
 import { Card, CardContent, CardHeader } from "../../primitives/card";
 
 export interface EntityCardProps {
@@ -12,6 +12,9 @@ export interface EntityCardProps {
   title: string;
   /** Optional description shown below the title */
   description?: string;
+  /** Forwarded to the title block's `PageTitle` as its `size`. Defaults to `"compact"` —
+   * EntityCard's normal density. */
+  titleVariant?: PageTitleProps["size"];
   /** Rendered left of the title. Defaults to a generic Database icon. Interactive content
    * inside it (e.g. a color picker trigger) does not trigger `onCardClick`. */
   icon?: ReactNode;
@@ -36,6 +39,7 @@ export function EntityCard({
   action,
   children,
   onCardClick,
+  titleVariant = "compact",
 }: Readonly<EntityCardProps>) {
   return (
     <Card
@@ -48,7 +52,7 @@ export function EntityCard({
     >
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <PageTitle
-          size="compact"
+          size={titleVariant}
           header={header}
           title={title}
           subtitle={description}

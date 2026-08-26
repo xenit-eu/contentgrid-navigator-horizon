@@ -99,6 +99,22 @@ export const WithColor: Story = {
   },
 };
 
+export const DefaultTitleVariant: Story = {
+  args: {
+    name: "invoice",
+    title: "Invoices",
+    description: "Outgoing invoices linked to suppliers and customers.",
+    titleVariant: "default",
+    action: createAction("Invoices"),
+    children: (
+      <>
+        <div className="text-2xl font-bold">42</div>
+        <p className="text-xs text-muted-foreground">items</p>
+      </>
+    ),
+  },
+};
+
 export const NoBody: Story = {
   args: {
     name: "supplier",
