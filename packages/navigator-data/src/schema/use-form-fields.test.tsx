@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import type { ProfileEntityShape } from "../shapes";
 import type { RenderFieldDescriptor } from "./render-field-descriptor";
-import { useFormFields } from "./use-form-fields";
+import { type UseFormFieldsOptions, useFormFields } from "./use-form-fields";
 
 const DUMMY_PROPERTY = {} as RenderFieldDescriptor["property"];
 
@@ -57,17 +57,6 @@ const attachmentField: RenderFieldDescriptor = {
   multiple: false,
 };
 
-const validityField: RenderFieldDescriptor = {
-  name: "validity",
-  label: "Validity",
-  required: true,
-  readOnly: false,
-  property: DUMMY_PROPERTY,
-  type: "date-range",
-  from: { name: "valid_from", label: "Valid from" },
-  until: { name: "valid_until", label: "Valid until" },
-};
-
 describe("useFormFields — initial values", () => {
   it("seeds a type-appropriate default when no initial value is given", () => {
     const { result } = renderHook(() =>
@@ -76,15 +65,10 @@ describe("useFormFields — initial values", () => {
     expect(result.current.values).toEqual({
       name: "",
       total: "",
-      active: false,
+      active: undefined,
       tags: [],
       attachment: undefined,
     });
-  });
-
-  it("seeds a date-range field's from/until sub-properties independently", () => {
-    const { result } = renderHook(() => useFormFields({ fields: [validityField] }));
-    expect(result.current.values).toEqual({ valid_from: "", valid_until: "" });
   });
 
   it("uses a supplied initial value over the type default", () => {
@@ -122,6 +106,42 @@ describe("useFormFields — setValue and isDirty", () => {
   });
 });
 
+describe("useFormFields — setValues (bulk)", () => {
+  it("applies several values in one call", () => {
+    const { result } = renderHook(() =>
+      useFormFields({ fields: [nameField, totalField, activeField] }),
+    );
+    act(() => result.current.setValues({ name: "Acme", total: 42 }));
+    expect(result.current.values).toMatchObject({ name: "Acme", total: 42 });
+  });
+
+  it("leaves fields not present in the partial untouched", () => {
+    const { result } = renderHook(() => useFormFields({ fields: [nameField, totalField] }));
+    act(() => result.current.setValue("total", 7));
+    act(() => result.current.setValues({ name: "Acme" }));
+    expect(result.current.values).toMatchObject({ name: "Acme", total: 7 });
+  });
+
+  it("clears client errors for every field included in the partial", () => {
+    const { result } = renderHook(() =>
+      useFormFields({ fields: [nameField, { ...totalField, required: true }] }),
+    );
+    act(() => result.current.validate());
+    expect(result.current.errors.name).toBeDefined();
+    expect(result.current.errors.total).toBeDefined();
+
+    act(() => result.current.setValues({ name: "Acme", total: 42 }));
+    expect(result.current.errors.name).toBeUndefined();
+    expect(result.current.errors.total).toBeUndefined();
+  });
+
+  it("marks the form dirty", () => {
+    const { result } = renderHook(() => useFormFields({ fields: [nameField, totalField] }));
+    act(() => result.current.setValues({ name: "Acme", total: 42 }));
+    expect(result.current.isDirty).toBe(true);
+  });
+});
+
 describe("useFormFields — validate", () => {
   it("flags empty required fields", () => {
     const { result } = renderHook(() => useFormFields({ fields: [nameField, totalField] }));
@@ -144,13 +164,6 @@ describe("useFormFields — validate", () => {
     expect(isValid).toBe(true);
     expect(result.current.errors.name).toBeUndefined();
   });
-
-  it("expands a required date-range field into its from/until sub-properties", () => {
-    const { result } = renderHook(() => useFormFields({ fields: [validityField] }));
-    act(() => result.current.validate());
-    expect(result.current.errors.valid_from).toBe("Valid from is required");
-    expect(result.current.errors.valid_until).toBe("Valid until is required");
-  });
 });
 
 describe("useFormFields — error precedence", () => {
@@ -167,6 +180,47 @@ describe("useFormFields — error precedence", () => {
     );
     act(() => result.current.validate());
     expect(result.current.errors.name).toBe("Name is required");
+  });
+
+  it("dismisses a field's server error as soon as the user edits that field", () => {
+    const { result } = renderHook(() =>
+      useFormFields({ fields: [nameField], serverErrors: { name: "Already taken" } }),
+    );
+    expect(result.current.errors.name).toBe("Already taken");
+
+    act(() => result.current.setValue("name", "A different name"));
+    expect(result.current.errors.name).toBeUndefined();
+  });
+
+  it("dismisses every field touched by a bulk setValues call", () => {
+    const { result } = renderHook(() =>
+      useFormFields({
+        fields: [nameField, totalField],
+        serverErrors: { name: "Already taken", total: "Out of range" },
+      }),
+    );
+    act(() => result.current.setValues({ name: "Acme", total: 1 }));
+    expect(result.current.errors.name).toBeUndefined();
+    expect(result.current.errors.total).toBeUndefined();
+  });
+
+  it("makes a dismissed server error visible again after the next submit, even with the same message", () => {
+    const { result, rerender } = renderHook((props: UseFormFieldsOptions) => useFormFields(props), {
+      initialProps: {
+        fields: [nameField],
+        serverErrors: { name: "Already taken" },
+      } as UseFormFieldsOptions,
+    });
+    act(() => result.current.setValue("name", "A different name"));
+    expect(result.current.errors.name).toBeUndefined();
+
+    // Mirrors CreateEntityItemFormFields.handleSubmit: serverErrors is cleared to {} at the
+    // start of every submit attempt, then repopulated in onError. The dismissal reset relies
+    // on that intermediate empty state — content comparison alone can't otherwise distinguish
+    // "still the same pending result" from "a new attempt landed the same message."
+    rerender({ fields: [nameField], serverErrors: {} });
+    rerender({ fields: [nameField], serverErrors: { name: "Already taken" } });
+    expect(result.current.errors.name).toBe("Already taken");
   });
 });
 

@@ -63,10 +63,10 @@ export function RelationToOneRenderer({
         onPreviousPage={onPreviousPage}
         onNextPage={onNextPage}
         createNewLink={createNewLink}
-        onSelect={(selectedHref) => {
+        onSelect={([selectedHref]) => {
+          if (!selectedHref) return;
           onChange(selectedHref);
           onItemResolved(selectedHref, options.find((o) => o.href === selectedHref)?.data ?? {});
-          setOpen(false);
         }}
       />
     </>

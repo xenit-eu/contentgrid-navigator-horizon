@@ -19,10 +19,10 @@ export interface FieldRendererProps {
  *
  * `file`, `relation-to-one`, and `relation-to-many` variants do occur on real
  * create-forms but are covered by other tickets — rendered as an inert
- * placeholder here rather than crashing the form. `date-range` and `typeahead`
- * never arise from `createFormToRenderFields` (see create-form-to-render-fields.ts's
- * own scope note) — the `never` check below is a compile-time exhaustiveness
- * guard for the day a bridge produces them, not a real runtime path today.
+ * placeholder here rather than crashing the form. `typeahead` never arises from
+ * `createFormToRenderFields` (see create-form-to-render-fields.ts's own scope
+ * note) — the `never` check below is a compile-time exhaustiveness guard for
+ * the day a bridge produces it, not a real runtime path today.
  */
 export function FieldRenderer({ field, value, onChange, error }: Readonly<FieldRendererProps>) {
   switch (field.type) {
@@ -41,7 +41,6 @@ export function FieldRenderer({ field, value, onChange, error }: Readonly<FieldR
     case "file":
     case "relation-to-one":
     case "relation-to-many":
-    case "date-range":
     case "typeahead":
       return <UnsupportedFieldPlaceholder field={field} />;
     default: {

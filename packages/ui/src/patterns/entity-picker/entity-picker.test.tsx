@@ -78,7 +78,7 @@ describe("EntityPicker — single-select mode (default)", () => {
     expect(screen.getByRole("button", { name: "Select" })).toBeEnabled();
   });
 
-  it("calls onSelect with href and label when confirmed", async () => {
+  it("calls onSelect with the selected href when confirmed", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const onOpenChange = vi.fn();
@@ -86,7 +86,7 @@ describe("EntityPicker — single-select mode (default)", () => {
     const row = screen.getByText("INV-001").closest("tr")!;
     await user.click(row);
     await user.click(screen.getByRole("button", { name: "Select" }));
-    expect(onSelect).toHaveBeenCalledWith("/invoices/1", "INV-001");
+    expect(onSelect).toHaveBeenCalledWith(["/invoices/1"]);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -211,7 +211,7 @@ describe("EntityPicker — multi-select mode", () => {
     expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
   });
 
-  it("calls onSelect for each selected item on confirm", async () => {
+  it("calls onSelect once with every selected href on confirm", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     render(<EntityPicker {...multiProps} onSelect={onSelect} />);
@@ -220,9 +220,8 @@ describe("EntityPicker — multi-select mode", () => {
     await user.click(row1);
     await user.click(row2);
     await user.click(screen.getByRole("button", { name: "Link 2 items" }));
-    expect(onSelect).toHaveBeenCalledTimes(2);
-    expect(onSelect).toHaveBeenCalledWith("/invoices/1", "INV-001");
-    expect(onSelect).toHaveBeenCalledWith("/invoices/2", "INV-002");
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(["/invoices/1", "/invoices/2"]);
   });
 });
 

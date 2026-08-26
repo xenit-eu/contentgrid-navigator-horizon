@@ -71,17 +71,19 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
         })
       }
       onCancel={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
-      renderCreateRelationTarget={(targetProfile) => (
-        <Link
-          to="/$entity/~create"
-          params={{ entity: targetProfile.name }}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-primary hover:underline"
-        >
-          Create {targetProfile.singularName}
-        </Link>
-      )}
+      renderCreateRelationTarget={(targetProfile) =>
+        targetProfile.createTemplate ? (
+          <Link
+            to="/$entity/~create"
+            params={{ entity: targetProfile.name }}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline"
+          >
+            Create {targetProfile.singularName}
+          </Link>
+        ) : null
+      }
     />
   );
 }
