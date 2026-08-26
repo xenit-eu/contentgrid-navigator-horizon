@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@contentgrid/ui";
-import { EntityIconBadge } from "../layout";
-import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
+import { EntityIconBadge } from "../../layout";
+import { useEntityDisplayPreferences } from "../use-entity-display-preferences";
 
 export interface EntityConfigurationDetailProps {
   readonly profile: ProfileEntity;
@@ -39,7 +39,7 @@ export function EntityConfigurationDetail({
       name={profile.singularName}
       title={profile.pluralName}
       header="Configure display"
-      description={`Change configuration settings for this icon. Changes in this page will reflect how ${profile.pluralName} are rendered`}
+      description={`Change configuration settings for this entity. Changes in this page will reflect how ${profile.pluralName} are rendered`}
       action={
         <Button variant="ghost" size="icon" onClick={() => onClose?.()}>
           <X className="h-4 w-4" aria-hidden />
