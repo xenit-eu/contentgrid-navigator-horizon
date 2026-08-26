@@ -14,7 +14,7 @@ export interface EntityCardProps {
   description?: string;
   /** Forwarded to the title block's `PageTitle` as its `size`. Defaults to `"compact"` —
    * EntityCard's normal density. */
-  titleVariant?: PageTitleProps["size"];
+  titleVariant?: NonNullable<PageTitleProps["size"]>;
   /** Rendered left of the title. Defaults to a generic Database icon. Interactive content
    * inside it (e.g. a color picker trigger) does not trigger `onCardClick`. */
   icon?: ReactNode;
@@ -56,10 +56,20 @@ export function EntityCard({
           header={header}
           title={title}
           subtitle={description}
-          icon={icon && <span onClick={(event) => event.stopPropagation()}>{icon}</span>}
+          icon={
+            icon && (
+              <span role="presentation" onClick={(event) => event.stopPropagation()}>
+                {icon}
+              </span>
+            )
+          }
         />
         {action && (
-          <div className="relative z-10" onClick={(event) => event.stopPropagation()}>
+          <div
+            role="presentation"
+            className="relative z-10"
+            onClick={(event) => event.stopPropagation()}
+          >
             {action}
           </div>
         )}

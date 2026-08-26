@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { GearIcon as Gear, WrenchIcon } from "@phosphor-icons/react";
 import {
   type ProfileEntity,
@@ -52,6 +52,36 @@ export function EntityConfigurationOverview({
     });
   }
 
+  let content: ReactNode;
+  if (isLoading && profiles.length === 0) {
+    content = (
+      <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-28 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  } else if (profiles.length === 0) {
+    content = (
+      <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
+        <p className="text-lg font-medium">No entities found</p>
+        <p className="text-sm">Make sure your ContentGrid application has entities defined.</p>
+      </div>
+    );
+  } else {
+    content = (
+      <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        {profiles.map((profile) => (
+          <EntityConfigurationCard
+            key={profile.name}
+            profile={profile}
+            onSelect={() => onSelectEntity(profile)}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageTitle
@@ -74,28 +104,7 @@ export function EntityConfigurationOverview({
         applyDisabled={profiles.length === 0}
       />
 
-      {isLoading && profiles.length === 0 ? (
-        <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-xl" />
-          ))}
-        </div>
-      ) : profiles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
-          <p className="text-lg font-medium">No entities found</p>
-          <p className="text-sm">Make sure your ContentGrid application has entities defined.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
-          {profiles.map((profile) => (
-            <EntityConfigurationCard
-              key={profile.name}
-              profile={profile}
-              onSelect={() => onSelectEntity(profile)}
-            />
-          ))}
-        </div>
-      )}
+      {content}
     </div>
   );
 }

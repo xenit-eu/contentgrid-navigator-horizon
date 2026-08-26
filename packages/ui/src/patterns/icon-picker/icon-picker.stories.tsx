@@ -12,7 +12,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function ControlledIconPicker({ initial }: { initial?: string }) {
+function ControlledIconPicker({ initial }: Readonly<{ initial?: string }>) {
   const [value, setValue] = useState(initial);
   return <IconPicker value={value} onChange={setValue} />;
 }

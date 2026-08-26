@@ -12,7 +12,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function ControlledColorPicker({ initial }: { initial?: string }) {
+function ControlledColorPicker({ initial }: Readonly<{ initial?: string }>) {
   const [value, setValue] = useState(initial);
   return <ColorPicker value={value} onChange={setValue} />;
 }

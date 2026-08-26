@@ -17,10 +17,10 @@ type Story = StoryObj<typeof meta>;
 function ControlledIconColorPicker({
   initialIcon,
   initialColor,
-}: {
+}: Readonly<{
   initialIcon?: string;
   initialColor?: string;
-}) {
+}>) {
   const [icon, setIcon] = useState(initialIcon);
   const [color, setColor] = useState(initialColor);
   return (

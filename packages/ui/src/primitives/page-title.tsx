@@ -19,7 +19,7 @@ function PageTitle({
   size = "default",
   className,
   ...props
-}: PageTitleProps) {
+}: Readonly<PageTitleProps>) {
   const compact = size === "compact";
   const Title = compact ? "h2" : "h1";
 
