@@ -15,4 +15,5 @@ export * from "./entity-selector";
 export * from "./user-menu";
 export * from "./icon-picker";
 export * from "./color-picker";
+export * from "./icon-color-picker";
 export * from "./theme-selector";

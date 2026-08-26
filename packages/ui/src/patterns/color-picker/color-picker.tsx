@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
-import { Input } from "../../primitives/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../primitives/popover";
 
 // ---------------------------------------------------------------------------
@@ -38,15 +37,55 @@ export const ENTITY_COLOR_SWATCHES: readonly ColorSwatch[] = [
 // ColorPicker
 // ---------------------------------------------------------------------------
 
+export interface ColorPickerContentProps {
+  /** Currently selected CSS color (any valid `color` value), or `undefined` if unset. */
+  readonly value: string | undefined;
+  /** Called with the new CSS color when a preset swatch is picked. */
+  readonly onChange: (color: string) => void;
+  readonly className?: string;
+}
+
+/**
+ * The swatch grid UI, with no popover chrome of its own — drop it into any `PopoverContent`
+ * (or compose it alongside other pickers, e.g. `IconColorPicker`).
+ */
+export function ColorPickerContent({
+  value,
+  onChange,
+  className,
+}: Readonly<ColorPickerContentProps>) {
+  return (
+    <div className={cn("space-y-3", className)}>
+      <div className="grid grid-cols-6 gap-2">
+        {ENTITY_COLOR_SWATCHES.map((swatch) => (
+          <button
+            key={swatch.value}
+            type="button"
+            title={swatch.label}
+            aria-label={swatch.label}
+            aria-pressed={value === swatch.value}
+            onClick={() => onChange(swatch.value)}
+            className={cn(
+              "size-7 rounded-full border-2",
+              value === swatch.value ? "border-foreground" : "border-transparent",
+            )}
+            style={{ backgroundColor: swatch.value }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export interface ColorPickerProps {
   /** Currently selected CSS color (any valid `color` value), or `undefined` if unset. */
   readonly value: string | undefined;
-  /** Called with the new CSS color, from a preset swatch or the custom input. */
+  /** Called with the new CSS color when a preset swatch is picked. */
   readonly onChange: (color: string) => void;
   readonly className?: string;
   /**
    * Custom trigger visual (e.g. an entity's own icon) — replaces the default swatch-circle
-   * trigger entirely. The popover's swatch grid and custom-color input are unaffected.
+   * trigger entirely. The popover's swatch grid is unaffected.
    */
   readonly children?: ReactNode;
 }
@@ -82,30 +121,8 @@ export function ColorPicker({ value, onChange, className, children }: Readonly<C
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 space-y-3">
-        <div className="grid grid-cols-6 gap-2">
-          {ENTITY_COLOR_SWATCHES.map((swatch) => (
-            <button
-              key={swatch.value}
-              type="button"
-              title={swatch.label}
-              aria-label={swatch.label}
-              aria-pressed={value === swatch.value}
-              onClick={() => onChange(swatch.value)}
-              className={cn(
-                "size-7 rounded-full border-2",
-                value === swatch.value ? "border-foreground" : "border-transparent",
-              )}
-              style={{ backgroundColor: swatch.value }}
-            />
-          ))}
-        </div>
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="Custom color (hex, oklch, …)"
-          aria-label="Custom color value"
-        />
+      <PopoverContent align="start" className="w-64">
+        <ColorPickerContent value={value} onChange={onChange} />
       </PopoverContent>
     </Popover>
   );

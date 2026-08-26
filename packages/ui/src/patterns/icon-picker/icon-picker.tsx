@@ -191,7 +191,7 @@ export function resolveEntityIcon(name: string | undefined): Icon | undefined {
 // IconPicker
 // ---------------------------------------------------------------------------
 
-export interface IconPickerProps {
+export interface IconPickerContentProps {
   /** Currently selected icon name (one of `ENTITY_ICON_OPTIONS`), or `undefined` if unset. */
   readonly value: string | undefined;
   /** Called with the selected icon's `name` when the user picks one. */
@@ -199,10 +199,17 @@ export interface IconPickerProps {
   readonly className?: string;
 }
 
-export function IconPicker({ value, onChange, className }: Readonly<IconPickerProps>) {
+/**
+ * The icon search/category-filter/grid UI, with no popover chrome of its own — drop it
+ * into any `PopoverContent` (or compose it alongside other pickers, e.g. `IconColorPicker`).
+ */
+export function IconPickerContent({
+  value,
+  onChange,
+  className,
+}: Readonly<IconPickerContentProps>) {
   const [query, setQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<readonly IconCategory[]>([]);
-  const SelectedIcon = resolveEntityIcon(value) ?? Question;
 
   function toggleCategory(category: IconCategory) {
     setSelectedCategories((current) =>
@@ -220,6 +227,63 @@ export function IconPicker({ value, onChange, className }: Readonly<IconPickerPr
   });
 
   return (
+    <div className={className}>
+      <Input
+        name="icon-search"
+        placeholder="Search icons…"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        className="mb-2"
+      />
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {ICON_CATEGORIES.map((category) => (
+          <SelectionChip
+            key={category}
+            label={category}
+            selected={selectedCategories.includes(category)}
+            onClick={() => toggleCategory(category)}
+          />
+        ))}
+      </div>
+      <div className="grid max-h-56 grid-cols-7 gap-1 overflow-y-auto">
+        {filtered.map(({ name, Icon: OptionIcon }) => (
+          <button
+            key={name}
+            type="button"
+            title={name}
+            aria-label={name}
+            aria-pressed={value === name}
+            onClick={() => onChange(name)}
+            className={cn(
+              "flex items-center justify-center rounded-md border p-2 hover:bg-accent",
+              value === name ? "border-primary bg-accent" : "border-transparent",
+            )}
+          >
+            <OptionIcon className="size-4" aria-hidden />
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <p className="col-span-7 py-2 text-center text-sm text-muted-foreground">
+            No icons found
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface IconPickerProps {
+  /** Currently selected icon name (one of `ENTITY_ICON_OPTIONS`), or `undefined` if unset. */
+  readonly value: string | undefined;
+  /** Called with the selected icon's `name` when the user picks one. */
+  readonly onChange: (name: string) => void;
+  readonly className?: string;
+}
+
+export function IconPicker({ value, onChange, className }: Readonly<IconPickerProps>) {
+  const SelectedIcon = resolveEntityIcon(value) ?? Question;
+
+  return (
     <Popover>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" className={cn("justify-start gap-2", className)}>
@@ -228,45 +292,7 @@ export function IconPicker({ value, onChange, className }: Readonly<IconPickerPr
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80">
-        <Input
-          placeholder="Search icons…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="mb-2"
-        />
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {ICON_CATEGORIES.map((category) => (
-            <SelectionChip
-              key={category}
-              label={category}
-              selected={selectedCategories.includes(category)}
-              onClick={() => toggleCategory(category)}
-            />
-          ))}
-        </div>
-        <div className="grid max-h-56 grid-cols-7 gap-1 overflow-y-auto">
-          {filtered.map(({ name, Icon: OptionIcon }) => (
-            <button
-              key={name}
-              type="button"
-              title={name}
-              aria-label={name}
-              aria-pressed={value === name}
-              onClick={() => onChange(name)}
-              className={cn(
-                "flex items-center justify-center rounded-md border p-2 hover:bg-accent",
-                value === name ? "border-primary bg-accent" : "border-transparent",
-              )}
-            >
-              <OptionIcon className="size-4" aria-hidden />
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <p className="col-span-7 py-2 text-center text-sm text-muted-foreground">
-              No icons found
-            </p>
-          )}
-        </div>
+        <IconPickerContent value={value} onChange={onChange} />
       </PopoverContent>
     </Popover>
   );

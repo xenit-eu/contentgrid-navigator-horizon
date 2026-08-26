@@ -30,17 +30,6 @@ describe("ColorPicker", () => {
     expect(onChange).toHaveBeenCalledWith("oklch(0.55 0.17 155)");
   });
 
-  it("calls onChange as the custom color input changes", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<ColorPicker value={undefined} onChange={onChange} />);
-
-    await user.click(screen.getByRole("button", { name: /choose color/i }));
-    await user.type(screen.getByLabelText("Custom color value"), "#f");
-
-    expect(onChange).toHaveBeenCalledWith("#f");
-  });
-
   it("renders custom trigger content instead of the default swatch when children are given", () => {
     render(
       <ColorPicker value={undefined} onChange={vi.fn()}>

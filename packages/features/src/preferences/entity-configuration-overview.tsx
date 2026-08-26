@@ -11,12 +11,17 @@ import {
   ENTITY_COLOR_THEMES,
   EntityCard,
   IconBadge,
+  IconColorPickerContent,
   PageTitle,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Skeleton,
   ThemeSelector,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface EntityConfigurationOverviewProps {
   readonly onSelectEntity: (profile: ProfileEntity) => void;
@@ -57,8 +62,8 @@ export function EntityConfigurationOverview({
       />
       {showColorHint && (
         <Alert onClose={() => setShowColorHint(false)}>
-          Click on an entity icon to change its color or select a common theme with the theme
-          selector.
+          Click on an entity icon to change its icon or color, or select a common theme with the
+          theme selector.
         </Alert>
       )}
       <ThemeSelector
@@ -70,7 +75,7 @@ export function EntityConfigurationOverview({
       />
 
       {isLoading && profiles.length === 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-28 w-full rounded-xl" />
           ))}
@@ -81,7 +86,7 @@ export function EntityConfigurationOverview({
           <p className="text-sm">Make sure your ContentGrid application has entities defined.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {profiles.map((profile) => (
             <EntityConfigurationCard
               key={profile.name}
@@ -99,12 +104,38 @@ function EntityConfigurationCard({
   profile,
   onSelect,
 }: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {
+  const { preferences, setOverride } = useEntityDisplayPreferences(profile);
+
   return (
     <EntityCard
       name={profile.name}
       title={profile.pluralName}
       description={profile.description || undefined}
-      icon={<EntityIconBadge variant="sm" profile={profile} />}
+      icon={
+        <Popover>
+          <PopoverTrigger asChild>
+            {/* The asChild target must be a real DOM element so Radix can anchor/position
+                the popover off it — EntityIconBadge/IconBadge don't forward refs, so they
+                can't be the target directly. A plain button wrapping the (non-interactive)
+                badge mirrors ColorPicker's own custom-trigger pattern. */}
+            <button
+              type="button"
+              aria-label={`Change icon and color for ${profile.pluralName}`}
+              className="inline-flex cursor-pointer items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <EntityIconBadge variant="sm" profile={profile} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80">
+            <IconColorPickerContent
+              icon={preferences.icon}
+              onIconChange={(icon) => setOverride({ icon })}
+              color={preferences.color}
+              onColorChange={(color) => setOverride({ color })}
+            />
+          </PopoverContent>
+        </Popover>
+      }
       onCardClick={onSelect}
       action={
         <Button
