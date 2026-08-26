@@ -86,7 +86,7 @@ function renderUseEntityDisplayPreferences(profileUrl = PROFILE_URL) {
 
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} }, true);
+  useEntityDisplayPreferencesStore.setState({ overrides: {} });
 });
 
 describe("useEntityDisplayPreferences", () => {

@@ -6,7 +6,7 @@ const PROFILE_URL_B = "https://b.example.com/profile";
 
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} }, true);
+  useEntityDisplayPreferencesStore.setState({ overrides: {} });
 });
 
 describe("useEntityDisplayPreferencesStore", () => {

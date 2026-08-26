@@ -6,7 +6,7 @@ import {
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { Button, EntityCard, Skeleton } from "@contentgrid/ui";
-import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
+import { EntityIconBadge } from "../layout";
 
 // ---------------------------------------------------------------------------
 // EntityOverviewPage — index route component (grid of entity cards)
@@ -95,17 +95,13 @@ function EntityCardConnected({
     { queryOptionsOverride: { refetchOnWindowFocus: false, refetchOnMount: false } },
   );
 
-  const { preferences } = useEntityDisplayPreferences(profile);
-  const EntityIcon = resolveEntityCardIcon(preferences.icon);
-
   return (
     <EntityCard
       name={profile.name}
       title={profile.pluralName}
       description={profile.description || undefined}
-      icon={<EntityIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
-      color={preferences.color}
-      onTitleClick={onSelect}
+      icon={<EntityIconBadge profile={profile} />}
+      onCardClick={onSelect}
       action={
         <Button
           variant="ghost"

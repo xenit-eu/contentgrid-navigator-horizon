@@ -1,7 +1,8 @@
-import { FileTextIcon, PlusIcon } from "@phosphor-icons/react";
+import { DatabaseIcon, FileTextIcon, PlusIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent } from "storybook/test";
 import { Button } from "../../primitives/button";
+import { IconBadge } from "../../primitives/icon-badge";
 import { EntityCard } from "./entity-card";
 
 const meta = {
@@ -25,6 +26,21 @@ function createAction(title: string) {
 export const Default: Story = {
   args: {
     name: "invoice",
+    title: "Invoices",
+    action: createAction("Invoices"),
+    children: (
+      <>
+        <div className="text-2xl font-bold">42</div>
+        <p className="text-xs text-muted-foreground">items</p>
+      </>
+    ),
+  },
+};
+
+export const WithHeader: Story = {
+  args: {
+    name: "invoice",
+    header: "Entity Collection",
     title: "Invoices",
     action: createAction("Invoices"),
     children: (
@@ -72,7 +88,7 @@ export const WithColor: Story = {
     name: "invoice",
     title: "Invoices",
     description: "Outgoing invoices linked to suppliers and customers.",
-    color: "oklch(0.55 0.17 155)",
+    icon: <IconBadge icon={<DatabaseIcon aria-hidden />} color="oklch(0.55 0.17 155)" />,
     action: createAction("Invoices"),
     children: (
       <>
@@ -108,7 +124,7 @@ export const WithInteraction: Story = {
   args: {
     name: "invoice",
     title: "Invoices",
-    onTitleClick: fn(),
+    onCardClick: fn(),
   },
   render: (args) => (
     <EntityCard
@@ -125,11 +141,8 @@ export const WithInteraction: Story = {
     </EntityCard>
   ),
   play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-
-    // Exact string match avoids ambiguity with the "Create Invoices" sr-only button
-    const titleBtn = canvas.getByRole("button", { name: "Invoices" });
-    await userEvent.click(titleBtn);
-    await expect(args.onTitleClick).toHaveBeenCalledWith("invoice");
+    const card = canvasElement.querySelector('[data-slot="entity-card"]') as HTMLElement;
+    await userEvent.click(card);
+    await expect(args.onCardClick).toHaveBeenCalledWith("invoice");
   },
 };
