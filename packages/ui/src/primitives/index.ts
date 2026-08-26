@@ -35,4 +35,5 @@ export * from "./selection-chip";
 export * from "./status-pill";
 export * from "./banner";
 export * from "./file-icon";
+export * from "./icon-badge";
 export * from "./page-title";

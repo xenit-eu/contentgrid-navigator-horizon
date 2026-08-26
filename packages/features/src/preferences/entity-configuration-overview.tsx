@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GearIcon as Gear } from "@phosphor-icons/react";
+import { GearIcon as Gear, WrenchIcon } from "@phosphor-icons/react";
 import {
   type ProfileEntity,
   useLoadedProfileEntities,
@@ -8,16 +8,15 @@ import {
 import {
   Alert,
   Button,
-  ColorPicker,
   ENTITY_COLOR_THEMES,
   EntityCard,
+  IconBadge,
   PageTitle,
   Skeleton,
   ThemeSelector,
 } from "@contentgrid/ui";
+import { EntityIconBadge } from "../layout";
 import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
-import { resolveEntityCardIcon } from "./resolve-entity-icon";
-import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface EntityConfigurationOverviewProps {
   readonly onSelectEntity: (profile: ProfileEntity) => void;
@@ -53,6 +52,7 @@ export function EntityConfigurationOverview({
       <PageTitle
         header="Configuration"
         title="Entity display"
+        icon={<IconBadge icon={<WrenchIcon size={32} />} />}
         subtitle="Customize how each entity's name, icon, and color are shown. Changes are saved to this browser and apply only to this backend."
       />
       {showColorHint && (
@@ -70,7 +70,7 @@ export function EntityConfigurationOverview({
       />
 
       {isLoading && profiles.length === 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-28 w-full rounded-xl" />
           ))}
@@ -81,7 +81,7 @@ export function EntityConfigurationOverview({
           <p className="text-sm">Make sure your ContentGrid application has entities defined.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {profiles.map((profile) => (
             <EntityConfigurationCard
               key={profile.name}
@@ -99,30 +99,13 @@ function EntityConfigurationCard({
   profile,
   onSelect,
 }: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {
-  const { preferences, setOverride } = useEntityDisplayPreferences(profile);
-  const EntityIcon = resolveEntityCardIcon(preferences.icon);
-
   return (
     <EntityCard
       name={profile.name}
       title={profile.pluralName}
       description={profile.description || undefined}
-      // The icon badge IS the color trigger: clicking it opens the color popover instead of
-      // a separate swatch button — the badge's own color-mix styling (via EntityCard's
-      // `color` prop below) doubles as the trigger's visual.
-      icon={
-        <ColorPicker
-          value={preferences.color}
-          onChange={(color) => setOverride({ color })}
-          // Expands the trigger button to fill EntityCard's icon-badge padding (`p-2`), so
-          // the whole colored badge is clickable — not just the icon glyph inside it.
-          className="-m-2 p-0"
-        >
-          <EntityIcon className="h-5 w-5 text-muted-foreground" aria-hidden />
-        </ColorPicker>
-      }
-      color={preferences.color}
-      onTitleClick={onSelect}
+      icon={<EntityIconBadge variant="sm" profile={profile} />}
+      onCardClick={onSelect}
       action={
         <Button
           variant="ghost"
