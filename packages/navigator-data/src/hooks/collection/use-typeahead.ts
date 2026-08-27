@@ -117,7 +117,7 @@ function extractSuggestions(
   if (!collection || !attributeName) return [];
   const counts = new Map<string, number>();
   for (const item of collection.items) {
-    const attribute = item.attributes.find((attr) => attr.value.name === attributeName);
+    const attribute = item.findAttribute(attributeName);
     if (attribute?.value.kind !== AttributeKind.PLAIN) continue;
     const { value } = attribute.value;
     if (typeof value === "string" && value.length > 0) {
