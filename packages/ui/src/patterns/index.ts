@@ -10,6 +10,7 @@ export * from "./sign-in-gate";
 export * from "./nav-item";
 export * from "./provenance-tag";
 export * from "./attribute-row";
+export * from "./item-reference/item-reference";
 export * from "./record-table/record-table";
 export * from "./record-table/table-row";
 export * from "./entity-selector";
