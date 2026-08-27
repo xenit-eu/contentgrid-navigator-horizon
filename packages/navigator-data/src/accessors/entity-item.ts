@@ -163,6 +163,16 @@ export class EntityItem {
   }
 
   /**
+   * Look up a single attribute by name.
+   *
+   * @param name - The attribute name (e.g. "number", "supplier")
+   * @returns The matching attribute, or undefined if this item has no attribute by that name
+   */
+  public findAttribute(name: string): EntityItemAttribute | undefined {
+    return this.attributes.find((attr) => attr.value.name === name);
+  }
+
+  /**
    * The HAL-FORMS "default" template for updating this entity (PATCH operation).
    *
    * Returns `null` if the current user lacks update permission or the template is missing.

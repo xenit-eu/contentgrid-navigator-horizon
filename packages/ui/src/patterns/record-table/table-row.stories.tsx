@@ -2,7 +2,7 @@ import * as React from "react";
 import { DotsThreeIcon as DotsThree, FileTextIcon as FileText } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Button } from "../../primitives/button";
-import { IconBadge } from "../../primitives/icon-badge";
+import { ItemReference } from "../item-reference/item-reference";
 import { RecordTableRow } from "./table-row";
 import type { RecordTableCell } from "./table-row";
 
@@ -25,13 +25,7 @@ function identityCell(reference: string, fileMeta: string): RecordTableCell {
   return {
     key: "name",
     content: (
-      <div className="flex items-center gap-[11px]">
-        <IconBadge icon={<FileText />} color="#019BE3" variant="sm" />
-        <div>
-          <div className="text-[13px] font-medium text-foreground">{reference}</div>
-          <div className="text-[12px] text-muted-foreground">{fileMeta}</div>
-        </div>
-      </div>
+      <ItemReference icon={<FileText />} color="#019BE3" title={reference} subtitle={fileMeta} />
     ),
   };
 }

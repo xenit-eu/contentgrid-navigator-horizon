@@ -236,6 +236,22 @@ describe("EntityItem — attributes", () => {
   });
 });
 
+describe("EntityItem — findAttribute", () => {
+  it("returns the attribute matching the given name", () => {
+    const hal = makeEntityItemHal({ id: "inv-001", number: "INV-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    const numberAttr = item.findAttribute("number");
+    expect(numberAttr).toBeDefined();
+    expect(numberAttr!.value.name).toBe("number");
+  });
+
+  it("returns undefined when no attribute matches the given name", () => {
+    const hal = makeEntityItemHal({ id: "inv-001", number: "INV-001" });
+    const item = new EntityItem(hal, makeProfileEntity());
+    expect(item.findAttribute("unknownField")).toBeUndefined();
+  });
+});
+
 describe("EntityItem — userDefinedAttributes", () => {
   it("returns only user-defined attributes", () => {
     const profileEntity = makeProfileEntity([
