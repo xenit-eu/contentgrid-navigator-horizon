@@ -12,8 +12,8 @@ export interface AttributeValueRendererProps {
 /**
  * Renders just an attribute's value (no label) — for compact contexts that
  * already show the attribute label separately (relation previews, reference
- * titles). Nested/object attributes render nothing; see `AttributeCell` for
- * the labeled, full-cell variant used by the main attribute grid.
+ * titles, and the main attribute table). Nested/object attributes render
+ * nothing.
  */
 export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRendererProps>) {
   const components = useAttributeRendererComponents();
