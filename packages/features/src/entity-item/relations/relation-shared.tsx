@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AttributeKind,
   type EntityItem,
   ProfileAttributeSearchType,
   type ProfileEntity,
@@ -21,7 +22,7 @@ import {
   type RelationConflictAlertProps,
   type ValidationAlertProps,
 } from "../../problem-details";
-import { formatAttributeValue } from "../attributes/attribute-format";
+import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
 
 /**
  * Fired when the user clicks through to a related entity item; receives the
@@ -117,17 +118,22 @@ export function RelationItemSearchDialog({
                 }}
               >
                 <div className="grid grid-cols-2 gap-2">
-                  {item.userDefinedAttributes.slice(0, 4).map((attr) => {
-                    const label =
-                      targetProfile.attributes.find((a) => a.name === attr.value.name)?.title ??
-                      attr.value.name;
-                    return (
-                      <div key={attr.value.name}>
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-sm truncate">{formatAttributeValue(attr)}</p>
-                      </div>
-                    );
-                  })}
+                  {item.userDefinedAttributes
+                    .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
+                    .slice(0, 4)
+                    .map((attr) => {
+                      const label =
+                        targetProfile.attributes.find((a) => a.name === attr.value.name)?.title ??
+                        attr.value.name;
+                      return (
+                        <div key={attr.value.name}>
+                          <p className="text-xs text-muted-foreground">{label}</p>
+                          <p className="text-sm truncate">
+                            <AttributeValueRenderer attr={attr} />
+                          </p>
+                        </div>
+                      );
+                    })}
                 </div>
               </button>
             ))}
