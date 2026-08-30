@@ -1,11 +1,11 @@
 import { CalendarIcon } from "@phosphor-icons/react";
 import { AttributeValue } from "@contentgrid/ui";
 
-export interface DateAttributeRendererProps {
+export interface DateTimeAttributeRendererProps {
   readonly value: string | null;
 }
 
-export function DateAttributeRenderer({ value }: Readonly<DateAttributeRendererProps>) {
+export function DateTimeAttributeRenderer({ value }: Readonly<DateTimeAttributeRendererProps>) {
   if (value == null) {
     return <AttributeValue />;
   }
@@ -15,7 +15,10 @@ export function DateAttributeRenderer({ value }: Readonly<DateAttributeRendererP
     return <AttributeValue>{value}</AttributeValue>;
   }
 
-  const formatted = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(parsed);
+  const formatted = new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
 
   return (
     <span className="flex items-center gap-1.5">

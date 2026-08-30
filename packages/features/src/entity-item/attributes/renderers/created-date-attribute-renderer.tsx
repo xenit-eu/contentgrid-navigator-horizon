@@ -1,11 +1,14 @@
 import { CalendarIcon } from "@phosphor-icons/react";
 import { AttributeValue } from "@contentgrid/ui";
+import { formatRelativeOrAbsoluteDate } from "./format-relative-date";
 
-export interface DateAttributeRendererProps {
+export interface CreatedDateAttributeRendererProps {
   readonly value: string | null;
 }
 
-export function DateAttributeRenderer({ value }: Readonly<DateAttributeRendererProps>) {
+export function CreatedDateAttributeRenderer({
+  value,
+}: Readonly<CreatedDateAttributeRendererProps>) {
   if (value == null) {
     return <AttributeValue />;
   }
@@ -15,12 +18,10 @@ export function DateAttributeRenderer({ value }: Readonly<DateAttributeRendererP
     return <AttributeValue>{value}</AttributeValue>;
   }
 
-  const formatted = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(parsed);
-
   return (
     <span className="flex items-center gap-1.5">
       <CalendarIcon size={14} className="text-muted-foreground" aria-hidden />
-      <AttributeValue>{formatted}</AttributeValue>
+      <AttributeValue>{`created ${formatRelativeOrAbsoluteDate(parsed)}`}</AttributeValue>
     </span>
   );
 }

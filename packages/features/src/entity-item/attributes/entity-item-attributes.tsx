@@ -5,7 +5,7 @@ import {
   ProfileAttributeType,
   type ProfileEntity,
 } from "@contentgrid/navigator-data";
-import { Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
+import { AttributeValue, Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
 import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
 import { useAttributeRendererComponents } from "./renderers/registry";
 
@@ -21,11 +21,25 @@ function isBooleanAttribute(attr: EntityItemAttribute): boolean {
   );
 }
 
+function formatBooleanTableValue(attr: EntityItemAttribute): string {
+  if (attr.value.kind !== AttributeKind.PLAIN) {
+    return "unset";
+  }
+  if (attr.value.value === true) {
+    return "true";
+  }
+  if (attr.value.value === false) {
+    return "false";
+  }
+  return "unset";
+}
+
 /**
- * Renders an entity item's user-defined attributes: boolean attributes as a
- * row of chips up top, everything else as a simple label/value table below.
- * Purely presentational: it reads the resolved `EntityItem` accessor and
- * renders it — it fetches nothing itself.
+ * Renders an entity item's user-defined attributes: audit trail (created/
+ * modified) up top, boolean attributes as a row of chips below that, then a
+ * simple label/value table for every attribute — booleans included, shown as
+ * plain "true"/"false"/"unset" text there. Purely presentational: it reads
+ * the resolved `EntityItem` accessor and renders it — it fetches nothing itself.
  */
 export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttributesProps>) {
   const components = useAttributeRendererComponents();
@@ -38,10 +52,22 @@ export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttri
     }));
 
   const booleanAttributes = attributes.filter(({ attr }) => isBooleanAttribute(attr));
-  const otherAttributes = attributes.filter(({ attr }) => !isBooleanAttribute(attr));
+  const auditAttributes = item.auditAttributes.filter(
+    (attr) => attr.value.kind !== AttributeKind.NESTED,
+  );
 
   return (
     <div className="space-y-4">
+      {auditAttributes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+          {auditAttributes.map((attr, index) => (
+            <span key={attr.value.name} className="flex items-center gap-2">
+              {index > 0 && <span aria-hidden>·</span>}
+              <AttributeValueRenderer attr={attr} />
+            </span>
+          ))}
+        </div>
+      )}
       {booleanAttributes.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {booleanAttributes.map(({ attr, label }) => (
@@ -57,14 +83,18 @@ export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttri
           ))}
         </div>
       )}
-      {otherAttributes.length > 0 && (
+      {attributes.length > 0 && (
         <Table>
           <TableBody>
-            {otherAttributes.map(({ attr, label }) => (
+            {attributes.map(({ attr, label }) => (
               <TableRow key={attr.value.name}>
                 <TableCell className="text-muted-foreground font-medium">{label}</TableCell>
                 <TableCell className="w-full">
-                  <AttributeValueRenderer attr={attr} />
+                  {isBooleanAttribute(attr) ? (
+                    <AttributeValue>{formatBooleanTableValue(attr)}</AttributeValue>
+                  ) : (
+                    <AttributeValueRenderer attr={attr} />
+                  )}
                 </TableCell>
               </TableRow>
             ))}
