@@ -28,6 +28,19 @@ export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRenderer
     return <components.unknown />;
   }
 
+  if (attr.profileAttribute?.isCreatedDate) {
+    return <components.createdDate value={attr.value.value as string | null} />;
+  }
+  if (attr.profileAttribute?.isModifiedDate) {
+    return <components.modifiedDate value={attr.value.value as string | null} />;
+  }
+  if (attr.profileAttribute?.isCreatedBy) {
+    return <components.createdBy value={attr.value.value} />;
+  }
+  if (attr.profileAttribute?.isModifiedBy) {
+    return <components.modifiedBy value={attr.value.value} />;
+  }
+
   const type = attr.profileAttribute?.type;
   if (type === ProfileAttributeType.boolean) {
     const value = attr.value.value as boolean | null;
@@ -37,8 +50,11 @@ export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRenderer
   if (type === ProfileAttributeType.long || type === ProfileAttributeType.double) {
     return <components.number value={attr.value.value as number | null} type={type} />;
   }
-  if (type === ProfileAttributeType.date || type === ProfileAttributeType.datetime) {
-    return <components.date value={attr.value.value as string | null} type={type} />;
+  if (type === ProfileAttributeType.date) {
+    return <components.date value={attr.value.value as string | null} />;
+  }
+  if (type === ProfileAttributeType.datetime) {
+    return <components.datetime value={attr.value.value as string | null} />;
   }
   return <components.string value={attr.value.value} />;
 }
