@@ -1,5 +1,5 @@
-import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { formatAttributeValue } from "./attribute-format";
+import { AttributeKind, type EntityItem, type ProfileEntity } from "@contentgrid/navigator-data";
+import { AttributeCell } from "./renderers/attribute-cell";
 
 export interface EntityItemAttributesProps {
   readonly profile: ProfileEntity;
@@ -14,16 +14,13 @@ export interface EntityItemAttributesProps {
 export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttributesProps>) {
   return (
     <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {item.userDefinedAttributes.map((attr) => {
-        const label =
-          profile.attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name;
-        return (
-          <div key={attr.value.name} className="rounded-lg border p-4">
-            <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-            <dd className="mt-1 truncate text-sm">{formatAttributeValue(attr)}</dd>
-          </div>
-        );
-      })}
+      {item.userDefinedAttributes
+        .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
+        .map((attr) => {
+          const label =
+            profile.attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name;
+          return <AttributeCell key={attr.value.name} attr={attr} label={label} />;
+        })}
     </dl>
   );
 }
