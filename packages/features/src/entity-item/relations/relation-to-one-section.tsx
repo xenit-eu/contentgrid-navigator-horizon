@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AttributeKind,
   type EntityItemToOneRelation,
   type ProfileEntity,
   toProblemDisplayModel,
@@ -21,7 +22,7 @@ import {
   Skeleton,
 } from "@contentgrid/ui";
 import { ProblemAlert } from "../../problem-details";
-import { formatAttributeValue } from "../attributes/attribute-format";
+import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
 import {
   MutationErrorDisplay,
   type MutationErrorDisplayProps,
@@ -131,17 +132,22 @@ export function RelationToOneSection({
           }}
         >
           <dl className="grid grid-cols-2 gap-2">
-            {linkedItem.data.userDefinedAttributes.slice(0, 4).map((attr) => {
-              const label =
-                linkedItem.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
-                  ?.title ?? attr.value.name;
-              return (
-                <div key={attr.value.name}>
-                  <dt className="text-xs text-muted-foreground">{label}</dt>
-                  <dd className="text-sm truncate">{formatAttributeValue(attr)}</dd>
-                </div>
-              );
-            })}
+            {linkedItem.data.userDefinedAttributes
+              .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
+              .slice(0, 4)
+              .map((attr) => {
+                const label =
+                  linkedItem.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
+                    ?.title ?? attr.value.name;
+                return (
+                  <div key={attr.value.name}>
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="text-sm truncate">
+                      <AttributeValueRenderer attr={attr} />
+                    </dd>
+                  </div>
+                );
+              })}
           </dl>
         </button>
       )}
