@@ -122,10 +122,35 @@ describe("EntityConfigurationDetail", () => {
     const user = userEvent.setup();
     renderDetail();
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: "Name attribute" }));
 
     expect(screen.getByRole("option", { name: "ID" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Invoice Number" })).toBeInTheDocument();
+  });
+
+  it("lists the id and user-defined attributes as subtitle-attribute options", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Subtitle attribute" }));
+
+    expect(screen.getByRole("option", { name: "ID" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Invoice Number" })).toBeInTheDocument();
+  });
+
+  it("persists a subtitle-attribute override when an option is chosen", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Subtitle attribute" }));
+    await user.click(screen.getByRole("option", { name: "Invoice Number" }));
+
+    await waitFor(() =>
+      expect(
+        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice
+          ?.subtitleAttribute,
+      ).toBe("invoice_number"),
+    );
   });
 
   it("persists an icon override when a new icon is chosen", async () => {
