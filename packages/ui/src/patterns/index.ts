@@ -19,3 +19,4 @@ export * from "./icon-picker";
 export * from "./color-picker";
 export * from "./icon-color-picker";
 export * from "./theme-selector";
+export * from "./tabbed-layout";

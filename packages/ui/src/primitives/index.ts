@@ -23,6 +23,7 @@ export * from "./skeleton";
 export * from "./sonner";
 export * from "./switch";
 export * from "./table";
+export * from "./tab-bar";
 export * from "./tabs";
 export * from "./textarea";
 export * from "./theme-provider";
