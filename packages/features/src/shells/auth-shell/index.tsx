@@ -35,13 +35,18 @@ export function AuthShell({ children }: Readonly<AuthShellProps>) {
     );
   }
 
+  const handleSignIn = () => {
+    const currentLocation = window.location.pathname + window.location.search;
+    return auth.signinRedirect({ state: currentLocation });
+  };
+
   if (auth.error) {
-    return <SignInGate error={auth.error.message} onSignIn={() => auth.signinRedirect()} />;
+    return <SignInGate error={auth.error.message} onSignIn={handleSignIn} />;
   }
 
   if (auth.isLoading || auth.user?.expired) {
     return null;
   }
 
-  return <SignInGate onSignIn={() => auth.signinRedirect()} />;
+  return <SignInGate onSignIn={handleSignIn} />;
 }
