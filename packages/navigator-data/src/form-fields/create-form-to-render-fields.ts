@@ -39,7 +39,6 @@ function attributeFieldDescriptor(prop: CreateFormProperty): RenderFieldDescript
     required: isRequired,
     readOnly: property.readOnly,
     description: profileAttribute?.description || undefined,
-    property,
   };
 
   if (isContent) {
@@ -89,7 +88,6 @@ function relationToOneFieldDescriptor(
     required: isRequired,
     readOnly: property.readOnly,
     description: profileRelation?.description || undefined,
-    property,
     type: "relation-to-one",
     profileRelation,
     targetCollectionHref,
@@ -106,7 +104,6 @@ function relationToManyFieldDescriptor(
     required: isRequired,
     readOnly: property.readOnly,
     description: profileRelation?.description || undefined,
-    property,
     type: "relation-to-many",
     profileRelation,
     targetCollectionHref,

@@ -101,6 +101,7 @@ export function RelationField({
 
   return (
     <>
+      {collection.isError && <ProblemAlert model={toProblemDisplayModel(collection.error)} />}
       {field.type === "relation-to-one" ? (
         <RelationToOneRenderer
           field={field}
@@ -118,7 +119,6 @@ export function RelationField({
           {...sharedProps}
         />
       )}
-      {collection.isError && <ProblemAlert model={toProblemDisplayModel(collection.error)} />}
     </>
   );
 }

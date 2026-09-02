@@ -5,14 +5,11 @@ import type { ProfileEntityShape } from "../shapes";
 import type { RenderFieldDescriptor } from "./render-field-descriptor";
 import { type UseFormFieldsOptions, useFormFields } from "./use-form-fields";
 
-const DUMMY_PROPERTY = {} as RenderFieldDescriptor["property"];
-
 const nameField: RenderFieldDescriptor = {
   name: "name",
   label: "Name",
   required: true,
   readOnly: false,
-  property: DUMMY_PROPERTY,
   type: "text",
   regex: /.*/,
   minLength: 0,
@@ -24,7 +21,6 @@ const totalField: RenderFieldDescriptor = {
   label: "Total",
   required: false,
   readOnly: false,
-  property: DUMMY_PROPERTY,
   type: "number",
 };
 
@@ -33,7 +29,6 @@ const activeField: RenderFieldDescriptor = {
   label: "Active",
   required: false,
   readOnly: false,
-  property: DUMMY_PROPERTY,
   type: "boolean",
 };
 
@@ -42,7 +37,6 @@ const tagsField: RenderFieldDescriptor = {
   label: "Tags",
   required: false,
   readOnly: false,
-  property: DUMMY_PROPERTY,
   type: "enum-multi",
   optionsSource: { kind: "inline", options: [] },
 };
@@ -52,7 +46,6 @@ const attachmentField: RenderFieldDescriptor = {
   label: "Attachment",
   required: false,
   readOnly: false,
-  property: DUMMY_PROPERTY,
   type: "file",
   multiple: false,
 };

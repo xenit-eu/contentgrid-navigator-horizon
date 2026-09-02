@@ -54,15 +54,29 @@ export function useProfileEntities(options?: UseProfileEntitiesOptions) {
  * Convenience wrapper over `useProfileEntities()` for consumers that only
  * need the successfully-loaded profiles plus a single loading flag, instead
  * of the raw per-entity query-result array.
+ *
+ * `isLoading` is true while ANY profile is still pending — not just while
+ * ALL of them are. It must stay true until every profile has settled (success
+ * or error), so it does not flip false the moment just one profile resolves
+ * (e.g. one already cached from elsewhere) while the rest are still loading.
+ *
+ * It also stays true while the profile root itself hasn't resolved yet —
+ * `useProfileEntities()` returns `[]` both before the root query resolves
+ * (entity links not yet known) and once it resolves to zero entities, so an
+ * empty result array alone can't distinguish "still loading" from "nothing to
+ * load". Reading `profileRootQuery` here subscribes to the same cache entry
+ * `useProfileEntities()` already reads internally — no extra fetch.
  */
 export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
   readonly profiles: readonly ProfileEntity[];
   readonly isLoading: boolean;
 } {
+  const { apiFetch, profileUrl } = useNavigatorData();
+  const rootQuery = useQuery(profileRootQuery(apiFetch, profileUrl));
   const results = useProfileEntities(options);
   return {
     profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
-    isLoading: results.length > 0 && results.every((r) => r.isPending),
+    isLoading: rootQuery.isPending || results.some((r) => r.isPending),
   };
 }
 

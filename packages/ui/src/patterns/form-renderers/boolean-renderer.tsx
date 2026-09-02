@@ -1,4 +1,4 @@
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/schema";
+import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
 import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
@@ -23,7 +23,7 @@ export function BooleanRenderer({ field, value, onChange, error }: Readonly<Bool
         <Checkbox
           id={name}
           name={name}
-          checked={value === true}
+          checked={value === undefined ? "indeterminate" : value === true}
           onCheckedChange={(checked) => onChange(checked === true)}
           disabled={readOnly}
           aria-invalid={!!error}

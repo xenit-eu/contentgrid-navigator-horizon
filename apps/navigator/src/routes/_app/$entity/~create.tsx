@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import { CreateEntityItemView } from "@contentgrid/features/entity-item-create";
+import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
@@ -60,30 +61,31 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
   );
 
   return (
-    <CreateEntityItemView
-      profile={profile}
-      breadcrumbs={breadcrumbs}
-      onCreated={(item) =>
-        go({
-          to: "/$entity/$itemId",
-          params: { entity: profile.name, itemId: item.id },
-          search: {},
-        })
-      }
-      onCancel={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
-      renderCreateRelationTarget={(targetProfile) =>
-        targetProfile.createTemplate ? (
-          <Link
-            to="/$entity/~create"
-            params={{ entity: targetProfile.name }}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline"
-          >
-            Create {targetProfile.singularName}
-          </Link>
-        ) : null
-      }
-    />
+    <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs}>
+      <CreateEntityItemView
+        profile={profile}
+        onCreated={(item) =>
+          go({
+            to: "/$entity/$itemId",
+            params: { entity: profile.name, itemId: item.id },
+            search: {},
+          })
+        }
+        onCancel={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
+        renderCreateRelationTarget={(targetProfile) =>
+          targetProfile.createTemplate ? (
+            <Link
+              to="/$entity/~create"
+              params={{ entity: targetProfile.name }}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              Create {targetProfile.singularName}
+            </Link>
+          ) : null
+        }
+      />
+    </BreadCrumbsToolBarLayout>
   );
 }
