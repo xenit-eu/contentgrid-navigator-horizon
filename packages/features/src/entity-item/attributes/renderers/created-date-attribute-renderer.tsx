@@ -21,8 +21,8 @@ export function CreatedDateAttributeRenderer({
   }
 
   return (
-    <span className="flex items-center gap-1.5">
-      <CalendarIcon size={14} className="text-muted-foreground" aria-hidden />
+    <span className="flex min-w-0 items-center gap-1.5">
+      <CalendarIcon size={14} className="shrink-0 text-muted-foreground" aria-hidden />
       <AttributeValue>{`${label}: ${formatRelativeOrAbsoluteDate(parsed)}`}</AttributeValue>
     </span>
   );

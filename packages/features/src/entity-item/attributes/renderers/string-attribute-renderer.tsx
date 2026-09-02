@@ -5,5 +5,5 @@ export interface StringAttributeRendererProps {
 }
 
 export function StringAttributeRenderer({ value }: Readonly<StringAttributeRendererProps>) {
-  return <AttributeValue>{value == null ? undefined : String(value)}</AttributeValue>;
+  return <AttributeValue wrap>{value == null ? undefined : String(value)}</AttributeValue>;
 }
