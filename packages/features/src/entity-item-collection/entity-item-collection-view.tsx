@@ -57,16 +57,6 @@ export function EntityItemCollectionView({
     [searchTemplate],
   );
 
-  // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
-  // that DIFFERS from the current `filters` (a deep link, or browser back/forward across a
-  // filter change), `pageUrl` belongs to a different search — discard it so `searchValues`
-  // drives page 1 of the CURRENT filters instead, rather than silently fetching the wrong page.
-  const pageUrlFilters = useMemo(
-    () => (pageUrl ? extractFilterValuesFromCollectionUrl(filterProperties, pageUrl) : {}),
-    [pageUrl, filterProperties],
-  );
-  const effectivePageUrl = recordsEqual(filters, pageUrlFilters) ? pageUrl : undefined;
-
   // undefined when there's no search template — same "disabled" signal the default (no
   // filters) mode already relied on before filtering existed, so an entity with no search
   // template behaves exactly as it did previously.
@@ -77,6 +67,33 @@ export function EntityItemCollectionView({
         : undefined,
     [searchTemplate, filterProperties, filters],
   );
+
+  // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
+  // that DIFFERS from the CURRENT filters (a deep link, or browser back/forward across a filter
+  // change), `pageUrl` belongs to a different search — discard it so `searchValues` drives page 1
+  // of the CURRENT filters instead, rather than silently fetching the wrong page.
+  //
+  // Both sides are compared post-encoding rather than as raw sidebar strings: `coerceFilterValue`
+  // normalizes datetime and number inputs before they're encoded (dropping milliseconds,
+  // canonicalizing "10.50" to "10.5", …), so a raw `filters` string and the value extracted back
+  // out of an already-encoded `pageUrl` can legitimately represent the same filter while being
+  // different strings. Running `filters` through the same HAL-FORMS encoder `searchValues` uses
+  // (via `profile.searchEntityRequest`) before comparing avoids that mismatch.
+  const pageUrlFilters = useMemo(
+    () => (pageUrl ? extractFilterValuesFromCollectionUrl(filterProperties, pageUrl) : {}),
+    [pageUrl, filterProperties],
+  );
+  const currentFilterParams = useMemo(
+    () =>
+      searchValues
+        ? extractFilterValuesFromCollectionUrl(
+            filterProperties,
+            profile.searchEntityRequest(searchValues).url,
+          )
+        : {},
+    [searchValues, filterProperties, profile],
+  );
+  const effectivePageUrl = recordsEqual(currentFilterParams, pageUrlFilters) ? pageUrl : undefined;
   const invalidFilterKeys = useMemo(
     () => findInvalidFilterKeys(filterProperties, filters),
     [filterProperties, filters],

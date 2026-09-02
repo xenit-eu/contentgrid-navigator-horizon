@@ -65,6 +65,36 @@ const itemProfileJson = {
         },
         _links: {},
       },
+      {
+        name: "created",
+        title: "Created",
+        type: "datetime",
+        description: "",
+        readOnly: true,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            { name: "created~after", title: "Created after", type: "greater-than" },
+          ],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
+      {
+        name: "amount",
+        title: "Amount",
+        type: "double",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [{ name: "amount", title: "Amount", type: "exact-match" }],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
     ],
     "blueprint:relation": [],
   },
@@ -87,7 +117,11 @@ const itemProfileJson = {
     search: {
       method: "GET",
       target: COLLECTION_URL,
-      properties: [{ name: "code~prefix", type: "text" }],
+      properties: [
+        { name: "code~prefix", type: "text" },
+        { name: "created~after", type: "datetime" },
+        { name: "amount", type: "number" },
+      ],
     },
   },
 };
@@ -178,6 +212,41 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
 
     expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
     expect(onRequest).toHaveBeenCalled();
+    const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
+    expect(requested.searchParams.get("_cursor")).toBe("page2token");
+  });
+
+  it("uses pageUrl directly for a datetime filter — same instant, different string encoding, preserves pagination", async () => {
+    const onRequest = vi.fn();
+    setupCollectionHandler(onRequest);
+
+    renderCollectionView({
+      profile: makeItemProfile(),
+      // What FilterSidebar.encodeDateInputValue produces from the datetime-local input (no
+      // milliseconds) — the raw sidebar string never round-trips byte-for-byte through the
+      // HAL-FORMS encoder, which re-serializes via Date#toISOString() (always ".000Z").
+      filters: { "created~after": "2024-01-01T10:00:00Z" },
+      pageUrl: `${COLLECTION_URL}?created~after=2024-01-01T10:00:00.000Z&_cursor=page2token`,
+    });
+
+    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
+    expect(requested.searchParams.get("_cursor")).toBe("page2token");
+  });
+
+  it("uses pageUrl directly for a number filter — same value, different string encoding, preserves pagination", async () => {
+    const onRequest = vi.fn();
+    setupCollectionHandler(onRequest);
+
+    renderCollectionView({
+      profile: makeItemProfile(),
+      // What the user typed into the sidebar input; the HAL-FORMS encoder re-serializes the
+      // coerced `number` via `"" + value`, which normalizes "10.50" down to "10.5".
+      filters: { amount: "10.50" },
+      pageUrl: `${COLLECTION_URL}?amount=10.5&_cursor=page2token`,
+    });
+
+    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
