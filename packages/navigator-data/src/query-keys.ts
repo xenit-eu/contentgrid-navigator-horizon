@@ -9,6 +9,8 @@ const ENTITY_DISPLAY_DEFAULTS_KEY = "EntityDisplayDefaults";
 const TO_ONE_RELATION_KEY = "ToOneRelation";
 const TO_MANY_RELATION_KEY = "ToManyRelation";
 const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
+const COLLECTION_PAGE_KEY = "CollectionPage";
+const COLLECTION_FILTERS_KEY = "CollectionFilters";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -115,5 +117,15 @@ export const queryKeys = {
      */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
+  },
+
+  collectionPage: {
+    /** Exact key for the remembered current-page href of one entity's collection. */
+    byEntityName: (entityName: string) => [COLLECTION_PAGE_KEY, entityName] as const,
+  },
+
+  collectionFilters: {
+    /** Exact key for the remembered active filter values of one entity's collection. */
+    byEntityName: (entityName: string) => [COLLECTION_FILTERS_KEY, entityName] as const,
   },
 };

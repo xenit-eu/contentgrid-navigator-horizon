@@ -1,28 +1,24 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../query-keys";
 
 /**
  * Two distinct mechanisms for handling a `next`/`prev` href safely, without
- * ever constructing a fetch URL from parts. Both exist to satisfy the same
- * platform invariant ("never construct or parse pagination cursors — follow
- * HAL next/prev links directly", root `CLAUDE.md`) — they differ because
- * pagination state has two different persistence needs in this app:
+ * ever constructing a fetch URL from parts (root `CLAUDE.md`: "never
+ * construct or parse pagination cursors — follow HAL next/prev links
+ * directly"):
  *
  * 1. **Same-origin trust check** (`resolveTrustedCollectionUrl`) — for a full
  *    href accepted directly as a fetch target. Used by the to-many relation
- *    hook's ephemeral `{ url }` mode (`collection.nextHref`/`prevHref` kept
- *    in memory, never written to the browser URL). Verifies the href
- *    resolves to the same origin as the API base before it's ever handed to
- *    the bearer-token-attaching `apiFetch` — a caller-supplied href could
- *    otherwise redirect an authenticated request to an attacker-controlled
- *    origin.
- * 2. **Cursor registry** (`registerCursorHref` / `resolveCursorHref`) — for a
- *    href that must survive being represented as a short opaque value in the
- *    browser URL. Used by the entity-list's `cursor` route param (same name
- *    as the legacy navigator's `cursor` search param / `onCursorChange`): the
- *    cursor is bookmarkable, but the href itself never touches the URL, so
- *    there is nothing to decode. The registry remembers the literal href a
- *    cursor was minted from, keyed by entity + cursor, in the `QueryClient`
- *    cache.
+ *    hook's ephemeral `{ url }` mode, and by `useEntityItemCollection`'s own
+ *    `{ url }` mode.
+ * 2. **Page-href memo** (`rememberCollectionPageHref` / `recallCollectionPageHref`)
+ *    — pagination position is deliberately kept OUT of the browser URL
+ *    (unlike filters, it isn't meant to be shareable: an opaque cursor only
+ *    ever resolves back to a real page in the session that received it from
+ *    the server). This just remembers the current page's literal href per
+ *    entity in the `QueryClient` cache, so it survives an unmount/remount
+ *    within the same session (e.g. navigating to an item and back) without
+ *    the data layer ever reconstructing a URL from a cursor.
  */
 
 /**
@@ -57,40 +53,72 @@ export function resolveTrustedCollectionUrl(
   }
 }
 
-const CURSOR_REGISTRY_KEY = "CursorHref";
-
 /**
- * Remembers the literal href a `cursor` was minted from — the exact
- * `EntityItemCollection.nextHref`/`prevHref` the server returned, captured at
- * the moment it's still in hand (the Next/Previous click handler), before the
- * opaque cursor value is written to the URL's search state.
+ * Remembers the literal href for an entity's current page — the exact
+ * `EntityItemCollection.nextHref`/`prevHref` the server returned — keyed by
+ * entity name in the `QueryClient` cache. Pass `href: undefined` to clear it
+ * (e.g. when filters change and the previous page no longer applies).
  *
- * The registry lives in the `QueryClient` cache (not a module-level map) so
- * it's scoped per app instance/test, and survives a route unmount/remount
- * within the same session (e.g. navigating to an item and back) without the
- * data layer ever needing to reconstruct a URL from the cursor.
+ * `setQueryData(key, undefined)` is a documented no-op in TanStack Query (the
+ * updater returning `undefined` leaves existing data untouched), so clearing
+ * requires an explicit `removeQueries` rather than setting `undefined`.
  */
-export function registerCursorHref(
+export function rememberCollectionPageHref(
   queryClient: QueryClient,
   entityName: string,
-  cursor: string,
-  href: string,
+  href: string | undefined,
 ): void {
-  queryClient.setQueryData([CURSOR_REGISTRY_KEY, entityName, cursor], href);
+  const queryKey = queryKeys.collectionPage.byEntityName(entityName);
+  if (href === undefined) {
+    queryClient.removeQueries({ queryKey, exact: true });
+  } else {
+    queryClient.setQueryData(queryKey, href);
+  }
 }
 
 /**
- * Resolves a `cursor` back to the literal href it was registered with.
- * Returns `undefined` when the cursor was never registered in this session —
- * a bookmarked, shared, or freshly-reloaded cursor. Callers must fall back to
- * the first-page request in that case rather than guessing at a URL; there is
- * no compliant way to turn an opaque cursor back into a fetchable URL other
- * than having previously been handed that exact URL by the server.
+ * Resolves the remembered current-page href for an entity. Returns
+ * `undefined` when nothing has been remembered in this session (first visit,
+ * a fresh reload, or a bookmarked/shared link) — callers fall back to the
+ * first-page request in that case.
  */
-export function resolveCursorHref(
+export function recallCollectionPageHref(
   queryClient: QueryClient,
   entityName: string,
-  cursor: string,
 ): string | undefined {
-  return queryClient.getQueryData([CURSOR_REGISTRY_KEY, entityName, cursor]);
+  return queryClient.getQueryData(queryKeys.collectionPage.byEntityName(entityName));
+}
+
+/**
+ * Remembers an entity's currently active filter values — keyed by entity name in the
+ * `QueryClient` cache, mirroring `rememberCollectionPageHref` above. This is a SEPARATE memo,
+ * not derived from the page-href one: the page href is only ever written on an explicit
+ * next/prev click (see `EntityItemCollectionTable`), so a caller who applies a filter and
+ * navigates away before ever paging through the result would have nothing to recover filters
+ * from if they only relied on the page-href memo. Pass `filters: {}` to clear it (e.g. "clear
+ * all filters" — a genuinely empty filter set is not worth remembering).
+ */
+export function rememberCollectionFilters(
+  queryClient: QueryClient,
+  entityName: string,
+  filters: Record<string, string>,
+): void {
+  const queryKey = queryKeys.collectionFilters.byEntityName(entityName);
+  if (Object.keys(filters).length === 0) {
+    queryClient.removeQueries({ queryKey, exact: true });
+  } else {
+    queryClient.setQueryData(queryKey, filters);
+  }
+}
+
+/**
+ * Resolves the remembered active filter values for an entity. Returns `undefined` when nothing
+ * has been remembered in this session (first visit, a fresh reload, or a bookmarked/shared
+ * link) — callers fall back to no filters in that case.
+ */
+export function recallCollectionFilters(
+  queryClient: QueryClient,
+  entityName: string,
+): Record<string, string> | undefined {
+  return queryClient.getQueryData(queryKeys.collectionFilters.byEntityName(entityName));
 }
