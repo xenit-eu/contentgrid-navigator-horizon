@@ -67,6 +67,6 @@ export function AttributeRendererProvider({
   );
 }
 
-export function useAttributeRendererComponents(): AttributeRendererComponents {
+export function useAttributeValueRendererComponents(): AttributeRendererComponents {
   return useContext(AttributeRendererContext);
 }

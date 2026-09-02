@@ -7,7 +7,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { AttributeValue, Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
 import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
-import { useAttributeRendererComponents } from "./renderers/registry";
+import { useAttributeValueRendererComponents } from "./renderers/registry";
 
 export interface EntityItemAttributesProps {
   readonly profile: ProfileEntity;
@@ -34,15 +34,36 @@ function formatBooleanTableValue(attr: EntityItemAttribute): string {
   return "unset";
 }
 
+function isDefined(attr: EntityItemAttribute | undefined): attr is EntityItemAttribute {
+  return attr !== undefined;
+}
+
+function AuditAttributeRow({ attrs }: Readonly<{ attrs: readonly EntityItemAttribute[] }>) {
+  if (attrs.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+      {attrs.map((attr, index) => (
+        <span key={attr.value.name} className="flex items-center gap-2">
+          {index > 0 && <span aria-hidden>·</span>}
+          <AttributeValueRenderer attr={attr} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /**
- * Renders an entity item's user-defined attributes: audit trail (created/
- * modified) up top, boolean attributes as a row of chips below that, then a
- * simple label/value table for every attribute — booleans included, shown as
- * plain "true"/"false"/"unset" text there. Purely presentational: it reads
- * the resolved `EntityItem` accessor and renders it — it fetches nothing itself.
+ * Renders an entity item's user-defined attributes: audit trail up top as two
+ * rows (created date + creator, then modified date + modifier), boolean
+ * attributes as a row of chips below that, then a simple label/value table
+ * for every attribute — booleans included, shown as plain "true"/"false"/
+ * "unset" text there. Purely presentational: it reads the resolved
+ * `EntityItem` accessor and renders it — it fetches nothing itself.
  */
 export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttributesProps>) {
-  const components = useAttributeRendererComponents();
+  const components = useAttributeValueRendererComponents();
 
   const attributes = item.userDefinedAttributes
     .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
@@ -52,20 +73,15 @@ export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttri
     }));
 
   const booleanAttributes = attributes.filter(({ attr }) => isBooleanAttribute(attr));
-  const auditAttributes = item.auditAttributes.filter(
-    (attr) => attr.value.kind !== AttributeKind.NESTED,
-  );
+  const createdAttrs = [item.createdDate, item.createdBy].filter(isDefined);
+  const modifiedAttrs = [item.modifiedDate, item.modifiedBy].filter(isDefined);
 
   return (
     <div className="space-y-4">
-      {auditAttributes.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-          {auditAttributes.map((attr, index) => (
-            <span key={attr.value.name} className="flex items-center gap-2">
-              {index > 0 && <span aria-hidden>·</span>}
-              <AttributeValueRenderer attr={attr} />
-            </span>
-          ))}
+      {(createdAttrs.length > 0 || modifiedAttrs.length > 0) && (
+        <div className="space-y-1">
+          <AuditAttributeRow attrs={createdAttrs} />
+          <AuditAttributeRow attrs={modifiedAttrs} />
         </div>
       )}
       {booleanAttributes.length > 0 && (

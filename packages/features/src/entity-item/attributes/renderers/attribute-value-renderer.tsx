@@ -3,7 +3,7 @@ import {
   type EntityItemAttribute,
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
-import { useAttributeRendererComponents } from "./registry";
+import { useAttributeValueRendererComponents } from "./registry";
 
 export interface AttributeValueRendererProps {
   readonly attr: EntityItemAttribute;
@@ -16,7 +16,7 @@ export interface AttributeValueRendererProps {
  * nothing.
  */
 export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRendererProps>) {
-  const components = useAttributeRendererComponents();
+  const components = useAttributeValueRendererComponents();
 
   if (attr.value.kind === AttributeKind.CONTENT) {
     return <components.content metadata={attr.value.metadata} />;
@@ -29,16 +29,20 @@ export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRenderer
   }
 
   if (attr.profileAttribute?.isCreatedDate) {
-    return <components.createdDate value={attr.value.value as string | null} />;
+    const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
+    return <components.createdDate value={attr.value.value as string | null} label={label} />;
   }
   if (attr.profileAttribute?.isModifiedDate) {
-    return <components.modifiedDate value={attr.value.value as string | null} />;
+    const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
+    return <components.modifiedDate value={attr.value.value as string | null} label={label} />;
   }
   if (attr.profileAttribute?.isCreatedBy) {
-    return <components.createdBy value={attr.value.value} />;
+    const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
+    return <components.createdBy value={attr.value.value} label={label} />;
   }
   if (attr.profileAttribute?.isModifiedBy) {
-    return <components.modifiedBy value={attr.value.value} />;
+    const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
+    return <components.modifiedBy value={attr.value.value} label={label} />;
   }
 
   const type = attr.profileAttribute?.type;

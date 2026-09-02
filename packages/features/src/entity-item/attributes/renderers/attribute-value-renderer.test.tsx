@@ -34,10 +34,12 @@ const spyRenderers: AttributeRendererComponents = {
   number: ({ value, type }) => <span data-testid="r-number">{`${value}:${type}`}</span>,
   date: ({ value }) => <span data-testid="r-date">{String(value)}</span>,
   datetime: ({ value }) => <span data-testid="r-datetime">{String(value)}</span>,
-  createdDate: ({ value }) => <span data-testid="r-createdDate">{String(value)}</span>,
-  modifiedDate: ({ value }) => <span data-testid="r-modifiedDate">{String(value)}</span>,
-  createdBy: ({ value }) => <span data-testid="r-createdBy">{String(value)}</span>,
-  modifiedBy: ({ value }) => <span data-testid="r-modifiedBy">{String(value)}</span>,
+  createdDate: ({ value, label }) => <span data-testid="r-createdDate">{`${label}:${value}`}</span>,
+  modifiedDate: ({ value, label }) => (
+    <span data-testid="r-modifiedDate">{`${label}:${value}`}</span>
+  ),
+  createdBy: ({ value, label }) => <span data-testid="r-createdBy">{`${label}:${value}`}</span>,
+  modifiedBy: ({ value, label }) => <span data-testid="r-modifiedBy">{`${label}:${value}`}</span>,
   content: ({ metadata }) => <span data-testid="r-content">{JSON.stringify(metadata)}</span>,
   unknown: () => <span data-testid="r-unknown" />,
 };
@@ -80,7 +82,7 @@ describe("AttributeValueRenderer", () => {
         type: ProfileAttributeType.datetime,
       }),
     });
-    expect(screen.getByTestId("r-createdDate")).toHaveTextContent("2021-01-01T00:00:00.000Z");
+    expect(screen.getByTestId("r-createdDate")).toHaveTextContent("Attr:2021-01-01T00:00:00.000Z");
     expect(screen.queryByTestId("r-datetime")).not.toBeInTheDocument();
   });
 
@@ -89,7 +91,7 @@ describe("AttributeValueRenderer", () => {
       value: new EntityItemAttributePlain("updatedAt", "2021-01-02T00:00:00.000Z"),
       profileAttribute: makeProfileAttribute({ isModifiedDate: true }),
     });
-    expect(screen.getByTestId("r-modifiedDate")).toHaveTextContent("2021-01-02T00:00:00.000Z");
+    expect(screen.getByTestId("r-modifiedDate")).toHaveTextContent("Attr:2021-01-02T00:00:00.000Z");
   });
 
   it("dispatches created-by attributes to the createdBy renderer", () => {
@@ -97,7 +99,7 @@ describe("AttributeValueRenderer", () => {
       value: new EntityItemAttributePlain("createdBy", "jane@example.com"),
       profileAttribute: makeProfileAttribute({ isCreatedBy: true }),
     });
-    expect(screen.getByTestId("r-createdBy")).toHaveTextContent("jane@example.com");
+    expect(screen.getByTestId("r-createdBy")).toHaveTextContent("Attr:jane@example.com");
   });
 
   it("dispatches modified-by attributes to the modifiedBy renderer", () => {
@@ -105,7 +107,7 @@ describe("AttributeValueRenderer", () => {
       value: new EntityItemAttributePlain("modifiedBy", "jane@example.com"),
       profileAttribute: makeProfileAttribute({ isModifiedBy: true }),
     });
-    expect(screen.getByTestId("r-modifiedBy")).toHaveTextContent("jane@example.com");
+    expect(screen.getByTestId("r-modifiedBy")).toHaveTextContent("Attr:jane@example.com");
   });
 
   it("gives created-date precedence over the other audit flags", () => {

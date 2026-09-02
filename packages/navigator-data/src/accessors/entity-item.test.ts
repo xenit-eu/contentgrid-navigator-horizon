@@ -319,6 +319,78 @@ describe("EntityItem — auditAttributes", () => {
   });
 });
 
+describe("EntityItem — audit attribute accessors", () => {
+  const profileEntity = makeProfileEntity([
+    { name: "number", type: "string", description: "", readonly: false },
+    {
+      name: "created_at",
+      type: "datetime",
+      description: "",
+      readonly: true,
+      _embedded: { [BLUEPRINT_CONSTRAINT_REL]: [{ type: "created-date" }] },
+    },
+    {
+      name: "created_by",
+      type: "string",
+      description: "",
+      readonly: true,
+      _embedded: { [BLUEPRINT_CONSTRAINT_REL]: [{ type: "created-by" }] },
+    },
+    {
+      name: "modified_at",
+      type: "datetime",
+      description: "",
+      readonly: true,
+      _embedded: { [BLUEPRINT_CONSTRAINT_REL]: [{ type: "modified-date" }] },
+    },
+    {
+      name: "modified_by",
+      type: "string",
+      description: "",
+      readonly: true,
+      _embedded: { [BLUEPRINT_CONSTRAINT_REL]: [{ type: "modified-by" }] },
+    },
+  ]);
+  const hal = makeEntityItemHal({
+    id: "inv-001",
+    number: "INV-001",
+    created_at: "2024-01-01T00:00:00.000Z",
+    created_by: "jane@example.com",
+    modified_at: "2024-02-01T00:00:00.000Z",
+    modified_by: "john@example.com",
+  });
+  const item = new EntityItem(hal, profileEntity);
+
+  it("createdDate returns the created-date audit attribute", () => {
+    expect(item.createdDate?.value.name).toBe("created_at");
+  });
+
+  it("modifiedDate returns the modified-date audit attribute", () => {
+    expect(item.modifiedDate?.value.name).toBe("modified_at");
+  });
+
+  it("createdBy returns the created-by audit attribute", () => {
+    expect(item.createdBy?.value.name).toBe("created_by");
+  });
+
+  it("modifiedBy returns the modified-by audit attribute", () => {
+    expect(item.modifiedBy?.value.name).toBe("modified_by");
+  });
+
+  it("returns undefined for each accessor when the profile has no matching audit attribute", () => {
+    const bareProfile = makeProfileEntity([
+      { name: "number", type: "string", description: "", readonly: false },
+    ]);
+    const bareHal = makeEntityItemHal({ id: "inv-001", number: "INV-001" });
+    const bareItem = new EntityItem(bareHal, bareProfile);
+
+    expect(bareItem.createdDate).toBeUndefined();
+    expect(bareItem.modifiedDate).toBeUndefined();
+    expect(bareItem.createdBy).toBeUndefined();
+    expect(bareItem.modifiedBy).toBeUndefined();
+  });
+});
+
 describe("EntityItem — defaultTemplate", () => {
   it("returns null when no default template on the item", () => {
     const hal = makeEntityItemHal({ id: "inv-001" });

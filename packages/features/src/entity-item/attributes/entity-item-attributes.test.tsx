@@ -31,9 +31,14 @@ function makeProfile(attributes: { name: string; title: string }[]): ProfileEnti
 
 function makeItem(
   userDefinedAttributes: EntityItemAttribute[],
-  auditAttributes: EntityItemAttribute[] = [],
+  audit: {
+    createdDate?: EntityItemAttribute;
+    createdBy?: EntityItemAttribute;
+    modifiedDate?: EntityItemAttribute;
+    modifiedBy?: EntityItemAttribute;
+  } = {},
 ): EntityItem {
-  return { userDefinedAttributes, auditAttributes } as unknown as EntityItem;
+  return { userDefinedAttributes, ...audit } as unknown as EntityItem;
 }
 
 describe("EntityItemAttributes", () => {
@@ -42,48 +47,61 @@ describe("EntityItemAttributes", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("renders audit attributes above the table, separated by a middle dot", () => {
+  it("renders created date and creator on one row, separated by a middle dot", () => {
     render(
       <EntityItemAttributes
         profile={makeProfile([])}
-        item={makeItem(
-          [],
-          [
-            {
-              value: new EntityItemAttributePlain("createdBy", "jane@example.com"),
-              profileAttribute: makeProfileAttribute({ name: "createdBy", isCreatedBy: true }),
-            },
-            {
-              value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
-              profileAttribute: makeProfileAttribute({ name: "createdAt", isCreatedDate: true }),
-            },
-          ],
-        )}
+        item={makeItem([], {
+          createdBy: {
+            value: new EntityItemAttributePlain("createdBy", "jane@example.com"),
+            profileAttribute: makeProfileAttribute({ name: "createdBy", isCreatedBy: true }),
+          },
+          createdDate: {
+            value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
+            profileAttribute: makeProfileAttribute({ name: "createdAt", isCreatedDate: true }),
+          },
+        })}
       />,
     );
-    expect(screen.getByText("jane@example.com")).toBeInTheDocument();
-    expect(screen.getByText(/^created /)).toBeInTheDocument();
+    expect(screen.getByText("Attr: jane@example.com")).toBeInTheDocument();
+    expect(screen.getAllByText(/^Attr: /)).toHaveLength(2);
     expect(screen.getByText("·")).toBeInTheDocument();
   });
 
-  it("filters nested attributes out of both the audit row and the table", () => {
+  it("renders the created row and modified row separately, without a dot between them", () => {
+    render(
+      <EntityItemAttributes
+        profile={makeProfile([])}
+        item={makeItem([], {
+          createdDate: {
+            value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
+            profileAttribute: makeProfileAttribute({ name: "createdAt", isCreatedDate: true }),
+          },
+          modifiedDate: {
+            value: new EntityItemAttributePlain("modifiedAt", "2016-02-01T00:00:00.000Z"),
+            profileAttribute: makeProfileAttribute({ name: "modifiedAt", isModifiedDate: true }),
+          },
+        })}
+      />,
+    );
+    expect(screen.getAllByText(/^Attr: /)).toHaveLength(2);
+    expect(screen.queryByText("·")).not.toBeInTheDocument();
+  });
+
+  it("filters nested attributes out of the table", () => {
     render(
       <EntityItemAttributes
         profile={makeProfile([{ name: "name", title: "Name" }])}
-        item={makeItem(
-          [
-            {
-              value: new EntityItemAttributePlain("name", "Acme"),
-              profileAttribute: makeProfileAttribute({ name: "name" }),
-            },
-            { value: new EntityItemAttributeNested("address", { city: "Ghent" }) },
-          ],
-          [new EntityItemAttributeNested("meta", { x: 1 })].map((value) => ({ value })),
-        )}
+        item={makeItem([
+          {
+            value: new EntityItemAttributePlain("name", "Acme"),
+            profileAttribute: makeProfileAttribute({ name: "name" }),
+          },
+          { value: new EntityItemAttributeNested("address", { city: "Ghent" }) },
+        ])}
       />,
     );
     expect(screen.queryByText("address")).not.toBeInTheDocument();
-    expect(screen.queryByText("meta")).not.toBeInTheDocument();
     expect(screen.getAllByRole("row")).toHaveLength(1);
   });
 
