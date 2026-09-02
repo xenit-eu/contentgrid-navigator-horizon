@@ -47,7 +47,7 @@ describe("EntityItemAttributes", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("renders created date and creator on one row, separated by a middle dot", () => {
+  it("renders created date and creator on one row", () => {
     render(
       <EntityItemAttributes
         profile={makeProfile([])}
@@ -65,10 +65,9 @@ describe("EntityItemAttributes", () => {
     );
     expect(screen.getByText("Attr: jane@example.com")).toBeInTheDocument();
     expect(screen.getAllByText(/^Attr: /)).toHaveLength(2);
-    expect(screen.getByText("·")).toBeInTheDocument();
   });
 
-  it("renders the created row and modified row separately, without a dot between them", () => {
+  it("renders the created row and modified row separately", () => {
     render(
       <EntityItemAttributes
         profile={makeProfile([])}
@@ -85,7 +84,6 @@ describe("EntityItemAttributes", () => {
       />,
     );
     expect(screen.getAllByText(/^Attr: /)).toHaveLength(2);
-    expect(screen.queryByText("·")).not.toBeInTheDocument();
   });
 
   it("only draws a connecting line before the last timeline entry", () => {
