@@ -16,6 +16,7 @@ export function CreatedByAttributeRenderer({
       status="neutral"
       icon={<UserIcon size={14} aria-hidden />}
       label={`${label}: ${displayValue}`}
+      className="whitespace-normal break-words"
     />
   );
 }

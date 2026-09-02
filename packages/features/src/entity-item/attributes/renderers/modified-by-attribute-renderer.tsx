@@ -17,7 +17,7 @@ export function ModifiedByAttributeRenderer({
       status="neutral"
       icon={<UserIcon size={14} aria-hidden />}
       label={`${label}: ${displayValue}`}
-      className="text-xs"
+      className="text-xs whitespace-normal break-words"
     />
   );
 }
