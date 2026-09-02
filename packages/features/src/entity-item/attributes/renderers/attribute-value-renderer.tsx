@@ -7,6 +7,12 @@ import { useAttributeValueRendererComponents } from "./registry";
 
 export interface AttributeValueRendererProps {
   readonly attr: EntityItemAttribute;
+  /**
+   * Wrap onto multiple lines instead of truncating with an ellipsis. Only
+   * applied to renderers whose props support it — passing it through has no
+   * effect on kinds that don't (content, unknown, boolean, number).
+   */
+  readonly wrap?: boolean;
 }
 
 /**
@@ -15,7 +21,7 @@ export interface AttributeValueRendererProps {
  * titles, and the main attribute table). Nested/object attributes render
  * nothing.
  */
-export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRendererProps>) {
+export function AttributeValueRenderer({ attr, wrap }: Readonly<AttributeValueRendererProps>) {
   const components = useAttributeValueRendererComponents();
 
   if (attr.value.kind === AttributeKind.CONTENT) {
@@ -30,19 +36,27 @@ export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRenderer
 
   if (attr.profileAttribute?.isCreatedDate) {
     const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
-    return <components.createdDate value={attr.value.value as string | null} label={label} />;
+    return (
+      <components.createdDate value={attr.value.value as string | null} label={label} wrap={wrap} />
+    );
   }
   if (attr.profileAttribute?.isModifiedDate) {
     const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
-    return <components.modifiedDate value={attr.value.value as string | null} label={label} />;
+    return (
+      <components.modifiedDate
+        value={attr.value.value as string | null}
+        label={label}
+        wrap={wrap}
+      />
+    );
   }
   if (attr.profileAttribute?.isCreatedBy) {
     const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
-    return <components.createdBy value={attr.value.value} label={label} />;
+    return <components.createdBy value={attr.value.value} label={label} wrap={wrap} />;
   }
   if (attr.profileAttribute?.isModifiedBy) {
     const label = attr.profileAttribute.title ?? attr.profileAttribute.name;
-    return <components.modifiedBy value={attr.value.value} label={label} />;
+    return <components.modifiedBy value={attr.value.value} label={label} wrap={wrap} />;
   }
 
   const type = attr.profileAttribute?.type;
@@ -55,10 +69,10 @@ export function AttributeValueRenderer({ attr }: Readonly<AttributeValueRenderer
     return <components.number value={attr.value.value as number | null} type={type} />;
   }
   if (type === ProfileAttributeType.date) {
-    return <components.date value={attr.value.value as string | null} />;
+    return <components.date value={attr.value.value as string | null} wrap={wrap} />;
   }
   if (type === ProfileAttributeType.datetime) {
-    return <components.datetime value={attr.value.value as string | null} />;
+    return <components.datetime value={attr.value.value as string | null} wrap={wrap} />;
   }
-  return <components.string value={attr.value.value} />;
+  return <components.string value={attr.value.value} wrap={wrap} />;
 }
