@@ -88,6 +88,25 @@ describe("EntityItemAttributes", () => {
     expect(screen.queryByText("·")).not.toBeInTheDocument();
   });
 
+  it("only draws a connecting line before the last timeline entry", () => {
+    const { container } = render(
+      <EntityItemAttributes
+        profile={makeProfile([])}
+        item={makeItem([], {
+          createdDate: {
+            value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
+            profileAttribute: makeProfileAttribute({ name: "createdAt", isCreatedDate: true }),
+          },
+          modifiedDate: {
+            value: new EntityItemAttributePlain("modifiedAt", "2016-02-01T00:00:00.000Z"),
+            profileAttribute: makeProfileAttribute({ name: "modifiedAt", isModifiedDate: true }),
+          },
+        })}
+      />,
+    );
+    expect(container.querySelectorAll(".bg-muted-foreground\\/30")).toHaveLength(1);
+  });
+
   it("filters nested attributes out of the table", () => {
     render(
       <EntityItemAttributes

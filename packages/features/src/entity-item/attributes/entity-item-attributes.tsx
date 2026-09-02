@@ -38,29 +38,38 @@ function isDefined(attr: EntityItemAttribute | undefined): attr is EntityItemAtt
   return attr !== undefined;
 }
 
-function AuditAttributeRow({ attrs }: Readonly<{ attrs: readonly EntityItemAttribute[] }>) {
-  if (attrs.length === 0) {
-    return null;
-  }
+function AuditTimelineEntry({
+  attrs,
+  isLast,
+}: Readonly<{ attrs: readonly EntityItemAttribute[]; isLast: boolean }>) {
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-      {attrs.map((attr, index) => (
-        <span key={attr.value.name} className="flex items-center gap-2">
-          {index > 0 && <span aria-hidden>·</span>}
-          <AttributeValueRenderer attr={attr} />
-        </span>
-      ))}
+    <div className="relative flex gap-3 pb-3 last:pb-0">
+      {!isLast && (
+        <span
+          className="absolute top-5.5 bottom-0 left-[2px] w-0.5 bg-muted-foreground/30"
+          aria-hidden
+        />
+      )}
+      <span className="mt-2 size-[7px] shrink-0 rounded-full bg-muted-foreground" aria-hidden />
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground/80">
+        {attrs.map((attr, index) => (
+          <span key={attr.value.name} className="flex items-center gap-2">
+            {index > 0 && <span aria-hidden>·</span>}
+            <AttributeValueRenderer attr={attr} />
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
 
 /**
- * Renders an entity item's user-defined attributes: audit trail up top as two
- * rows (created date + creator, then modified date + modifier), boolean
- * attributes as a row of chips below that, then a simple label/value table
- * for every attribute — booleans included, shown as plain "true"/"false"/
- * "unset" text there. Purely presentational: it reads the resolved
- * `EntityItem` accessor and renders it — it fetches nothing itself.
+ * Renders an entity item's user-defined attributes: audit trail up top as a
+ * two-entry timeline (created date + creator, then modified date +
+ * modifier), boolean attributes as a row of chips below that, then a simple
+ * label/value table for every attribute — booleans included, shown as plain
+ * "true"/"false"/"unset" text there. Purely presentational: it reads the
+ * resolved `EntityItem` accessor and renders it — it fetches nothing itself.
  */
 export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttributesProps>) {
   const components = useAttributeValueRendererComponents();
@@ -75,15 +84,10 @@ export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttri
   const booleanAttributes = attributes.filter(({ attr }) => isBooleanAttribute(attr));
   const createdAttrs = [item.createdDate, item.createdBy].filter(isDefined);
   const modifiedAttrs = [item.modifiedDate, item.modifiedBy].filter(isDefined);
+  const timelineEntries = [createdAttrs, modifiedAttrs].filter((attrs) => attrs.length > 0);
 
   return (
     <div className="space-y-4">
-      {(createdAttrs.length > 0 || modifiedAttrs.length > 0) && (
-        <div className="space-y-1">
-          <AuditAttributeRow attrs={createdAttrs} />
-          <AuditAttributeRow attrs={modifiedAttrs} />
-        </div>
-      )}
       {booleanAttributes.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {booleanAttributes.map(({ attr, label }) => (
@@ -116,6 +120,17 @@ export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttri
             ))}
           </TableBody>
         </Table>
+      )}
+      {timelineEntries.length > 0 && (
+        <div className="">
+          {timelineEntries.map((attrs, index) => (
+            <AuditTimelineEntry
+              key={attrs[0].value.name}
+              attrs={attrs}
+              isLast={index === timelineEntries.length - 1}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
