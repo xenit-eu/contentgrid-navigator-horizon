@@ -4,17 +4,17 @@ import { CreatedByAttributeRenderer } from "./created-by-attribute-renderer";
 
 describe("CreatedByAttributeRenderer", () => {
   it("renders an em dash when value is null", () => {
-    render(<CreatedByAttributeRenderer value={null} />);
-    expect(screen.getByText("—")).toBeInTheDocument();
+    render(<CreatedByAttributeRenderer value={null} label="Created by" />);
+    expect(screen.getByText("Created by: —")).toBeInTheDocument();
   });
 
-  it("renders the string value as-is", () => {
-    render(<CreatedByAttributeRenderer value="jane@example.com" />);
-    expect(screen.getByText("jane@example.com")).toBeInTheDocument();
+  it("renders the string value prefixed with the attribute label", () => {
+    render(<CreatedByAttributeRenderer value="jane@example.com" label="Created by" />);
+    expect(screen.getByText("Created by: jane@example.com")).toBeInTheDocument();
   });
 
   it("stringifies non-string values", () => {
-    render(<CreatedByAttributeRenderer value={42} />);
-    expect(screen.getByText("42")).toBeInTheDocument();
+    render(<CreatedByAttributeRenderer value={42} label="Created by" />);
+    expect(screen.getByText("Created by: 42")).toBeInTheDocument();
   });
 });

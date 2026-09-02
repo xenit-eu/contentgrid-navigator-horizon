@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   AttributeRendererProvider,
   defaultAttributeRendererComponents,
-  useAttributeRendererComponents,
+  useAttributeValueRendererComponents,
 } from "./registry";
 
 function ComponentsProbe() {
-  const components = useAttributeRendererComponents();
+  const components = useAttributeValueRendererComponents();
   return (
     <div>
       <span data-testid="is-default-string">
@@ -18,7 +18,7 @@ function ComponentsProbe() {
   );
 }
 
-describe("useAttributeRendererComponents", () => {
+describe("useAttributeValueRendererComponents", () => {
   it("returns the built-in defaults when used outside a provider", () => {
     render(<ComponentsProbe />);
     expect(screen.getByTestId("is-default-string")).toHaveTextContent("true");
@@ -44,7 +44,7 @@ describe("AttributeRendererProvider", () => {
 
   it("falls back to defaults for renderers not present in overrides", () => {
     function ComponentsBooleanProbe() {
-      const components = useAttributeRendererComponents();
+      const components = useAttributeValueRendererComponents();
       return (
         <span data-testid="is-default-boolean">
           {String(components.boolean === defaultAttributeRendererComponents.boolean)}

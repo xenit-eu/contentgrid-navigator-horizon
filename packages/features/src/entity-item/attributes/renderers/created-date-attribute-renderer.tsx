@@ -4,10 +4,12 @@ import { formatRelativeOrAbsoluteDate } from "./format-relative-date";
 
 export interface CreatedDateAttributeRendererProps {
   readonly value: string | null;
+  readonly label: string;
 }
 
 export function CreatedDateAttributeRenderer({
   value,
+  label,
 }: Readonly<CreatedDateAttributeRendererProps>) {
   if (value == null) {
     return <AttributeValue />;
@@ -21,7 +23,7 @@ export function CreatedDateAttributeRenderer({
   return (
     <span className="flex items-center gap-1.5">
       <CalendarIcon size={14} className="text-muted-foreground" aria-hidden />
-      <AttributeValue>{`created ${formatRelativeOrAbsoluteDate(parsed)}`}</AttributeValue>
+      <AttributeValue>{`${label}: ${formatRelativeOrAbsoluteDate(parsed)}`}</AttributeValue>
     </span>
   );
 }
