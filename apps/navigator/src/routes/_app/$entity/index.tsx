@@ -78,7 +78,9 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
   // synced from the URL yet" and "explicitly cleared," and the explicit-clear path
   // (`handleFiltersChange`) already updates `filters` directly for that case.
   useEffect(() => {
-    if (Object.keys(urlFilters).length > 0) setFilters(urlFilters);
+    // First pass is handled by the lazy initializer; from here on the URL is authoritative.
+    if (!didSyncUrlFromCacheRef.current) return;
+    setFilters(urlFilters);
   }, [urlFilters]);
 
   // The initial `filters` state above may have come from the cache rather than the URL (arrived
