@@ -8,10 +8,14 @@ import {
   toProblemDisplayModel,
   useCreateEntityItem,
   useFormFields,
-  useProfileEntities,
+  useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { Button, FieldRenderer, Skeleton } from "@contentgrid/ui";
-import { ProblemAlert } from "../problem-details";
+import {
+  ProblemAlert,
+  type RelationConflictAlertProps,
+  type ValidationAlertProps,
+} from "../problem-details";
 import { RelationField, isRelationField } from "./relation-field";
 
 export interface CreateEntityItemFormProps {
@@ -34,6 +38,38 @@ export interface CreateEntityItemFormProps {
    * tracks this signal and owns the guard itself.
    */
   readonly onDirtyChange?: (isDirty: boolean) => void;
+  /**
+   * Fires for a `duplicate` entity-level validation error (HTTP 400) — e.g. a unique
+   * constraint spanning fields the create-form doesn't render inline. Receives the
+   * conflicting item's href.
+   */
+  readonly onConflictingItemClick?: ValidationAlertProps["onConflictingItemClick"];
+  /**
+   * Fires for a `missing-relation-target` entity-level validation error (HTTP 400) — a
+   * linked href no longer resolves to an entity item. Receives the dangling href.
+   */
+  readonly onMissingRelationTargetClick?: ValidationAlertProps["onMissingRelationTargetClick"];
+  /**
+   * Fires for an `allowed-values` entity-level validation error (HTTP 400). Receives the
+   * allowed values from the problem body.
+   */
+  readonly onAllowedValuesClick?: ValidationAlertProps["onAllowedValuesClick"];
+  /**
+   * Fires for a `type`/`type-format` entity-level validation error (HTTP 400). Receives
+   * the expected/actual type info from the problem body.
+   */
+  readonly onExpectedTypeClick?: ValidationAlertProps["onExpectedTypeClick"];
+  /**
+   * Fires for a `blindRelationOverwrite` entity-level error (HTTP 409) — a to-one relation
+   * set by this create would silently overwrite an existing link. Receives the conflicting
+   * link info.
+   */
+  readonly onBlindRelationOverwriteClick?: RelationConflictAlertProps["onBlindRelationOverwriteClick"];
+  /**
+   * Fires for a `requiredRelation` entity-level error (HTTP 409). Receives the affected
+   * relation name.
+   */
+  readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
 }
 
 /**
@@ -49,10 +85,9 @@ export function CreateEntityItemForm(props: Readonly<CreateEntityItemFormProps>)
   if (!createTemplate) {
     return (
       <ProblemAlert
-        model={{
-          kind: "unknown",
-          title: `Creating a new ${props.profile.singularName} is not permitted.`,
-        }}
+        model={toProblemDisplayModel(
+          `Creating a new ${props.profile.singularName} is not permitted.`,
+        )}
       />
     );
   }
@@ -67,6 +102,12 @@ function CreateEntityItemFormFields({
   onCancel,
   renderCreateRelationTarget,
   onDirtyChange,
+  onConflictingItemClick,
+  onMissingRelationTargetClick,
+  onAllowedValuesClick,
+  onExpectedTypeClick,
+  onBlindRelationOverwriteClick,
+  onRequiredRelationClick,
 }: Readonly<CreateEntityItemFormProps & { createTemplate: CreateHalFormTemplate }>) {
   const fields = useMemo(() => createFormToRenderFields(createTemplate), [createTemplate]);
   const hasRelationFields = useMemo(() => fields.some(isRelationField), [fields]);
@@ -77,26 +118,12 @@ function CreateEntityItemFormFields({
     onDirtyChange?.(formFields.isDirty);
   }, [formFields.isDirty, onDirtyChange]);
 
-  // Not useLoadedProfileEntities() — its isLoading is "every result is still
-  // pending", which flips false as soon as ONE profile settles (e.g. one
-  // already cached from elsewhere) even while others are still loading,
-  // making the "target not found" fallback below fire on a profile that
-  // simply hasn't resolved yet.
-  //
   // Disabled via queryOptionsOverride (never by skipping the hook call, per
   // navigator-data/CLAUDE.md) when this form has no relation field — fetching
   // every entity profile in the application is otherwise wasted work.
-  const profileResults = useProfileEntities({
+  const { profiles, isLoading: profilesLoading } = useLoadedProfileEntities({
     queryOptionsOverride: { enabled: hasRelationFields },
   });
-  const profiles = useMemo(
-    () => profileResults.flatMap((r) => (r.data ? [r.data] : [])),
-    [profileResults],
-  );
-  // profileResults is [] both before the profile-root query resolves (entity
-  // links not yet derived) and when disabled above — neither is "settled",
-  // so an empty array must not vacuously satisfy .every().
-  const profilesSettled = profileResults.length > 0 && profileResults.every((r) => !r.isPending);
   const [relationItemsData, setRelationItemsData] = useState<
     Record<string, Record<string, unknown>>
   >({});
@@ -156,6 +183,18 @@ function CreateEntityItemFormFields({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      {nonFieldError && (
+        <ProblemAlert
+          model={toProblemDisplayModel(nonFieldError)}
+          onConflictingItemClick={onConflictingItemClick}
+          onMissingRelationTargetClick={onMissingRelationTargetClick}
+          onAllowedValuesClick={onAllowedValuesClick}
+          onExpectedTypeClick={onExpectedTypeClick}
+          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onRequiredRelationClick={onRequiredRelationClick}
+        />
+      )}
+
       {fields.map((field) => {
         if (!isRelationField(field)) {
           return (
@@ -169,7 +208,7 @@ function CreateEntityItemFormFields({
           );
         }
 
-        if (!profilesSettled) {
+        if (profilesLoading) {
           return <Skeleton key={field.name} className="h-16 w-full rounded-md" />;
         }
 
@@ -196,8 +235,6 @@ function CreateEntityItemFormFields({
           />
         );
       })}
-
-      {nonFieldError && <ProblemAlert model={toProblemDisplayModel(nonFieldError)} />}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={createMutation.isPending}>

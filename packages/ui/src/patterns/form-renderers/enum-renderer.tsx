@@ -1,4 +1,4 @@
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/schema";
+import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
 import {
   Select,
   SelectContent,

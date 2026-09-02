@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/schema";
+import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
 import { EntityPicker } from "../entity-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
 import type { RelationRendererPickerProps } from "./relation-picker-props";

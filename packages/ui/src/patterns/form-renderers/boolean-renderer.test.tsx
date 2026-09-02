@@ -14,9 +14,9 @@ describe("BooleanRenderer", () => {
     expect(screen.getByRole("checkbox")).toBeChecked();
   });
 
-  it("treats a non-boolean value as unchecked", () => {
+  it("renders an unset value as indeterminate, distinct from false", () => {
     render(<BooleanRenderer field={booleanField()} value={undefined} onChange={vi.fn()} />);
-    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "mixed");
   });
 
   it("calls onChange with true when checked", () => {

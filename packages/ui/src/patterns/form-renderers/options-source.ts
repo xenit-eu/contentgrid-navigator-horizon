@@ -1,4 +1,4 @@
-import type { FieldOption, FieldOptionsSource } from "@contentgrid/navigator-data/schema";
+import type { FieldOption, FieldOptionsSource } from "@contentgrid/navigator-data/form-fields";
 
 /**
  * `EnumRenderer` and `EnumMultiRenderer` only render inline options — resolving

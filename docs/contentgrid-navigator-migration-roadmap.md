@@ -292,14 +292,14 @@ The single biggest correctness gap. The prototype's `useFormFields` (the startin
 
 **Scope correction vs. earlier draft:** the heavy lifting (parsing `_templates` → `HalFormsTemplate` / `HalFormsProperty`) is already done by Xenit's `@contentgrid/hal-forms` (`resolveTemplate`). The work here is a **bridge mapper** that adapts that output to a shadcn-renderer-friendly `FieldDescriptor[]`, plus the renderer set itself. Not a 500-LOC port.
 
-| #    | Task                                                                                                                                                                                              | Estimate | Confidence |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- |
-| 5A.1 | Bridge `@contentgrid/hal-forms.HalFormsTemplate` → `FieldDescriptor[]` in `packages/navigator-data/src/schema/`. Handles type mapping, range-pair pairing, options/enum, relation-link references | 0.75d    | M          |
-| 5A.2 | Replace `useFormFields` to consume `_templates.create-form` / `default-form` via the bridge                                                                                                       | 0.5d     | H          |
-| 5A.3 | shadcn-native field renderers: typeahead (prefix-match), enum (single + multi), datetime, **range date pair**, file, relation (to-one + to-many)                                                  | 1.5d     | M          |
-| 5A.4 | Unsaved-changes route guard on dirty form (TanStack Router `beforeLoad`/`onLeave`)                                                                                                                | 0.25d    | H          |
-| 5A.5 | Relation accordion + unlink-all flow                                                                                                                                                              | 0.5d     | H          |
-| 5A.6 | Round-trip parity test: existing navigator's `_templates` for a known entity renders identically in the new app, consuming Phase 0.5 fixtures                                                     | 0.25d    | M          |
+| #    | Task                                                                                                                                                                                                         | Estimate | Confidence |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ---------- |
+| 5A.1 | Bridge `@contentgrid/hal-forms.HalFormsTemplate` → `RenderFieldDescriptor[]` in `packages/navigator-data/src/form-fields/`. Handles type mapping, range-pair pairing, options/enum, relation-link references | 0.75d    | M          |
+| 5A.2 | Replace `useFormFields` to consume `_templates.create-form` / `default-form` via the bridge                                                                                                                  | 0.5d     | H          |
+| 5A.3 | shadcn-native field renderers: typeahead (prefix-match), enum (single + multi), datetime, **range date pair**, file, relation (to-one + to-many)                                                             | 1.5d     | M          |
+| 5A.4 | Unsaved-changes route guard on dirty form (TanStack Router `beforeLoad`/`onLeave`)                                                                                                                           | 0.25d    | H          |
+| 5A.5 | Relation accordion + unlink-all flow                                                                                                                                                                         | 0.5d     | H          |
+| 5A.6 | Round-trip parity test: existing navigator's `_templates` for a known entity renders identically in the new app, consuming Phase 0.5 fixtures                                                                | 0.25d    | M          |
 
 **Exit criterion (5A):** known-entity HAL-Forms `_templates` round-trip identically against the existing navigator's reference output.
 

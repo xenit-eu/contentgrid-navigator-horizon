@@ -1,12 +1,14 @@
 import type { SimpleLink } from "@contentgrid/hal";
-import type { HalFormsProperty } from "@contentgrid/hal-forms";
 import type { ProfileRelation } from "../accessors/relation-profile";
 
 /**
- * Fields every RenderFieldDescriptor variant carries. `property` is the original HAL-FORMS
- * property — kept on every variant so the bridge never has to be extended just to stop dropping
- * a field the caller turns out to need (see packages/navigator-data/CLAUDE.md's "carry full
- * template property metadata through the RenderFieldDescriptor bridge" rule).
+ * Fields every RenderFieldDescriptor variant carries. Every piece of template metadata a
+ * `packages/ui` renderer needs (validation constraints, options) is surfaced as its own typed
+ * field on the relevant variant — see packages/navigator-data/CLAUDE.md's "carry full template
+ * property metadata through the RenderFieldDescriptor bridge" rule. There is no raw
+ * `HalFormsProperty` pass-through: `packages/ui` and `packages/features` are both forbidden from
+ * importing `@contentgrid/hal-forms` directly, so a field no renderer can construct or read
+ * without casting is dead weight, not a safety net.
  */
 export interface RenderFieldDescriptorBase {
   readonly name: string;
@@ -14,7 +16,6 @@ export interface RenderFieldDescriptorBase {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly property: HalFormsProperty;
 }
 
 export interface FieldOption {
