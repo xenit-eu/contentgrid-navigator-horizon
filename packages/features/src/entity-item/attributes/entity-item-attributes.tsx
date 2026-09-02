@@ -52,9 +52,8 @@ function AuditTimelineEntry({
       )}
       <span className="mt-2 size-[7px] shrink-0 rounded-full bg-muted-foreground" aria-hidden />
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground/80">
-        {attrs.map((attr, index) => (
+        {attrs.map((attr) => (
           <span key={attr.value.name} className="flex items-center gap-2">
-            {index > 0 && <span aria-hidden>·</span>}
             <AttributeValueRenderer attr={attr} />
           </span>
         ))}

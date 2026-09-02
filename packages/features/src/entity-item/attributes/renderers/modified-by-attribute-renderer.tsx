@@ -11,11 +11,13 @@ export function ModifiedByAttributeRenderer({
   label,
 }: Readonly<ModifiedByAttributeRendererProps>) {
   const displayValue = value == null ? "—" : String(value);
+
   return (
     <StatusPill
       status="neutral"
       icon={<UserIcon size={14} aria-hidden />}
       label={`${label}: ${displayValue}`}
+      className="text-xs"
     />
   );
 }
