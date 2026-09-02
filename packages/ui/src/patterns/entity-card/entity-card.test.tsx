@@ -76,6 +76,35 @@ describe("EntityCard", () => {
     await user.click(screen.getByText("Invoice"));
   });
 
+  it("is keyboard-focusable and exposes role=button when onCardClick is provided", () => {
+    render(<EntityCard {...baseProps} onCardClick={vi.fn()} />);
+    const card = screen.getByRole("button");
+    expect(card).toHaveAttribute("tabIndex", "0");
+  });
+
+  it("is not focusable and has no button role when onCardClick is omitted", () => {
+    render(<EntityCard {...baseProps} />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("calls onCardClick when Enter is pressed while the card is focused", async () => {
+    const user = userEvent.setup();
+    const onCardClick = vi.fn();
+    render(<EntityCard {...baseProps} onCardClick={onCardClick} />);
+    screen.getByRole("button").focus();
+    await user.keyboard("{Enter}");
+    expect(onCardClick).toHaveBeenCalledWith("invoice");
+  });
+
+  it("calls onCardClick when Space is pressed while the card is focused", async () => {
+    const user = userEvent.setup();
+    const onCardClick = vi.fn();
+    render(<EntityCard {...baseProps} onCardClick={onCardClick} />);
+    screen.getByRole("button").focus();
+    await user.keyboard(" ");
+    expect(onCardClick).toHaveBeenCalledWith("invoice");
+  });
+
   it("renders no action slot when omitted", () => {
     render(<EntityCard {...baseProps} />);
     expect(screen.queryByRole("button", { name: /create/i })).not.toBeInTheDocument();

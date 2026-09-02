@@ -47,11 +47,25 @@ export function EntityCard({
   return (
     <Card
       data-slot="entity-card"
+      role={onCardClick ? "button" : undefined}
+      tabIndex={onCardClick ? 0 : undefined}
       className={cn(
         "group relative transition-colors",
         onCardClick && "cursor-pointer hover:border-primary/50",
       )}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
+      onKeyDown={
+        onCardClick
+          ? (event) => {
+              if (event.key === "Enter") {
+                onCardClick(name);
+              } else if (event.key === " ") {
+                event.preventDefault();
+                onCardClick(name);
+              }
+            }
+          : undefined
+      }
     >
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <PageTitle
