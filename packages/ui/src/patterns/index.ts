@@ -12,6 +12,7 @@ export * from "./provenance-tag";
 export * from "./attribute-row";
 export * from "./table-row";
 export * from "./entity-selector";
+export * from "./attribute-selector";
 export * from "./user-menu";
 export * from "./icon-picker";
 export * from "./color-picker";
