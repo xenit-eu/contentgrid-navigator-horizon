@@ -5,6 +5,7 @@ import {
   applyFilterValues,
   buildFilterProperties,
   coerceFilterValue,
+  extractFilterValuesFromCollectionUrl,
   findInvalidFilterKeys,
 } from "./filter-properties";
 
@@ -638,6 +639,63 @@ describe("applyFilterValues", () => {
       title: "",
     });
     expect(result.value("title").value).toBeUndefined();
+  });
+});
+
+describe("extractFilterValuesFromCollectionUrl", () => {
+  it("extracts values for known filter properties from the query string", () => {
+    const result = extractFilterValuesFromCollectionUrl(
+      sharedProps,
+      "https://api.example.com/items?title=hello&amount~gte=100",
+    );
+    expect(result).toEqual({ title: "hello", "amount~gte": "100" });
+  });
+
+  it("ignores _cursor, _sort, _size, and _internal_* params", () => {
+    const result = extractFilterValuesFromCollectionUrl(
+      sharedProps,
+      "https://api.example.com/items?title=hello&_cursor=abc&_sort=title,asc&_size=20&_internal_invoice__products=xyz",
+    );
+    expect(result).toEqual({ title: "hello" });
+  });
+
+  it("ignores query params that don't match any known filter property", () => {
+    const result = extractFilterValuesFromCollectionUrl(
+      sharedProps,
+      "https://api.example.com/items?unknown_param=hello",
+    );
+    expect(result).toEqual({});
+  });
+
+  it("returns an empty object for a URL with no query string", () => {
+    expect(
+      extractFilterValuesFromCollectionUrl(sharedProps, "https://api.example.com/items"),
+    ).toEqual({});
+  });
+
+  it("resolves a relative URL against a placeholder base rather than throwing", () => {
+    const result = extractFilterValuesFromCollectionUrl(sharedProps, "/items?title=hello");
+    expect(result).toEqual({ title: "hello" });
+  });
+
+  it("returns an empty object for an unparseable URL", () => {
+    expect(extractFilterValuesFromCollectionUrl(sharedProps, "http://[::1")).toEqual({});
+  });
+
+  it("round-trips with applyFilterValues via searchEntityRequest-shaped URLs", () => {
+    const values = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+      title: "hello",
+      "amount~gte": "100",
+    });
+    const encodedParams = Object.entries(values.valueMap).filter(([, v]) => v !== undefined);
+    const url = `https://api.example.com/items?${new URLSearchParams(
+      encodedParams.map(([k, v]) => [k, String(v)]),
+    ).toString()}`;
+
+    expect(extractFilterValuesFromCollectionUrl(sharedProps, url)).toEqual({
+      title: "hello",
+      "amount~gte": "100",
+    });
   });
 });
 
