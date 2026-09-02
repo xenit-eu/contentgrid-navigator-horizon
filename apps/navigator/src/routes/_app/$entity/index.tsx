@@ -54,7 +54,7 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
   // across sessions — EXCEPT across a trip to an item's detail page: that page's URL stays
   // clean (see `onEntityItemClick` below and the $itemId route's breadcrumb), so the URL alone
   // isn't enough to restore them on the way back. `rememberCollectionFilters` is a second, plain
-  // memo written on every real change (below) — independent of pagination, unlike the page-href
+  // memo kept in sync with `filters` (below) — independent of pagination, unlike the page-href
   // memo, which only ever gets written on an explicit next/prev click and is therefore empty
   // for a filter the user applied but never paged through.
   const [filters, setFilters] = useState<Record<string, string>>(() =>
@@ -62,6 +62,15 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
       ? urlFilters
       : (recallCollectionFilters(queryClient, profile.name) ?? {}),
   );
+
+  // Keeps the memo in sync with `filters` regardless of how `filters` changed — an explicit
+  // sidebar edit (`handleFiltersChange`), the URL-sync effect below, or the initial state itself
+  // (a deep link/bookmark arrives with filters already in the URL, which never otherwise touches
+  // the memo). Without this, filters that only ever arrived via the URL are invisible to the
+  // memo, so a round trip through an item's clean-URL detail page silently drops them.
+  useEffect(() => {
+    rememberCollectionFilters(queryClient, profile.name, filters);
+  }, [filters, queryClient, profile.name]);
 
   // Keeps `filters` in sync if the URL's own filters change while this route stays mounted
   // (e.g. browser back/forward between two filtered searches, or a shared link opened while
@@ -108,7 +117,6 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
   function handleFiltersChange(nextFilters: Record<string, string>) {
     handlePageChange(undefined);
     setFilters(nextFilters);
-    rememberCollectionFilters(queryClient, profile.name, nextFilters);
     go({
       to: "/$entity",
       params: { entity: profile.name },

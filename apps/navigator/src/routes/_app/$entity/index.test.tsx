@@ -164,6 +164,17 @@ describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
     expect(await screen.findByTestId("filters")).toHaveTextContent('{"status":"closed"}');
   });
 
+  it("writes filters that arrive via the URL into the memo, not just ones set through the sidebar", async () => {
+    const queryClient = new QueryClient();
+
+    await renderEntityRoute(queryClient, "/invoice?s.status=open");
+
+    expect(await screen.findByTestId("filters")).toHaveTextContent('{"status":"open"}');
+    await waitFor(() =>
+      expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ status: "open" }),
+    );
+  });
+
   it("shows no filters when neither the URL nor the memo has any", async () => {
     const queryClient = new QueryClient();
 
