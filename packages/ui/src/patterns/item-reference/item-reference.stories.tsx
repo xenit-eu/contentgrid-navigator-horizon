@@ -51,6 +51,16 @@ export const Muted: Story = {
   },
 };
 
+export const Outlined: Story = {
+  args: {
+    icon: <FileText />,
+    color: "#019BE3",
+    outlined: true,
+    title: "INV-2024-0042",
+    subtitle: "invoice_acme_q4.pdf · 2.4 MB",
+  },
+};
+
 export const NoSubtitle: Story = {
   args: {
     icon: <FileText />,

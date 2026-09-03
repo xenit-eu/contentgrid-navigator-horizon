@@ -29,6 +29,20 @@ describe("ItemReference", () => {
     expect(container.querySelector('[data-slot="icon-badge"]')).not.toBeInTheDocument();
   });
 
+  it("forwards outlined to the icon badge", () => {
+    const { container } = render(
+      <ItemReference
+        title="Acme Corporation"
+        icon={<svg />}
+        color="oklch(0.55 0.17 155)"
+        outlined
+      />,
+    );
+    const badge = container.querySelector('[data-slot="icon-badge"]') as HTMLElement;
+    expect(badge).toHaveClass("border");
+    expect(badge.style.borderColor).toBe("oklch(0.55 0.17 155)");
+  });
+
   it("is not interactive (no role, no tabIndex) when onClick is absent", () => {
     render(<ItemReference title="Acme Corporation" />);
     const el = screen.getByText("Acme Corporation").closest('[data-slot="item-reference"]');

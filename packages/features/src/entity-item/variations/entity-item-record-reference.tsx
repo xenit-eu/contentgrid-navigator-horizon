@@ -8,6 +8,12 @@ export interface EntityItemReferenceProps {
   readonly onClick?: () => void;
   readonly selected?: boolean;
   readonly size?: "sm" | "default" | "lg";
+  /** Blends the icon badge into a soft, semi-transparent fill instead of a solid one. */
+  readonly muted?: boolean;
+  /** Renders the icon badge with a border and icon in the entity's color instead of a solid
+   * fill. Combined with `muted`, the background keeps the soft muted fill instead of going
+   * fully transparent — see `IconBadge`'s doc comment. */
+  readonly outlined?: boolean;
   readonly className?: string;
 }
 
@@ -23,6 +29,8 @@ export function EntityItemReference({
   onClick,
   selected,
   size,
+  muted,
+  outlined,
   className,
 }: Readonly<EntityItemReferenceProps>) {
   const { preferences, nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(
@@ -40,6 +48,8 @@ export function EntityItemReference({
     <ItemReference
       icon={<Icon />}
       color={preferences.color}
+      muted={muted}
+      outlined={outlined}
       title={title}
       subtitle={subtitle}
       onClick={onClick}

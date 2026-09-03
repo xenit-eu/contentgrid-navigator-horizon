@@ -76,6 +76,39 @@ describe("IconBadge", () => {
     expect(container.querySelector('[data-slot="icon-badge"]')).not.toHaveClass("text-white");
   });
 
+  it("uses a transparent background with a border and text in the given color when outlined", () => {
+    const { container } = render(
+      <IconBadge icon={<span />} color="oklch(0.55 0.17 155)" outlined />,
+    );
+    const badge = container.querySelector('[data-slot="icon-badge"]') as HTMLElement;
+    expect(badge).toHaveClass("border");
+    expect(badge).not.toHaveClass("text-white");
+    expect(badge.style.backgroundColor).toBe("transparent");
+    expect(badge.style.borderColor).toBe("oklch(0.55 0.17 155)");
+    expect(badge.style.color).toBe("oklch(0.55 0.17 155)");
+  });
+
+  it("falls back to the theme's muted-foreground color when outlined with no color given", () => {
+    const { container } = render(<IconBadge icon={<span />} outlined />);
+    const badge = container.querySelector('[data-slot="icon-badge"]') as HTMLElement;
+    expect(badge.style.borderColor).toBe("var(--muted-foreground)");
+    expect(badge.style.color).toBe("var(--muted-foreground)");
+  });
+
+  it("combines with muted: keeps the soft fill, adds a full-color border and icon", () => {
+    const { container } = render(
+      <IconBadge icon={<span />} color="oklch(0.55 0.17 155)" muted outlined />,
+    );
+    const badge = container.querySelector('[data-slot="icon-badge"]') as HTMLElement;
+    expect(badge).toHaveClass("border");
+    expect(badge).not.toHaveClass("text-white");
+    expect(badge.style.backgroundColor).toBe(
+      "color-mix(in oklch, oklch(0.55 0.17 155) 30%, transparent)",
+    );
+    expect(badge.style.borderColor).toBe("oklch(0.55 0.17 155)");
+    expect(badge.style.color).toBe("oklch(0.55 0.17 155)");
+  });
+
   it("only applies the hover/cursor-pointer affordance when clickable", () => {
     const { container: withoutClick } = render(<IconBadge icon={<span />} />);
     expect(withoutClick.querySelector('[data-slot="icon-badge"]')).not.toHaveClass(
