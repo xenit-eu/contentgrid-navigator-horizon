@@ -130,10 +130,9 @@ function makeItemProfile(): ProfileEntity {
   return makeProfileEntity(itemProfileJson, PROFILE_URL, "item");
 }
 
-// A distinguishable ITEM COUNT (not just page metadata — `EntityItemCollection.pageSize` reads
-// `halSlice.items.length`), so the rendered "N items on this page" string (from
-// EntityItemCollectionTable's pagination footer) tells us unambiguously which response actually
-// got used. `_links.next` is required for that footer to render at all (`collection.hasNext`).
+// A distinguishable ITEM COUNT via `total_items_exact`, so the rendered "N items" subtitle
+// (from EntityItemCollectionView's own `PageTitle`, built from `collection.totalItems`) tells us
+// unambiguously which response actually got used.
 function collectionBody(itemCount: number) {
   const items = Array.from({ length: itemCount }, (_, i) => ({
     id: `item-${i}`,
@@ -197,7 +196,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
 
     renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
-    expect(await screen.findByText("2 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
   });
 
   it("uses pageUrl directly when it encodes the SAME filters — preserves pagination", async () => {
@@ -210,7 +209,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       filters: { "code~prefix": "abc" },
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
     expect(onRequest).toHaveBeenCalled();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
@@ -229,7 +228,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       pageUrl: `${COLLECTION_URL}?created~after=2024-01-01T10:00:00.000Z&_cursor=page2token`,
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -246,7 +245,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       pageUrl: `${COLLECTION_URL}?amount=10.5&_cursor=page2token`,
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -264,7 +263,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     });
 
     // Falls back to searchValues (page 1 of the CURRENT filters), not the mismatched page.
-    expect(await screen.findByText("2 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBeNull();
     expect(requested.searchParams.get("code~prefix")).toBe("abc");
@@ -279,6 +278,6 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       // filters omitted entirely — defaults to {}, which matches what this pageUrl encodes (none).
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
   });
 });

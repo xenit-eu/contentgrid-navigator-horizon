@@ -11,6 +11,7 @@ const TO_MANY_RELATION_KEY = "ToManyRelation";
 const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
 const COLLECTION_PAGE_KEY = "CollectionPage";
 const COLLECTION_FILTERS_KEY = "CollectionFilters";
+const COLLECTION_SORT_KEY = "CollectionSort";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -127,5 +128,10 @@ export const queryKeys = {
   collectionFilters: {
     /** Exact key for the remembered active filter values of one entity's collection. */
     byEntityName: (entityName: string) => [COLLECTION_FILTERS_KEY, entityName] as const,
+  },
+
+  collectionSort: {
+    /** Exact key for the remembered active sort value of one entity's collection. */
+    byEntityName: (entityName: string) => [COLLECTION_SORT_KEY, entityName] as const,
   },
 };
