@@ -1,7 +1,7 @@
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { ItemReference } from "@contentgrid/ui";
 import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../preferences";
-import { formatAttributeValue } from "../attributes/attribute-format";
+import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
 
 export interface EntityItemReferenceProps {
   readonly item: EntityItem;
@@ -31,10 +31,10 @@ export function EntityItemReference({
   const Icon = resolveEntityCardIcon(preferences.icon);
 
   const nameAttr = nameAttribute ? item.findAttribute(nameAttribute.name) : undefined;
-  const title = nameAttr ? formatAttributeValue(nameAttr) : item.id;
+  const title = nameAttr ? <AttributeValueRenderer attr={nameAttr} /> : item.id;
 
   const subtitleAttr = subtitleAttribute ? item.findAttribute(subtitleAttribute.name) : undefined;
-  const subtitle = subtitleAttr ? formatAttributeValue(subtitleAttr) : undefined;
+  const subtitle = subtitleAttr ? <AttributeValueRenderer attr={subtitleAttr} /> : undefined;
 
   return (
     <ItemReference
