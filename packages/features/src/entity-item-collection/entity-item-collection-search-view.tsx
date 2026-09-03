@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ProfileEntity } from "@contentgrid/navigator-data";
+import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
@@ -29,7 +29,7 @@ export interface EntityItemCollectionSearchViewProps {
   /** Actions / buttons shown at the end of the toolbar (only when `toolbar` is true). */
   readonly actions?: ReactNode;
   /** Fired when an entity item row is clicked; receives the item id. */
-  readonly onEntityItemClick?: (itemId: string) => void;
+  readonly onEntityItemClick?: (item: EntityItem) => void;
 }
 
 /**
