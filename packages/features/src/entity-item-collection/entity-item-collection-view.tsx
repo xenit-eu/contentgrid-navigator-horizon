@@ -14,6 +14,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { FilterSidebar, PageTitle } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
+import { EntityIconBadge } from "../layout";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
@@ -147,6 +148,7 @@ export function EntityItemCollectionView({
       <div className="p-4">
         <PageTitle
           header={"Entity Collection"}
+          icon={<EntityIconBadge profile={profile} />}
           title={profile.pluralName}
           subtitle={itemCountTitle}
         />

@@ -13,7 +13,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   display: {
     defaultPageSize: 20,
-    entityOverrides: {},
   },
   theme: {
     colorPreset: null,

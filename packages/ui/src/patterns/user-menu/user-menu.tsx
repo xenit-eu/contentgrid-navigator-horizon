@@ -1,10 +1,15 @@
-import { CaretDownIcon as CaretDown, SignOutIcon as SignOut } from "@phosphor-icons/react";
+import {
+  CaretDownIcon as CaretDown,
+  GearIcon as Gear,
+  SignOutIcon as SignOut,
+} from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Avatar, AvatarFallback } from "../../primitives/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../primitives/dropdown-menu";
 
@@ -17,6 +22,8 @@ export interface UserMenuProps {
   name: string;
   /** Email address of the signed-in user */
   email: string;
+  /** Called when "Settings" is selected */
+  onSettingsClick?: () => void;
   /** Called when "Log out" is selected */
   onLogOut?: () => void;
   /** Extra class names applied to the trigger button */
@@ -38,7 +45,13 @@ function getInitials(name: string): string {
 // Main export
 // ---------------------------------------------------------------------------
 
-export function UserMenu({ name, email, onLogOut, className }: Readonly<UserMenuProps>) {
+export function UserMenu({
+  name,
+  email,
+  onSettingsClick,
+  onLogOut,
+  className,
+}: Readonly<UserMenuProps>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -60,6 +73,11 @@ export function UserMenu({ name, email, onLogOut, className }: Readonly<UserMenu
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onSelect={() => onSettingsClick?.()}>
+          <Gear />
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => onLogOut?.()}>
           <SignOut />
           Log out

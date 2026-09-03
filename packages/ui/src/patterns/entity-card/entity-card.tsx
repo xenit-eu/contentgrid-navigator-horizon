@@ -1,77 +1,98 @@
-import {
-  DatabaseIcon as Database,
-  FileTextIcon as FileText,
-  PlusIcon as Plus,
-} from "@phosphor-icons/react";
-import { Button } from "../../primitives/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../primitives/card";
+import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
+import { PageTitle, type PageTitleProps } from "../../primitives";
+import { Card, CardContent, CardHeader } from "../../primitives/card";
 
 export interface EntityCardProps {
-  /** Unique identifier / URL-safe name for this entity (used in callback) */
+  /** Unique identifier / URL-safe name for this entity (passed to `onCardClick`) */
   name: string;
+  /** Small eyebrow label rendered above the title. Omitted entirely when not provided. */
+  header?: string;
   /** Human-readable title */
   title: string;
-  /** Total item count; shown as "—" when undefined */
-  count?: number;
   /** Optional description shown below the title */
   description?: string;
-  /** When true a FileText icon is shown, otherwise a Database icon */
-  hasContent?: boolean;
-  /** Called when the user clicks the create-action button */
-  onCreateClick?: (entityName: string) => void;
-  /** Called when the user clicks the card title / entity link */
-  onTitleClick?: (entityName: string) => void;
+  /** Forwarded to the title block's `PageTitle` as its `size`. Defaults to `"compact"` —
+   * EntityCard's normal density. */
+  titleVariant?: NonNullable<PageTitleProps["size"]>;
+  /** Rendered left of the title. Defaults to a generic Database icon. Interactive content
+   * inside it (e.g. a color picker trigger) does not trigger `onCardClick`. */
+  icon?: ReactNode;
+  /**
+   * Rendered in the header's top-right corner (e.g. a "create" button). Independently
+   * clickable — does not trigger `onCardClick`. Omitted entirely when not provided.
+   */
+  action?: ReactNode;
+  /** Card body — a stat, a preview, or anything else. Omitted entirely when not provided. */
+  children?: ReactNode;
+  /** Called when the user clicks anywhere on the card outside `action`/interactive icon
+   * content. Omitted entirely (a plain, non-interactive card) when not provided. */
+  onCardClick?: (name: string) => void;
+
+  indentSubtitle?: boolean;
 }
 
 export function EntityCard({
   name,
+  header,
   title,
-  count,
   description,
-  hasContent,
-  onCreateClick,
-  onTitleClick,
+  icon,
+  action,
+  children,
+  onCardClick,
+  indentSubtitle = true,
+  titleVariant = "compact",
 }: Readonly<EntityCardProps>) {
   return (
-    <Card className="group relative transition-colors hover:border-primary/50">
+    <Card
+      data-slot="entity-card"
+      role={onCardClick ? "button" : undefined}
+      tabIndex={onCardClick ? 0 : undefined}
+      className={cn(
+        "group relative transition-colors",
+        onCardClick && "cursor-pointer hover:border-primary/50",
+      )}
+      onClick={onCardClick ? () => onCardClick(name) : undefined}
+      onKeyDown={
+        onCardClick
+          ? (event) => {
+              if (event.key === "Enter") {
+                onCardClick(name);
+              } else if (event.key === " ") {
+                event.preventDefault();
+                onCardClick(name);
+              }
+            }
+          : undefined
+      }
+    >
       <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div>
-          <CardTitle className="text-lg">
-            <button
-              type="button"
-              className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md text-left after:absolute after:inset-0 after:content-['']"
-              onClick={() => onTitleClick?.(name)}
-            >
-              {hasContent ? (
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <Database className="h-5 w-5 text-muted-foreground" />
-              )}
-              {title}
-            </button>
-          </CardTitle>
-          {description && (
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{description}</p>
-          )}
-        </div>
-        <div className="relative z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateClick?.(name);
-            }}
+        <PageTitle
+          size={titleVariant}
+          header={header}
+          title={title}
+          subtitle={description}
+          indentSubtitle={indentSubtitle}
+          icon={
+            icon && (
+              <span role="presentation" onClick={(event) => event.stopPropagation()}>
+                {icon}
+              </span>
+            )
+          }
+        />
+        {action && (
+          <div
+            role="presentation"
+            className="relative z-10"
+            onClick={(event) => event.stopPropagation()}
           >
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">Create {title}</span>
-          </Button>
-        </div>
+            {action}
+          </div>
+        )}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{count ?? "—"}</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </CardContent>
+      {children && <CardContent>{children}</CardContent>}
     </Card>
   );
 }

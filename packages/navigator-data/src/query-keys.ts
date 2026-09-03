@@ -5,6 +5,7 @@ const ENTITY_ITEM_KEY = "EntityItem";
 const ENTITY_COLLECTION_KEY = "EntitySearch";
 const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
+const ENTITY_DISPLAY_DEFAULTS_KEY = "EntityDisplayDefaults";
 const TO_ONE_RELATION_KEY = "ToOneRelation";
 const TO_MANY_RELATION_KEY = "ToManyRelation";
 const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
@@ -68,6 +69,17 @@ export const queryKeys = {
   profileRoot: {
     /** Exact key for the profile root at a given URL. */
     byUrl: (profileUrl: string) => [PROFILE_ROOT_KEY, profileUrl] as const,
+  },
+
+  /**
+   * Backend-provided display-preference defaults (icon/color/cardStyle/etc.), one batch fetch
+   * per backend. Deliberately its own root — not nested under `profileRoot` — so invalidating
+   * one doesn't invalidate the other. Not yet used by a live query: `useEntityDisplayDefaults`
+   * is currently stubbed pending a backend contract (see hooks/preferences/).
+   */
+  entityDisplayDefaults: {
+    /** Exact key for one backend's display-preference defaults, by profile URL. */
+    byProfileUrl: (profileUrl: string) => [ENTITY_DISPLAY_DEFAULTS_KEY, profileUrl] as const,
   },
 
   toOneRelation: {

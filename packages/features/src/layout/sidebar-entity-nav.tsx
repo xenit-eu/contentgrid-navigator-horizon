@@ -1,4 +1,4 @@
-import { BracketsSquareIcon, DatabaseIcon, FileTextIcon, StackIcon } from "@phosphor-icons/react";
+import { BracketsSquareIcon, StackIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { type ProfileEntity, useCachedEntityItemCollection } from "@contentgrid/navigator-data";
 import {
@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarMenuSkeleton,
 } from "@contentgrid/ui";
+import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
 
 interface SidebarEntityNavProps {
   readonly profiles: readonly ProfileEntity[];
@@ -63,19 +64,36 @@ function SidebarEntityNavItem({
   const { data: collection } = useCachedEntityItemCollection(profile);
   const total = collection?.totalItems;
 
+  const { preferences } = useEntityDisplayPreferences(profile);
+  const EntityIcon = resolveEntityCardIcon(preferences.icon);
+
   const tooltip = profile.description
     ? `${profile.pluralName}: ${profile.description}`
     : profile.pluralName;
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive} tooltip={tooltip} className="gap-3">
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip={tooltip}
+        className="gap-3"
+        // Overrides the default `border-l-sidebar-primary` active-state border color with
+        // the entity's chosen color. Inline style wins over the Tailwind class regardless of
+        // stylesheet order. Only applied when active + a color is set — otherwise the
+        // default border color (transparent when inactive, sidebar-primary when active)
+        // is untouched.
+        style={isActive && preferences.color ? { borderLeftColor: preferences.color } : undefined}
+      >
         <Link to={"/$entity" as string} params={{ entity: profile.name } as Record<string, string>}>
-          {profile.hasContentAttributes ? (
-            <FileTextIcon aria-hidden />
-          ) : (
-            <DatabaseIcon aria-hidden />
-          )}
+          {/* Styled directly on the svg (not a wrapping span) — SidebarMenuButton's base
+              classes target `>svg` and `>span:last-child` as direct children; a wrapper
+              would break the `[&>svg]:size-4` sizing rule. Phosphor icons render with
+              `fill="currentColor"`, so `style.color` tints the icon directly. */}
+          <EntityIcon
+            aria-hidden
+            style={preferences.color ? { color: preferences.color } : undefined}
+          />
           <span>{profile.pluralName}</span>
         </Link>
       </SidebarMenuButton>

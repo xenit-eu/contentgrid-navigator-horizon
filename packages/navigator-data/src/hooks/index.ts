@@ -60,3 +60,5 @@ export type {
   DownloadContentVariables,
   ContentDownload,
 } from "./item/use-content";
+export { useEntityDisplayDefaults } from "./preferences/use-entity-display-defaults";
+export type { UseEntityDisplayDefaultsResult } from "./preferences/use-entity-display-defaults";
