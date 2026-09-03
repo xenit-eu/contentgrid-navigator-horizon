@@ -6,6 +6,7 @@ import {
   findInvalidFilterKeys,
 } from "@contentgrid/features/search";
 import {
+  EntityItem,
   type ProfileEntity,
   createValues,
   toProblemDisplayModel,
@@ -14,7 +15,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { FilterSidebar, PageTitle } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
-import { BreadCrumbsToolBarLayout, EntityIconBadge, PageLayout } from "../layout";
+import { EntityIconBadge } from "../layout";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
@@ -25,7 +26,7 @@ export interface EntityItemCollectionViewProps {
    */
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
-  readonly onEntityItemClick?: (itemId: string) => void;
+  readonly onEntityItemClick?: (itemId: EntityItem) => void;
   /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).

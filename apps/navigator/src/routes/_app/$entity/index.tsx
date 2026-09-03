@@ -9,6 +9,7 @@ import {
   entitySearchStateValidator,
 } from "@contentgrid/features/search";
 import {
+  EntityItem,
   type ProfileEntity,
   recallCollectionFilters,
   recallCollectionPageHref,
@@ -167,14 +168,14 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
       actions={actions}
       toolbar
       breadcrumbs={breadcrumbs}
-      onEntityItemClick={(itemId: string) =>
+      onEntityItemClick={(item: EntityItem) =>
         // Filters are deliberately NOT forwarded into the item-detail URL — they stay
         // recoverable via `rememberCollectionFilters`/`rememberCollectionPageHref`, so the
         // breadcrumb back to this list restores them from the QueryClient cache rather than
         // round-tripping through the URL.
         go({
           to: "/$entity/$itemId",
-          params: { entity: profile.name, itemId },
+          params: { entity: profile.name, itemId: item.id },
           search: {},
         })
       }
