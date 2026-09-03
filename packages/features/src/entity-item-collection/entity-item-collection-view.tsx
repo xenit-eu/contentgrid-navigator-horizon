@@ -14,7 +14,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { FilterSidebar, PageTitle } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
-import { BreadCrumbsToolBarLayout, EntityIconBadge, PageLayout } from "../layout";
+import { EntityIconBadge } from "../layout";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
