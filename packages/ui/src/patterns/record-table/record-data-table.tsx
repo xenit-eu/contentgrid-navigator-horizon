@@ -1,5 +1,9 @@
 import { Children, type ReactNode } from "react";
-import { TrayIcon as Tray } from "@phosphor-icons/react";
+import {
+  CaretLeftIcon as CaretLeft,
+  CaretRightIcon as CaretRight,
+  TrayIcon as Tray,
+} from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import { RecordTableHeader } from "./record-table-header";
@@ -24,6 +28,11 @@ export interface RecordDataTableProps {
   onNextPageClick?: () => void;
   /** Renders the previous button as enabled when passed */
   onPreviousPageClick?: () => void;
+  /**
+   * Rendered at the start of the pagination footer bar (e.g. a "Showing 20 of 100 items"
+   * summary). The footer bar renders whenever this is set, even with no next/previous page.
+   */
+  footerContent?: ReactNode;
 
   tableActions?: ReactNode;
 
@@ -56,6 +65,7 @@ function RecordDataTable({
   onSort,
   onNextPageClick,
   onPreviousPageClick,
+  footerContent,
   tableActions,
   showActionsColumn,
   onCreateClick,
@@ -70,47 +80,59 @@ function RecordDataTable({
         <div className="flex shrink-0 items-center justify-end gap-2">{tableActions}</div>
       )}
 
-      <div role="table" className="flex min-h-0 flex-1 flex-col rounded-md border overflow-hidden">
-        <RecordTableHeader
-          columns={columns}
-          sortOptions={sortOptions}
-          currentSort={currentSort}
-          onSort={onSort}
-          showActionsColumn={showActionsColumn}
-        />
+      <div className="flex min-h-0 flex-1 flex-col rounded-md border overflow-hidden">
+        <div role="table" className="flex min-h-0 flex-1 flex-col">
+          <RecordTableHeader
+            columns={columns}
+            sortOptions={sortOptions}
+            currentSort={currentSort}
+            onSort={onSort}
+            showActionsColumn={showActionsColumn}
+          />
 
-        <div role="rowgroup" className="min-h-0 flex-1 overflow-y-auto">
-          {isEmpty ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-              <Tray className="size-10" aria-hidden />
-              <p className="text-sm font-medium">No {entityTitle ?? entityName} found</p>
-              {onCreateClick && (
-                <Button variant="outline" size="sm" onClick={onCreateClick}>
-                  Add new item to {entityTitle ?? entityName}
-                </Button>
-              )}
+          <div role="rowgroup" className="min-h-0 flex-1 overflow-y-auto">
+            {isEmpty ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                <Tray className="size-10" aria-hidden />
+                <p className="text-sm font-medium">No {entityTitle ?? entityName} found</p>
+                {onCreateClick && (
+                  <Button variant="outline" size="sm" onClick={onCreateClick}>
+                    Add new item to {entityTitle ?? entityName}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              children
+            )}
+          </div>
+        </div>
+
+        {(onNextPageClick || onPreviousPageClick || footerContent) && (
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-muted/70 p-2">
+            <div className="px-2 text-xs text-muted-foreground">{footerContent}</div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!onPreviousPageClick}
+                onClick={onPreviousPageClick}
+              >
+                <CaretLeft aria-hidden />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!onNextPageClick}
+                onClick={onNextPageClick}
+              >
+                Next
+                <CaretRight aria-hidden />
+              </Button>
             </div>
-          ) : (
-            children
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
-      {(onNextPageClick || onPreviousPageClick) && (
-        <div className="flex shrink-0 items-center justify-between pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!onPreviousPageClick}
-            onClick={onPreviousPageClick}
-          >
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" disabled={!onNextPageClick} onClick={onNextPageClick}>
-            Next
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

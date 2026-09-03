@@ -138,6 +138,18 @@ export const WithPagination: Story = {
   },
 };
 
+export const WithFooterItemCount: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    footerContent: "Showing 3 of ~42 items",
+    onNextPageClick: fn(),
+    onPreviousPageClick: undefined,
+    children: buildRows(),
+  },
+};
+
 export const Empty: Story = {
   args: {
     entityName: "invoice",

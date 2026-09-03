@@ -2,6 +2,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
 import { format } from "date-fns";
+import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
 import { Input } from "../../primitives/input";
@@ -86,6 +87,12 @@ export interface FilterSidebarProps {
    * filtering by it.
    */
   invalidFilterKeys?: readonly string[];
+  /**
+   * Extra class names on the root element, merged with (and able to override, via
+   * tailwind-merge) the default fixed-width sidebar styling — e.g. render this full-width
+   * inside a modal instead of as a docked sidebar.
+   */
+  className?: string;
 }
 
 function isoToDateInputValue(isoString: string): string {
@@ -898,6 +905,7 @@ export function FilterSidebar({
   typeaheadSuggestions,
   typeaheadIsLoading,
   invalidFilterKeys,
+  className,
 }: Readonly<FilterSidebarProps>) {
   const hasActiveFilters = Object.values(filters).some((v) => !!v);
   // Redundant siblings (bare exact-match, redundant strict range bound) are already excluded
@@ -906,7 +914,7 @@ export function FilterSidebar({
   const invalidKeySet = new Set(invalidFilterKeys ?? []);
 
   return (
-    <div className="w-56 shrink-0 rounded-lg bg-muted/40 p-4">
+    <div className={cn("w-56 shrink-0 rounded-lg bg-muted/40 p-4", className)}>
       <div className="flex items-center justify-between mb-4">
         <span className="text-base font-semibold">Filters</span>
         {hasActiveFilters && onClearAll && (

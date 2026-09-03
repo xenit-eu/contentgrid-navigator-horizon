@@ -75,7 +75,7 @@ function RecordTableHeader({
           role="row"
           style={{ gridTemplateColumns }}
           className={cn(
-            "grid items-center gap-3 px-4 py-2 border-b border-[#F1F4F7] dark:border-[#1B3A50] bg-muted/50",
+            "grid items-center gap-3 px-4 py-2 border-b border-[#F1F4F7] dark:border-[#1B3A50] bg-muted/70",
           )}
         >
           {columns.map((column) => {
