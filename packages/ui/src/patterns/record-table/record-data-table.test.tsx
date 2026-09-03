@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { RecordTable } from "./record-table";
-import type { RecordTableColumn, RecordTableSortOption } from "./record-table";
+import { RecordDataTable } from "./record-data-table";
+import type { RecordTableColumn, RecordTableSortOption } from "./record-table-header";
 
 const COLUMNS: RecordTableColumn[] = [
   { key: "name", header: "Name" },
@@ -14,76 +14,31 @@ const SORT_OPTIONS: RecordTableSortOption[] = [
   { value: "name,desc", property: "name", prompt: "Z→A", direction: "desc" },
 ];
 
-function renderTable(overrides: Partial<Parameters<typeof RecordTable>[0]> = {}) {
+function renderTable(overrides: Partial<Parameters<typeof RecordDataTable>[0]> = {}) {
   return render(
-    <RecordTable entityName="user" columns={COLUMNS} {...overrides}>
+    <RecordDataTable entityName="user" columns={COLUMNS} {...overrides}>
       {overrides.children ?? <div role="row">Alice</div>}
-    </RecordTable>,
+    </RecordDataTable>,
   );
 }
 
-describe("RecordTable — column headers", () => {
-  it("renders column headers", () => {
+describe("RecordDataTable — header delegation", () => {
+  it("renders column headers via RecordTableHeader", () => {
     renderTable();
     expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("Status")).toBeInTheDocument();
   });
 
-  it("renders a sort button for a column present in sortOptions, with onSort", () => {
-    renderTable({ sortOptions: SORT_OPTIONS, onSort: vi.fn() });
-    expect(screen.getByRole("button", { name: /name/i })).toBeInTheDocument();
-  });
-
-  it("does not render a sort button when onSort is absent", () => {
-    renderTable({ sortOptions: SORT_OPTIONS });
-    expect(screen.queryByRole("button", { name: /name/i })).not.toBeInTheDocument();
-  });
-
-  it("does not render a sort button when sortOptions is absent", () => {
-    renderTable({ onSort: vi.fn() });
-    expect(screen.queryByRole("button", { name: /name/i })).not.toBeInTheDocument();
-  });
-
-  it("does not render a sort button for a column with no matching sortOptions entry", () => {
-    renderTable({ sortOptions: SORT_OPTIONS, onSort: vi.fn() });
-    expect(screen.queryByRole("button", { name: /status/i })).not.toBeInTheDocument();
-  });
-
-  it("calls onSort with the first sort option when an unsorted column is clicked", async () => {
-    const user = userEvent.setup();
-    const onSort = vi.fn();
-    renderTable({ sortOptions: SORT_OPTIONS, onSort });
-    await user.click(screen.getByRole("button", { name: /name/i }));
-    expect(onSort).toHaveBeenCalledWith(SORT_OPTIONS[0]);
-  });
-
-  it("cycles from the active option to the next option in sortOptions order", async () => {
+  it("wires sortOptions/currentSort/onSort through to the header's sort button", async () => {
     const user = userEvent.setup();
     const onSort = vi.fn();
     renderTable({ sortOptions: SORT_OPTIONS, currentSort: ["name,asc"], onSort });
     await user.click(screen.getByRole("button", { name: /name/i }));
     expect(onSort).toHaveBeenCalledWith(SORT_OPTIONS[1]);
   });
-
-  it("cycles to undefined (cleared) after the last sort option", async () => {
-    const user = userEvent.setup();
-    const onSort = vi.fn();
-    renderTable({ sortOptions: SORT_OPTIONS, currentSort: ["name,desc"], onSort });
-    await user.click(screen.getByRole("button", { name: /name/i }));
-    expect(onSort).toHaveBeenCalledWith(undefined);
-  });
-
-  it("only reflects the active option belonging to that column, independent of other active sorts", async () => {
-    const user = userEvent.setup();
-    const onSort = vi.fn();
-    // "status" has its own active sort in currentSort, unrelated to "name"'s options.
-    renderTable({ sortOptions: SORT_OPTIONS, currentSort: ["status,asc", "name,asc"], onSort });
-    await user.click(screen.getByRole("button", { name: /name/i }));
-    expect(onSort).toHaveBeenCalledWith(SORT_OPTIONS[1]);
-  });
 });
 
-describe("RecordTable — rows", () => {
+describe("RecordDataTable — rows", () => {
   it("renders row children", () => {
     renderTable({ children: <div role="row">Alice</div> });
     expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -103,9 +58,17 @@ describe("RecordTable — rows", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
   });
+
+  it("renders the row list in a scrollable region separate from the header", () => {
+    renderTable({ children: <div role="row">Alice</div> });
+    const rowgroups = screen.getAllByRole("rowgroup");
+    // Header rowgroup (from RecordTableHeader) + body rowgroup (the scrollable one).
+    expect(rowgroups).toHaveLength(2);
+    expect(rowgroups[1]).toHaveClass("overflow-y-auto");
+  });
 });
 
-describe("RecordTable — actions column", () => {
+describe("RecordDataTable — actions column", () => {
   it("reserves an extra header cell when showActionsColumn is true", () => {
     renderTable({ showActionsColumn: true });
     expect(screen.getAllByRole("columnheader")).toHaveLength(COLUMNS.length + 1);
@@ -117,7 +80,7 @@ describe("RecordTable — actions column", () => {
   });
 });
 
-describe("RecordTable — table actions", () => {
+describe("RecordDataTable — table actions", () => {
   it("renders tableActions when provided", () => {
     renderTable({ tableActions: <button type="button">Export</button> });
     expect(screen.getByRole("button", { name: /export/i })).toBeInTheDocument();
@@ -129,7 +92,7 @@ describe("RecordTable — table actions", () => {
   });
 });
 
-describe("RecordTable — empty state", () => {
+describe("RecordDataTable — empty state", () => {
   it("renders empty state when there are no row children", () => {
     renderTable({ children: [], entityTitle: "Users" });
     expect(screen.getByText("No Users found")).toBeInTheDocument();
@@ -159,7 +122,7 @@ describe("RecordTable — empty state", () => {
   });
 });
 
-describe("RecordTable — pagination", () => {
+describe("RecordDataTable — pagination", () => {
   it("does not render pagination controls when neither handler is provided", () => {
     renderTable();
     expect(screen.queryByRole("button", { name: /previous/i })).not.toBeInTheDocument();

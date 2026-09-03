@@ -5,7 +5,9 @@ import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemCollectionSearchView } from "@contentgrid/features/entity-item-collection";
 import {
   applyFiltersToSearchState,
+  applySortToSearchState,
   decodeFiltersFromSearchState,
+  decodeSortFromSearchState,
   entitySearchStateValidator,
 } from "@contentgrid/features/search";
 import {
@@ -13,8 +15,10 @@ import {
   type ProfileEntity,
   recallCollectionFilters,
   recallCollectionPageHref,
+  recallCollectionSort,
   rememberCollectionFilters,
   rememberCollectionPageHref,
+  rememberCollectionSort,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import {
@@ -127,6 +131,46 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
     });
   }
 
+  // Sort mirrors the filters block above exactly — a URL-shareable `sort` param backed by a
+  // session memo so it survives a round trip through an item's clean-URL detail page.
+  const urlSort = useMemo(() => decodeSortFromSearchState(search), [search]);
+
+  const [sort, setSort] = useState<string | undefined>(
+    () => urlSort ?? recallCollectionSort(queryClient, profile.name),
+  );
+
+  useEffect(() => {
+    rememberCollectionSort(queryClient, profile.name, sort);
+  }, [sort, queryClient, profile.name]);
+
+  useEffect(() => {
+    if (!didSyncSortFromCacheRef.current) return;
+    setSort(urlSort);
+  }, [urlSort]);
+
+  const didSyncSortFromCacheRef = useRef(false);
+  useEffect(() => {
+    if (didSyncSortFromCacheRef.current) return;
+    didSyncSortFromCacheRef.current = true;
+    if (urlSort === undefined && sort !== undefined) {
+      go({
+        to: "/$entity",
+        params: { entity: profile.name },
+        search: (prev) => applySortToSearchState(prev, sort),
+        replace: true,
+      });
+    }
+  }, [urlSort, sort, go, profile.name]);
+
+  function handleSortChange(nextSort: string | undefined) {
+    setSort(nextSort);
+    go({
+      to: "/$entity",
+      params: { entity: profile.name },
+      search: (prev) => applySortToSearchState(prev, nextSort),
+    });
+  }
+
   const breadcrumbs = (
     <Breadcrumb>
       <BreadcrumbList>
@@ -165,6 +209,8 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
       onPageChange={handlePageChange}
       filters={filters}
       onFiltersChange={handleFiltersChange}
+      currentSort={sort}
+      onSortChange={handleSortChange}
       actions={actions}
       toolbar
       breadcrumbs={breadcrumbs}

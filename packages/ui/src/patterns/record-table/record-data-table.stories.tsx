@@ -3,15 +3,15 @@ import { DotsThreeIcon as DotsThree } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
 import { Button } from "../../primitives/button";
-import { RecordTable } from "./record-table";
-import type { RecordTableSortOption } from "./record-table";
+import { RecordDataTable } from "./record-data-table";
+import type { RecordTableSortOption } from "./record-table-header";
 import { RecordTableRow } from "./table-row";
 
 const meta = {
-  title: "Patterns/RecordTable",
-  component: RecordTable,
+  title: "Patterns/RecordDataTable",
+  component: RecordDataTable,
   tags: ["autodocs"],
-} satisfies Meta<typeof RecordTable>;
+} satisfies Meta<typeof RecordDataTable>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -57,6 +57,19 @@ function buildRows(actions?: (reference: string) => ReactNode) {
         { key: "total", content: row.total, align: "end" },
       ]}
       actions={actions?.(row.reference)}
+    />
+  ));
+}
+
+function buildManyRows(count: number) {
+  return Array.from({ length: count }, (_, i) => (
+    <RecordTableRow
+      key={i}
+      cells={[
+        { key: "reference", content: `INV-2024-${String(i).padStart(4, "0")}` },
+        { key: "supplier", content: `Supplier ${i + 1}` },
+        { key: "total", content: `€ ${(i + 1) * 100}.00`, align: "end" },
+      ]}
     />
   ));
 }
@@ -141,5 +154,21 @@ export const EmptyWithCreate: Story = {
     columns: COLUMNS,
     onCreateClick: fn(),
     children: [],
+  },
+};
+
+/**
+ * Demonstrates the scrollable layout: given a bounded height via `className`, the column
+ * header and Previous/Next footer stay pinned while only the row list scrolls.
+ */
+export const ScrollableWithFixedHeight: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    className: "h-96",
+    onNextPageClick: fn(),
+    onPreviousPageClick: fn(),
+    children: buildManyRows(40),
   },
 };

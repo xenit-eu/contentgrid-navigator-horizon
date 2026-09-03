@@ -1,11 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  applyFilterValues,
-  buildFilterProperties,
-  extractFilterValuesFromCollectionUrl,
-  findInvalidFilterKeys,
-} from "@contentgrid/features/search";
-import {
   EntityItem,
   type ProfileEntity,
   createValues,
@@ -13,9 +7,15 @@ import {
   useEntityItemCollection,
   useTypeahead,
 } from "@contentgrid/navigator-data";
-import { FilterSidebar, PageTitle } from "@contentgrid/ui";
+import { FilterSidebar, PageTitle, type RecordTableSortOption } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { EntityIconBadge } from "../layout";
+import {
+  applyFilterValues,
+  buildFilterProperties,
+  extractFilterValuesFromCollectionUrl,
+  findInvalidFilterKeys,
+} from "../search/filter-properties";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
@@ -26,7 +26,7 @@ export interface EntityItemCollectionViewProps {
    */
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
-  readonly onEntityItemClick?: (itemId: EntityItem) => void;
+  readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).
@@ -36,6 +36,10 @@ export interface EntityItemCollectionViewProps {
   readonly filters?: Record<string, string>;
   /** Fired when the user changes or clears a filter; receives the full next filters map. */
   readonly onFiltersChange?: (filters: Record<string, string>) => void;
+  /** Currently active sort value, e.g. `"name,asc"`. Defaults to no sort applied. */
+  readonly currentSort?: string;
+  /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
+  readonly onSortChange?: (sort: string | undefined) => void;
 }
 
 /**
@@ -52,6 +56,8 @@ export function EntityItemCollectionView({
   onPageChange,
   filters = {},
   onFiltersChange,
+  currentSort,
+  onSortChange,
 }: Readonly<EntityItemCollectionViewProps>) {
   const searchTemplate = profile.searchTemplate;
   const filterProperties = useMemo(
@@ -62,13 +68,18 @@ export function EntityItemCollectionView({
   // undefined when there's no search template — same "disabled" signal the default (no
   // filters) mode already relied on before filtering existed, so an entity with no search
   // template behaves exactly as it did previously.
-  const searchValues = useMemo(
-    () =>
-      searchTemplate
-        ? applyFilterValues(createValues(searchTemplate.template), filterProperties, filters)
-        : undefined,
-    [searchTemplate, filterProperties, filters],
-  );
+  const searchValues = useMemo(() => {
+    if (!searchTemplate) return undefined;
+    const filtered = applyFilterValues(
+      createValues(searchTemplate.template),
+      filterProperties,
+      filters,
+    );
+    // `_sort` is always multi-value — pass a single-element array, never a plain string.
+    return currentSort && searchTemplate.sortProperty
+      ? filtered.withValue(searchTemplate.sortProperty.name, [currentSort])
+      : filtered;
+  }, [searchTemplate, filterProperties, filters, currentSort]);
 
   // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
   // that DIFFERS from the CURRENT filters (a deep link, or browser back/forward across a filter
@@ -142,11 +153,18 @@ export function EntityItemCollectionView({
     setActiveTypeaheadField(undefined);
   }
 
+  // A sort change invalidates whatever page cursor was in flight the same way a filter change
+  // does — hand pagination back to page one via the same callback.
+  function handleSort(option: RecordTableSortOption | undefined) {
+    onSortChange?.(option?.value);
+    onPageChange?.(undefined);
+  }
+
   const itemCountTitle = `${collection.data?.totalItems?.count ?? "-"} items ${collection.data?.totalItems?.isEstimated ? "(estimated)" : ""}`;
 
   return (
-    <>
-      <div className="p-4">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 p-4">
         <PageTitle
           header={"Entity Collection"}
           icon={<EntityIconBadge profile={profile} />}
@@ -155,7 +173,7 @@ export function EntityItemCollectionView({
         />
       </div>
 
-      <div className="flex gap-4 px-4 pb-4">
+      <div className="flex min-h-0 flex-1 gap-4 px-4 pb-4">
         {filterProperties.length > 0 && (
           <FilterSidebar
             filterProperties={filterProperties}
@@ -170,22 +188,25 @@ export function EntityItemCollectionView({
           />
         )}
 
-        <div className="min-w-0 flex-1 space-y-4">
+        <div className="min-h-0 min-w-0 flex-1">
           {collection.isPending && <LoadingPage />}
 
           {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
 
           {collection.isSuccess && (
             <EntityItemCollectionTable
+              className="h-full"
               profile={profile}
               collection={collection.data}
               onEntityItemClick={onEntityItemClick}
               onPageChange={onPageChange}
+              currentSort={currentSort}
+              onSort={handleSort}
             />
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
