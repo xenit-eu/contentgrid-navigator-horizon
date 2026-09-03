@@ -9,6 +9,10 @@ export interface ItemReferenceProps {
   readonly color?: string;
   /** Blends the badge into a soft, semi-transparent fill instead of a solid one. */
   readonly muted?: boolean;
+  /** Renders the badge with a border and icon in `color` instead of a solid fill. Combined
+   * with `muted`, the background keeps the soft muted fill instead of going fully
+   * transparent — see `IconBadge`'s doc comment. */
+  readonly outlined?: boolean;
   /** Badge size. Defaults to "sm" — this is meant to sit inline in a table row or list item. */
   readonly size?: "sm" | "default" | "lg";
   /** Primary label. */
@@ -27,6 +31,7 @@ function ItemReference({
   icon,
   color,
   muted = false,
+  outlined = false,
   size = "sm",
   title,
   subtitle,
@@ -64,7 +69,9 @@ function ItemReference({
         className,
       )}
     >
-      {icon && <IconBadge icon={icon} color={color} muted={muted} variant={size} />}
+      {icon && (
+        <IconBadge icon={icon} color={color} muted={muted} outlined={outlined} variant={size} />
+      )}
       <div className="min-w-0">
         <div
           className={cn(
