@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { FunnelIcon as Funnel } from "@phosphor-icons/react";
 import {
   EntityItem,
   type ProfileEntity,
@@ -7,7 +8,16 @@ import {
   useEntityItemCollection,
   useTypeahead,
 } from "@contentgrid/navigator-data";
-import { FilterSidebar, PageTitle, type RecordTableSortOption } from "@contentgrid/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  FilterSidebar,
+  PageTitle,
+  type RecordTableSortOption,
+} from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { EntityIconBadge } from "../layout";
 import {
@@ -112,6 +122,11 @@ export function EntityItemCollectionView({
     [filterProperties, filters],
   );
 
+  // Filters live in a modal (triggered from the toolbar) rather than an always-visible sidebar
+  // — this just tracks whether that modal is open.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
   // Only one field can be typeahead-active at a time (mirrors FilterSidebar's own
   // activeTypeaheadField contract) — switching fields just re-targets this single hook call
   // rather than needing one useTypeahead per property.
@@ -173,39 +188,55 @@ export function EntityItemCollectionView({
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-4 px-4 pb-4">
-        {filterProperties.length > 0 && (
-          <FilterSidebar
-            filterProperties={filterProperties}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onClearAll={handleClearAll}
-            invalidFilterKeys={invalidFilterKeys}
-            onTypeaheadSearch={handleTypeaheadSearch}
-            activeTypeaheadField={activeTypeaheadField}
-            typeaheadSuggestions={typeahead.results.map((r) => r.value)}
-            typeaheadIsLoading={typeahead.isLoading}
+      <div className="min-h-0 flex-1 px-4 pb-4">
+        {collection.isPending && <LoadingPage />}
+
+        {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
+
+        {collection.isSuccess && (
+          <EntityItemCollectionTable
+            className="h-full"
+            profile={profile}
+            collection={collection.data}
+            onEntityItemClick={onEntityItemClick}
+            onPageChange={onPageChange}
+            currentSort={currentSort}
+            onSort={handleSort}
+            tableActions={
+              filterProperties.length > 0 && (
+                <Button variant="outline" onClick={() => setFiltersOpen(true)}>
+                  <Funnel aria-hidden />
+                  Filters
+                  {activeFilterCount > 0 && <Badge variant="secondary">{activeFilterCount}</Badge>}
+                </Button>
+              )
+            }
           />
         )}
-
-        <div className="min-h-0 min-w-0 flex-1">
-          {collection.isPending && <LoadingPage />}
-
-          {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
-
-          {collection.isSuccess && (
-            <EntityItemCollectionTable
-              className="h-full"
-              profile={profile}
-              collection={collection.data}
-              onEntityItemClick={onEntityItemClick}
-              onPageChange={onPageChange}
-              currentSort={currentSort}
-              onSort={handleSort}
-            />
-          )}
-        </div>
       </div>
+
+      {filterProperties.length > 0 && (
+        <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+            {/* FilterSidebar renders its own "Filters" heading + Clear-all control below —
+                this stays visually hidden purely to satisfy Radix's accessible-name requirement
+                for DialogContent without showing a redundant second heading. */}
+            <DialogTitle className="sr-only">Filters</DialogTitle>
+            <FilterSidebar
+              className="w-full shrink rounded-none bg-transparent p-0"
+              filterProperties={filterProperties}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClearAll={handleClearAll}
+              invalidFilterKeys={invalidFilterKeys}
+              onTypeaheadSearch={handleTypeaheadSearch}
+              activeTypeaheadField={activeTypeaheadField}
+              typeaheadSuggestions={typeahead.results.map((r) => r.value)}
+              typeaheadIsLoading={typeahead.isLoading}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

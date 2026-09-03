@@ -156,4 +156,17 @@ describe("RecordDataTable — pagination", () => {
     await user.click(screen.getByRole("button", { name: /previous/i }));
     expect(onPreviousPageClick).toHaveBeenCalled();
   });
+
+  it("renders the footer bar for footerContent alone, with both nav buttons disabled", () => {
+    renderTable({ footerContent: "Showing 5 of 5 items" });
+    expect(screen.getByText("Showing 5 of 5 items")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /previous/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /next/i })).toBeDisabled();
+  });
+
+  it("renders footerContent alongside pagination controls", () => {
+    renderTable({ footerContent: "Showing 20 of ~100 items", onNextPageClick: vi.fn() });
+    expect(screen.getByText("Showing 20 of ~100 items")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+  });
 });

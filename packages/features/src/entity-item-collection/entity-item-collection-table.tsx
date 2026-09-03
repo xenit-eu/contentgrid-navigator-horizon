@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
 import {
   type EntityItem,
@@ -39,6 +39,8 @@ export interface EntityItemCollectionTableProps {
   readonly currentSort?: string;
   /** Called with the clicked column's next sort option (or `undefined` to clear it). */
   readonly onSort?: (option: RecordTableSortOption | undefined) => void;
+  /** Rendered above the table, right-aligned (e.g. a "Filters" button). */
+  readonly tableActions?: ReactNode;
   /**
    * Forwarded to the underlying `RecordDataTable`'s root — pass a bounding class (e.g.
    * `"h-full"`) to opt into the pinned-header/scrollable-body layout when this table is
@@ -61,6 +63,14 @@ function toRecordTableSortOptions(profile: ProfileEntity): RecordTableSortOption
     }));
 }
 
+/** e.g. "Showing 20 of ~100 items" — the "~" only appears when the total is an estimate. */
+function itemCountLabel(collection: EntityItemCollection): string {
+  const total = collection.totalItems;
+  const shown = collection.items.length;
+  if (!total) return `Showing ${shown} items`;
+  return `Showing ${shown} of ${total.isEstimated ? "~" : ""}${total.count.toLocaleString()} items`;
+}
+
 /**
  * Renders an entity collection as a `RecordDataTable` plus cursor-based pagination. Purely
  * presentational with respect to fetching — it reads the resolved `EntityItemCollection`
@@ -75,6 +85,7 @@ export function EntityItemCollectionTable({
   onPageChange,
   currentSort,
   onSort,
+  tableActions,
   className,
 }: Readonly<EntityItemCollectionTableProps>) {
   const visibility = useColumnVisibility(profile);
@@ -95,10 +106,12 @@ export function EntityItemCollectionTable({
         entityName={profile.name}
         entityTitle={profile.pluralName}
         columns={columns}
+        tableActions={tableActions}
         sortOptions={sortOptions}
         currentSort={currentSort ? [currentSort] : []}
         onSort={onSort}
         showActionsColumn
+        footerContent={itemCountLabel(collection)}
         onNextPageClick={collection.hasNext ? () => onPageChange?.(collection.nextHref) : undefined}
         onPreviousPageClick={
           collection.hasPrevious ? () => onPageChange?.(collection.prevHref) : undefined
