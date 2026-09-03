@@ -546,6 +546,9 @@ importers:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig

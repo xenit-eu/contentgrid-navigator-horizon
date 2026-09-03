@@ -16,6 +16,7 @@ export type { default as ProfileEntityType, EntityPreferences } from "./accessor
 export * from "./config";
 export { queryKeys } from "./query-keys";
 export * from "./search";
+export * from "./form-fields";
 export { createValues } from "@contentgrid/hal-forms/values";
 export type { HalFormValues } from "@contentgrid/hal-forms/values";
 export type { SearchRequestSpec } from "./api/requests";

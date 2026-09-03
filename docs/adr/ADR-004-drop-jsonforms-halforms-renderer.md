@@ -18,7 +18,7 @@ We need to decide: keep JSONForms, port it as-is, or commit fully to a shadcn-na
 
 **Drop JSONForms. Build a small HAL-Forms→shadcn bridge in `@contentgrid/navigator-data` plus a renderer set in `packages/ui`.**
 
-- The bridge lives at `packages/navigator-data/src/schema/hal-forms-bridge.ts` (Phase 5A.1 artefact) and maps `HalFormsTemplate` from `@contentgrid/hal-forms` → `FieldDescriptor[]` consumable by our renderers.
+- The bridge lives at `packages/navigator-data/src/form-fields/create-form-to-render-fields.ts` (Phase 5A.1 artefact) and maps `HalFormsTemplate` from `@contentgrid/hal-forms` → `RenderFieldDescriptor[]` consumable by our renderers. It stays in `@contentgrid/navigator-data` — not `packages/ui` or `packages/features` — because both of those packages are forbidden from importing `@contentgrid/hal-forms` directly (ADR-007's two-layer model); the folder is named `form-fields/`, not `schema/`, to avoid colliding with the unrelated Zod-validated app-config schema that also lives in this package.
 - The renderer set covers: text, number, datetime, enum (single + multi), typeahead (prefix-match remote), file upload, range pair (date/number), relation (to-one + to-many).
 - Forms drive from `_templates.create-form` / `default-form`, not profile metadata.
 

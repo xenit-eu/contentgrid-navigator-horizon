@@ -12,4 +12,6 @@ export * from "./provenance-tag";
 export * from "./attribute-row";
 export * from "./table-row";
 export * from "./entity-selector";
+export * from "./form-renderers";
+export * from "./unsaved-changes-dialog";
 export * from "./user-menu";
