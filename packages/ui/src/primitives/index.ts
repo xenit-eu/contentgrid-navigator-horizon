@@ -1,4 +1,5 @@
 export * from "./alert";
+export * from "./attribute-value";
 export * from "./alert-dialog";
 export * from "./avatar";
 export * from "./badge";
