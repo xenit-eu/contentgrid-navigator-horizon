@@ -33,7 +33,7 @@ Layer 2 — composition layer (workspace package today; publish-ready surface)
 - Composition glue: typed-fetch + auth hooks + problem-details wired into a usable client.
 - TanStack Query hooks: `useEntity`, `useList`, `useCreate`, `useUpdate`, `useDelete`, `useRelation`, `useSearch`.
 - ETag / `If-Match` optimistic-concurrency policy.
-- HAL-Forms → `FieldDescriptor[]` bridge (ADR-004).
+- HAL-Forms **model-enrichment** accessors — profile linking, relation cardinality + target hrefs, search-operator parsing, allowed values (`CreateHalFormTemplate`, `SearchHalFormTemplate`). The Navigator-specific `FieldDescriptor` **rendering projection** does NOT live here; it lives in an app-level `forms/` module (ADR-004).
 - Zod-validated app config + presets.
 - MSW handler fixtures for tests, exported for consumer reuse.
 

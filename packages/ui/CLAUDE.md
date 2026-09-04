@@ -32,10 +32,14 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
     must not import Radix directly.
 - **Pattern** — a composed component that encodes Navigator-domain semantics.
   Lives in `src/patterns/`. Examples: `EntityCard`, `DataTable`,
-  `FilterSidebar`, HAL-Forms field renderers, `PdfHighlightOverlay`.
-  - Reads `FieldDescriptor[]` (the bridge type from `@contentgrid/navigator-data`
-    via HAL-Forms → FieldDescriptor bridge, ADR-004) — it does NOT import
-    `@contentgrid/hal` or `@contentgrid/hal-forms` directly.
+  `FilterSidebar`, `PdfHighlightOverlay`.
+  - Domain-shaped, but **widget-agnostic about HAL-Forms `kind`**: the
+    `kind`-aware `FieldRenderer` switch and the `FieldDescriptor` type do NOT
+    live here — they live in the app-level `forms/` module
+    ([ADR-004](../../docs/adr/ADR-004-halforms-form-rendering-seam.md)). `@contentgrid/ui`
+    provides only the dumb form primitives (`input`, `select`, `checkbox`, …)
+    that those renderers compose. Patterns do NOT import `@contentgrid/hal` or
+    `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
     reused across multiple tracks or apps.

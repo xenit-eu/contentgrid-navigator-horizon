@@ -40,7 +40,7 @@ Read in this order before writing any code:
    - [ADR-001](docs/adr/ADR-001-state-management-zustand-tanstack-query.md) — State management: Zustand (client) + TanStack Query (server).
    - [ADR-002](docs/adr/ADR-002-monorepo-tooling-pnpm.md) — Monorepo tooling: pnpm workspaces only.
    - [ADR-003](docs/adr/ADR-003-ui-stack-tailwind-shadcn.md) — UI stack: Tailwind v4 + shadcn/ui; primitive vs. pattern boundary.
-   - [ADR-004](docs/adr/ADR-004-drop-jsonforms-halforms-renderer.md) — Forms: drop JSONForms; HAL-Forms → shadcn renderer.
+   - [ADR-004](docs/adr/ADR-004-halforms-form-rendering-seam.md) — HAL-Forms form rendering: model-enrichment (navigator-data) vs rendering-projection (app `forms/` module).
    - [ADR-005](docs/adr/ADR-005-router-tanstack-router.md) — Router: TanStack Router (file-based, type-safe).
    - [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md) — Three-track delivery model: generic / experimental / custom.
    - [ADR-007](docs/adr/ADR-007-two-layer-dependency-model.md) — Two-layer dependency model: peerDeps + composition layer.
