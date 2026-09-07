@@ -20,19 +20,10 @@ const OPTIONS: EntityPickerOption[] = [
 
 export const Empty: Story = {
   args: {
-    field: relationToManyField(),
+    ...relationToManyField(),
     value: [],
     onChange: fn(),
     options: OPTIONS,
-    isLoading: false,
-    searchQuery: "",
-    onSearch: fn(),
-    hasPreviousPage: false,
-    hasNextPage: false,
-    onPreviousPage: fn(),
-    onNextPage: fn(),
-    selectedItemsData: {},
-    onItemResolved: fn(),
   },
 };
 
@@ -47,7 +38,7 @@ export const WithLinkedItems: Story = {
 export const ReadOnly: Story = {
   args: {
     ...WithLinkedItems.args,
-    field: relationToManyField({ readOnly: true }),
+    readOnly: true,
   },
 };
 

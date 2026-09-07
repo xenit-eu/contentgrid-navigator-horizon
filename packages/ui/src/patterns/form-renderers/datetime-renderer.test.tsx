@@ -5,18 +5,14 @@ import { datetimeField } from "./test-fixtures";
 
 describe("DateTimeRenderer", () => {
   it("renders a date input for a date-only field", () => {
-    render(<DateTimeRenderer field={datetimeField()} value="" onChange={vi.fn()} />);
+    render(<DateTimeRenderer {...datetimeField()} value="" onChange={vi.fn()} />);
     const input = screen.getByLabelText("Due date");
     expect(input).toHaveAttribute("type", "date");
   });
 
   it("renders a datetime-local input when includesTime is true", () => {
     render(
-      <DateTimeRenderer
-        field={datetimeField({ includesTime: true })}
-        value=""
-        onChange={vi.fn()}
-      />,
+      <DateTimeRenderer {...datetimeField({ includesTime: true })} value="" onChange={vi.fn()} />,
     );
     expect(screen.getByLabelText("Due date")).toHaveAttribute("type", "datetime-local");
   });
@@ -24,7 +20,7 @@ describe("DateTimeRenderer", () => {
   it("formats a Date value as a date-input string", () => {
     render(
       <DateTimeRenderer
-        field={datetimeField()}
+        {...datetimeField()}
         value={new Date("2024-03-15T00:00:00.000Z")}
         onChange={vi.fn()}
       />,
@@ -37,7 +33,7 @@ describe("DateTimeRenderer", () => {
     // datetime/datetime-local wire types — a bare "date" property must stay a
     // plain string or encoding throws (HalFormValuesImpl.isValidTypeValue).
     const onChange = vi.fn();
-    render(<DateTimeRenderer field={datetimeField()} value="" onChange={onChange} />);
+    render(<DateTimeRenderer {...datetimeField()} value="" onChange={onChange} />);
     fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2024-03-15" } });
     expect(onChange).toHaveBeenCalledWith("2024-03-15");
   });
@@ -45,11 +41,7 @@ describe("DateTimeRenderer", () => {
   it("calls onChange with a Date instance when includesTime is true", () => {
     const onChange = vi.fn();
     render(
-      <DateTimeRenderer
-        field={datetimeField({ includesTime: true })}
-        value=""
-        onChange={onChange}
-      />,
+      <DateTimeRenderer {...datetimeField({ includesTime: true })} value="" onChange={onChange} />,
     );
     fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2024-03-15T10:30" } });
     expect(onChange).toHaveBeenCalledWith(new Date("2024-03-15T10:30"));
@@ -57,7 +49,7 @@ describe("DateTimeRenderer", () => {
 
   it("calls onChange with an empty string when cleared", () => {
     const onChange = vi.fn();
-    render(<DateTimeRenderer field={datetimeField()} value="2024-03-15" onChange={onChange} />);
+    render(<DateTimeRenderer {...datetimeField()} value="2024-03-15" onChange={onChange} />);
     fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "" } });
     expect(onChange).toHaveBeenCalledWith("");
   });

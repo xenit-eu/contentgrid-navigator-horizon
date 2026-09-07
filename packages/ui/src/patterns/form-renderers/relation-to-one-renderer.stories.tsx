@@ -20,19 +20,10 @@ const OPTIONS: EntityPickerOption[] = [
 
 export const Empty: Story = {
   args: {
-    field: relationToOneField(),
+    ...relationToOneField(),
     value: undefined,
     onChange: fn(),
     options: OPTIONS,
-    isLoading: false,
-    searchQuery: "",
-    onSearch: fn(),
-    hasPreviousPage: false,
-    hasNextPage: false,
-    onPreviousPage: fn(),
-    onNextPage: fn(),
-    selectedItemsData: {},
-    onItemResolved: fn(),
   },
 };
 
@@ -47,14 +38,14 @@ export const Linked: Story = {
 export const ReadOnly: Story = {
   args: {
     ...Linked.args,
-    field: relationToOneField({ readOnly: true }),
+    readOnly: true,
   },
 };
 
 export const WithError: Story = {
   args: {
     ...Empty.args,
-    field: relationToOneField({ required: true }),
+    required: true,
     error: "Supplier is required",
   },
 };

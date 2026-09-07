@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fireEvent, fn, within } from "storybook/test";
 import { EnumMultiRenderer } from "./enum-multi-renderer";
-import { REMOTE_OPTIONS, enumMultiField } from "./test-fixtures";
+import { enumMultiField } from "./test-fixtures";
 
 const meta = {
   title: "Patterns/FormRenderers/EnumMultiRenderer",
@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    field: enumMultiField(),
+    ...enumMultiField(),
     value: [],
     onChange: fn(),
   },
@@ -22,7 +22,7 @@ export const Default: Story = {
 
 export const WithSelectedValues: Story = {
   args: {
-    field: enumMultiField(),
+    ...enumMultiField(),
     value: ["draft", "archived"],
     onChange: fn(),
   },
@@ -30,7 +30,7 @@ export const WithSelectedValues: Story = {
 
 export const RemoteOptionsNotYetLoaded: Story = {
   args: {
-    field: enumMultiField({ optionsSource: REMOTE_OPTIONS }),
+    ...enumMultiField({ options: [], isRemote: true }),
     value: [],
     onChange: fn(),
   },
@@ -38,13 +38,13 @@ export const RemoteOptionsNotYetLoaded: Story = {
 
 export const CheckingAnOptionCallsOnChange: Story = {
   args: {
-    field: enumMultiField(),
+    ...enumMultiField(),
     value: ["draft"],
     onChange: fn(),
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    await fireEvent.click(canvas.getByLabelText("Published"));
+    await fireEvent.click(canvas.getByLabelText("published"));
     await expect(args.onChange).toHaveBeenCalledWith(["draft", "published"]);
   },
   tags: ["no-visual-test"],

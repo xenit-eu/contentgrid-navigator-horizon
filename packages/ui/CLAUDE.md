@@ -33,9 +33,13 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
 - **Pattern** — a composed component that encodes Navigator-domain semantics.
   Lives in `src/patterns/`. Examples: `EntityCard`, `DataTable`,
   `FilterSidebar`, HAL-Forms field renderers, `PdfHighlightOverlay`.
-  - Reads `RenderFieldDescriptor[]` (the bridge type from `@contentgrid/navigator-data`
-    via HAL-Forms → RenderFieldDescriptor bridge, ADR-004) — it does NOT import
-    `@contentgrid/hal` or `@contentgrid/hal-forms` directly.
+  - The HAL-Forms field renderers (`src/patterns/form-renderers/`) take plain scalar props
+    (`name`, `label`, `required`, `readOnly`, `description?`, `value`, `onChange`, `error?`,
+    plus type-specific constraints like `includesTime`/`options`) — NOT a descriptor object.
+    The `kind`-dispatching switch and the `FieldDescriptor` type itself live in
+    `packages/features/src/entity-item-create/` (ADR-004), not here; these components have no
+    dependency on that type or on any HAL-Forms shape, and do NOT import `@contentgrid/hal` or
+    `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
     reused across multiple tracks or apps.
@@ -102,7 +106,8 @@ No CLI involved.
   `@contentgrid/typed-fetch`, `@contentgrid/fetch-hooks`,
   `@contentgrid/fetch-hook-authentication`, `@contentgrid/problem-details`,
   or `@contentgrid/uri-template` — those belong in `packages/navigator-data`.
-  Patterns read `RenderFieldDescriptor[]`, not raw HAL types.
+  The form-renderer patterns take plain scalar props (see above), not a `FieldDescriptor` or any
+  other HAL-Forms-shaped type — that type lives in `packages/features/src/entity-item-create/`.
 - Do NOT import from `packages/features/*` — features depend on `packages/ui`,
   not the other way around.
 - Do NOT import Radix UI (`@radix-ui/*`) outside `packages/ui`. Inside
@@ -112,18 +117,32 @@ No CLI involved.
 
 ## HAL-FORMS metadata in pattern components
 
-- Pattern components that render HAL-FORMS-derived props MUST accept the full
-  `RenderFieldDescriptor` shape, including `options.link` (remote enumerations) and
-  all validation constraints (`required`, `regex`, `readOnly`, `allowed-values`).
-  Do NOT narrow the prop type to a lossy subset — silent field drops degrade
-  UX without compile-time errors.
-- Remote option FETCHING stays out of `packages/ui`. Do NOT import from
-  `@contentgrid/hal`, `@contentgrid/hal-forms`, or any data-layer package to
-  resolve `options.link` inside a pattern component. Accept already-resolved
-  options or a loader callback from the caller.
-- Why: `packages/ui` is the rendering layer; data fetching belongs in
-  `packages/navigator-data`. Mixing them violates the two-layer model (ADR-007)
-  and would pull Layer-1 packages into the UI bundle.
+Per ADR-004, `packages/ui`'s form-renderer patterns
+(`src/patterns/form-renderers/`) are **descriptor-agnostic**: they never see a `FieldDescriptor`,
+a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch that reads a
+`FieldDescriptor` and unpacks it into plain props lives in
+`packages/features/src/entity-item-create/render/field-renderer.tsx`, one layer up.
+
+- Each renderer takes plain scalar props only: `name`, `label`, `required`, `readOnly`,
+  `description?`, `value`, `onChange`, `error?`, plus type-specific constraints
+  (`includesTime` for datetime, `options`/`isRemote` for enum, `min`/`max`/`step` for number,
+  etc.). Do NOT reintroduce a descriptor-object prop (`field: SomeDescriptorType`) — that was the
+  exact coupling this restructure removed. A caller unpacks its own descriptor type into these
+  props before rendering.
+- `enum`/`enum-multi` renderers take already-resolved `options: readonly string[]` plus an
+  `isRemote?: boolean` flag for "not yet loaded" — they never see a raw HAL-FORMS options object
+  or resolve a remote `options.link` themselves.
+- Remote option FETCHING stays out of `packages/ui`, unchanged: the caller (in
+  `packages/features`) decides `isRemote` and supplies already-resolved `options` once loaded.
+- The one exception where a `packages/ui`-adjacent renderer needs live data —
+  `RelationToOneRenderer`/`RelationToManyRenderer` needing a target collection's candidates —
+  is solved by keeping the actual fetch (`render/relation-field.tsx`, using
+  `useEntityItemCollection`) in `packages/features`, one layer above these dumb renderers; the
+  renderers themselves still only receive an already-fetched `options: EntityPickerOption[]` list
+  plus pagination callbacks.
+- Why: `packages/ui` is the rendering layer; data fetching and HAL-Forms-shaped state belong in
+  `packages/navigator-data`/`packages/features`. Mixing them violates the two-layer model
+  (ADR-007) and would pull Layer-1 packages into the UI bundle.
 
 ---
 

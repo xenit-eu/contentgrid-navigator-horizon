@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    field: numberField(),
+    ...numberField(),
     value: "",
     onChange: fn(),
   },
@@ -22,7 +22,7 @@ export const Default: Story = {
 
 export const WithValue: Story = {
   args: {
-    field: numberField(),
+    ...numberField(),
     value: 42,
     onChange: fn(),
   },
@@ -30,7 +30,7 @@ export const WithValue: Story = {
 
 export const WithError: Story = {
   args: {
-    field: numberField(),
+    ...numberField(),
     value: "",
     onChange: fn(),
     error: "Quantity is required",
@@ -39,7 +39,7 @@ export const WithError: Story = {
 
 export const TypingCallsOnChangeWithACoercedNumber: Story = {
   args: {
-    field: numberField(),
+    ...numberField(),
     value: "",
     onChange: fn(),
   },

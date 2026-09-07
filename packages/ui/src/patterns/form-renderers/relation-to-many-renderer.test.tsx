@@ -14,19 +14,10 @@ const OPTIONS: EntityPickerOption[] = [
 ];
 
 const BASE_PROPS: RelationToManyRendererProps = {
-  field: relationToManyField(),
+  ...relationToManyField(),
   value: [],
   onChange: vi.fn(),
   options: OPTIONS,
-  isLoading: false,
-  searchQuery: "",
-  onSearch: vi.fn(),
-  hasPreviousPage: false,
-  hasNextPage: false,
-  onPreviousPage: vi.fn(),
-  onNextPage: vi.fn(),
-  selectedItemsData: {},
-  onItemResolved: vi.fn(),
 };
 
 function renderRenderer(overrides: Partial<RelationToManyRendererProps> = {}) {
@@ -98,9 +89,23 @@ describe("RelationToManyRenderer", () => {
     expect(onChange).toHaveBeenCalledWith(["/products/2"]);
   });
 
+  it("calls onViewItem with the clicked row's href", async () => {
+    const user = userEvent.setup();
+    const onViewItem = vi.fn();
+    renderRenderer({
+      value: ["/products/1", "/products/2"],
+      selectedItemsData: { "/products/1": { name: "Widget" }, "/products/2": { name: "Gadget" } },
+      onViewItem,
+    });
+
+    await user.click(screen.getByText("Widget").closest("tr")!);
+
+    expect(onViewItem).toHaveBeenCalledWith("/products/1");
+  });
+
   it("hides Link/Unlink actions when the field is read-only", () => {
     renderRenderer({
-      field: relationToManyField({ readOnly: true }),
+      readOnly: true,
       value: ["/products/1"],
       selectedItemsData: { "/products/1": { name: "Widget" } },
     });

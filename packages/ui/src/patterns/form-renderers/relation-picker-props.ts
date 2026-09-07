@@ -27,4 +27,8 @@ export interface RelationRendererPickerProps {
   readonly onItemResolved: (href: string, data: Record<string, unknown>) => void;
   /** Rendered in the picker when provided — see EntityPicker's `createNewLink`. */
   readonly createNewLink?: ReactNode;
+  /** Forwarded straight to `RelationSection`'s `onViewItem` — receives a linked item's href (this
+   * is what `RelationSection`'s `RelationItem.id` is set to below). Omitted entirely (no "view
+   * details" affordance) when not provided. */
+  readonly onViewItem?: (href: string) => void;
 }

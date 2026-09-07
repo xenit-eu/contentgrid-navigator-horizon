@@ -10,19 +10,10 @@ const OPTIONS: EntityPickerOption[] = [
 ];
 
 const BASE_PROPS: RelationToOneRendererProps = {
-  field: relationToOneField(),
+  ...relationToOneField(),
   value: undefined,
   onChange: vi.fn(),
   options: OPTIONS,
-  isLoading: false,
-  searchQuery: "",
-  onSearch: vi.fn(),
-  hasPreviousPage: false,
-  hasNextPage: false,
-  onPreviousPage: vi.fn(),
-  onNextPage: vi.fn(),
-  selectedItemsData: {},
-  onItemResolved: vi.fn(),
 };
 
 function renderRenderer(overrides: Partial<RelationToOneRendererProps> = {}) {
@@ -74,8 +65,22 @@ describe("RelationToOneRenderer", () => {
     expect(onChange).toHaveBeenCalledWith(undefined);
   });
 
+  it("calls onViewItem with the linked item's href when view details is clicked", async () => {
+    const user = userEvent.setup();
+    const onViewItem = vi.fn();
+    renderRenderer({
+      value: "/suppliers/1",
+      selectedItemsData: { "/suppliers/1": { name: "Acme Corp" } },
+      onViewItem,
+    });
+
+    await user.click(screen.getByRole("button", { name: /view details/i }));
+
+    expect(onViewItem).toHaveBeenCalledWith("/suppliers/1");
+  });
+
   it("hides Link/Unlink actions when the field is read-only", () => {
-    renderRenderer({ field: relationToOneField({ readOnly: true }) });
+    renderRenderer({ readOnly: true });
     expect(screen.queryByRole("button", { name: /link supplier/i })).not.toBeInTheDocument();
   });
 

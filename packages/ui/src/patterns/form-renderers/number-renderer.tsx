@@ -1,12 +1,21 @@
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
+import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
 import { FieldShell } from "./field-shell";
 
 export interface NumberRendererProps {
-  readonly field: Extract<RenderFieldDescriptor, { type: "number" }>;
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly readOnly: boolean;
+  readonly description?: string;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly onFocus?: () => void;
+  readonly onBlur?: () => void;
 }
 
 function displayValueFor(value: FieldValue): string {
@@ -15,8 +24,21 @@ function displayValueFor(value: FieldValue): string {
   return "";
 }
 
-export function NumberRenderer({ field, value, onChange, error }: Readonly<NumberRendererProps>) {
-  const { name, label, required, readOnly, description } = field;
+export function NumberRenderer({
+  name,
+  label,
+  required,
+  readOnly,
+  description,
+  value,
+  onChange,
+  error,
+  min,
+  max,
+  step,
+  onFocus,
+  onBlur,
+}: Readonly<NumberRendererProps>) {
   const displayValue = displayValueFor(value);
 
   return (
@@ -46,6 +68,11 @@ export function NumberRenderer({ field, value, onChange, error }: Readonly<Numbe
         }}
         readOnly={readOnly}
         required={required}
+        min={min}
+        max={max}
+        step={step}
+        onFocus={onFocus}
+        onBlur={onBlur}
         aria-invalid={!!error}
         aria-describedby={error ? `${name}-error` : undefined}
       />

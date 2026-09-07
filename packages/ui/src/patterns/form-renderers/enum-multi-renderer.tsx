@@ -1,26 +1,35 @@
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
+import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
 import { FieldShell } from "./field-shell";
-import { resolveInlineOptions } from "./options-source";
 
 export interface EnumMultiRendererProps {
-  readonly field: Extract<RenderFieldDescriptor, { type: "enum-multi" }>;
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly readOnly: boolean;
+  readonly description?: string;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  readonly options: readonly string[];
+  /** True when the caller's options source is a remote link not yet resolved into `options`. */
+  readonly isRemote?: boolean;
 }
 
 export function EnumMultiRenderer({
-  field,
+  name,
+  label,
+  required,
+  readOnly,
+  description,
   value,
   onChange,
   error,
+  options,
+  isRemote = false,
 }: Readonly<EnumMultiRendererProps>) {
-  const { name, label, required, readOnly, description, optionsSource } = field;
-  const options = resolveInlineOptions(optionsSource);
   const selected = Array.isArray(value) ? value : [];
-  const isRemote = optionsSource.kind === "remote";
 
   function toggle(optionValue: string, checked: boolean) {
     onChange(checked ? [...selected, optionValue] : selected.filter((v) => v !== optionValue));
@@ -39,14 +48,14 @@ export function EnumMultiRenderer({
       ) : (
         <div className="space-y-2">
           {options.map((option) => (
-            <div key={option.value} className="flex items-center gap-2">
+            <div key={option} className="flex items-center gap-2">
               <Checkbox
-                id={`${name}-${option.value}`}
-                checked={selected.includes(option.value)}
-                onCheckedChange={(checked) => toggle(option.value, checked === true)}
+                id={`${name}-${option}`}
+                checked={selected.includes(option)}
+                onCheckedChange={(checked) => toggle(option, checked === true)}
                 disabled={readOnly}
               />
-              <Label htmlFor={`${name}-${option.value}`}>{option.label}</Label>
+              <Label htmlFor={`${name}-${option}`}>{option}</Label>
             </div>
           ))}
         </div>

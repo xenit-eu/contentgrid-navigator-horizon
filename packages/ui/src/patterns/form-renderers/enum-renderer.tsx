@@ -1,4 +1,4 @@
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
+import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import {
   Select,
   SelectContent,
@@ -7,22 +7,30 @@ import {
   SelectValue,
 } from "../../primitives/select";
 import { FieldShell } from "./field-shell";
-import { resolveInlineOptions } from "./options-source";
 
 export interface EnumRendererProps {
-  readonly field: Extract<RenderFieldDescriptor, { type: "enum" }>;
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly readOnly: boolean;
+  readonly description?: string;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  readonly options: readonly string[];
+  /** True when the caller's options source is a remote link not yet resolved into `options` —
+   * fetching stays out of `packages/ui` (see this package's CLAUDE.md), so the caller decides. */
+  readonly isRemote?: boolean;
+  readonly onFocus?: () => void;
+  readonly onBlur?: () => void;
 }
 
 /**
  * Radix `Select` disallows `value=""` on an item, and once a value is picked there's no
  * built-in way back to unselected — so a non-required field (whose unset representation is
- * `""`, per `defaultValueFor` in `use-form-fields.ts`) could never be returned to that state
- * before submit. `UNSET` is a sentinel item value mapped back to `""` in `onChange`; only
- * offered for non-required fields, mirroring `BooleanRenderer`'s "Clear" affordance for the
- * same problem on boolean fields.
+ * `""`) could never be returned to that state before submit. `UNSET` is a sentinel item value
+ * mapped back to `""` in `onChange`; only offered for non-required fields, mirroring
+ * `BooleanRenderer`'s "Clear" affordance for the same problem on boolean fields.
  *
  * `UNSET` is never passed as the controlled `value` — an untouched or just-cleared field
  * always renders as `selected` (`undefined`), so the trigger shows the neutral "Select…"
@@ -30,11 +38,21 @@ export interface EnumRendererProps {
  */
 const UNSET = "__unset__";
 
-export function EnumRenderer({ field, value, onChange, error }: Readonly<EnumRendererProps>) {
-  const { name, label, required, readOnly, description, optionsSource } = field;
-  const options = resolveInlineOptions(optionsSource);
+export function EnumRenderer({
+  name,
+  label,
+  required,
+  readOnly,
+  description,
+  value,
+  onChange,
+  error,
+  options,
+  isRemote = false,
+  onFocus,
+  onBlur,
+}: Readonly<EnumRendererProps>) {
   const selected = typeof value === "string" && value !== "" ? value : undefined;
-  const isRemote = optionsSource.kind === "remote";
   // Excluded for a remote options source — its options haven't loaded yet (the trigger is
   // disabled and shows "Options not yet loaded"), so there's nothing to clear back to "none" from.
   const canUnset = !required && !isRemote;
@@ -54,6 +72,8 @@ export function EnumRenderer({ field, value, onChange, error }: Readonly<EnumRen
       >
         <SelectTrigger
           id={name}
+          onFocus={onFocus}
+          onBlur={onBlur}
           aria-invalid={!!error}
           aria-describedby={error ? `${name}-error` : undefined}
         >
@@ -66,8 +86,8 @@ export function EnumRenderer({ field, value, onChange, error }: Readonly<EnumRen
         <SelectContent position="popper">
           {canUnset && <SelectItem value={UNSET}>(none)</SelectItem>}
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
+            <SelectItem key={option} value={option}>
+              {option}
             </SelectItem>
           ))}
         </SelectContent>

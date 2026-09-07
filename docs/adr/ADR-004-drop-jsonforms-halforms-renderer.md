@@ -1,4 +1,4 @@
-# ADR-004 — Forms: drop JSONForms, build a HAL-Forms→shadcn renderer set
+# ADR-004 — Forms: drop JSONForms; HAL-Forms → `FieldDescriptor`/`FieldRenderer` architecture
 
 **Date:** 2026-04-29
 **Status:** Accepted
@@ -12,104 +12,110 @@ The original navigator uses JSONForms v3.6.0 (pinned exact) with eight custom re
 
 Backend already publishes `@contentgrid/hal-forms`, which parses `_templates` into a typed `HalFormsTemplate` / `HalFormsProperty` structure. So the heavy parsing work is already done upstream by Xenit.
 
-We need to decide: keep JSONForms, port it as-is, or commit fully to a shadcn-native renderer set on top of `@contentgrid/hal-forms`.
+**This ADR was first accepted with a bridge shaped as `HalFormsTemplate` → `RenderFieldDescriptor[]`**, split across `packages/navigator-data/src/form-fields/` (the bridge + `useFormFields`) and `packages/ui/src/patterns/form-renderers/` (a `FieldRenderer` switch dispatching to per-type renderers). That implementation shipped and worked, but coupled two things that don't actually belong together:
+
+- **Model enrichment** — "what the backend requires" (required-ness, constraints, relation cardinality) — is a `packages/navigator-data` concern; it doesn't change per rendering surface.
+- **Rendering projection** — "how it renders" (which widget, how errors display, how a relation picker fetches its candidates) — is a presentation concern that needs to evolve independently (new field kinds, new error UX, an eventual AI-extraction annotation layer) without touching the data layer.
+
+This ADR splits these into a dedicated rendering-projection engine — a `FieldDescriptor` union, `resolveFieldDescriptors()`, a `kind`-aware `FieldRenderer`, `LayoutInformation`, and a `FormContainer` — with dumb widgets staying in `packages/ui`, decoupled from any specific descriptor type.
 
 ## Decision
 
-**Drop JSONForms. Build a small HAL-Forms→shadcn bridge in `@contentgrid/navigator-data` plus a renderer set in `packages/ui`.**
+**Drop the old `RenderFieldDescriptor` bridge. Adopt a `FieldDescriptor`/`FieldRenderer`/`FieldError` architecture, split across three packages by responsibility, not by feature.**
 
-- The bridge lives at `packages/navigator-data/src/form-fields/create-form-to-render-fields.ts` (Phase 5A.1 artefact) and maps `HalFormsTemplate` from `@contentgrid/hal-forms` → `RenderFieldDescriptor[]` consumable by our renderers. It stays in `@contentgrid/navigator-data` — not `packages/ui` or `packages/features` — because both of those packages are forbidden from importing `@contentgrid/hal-forms` directly (ADR-007's two-layer model); the folder is named `form-fields/`, not `schema/`, to avoid colliding with the unrelated Zod-validated app-config schema that also lives in this package.
-- The renderer set covers: text, number, datetime, enum (single + multi), typeahead (prefix-match remote), file upload, range pair (date/number), relation (to-one + to-many).
-- Forms drive from `_templates.create-form` / `default-form`, not profile metadata.
+```
+packages/navigator-data          Layer 2 — model enrichment ("what the backend requires")
+  CreateHalFormTemplate, ProfileAttribute, ProfileRelation, HalFormsProperty (re-exported type)
+  — unchanged by this restructure; still the source `resolveCreateFieldDescriptors` reads from.
 
-## Why drop JSONForms
+packages/features/src/entity-item-create   Rendering-projection engine (moved here — see
+                                            "Where the engine lives" below)
+  model/    FieldDescriptor union, LayoutInformation, resolveCreateFieldDescriptors()  (pure)
+  state/    FieldError taxonomy, useEntityFormState()                                  (state)
+  render/   FieldRenderer (kind switch), relation-field.tsx, FormContainer             (render)
+
+packages/ui/src/patterns/form-renderers    Layer — dumb widgets
+  TextRenderer, NumberRenderer, BooleanRenderer, DateTimeRenderer, EnumRenderer,
+  EnumMultiRenderer, RelationToOneRenderer, RelationToManyRenderer
+  — plain scalar props (name, label, required, readOnly, value, onChange, error, ...);
+    no dependency on any descriptor type, HAL, or HAL-Forms.
+```
+
+- **`FieldDescriptor`** (`packages/features/src/entity-item-create/model/field-descriptor.ts`) is a `kind`-discriminated union (`text`, `number`, `datetime`, `boolean`, `file`, `enum`, `relation`). Every variant carries the raw `HalFormsProperty` (re-exported as a type from `@contentgrid/navigator-data`, never imported from `@contentgrid/hal-forms` directly) alongside its own typed fields — unlike the old `RenderFieldDescriptor`, nothing needs pre-flattening into a lossy subset before a renderer can use it.
+- **`resolveCreateFieldDescriptors()`** (`model/resolve-create-field-descriptors.ts`) is a pure function: `CreateHalFormTemplate` → `{ fields, layout }`. No React, no fetching — a direct, same-shaped replacement for the retired `create-form-to-render-fields.ts`.
+- **`FieldRenderer`** (`render/field-renderer.tsx`) is the `kind` switch, now living in `packages/features` rather than `packages/ui`. This is the one deliberate exception: `packages/ui` cannot fetch (see its CLAUDE.md), but a `relation` field's picker needs to fetch its target collection via `@contentgrid/navigator-data` hooks (`render/relation-field.tsx`). Every other `kind` delegates straight through to a `packages/ui` widget.
+- **`FieldError`** (`state/field-error.ts`) replaces the old flat `Record<string, string>` with a two-source taxonomy — `{ source: "internal" | "external", message, problemType?, detail? }` — so a client-side required-field error and a server validation error are distinguishable, and a future annotation/extraction seam has a defined `source` to write under.
+- **`useEntityFormState()`** (`state/use-entity-form-state.ts`) replaces `useFormFields`: same dismissal-tracking/dirty-check behaviour, ported onto `FieldDescriptor[]`/`FieldError[]` instead of the old types.
+- Values/submit are unchanged: `HalFormValues<T>` + `halFormCodecs` + the existing `useCreateEntityItem` mutation hook.
+
+## Where the engine lives — a single implementation, not two
+
+One alternative considered was placing the new engine "app-level first" under `apps/navigator/src/forms/`, deferring extraction to a shared package "until a second track needs it" (citing ADR-010's cutover-first pattern). That trigger was already met at adoption time: `entity-item-create` was already `x-stability: "stable"` in `packages/features` and already consumed identically by **both** `apps/navigator` and `apps/navigator-experimental`.
+
+The actual hard constraint in this ADR is narrower than "must be app-level": it only rules out `packages/navigator-data` (model-enrichment layer) and `packages/ui` (dumb-widget layer) as homes for the rendering-projection logic. `packages/features/<feature>/` is exactly the layer designed for this per `packages/features/CLAUDE.md` — features are the unit of promotion/sharing between tracks, and no code moves between directories on promotion. The relation-fetching exception ("`packages/ui` can't fetch, but the relation case may") works identically whether `FieldRenderer` lives in `apps/navigator/src/forms/` or `packages/features/src/entity-item-create/` — `packages/features` already fetches via `navigator-data` hooks today.
+
+**Decision: the engine lives inside `packages/features/src/entity-item-create/`, replacing that feature's internals in place.** Both apps get the new architecture from the same import, with no code duplication, and the old bridge could be deleted outright rather than kept alive for a "legacy path" (`packages/navigator-data/src/form-fields/*` and `packages/ui/src/patterns/form-renderers/field-renderer.tsx` had no other consumers).
+
+**Tradeoff accepted:** this couples `apps/navigator` and `apps/navigator-experimental` on one implementation — a regression here affects both apps simultaneously, with no app-boundary isolation during rollout. Given both tracks already shared this exact feature and it was already `stable`, this was judged the right call over maintaining a duplicate.
+
+## Why drop JSONForms (unchanged from the original decision)
 
 - **Pinned-exact dependency** (`3.6.0`) means we're stuck on a release line. Upgrade is its own project.
-- **Ajv + JSON Schema** runtime is heavy and only partially leveraged — we use a fraction of its validation surface.
+- **Ajv + JSON Schema** runtime is heavy and only partially leveraged.
 - **Custom renderers** in JSONForms are awkward to write against modern React: imperative tester functions, ranks, and the `dispatch` model don't compose well with hooks-first code.
-- **Styling integration** — JSONForms' MUI bridge is what we're migrating _away_ from. The vanilla bridge requires re-skinning every renderer anyway.
-- **HAL-Forms ≠ JSON Schema.** `_templates` is the actual server contract. Round-tripping it through JSON Schema loses information (e.g. relation link semantics) and adds translation layers.
-- **`@contentgrid/hal-forms` already exists.** The parsing problem is solved. JSONForms would be a second parsing layer we don't need.
+- **Styling integration** — JSONForms' MUI bridge is what we migrated _away_ from.
+- **HAL-Forms ≠ JSON Schema.** `_templates` is the actual server contract. Round-tripping it through JSON Schema loses information and adds translation layers.
+- **`@contentgrid/hal-forms` already exists.** The parsing problem is solved upstream.
 
-## Why custom renderers (vs. another forms library)
+## Why custom renderers (vs. another forms library) — unchanged
 
-- **TanStack Form** was considered (Phase 5A spike). Solid, headless, type-safe — but it's a forms-state library, not a renderer set. We'd still write every shadcn-native field component. Adoption adds API surface without solving our actual problem.
-- **React Hook Form** — similar story. Good for app-level form ergonomics, but we need _server-driven_ fields, not user-defined schemas.
-- **Hand-rolled with `useFormFields`** (current prototype direction) — already on this path, just incomplete. Closing the gap is cheaper than introducing another library.
+- **TanStack Form** / **React Hook Form** were both considered and rejected — we need _server-driven_ fields, not user-defined schemas, and adopting either would still require writing every shadcn-native field component ourselves.
+- Hand-rolled state (`useEntityFormState`, formerly `useFormFields`) closes the gap more cheaply than introducing another library. Nothing rules out adopting TanStack Form _inside_ a renderer later if a state-management ceiling is hit.
 
-We can adopt TanStack Form _inside_ a renderer later if we hit a state-management ceiling. Not as a starting point.
+## Export surface stays stable
 
-## Scope of the renderer set
+`packages/features/src/entity-item-create`'s public barrel keeps exporting `CreateEntityItemView` / `CreateEntityItemForm` (same names, prop-compatible) — `CreateEntityItemForm` is now an alias for the new `CreateEntityItemContainer` (the smart component owning gating, relation-profile loading, the mutation, and error mapping), which renders the new chrome-only `CreateEntityItemForm` (in `create-entity-item-form.tsx`) internally. Both apps' route files need zero or near-zero changes.
 
-Driven by the Phase 0.5 entity-profile audit. Expected types:
+## Scope of this restructure
 
-- text (single + multiline), email, password, url
-- number, integer
-- datetime (date, time, date+time)
-- enum (single + multi-select)
-- typeahead (debounced remote search, prefix match)
-- range pair (`date~from` / `~until`, `num~gte` / `~lte`)
-- file upload (with XHR progress, cancel, retry)
-- relation (to-one picker, to-many list, with unlink-all)
+This restructure covers the create-form path only: attributes (`text`, `number`, `boolean`, `datetime`, `enum`, `file` placeholder) and relations (`relation`, both cardinalities). It does **not** cover:
 
-If the audit surfaces a shape with no clean shadcn-native equivalent (rare oneOf/anyOf, conditional rendering driven by other field values), we either: (a) implement a focused custom renderer, or (b) escalate as out-of-scope before Phase 5 commits. No silent gap.
+- Search-form reuse — `filter` and `sort` are deliberately NOT `FieldDescriptor` union members. Filtering already has a real, differently-shaped home (`packages/features/src/search/filter-properties.ts`'s `SearchFilterProperty`); sort is never a per-field concept in legacy Navigator, but a single collection-view control reading the search template's `_sort` property directly. See `model/field-descriptor.ts`'s doc comment for the full rationale.
+- The AI-extraction service itself — the `FieldError` two-source taxonomy leaves a defined `source` for a future extraction-originated error to write under, and `CreateEntityItemContainer` takes an `annotations` prop (keyed by field name, holding a `FieldAnnotation` — an interface, deliberately expandable rather than a fixed value type) so a future extraction feature can offer an externally-extracted value back into a field. Unused and empty for now, in this create-form/attributes-only restructure. Legacy Navigator's own AI-extraction integration (`ExtractionContext.tsx`) is a fuller context-driven citation/popover system; this prop is a narrower seam for the same idea, not a port of that system.
+- `file` field rendering — still an inert placeholder, to be addressed separately.
 
-## What is lost by dropping JSONForms — honest inventory
+## What is lost by dropping JSONForms — honest inventory (unchanged)
 
-The deep-dive in analysis §3A catalogues five specific capabilities that JSONForms provides out-of-the-box and that the custom renderer must address explicitly:
+1. **Built-in conditional rules** (`rule.effect: HIDE | SHOW | DISABLE | ENABLE`) — no HAL-Forms equivalent exists today; would need a hand-rolled predicate layer if a production `_templates` ever needs one.
+2. **Layout primitives** (tabs, fieldsets, nested layouts) — `LayoutInformation` today only ever produces a single flat group for a create-form; multi-group layout is a placeholder for a future search-form migration, not implemented.
+3. **`oneOf`/`anyOf` polymorphic forms** — no HAL-Forms equivalent; would need per-case implementation if it arises.
+4. **Ajv validation cohesion** — replaced by `useEntityFormState`'s client-side required-field validation plus `FieldError`'s external/server half; different idiom, not a drop-in replacement for arbitrary Ajv keywords.
+5. **An external ecosystem** — the renderer set is bespoke; every problem is our problem.
 
-1. **Built-in conditional rules.** `rule.effect: HIDE | SHOW | DISABLE | ENABLE` against a JSON-pointer `scope` — field B disappears when field A == X. The new renderer must implement a hand-rolled predicate layer (e.g. `react-hook-form` `watch` + condition). Cost is proportional to how often production `_templates` actually use conditionals — Phase 0.5 task 0.5.3 catalogues this.
-2. **Layout primitives.** `Categorization` (tabs), `Group` (fieldset), nested layouts. HAL-Forms does not carry layout hints today; if any customer schema injected layout via JSON UI Schema, that is lost.
-3. **`oneOf` / `anyOf` polymorphic forms.** JSONForms has dedicated renderers for discriminated unions. The new renderer must reimplement per-case if production entity profiles use polymorphism. Phase 0.5.3 catalogues whether they do.
-4. **Ajv validation cohesion.** JSONForms binds Ajv errors to controls by JSON pointer. Replacement is Zod derived from `FieldDescriptor` — equivalent capability, different idiom, real porting effort for any custom keyword logic.
-5. **An external ecosystem.** Stack Overflow answers, GitHub issues, third-party renderer packages. The custom renderer is bespoke — every problem is our problem.
+## Surviving open risk (unchanged)
 
-## The rejected middle path: keep JSONForms, swap renderer set
-
-This option was explicitly examined: write a `@contentgrid/jsonforms-shadcn-renderers` package, register it in place of `@jsonforms/material-renderers`, keep the JSON-Schema translation layer.
-
-Why it does not pay off:
-
-- **You still write a complete renderer set.** Every primitive (text, select, checkbox, date, file, HAL-link picker, array, oneOf) needs a shadcn-native renderer with a tester. That is the same effort as the `FieldDescriptor` switch — minus the type safety, plus the framework boilerplate.
-- **You still carry JSONForms' weight.** The bundle keeps `@jsonforms/core` + `@jsonforms/react` + Ajv + redux-bridging code, all of which exist purely to dispatch into renderers we wrote. ~80–100 KB gzipped of pure overhead.
-- **You inherit the version-coupling risk.** JSONForms v3 → v4 forces a renderer rewrite anyway (the `tester` API changes between majors); an ongoing upgrade obligation in exchange for a layer we no longer need.
-- **The HAL-Forms → JSON-Schema translator stays forever.** It is the most fragile piece of the existing navigator. Owning the direct HAL → `FieldDescriptor` mapping removes it.
-
-Rejected. The middle path keeps JSONForms' costs and discards its benefits.
-
-## Phase 0.5 audit as gating clause
-
-The audit (task 0.5.3) catalogues `oneOf` / `anyOf`, `rule.effect`, custom Ajv keywords, and `Categorization` layouts across all production entity profiles.
-
-- **Audit shows minimal usage** (expected): proceed with the HAL-Forms-native renderer as planned.
-- **Audit shows significant usage** with no clean shadcn equivalent: escalate before Phase 5A starts. Options at that point: (a) widen Phase 5A scope for the missing renderer cases, (b) keep the original navigator on those entity profiles until equivalents exist, (c) reopen this decision. The team decides; this ADR records the gating condition.
-
-## Surviving open risk
-
-If a customer's HAL-Forms `_templates` evolves post-cutover and introduces a shape the renderer's discriminated union does not cover, the failure mode is a TypeScript compile error (visible) rather than a silent fallback (invisible). This is intentional. The renderer must have an explicit "unhandled descriptor type" path that fails loudly in dev and renders a marked placeholder in production so the gap surfaces early. Tracked as a renderer-design requirement under Phase 5A.
+If a customer's HAL-Forms `_templates` evolves and introduces a shape `FieldDescriptor`'s discriminated union doesn't cover, the failure mode is a TypeScript compile error (visible), not a silent fallback. `FieldRenderer` renders an explicit "not yet supported" placeholder for any `kind` without a producer or widget, so a gap surfaces as a visible placeholder in the UI, not a crash or a silently dropped field.
 
 ## Consequences
 
 **Positive:**
 
-- Forms are driven by the actual server contract (`_templates`), not by profile metadata.
-- Bundle drops by ~135 KB gzipped (JSONForms core + Ajv + MUI renderers removed; react-hook-form + Zod already required).
-- Renderers compose with shadcn primitives, so style consistency is automatic.
-- `FieldDescriptor[]` is a TypeScript discriminated union — exhaustiveness checked by the compiler. Bad combinations fail at compile time, not at runtime.
-- `FieldDescriptor[]` is small enough that customer-track apps can override individual renderers without forking the library.
-- AI-friendliness: a new field type is a code change in three files (type, renderer case, story). JSONForms requires understanding tester ranking, `JsonFormsRendererRegistryEntry` shape, and redux-style state plumbing.
+- Forms are still driven by the actual server contract (`_templates`), not by profile metadata.
+- `FieldDescriptor` is a TypeScript discriminated union — exhaustiveness checked by the compiler.
+- Model enrichment and rendering projection are now independently evolvable: a new widget or error-display change never touches `packages/navigator-data`, and a new attribute constraint never touches `packages/ui`.
+- The one "packages/ui can't fetch" exception (`relation` fields) is now structurally explicit — it lives in `packages/features`, not smuggled into `packages/ui` or worked around with prop-drilled fetch results.
+- Both `apps/navigator` and `apps/navigator-experimental` share one implementation with zero duplication.
 
 **Negative / accepted:**
 
 - We own the renderer set forever. Mitigated by keeping the surface narrow and tested.
-- HAL-Forms shapes that JSONForms handled "for free" need explicit support. The Phase 0.5 audit exists to catch these early.
-- Round-trip parity test (5A.6) becomes mandatory — if the renderer set diverges from the original's behaviour on a known entity, that's a regression we ship into customer hands.
-- Conditional field logic requires explicit predicate code where JSONForms provided declarative `rule.effect`. Scope confirmed by Phase 0.5.3 audit.
+- Both apps move together — a regression in the shared engine affects both tracks simultaneously, with no per-app staged rollout (see "Where the engine lives" above).
+- `FieldDescriptor.property` carrying the raw `HalFormsProperty` through is a wider surface than the old `RenderFieldDescriptor`'s hand-picked fields — a renderer can now reach into template internals directly, which needs review discipline to keep `packages/ui` genuinely descriptor-agnostic (it never receives `property` — only the plain scalars `FieldRenderer` extracts from it).
 
 ## Reconsider when
 
-- HAL-Forms grows shapes we can't render with a small custom set (e.g. recursive nested objects, deeply conditional fields). Then evaluate TanStack Form _or_ a focused new renderer.
-- Phase 0.5 audit reveals heavy `oneOf` / `anyOf` or `rule.effect` usage that Phase 5A cannot absorb cleanly. Then options (a), (b), or (c) from the gating clause above apply.
+- HAL-Forms grows shapes the `FieldDescriptor` union can't render with a small custom set (e.g. recursive nested objects, deeply conditional fields). Then evaluate TanStack Form _or_ a focused new renderer.
+- A search-form migration is undertaken — revisit whether `LayoutInformation`'s single-group assumption still holds, and whether `filter`/`sort` warrant their own `FieldDescriptor`-shaped types at that point (see `model/field-descriptor.ts`'s doc comment for why they don't today).
 - A customer requires a forms-builder UX (end-users defining their own forms). That's a different problem domain.
 
 ---

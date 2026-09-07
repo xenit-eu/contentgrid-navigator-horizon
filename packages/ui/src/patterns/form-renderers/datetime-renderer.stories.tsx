@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 
 export const DateOnly: Story = {
   args: {
-    field: datetimeField(),
+    ...datetimeField(),
     value: "",
     onChange: fn(),
   },
@@ -22,7 +22,7 @@ export const DateOnly: Story = {
 
 export const WithTime: Story = {
   args: {
-    field: datetimeField({ includesTime: true, name: "scheduledAt", label: "Scheduled at" }),
+    ...datetimeField({ includesTime: true, name: "scheduledAt", label: "Scheduled at" }),
     value: "",
     onChange: fn(),
   },
@@ -30,7 +30,7 @@ export const WithTime: Story = {
 
 export const WithValue: Story = {
   args: {
-    field: datetimeField(),
+    ...datetimeField(),
     value: new Date("2024-03-15T00:00:00.000Z"),
     onChange: fn(),
   },
@@ -38,7 +38,7 @@ export const WithValue: Story = {
 
 export const WithError: Story = {
   args: {
-    field: datetimeField(),
+    ...datetimeField(),
     value: "",
     onChange: fn(),
     error: "Due date is required",

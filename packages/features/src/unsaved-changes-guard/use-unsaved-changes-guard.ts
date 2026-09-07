@@ -29,8 +29,8 @@ export interface UseUnsavedChangesGuardResult {
  * would show the native prompt even on a pristine form, so it's explicitly gated here.
  *
  * `isDirty` is a plain boolean rather than a specific form library's dirty flag — this
- * repo doesn't use react-hook-form (see ADR-004); pass `useFormFields(...).isDirty`
- * from `@contentgrid/navigator-data`, or any other boolean dirty signal.
+ * repo doesn't use react-hook-form (see ADR-004); pass `useEntityFormState(...).isDirty`
+ * from `@contentgrid/features/entity-item-create`, or any other boolean dirty signal.
  */
 export function useUnsavedChangesGuard(isDirty: boolean): UseUnsavedChangesGuardResult {
   const blockingSuspendedRef = useRef(false);

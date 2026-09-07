@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { PageTitle, UnsavedChangesDialog } from "@contentgrid/ui";
 import { useUnsavedChangesGuard } from "../unsaved-changes-guard";
-import { CreateEntityItemForm } from "./create-entity-item-form";
+import { CreateEntityItemContainer } from "./create-entity-item-container";
 
 export interface CreateEntityItemViewProps {
   readonly profile: ProfileEntity;
@@ -11,11 +11,12 @@ export interface CreateEntityItemViewProps {
   /** Renders a cancel button next to submit when provided. */
   readonly onCancel?: () => void;
   readonly renderCreateRelationTarget?: (targetProfile: ProfileEntity) => ReactNode;
+  readonly onViewRelationItem?: (targetProfile: ProfileEntity, itemId: string) => void;
 }
 
 /**
  * App-agnostic create-item content: title, unsaved-changes guard, and
- * `CreateEntityItemForm`. No page chrome of its own — the caller wraps this
+ * `CreateEntityItemContainer`. No page chrome of its own — the caller wraps this
  * in whatever layout (e.g. `BreadCrumbsToolBarLayout`) the route needs, and
  * that layout owns the surrounding padding. All routing / navigation is
  * supplied by the caller through `onCreated` and `onCancel` — this component
@@ -26,6 +27,7 @@ export function CreateEntityItemView({
   onCreated,
   onCancel,
   renderCreateRelationTarget,
+  onViewRelationItem,
 }: Readonly<CreateEntityItemViewProps>) {
   const [isDirty, setIsDirty] = useState(false);
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
@@ -38,7 +40,7 @@ export function CreateEntityItemView({
         onConfirm={unsavedChangesGuard.confirmNavigation}
         onCancel={unsavedChangesGuard.cancelNavigation}
       />
-      <CreateEntityItemForm
+      <CreateEntityItemContainer
         profile={profile}
         onDirtyChange={setIsDirty}
         onCreated={
@@ -46,6 +48,7 @@ export function CreateEntityItemView({
         }
         onCancel={onCancel && (() => unsavedChangesGuard.withoutBlocking(onCancel))}
         renderCreateRelationTarget={renderCreateRelationTarget}
+        onViewRelationItem={onViewRelationItem}
       />
     </div>
   );

@@ -1,154 +1,132 @@
-import type {
-  FieldOptionsSource,
-  RenderFieldDescriptor,
-} from "@contentgrid/navigator-data/form-fields";
+import type { BooleanRendererProps } from "./boolean-renderer";
+import type { DateTimeRendererProps } from "./datetime-renderer";
+import type { EnumMultiRendererProps } from "./enum-multi-renderer";
+import type { EnumRendererProps } from "./enum-renderer";
+import type { NumberRendererProps } from "./number-renderer";
+import type { RelationToManyRendererProps } from "./relation-to-many-renderer";
+import type { RelationToOneRendererProps } from "./relation-to-one-renderer";
+import type { TextRendererProps } from "./text-renderer";
 
-/**
- * `SimpleLink` (the real type of `link` below) is a class with private fields —
- * an object literal can't structurally satisfy it, and `packages/ui` can't
- * import `@contentgrid/hal` to construct a real instance, so this stands in a
- * dummy value typed via a cast rather than importing the real type.
- */
-const DUMMY_LINK = {} as unknown as Extract<FieldOptionsSource, { kind: "remote" }>["link"];
-
-const INLINE_OPTIONS: FieldOptionsSource = {
-  kind: "inline",
-  options: [
-    { value: "draft", label: "Draft" },
-    { value: "published", label: "Published" },
-    { value: "archived", label: "Archived" },
-  ],
-};
-
-const REMOTE_OPTIONS: FieldOptionsSource = {
-  kind: "remote",
-  link: DUMMY_LINK,
-};
+/** Every renderer's fixture omits `value`/`onChange` — those vary per test/story and are
+ * supplied at the call site, spread alongside the fixture's base props. */
+type BaseProps<T> = Omit<T, "value" | "onChange">;
 
 export function textField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "text" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "text" }> {
+  overrides: Partial<BaseProps<TextRendererProps>> = {},
+): BaseProps<TextRendererProps> {
   return {
     name: "name",
     label: "Name",
     required: false,
     readOnly: false,
-    type: "text",
-    regex: /.*/,
-    minLength: 0,
-    maxLength: 0,
     ...overrides,
   };
 }
 
 export function numberField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "number" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "number" }> {
+  overrides: Partial<BaseProps<NumberRendererProps>> = {},
+): BaseProps<NumberRendererProps> {
   return {
     name: "quantity",
     label: "Quantity",
     required: false,
     readOnly: false,
-    type: "number",
     ...overrides,
   };
 }
 
 export function booleanField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "boolean" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "boolean" }> {
+  overrides: Partial<BaseProps<BooleanRendererProps>> = {},
+): BaseProps<BooleanRendererProps> {
   return {
     name: "active",
     label: "Active",
     required: false,
     readOnly: false,
-    type: "boolean",
     ...overrides,
   };
 }
 
 export function datetimeField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "datetime" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "datetime" }> {
+  overrides: Partial<BaseProps<DateTimeRendererProps>> = {},
+): BaseProps<DateTimeRendererProps> {
   return {
     name: "dueDate",
     label: "Due date",
     required: false,
     readOnly: false,
-    type: "datetime",
     includesTime: false,
     ...overrides,
   };
 }
 
+const INLINE_STATUS_OPTIONS = ["draft", "published", "archived"];
+
 export function enumField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "enum" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "enum" }> {
+  overrides: Partial<BaseProps<EnumRendererProps>> = {},
+): BaseProps<EnumRendererProps> {
   return {
     name: "status",
     label: "Status",
     required: false,
     readOnly: false,
-    type: "enum",
-    optionsSource: INLINE_OPTIONS,
+    options: INLINE_STATUS_OPTIONS,
     ...overrides,
   };
 }
 
 export function enumMultiField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "enum-multi" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "enum-multi" }> {
+  overrides: Partial<BaseProps<EnumMultiRendererProps>> = {},
+): BaseProps<EnumMultiRendererProps> {
   return {
     name: "tags",
     label: "Tags",
     required: false,
     readOnly: false,
-    type: "enum-multi",
-    optionsSource: INLINE_OPTIONS,
-    ...overrides,
-  };
-}
-
-export function fileField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "file" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "file" }> {
-  return {
-    name: "attachment",
-    label: "Attachment",
-    required: false,
-    readOnly: false,
-    type: "file",
-    multiple: false,
+    options: INLINE_STATUS_OPTIONS,
     ...overrides,
   };
 }
 
 export function relationToOneField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "relation-to-one" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "relation-to-one" }> {
+  overrides: Partial<BaseProps<RelationToOneRendererProps>> = {},
+): BaseProps<RelationToOneRendererProps> {
   return {
     name: "supplier",
     label: "Supplier",
     required: false,
     readOnly: false,
-    type: "relation-to-one",
-    targetCollectionHref: "https://api.example.com/suppliers",
+    ...relationPickerDefaults(),
     ...overrides,
   };
 }
 
 export function relationToManyField(
-  overrides: Partial<Extract<RenderFieldDescriptor, { type: "relation-to-many" }>> = {},
-): Extract<RenderFieldDescriptor, { type: "relation-to-many" }> {
+  overrides: Partial<BaseProps<RelationToManyRendererProps>> = {},
+): BaseProps<RelationToManyRendererProps> {
   return {
     name: "products",
     label: "Products",
     required: false,
     readOnly: false,
-    type: "relation-to-many",
-    targetCollectionHref: "https://api.example.com/products",
+    ...relationPickerDefaults(),
     ...overrides,
   };
 }
 
-export { REMOTE_OPTIONS };
+/** Neutral picker-plumbing defaults shared by the relation-to-one/relation-to-many fixtures —
+ * a caller overriding one of these (e.g. a story supplying real `options`) spreads over it. */
+function relationPickerDefaults() {
+  return {
+    options: [],
+    isLoading: false,
+    searchQuery: "",
+    onSearch: () => {},
+    hasPreviousPage: false,
+    hasNextPage: false,
+    onPreviousPage: () => {},
+    onNextPage: () => {},
+    selectedItemsData: {},
+    onItemResolved: () => {},
+  };
+}

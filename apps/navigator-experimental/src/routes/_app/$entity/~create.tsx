@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import { CreateEntityItemView } from "@contentgrid/features/entity-item-create";
 import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
@@ -29,6 +29,7 @@ function RouteComponent() {
 
 function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const go = useNavigate();
+  const router = useRouter();
 
   const breadcrumbs = (
     <Breadcrumb>
@@ -85,6 +86,13 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
             </Link>
           ) : null
         }
+        onViewRelationItem={(targetProfile, itemId) => {
+          const location = router.buildLocation({
+            to: "/$entity/$itemId",
+            params: { entity: targetProfile.name, itemId },
+          });
+          window.open(location.href, "_blank", "noopener,noreferrer");
+        }}
       />
     </BreadCrumbsToolBarLayout>
   );

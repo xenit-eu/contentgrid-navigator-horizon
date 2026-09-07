@@ -1,31 +1,27 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { EnumMultiRenderer } from "./enum-multi-renderer";
-import { REMOTE_OPTIONS, enumMultiField } from "./test-fixtures";
+import { enumMultiField } from "./test-fixtures";
 
 describe("EnumMultiRenderer", () => {
   it("renders one checkbox per inline option", () => {
-    render(<EnumMultiRenderer field={enumMultiField()} value={[]} onChange={vi.fn()} />);
+    render(<EnumMultiRenderer {...enumMultiField()} value={[]} onChange={vi.fn()} />);
     expect(screen.getAllByRole("checkbox")).toHaveLength(3);
   });
 
   it("checks the boxes matching the current value", () => {
     render(
-      <EnumMultiRenderer
-        field={enumMultiField()}
-        value={["draft", "archived"]}
-        onChange={vi.fn()}
-      />,
+      <EnumMultiRenderer {...enumMultiField()} value={["draft", "archived"]} onChange={vi.fn()} />,
     );
-    expect(screen.getByLabelText("Draft")).toBeChecked();
-    expect(screen.getByLabelText("Published")).not.toBeChecked();
-    expect(screen.getByLabelText("Archived")).toBeChecked();
+    expect(screen.getByLabelText("draft")).toBeChecked();
+    expect(screen.getByLabelText("published")).not.toBeChecked();
+    expect(screen.getByLabelText("archived")).toBeChecked();
   });
 
   it("adds the option value when checked", () => {
     const onChange = vi.fn();
-    render(<EnumMultiRenderer field={enumMultiField()} value={["draft"]} onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText("Published"));
+    render(<EnumMultiRenderer {...enumMultiField()} value={["draft"]} onChange={onChange} />);
+    fireEvent.click(screen.getByLabelText("published"));
     expect(onChange).toHaveBeenCalledWith(["draft", "published"]);
   });
 
@@ -33,17 +29,17 @@ describe("EnumMultiRenderer", () => {
     const onChange = vi.fn();
     render(
       <EnumMultiRenderer
-        field={enumMultiField()}
+        {...enumMultiField()}
         value={["draft", "published"]}
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByLabelText("Draft"));
+    fireEvent.click(screen.getByLabelText("draft"));
     expect(onChange).toHaveBeenCalledWith(["published"]);
   });
 
   it("treats a non-array value as no selection", () => {
-    render(<EnumMultiRenderer field={enumMultiField()} value={undefined} onChange={vi.fn()} />);
+    render(<EnumMultiRenderer {...enumMultiField()} value={undefined} onChange={vi.fn()} />);
     for (const checkbox of screen.getAllByRole("checkbox")) {
       expect(checkbox).not.toBeChecked();
     }
@@ -52,7 +48,7 @@ describe("EnumMultiRenderer", () => {
   it("shows a not-yet-loaded message and no checkboxes for a remote options source", () => {
     render(
       <EnumMultiRenderer
-        field={enumMultiField({ optionsSource: REMOTE_OPTIONS })}
+        {...enumMultiField({ options: [], isRemote: true })}
         value={[]}
         onChange={vi.fn()}
       />,

@@ -1,11 +1,14 @@
 import { useState } from "react";
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
+import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { EntityPicker } from "../entity-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
 import type { RelationRendererPickerProps } from "./relation-picker-props";
 
 export interface RelationToManyRendererProps extends RelationRendererPickerProps {
-  readonly field: Extract<RenderFieldDescriptor, { type: "relation-to-many" }>;
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly readOnly: boolean;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
@@ -18,7 +21,9 @@ export interface RelationToManyRendererProps extends RelationRendererPickerProps
  * already collected — so the new hrefs are simply appended onto the current `value`.
  */
 export function RelationToManyRenderer({
-  field,
+  label,
+  required,
+  readOnly,
   value,
   onChange,
   error,
@@ -34,6 +39,7 @@ export function RelationToManyRenderer({
   columns,
   onItemResolved,
   createNewLink,
+  onViewItem,
 }: Readonly<RelationToManyRendererProps>) {
   const [open, setOpen] = useState(false);
   const hrefs = Array.isArray(value) ? (value as string[]) : [];
@@ -45,20 +51,19 @@ export function RelationToManyRenderer({
   return (
     <>
       <RelationSection
-        title={field.label}
-        required={field.required}
+        title={label}
+        required={required}
         items={items}
         columns={columns}
-        onLink={field.readOnly ? undefined : () => setOpen(true)}
-        onUnlink={
-          field.readOnly ? undefined : (id) => onChange(hrefs.filter((href) => href !== id))
-        }
+        onLink={readOnly ? undefined : () => setOpen(true)}
+        onUnlink={readOnly ? undefined : (id) => onChange(hrefs.filter((href) => href !== id))}
+        onViewItem={onViewItem}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <EntityPicker
         open={open}
         onOpenChange={setOpen}
-        relationTitle={field.label}
+        relationTitle={label}
         options={options.filter((option) => !hrefs.includes(option.href))}
         isLoading={isLoading}
         searchQuery={searchQuery}

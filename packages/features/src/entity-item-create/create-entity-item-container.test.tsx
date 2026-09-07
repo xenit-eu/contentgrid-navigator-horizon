@@ -12,7 +12,7 @@ import {
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { server } from "../../test-setup";
-import { CreateEntityItemForm } from "./create-entity-item-form";
+import { CreateEntityItemContainer } from "./create-entity-item-container";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
@@ -149,28 +149,31 @@ function supplierCollectionHandler(
   );
 }
 
-function Harness({
+function LoadInvoiceProfileAndRenderCreateForm({
   onCreated,
   onCancel,
   onDirtyChange,
+  annotations,
 }: Readonly<{
   onCreated?: (item: { id: string }) => void;
   onCancel?: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
+  annotations?: Parameters<typeof CreateEntityItemContainer>[0]["annotations"];
 }>) {
   const { data: profile } = useProfileEntity({ name: "invoice" });
   if (!profile) return <p>Loading…</p>;
   return (
-    <CreateEntityItemForm
+    <CreateEntityItemContainer
       profile={profile}
       onCreated={onCreated}
       onCancel={onCancel}
       onDirtyChange={onDirtyChange}
+      annotations={annotations}
     />
   );
 }
 
-function renderForm(props: Parameters<typeof Harness>[0] = {}) {
+function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateForm>[0] = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
@@ -189,10 +192,10 @@ function renderForm(props: Parameters<typeof Harness>[0] = {}) {
     );
   }
 
-  return render(<Harness {...props} />, { wrapper: Wrapper });
+  return render(<LoadInvoiceProfileAndRenderCreateForm {...props} />, { wrapper: Wrapper });
 }
 
-describe("CreateEntityItemForm", () => {
+describe("CreateEntityItemContainer", () => {
   it("renders one field per create-form property", async () => {
     server.use(profileRootHandler(), invoiceProfileHandler());
     renderForm();
@@ -215,6 +218,20 @@ describe("CreateEntityItemForm", () => {
 
     await screen.findByLabelText(/Invoice Number/);
     await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
+  });
+
+  it("shows a required field's error on blur, before any submit attempt", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler());
+    renderForm();
+
+    const input = await screen.findByLabelText(/Invoice Number/);
+    expect(screen.queryByText("Invoice Number is required")).not.toBeInTheDocument();
+
+    await user.click(input);
+    await user.tab();
 
     expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
   });
@@ -303,6 +320,35 @@ describe("CreateEntityItemForm", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     expect(await screen.findByText("Already in use")).toBeInTheDocument();
+  });
+
+  describe("annotations", () => {
+    it("applies every annotated field's extracted value in one click", async () => {
+      const user = userEvent.setup();
+      server.use(profileRootHandler(), invoiceProfileHandler());
+      renderForm({
+        annotations: {
+          invoice_number: { extractedValue: "INV-99" },
+          is_recurring: { extractedValue: true },
+        },
+      });
+
+      await screen.findByLabelText(/Invoice Number/);
+      await user.click(screen.getByRole("button", { name: "Apply all extracted values" }));
+
+      expect(screen.getByLabelText(/Invoice Number/)).toHaveValue("INV-99");
+      expect(screen.getByLabelText("Is Recurring")).toBeChecked();
+    });
+
+    it("does not show the apply-all button when there are no annotations", async () => {
+      server.use(profileRootHandler(), invoiceProfileHandler());
+      renderForm();
+
+      await screen.findByLabelText(/Invoice Number/);
+      expect(
+        screen.queryByRole("button", { name: "Apply all extracted values" }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("relation fields", () => {

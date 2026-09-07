@@ -1,13 +1,20 @@
 import { format } from "date-fns";
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
+import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
 import { FieldShell } from "./field-shell";
 
 export interface DateTimeRendererProps {
-  readonly field: Extract<RenderFieldDescriptor, { type: "datetime" }>;
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly readOnly: boolean;
+  readonly description?: string;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  readonly includesTime: boolean;
+  readonly onFocus?: () => void;
+  readonly onBlur?: () => void;
 }
 
 /**
@@ -25,13 +32,18 @@ function toInputValue(value: FieldValue, includesTime: boolean): string {
 }
 
 export function DateTimeRenderer({
-  field,
+  name,
+  label,
+  required,
+  readOnly,
+  description,
   value,
   onChange,
   error,
+  includesTime,
+  onFocus,
+  onBlur,
 }: Readonly<DateTimeRendererProps>) {
-  const { name, label, required, readOnly, description, includesTime } = field;
-
   return (
     <FieldShell
       name={name}
@@ -58,6 +70,8 @@ export function DateTimeRenderer({
         }}
         readOnly={readOnly}
         required={required}
+        onFocus={onFocus}
+        onBlur={onBlur}
         aria-invalid={!!error}
         aria-describedby={error ? `${name}-error` : undefined}
       />

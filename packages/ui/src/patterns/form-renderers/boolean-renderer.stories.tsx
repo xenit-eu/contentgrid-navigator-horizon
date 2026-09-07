@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Unchecked: Story = {
   args: {
-    field: booleanField(),
+    ...booleanField(),
     value: false,
     onChange: fn(),
   },
@@ -22,7 +22,7 @@ export const Unchecked: Story = {
 
 export const Checked: Story = {
   args: {
-    field: booleanField(),
+    ...booleanField(),
     value: true,
     onChange: fn(),
   },
@@ -30,7 +30,7 @@ export const Checked: Story = {
 
 export const ReadOnly: Story = {
   args: {
-    field: booleanField({ readOnly: true }),
+    ...booleanField({ readOnly: true }),
     value: true,
     onChange: fn(),
   },
@@ -38,7 +38,7 @@ export const ReadOnly: Story = {
 
 export const WithError: Story = {
   args: {
-    field: booleanField(),
+    ...booleanField(),
     value: false,
     onChange: fn(),
     error: "Must be accepted",
@@ -47,7 +47,7 @@ export const WithError: Story = {
 
 export const ClickingTogglesOnChange: Story = {
   args: {
-    field: booleanField(),
+    ...booleanField(),
     value: false,
     onChange: fn(),
   },

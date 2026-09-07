@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    field: textField(),
+    ...textField(),
     value: "",
     onChange: fn(),
   },
@@ -22,7 +22,7 @@ export const Default: Story = {
 
 export const Required: Story = {
   args: {
-    field: textField({ required: true }),
+    ...textField({ required: true }),
     value: "",
     onChange: fn(),
   },
@@ -30,7 +30,7 @@ export const Required: Story = {
 
 export const ReadOnly: Story = {
   args: {
-    field: textField({ readOnly: true }),
+    ...textField({ readOnly: true }),
     value: "Acme Corp",
     onChange: fn(),
   },
@@ -38,7 +38,7 @@ export const ReadOnly: Story = {
 
 export const WithDescription: Story = {
   args: {
-    field: textField({ description: "The legal entity name, as registered." }),
+    ...textField({ description: "The legal entity name, as registered." }),
     value: "",
     onChange: fn(),
   },
@@ -46,7 +46,7 @@ export const WithDescription: Story = {
 
 export const WithError: Story = {
   args: {
-    field: textField(),
+    ...textField(),
     value: "",
     onChange: fn(),
     error: "Name is required",
@@ -55,7 +55,7 @@ export const WithError: Story = {
 
 export const TypingCallsOnChange: Story = {
   args: {
-    field: textField(),
+    ...textField(),
     value: "",
     onChange: fn(),
   },

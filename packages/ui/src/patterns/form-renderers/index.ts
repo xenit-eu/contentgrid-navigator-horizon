@@ -1,5 +1,3 @@
-export { FieldRenderer } from "./field-renderer";
-export type { FieldRendererProps } from "./field-renderer";
 export { TextRenderer } from "./text-renderer";
 export type { TextRendererProps } from "./text-renderer";
 export { NumberRenderer } from "./number-renderer";

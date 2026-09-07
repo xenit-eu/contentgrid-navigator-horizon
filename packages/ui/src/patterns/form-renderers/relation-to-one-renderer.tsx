@@ -1,11 +1,14 @@
 import { useState } from "react";
-import type { FieldValue, RenderFieldDescriptor } from "@contentgrid/navigator-data/form-fields";
+import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { EntityPicker } from "../entity-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
 import type { RelationRendererPickerProps } from "./relation-picker-props";
 
 export interface RelationToOneRendererProps extends RelationRendererPickerProps {
-  readonly field: Extract<RenderFieldDescriptor, { type: "relation-to-one" }>;
+  readonly name: string;
+  readonly label: string;
+  readonly required: boolean;
+  readonly readOnly: boolean;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
@@ -17,7 +20,9 @@ export interface RelationToOneRendererProps extends RelationRendererPickerProps 
  * of building new selection chrome from scratch.
  */
 export function RelationToOneRenderer({
-  field,
+  label,
+  required,
+  readOnly,
   value,
   onChange,
   error,
@@ -33,6 +38,7 @@ export function RelationToOneRenderer({
   columns,
   onItemResolved,
   createNewLink,
+  onViewItem,
 }: Readonly<RelationToOneRendererProps>) {
   const [open, setOpen] = useState(false);
   const href = typeof value === "string" && value !== "" ? value : undefined;
@@ -41,19 +47,20 @@ export function RelationToOneRenderer({
   return (
     <>
       <RelationSection
-        title={field.label}
-        required={field.required}
+        title={label}
+        required={required}
         isManyToOne
         items={items}
         columns={columns}
-        onLink={field.readOnly ? undefined : () => setOpen(true)}
-        onUnlink={field.readOnly ? undefined : () => onChange(undefined)}
+        onLink={readOnly ? undefined : () => setOpen(true)}
+        onUnlink={readOnly ? undefined : () => onChange(undefined)}
+        onViewItem={onViewItem}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <EntityPicker
         open={open}
         onOpenChange={setOpen}
-        relationTitle={field.label}
+        relationTitle={label}
         options={options}
         isLoading={isLoading}
         searchQuery={searchQuery}
