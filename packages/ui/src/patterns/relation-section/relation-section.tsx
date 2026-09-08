@@ -90,8 +90,15 @@ function getItemLabel(item: RelationItem): string {
 }
 
 function resolveColumnKeys(items: RelationItem[], columns?: RelationColumn[]): string[] {
+  // Checked across every item, not just `items[0]` — a column is only dropped when NO item
+  // carries that key at all (e.g. a caller-supplied column referencing an attribute that
+  // genuinely isn't part of the target profile). Checking `items[0]` alone previously made every
+  // column vanish whenever that one item's preview data specifically hadn't resolved yet (e.g.
+  // right after an annotation set a relation field's value without going through the picker's own
+  // resolve path — see `create-entity-item-form.tsx`), even while other linked items' data was
+  // already available.
   if (columns && columns.length > 0) {
-    return columns.map((c) => c.key).filter((k) => items[0] && k in items[0].data);
+    return columns.map((c) => c.key).filter((k) => items.some((item) => k in item.data));
   }
   if (!items[0]) return [];
   return Object.keys(items[0].data).filter((k) => !k.startsWith("_") && k !== "id");

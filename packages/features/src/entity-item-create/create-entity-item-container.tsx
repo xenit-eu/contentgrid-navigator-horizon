@@ -166,12 +166,20 @@ function CreateEntityItemContainerReady({
   // update (and dismiss their errors) in a single commit via `formState.setValues`, rather than
   // requiring one `onFieldChange` call per field the way each field's own "Use extracted value"
   // button (built by `create-entity-item-form.tsx` from the same `annotations`) already does.
+  // Excludes `relation` fields for the same reason `create-entity-item-form.tsx`'s per-field
+  // button does — a relation's value must be a real href resolved through the picker, not a raw
+  // extracted string.
+  const applicableAnnotationEntries = annotations
+    ? Object.entries(annotations).filter(
+        ([name]) => fields.find((field) => field.name === name)?.kind !== "relation",
+      )
+    : [];
   const onApplyAllAnnotations =
-    annotations && Object.keys(annotations).length > 0
+    applicableAnnotationEntries.length > 0
       ? () =>
           formState.setValues(
             Object.fromEntries(
-              Object.entries(annotations).map(([name, annotation]) => [
+              applicableAnnotationEntries.map(([name, annotation]) => [
                 name,
                 annotation.extractedValue,
               ]),

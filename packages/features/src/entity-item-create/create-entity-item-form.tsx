@@ -66,11 +66,21 @@ export function CreateEntityItemForm({
     () => resolveCreateFieldDescriptors(createTemplate),
     [createTemplate],
   );
-  const annotationCount = annotations ? Object.keys(annotations).length : 0;
+  // A relation field's value must be a real href resolved through the picker's own search/select
+  // flow (see `render/relation-field.tsx`) — accepting a raw extracted string here would set the
+  // field's value without ever populating `relationItemsData`, leaving its linked-item preview
+  // permanently stuck showing no attributes (or the bare href) for that item. Annotations only
+  // ever apply to plain attribute fields.
+  function isRelationField(fieldName: string): boolean {
+    return fields.find((field) => field.name === fieldName)?.kind === "relation";
+  }
+  const applicableAnnotationCount = annotations
+    ? Object.keys(annotations).filter((name) => !isRelationField(name)).length
+    : 0;
 
   function renderBottomChildren(fieldName: string) {
     const annotation = annotations?.[fieldName];
-    if (!annotation) return null;
+    if (!annotation || isRelationField(fieldName)) return null;
     return (
       <button
         type="button"
@@ -86,11 +96,11 @@ export function CreateEntityItemForm({
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       {nonFieldErrorAlert}
 
-      {onApplyAllAnnotations && annotationCount > 0 && (
+      {onApplyAllAnnotations && applicableAnnotationCount > 0 && (
         <div className="flex items-center justify-between rounded-md border border-dashed p-3 text-sm">
           <span>
-            {annotationCount} field{annotationCount === 1 ? "" : "s"} have an extracted value
-            available.
+            {applicableAnnotationCount} field{applicableAnnotationCount === 1 ? "" : "s"} have an
+            extracted value available.
           </span>
           <Button type="button" variant="outline" size="sm" onClick={onApplyAllAnnotations}>
             Apply all extracted values
