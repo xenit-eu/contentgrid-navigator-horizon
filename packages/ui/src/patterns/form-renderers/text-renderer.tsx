@@ -1,6 +1,6 @@
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
-import { FieldShell } from "./field-shell";
+import { FieldShell, fieldAriaProps } from "./field-shell";
 
 export interface TextRendererProps {
   readonly name: string;
@@ -54,8 +54,7 @@ export function TextRenderer({
         maxLength={maxLength && maxLength > 0 ? maxLength : undefined}
         onFocus={onFocus}
         onBlur={onBlur}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${name}-error` : undefined}
+        {...fieldAriaProps(name, error)}
       />
     </FieldShell>
   );

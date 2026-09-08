@@ -14,6 +14,7 @@ import {
   type ValidationAlertProps,
 } from "../problem-details";
 import { CreateEntityItemForm } from "./create-entity-item-form";
+import { isRelationField } from "./model/field-descriptor";
 import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-descriptors";
 import type { FieldAnnotation, RelationFieldData } from "./render/field-renderer";
 import type { FieldError } from "./state/field-error";
@@ -131,7 +132,10 @@ function CreateEntityItemContainerReady({
   onRequiredRelationClick,
   annotations,
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
-  const { fields } = useMemo(() => resolveCreateFieldDescriptors(createTemplate), [createTemplate]);
+  const { fields, layout } = useMemo(
+    () => resolveCreateFieldDescriptors(createTemplate),
+    [createTemplate],
+  );
   const hasRelationFields = useMemo(
     () => fields.some((field) => field.kind === "relation"),
     [fields],
@@ -167,12 +171,9 @@ function CreateEntityItemContainerReady({
   // requiring one `onFieldChange` call per field the way each field's own "Use extracted value"
   // button (built by `create-entity-item-form.tsx` from the same `annotations`) already does.
   // Excludes `relation` fields for the same reason `create-entity-item-form.tsx`'s per-field
-  // button does — a relation's value must be a real href resolved through the picker, not a raw
-  // extracted string.
+  // button does — see `isRelationField`'s doc comment.
   const applicableAnnotationEntries = annotations
-    ? Object.entries(annotations).filter(
-        ([name]) => fields.find((field) => field.name === name)?.kind !== "relation",
-      )
+    ? Object.entries(annotations).filter(([name]) => !isRelationField(fields, name))
     : [];
   const onApplyAllAnnotations =
     applicableAnnotationEntries.length > 0
@@ -238,7 +239,8 @@ function CreateEntityItemContainerReady({
 
   return (
     <CreateEntityItemForm
-      createTemplate={createTemplate}
+      fields={fields}
+      layout={layout}
       values={formState.values}
       fieldState={formState.fieldState}
       onFieldChange={formState.setValue}

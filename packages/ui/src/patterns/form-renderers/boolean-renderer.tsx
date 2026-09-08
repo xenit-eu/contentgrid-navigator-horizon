@@ -2,7 +2,7 @@ import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
-import { RequiredMarker } from "./field-shell";
+import { FieldMessage, RequiredMarker, fieldAriaProps } from "./field-shell";
 
 export interface BooleanRendererProps {
   readonly name: string;
@@ -44,8 +44,7 @@ export function BooleanRenderer({
           disabled={readOnly}
           onFocus={onFocus}
           onBlur={onBlur}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${name}-error` : undefined}
+          {...fieldAriaProps(name, error)}
         />
         <Label htmlFor={name}>
           {label}
@@ -61,12 +60,7 @@ export function BooleanRenderer({
           </Button>
         )}
       </div>
-      {description && !error && <p className="text-sm text-muted-foreground">{description}</p>}
-      {error && (
-        <p id={`${name}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      <FieldMessage name={name} description={description} error={error} />
     </div>
   );
 }

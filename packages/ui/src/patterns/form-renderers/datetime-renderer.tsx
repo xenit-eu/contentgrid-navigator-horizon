@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
-import { FieldShell } from "./field-shell";
+import { FieldShell, fieldAriaProps } from "./field-shell";
 
 export interface DateTimeRendererProps {
   readonly name: string;
@@ -72,8 +72,7 @@ export function DateTimeRenderer({
         required={required}
         onFocus={onFocus}
         onBlur={onBlur}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${name}-error` : undefined}
+        {...fieldAriaProps(name, error)}
       />
     </FieldShell>
   );

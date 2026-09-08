@@ -145,9 +145,6 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          min={field.min}
-          max={field.max}
-          step={field.step}
           value={value}
           onChange={onChange}
           error={error}

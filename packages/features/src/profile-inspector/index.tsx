@@ -5,6 +5,7 @@ import {
   type CreateFormRelationToOneProperty,
   type ProfileEntity,
   type SearchHalFormTemplateProperty,
+  isAnyProfileLoading,
   profileRootQuery,
   useNavigatorData,
   useProfileEntities,
@@ -31,7 +32,7 @@ export function ProfileInspector() {
   const profileResults = useProfileEntities();
 
   // Check if any profiles are still loading (root or per-entity)
-  const isLoading = rootQuery.isPending || profileResults.some((result) => result.isPending);
+  const isLoading = isAnyProfileLoading(rootQuery.isPending, profileResults);
   const hasErrors = rootQuery.isError || profileResults.some((result) => result.isError);
 
   // Extract successfully loaded profiles
@@ -529,7 +530,7 @@ function RelationPropertyCard({
   kind: "to-one" | "to-many";
   allProfiles: readonly ProfileEntity[];
 }>) {
-  const isRequired = kind === "to-one" && "isRequired" in prop && prop.isRequired;
+  const isRequired = prop.isRequired;
   const targetProfile = prop.profileRelation?.getTargetProfile(allProfiles);
   return (
     <div className="rounded border bg-muted p-2">

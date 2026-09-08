@@ -46,3 +46,14 @@ export function toEntityPickerColumns(
 ): EntityPickerColumn[] | undefined {
   return columns?.map(({ key, title }) => ({ key, header: title }));
 }
+
+/** Looks up a just-selected option's own attribute data by href, for the `onItemResolved` call
+ * both `RelationToOneRenderer` and `RelationToManyRenderer` make right after a picker selection —
+ * falls back to `{}` since `onItemResolved`'s cache is keyed by href regardless of whether real
+ * data was found (matches `RelationItem.data`'s existing `?? {}` fallback elsewhere). */
+export function resolveOptionData(
+  options: readonly EntityPickerOption[],
+  href: string,
+): Record<string, unknown> {
+  return options.find((option) => option.href === href)?.data ?? {};
+}

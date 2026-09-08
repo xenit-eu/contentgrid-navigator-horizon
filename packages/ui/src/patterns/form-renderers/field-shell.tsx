@@ -21,6 +21,38 @@ export function RequiredMarker() {
   );
 }
 
+/** `aria-invalid`/`aria-describedby` for a field's own input control — shared by every
+ * single-input renderer in this directory (spread directly onto the control element). */
+export function fieldAriaProps(
+  name: string,
+  error: string | undefined,
+): { readonly "aria-invalid": boolean; readonly "aria-describedby": string | undefined } {
+  return {
+    "aria-invalid": !!error,
+    "aria-describedby": error ? `${name}-error` : undefined,
+  };
+}
+
+/** The description-or-error line below a field's control — shared by `FieldShell` below and
+ * `BooleanRenderer` (whose checkbox-beside-label layout renders this same footer itself, outside
+ * `FieldShell`). */
+export function FieldMessage({
+  name,
+  description,
+  error,
+}: Readonly<Pick<FieldShellProps, "name" | "description" | "error">>) {
+  return (
+    <>
+      {description && !error && <p className="text-sm text-muted-foreground">{description}</p>}
+      {error && (
+        <p id={`${name}-error`} className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
 /**
  * Shared label/required-marker/description/error chrome for the input-per-row
  * form-renderers in this directory (everything except `BooleanRenderer`, whose
@@ -41,12 +73,7 @@ export function FieldShell({
         {required && <RequiredMarker />}
       </Label>
       {children}
-      {description && !error && <p className="text-sm text-muted-foreground">{description}</p>}
-      {error && (
-        <p id={`${name}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      <FieldMessage name={name} description={description} error={error} />
     </div>
   );
 }

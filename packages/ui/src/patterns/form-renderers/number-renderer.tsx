@@ -1,6 +1,6 @@
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
-import { FieldShell } from "./field-shell";
+import { FieldShell, fieldAriaProps } from "./field-shell";
 
 export interface NumberRendererProps {
   readonly name: string;
@@ -73,8 +73,7 @@ export function NumberRenderer({
         step={step}
         onFocus={onFocus}
         onBlur={onBlur}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${name}-error` : undefined}
+        {...fieldAriaProps(name, error)}
       />
     </FieldShell>
   );

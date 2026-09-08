@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../primitives/select";
-import { FieldShell } from "./field-shell";
+import { FieldShell, fieldAriaProps } from "./field-shell";
 
 /** A single selectable choice: `value` is the machine token submitted to the server, `label` is
  * the human-readable text shown to the user (the HAL-FORMS option's `prompt`). Kept distinct
@@ -78,13 +78,7 @@ export function EnumRenderer({
         onValueChange={(next) => onChange(next === UNSET ? "" : next)}
         disabled={readOnly || isRemote}
       >
-        <SelectTrigger
-          id={name}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${name}-error` : undefined}
-        >
+        <SelectTrigger id={name} onFocus={onFocus} onBlur={onBlur} {...fieldAriaProps(name, error)}>
           <SelectValue placeholder={isRemote ? "Options not yet loaded" : "Select…"} />
         </SelectTrigger>
         {/* "popper" instead of the default "item-aligned": item-aligned positions the

@@ -2,7 +2,11 @@ import { useState } from "react";
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { EntityPicker } from "../entity-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
-import { type RelationRendererPickerProps, toEntityPickerColumns } from "./relation-picker-props";
+import {
+  type RelationRendererPickerProps,
+  resolveOptionData,
+  toEntityPickerColumns,
+} from "./relation-picker-props";
 
 export interface RelationToOneRendererProps extends RelationRendererPickerProps {
   readonly name: string;
@@ -74,7 +78,7 @@ export function RelationToOneRenderer({
         onSelect={([selectedHref]) => {
           if (!selectedHref) return;
           onChange(selectedHref);
-          onItemResolved(selectedHref, options.find((o) => o.href === selectedHref)?.data ?? {});
+          onItemResolved(selectedHref, resolveOptionData(options, selectedHref));
         }}
       />
     </>

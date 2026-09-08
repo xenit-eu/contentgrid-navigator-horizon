@@ -76,8 +76,22 @@ export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
   const results = useProfileEntities(options);
   return {
     profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
-    isLoading: rootQuery.isPending || results.some((r) => r.isPending),
+    isLoading: isAnyProfileLoading(rootQuery.isPending, results),
   };
+}
+
+/**
+ * Shared "still loading" formula for a caller that (unlike `useLoadedProfileEntities`) also needs
+ * its own direct `rootQuery`/`useProfileEntities()` results for other purposes (e.g.
+ * `ProfileInspector`'s error list needs `rootQuery.error` and each result's own `isError`, not
+ * just booleans) and so can't just call `useLoadedProfileEntities()` for everything. See that
+ * hook's doc comment above for why both the root query and every per-entity result matter.
+ */
+export function isAnyProfileLoading(
+  rootQueryPending: boolean,
+  results: readonly { readonly isPending: boolean }[],
+): boolean {
+  return rootQueryPending || results.some((r) => r.isPending);
 }
 
 /**

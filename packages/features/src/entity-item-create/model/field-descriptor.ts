@@ -50,11 +50,7 @@ export type FieldDescriptor =
          * reaches this descriptor. */
         readonly format?: "email";
       })
-  | ({ readonly kind: "number" } & FieldDescriptorBase & {
-        readonly min?: number;
-        readonly max?: number;
-        readonly step?: number;
-      })
+  | ({ readonly kind: "number" } & FieldDescriptorBase)
   | ({ readonly kind: "datetime" } & FieldDescriptorBase & { readonly includesTime: boolean })
   | ({ readonly kind: "boolean" } & FieldDescriptorBase)
   | ({ readonly kind: "file" } & FieldDescriptorBase & { readonly multiple: boolean })
@@ -66,3 +62,12 @@ export type FieldDescriptor =
         readonly cardinality: "to-one" | "to-many";
         readonly targetHref: string;
       });
+
+/** A relation field's value must be a real href resolved through the picker's own search/select
+ * flow (`render/relation-field.tsx`) — never a raw string, e.g. from an extraction annotation.
+ * Shared by `create-entity-item-form.tsx` (per-field "Use extracted value" button) and
+ * `create-entity-item-container.tsx` ("Apply all extracted values") so both exclusions stay in
+ * sync rather than being reimplemented per call site. */
+export function isRelationField(fields: readonly FieldDescriptor[], name: string): boolean {
+  return fields.find((field) => field.name === name)?.kind === "relation";
+}

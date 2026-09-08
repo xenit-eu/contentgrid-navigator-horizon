@@ -1,13 +1,21 @@
-import { type ReactNode, type SubmitEvent, useMemo } from "react";
-import type { CreateHalFormTemplate, FieldValue } from "@contentgrid/navigator-data";
+import { type ReactNode, type SubmitEvent } from "react";
+import type { FieldValue } from "@contentgrid/navigator-data";
 import { Button } from "@contentgrid/ui";
-import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-descriptors";
+import { type FieldDescriptor, isRelationField } from "./model/field-descriptor";
+import type { LayoutInformation } from "./model/layout-information";
 import type { FieldAnnotation, RelationFieldData } from "./render/field-renderer";
 import { FormContainer } from "./render/form-container";
 import type { FieldState } from "./state/field-error";
 
 export interface CreateEntityItemFormProps {
-  readonly createTemplate: CreateHalFormTemplate;
+  /** Already resolved by the caller (`create-entity-item-container.tsx`) via
+   * `resolveCreateFieldDescriptors` — kept as a prop here rather than re-resolved from a
+   * `createTemplate` prop, since the container already needs the same `fields`/`layout` for its
+   * own annotation-filtering and relation-field logic; resolving it twice from the same input
+   * would just be redundant work for no independent-usability benefit (this component is only
+   * ever rendered by that container). */
+  readonly fields: readonly FieldDescriptor[];
+  readonly layout: LayoutInformation;
   readonly values: Readonly<Record<string, FieldValue>>;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly onFieldChange: (name: string, value: FieldValue) => void;
@@ -41,14 +49,15 @@ export interface CreateEntityItemFormProps {
 }
 
 /**
- * Owns the `<form>` tag, the field list (via `resolveCreateFieldDescriptors` + `FormContainer`),
- * and the submit/cancel buttons — entity-specific chrome only, no HAL-Forms parsing, form state,
- * or mutation logic of its own (that's `create-entity-item-container.tsx`, which renders this
+ * Owns the `<form>` tag, the field list (via `FormContainer`), and the submit/cancel buttons —
+ * entity-specific chrome only, no HAL-Forms parsing, form state, or mutation logic of its own
+ * (that's `create-entity-item-container.tsx`, which resolves `fields`/`layout` and renders this
  * component). Direct replacement for the "form fields" half of the retired, monolithic
  * `create-entity-item-form.tsx` (formerly the inner `CreateEntityItemFormFields`).
  */
 export function CreateEntityItemForm({
-  createTemplate,
+  fields,
+  layout,
   values,
   fieldState,
   onFieldChange,
@@ -62,25 +71,14 @@ export function CreateEntityItemForm({
   annotations,
   onApplyAllAnnotations,
 }: Readonly<CreateEntityItemFormProps>) {
-  const { fields, layout } = useMemo(
-    () => resolveCreateFieldDescriptors(createTemplate),
-    [createTemplate],
-  );
-  // A relation field's value must be a real href resolved through the picker's own search/select
-  // flow (see `render/relation-field.tsx`) — accepting a raw extracted string here would set the
-  // field's value without ever populating `relationItemsData`, leaving its linked-item preview
-  // permanently stuck showing no attributes (or the bare href) for that item. Annotations only
-  // ever apply to plain attribute fields.
-  function isRelationField(fieldName: string): boolean {
-    return fields.find((field) => field.name === fieldName)?.kind === "relation";
-  }
+  // Annotations only ever apply to plain attribute fields — see `isRelationField`'s doc comment.
   const applicableAnnotationCount = annotations
-    ? Object.keys(annotations).filter((name) => !isRelationField(name)).length
+    ? Object.keys(annotations).filter((name) => !isRelationField(fields, name)).length
     : 0;
 
   function renderBottomChildren(fieldName: string) {
     const annotation = annotations?.[fieldName];
-    if (!annotation || isRelationField(fieldName)) return null;
+    if (!annotation || isRelationField(fields, fieldName)) return null;
     return (
       <button
         type="button"
