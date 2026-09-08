@@ -96,8 +96,8 @@ export interface CreateEntityItemContainerProps {
  *
  * Direct replacement for the "gating + state + mutation" half of the retired, monolithic
  * `create-entity-item-form.tsx` (formerly `CreateEntityItemForm` + its inner
- * `CreateEntityItemFormFields`). `CreateEntityItemView`/the package barrel re-export this under
- * the previous public name (`CreateEntityItemForm`) so both apps' route files need zero changes.
+ * `CreateEntityItemFormFields`). Rendered by `CreateEntityItemView`, the package's public entry
+ * point for both apps' route files.
  */
 export function CreateEntityItemContainer(props: Readonly<CreateEntityItemContainerProps>) {
   const createTemplate = props.profile.createTemplate;
@@ -149,6 +149,8 @@ function CreateEntityItemContainerReady({
   const { profiles, isLoading: profilesLoading } = useLoadedProfileEntities({
     queryOptionsOverride: { enabled: hasRelationFields },
   });
+  // href -> raw preview-attribute data (not `EntityItem` — see `RelationFieldProps`'
+  // `relationItemsData` doc comment in `render/relation-field.tsx` for why).
   const [relationItemsData, setRelationItemsData] = useState<
     Record<string, Record<string, unknown>>
   >({});

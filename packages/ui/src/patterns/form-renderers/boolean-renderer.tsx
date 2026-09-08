@@ -2,6 +2,7 @@ import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
+import { RequiredMarker } from "./field-shell";
 
 export interface BooleanRendererProps {
   readonly name: string;
@@ -48,11 +49,7 @@ export function BooleanRenderer({
         />
         <Label htmlFor={name}>
           {label}
-          {required && (
-            <span aria-hidden="true" className="text-destructive">
-              *
-            </span>
-          )}
+          {required && <RequiredMarker />}
         </Label>
         {/* A boolean attribute can genuinely be unset (see use-entity-form-state.ts's isEmpty
          * doc comment) — this is the only way back to that state once the checkbox has been

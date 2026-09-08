@@ -51,7 +51,6 @@ function supplierField(cardinality: "to-one" | "to-many" = "to-one"): RelationFi
     kind: "relation",
     cardinality,
     targetHref: `${API_URL}/suppliers`,
-    valueField: "/_links/self/href",
     property: DUMMY_PROPERTY,
   };
 }

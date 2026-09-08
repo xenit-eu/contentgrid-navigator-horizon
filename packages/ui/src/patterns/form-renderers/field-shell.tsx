@@ -10,6 +10,17 @@ export interface FieldShellProps {
   readonly children: ReactNode;
 }
 
+/** Shared across every renderer that marks a field required — `FieldShell` below,
+ * `BooleanRenderer` (whose checkbox-beside-label layout doesn't use `FieldShell`), and
+ * `RelationSection` (`packages/ui/src/patterns/relation-section/`). */
+export function RequiredMarker() {
+  return (
+    <span aria-hidden="true" className="text-destructive">
+      *
+    </span>
+  );
+}
+
 /**
  * Shared label/required-marker/description/error chrome for the input-per-row
  * form-renderers in this directory (everything except `BooleanRenderer`, whose
@@ -27,11 +38,7 @@ export function FieldShell({
     <div className="space-y-1.5">
       <Label htmlFor={name}>
         {label}
-        {required && (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        )}
+        {required && <RequiredMarker />}
       </Label>
       {children}
       {description && !error && <p className="text-sm text-muted-foreground">{description}</p>}

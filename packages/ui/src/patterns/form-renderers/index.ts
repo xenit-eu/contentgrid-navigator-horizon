@@ -8,6 +8,7 @@ export { DateTimeRenderer } from "./datetime-renderer";
 export type { DateTimeRendererProps } from "./datetime-renderer";
 export { EnumRenderer } from "./enum-renderer";
 export type { EnumOption, EnumRendererProps } from "./enum-renderer";
+export { RequiredMarker } from "./field-shell";
 export { EnumMultiRenderer } from "./enum-multi-renderer";
 export type { EnumMultiRendererProps } from "./enum-multi-renderer";
 export { RelationToOneRenderer } from "./relation-to-one-renderer";

@@ -112,14 +112,6 @@ function attributeFieldDescriptor(prop: CreateFormProperty): FieldDescriptor {
   }
 }
 
-/** The value the server expects to submit for a linked item — every relation renderer in this
- * codebase already submits an item's self href directly (see the retired
- * `relation-field.tsx`'s `RelationToOneRenderer`/`RelationToManyRenderer` usage), so this is a
- * fixed default rather than something read off the wire template today. Kept as its own field
- * (rather than hardcoded at the render site) because the raw HAL-FORMS options wire shape already
- * carries a `valueField` hint for a future server-driven convention. */
-const DEFAULT_RELATION_VALUE_FIELD = "/_links/self/href";
-
 function relationFieldDescriptor(
   prop: CreateFormRelationToOneProperty | CreateFormRelationToManyProperty,
   cardinality: "to-one" | "to-many",
@@ -135,7 +127,6 @@ function relationFieldDescriptor(
     kind: "relation",
     cardinality,
     targetHref: targetCollectionHref,
-    valueField: DEFAULT_RELATION_VALUE_FIELD,
   };
 }
 

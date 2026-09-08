@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { EntityPickerOption } from "../entity-picker";
+import type { EntityPickerColumn, EntityPickerOption } from "../entity-picker";
 import type { RelationColumn } from "../relation-section";
 
 /**
@@ -31,4 +31,18 @@ export interface RelationRendererPickerProps {
    * is what `RelationSection`'s `RelationItem.id` is set to below). Omitted entirely (no "view
    * details" affordance) when not provided. */
   readonly onViewItem?: (href: string) => void;
+}
+
+/**
+ * `RelationColumn` (`{key, title}`, used by `RelationSection`'s linked-item preview) and
+ * `EntityPickerColumn` (`{key, header}`, used by `EntityPicker`'s search dialog) carry the same
+ * caller-supplied column titles under different field names — without this conversion, a
+ * `RelationToOneRenderer`/`RelationToManyRenderer` caller's `columns` only reached the preview,
+ * leaving the picker dialog to fall back to its own auto-derived column headers for the same
+ * relation, so the two could show different labels for the same attribute.
+ */
+export function toEntityPickerColumns(
+  columns?: RelationColumn[],
+): EntityPickerColumn[] | undefined {
+  return columns?.map(({ key, title }) => ({ key, header: title }));
 }

@@ -33,6 +33,15 @@ export interface RelationFieldProps {
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  /**
+   * href -> raw attribute data, for the picker's linked-item preview (`RelationSection`'s
+   * `RelationItem.data`) — deliberately NOT `Record<string, EntityItem>`: what's cached here is a
+   * plain snapshot of a few preview attributes read straight off `EntityPickerOption.data`
+   * (`item.halItem.data`), not a full `EntityItem` accessor with its own links/ETag/mutation
+   * methods. Every entry is either freshly resolved by this same create session's own picker
+   * fetch (see `onItemResolved` below) or never touched at all, so a stale/dangling entry can't
+   * accumulate here the way it could on a long-lived edit form.
+   */
   readonly relationItemsData: Readonly<Record<string, Record<string, unknown>>>;
   readonly onItemResolved: (href: string, data: Record<string, unknown>) => void;
   readonly renderCreateRelationTarget?: (targetProfile: ProfileEntity) => ReactNode;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { EntityPicker } from "../entity-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
-import type { RelationRendererPickerProps } from "./relation-picker-props";
+import { type RelationRendererPickerProps, toEntityPickerColumns } from "./relation-picker-props";
 
 export interface RelationToOneRendererProps extends RelationRendererPickerProps {
   readonly name: string;
@@ -62,6 +62,7 @@ export function RelationToOneRenderer({
         onOpenChange={setOpen}
         relationTitle={label}
         options={options}
+        columns={toEntityPickerColumns(columns)}
         isLoading={isLoading}
         searchQuery={searchQuery}
         onSearch={onSearch}

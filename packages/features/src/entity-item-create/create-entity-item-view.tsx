@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { PageTitle, UnsavedChangesDialog } from "@contentgrid/ui";
+import type { RelationConflictAlertProps, ValidationAlertProps } from "../problem-details";
 import { useUnsavedChangesGuard } from "../unsaved-changes-guard";
 import { CreateEntityItemContainer } from "./create-entity-item-container";
 
@@ -12,6 +13,18 @@ export interface CreateEntityItemViewProps {
   readonly onCancel?: () => void;
   readonly renderCreateRelationTarget?: (targetProfile: ProfileEntity) => ReactNode;
   readonly onViewRelationItem?: (targetProfile: ProfileEntity, itemId: string) => void;
+  /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
+  readonly onConflictingItemClick?: ValidationAlertProps["onConflictingItemClick"];
+  /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
+  readonly onMissingRelationTargetClick?: ValidationAlertProps["onMissingRelationTargetClick"];
+  /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
+  readonly onAllowedValuesClick?: ValidationAlertProps["onAllowedValuesClick"];
+  /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
+  readonly onExpectedTypeClick?: ValidationAlertProps["onExpectedTypeClick"];
+  /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
+  readonly onBlindRelationOverwriteClick?: RelationConflictAlertProps["onBlindRelationOverwriteClick"];
+  /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
+  readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
 }
 
 /**
@@ -28,6 +41,12 @@ export function CreateEntityItemView({
   onCancel,
   renderCreateRelationTarget,
   onViewRelationItem,
+  onConflictingItemClick,
+  onMissingRelationTargetClick,
+  onAllowedValuesClick,
+  onExpectedTypeClick,
+  onBlindRelationOverwriteClick,
+  onRequiredRelationClick,
 }: Readonly<CreateEntityItemViewProps>) {
   const [isDirty, setIsDirty] = useState(false);
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
@@ -49,6 +68,12 @@ export function CreateEntityItemView({
         onCancel={onCancel && (() => unsavedChangesGuard.withoutBlocking(onCancel))}
         renderCreateRelationTarget={renderCreateRelationTarget}
         onViewRelationItem={onViewRelationItem}
+        onConflictingItemClick={onConflictingItemClick}
+        onMissingRelationTargetClick={onMissingRelationTargetClick}
+        onAllowedValuesClick={onAllowedValuesClick}
+        onExpectedTypeClick={onExpectedTypeClick}
+        onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+        onRequiredRelationClick={onRequiredRelationClick}
       />
     </div>
   );

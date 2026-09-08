@@ -65,7 +65,4 @@ export type FieldDescriptor =
   | ({ readonly kind: "relation" } & FieldDescriptorBase & {
         readonly cardinality: "to-one" | "to-many";
         readonly targetHref: string;
-        readonly valueField: string;
       });
-
-export type FieldDescriptorKind = FieldDescriptor["kind"];

@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "../../primitives/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../primitives/tooltip";
+import { RequiredMarker } from "../form-renderers/field-shell";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -100,15 +101,6 @@ function getColumnTitle(key: string, columns?: RelationColumn[]): string {
   const col = columns?.find((c) => c.key === key);
   if (col) return col.title;
   return key.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-/** Matches the required marker in FieldShell/BooleanRenderer. */
-function RequiredMarker() {
-  return (
-    <span aria-hidden="true" className="text-destructive">
-      *
-    </span>
-  );
 }
 
 // ---------------------------------------------------------------------------

@@ -11,6 +11,10 @@ export interface CreateEntityItemFormProps {
   readonly values: Readonly<Record<string, FieldValue>>;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly onFieldChange: (name: string, value: FieldValue) => void;
+  /** See `render/form-container.tsx`'s `FormContainerProps.onFieldFocus` doc comment — kept as
+   * passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
+   * field kicking off remote autocomplete on focus), with no current caller. */
+  readonly onFieldFocus?: (name: string) => void;
   /** Marks a field touched on blur — see `useEntityFormState`'s `touchField` doc comment. Shows a
    * required-and-empty field's error as soon as the user leaves it, without waiting for submit. */
   readonly onFieldBlur?: (name: string) => void;
@@ -48,6 +52,7 @@ export function CreateEntityItemForm({
   values,
   fieldState,
   onFieldChange,
+  onFieldFocus,
   onFieldBlur,
   onSubmit,
   isSubmitting,
@@ -98,6 +103,7 @@ export function CreateEntityItemForm({
         layout={layout}
         values={values}
         onChange={onFieldChange}
+        onFieldFocus={onFieldFocus}
         onFieldBlur={onFieldBlur}
         fieldState={fieldState}
         relationFieldData={relationFieldData}

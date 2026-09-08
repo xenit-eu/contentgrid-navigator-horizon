@@ -94,7 +94,6 @@ function relationField() {
     kind: "relation",
     cardinality: "to-one",
     targetHref: "https://api.example.com/suppliers",
-    valueField: "/_links/self/href",
     property: DUMMY_PROPERTY,
   } satisfies Extract<FieldDescriptor, { kind: "relation" }>;
 }
