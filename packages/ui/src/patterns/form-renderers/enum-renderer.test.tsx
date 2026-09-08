@@ -28,7 +28,7 @@ describe("EnumRenderer", () => {
 
   it("shows the selected option's label", () => {
     render(<EnumRenderer {...enumField()} value="published" onChange={vi.fn()} />);
-    expect(screen.getByText("published")).toBeInTheDocument();
+    expect(screen.getByText("Published")).toBeInTheDocument();
   });
 
   it("clears a selected value back to empty via the (none) option", async () => {

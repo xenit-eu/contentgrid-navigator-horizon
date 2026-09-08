@@ -8,6 +8,14 @@ import {
 } from "../../primitives/select";
 import { FieldShell } from "./field-shell";
 
+/** A single selectable choice: `value` is the machine token submitted to the server, `label` is
+ * the human-readable text shown to the user (the HAL-FORMS option's `prompt`). Kept distinct
+ * because attribute/enum values are customer-defined machine tokens, not display text. */
+export interface EnumOption {
+  readonly value: string;
+  readonly label: string;
+}
+
 export interface EnumRendererProps {
   readonly name: string;
   readonly label: string;
@@ -17,7 +25,7 @@ export interface EnumRendererProps {
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
-  readonly options: readonly string[];
+  readonly options: readonly EnumOption[];
   /** True when the caller's options source is a remote link not yet resolved into `options` —
    * fetching stays out of `packages/ui` (see this package's CLAUDE.md), so the caller decides. */
   readonly isRemote?: boolean;
@@ -86,8 +94,8 @@ export function EnumRenderer({
         <SelectContent position="popper">
           {canUnset && <SelectItem value={UNSET}>(none)</SelectItem>}
           {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>

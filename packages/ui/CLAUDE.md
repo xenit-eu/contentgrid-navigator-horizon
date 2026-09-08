@@ -129,9 +129,12 @@ a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch tha
   etc.). Do NOT reintroduce a descriptor-object prop (`field: SomeDescriptorType`) — that was the
   exact coupling this restructure removed. A caller unpacks its own descriptor type into these
   props before rendering.
-- `enum`/`enum-multi` renderers take already-resolved `options: readonly string[]` plus an
-  `isRemote?: boolean` flag for "not yet loaded" — they never see a raw HAL-FORMS options object
-  or resolve a remote `options.link` themselves.
+- `enum`/`enum-multi` renderers take already-resolved `options: readonly EnumOption[]`
+  (`{ value: string; label: string }` — `value` is the machine token submitted to the server,
+  `label` is the HAL-FORMS option's `prompt`, kept separate because attribute/enum values are
+  customer-defined tokens, not display text) plus an `isRemote?: boolean` flag for "not yet
+  loaded" — they never see a raw HAL-FORMS options object or resolve a remote `options.link`
+  themselves.
 - Remote option FETCHING stays out of `packages/ui`, unchanged: the caller (in
   `packages/features`) decides `isRemote` and supplies already-resolved `options` once loaded.
 - The one exception where a `packages/ui`-adjacent renderer needs live data —

@@ -60,7 +60,11 @@ export function datetimeField(
   };
 }
 
-const INLINE_STATUS_OPTIONS = ["draft", "published", "archived"];
+const INLINE_STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "published", label: "Published" },
+  { value: "archived", label: "Archived" },
+];
 
 export function enumField(
   overrides: Partial<BaseProps<EnumRendererProps>> = {},

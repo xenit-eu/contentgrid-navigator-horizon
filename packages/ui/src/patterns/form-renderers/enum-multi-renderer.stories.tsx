@@ -44,7 +44,7 @@ export const CheckingAnOptionCallsOnChange: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    await fireEvent.click(canvas.getByLabelText("published"));
+    await fireEvent.click(canvas.getByLabelText("Published"));
     await expect(args.onChange).toHaveBeenCalledWith(["draft", "published"]);
   },
   tags: ["no-visual-test"],

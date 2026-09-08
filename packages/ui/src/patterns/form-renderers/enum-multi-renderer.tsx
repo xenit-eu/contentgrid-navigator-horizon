@@ -1,6 +1,7 @@
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
+import type { EnumOption } from "./enum-renderer";
 import { FieldShell } from "./field-shell";
 
 export interface EnumMultiRendererProps {
@@ -12,7 +13,7 @@ export interface EnumMultiRendererProps {
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
-  readonly options: readonly string[];
+  readonly options: readonly EnumOption[];
   /** True when the caller's options source is a remote link not yet resolved into `options`. */
   readonly isRemote?: boolean;
 }
@@ -48,14 +49,14 @@ export function EnumMultiRenderer({
       ) : (
         <div className="space-y-2">
           {options.map((option) => (
-            <div key={option} className="flex items-center gap-2">
+            <div key={option.value} className="flex items-center gap-2">
               <Checkbox
-                id={`${name}-${option}`}
-                checked={selected.includes(option)}
-                onCheckedChange={(checked) => toggle(option, checked === true)}
+                id={`${name}-${option.value}`}
+                checked={selected.includes(option.value)}
+                onCheckedChange={(checked) => toggle(option.value, checked === true)}
                 disabled={readOnly}
               />
-              <Label htmlFor={`${name}-${option}`}>{option}</Label>
+              <Label htmlFor={`${name}-${option.value}`}>{option.label}</Label>
             </div>
           ))}
         </div>

@@ -63,7 +63,10 @@ function enumField(overrides: Partial<Extract<FieldDescriptor, { kind: "enum" }>
     required: false,
     readOnly: false,
     kind: "enum",
-    options: ["draft", "published"],
+    options: [
+      { value: "draft", label: "Draft" },
+      { value: "published", label: "Published" },
+    ],
     multiValue: false,
     property: DUMMY_PROPERTY,
     ...overrides,

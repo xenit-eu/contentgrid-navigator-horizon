@@ -5,6 +5,7 @@ import type {
   CreateHalFormTemplate,
   HalFormsProperty,
 } from "@contentgrid/navigator-data";
+import type { EnumOption } from "@contentgrid/ui";
 import type { FieldDescriptor } from "./field-descriptor";
 import type { LayoutInformation } from "./layout-information";
 
@@ -67,7 +68,7 @@ function attributeFieldDescriptor(prop: CreateFormProperty): FieldDescriptor {
     return {
       ...base,
       kind: "enum",
-      options: resolveInlineOptionValues(property) ?? [],
+      options: resolveInlineOptions(property) ?? [],
       multiValue: property.multiValue,
     };
   }
@@ -139,18 +140,23 @@ function relationFieldDescriptor(
 }
 
 /**
- * Only resolves an INLINE options source to plain values — a remote source's link is a
- * data-fetching concern that belongs in `render/field-renderer.tsx` (via the raw `property`
- * carried on the descriptor), not in this pure bridge. Mirrors the retired bridge's
- * `buildOptionsSource`, but returns bare values (this ticket has no field-level need for a
- * separate prompt/value pair beyond what `HalFormsProperty.options` itself already exposes to a
- * renderer that wants it).
+ * Only resolves an INLINE options source — a remote source's link is a data-fetching concern
+ * that belongs in `render/field-renderer.tsx` (via the raw `property` carried on the
+ * descriptor), not in this pure bridge. Mirrors the retired bridge's `buildOptionsSource`.
+ *
+ * Keeps each option's `prompt` alongside its `value` (via `HalFormsProperty.options.toOption`):
+ * `prompt` is the HAL-FORMS spec's human-readable label, distinct from the machine `value` —
+ * attribute/enum values are customer-defined tokens (see root CLAUDE.md's "No hardcoded
+ * attribute names" rule) and are not safe to reformat into a label client-side.
  */
-function resolveInlineOptionValues(property: HalFormsProperty): readonly string[] | undefined {
+function resolveInlineOptions(property: HalFormsProperty): readonly EnumOption[] | undefined {
   const { options } = property;
   if (!options) return undefined;
   if (options.isInline() && options.inline.length > 0) {
-    return options.inline.map((value) => options.toOption(value).value);
+    return options.inline.map((value) => {
+      const option = options.toOption(value);
+      return { value: option.value, label: option.prompt };
+    });
   }
   return undefined;
 }

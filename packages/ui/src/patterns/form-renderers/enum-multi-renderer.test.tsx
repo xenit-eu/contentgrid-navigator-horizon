@@ -13,15 +13,15 @@ describe("EnumMultiRenderer", () => {
     render(
       <EnumMultiRenderer {...enumMultiField()} value={["draft", "archived"]} onChange={vi.fn()} />,
     );
-    expect(screen.getByLabelText("draft")).toBeChecked();
-    expect(screen.getByLabelText("published")).not.toBeChecked();
-    expect(screen.getByLabelText("archived")).toBeChecked();
+    expect(screen.getByLabelText("Draft")).toBeChecked();
+    expect(screen.getByLabelText("Published")).not.toBeChecked();
+    expect(screen.getByLabelText("Archived")).toBeChecked();
   });
 
   it("adds the option value when checked", () => {
     const onChange = vi.fn();
     render(<EnumMultiRenderer {...enumMultiField()} value={["draft"]} onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText("published"));
+    fireEvent.click(screen.getByLabelText("Published"));
     expect(onChange).toHaveBeenCalledWith(["draft", "published"]);
   });
 
@@ -34,7 +34,7 @@ describe("EnumMultiRenderer", () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByLabelText("draft"));
+    fireEvent.click(screen.getByLabelText("Draft"));
     expect(onChange).toHaveBeenCalledWith(["published"]);
   });
 

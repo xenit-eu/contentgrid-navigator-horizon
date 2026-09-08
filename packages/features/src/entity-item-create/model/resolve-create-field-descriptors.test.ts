@@ -206,7 +206,11 @@ describe("resolveCreateFieldDescriptors", () => {
     expect(field.kind).toBe("enum");
     if (field.kind === "enum") {
       expect(field.multiValue).toBe(false);
-      expect(field.options).toEqual(["draft", "sent", "paid"]);
+      expect(field.options).toEqual([
+        { value: "draft", label: "draft" },
+        { value: "sent", label: "sent" },
+        { value: "paid", label: "paid" },
+      ]);
     }
   });
 
@@ -216,7 +220,10 @@ describe("resolveCreateFieldDescriptors", () => {
     expect(field.kind).toBe("enum");
     if (field.kind === "enum") {
       expect(field.multiValue).toBe(true);
-      expect(field.options).toEqual(["urgent", "recurring"]);
+      expect(field.options).toEqual([
+        { value: "urgent", label: "urgent" },
+        { value: "recurring", label: "recurring" },
+      ]);
     }
   });
 

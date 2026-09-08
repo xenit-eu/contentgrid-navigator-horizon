@@ -1,4 +1,5 @@
 import type { HalFormsProperty } from "@contentgrid/navigator-data";
+import type { EnumOption } from "@contentgrid/ui";
 
 /**
  * Fields every `FieldDescriptor` variant carries. Unlike the retired
@@ -58,7 +59,7 @@ export type FieldDescriptor =
   | ({ readonly kind: "boolean" } & FieldDescriptorBase)
   | ({ readonly kind: "file" } & FieldDescriptorBase & { readonly multiple: boolean })
   | ({ readonly kind: "enum" } & FieldDescriptorBase & {
-        readonly options: readonly string[];
+        readonly options: readonly EnumOption[];
         readonly multiValue: boolean;
       })
   | ({ readonly kind: "relation" } & FieldDescriptorBase & {
