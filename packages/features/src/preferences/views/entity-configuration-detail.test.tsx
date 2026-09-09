@@ -55,6 +55,17 @@ function invoiceProfileJson() {
           _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
           _links: {},
         },
+        {
+          name: "created_by",
+          title: "Created By",
+          type: "string",
+          readOnly: true,
+          _embedded: {
+            "blueprint:constraint": [{ type: "created-by" }],
+            "blueprint:search-param": [],
+          },
+          _links: {},
+        },
       ],
       "blueprint:relation": [],
     },
@@ -161,6 +172,33 @@ describe("EntityConfigurationDetail", () => {
 
     expect(screen.getByRole("checkbox", { name: /^ID/ })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /^Invoice Number/ })).toBeInTheDocument();
+  });
+
+  it("lists audit attributes as visible-column options, in a system attributes group", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
+
+    expect(screen.getByRole("checkbox", { name: /^Created By/ })).toBeInTheDocument();
+    expect(screen.getByText("System attributes")).toBeInTheDocument();
+  });
+
+  it("persists a visible-columns override for a chosen audit attribute", async () => {
+    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+      visibleColumns: [],
+    });
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
+    await user.click(screen.getByRole("checkbox", { name: /^Created By/ }));
+
+    await waitFor(() =>
+      expect(
+        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns,
+      ).toEqual(["created_by"]),
+    );
   });
 
   it("persists a visible-columns override when an option is chosen", async () => {

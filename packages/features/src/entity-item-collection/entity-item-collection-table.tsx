@@ -22,7 +22,7 @@ import {
   type RecordTableSortOption,
 } from "@contentgrid/ui";
 import { AttributeValueRenderer, EntityItemReference } from "../entity-item";
-import { buildColumns, useColumnVisibility } from "../preferences";
+import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
@@ -41,6 +41,17 @@ export interface EntityItemCollectionTableProps {
   readonly onSort?: (option: RecordTableSortOption | undefined) => void;
   /** Rendered above the table, right-aligned (e.g. a "Filters" button). */
   readonly tableActions?: ReactNode;
+  /**
+   * Session-local column selection from the collection view's "Columns" picker. Overrides the
+   * persisted `useColumnVisibility` result for rendering only — never written back to persisted
+   * preferences. Falls back to the persisted visible columns when omitted.
+   */
+  readonly visibleColumnNames?: readonly string[];
+  /**
+   * Attribute names that must render as columns regardless of `visibleColumnNames` — e.g.
+   * attributes the user is actively filtering on.
+   */
+  readonly forcedVisibleColumnNames?: readonly string[];
   /**
    * Forwarded to the underlying `RecordDataTable`'s root — pass a bounding class (e.g.
    * `"h-full"`) to opt into the pinned-header/scrollable-body layout when this table is
@@ -86,9 +97,29 @@ export function EntityItemCollectionTable({
   currentSort,
   onSort,
   tableActions,
+  visibleColumnNames,
+  forcedVisibleColumnNames,
   className,
 }: Readonly<EntityItemCollectionTableProps>) {
-  const visibility = useColumnVisibility(profile);
+  const persistedVisibility = useColumnVisibility(profile);
+  // Union a session-local override and any actively-filtered attribute on top of the persisted
+  // visible columns, purely for rendering — this never writes back to persisted preferences.
+  // A forced-visible column (from `forcedVisibleColumnNames`) may show here even when the
+  // "Columns" picker's own checkbox is unchecked, and unchecking it won't hide it while the
+  // filter stays active — the union always wins. That's intentional: teaching the picker about
+  // "forced" state would leak a search/filter concept into the generic attribute-selector
+  // pattern for a narrow, self-correcting edge case (the column stays visible, nothing is lost).
+  const effectiveVisibleColumns = useMemo(() => {
+    const base = visibleColumnNames ?? persistedVisibility.visibleColumns;
+    return [...new Set([...base, ...(forcedVisibleColumnNames ?? [])])];
+  }, [visibleColumnNames, persistedVisibility.visibleColumns, forcedVisibleColumnNames]);
+  const visibility: ColumnVisibilityConfig = useMemo(
+    () => ({
+      visibleColumns: effectiveVisibleColumns,
+      isVisible: (name) => effectiveVisibleColumns.includes(name),
+    }),
+    [effectiveVisibleColumns],
+  );
   const attributeColumns = useMemo(() => buildColumns(profile, visibility), [profile, visibility]);
   const sortOptions = useMemo(() => toRecordTableSortOptions(profile), [profile]);
   const columns = useMemo(

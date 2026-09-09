@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FunnelIcon as Funnel } from "@phosphor-icons/react";
+import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
   EntityItem,
   type ProfileEntity,
@@ -9,6 +9,7 @@ import {
   useTypeahead,
 } from "@contentgrid/navigator-data";
 import {
+  AttributeMultiSelectContent,
   Badge,
   Button,
   Dialog,
@@ -16,14 +17,19 @@ import {
   DialogTitle,
   FilterSidebar,
   PageTitle,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   type RecordTableSortOption,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { EntityIconBadge } from "../layout";
+import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
   applyFilterValues,
   buildFilterProperties,
   extractFilterValuesFromCollectionUrl,
+  findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
@@ -127,6 +133,36 @@ export function EntityItemCollectionView({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  // Attribute names the user is actively filtering on — always shown as columns regardless of
+  // the local "Columns" selection below (see the union in EntityItemCollectionTable).
+  const activelyFilteredAttributeNames = useMemo(
+    () => findActivelyFilteredAttributeNames(filterProperties, filters),
+    [filterProperties, filters],
+  );
+
+  // A local, session-only "Columns" selector next to Filters — lets the user adjust visible
+  // columns for just this table view without touching persisted preferences (that's what
+  // `~configuration/$entity`'s "Visible columns" picker is for). Seeded once, on mount, from the
+  // currently persisted columns via a lazy initializer — it deliberately does NOT re-sync if the
+  // persisted preference changes later, so a user's in-progress local edits aren't silently
+  // overwritten mid-session. The route remounts this view per entity (`key={profile.name}`), so
+  // switching entities naturally resets this back to the new entity's persisted default — no
+  // extra reset effect needed here.
+  const persistedVisibility = useColumnVisibility(profile);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [localVisibleColumns, setLocalVisibleColumns] = useState<readonly string[]>(
+    () => persistedVisibility.visibleColumns,
+  );
+  const attributeOptions = useMemo(
+    () => [
+      ...[profile.idAttribute, ...profile.userDefinedAttributes].map((attribute) =>
+        toAttributeOption(attribute, false),
+      ),
+      ...profile.auditAttributes.map((attribute) => toAttributeOption(attribute, true)),
+    ],
+    [profile],
+  );
+
   // Only one field can be typeahead-active at a time (mirrors FilterSidebar's own
   // activeTypeaheadField contract) — switching fields just re-targets this single hook call
   // rather than needing one useTypeahead per property.
@@ -202,13 +238,38 @@ export function EntityItemCollectionView({
             onPageChange={onPageChange}
             currentSort={currentSort}
             onSort={handleSort}
+            visibleColumnNames={localVisibleColumns}
+            forcedVisibleColumnNames={activelyFilteredAttributeNames}
             tableActions={
-              filterProperties.length > 0 && (
-                <Button variant="outline" onClick={() => setFiltersOpen(true)}>
-                  <Funnel aria-hidden />
-                  Filters
-                  {activeFilterCount > 0 && <Badge variant="secondary">{activeFilterCount}</Badge>}
-                </Button>
+              (attributeOptions.length > 0 || filterProperties.length > 0) && (
+                <>
+                  {attributeOptions.length > 0 && (
+                    <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline">
+                          <SlidersHorizontalIcon aria-hidden />
+                          Columns
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-1" align="end">
+                        <AttributeMultiSelectContent
+                          attributes={attributeOptions}
+                          values={localVisibleColumns}
+                          onChange={setLocalVisibleColumns}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  {filterProperties.length > 0 && (
+                    <Button variant="outline" onClick={() => setFiltersOpen(true)}>
+                      <Funnel aria-hidden />
+                      Filters
+                      {activeFilterCount > 0 && (
+                        <Badge variant="secondary">{activeFilterCount}</Badge>
+                      )}
+                    </Button>
+                  )}
+                </>
               )
             }
           />

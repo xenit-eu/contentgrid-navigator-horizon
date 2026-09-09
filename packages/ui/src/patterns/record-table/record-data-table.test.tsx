@@ -64,7 +64,22 @@ describe("RecordDataTable — rows", () => {
     const rowgroups = screen.getAllByRole("rowgroup");
     // Header rowgroup (from RecordTableHeader) + body rowgroup (the scrollable one).
     expect(rowgroups).toHaveLength(2);
-    expect(rowgroups[1]).toHaveClass("overflow-y-auto");
+    expect(rowgroups[1]).toHaveClass("overflow-auto");
+  });
+
+  it("syncs the header's horizontal scroll position to the body's on scroll", () => {
+    const { container } = renderTable({ children: <div role="row">Alice</div> });
+    const table = container.querySelector('[role="table"]') as HTMLElement;
+    const headerWrapper = table.firstElementChild as HTMLElement;
+    const rowgroup = screen.getAllByRole("rowgroup")[1];
+
+    expect(headerWrapper).toHaveClass("overflow-x-hidden", "shrink-0");
+    expect(headerWrapper.scrollLeft).toBe(0);
+
+    Object.defineProperty(rowgroup, "scrollLeft", { value: 120, writable: true });
+    rowgroup.dispatchEvent(new Event("scroll", { bubbles: false }));
+
+    expect(headerWrapper.scrollLeft).toBe(120);
   });
 });
 

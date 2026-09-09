@@ -10,13 +10,26 @@
  */
 const ACTIONS_COLUMN_WIDTH = "72px";
 
+/**
+ * Minimum width for a non-reference data column. A real minimum (rather than `0`) is what makes
+ * the table's horizontal scroll possible: `minmax(0, 1fr)` lets columns get squeezed down to
+ * nothing as more are added, so the grid never actually overflows its container — there's simply
+ * nothing to scroll. `minmax(140px, 1fr)` still lets columns grow to fill extra space, but once
+ * total minimum widths exceed the container, the grid overflows and the horizontal-scroll wrapper
+ * in `RecordDataTable` kicks in instead of crushing every column unreadably thin.
+ */
+const MIN_DATA_COLUMN_WIDTH = "140px";
+
 export function getRecordTableGridTemplate(
   columnCount: number,
   options?: { hasActions?: boolean },
 ): string {
   if (columnCount < 1) return "";
   const rest = columnCount - 1;
-  const tracks = ["minmax(200px, 1.6fr)", ...Array(rest).fill("minmax(0, 1fr)")];
+  const tracks = [
+    "minmax(200px, 1.6fr)",
+    ...Array(rest).fill(`minmax(${MIN_DATA_COLUMN_WIDTH}, 1fr)`),
+  ];
   if (options?.hasActions) tracks.push(ACTIONS_COLUMN_WIDTH);
   return tracks.join(" ");
 }

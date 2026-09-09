@@ -1,4 +1,4 @@
-import { Children, type ReactNode } from "react";
+import { Children, type ReactNode, useRef } from "react";
 import {
   CaretLeftIcon as CaretLeft,
   CaretRightIcon as CaretRight,
@@ -73,6 +73,7 @@ function RecordDataTable({
   className,
 }: Readonly<RecordDataTableProps>) {
   const isEmpty = Children.count(children) === 0;
+  const headerScrollRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className={cn("flex min-h-0 flex-col gap-2", className)}>
@@ -82,15 +83,34 @@ function RecordDataTable({
 
       <div className="flex min-h-0 flex-1 flex-col rounded-md border overflow-hidden">
         <div role="table" className="flex min-h-0 flex-1 flex-col">
-          <RecordTableHeader
-            columns={columns}
-            sortOptions={sortOptions}
-            currentSort={currentSort}
-            onSort={onSort}
-            showActionsColumn={showActionsColumn}
-          />
+          {/* An element with `overflow-y` set to anything but `visible` forces its `overflow-x`
+              to become non-visible too (CSS overflow spec) — so the rowgroup below, which must
+              scroll vertically, unavoidably becomes its own independent horizontal-scroll
+              container as well; it can't simply pass horizontal overflow up to an ancestor.
+              Rather than fight that, this header wrapper's `scrollLeft` is kept in sync with the
+              rowgroup's via the rowgroup's `onScroll` below (the standard "frozen header" trick)
+              — `overflow-x-hidden` here means the header has no scrollbar of its own and isn't
+              user-draggable, but remains freely scrollable by setting `scrollLeft` in JS, and
+              `position: sticky` on its trailing actions cell still tracks that scroll offset. */}
+          <div ref={headerScrollRef} className="shrink-0 overflow-x-hidden">
+            <RecordTableHeader
+              columns={columns}
+              sortOptions={sortOptions}
+              currentSort={currentSort}
+              onSort={onSort}
+              showActionsColumn={showActionsColumn}
+            />
+          </div>
 
-          <div role="rowgroup" className="min-h-0 flex-1 overflow-y-auto">
+          <div
+            role="rowgroup"
+            className="min-h-0 flex-1 overflow-auto"
+            onScroll={(event) => {
+              if (headerScrollRef.current) {
+                headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
+              }
+            }}
+          >
             {isEmpty ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
                 <Tray className="size-10" aria-hidden />

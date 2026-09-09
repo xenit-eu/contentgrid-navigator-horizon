@@ -10,8 +10,9 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
@@ -21,6 +22,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../test-setup";
+import { useEntityDisplayPreferencesStore } from "../preferences";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
 const API_URL = "https://api.example.com";
@@ -279,5 +281,79 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     });
 
     expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
+  });
+});
+
+describe("EntityItemCollectionView — Columns selector", () => {
+  afterEach(() => {
+    localStorage.clear();
+    useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  });
+
+  it("renders a Columns button next to Filters", async () => {
+    setupCollectionHandler();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    expect(screen.getByRole("button", { name: /columns/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /filters/i })).toBeInTheDocument();
+  });
+
+  it("hides a column in the table when it's unchecked in the Columns popover", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+
+    expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
+  });
+
+  it("does not write the toggle to persisted preferences", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+
+    expect(useEntityDisplayPreferencesStore.getState().overrides).toEqual({});
+  });
+
+  it("resets the local column selection on remount", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    const { unmount } = renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+    expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
+    unmount();
+
+    renderCollectionView({ profile: makeItemProfile() });
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+  });
+
+  it("keeps an actively-filtered column visible even when unchecked in the picker", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
   });
 });
