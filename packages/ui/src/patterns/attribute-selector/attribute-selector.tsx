@@ -107,17 +107,19 @@ function AttributeOptionCompactLabel({ option }: Readonly<{ option: ProfileAttri
 
 function AttributeOptionLabel({ option }: Readonly<{ option: ProfileAttributeOption }>) {
   return (
-    <div className="flex min-w-0 items-start gap-2">
+    <div className="flex w-full min-w-0 items-start gap-2">
       <AttributeTypeIcon type={option.type} className="mt-0.5" />
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium">{option.title ?? option.name}</span>
-          <Badge variant="outline" className="text-muted-foreground font-normal">
+          <span className="min-w-0 truncate font-medium">{option.title ?? option.name}</span>
+          <Badge variant="outline" className="text-muted-foreground ml-auto shrink-0 font-normal">
             {option.type}
           </Badge>
         </div>
         {option.description && (
-          <span className="text-muted-foreground truncate text-xs">{option.description}</span>
+          <span className="text-muted-foreground truncate text-xs mt-0.5">
+            {option.description}
+          </span>
         )}
       </div>
     </div>
@@ -166,7 +168,11 @@ export function AttributeSelect({
           {regular.length > 0 && (
             <SelectGroup>
               {regular.map((option) => (
-                <SelectItem key={option.name} value={option.name}>
+                <SelectItem
+                  key={option.name}
+                  value={option.name}
+                  className="[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
+                >
                   <AttributeOptionLabel option={option} />
                 </SelectItem>
               ))}
@@ -181,7 +187,11 @@ export function AttributeSelect({
                   System attributes
                 </SelectLabel>
                 {systemAttributes.map((option) => (
-                  <SelectItem key={option.name} value={option.name}>
+                  <SelectItem
+                    key={option.name}
+                    value={option.name}
+                    className="[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
+                  >
                     <AttributeOptionLabel option={option} />
                   </SelectItem>
                 ))}
