@@ -17,8 +17,7 @@ export function toFieldErrors(
     const fieldError: FieldError = {
       source: "external",
       message: error.detail ?? error.title,
-      problemType: error.type,
-      detail: error as unknown as Record<string, unknown>,
+      problemDetail: error,
     };
     (result[error.field] ??= []).push(fieldError);
   }

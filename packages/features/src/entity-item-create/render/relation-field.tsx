@@ -11,7 +11,7 @@ import {
   AlertActionSection,
   AlertButton,
   AlertDescription,
-  type EntityPickerOption,
+  type EntityItemPickerOption,
   type RelationColumn,
   RelationToManyRenderer,
   RelationToOneRenderer,
@@ -41,7 +41,7 @@ export interface RelationFieldProps {
   /**
    * href -> raw attribute data, for the picker's linked-item preview (`RelationSection`'s
    * `RelationItem.data`) — deliberately NOT `Record<string, EntityItem>`: what's cached here is a
-   * plain snapshot of a few preview attributes read straight off `EntityPickerOption.data`
+   * plain snapshot of a few preview attributes read straight off `EntityItemPickerOption.data`
    * (`item.halItem.data`), not a full `EntityItem` accessor with its own links/ETag/mutation
    * methods. Every entry is either freshly resolved by this same create session's own picker
    * fetch (see `onItemResolved` below) or never touched at all, so a stale/dangling entry can't
@@ -143,7 +143,12 @@ export function RelationField({
     pageUrl ? { url: pageUrl, profileEntity: targetProfile } : { profileEntity: targetProfile },
   );
 
-  const options: EntityPickerOption[] = (collection.data?.items ?? []).map((item) => ({
+  // Projected to a plain EntityItemPickerOption rather than passed as `EntityItem` — the picker
+  // (`RelationToOneRenderer`/`RelationToManyRenderer`, in `packages/ui`) is forbidden from
+  // depending on `@contentgrid/navigator-data` at all (see packages/ui/CLAUDE.md's forbidden
+  // imports), so it can never receive the HAL accessor class itself, only the plain
+  // id/href/preview-data it needs to render a row.
+  const options: EntityItemPickerOption[] = (collection.data?.items ?? []).map((item) => ({
     id: item.id,
     href: item.selfLink.href,
     data: item.halItem.data,

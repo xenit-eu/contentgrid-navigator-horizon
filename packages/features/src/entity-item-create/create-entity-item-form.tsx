@@ -1,11 +1,11 @@
 import { type ReactNode, type SubmitEvent } from "react";
-import type { FieldValue } from "@contentgrid/navigator-data";
+import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Button } from "@contentgrid/ui";
 import { type FieldDescriptor, isRelationField } from "./model/field-descriptor";
 import type { LayoutInformation } from "./model/layout-information";
 import type { FieldAnnotation, RelationFieldData } from "./render/field-renderer";
 import { FormContainer } from "./render/form-container";
-import type { FieldState } from "./state/field-error";
+import type { FieldState } from "./state/field-state";
 
 export interface CreateEntityItemFormProps {
   /** Already resolved by the caller (`create-entity-item-container.tsx`) via
@@ -16,14 +16,14 @@ export interface CreateEntityItemFormProps {
    * ever rendered by that container). */
   readonly fields: readonly FieldDescriptor[];
   readonly layout: LayoutInformation;
-  readonly values: Readonly<Record<string, FieldValue>>;
+  readonly values: FieldValueMap;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly onFieldChange: (name: string, value: FieldValue) => void;
   /** See `render/form-container.tsx`'s `FormContainerProps.onFieldFocus` doc comment — kept as
    * passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
    * field kicking off remote autocomplete on focus), with no current caller. */
   readonly onFieldFocus?: (name: string) => void;
-  /** Marks a field touched on blur — see `useEntityFormState`'s `touchField` doc comment. Shows a
+  /** Marks a field touched on blur — see `useEntityItemCreateFormState`'s `touchField` doc comment. Shows a
    * required-and-empty field's error as soon as the user leaves it, without waiting for submit. */
   readonly onFieldBlur?: (name: string) => void;
   readonly onSubmit: (event: SubmitEvent) => void;
@@ -41,7 +41,7 @@ export interface CreateEntityItemFormProps {
   readonly annotations?: Readonly<Record<string, FieldAnnotation>>;
   /**
    * Fired when the user wants every annotated field's extracted value applied at once —
-   * `create-entity-item-container.tsx` builds this from `useEntityFormState`'s bulk `setValues`,
+   * `create-entity-item-container.tsx` builds this from `useEntityItemCreateFormState`'s bulk `setValues`,
    * so all annotated fields update (and dismiss their errors) in a single commit rather than one
    * `onFieldChange` call per field. Only rendered when both this and `annotations` are non-empty.
    */

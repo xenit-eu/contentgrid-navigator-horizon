@@ -26,7 +26,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** A single selectable option in the picker */
-export interface EntityPickerOption {
+export interface EntityItemPickerOption {
   /** Unique identifier for this option */
   id: string;
   /** Stable href / self-link URI used as the selection value */
@@ -36,23 +36,23 @@ export interface EntityPickerOption {
 }
 
 /** Column descriptor controlling which data fields are shown */
-export interface EntityPickerColumn {
+export interface EntityItemPickerColumn {
   /** Attribute name */
   key: string;
   /** Column header label */
   header: string;
 }
 
-export interface EntityPickerProps {
+export interface EntityItemPickerProps {
   /** Controls dialog visibility */
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Title used in the dialog heading, e.g. "Invoice" */
   relationTitle: string;
   /** Current loaded page of options */
-  options: EntityPickerOption[];
+  options: EntityItemPickerOption[];
   /** Columns to display; when empty the picker falls back to the first data keys */
-  columns?: EntityPickerColumn[];
+  columns?: EntityItemPickerColumn[];
   /** True while options are being fetched */
   isLoading?: boolean;
   /** Current search query — controlled externally so the caller can debounce / fetch */
@@ -90,8 +90,8 @@ export interface EntityPickerProps {
 // ---------------------------------------------------------------------------
 
 function resolveColumnKeys(
-  options: EntityPickerOption[],
-  columns?: EntityPickerColumn[],
+  options: EntityItemPickerOption[],
+  columns?: EntityItemPickerColumn[],
 ): string[] {
   if (columns && columns.length > 0) return columns.map((c) => c.key);
   if (!options[0]) return [];
@@ -100,7 +100,7 @@ function resolveColumnKeys(
     .slice(0, 4);
 }
 
-function resolveColumnHeaders(columnKeys: string[], columns?: EntityPickerColumn[]): string[] {
+function resolveColumnHeaders(columnKeys: string[], columns?: EntityItemPickerColumn[]): string[] {
   if (columns && columns.length > 0) return columns.map((c) => c.header);
   return columnKeys;
 }
@@ -116,7 +116,7 @@ const SKELETON_ROWS = ["s1", "s2", "s3"];
 // Main export
 // ---------------------------------------------------------------------------
 
-export function EntityPicker({
+export function EntityItemPicker({
   open,
   onOpenChange,
   relationTitle,
@@ -133,7 +133,7 @@ export function EntityPicker({
   multiSelect = false,
   onSelect,
   createNewLink,
-}: Readonly<EntityPickerProps>) {
+}: Readonly<EntityItemPickerProps>) {
   // Single-select state
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
 

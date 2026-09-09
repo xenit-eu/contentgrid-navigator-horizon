@@ -11,7 +11,7 @@ two-layer dependency model.
 **Per ADR-004:** the rendering-projection bridge that used to live here
 (`HalFormsTemplate` → `RenderFieldDescriptor[]`, plus the `useFormFields` hook and the `FieldRenderer`
 switch in `packages/ui`) has moved to `packages/features/src/entity-item-create/`
-(`FieldDescriptor`/`resolveCreateFieldDescriptors`/`useEntityFormState`/`FieldRenderer`). This
+(`FieldDescriptor`/`resolveCreateFieldDescriptors`/`useEntityItemCreateFormState`/`FieldRenderer`). This
 package keeps only model enrichment — it has no rendering-projection or `kind`-dispatch logic of
 its own. It re-exports a handful of `@contentgrid/hal-forms` types (`HalFormsProperty`,
 `HalFormsTemplate`, alongside the pre-existing `createValues`/`HalFormValues`) purely so

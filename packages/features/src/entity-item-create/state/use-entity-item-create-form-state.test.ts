@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import { resolveTemplate } from "@contentgrid/navigator-data";
 import type { HalFormsProperty } from "@contentgrid/navigator-data";
 import type { FieldDescriptor } from "../model/field-descriptor";
-import { type UseEntityFormStateOptions, useEntityFormState } from "./use-entity-form-state";
+import {
+  type UseEntityItemCreateFormStateOptions,
+  useEntityItemCreateFormState,
+} from "./use-entity-item-create-form-state";
 
-/** `use-entity-form-state.ts` never reads `.property` itself — every field it cares about
+/** `use-entity-item-create-form-state.ts` never reads `.property` itself — every field it cares about
  * (`kind`, `label`, `required`, ...) is a typed sibling on the descriptor — so a dummy stand-in
  * is enough here, mirroring the DUMMY_LINK pattern in
  * packages/ui/src/patterns/form-renderers/test-fixtures.ts. */
@@ -59,10 +62,10 @@ const attachmentField: FieldDescriptor = {
   property: DUMMY_PROPERTY,
 };
 
-describe("useEntityFormState — initial values", () => {
+describe("useEntityItemCreateFormState — initial values", () => {
   it("seeds a type-appropriate default when no initial value is given", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({
+      useEntityItemCreateFormState({
         fields: [nameField, totalField, activeField, tagsField, attachmentField],
       }),
     );
@@ -77,32 +80,32 @@ describe("useEntityFormState — initial values", () => {
 
   it("uses a supplied initial value over the type default", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField], initialValues: { name: "Acme" } }),
+      useEntityItemCreateFormState({ fields: [nameField], initialValues: { name: "Acme" } }),
     );
     expect(result.current.values.name).toBe("Acme");
   });
 });
 
-describe("useEntityFormState — setValue and isDirty", () => {
+describe("useEntityItemCreateFormState — setValue and isDirty", () => {
   it("updates the named value", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     act(() => result.current.setValue("name", "Acme"));
     expect(result.current.values.name).toBe("Acme");
   });
 
   it("is not dirty before any change", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     expect(result.current.isDirty).toBe(false);
   });
 
   it("is dirty after a value changes", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     act(() => result.current.setValue("name", "Acme"));
     expect(result.current.isDirty).toBe(true);
   });
 
   it("clears an internal error on the field being edited", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     act(() => result.current.validate());
     expect(result.current.fieldState.name?.errors).toBeDefined();
     act(() => result.current.setValue("name", "Acme"));
@@ -110,17 +113,19 @@ describe("useEntityFormState — setValue and isDirty", () => {
   });
 });
 
-describe("useEntityFormState — setValues (bulk)", () => {
+describe("useEntityItemCreateFormState — setValues (bulk)", () => {
   it("applies several values in one call", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField, totalField, activeField] }),
+      useEntityItemCreateFormState({ fields: [nameField, totalField, activeField] }),
     );
     act(() => result.current.setValues({ name: "Acme", total: 42 }));
     expect(result.current.values).toMatchObject({ name: "Acme", total: 42 });
   });
 
   it("leaves fields not present in the partial untouched", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, totalField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, totalField] }),
+    );
     act(() => result.current.setValue("total", 7));
     act(() => result.current.setValues({ name: "Acme" }));
     expect(result.current.values).toMatchObject({ name: "Acme", total: 7 });
@@ -128,7 +133,7 @@ describe("useEntityFormState — setValues (bulk)", () => {
 
   it("clears internal errors for every field included in the partial", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField, { ...totalField, required: true }] }),
+      useEntityItemCreateFormState({ fields: [nameField, { ...totalField, required: true }] }),
     );
     act(() => result.current.validate());
     expect(result.current.fieldState.name?.errors).toBeDefined();
@@ -140,15 +145,17 @@ describe("useEntityFormState — setValues (bulk)", () => {
   });
 
   it("marks the form dirty", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, totalField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, totalField] }),
+    );
     act(() => result.current.setValues({ name: "Acme", total: 42 }));
     expect(result.current.isDirty).toBe(true);
   });
 });
 
-describe("useEntityFormState — touchField", () => {
+describe("useEntityItemCreateFormState — touchField", () => {
   it("shows a required field's error as soon as it's touched empty, without calling validate", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     expect(result.current.fieldState.name?.errors).toBeUndefined();
 
     act(() => result.current.touchField("name"));
@@ -158,13 +165,13 @@ describe("useEntityFormState — touchField", () => {
   });
 
   it("shows nothing for a touched non-required field left empty", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [totalField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [totalField] }));
     act(() => result.current.touchField("total"));
     expect(result.current.fieldState.total?.errors).toBeUndefined();
   });
 
   it("clears the touched error live once the field is filled in", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     act(() => result.current.touchField("name"));
     expect(result.current.fieldState.name?.errors).toBeDefined();
 
@@ -173,7 +180,7 @@ describe("useEntityFormState — touchField", () => {
   });
 
   it("re-shows the error if a touched field is cleared back out again", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     act(() => result.current.touchField("name"));
     act(() => result.current.setValue("name", "Acme"));
     expect(result.current.fieldState.name?.errors).toBeUndefined();
@@ -183,15 +190,19 @@ describe("useEntityFormState — touchField", () => {
   });
 
   it("does not flag an untouched required field before any submit attempt", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, totalField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, totalField] }),
+    );
     act(() => result.current.touchField("total"));
     expect(result.current.fieldState.name?.errors).toBeUndefined();
   });
 });
 
-describe("useEntityFormState — validate", () => {
+describe("useEntityItemCreateFormState — validate", () => {
   it("flags empty required fields", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, totalField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, totalField] }),
+    );
     let isValid = true;
     act(() => {
       isValid = result.current.validate();
@@ -204,7 +215,7 @@ describe("useEntityFormState — validate", () => {
   });
 
   it("passes when every required field is filled", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField] }));
+    const { result } = renderHook(() => useEntityItemCreateFormState({ fields: [nameField] }));
     act(() => result.current.setValue("name", "Acme"));
     let isValid = false;
     act(() => {
@@ -215,19 +226,19 @@ describe("useEntityFormState — validate", () => {
   });
 });
 
-describe("useEntityFormState — error precedence", () => {
+describe("useEntityItemCreateFormState — error precedence", () => {
   const alreadyTaken = [{ source: "external", message: "Already taken" }] as const;
 
   it("merges external errors in", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField], externalErrors: { name: alreadyTaken } }),
+      useEntityItemCreateFormState({ fields: [nameField], externalErrors: { name: alreadyTaken } }),
     );
     expect(result.current.fieldState.name?.errors).toEqual(alreadyTaken);
   });
 
   it("internal errors override external errors for the same field", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField], externalErrors: { name: alreadyTaken } }),
+      useEntityItemCreateFormState({ fields: [nameField], externalErrors: { name: alreadyTaken } }),
     );
     act(() => result.current.validate());
     expect(result.current.fieldState.name?.errors).toEqual([
@@ -237,7 +248,7 @@ describe("useEntityFormState — error precedence", () => {
 
   it("dismisses a field's external error as soon as the user edits that field", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField], externalErrors: { name: alreadyTaken } }),
+      useEntityItemCreateFormState({ fields: [nameField], externalErrors: { name: alreadyTaken } }),
     );
     expect(result.current.fieldState.name?.errors).toEqual(alreadyTaken);
 
@@ -248,7 +259,7 @@ describe("useEntityFormState — error precedence", () => {
   it("dismisses every field touched by a bulk setValues call", () => {
     const outOfRange = [{ source: "external" as const, message: "Out of range" }];
     const { result } = renderHook(() =>
-      useEntityFormState({
+      useEntityItemCreateFormState({
         fields: [nameField, totalField],
         externalErrors: { name: alreadyTaken, total: outOfRange },
       }),
@@ -260,12 +271,12 @@ describe("useEntityFormState — error precedence", () => {
 
   it("makes a dismissed external error visible again after the next submit, even with the same message", () => {
     const { result, rerender } = renderHook(
-      (props: UseEntityFormStateOptions) => useEntityFormState(props),
+      (props: UseEntityItemCreateFormStateOptions) => useEntityItemCreateFormState(props),
       {
         initialProps: {
           fields: [nameField],
           externalErrors: { name: alreadyTaken },
-        } as UseEntityFormStateOptions,
+        } as UseEntityItemCreateFormStateOptions,
       },
     );
     act(() => result.current.setValue("name", "A different name"));
@@ -281,10 +292,10 @@ describe("useEntityFormState — error precedence", () => {
   });
 });
 
-describe("useEntityFormState — reset", () => {
+describe("useEntityItemCreateFormState — reset", () => {
   it("restores the initial values and clears internal errors", () => {
     const { result } = renderHook(() =>
-      useEntityFormState({ fields: [nameField], initialValues: { name: "Acme" } }),
+      useEntityItemCreateFormState({ fields: [nameField], initialValues: { name: "Acme" } }),
     );
     act(() => result.current.setValue("name", "Changed"));
     act(() => result.current.validate());
@@ -295,7 +306,7 @@ describe("useEntityFormState — reset", () => {
   });
 });
 
-describe("useEntityFormState — buildValues", () => {
+describe("useEntityItemCreateFormState — buildValues", () => {
   const profileJson = {
     name: "invoice",
     description: "",
@@ -320,14 +331,18 @@ describe("useEntityFormState — buildValues", () => {
   )!;
 
   it("encodes only the fields that have a value", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, totalField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, totalField] }),
+    );
     act(() => result.current.setValue("name", "Acme"));
     const values = result.current.buildValues(template);
     expect(values.valueMap).toEqual({ name: "Acme" });
   });
 
   it("omits an empty-string value", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, totalField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, totalField] }),
+    );
     act(() => result.current.setValue("name", "Acme"));
     act(() => result.current.setValue("total", ""));
     const values = result.current.buildValues(template);
@@ -338,14 +353,18 @@ describe("useEntityFormState — buildValues", () => {
     // Regression: the HAL-FORMS codec rejects an empty list for a multi-value property
     // outright, so an untouched tags field (default `[]`) must never reach `withValue` — it
     // previously crashed every submit that included one.
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, tagsField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, tagsField] }),
+    );
     act(() => result.current.setValue("name", "Acme"));
     const values = result.current.buildValues(template);
     expect(values.valueMap).toEqual({ name: "Acme" });
   });
 
   it("encodes a non-empty multi-value enum field", () => {
-    const { result } = renderHook(() => useEntityFormState({ fields: [nameField, tagsField] }));
+    const { result } = renderHook(() =>
+      useEntityItemCreateFormState({ fields: [nameField, tagsField] }),
+    );
     act(() => result.current.setValue("name", "Acme"));
     act(() => result.current.setValue("tags", ["a", "b"]));
     const values = result.current.buildValues(template);

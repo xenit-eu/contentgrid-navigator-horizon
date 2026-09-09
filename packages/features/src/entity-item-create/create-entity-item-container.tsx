@@ -19,7 +19,7 @@ import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-desc
 import type { FieldAnnotation, RelationFieldData } from "./render/field-renderer";
 import type { FieldError } from "./state/field-error";
 import { toFieldErrors } from "./state/to-field-errors";
-import { useEntityFormState } from "./state/use-entity-form-state";
+import { useEntityItemCreateFormState } from "./state/use-entity-item-create-form-state";
 
 export interface CreateEntityItemContainerProps {
   readonly profile: ProfileEntity;
@@ -141,7 +141,7 @@ function CreateEntityItemContainerReady({
     [fields],
   );
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldError[]>>({});
-  const formState = useEntityFormState({ fields, externalErrors });
+  const formState = useEntityItemCreateFormState({ fields, externalErrors });
 
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
@@ -229,7 +229,7 @@ function CreateEntityItemContainerReady({
         resolveTargetProfile: (field) =>
           profilesLoading
             ? undefined
-            : profiles.find((candidate) => candidate.collectionUrl === field.targetHref),
+            : profiles.find((candidate) => candidate.describesUrl(field.targetHref)),
         relationItemsData,
         onItemResolved,
         renderCreateRelationTarget,

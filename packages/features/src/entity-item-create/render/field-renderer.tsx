@@ -9,7 +9,7 @@ import {
   TextRenderer,
 } from "@contentgrid/ui";
 import type { FieldDescriptor } from "../model/field-descriptor";
-import type { FieldState } from "../state/field-error";
+import type { FieldState } from "../state/field-state";
 import { RelationField, type RelationFieldDescriptor } from "./relation-field";
 
 /**

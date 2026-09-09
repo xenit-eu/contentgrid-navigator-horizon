@@ -1,14 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { EntityPickerOption } from "../entity-picker";
+import type { EntityItemPickerOption } from "../entity-item-picker";
 import {
   RelationToManyRenderer,
   type RelationToManyRendererProps,
 } from "./relation-to-many-renderer";
 import { relationToManyField } from "./test-fixtures";
 
-const OPTIONS: EntityPickerOption[] = [
+const OPTIONS: EntityItemPickerOption[] = [
   { id: "1", href: "/products/1", data: { name: "Widget" } },
   { id: "3", href: "/products/3", data: { name: "Gizmo" } },
 ];

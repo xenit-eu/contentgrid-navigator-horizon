@@ -1,16 +1,16 @@
 import type { ReactNode } from "react";
-import type { EntityPickerColumn, EntityPickerOption } from "../entity-picker";
+import type { EntityItemPickerColumn, EntityItemPickerOption } from "../entity-item-picker";
 import type { RelationColumn } from "../relation-section";
 
 /**
  * Props shared by `RelationToOneRenderer` and `RelationToManyRenderer` for
- * wiring the linked-item preview and the `EntityPicker` search dialog —
+ * wiring the linked-item preview and the `EntityItemPicker` search dialog —
  * everything except the field/value/onChange/error trio, which differs by
  * cardinality.
  */
 export interface RelationRendererPickerProps {
   /** Current page of candidates to link — fetched by the caller (packages/ui can't fetch). */
-  readonly options: EntityPickerOption[];
+  readonly options: EntityItemPickerOption[];
   readonly isLoading: boolean;
   readonly searchQuery: string;
   readonly onSearch: (query: string) => void;
@@ -25,7 +25,7 @@ export interface RelationRendererPickerProps {
   readonly columns?: RelationColumn[];
   /** Called the moment a picker selection is made, so the caller can cache the item's data. */
   readonly onItemResolved: (href: string, data: Record<string, unknown>) => void;
-  /** Rendered in the picker when provided — see EntityPicker's `createNewLink`. */
+  /** Rendered in the picker when provided — see EntityItemPicker's `createNewLink`. */
   readonly createNewLink?: ReactNode;
   /** Forwarded straight to `RelationSection`'s `onViewItem` — receives a linked item's href (this
    * is what `RelationSection`'s `RelationItem.id` is set to below). Omitted entirely (no "view
@@ -35,7 +35,7 @@ export interface RelationRendererPickerProps {
 
 /**
  * `RelationColumn` (`{key, title}`, used by `RelationSection`'s linked-item preview) and
- * `EntityPickerColumn` (`{key, header}`, used by `EntityPicker`'s search dialog) carry the same
+ * `EntityItemPickerColumn` (`{key, header}`, used by `EntityItemPicker`'s search dialog) carry the same
  * caller-supplied column titles under different field names — without this conversion, a
  * `RelationToOneRenderer`/`RelationToManyRenderer` caller's `columns` only reached the preview,
  * leaving the picker dialog to fall back to its own auto-derived column headers for the same
@@ -43,7 +43,7 @@ export interface RelationRendererPickerProps {
  */
 export function toEntityPickerColumns(
   columns?: RelationColumn[],
-): EntityPickerColumn[] | undefined {
+): EntityItemPickerColumn[] | undefined {
   return columns?.map(({ key, title }) => ({ key, header: title }));
 }
 
@@ -52,7 +52,7 @@ export function toEntityPickerColumns(
  * falls back to `{}` since `onItemResolved`'s cache is keyed by href regardless of whether real
  * data was found (matches `RelationItem.data`'s existing `?? {}` fallback elsewhere). */
 export function resolveOptionData(
-  options: readonly EntityPickerOption[],
+  options: readonly EntityItemPickerOption[],
   href: string,
 ): Record<string, unknown> {
   return options.find((option) => option.href === href)?.data ?? {};

@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
-import type { FieldValue } from "@contentgrid/navigator-data";
+import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { LayoutInformation } from "../model/layout-information";
-import type { FieldState } from "../state/field-error";
+import type { FieldState } from "../state/field-state";
 import { FieldRenderer, type RelationFieldData } from "./field-renderer";
 
 export interface FormContainerProps {
   readonly fields: readonly FieldDescriptor[];
   readonly layout: LayoutInformation;
-  readonly values: Readonly<Record<string, FieldValue>>;
+  readonly values: FieldValueMap;
   readonly onChange: (name: string, value: FieldValue) => void;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   /** See `field-renderer.tsx`'s `RelationFieldData` doc comment. Omitted entirely renders every

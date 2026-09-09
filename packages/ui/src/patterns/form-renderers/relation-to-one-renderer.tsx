@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
-import { EntityPicker } from "../entity-picker";
+import { EntityItemPicker } from "../entity-item-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
 import {
   type RelationRendererPickerProps,
@@ -19,7 +19,7 @@ export interface RelationToOneRendererProps extends RelationRendererPickerProps 
 }
 
 /**
- * Wraps the existing `RelationSection` (display + link/unlink) and `EntityPicker`
+ * Wraps the existing `RelationSection` (display + link/unlink) and `EntityItemPicker`
  * (search dialog) patterns — both already presentation-only/controlled — instead
  * of building new selection chrome from scratch.
  */
@@ -61,7 +61,7 @@ export function RelationToOneRenderer({
         onViewItem={onViewItem}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <EntityPicker
+      <EntityItemPicker
         open={open}
         onOpenChange={setOpen}
         relationTitle={label}

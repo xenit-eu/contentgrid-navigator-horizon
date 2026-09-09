@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
-import { EntityPicker } from "../entity-picker";
+import { EntityItemPicker } from "../entity-item-picker";
 import { type RelationItem, RelationSection } from "../relation-section";
 import {
   type RelationRendererPickerProps,
@@ -19,9 +19,9 @@ export interface RelationToManyRendererProps extends RelationRendererPickerProps
 }
 
 /**
- * Wraps `RelationSection` (display + link/unlink) and `EntityPicker` (search dialog), with
- * `EntityPicker` in multi-select mode so several items can be linked from one popover open.
- * `EntityPicker.onSelect` fires exactly once per confirm, with every selected item's href
+ * Wraps `RelationSection` (display + link/unlink) and `EntityItemPicker` (search dialog), with
+ * `EntityItemPicker` in multi-select mode so several items can be linked from one popover open.
+ * `EntityItemPicker.onSelect` fires exactly once per confirm, with every selected item's href
  * already collected — so the new hrefs are simply appended onto the current `value`.
  */
 export function RelationToManyRenderer({
@@ -64,7 +64,7 @@ export function RelationToManyRenderer({
         onViewItem={onViewItem}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <EntityPicker
+      <EntityItemPicker
         open={open}
         onOpenChange={setOpen}
         relationTitle={label}

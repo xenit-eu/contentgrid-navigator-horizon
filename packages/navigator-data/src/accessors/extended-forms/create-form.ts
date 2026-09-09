@@ -31,8 +31,9 @@ import type { ProfileRelation } from "../relation-profile";
  *      (`useProfileEntities()`) is only available async, after this template is already needed
  *      for the create/permission gate. Callers resolve it themselves once profiles have loaded
  *      (see `CreateEntityItemContainer`'s `resolveTargetProfile` in
- *      packages/features/src/entity-item-create/, which matches on `targetCollectionHref` rather
- *      than `profileRelation.getTargetProfile()` — this stays correct even when `profileRelation`
+ *      packages/features/src/entity-item-create/, which matches via
+ *      `profileEntity.describesUrl(targetCollectionHref)` rather than
+ *      `profileRelation.getTargetProfile()` — this stays correct even when `profileRelation`
  *      itself is unresolved, since `targetCollectionHref` is always present on the property).
  */
 

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
-import type { EntityPickerOption } from "../entity-picker";
+import type { EntityItemPickerOption } from "../entity-item-picker";
 import { RelationToOneRenderer } from "./relation-to-one-renderer";
 import { relationToOneField } from "./test-fixtures";
 
@@ -13,7 +13,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const OPTIONS: EntityPickerOption[] = [
+const OPTIONS: EntityItemPickerOption[] = [
   { id: "1", href: "/suppliers/1", data: { name: "Acme Corp" } },
   { id: "2", href: "/suppliers/2", data: { name: "Globex Inc" } },
 ];

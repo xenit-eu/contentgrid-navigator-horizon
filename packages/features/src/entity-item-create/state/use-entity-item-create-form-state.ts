@@ -1,13 +1,15 @@
 import { useMemo, useRef, useState } from "react";
 import type {
   FieldValue,
+  FieldValueMap,
   HalFormValues,
   HalFormsTemplate,
   TypedRequestSpec,
 } from "@contentgrid/navigator-data";
 import { createValues } from "@contentgrid/navigator-data";
 import type { FieldDescriptor } from "../model/field-descriptor";
-import type { FieldError, FieldState } from "./field-error";
+import type { FieldError } from "./field-error";
+import type { FieldState } from "./field-state";
 
 /**
  * Stable shared reference for the `externalErrors` default — avoids allocating a fresh `{}` on
@@ -44,23 +46,23 @@ function haveEqualExternalErrorContent(
   });
 }
 
-export interface UseEntityFormStateOptions {
+export interface UseEntityItemCreateFormStateOptions {
   readonly fields: readonly FieldDescriptor[];
   /** Existing values, keyed by property name (edit mode). Omitted fields start at a type-appropriate empty value. */
-  readonly initialValues?: Readonly<Record<string, FieldValue>>;
+  readonly initialValues?: FieldValueMap;
   /**
    * Per-field server-sourced errors, keyed by property name — typically the output of
    * `toFieldErrors(getValidationFieldErrors(error))` after a failed submit. A field's external
    * errors are dismissed (hidden from `errors`, without mutating this object) as soon as
-   * `setValue`/`setValues` touches that field — see the doc comment on `useEntityFormState`
+   * `setValue`/`setValues` touches that field — see the doc comment on `useEntityItemCreateFormState`
    * below. Passing a new object here (e.g. from the next failed submit) makes every field's
    * external errors visible again.
    */
   readonly externalErrors?: Readonly<Record<string, readonly FieldError[]>>;
 }
 
-export interface UseEntityFormStateResult {
-  readonly values: Readonly<Record<string, FieldValue>>;
+export interface UseEntityItemCreateFormState {
+  readonly values: FieldValueMap;
   setValue(name: string, value: FieldValue): void;
   /**
    * Applies several values in one commit — used by `create-entity-item-container.tsx`'s
@@ -68,7 +70,7 @@ export interface UseEntityFormStateResult {
    * to calling `setValue` once per entry, but as a single state update, and clearing every
    * affected field's internal error together.
    */
-  setValues(partial: Readonly<Record<string, FieldValue>>): void;
+  setValues(partial: FieldValueMap): void;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly isDirty: boolean;
   /**
@@ -122,7 +124,7 @@ function defaultValueFor(field: FieldDescriptor): FieldValue {
 
 function initializeValues(
   fields: readonly FieldDescriptor[],
-  initialValues: Readonly<Record<string, FieldValue>> | undefined,
+  initialValues: FieldValueMap | undefined,
 ): Record<string, FieldValue> {
   const values: Record<string, FieldValue> = {};
   for (const field of fields) {
@@ -193,11 +195,11 @@ function requiredFieldEntries(
  * touched) it reappears, with no explicit clear-on-edit step needed the way external errors need
  * `dismissExternalErrors`.
  */
-export function useEntityFormState({
+export function useEntityItemCreateFormState({
   fields,
   initialValues,
   externalErrors = EMPTY_EXTERNAL_ERRORS,
-}: UseEntityFormStateOptions): UseEntityFormStateResult {
+}: UseEntityItemCreateFormStateOptions): UseEntityItemCreateFormState {
   const [values, setValuesState] = useState<Record<string, FieldValue>>(() =>
     initializeValues(fields, initialValues),
   );
@@ -238,7 +240,7 @@ export function useEntityFormState({
     dismissExternalErrors([name]);
   }
 
-  function setValues(partial: Readonly<Record<string, FieldValue>>) {
+  function setValues(partial: FieldValueMap) {
     setValuesState((prev) => ({ ...prev, ...partial }));
     dismissExternalErrors(Object.keys(partial));
   }

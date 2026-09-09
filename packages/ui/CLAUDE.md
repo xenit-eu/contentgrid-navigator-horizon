@@ -141,7 +141,7 @@ a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch tha
   `RelationToOneRenderer`/`RelationToManyRenderer` needing a target collection's candidates —
   is solved by keeping the actual fetch (`render/relation-field.tsx`, using
   `useEntityItemCollection`) in `packages/features`, one layer above these dumb renderers; the
-  renderers themselves still only receive an already-fetched `options: EntityPickerOption[]` list
+  renderers themselves still only receive an already-fetched `options: EntityItemPickerOption[]` list
   plus pagination callbacks.
 - Why: `packages/ui` is the rendering layer; data fetching and HAL-Forms-shaped state belong in
   `packages/navigator-data`/`packages/features`. Mixing them violates the two-layer model

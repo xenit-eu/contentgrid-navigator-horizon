@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
-import { EntityPicker } from "./entity-picker";
+import { EntityItemPicker } from "./entity-item-picker";
 
 const meta = {
-  title: "Patterns/EntityPicker",
-  component: EntityPicker,
+  title: "Patterns/EntityItemPicker",
+  component: EntityItemPicker,
   tags: ["autodocs"],
-} satisfies Meta<typeof EntityPicker>;
+} satisfies Meta<typeof EntityItemPicker>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

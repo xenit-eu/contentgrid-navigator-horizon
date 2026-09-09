@@ -1,11 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { EntityPickerOption } from "../entity-picker";
+import type { EntityItemPickerOption } from "../entity-item-picker";
 import { RelationToOneRenderer, type RelationToOneRendererProps } from "./relation-to-one-renderer";
 import { relationToOneField } from "./test-fixtures";
 
-const OPTIONS: EntityPickerOption[] = [
+const OPTIONS: EntityItemPickerOption[] = [
   { id: "1", href: "/suppliers/1", data: { name: "Acme Corp" } },
 ];
 
