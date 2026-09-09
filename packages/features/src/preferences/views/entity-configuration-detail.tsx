@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { EyeIcon, PlusCircleIcon, TableIcon, XIcon as X } from "@phosphor-icons/react";
-import { type ProfileEntity } from "@contentgrid/navigator-data";
+import { type ProfileAttribute, type ProfileEntity } from "@contentgrid/navigator-data";
 import {
+  AttributeMultiSelect,
+  AttributeSelect,
   Button,
   ColorPicker,
+  ColorPickerContent,
   EntityCard,
   IconPicker,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  type ProfileAttributeOption,
   TabLink,
   TabbedLayout,
 } from "@contentgrid/ui";
@@ -25,6 +24,18 @@ export interface EntityConfigurationDetailProps {
   readonly profile: ProfileEntity;
   /** Called when the close button is clicked (e.g. navigate back to the configuration list). */
   readonly onClose?: () => void;
+}
+
+function toAttributeOption(attribute: ProfileAttribute, isSystem: boolean): ProfileAttributeOption {
+  return {
+    name: attribute.name,
+    title: attribute.title,
+    description: attribute.description,
+    type: attribute.isContent
+      ? "content"
+      : (attribute.type as unknown as ProfileAttributeOption["type"]),
+    isSystem,
+  };
 }
 
 const PREVIEW_TABS = [
@@ -57,9 +68,16 @@ export function EntityConfigurationDetail({
   onClose,
 }: Readonly<EntityConfigurationDetailProps>) {
   const { preferences, setOverride } = useEntityDisplayPreferences(profile);
-  const attributeOptions = [profile.idAttribute, ...profile.userDefinedAttributes];
-  const nameAttributeFieldId = `${profile.name}-name-attribute`;
-  const subtitleAttributeFieldId = `${profile.name}-subtitle-attribute`;
+  const regularOptions = [profile.idAttribute, ...profile.userDefinedAttributes].map((attribute) =>
+    toAttributeOption(attribute, false),
+  );
+  const systemOptions = profile.auditAttributes.map((attribute) =>
+    toAttributeOption(attribute, true),
+  );
+  // Name/subtitle can point at any attribute, including audit fields (e.g. "modified date").
+  const attributeOptions = [...regularOptions, ...systemOptions];
+  // Visible columns are limited to what the collection table actually renders (id + user-defined).
+  const columnOptions = regularOptions;
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
 
   return (
@@ -83,74 +101,67 @@ export function EntityConfigurationDetail({
       }
     >
       <div className="@container">
-        <div className="grid gap-6 @3xl:grid-cols-2">
-          <div className="space-y-4">
+        <div className="flex flex-col gap-6 @3xl:flex-row">
+          <div className="min-w-0 flex-1">
+            <TabbedLayout
+              tabs={PREVIEW_TABS.map((tab) => ({ ...tab, active: tab.key === activeTab }))}
+              renderTabLink={(tab, label) => (
+                <TabLink
+                  key={tab.key}
+                  href="#"
+                  active={tab.active}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setActiveTab(tab.key as (typeof PREVIEW_TABS)[number]["key"]);
+                  }}
+                >
+                  {label}
+                </TabLink>
+              )}
+            >
+              {activeTab === "item" && <EntityItemPreview profile={profile} />}
+              {activeTab === "collection" && <EntityTablePreview profile={profile} />}
+              {activeTab === "create" && <EntityCreateFormPreview profile={profile} />}
+            </TabbedLayout>
+          </div>
+
+          <div className="bg-border hidden w-px self-stretch @3xl:block" aria-hidden />
+
+          <div className="space-y-4 @3xl:w-72 @3xl:shrink-0">
+            <ColorPickerContent
+              value={preferences.color}
+              onChange={(color) => setOverride({ color })}
+            />
+
             <div className="space-y-1.5">
               <Label>Icon</Label>
               <IconPicker value={preferences.icon} onChange={(icon) => setOverride({ icon })} />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor={nameAttributeFieldId}>Name attribute</Label>
-              <Select
-                value={preferences.nameAttribute}
-                onValueChange={(value) => setOverride({ nameAttribute: value })}
-              >
-                <SelectTrigger id={nameAttributeFieldId} className="w-full">
-                  <SelectValue placeholder="Choose attribute" />
-                </SelectTrigger>
-                <SelectContent>
-                  {attributeOptions.map((attribute) => (
-                    <SelectItem key={attribute.name} value={attribute.name}>
-                      {attribute.title ?? attribute.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <AttributeSelect
+              label="Name attribute"
+              attributes={attributeOptions}
+              value={preferences.nameAttribute}
+              onSelect={(attribute) => setOverride({ nameAttribute: attribute.name })}
+              placeholder="Choose attribute"
+            />
 
-            <div className="space-y-1.5">
-              <Label htmlFor={subtitleAttributeFieldId}>Subtitle attribute</Label>
-              <Select
-                value={preferences.subtitleAttribute}
-                onValueChange={(value) => setOverride({ subtitleAttribute: value })}
-              >
-                <SelectTrigger id={subtitleAttributeFieldId} className="w-full">
-                  <SelectValue placeholder="Choose attribute" />
-                </SelectTrigger>
-                <SelectContent>
-                  {attributeOptions.map((attribute) => (
-                    <SelectItem key={attribute.name} value={attribute.name}>
-                      {attribute.title ?? attribute.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <AttributeSelect
+              label="Subtitle attribute"
+              attributes={attributeOptions}
+              value={preferences.subtitleAttribute}
+              onSelect={(attribute) => setOverride({ subtitleAttribute: attribute.name })}
+              placeholder="Choose attribute"
+            />
+
+            <AttributeMultiSelect
+              label="Visible columns"
+              attributes={columnOptions}
+              values={preferences.visibleColumns ?? []}
+              onChange={(names) => setOverride({ visibleColumns: [...names] })}
+              placeholder="Choose columns"
+            />
           </div>
-
-          <TabbedLayout
-            tabs={PREVIEW_TABS.map((tab) => ({ ...tab, active: tab.key === activeTab }))}
-            renderTabLink={(tab, label) => (
-              <TabLink
-                key={tab.key}
-                href="#"
-                active={tab.active}
-                icon={tab.icon}
-                iconColor={tab.iconColor}
-                onClick={(event) => {
-                  event.preventDefault();
-                  setActiveTab(tab.key as (typeof PREVIEW_TABS)[number]["key"]);
-                }}
-              >
-                {label}
-              </TabLink>
-            )}
-          >
-            {activeTab === "item" && <EntityItemPreview profile={profile} />}
-            {activeTab === "collection" && <EntityTablePreview profile={profile} />}
-            {activeTab === "create" && <EntityCreateFormPreview profile={profile} />}
-          </TabbedLayout>
         </div>
       </div>
     </EntityCard>
