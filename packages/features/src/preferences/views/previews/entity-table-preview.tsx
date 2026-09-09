@@ -5,7 +5,6 @@ import {
   useEntityItemCollection,
 } from "@contentgrid/navigator-data";
 import { Alert, AlertDescription, Label } from "@contentgrid/ui";
-import { EntityItemReference } from "../../../entity-item";
 import { EntityItemCollectionTable } from "../../../entity-item-collection";
 import { ProblemAlert } from "../../../problem-details";
 
@@ -39,10 +38,7 @@ export function EntityTablePreview({ profile }: Readonly<EntityTablePreviewProps
         </Alert>
       )}
       {collection.isSuccess && !collection.data.isEmpty && (
-        <div className="max-h-64 overflow-y-auto">
-          {collection.data.items.map((item) => (
-            <EntityItemReference item={item} />
-          ))}
+        <div className="max-h-128 overflow-y-auto">
           <EntityItemCollectionTable profile={profile} collection={collection.data} />
         </div>
       )}
