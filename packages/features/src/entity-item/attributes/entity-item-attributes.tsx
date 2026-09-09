@@ -80,7 +80,12 @@ export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttri
       label: profile.attributes.find((a) => a.name === attr.value.name)?.title ?? attr.value.name,
     }));
 
-  const booleanAttributes = attributes.filter(({ attr }) => isBooleanAttribute(attr));
+  const booleanAttributes = attributes.filter(
+    ({ attr }) =>
+      isBooleanAttribute(attr) &&
+      attr.value.kind === AttributeKind.PLAIN &&
+      attr.value.value !== null,
+  );
   const createdAttrs = [item.createdDate, item.createdBy].filter(isDefined);
   const modifiedAttrs = [item.modifiedDate, item.modifiedBy].filter(isDefined);
   const timelineEntries = [createdAttrs, modifiedAttrs].filter((attrs) => attrs.length > 0);
