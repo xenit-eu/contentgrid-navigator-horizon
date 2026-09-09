@@ -102,16 +102,10 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/$entity/$itemId': typeof AppEntityItemIdRoute
   '/_app/$entity/~create': typeof AppEntityChar126createRoute
-<<<<<<< HEAD
   '/_app/~configuration/$entity': typeof AppChar126configurationEntityRouteWithChildren
   '/_app/$entity/': typeof AppEntityIndexRoute
   '/_app/~configuration/': typeof AppChar126configurationIndexRoute
   '/_app/~configuration/$entity/': typeof AppChar126configurationEntityIndexRoute
-=======
-  '/_app/~configuration/$entity': typeof AppChar126configurationEntityRoute
-  '/_app/$entity/': typeof AppEntityIndexRoute
-  '/_app/~configuration/': typeof AppChar126configurationIndexRoute
->>>>>>> 049be75 (Add IconBadge primitive, wire it into EntityCard and PageTitle)
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -124,25 +118,16 @@ export interface FileRouteTypes {
     | '/~configuration/$entity'
     | '/$entity/'
     | '/~configuration/'
-<<<<<<< HEAD
     | '/~configuration/$entity/'
-=======
->>>>>>> 049be75 (Add IconBadge primitive, wire it into EntityCard and PageTitle)
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/config'
     | '/'
     | '/$entity/$itemId'
     | '/$entity/~create'
-<<<<<<< HEAD
     | '/$entity'
     | '/~configuration'
     | '/~configuration/$entity'
-=======
-    | '/~configuration/$entity'
-    | '/$entity'
-    | '/~configuration'
->>>>>>> 049be75 (Add IconBadge primitive, wire it into EntityCard and PageTitle)
   id:
     | '__root__'
     | '/_app'
@@ -154,10 +139,7 @@ export interface FileRouteTypes {
     | '/_app/~configuration/$entity'
     | '/_app/$entity/'
     | '/_app/~configuration/'
-<<<<<<< HEAD
     | '/_app/~configuration/$entity/'
-=======
->>>>>>> 049be75 (Add IconBadge primitive, wire it into EntityCard and PageTitle)
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,23 +256,15 @@ const AppChar126configurationEntityRouteWithChildren =
 interface AppRouteChildren {
   AppEntityRoute: typeof AppEntityRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
-<<<<<<< HEAD
   AppChar126configurationEntityRoute: typeof AppChar126configurationEntityRouteWithChildren
-=======
-  AppChar126configurationEntityRoute: typeof AppChar126configurationEntityRoute
->>>>>>> 049be75 (Add IconBadge primitive, wire it into EntityCard and PageTitle)
   AppChar126configurationIndexRoute: typeof AppChar126configurationIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppEntityRoute: AppEntityRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
-<<<<<<< HEAD
   AppChar126configurationEntityRoute:
     AppChar126configurationEntityRouteWithChildren,
-=======
-  AppChar126configurationEntityRoute: AppChar126configurationEntityRoute,
->>>>>>> 049be75 (Add IconBadge primitive, wire it into EntityCard and PageTitle)
   AppChar126configurationIndexRoute: AppChar126configurationIndexRoute,
 }
 
