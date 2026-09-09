@@ -14,6 +14,7 @@ import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
+import { Label } from "../../primitives/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../../primitives/popover";
 import {
   Select,
@@ -158,10 +159,10 @@ export function AttributeSelect({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {label && <span className="text-sm font-medium">{label}</span>}
+    <div className="flex flex-col gap-1.5">
+      {label && <Label>{label}</Label>}
       <Select value={value} onValueChange={handleValueChange} disabled={!hasOptions}>
-        <SelectTrigger className="h-9 w-64" aria-label={label ?? effectivePlaceholder}>
+        <SelectTrigger className="h-9 w-full" aria-label={label ?? effectivePlaceholder}>
           <SelectValue placeholder={effectivePlaceholder}>
             {selectedOption && <AttributeOptionCompactLabel option={selectedOption} />}
           </SelectValue>
@@ -279,8 +280,8 @@ export function AttributeMultiSelect({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {label && <span className="text-sm font-medium">{label}</span>}
+    <div className="flex flex-col gap-1.5">
+      {label && <Label>{label}</Label>}
       <Popover open={hasOptions && open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -289,7 +290,7 @@ export function AttributeMultiSelect({
             aria-expanded={open}
             aria-label={label ?? effectivePlaceholder}
             disabled={!hasOptions}
-            className="h-9 w-64 justify-between font-normal"
+            className="h-9 w-full justify-between font-normal"
           >
             <span
               className={cn("truncate", selectedOptions.length === 0 && "text-muted-foreground")}
