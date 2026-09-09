@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EyeIcon, PlusCircleIcon, TableIcon, XIcon as X } from "@phosphor-icons/react";
-import { type ProfileAttribute, type ProfileEntity } from "@contentgrid/navigator-data";
+import { type ProfileEntity } from "@contentgrid/navigator-data";
 import {
   AttributeMultiSelect,
   AttributeSelect,
@@ -10,11 +10,11 @@ import {
   EntityCard,
   IconPicker,
   Label,
-  type ProfileAttributeOption,
   TabLink,
   TabbedLayout,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../../layout";
+import { toAttributeOption } from "../attribute-options";
 import { useEntityDisplayPreferences } from "../use-entity-display-preferences";
 import { EntityCreateFormPreview } from "./previews/entity-create-form-preview";
 import { EntityItemPreview } from "./previews/entity-item-preview";
@@ -24,18 +24,6 @@ export interface EntityConfigurationDetailProps {
   readonly profile: ProfileEntity;
   /** Called when the close button is clicked (e.g. navigate back to the configuration list). */
   readonly onClose?: () => void;
-}
-
-function toAttributeOption(attribute: ProfileAttribute, isSystem: boolean): ProfileAttributeOption {
-  return {
-    name: attribute.name,
-    title: attribute.title,
-    description: attribute.description,
-    type: attribute.isContent
-      ? "content"
-      : (attribute.type as unknown as ProfileAttributeOption["type"]),
-    isSystem,
-  };
 }
 
 const PREVIEW_TABS = [
@@ -74,10 +62,9 @@ export function EntityConfigurationDetail({
   const systemOptions = profile.auditAttributes.map((attribute) =>
     toAttributeOption(attribute, true),
   );
-  // Name/subtitle can point at any attribute, including audit fields (e.g. "modified date").
+  // Name/subtitle/visible-columns can all point at any attribute, including audit fields
+  // (e.g. "modified date") — buildColumns() renders a column for any visible audit attribute too.
   const attributeOptions = [...regularOptions, ...systemOptions];
-  // Visible columns are limited to what the collection table actually renders (id + user-defined).
-  const columnOptions = regularOptions;
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
 
   return (
@@ -156,7 +143,7 @@ export function EntityConfigurationDetail({
 
             <AttributeMultiSelect
               label="Visible columns"
-              attributes={columnOptions}
+              attributes={attributeOptions}
               values={preferences.visibleColumns ?? []}
               onChange={(names) => setOverride({ visibleColumns: [...names] })}
               placeholder="Choose columns"

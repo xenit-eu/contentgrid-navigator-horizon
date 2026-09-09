@@ -22,6 +22,7 @@ export {
   buildRows,
 } from "./use-column-visibility";
 export type { ColumnVisibilityConfig } from "./use-column-visibility";
+export { toAttributeOption } from "./attribute-options";
 export { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 export type { UseEntityDisplayPreferencesResult } from "./use-entity-display-preferences";
 export { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";

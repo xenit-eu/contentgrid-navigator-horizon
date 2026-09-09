@@ -23,6 +23,10 @@ function RecordTableRow({
   onClick,
   className,
 }: RecordTableRowProps) {
+  const rowBackground = selected
+    ? "bg-[#EAF6FE] dark:bg-[rgba(90,196,242,0.12)]"
+    : "bg-[#FAFDFF] dark:bg-[#102a3e]";
+
   return (
     <div
       role="row"
@@ -48,9 +52,7 @@ function RecordTableRow({
       }}
       className={cn(
         "relative grid items-center gap-3 px-4 py-3 border-b border-[#F1F4F7] dark:border-[#1B3A50] cursor-pointer transition-colors",
-        selected
-          ? "bg-[#EAF6FE] dark:bg-[rgba(90,196,242,0.12)]"
-          : "bg-[#FAFDFF] dark:bg-[#102a3e]",
+        rowBackground,
         className,
       )}
     >
@@ -75,7 +77,10 @@ function RecordTableRow({
       ))}
 
       {actions && (
-        <div role="cell" className="flex items-center justify-end gap-1">
+        <div
+          role="cell"
+          className={cn("sticky right-0 flex items-center justify-end gap-1", rowBackground)}
+        >
           {actions}
         </div>
       )}
