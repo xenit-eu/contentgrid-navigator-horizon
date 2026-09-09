@@ -99,6 +99,13 @@ describe("AttributeSelect", () => {
     render(<AttributeSelect attributes={ATTRIBUTES} onSelect={vi.fn()} label="Sort by" />);
     expect(screen.getByText("Sort by")).toBeInTheDocument();
   });
+
+  it("is disabled and shows 'No options available' when there are no attributes", () => {
+    render(<AttributeSelect attributes={[]} onSelect={vi.fn()} />);
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveTextContent("No options available");
+  });
 });
 
 describe("AttributeMultiSelect", () => {
@@ -195,5 +202,12 @@ describe("AttributeMultiSelect", () => {
       />,
     );
     expect(screen.getByText("Columns")).toBeInTheDocument();
+  });
+
+  it("is disabled and shows 'No options available' when there are no attributes", () => {
+    render(<AttributeMultiSelect attributes={[]} values={[]} onChange={vi.fn()} />);
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveTextContent("No options available");
   });
 });

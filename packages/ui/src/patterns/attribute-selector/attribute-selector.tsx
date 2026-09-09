@@ -149,6 +149,8 @@ export function AttributeSelect({
 }: Readonly<AttributeSelectProps>) {
   const { attributes: regular, systemAttributes } = groupOptions(attributes);
   const selectedOption = attributes.find((option) => option.name === value);
+  const hasOptions = attributes.length > 0;
+  const effectivePlaceholder = hasOptions ? placeholder : "No options available";
 
   function handleValueChange(name: string) {
     const attribute = attributes.find((option) => option.name === name);
@@ -158,9 +160,9 @@ export function AttributeSelect({
   return (
     <div className="flex items-center gap-2">
       {label && <span className="text-sm font-medium">{label}</span>}
-      <Select value={value} onValueChange={handleValueChange}>
-        <SelectTrigger className="h-9 w-64" aria-label={label ?? placeholder}>
-          <SelectValue placeholder={placeholder}>
+      <Select value={value} onValueChange={handleValueChange} disabled={!hasOptions}>
+        <SelectTrigger className="h-9 w-64" aria-label={label ?? effectivePlaceholder}>
+          <SelectValue placeholder={effectivePlaceholder}>
             {selectedOption && <AttributeOptionCompactLabel option={selectedOption} />}
           </SelectValue>
         </SelectTrigger>
@@ -256,6 +258,8 @@ export function AttributeMultiSelect({
   const { attributes: regular, systemAttributes } = groupOptions(attributes);
   const selected = new Set(values);
   const selectedOptions = attributes.filter((option) => selected.has(option.name));
+  const hasOptions = attributes.length > 0;
+  const effectivePlaceholder = hasOptions ? placeholder : "No options available";
 
   function toggle(name: string) {
     if (selected.has(name)) {
@@ -267,7 +271,7 @@ export function AttributeMultiSelect({
 
   let triggerText: string;
   if (selectedOptions.length === 0) {
-    triggerText = placeholder;
+    triggerText = effectivePlaceholder;
   } else if (selectedOptions.length === 1) {
     triggerText = selectedOptions[0].title ?? selectedOptions[0].name;
   } else {
@@ -277,13 +281,14 @@ export function AttributeMultiSelect({
   return (
     <div className="flex items-center gap-2">
       {label && <span className="text-sm font-medium">{label}</span>}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={hasOptions && open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            aria-label={label ?? placeholder}
+            aria-label={label ?? effectivePlaceholder}
+            disabled={!hasOptions}
             className="h-9 w-64 justify-between font-normal"
           >
             <span
