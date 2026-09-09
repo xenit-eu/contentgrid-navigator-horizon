@@ -39,8 +39,6 @@ export function EntityItemPreview({ profile }: Readonly<EntityItemPreviewProps>)
       {collection.isSuccess && !collection.data.isEmpty && (
         <div className="space-y-3">
           <EntityItemReference item={collection.data.items[0]} size="lg" />
-          <EntityItemReference item={collection.data.items[0]} size="default" />
-          <EntityItemReference item={collection.data.items[0]} size="sm" />
           <EntityItemAttributes item={collection.data.items[0]} />
         </div>
       )}
