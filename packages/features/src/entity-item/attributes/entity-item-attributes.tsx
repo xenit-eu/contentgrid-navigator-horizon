@@ -3,14 +3,12 @@ import {
   type EntityItem,
   type EntityItemAttribute,
   ProfileAttributeType,
-  type ProfileEntity,
 } from "@contentgrid/navigator-data";
 import { AttributeValue, Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
 import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
-import { useAttributeValueRendererComponents } from "./renderers/registry";
+import { defaultAttributeRendererComponents } from "./renderers/registry";
 
 export interface EntityItemAttributesProps {
-  readonly profile: ProfileEntity;
   readonly item: EntityItem;
 }
 
@@ -70,8 +68,10 @@ function AuditTimelineEntry({
  * "true"/"false"/"unset" text there. Purely presentational: it reads the
  * resolved `EntityItem` accessor and renders it — it fetches nothing itself.
  */
-export function EntityItemAttributes({ profile, item }: Readonly<EntityItemAttributesProps>) {
-  const components = useAttributeValueRendererComponents();
+export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProps>) {
+  // TODO component should later inspect the userPreferences to see if there are custom components for certain entity - attributes
+  const components = defaultAttributeRendererComponents;
+  const profile = item.profileEntity;
 
   const attributes = item.userDefinedAttributes
     .filter((attr) => attr.value.kind !== AttributeKind.NESTED)

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   type EntityItemAttribute,
   EntityItemAttributeContent,
@@ -10,7 +10,7 @@ import {
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
 import { AttributeValueRenderer } from "./attribute-value-renderer";
-import { type AttributeRendererComponents, AttributeRendererProvider } from "./registry";
+import type { AttributeRendererComponents } from "./registry";
 
 const DUMMY_LINK = {} as ConstructorParameters<typeof EntityItemAttributeContent>[2];
 
@@ -28,28 +28,36 @@ function makeProfileAttribute(overrides: Partial<ProfileAttribute> = {}): Profil
   } as unknown as ProfileAttribute;
 }
 
-const spyRenderers: AttributeRendererComponents = {
-  boolean: ({ value, label }) => <span data-testid="r-boolean">{`${value}:${label}`}</span>,
-  string: ({ value }) => <span data-testid="r-string">{String(value)}</span>,
-  number: ({ value, type }) => <span data-testid="r-number">{`${value}:${type}`}</span>,
-  date: ({ value }) => <span data-testid="r-date">{String(value)}</span>,
-  datetime: ({ value }) => <span data-testid="r-datetime">{String(value)}</span>,
-  createdDate: ({ value, label }) => <span data-testid="r-createdDate">{`${label}:${value}`}</span>,
-  modifiedDate: ({ value, label }) => (
-    <span data-testid="r-modifiedDate">{`${label}:${value}`}</span>
-  ),
-  createdBy: ({ value, label }) => <span data-testid="r-createdBy">{`${label}:${value}`}</span>,
-  modifiedBy: ({ value, label }) => <span data-testid="r-modifiedBy">{`${label}:${value}`}</span>,
-  content: ({ metadata }) => <span data-testid="r-content">{JSON.stringify(metadata)}</span>,
-  unknown: () => <span data-testid="r-unknown" />,
-};
+// Spy renderers stand in for the real per-type components so each test can
+// assert which one the dispatcher picked. Injected by mocking the registry
+// module `AttributeValueRenderer` reads its components from.
+const { spyRenderers } = vi.hoisted(() => {
+  const spyRenderers: AttributeRendererComponents = {
+    boolean: ({ value, label }) => <span data-testid="r-boolean">{`${value}:${label}`}</span>,
+    string: ({ value }) => <span data-testid="r-string">{String(value)}</span>,
+    number: ({ value, type }) => <span data-testid="r-number">{`${value}:${type}`}</span>,
+    date: ({ value }) => <span data-testid="r-date">{String(value)}</span>,
+    datetime: ({ value }) => <span data-testid="r-datetime">{String(value)}</span>,
+    createdDate: ({ value, label }) => (
+      <span data-testid="r-createdDate">{`${label}:${value}`}</span>
+    ),
+    modifiedDate: ({ value, label }) => (
+      <span data-testid="r-modifiedDate">{`${label}:${value}`}</span>
+    ),
+    createdBy: ({ value, label }) => <span data-testid="r-createdBy">{`${label}:${value}`}</span>,
+    modifiedBy: ({ value, label }) => <span data-testid="r-modifiedBy">{`${label}:${value}`}</span>,
+    content: ({ metadata }) => <span data-testid="r-content">{JSON.stringify(metadata)}</span>,
+    unknown: () => <span data-testid="r-unknown" />,
+  };
+  return { spyRenderers };
+});
+
+vi.mock("./registry", () => ({
+  defaultAttributeRendererComponents: spyRenderers,
+}));
 
 function renderAttr(attr: EntityItemAttribute) {
-  return render(
-    <AttributeRendererProvider overrides={spyRenderers}>
-      <AttributeValueRenderer attr={attr} />
-    </AttributeRendererProvider>,
-  );
+  return render(<AttributeValueRenderer attr={attr} />);
 }
 
 describe("AttributeValueRenderer", () => {

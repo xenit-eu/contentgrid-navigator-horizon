@@ -37,20 +37,20 @@ function makeItem(
     modifiedDate?: EntityItemAttribute;
     modifiedBy?: EntityItemAttribute;
   } = {},
+  profile: ProfileEntity = makeProfile([]),
 ): EntityItem {
-  return { userDefinedAttributes, ...audit } as unknown as EntityItem;
+  return { userDefinedAttributes, ...audit, profileEntity: profile } as unknown as EntityItem;
 }
 
 describe("EntityItemAttributes", () => {
   it("renders nothing but the empty wrapper when there are no attributes", () => {
-    render(<EntityItemAttributes profile={makeProfile([])} item={makeItem([])} />);
+    render(<EntityItemAttributes item={makeItem([])} />);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("renders created date and creator on one row", () => {
     render(
       <EntityItemAttributes
-        profile={makeProfile([])}
         item={makeItem([], {
           createdBy: {
             value: new EntityItemAttributePlain("createdBy", "jane@example.com"),
@@ -70,7 +70,6 @@ describe("EntityItemAttributes", () => {
   it("renders the created row and modified row separately", () => {
     render(
       <EntityItemAttributes
-        profile={makeProfile([])}
         item={makeItem([], {
           createdDate: {
             value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
@@ -89,7 +88,6 @@ describe("EntityItemAttributes", () => {
   it("only draws a connecting line before the last timeline entry", () => {
     const { container } = render(
       <EntityItemAttributes
-        profile={makeProfile([])}
         item={makeItem([], {
           createdDate: {
             value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
@@ -108,14 +106,17 @@ describe("EntityItemAttributes", () => {
   it("filters nested attributes out of the table", () => {
     render(
       <EntityItemAttributes
-        profile={makeProfile([{ name: "name", title: "Name" }])}
-        item={makeItem([
-          {
-            value: new EntityItemAttributePlain("name", "Acme"),
-            profileAttribute: makeProfileAttribute({ name: "name" }),
-          },
-          { value: new EntityItemAttributeNested("address", { city: "Ghent" }) },
-        ])}
+        item={makeItem(
+          [
+            {
+              value: new EntityItemAttributePlain("name", "Acme"),
+              profileAttribute: makeProfileAttribute({ name: "name" }),
+            },
+            { value: new EntityItemAttributeNested("address", { city: "Ghent" }) },
+          ],
+          {},
+          makeProfile([{ name: "name", title: "Name" }]),
+        )}
       />,
     );
     expect(screen.queryByText("address")).not.toBeInTheDocument();
@@ -125,17 +126,20 @@ describe("EntityItemAttributes", () => {
   it("shows the profile title as the row label, falling back to the raw name", () => {
     render(
       <EntityItemAttributes
-        profile={makeProfile([{ name: "supplier_name", title: "Supplier name" }])}
-        item={makeItem([
-          {
-            value: new EntityItemAttributePlain("supplier_name", "Acme"),
-            profileAttribute: makeProfileAttribute({ name: "supplier_name" }),
-          },
-          {
-            value: new EntityItemAttributePlain("untitled_field", "raw"),
-            profileAttribute: makeProfileAttribute({ name: "untitled_field" }),
-          },
-        ])}
+        item={makeItem(
+          [
+            {
+              value: new EntityItemAttributePlain("supplier_name", "Acme"),
+              profileAttribute: makeProfileAttribute({ name: "supplier_name" }),
+            },
+            {
+              value: new EntityItemAttributePlain("untitled_field", "raw"),
+              profileAttribute: makeProfileAttribute({ name: "untitled_field" }),
+            },
+          ],
+          {},
+          makeProfile([{ name: "supplier_name", title: "Supplier name" }]),
+        )}
       />,
     );
     expect(screen.getByText("Supplier name")).toBeInTheDocument();
@@ -145,16 +149,19 @@ describe("EntityItemAttributes", () => {
   it("renders boolean attributes as a chip row using the profile title as the label", () => {
     render(
       <EntityItemAttributes
-        profile={makeProfile([{ name: "active", title: "Active" }])}
-        item={makeItem([
-          {
-            value: new EntityItemAttributePlain("active", true),
-            profileAttribute: makeProfileAttribute({
-              name: "active",
-              type: ProfileAttributeType.boolean,
-            }),
-          },
-        ])}
+        item={makeItem(
+          [
+            {
+              value: new EntityItemAttributePlain("active", true),
+              profileAttribute: makeProfileAttribute({
+                name: "active",
+                type: ProfileAttributeType.boolean,
+              }),
+            },
+          ],
+          {},
+          makeProfile([{ name: "active", title: "Active" }]),
+        )}
       />,
     );
     const chips = screen
@@ -167,34 +174,37 @@ describe("EntityItemAttributes", () => {
   it("renders boolean values as plain true/false/unset text in the table, not a chip", () => {
     render(
       <EntityItemAttributes
-        profile={makeProfile([
-          { name: "active", title: "Active" },
-          { name: "verified", title: "Verified" },
-          { name: "archived", title: "Archived" },
-        ])}
-        item={makeItem([
-          {
-            value: new EntityItemAttributePlain("active", true),
-            profileAttribute: makeProfileAttribute({
-              name: "active",
-              type: ProfileAttributeType.boolean,
-            }),
-          },
-          {
-            value: new EntityItemAttributePlain("verified", false),
-            profileAttribute: makeProfileAttribute({
-              name: "verified",
-              type: ProfileAttributeType.boolean,
-            }),
-          },
-          {
-            value: new EntityItemAttributePlain("archived", null),
-            profileAttribute: makeProfileAttribute({
-              name: "archived",
-              type: ProfileAttributeType.boolean,
-            }),
-          },
-        ])}
+        item={makeItem(
+          [
+            {
+              value: new EntityItemAttributePlain("active", true),
+              profileAttribute: makeProfileAttribute({
+                name: "active",
+                type: ProfileAttributeType.boolean,
+              }),
+            },
+            {
+              value: new EntityItemAttributePlain("verified", false),
+              profileAttribute: makeProfileAttribute({
+                name: "verified",
+                type: ProfileAttributeType.boolean,
+              }),
+            },
+            {
+              value: new EntityItemAttributePlain("archived", null),
+              profileAttribute: makeProfileAttribute({
+                name: "archived",
+                type: ProfileAttributeType.boolean,
+              }),
+            },
+          ],
+          {},
+          makeProfile([
+            { name: "active", title: "Active" },
+            { name: "verified", title: "Verified" },
+            { name: "archived", title: "Archived" },
+          ]),
+        )}
       />,
     );
     expect(screen.getByText("true")).toBeInTheDocument();

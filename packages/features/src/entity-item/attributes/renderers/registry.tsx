@@ -1,4 +1,3 @@
-import { type ReactNode, createContext, useContext } from "react";
 import { BooleanAttributeRenderer } from "./boolean-attribute-renderer";
 import { ContentAttributeRenderer } from "./content-attribute-renderer";
 import { CreatedByAttributeRenderer } from "./created-by-attribute-renderer";
@@ -38,35 +37,3 @@ export const defaultAttributeRendererComponents: AttributeRendererComponents = {
   content: ContentAttributeRenderer,
   unknown: UnknownAttributeRenderer,
 };
-
-const AttributeRendererContext = createContext<AttributeRendererComponents>(
-  defaultAttributeRendererComponents,
-);
-
-export interface AttributeRendererProviderProps {
-  /** Per-type renderer overrides, merged over the built-in defaults. */
-  readonly overrides?: Partial<AttributeRendererComponents>;
-  readonly children?: ReactNode;
-}
-
-/**
- * Lets a consuming app override how one or more attribute types render, without
- * forking the renderers themselves. Wrap this once around the app (or a subtree);
- * without a provider, consumers fall back to `defaultAttributeRendererComponents`.
- */
-export function AttributeRendererProvider({
-  overrides,
-  children,
-}: Readonly<AttributeRendererProviderProps>) {
-  const value: AttributeRendererComponents = {
-    ...defaultAttributeRendererComponents,
-    ...overrides,
-  };
-  return (
-    <AttributeRendererContext.Provider value={value}>{children}</AttributeRendererContext.Provider>
-  );
-}
-
-export function useAttributeValueRendererComponents(): AttributeRendererComponents {
-  return useContext(AttributeRendererContext);
-}

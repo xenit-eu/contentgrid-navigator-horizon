@@ -100,7 +100,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
 
       {item.isSuccess && (
         <div className="space-y-6 p-4 pt-0">
-          <EntityItemAttributes profile={item.data.profileEntity} item={item.data} />
+          <EntityItemAttributes item={item.data} />
 
           {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
             <>

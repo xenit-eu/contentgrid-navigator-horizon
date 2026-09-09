@@ -3,7 +3,7 @@ import {
   type EntityItemAttribute,
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
-import { useAttributeValueRendererComponents } from "./registry";
+import { defaultAttributeRendererComponents } from "./registry";
 
 export interface AttributeValueRendererProps {
   readonly attr: EntityItemAttribute;
@@ -22,7 +22,7 @@ export interface AttributeValueRendererProps {
  * nothing.
  */
 export function AttributeValueRenderer({ attr, wrap }: Readonly<AttributeValueRendererProps>) {
-  const components = useAttributeValueRendererComponents();
+  const components = defaultAttributeRendererComponents;
 
   if (attr.value.kind === AttributeKind.CONTENT) {
     return <components.content metadata={attr.value.metadata} />;
