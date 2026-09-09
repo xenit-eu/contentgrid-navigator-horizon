@@ -91,4 +91,23 @@ describe("RecordTableRow", () => {
       getRecordTableGridTemplate(CELLS.length, { hasActions: true }),
     );
   });
+
+  it("pins the trailing actions cell to the right with the row's own (unselected) background", () => {
+    render(<RecordTableRow cells={CELLS} actions={<button type="button">Delete</button>} />);
+    const cells = screen.getAllByRole("cell");
+    expect(cells.at(-1)).toHaveClass("sticky", "right-0", "bg-[#FAFDFF]", "dark:bg-[#102a3e]");
+  });
+
+  it("pins the trailing actions cell with the selected background when the row is selected", () => {
+    render(
+      <RecordTableRow cells={CELLS} selected actions={<button type="button">Delete</button>} />,
+    );
+    const cells = screen.getAllByRole("cell");
+    expect(cells.at(-1)).toHaveClass(
+      "sticky",
+      "right-0",
+      "bg-[#EAF6FE]",
+      "dark:bg-[rgba(90,196,242,0.12)]",
+    );
+  });
 });

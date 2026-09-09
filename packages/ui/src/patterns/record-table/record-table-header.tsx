@@ -109,7 +109,7 @@ function RecordTableHeader({
               </div>
             );
           })}
-          {showActionsColumn && <div role="columnheader" />}
+          {showActionsColumn && <div role="columnheader" className="sticky right-0 bg-muted/70" />}
         </div>
       </div>
     </TooltipProvider>

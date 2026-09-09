@@ -58,7 +58,8 @@ export function filterVisibleAttributes(
 /**
  * Build table columns based on profile and visibility preferences.
  *
- * Includes id column plus filtered user-defined attributes. Pure function — takes the
+ * Includes the id column plus filtered user-defined and audit/system attributes. Pure
+ * function — takes the
  * `ColumnVisibilityConfig` from `useColumnVisibility` as a parameter rather than calling the
  * hook itself, so it's safe to call conditionally (e.g. inside `useMemo`, or only when a
  * target profile has resolved) without violating the Rules of Hooks.
@@ -86,6 +87,17 @@ export function buildColumns(
 
   // Add user-defined attributes
   profile.userDefinedAttributes.forEach((attr) => {
+    if (isVisible(attr.name)) {
+      columns.push({
+        key: attr.name,
+        header: attr.title ?? attr.name,
+        sortable: true,
+      });
+    }
+  });
+
+  // Add audit/system attributes (created-by, modified-date, etc.)
+  profile.auditAttributes.forEach((attr) => {
     if (isVisible(attr.name)) {
       columns.push({
         key: attr.name,
