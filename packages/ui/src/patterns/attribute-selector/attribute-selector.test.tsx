@@ -112,6 +112,28 @@ describe("AttributeMultiSelect", () => {
     expect(screen.getByRole("combobox")).toHaveTextContent("Amount");
   });
 
+  it("treats a stale selected value with no matching attribute as unselected", () => {
+    render(
+      <AttributeMultiSelect attributes={ATTRIBUTES} values={["removed"]} onChange={vi.fn()} />,
+    );
+    const trigger = screen.getByText("Select attributes");
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveClass("text-muted-foreground");
+  });
+
+  it("ignores a stale value when counting selected attributes", () => {
+    render(
+      <AttributeMultiSelect
+        attributes={ATTRIBUTES}
+        values={["amount", "removed"]}
+        onChange={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toHaveTextContent("Amount");
+    expect(screen.queryByText("2 attributes selected")).toBeNull();
+  });
+
   it("shows a count when multiple attributes are selected", () => {
     render(
       <AttributeMultiSelect

@@ -255,6 +255,7 @@ export function AttributeMultiSelect({
   const [open, setOpen] = useState(false);
   const { attributes: regular, systemAttributes } = groupOptions(attributes);
   const selected = new Set(values);
+  const selectedOptions = attributes.filter((option) => selected.has(option.name));
 
   function toggle(name: string) {
     if (selected.has(name)) {
@@ -265,13 +266,12 @@ export function AttributeMultiSelect({
   }
 
   let triggerText: string;
-  if (selected.size === 0) {
+  if (selectedOptions.length === 0) {
     triggerText = placeholder;
-  } else if (selected.size === 1) {
-    const option = attributes.find((attribute) => selected.has(attribute.name));
-    triggerText = option?.title ?? option?.name ?? placeholder;
+  } else if (selectedOptions.length === 1) {
+    triggerText = selectedOptions[0].title ?? selectedOptions[0].name;
   } else {
-    triggerText = `${selected.size} attributes selected`;
+    triggerText = `${selectedOptions.length} attributes selected`;
   }
 
   return (
@@ -286,7 +286,9 @@ export function AttributeMultiSelect({
             aria-label={label ?? placeholder}
             className="h-9 w-64 justify-between font-normal"
           >
-            <span className={cn("truncate", selected.size === 0 && "text-muted-foreground")}>
+            <span
+              className={cn("truncate", selectedOptions.length === 0 && "text-muted-foreground")}
+            >
               {triggerText}
             </span>
             <CaretDownIcon className="size-4 shrink-0 opacity-50" aria-hidden />
