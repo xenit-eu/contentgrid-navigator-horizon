@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   CalendarIcon,
   CaretDownIcon,
@@ -227,7 +227,8 @@ function AttributeCheckboxRow({
   checked: boolean;
   onToggle: (name: string) => void;
 }>) {
-  const inputId = `attribute-multiselect-${option.name}`;
+  const instanceId = useId();
+  const inputId = `${instanceId}-${option.name}`;
   return (
     <label
       htmlFor={inputId}
