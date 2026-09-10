@@ -12,8 +12,8 @@ export { RelationToManySection } from "./relations/relation-to-many-section";
 export type { RelationItemClickHandler } from "./relations/relation-shared";
 export { ensureEntityItemDetailLoaderData } from "./entity-item-loader";
 export type { EntityItemDetailLoaderContext } from "./entity-item-loader";
-export { EntityItemReference } from "./variations/entity-item-record-reference";
-export type { EntityItemReferenceProps } from "./variations/entity-item-record-reference";
+export { EntityItemReference } from "./variations/entity-item-reference";
+export type { EntityItemReferenceProps } from "./variations/entity-item-reference";
 export {
   AttributeValueRenderer,
   TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
