@@ -51,7 +51,13 @@ function RecordTableRow({
         }),
       }}
       className={cn(
-        "relative grid items-center gap-3 px-4 py-3 border-b border-[#F1F4F7] dark:border-[#1B3A50] cursor-pointer transition-colors",
+        // `w-fit min-w-full`: a block-level grid container's `width: auto` fills the scroll
+        // parent's available width and stops there — it does NOT grow to accommodate its own
+        // overflowing tracks, so the row's painted background/border stay at the container's
+        // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
+        // to its content's actual width when that's wider than the container (matching what the
+        // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
+        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-[#F1F4F7] dark:border-[#1B3A50] cursor-pointer transition-colors",
         rowBackground,
         className,
       )}
