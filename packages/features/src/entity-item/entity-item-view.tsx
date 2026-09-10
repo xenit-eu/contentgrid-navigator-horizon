@@ -15,7 +15,7 @@ import type {
 } from "./relations/relation-shared";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
-import { EntityItemReference } from "./variations/entity-item-record-reference";
+import { EntityItemReference } from "./variations/entity-item-reference";
 
 /** Identify the item by its already-known profile and id. */
 export interface EntityItemViewByProfile {
