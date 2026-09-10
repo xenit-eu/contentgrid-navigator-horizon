@@ -1,4 +1,4 @@
-import { Children, type ReactNode, useRef } from "react";
+import { Children, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   CaretLeftIcon as CaretLeft,
   CaretRightIcon as CaretRight,
@@ -74,6 +74,28 @@ function RecordDataTable({
 }: Readonly<RecordDataTableProps>) {
   const isEmpty = Children.count(children) === 0;
   const headerScrollRef = useRef<HTMLDivElement>(null);
+  const rowGroupRef = useRef<HTMLDivElement>(null);
+
+  // The rowgroup's own vertical scrollbar (when one is rendered) eats into its content width,
+  // shrinking the space available to its rows — but the header wrapper never scrolls vertically,
+  // so it never loses that width, and its columns drift out of alignment with the row cells
+  // below them. Mirror the rowgroup's actual scrollbar width as right padding on the header so
+  // both compute their column tracks against the same available width. Measured via
+  // ResizeObserver (rather than only on mount) because the scrollbar can appear or disappear
+  // later purely from a content-box change — e.g. the row count changing on pagination — without
+  // the rowgroup's own border-box size changing.
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
+  useEffect(() => {
+    const rowGroupEl = rowGroupRef.current;
+    if (!rowGroupEl) return;
+
+    const measure = () => setScrollbarWidth(rowGroupEl.offsetWidth - rowGroupEl.clientWidth);
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(rowGroupEl);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className={cn("flex min-h-0 flex-col gap-2", className)}>
@@ -91,8 +113,15 @@ function RecordDataTable({
               rowgroup's via the rowgroup's `onScroll` below (the standard "frozen header" trick)
               — `overflow-x-hidden` here means the header has no scrollbar of its own and isn't
               user-draggable, but remains freely scrollable by setting `scrollLeft` in JS, and
-              `position: sticky` on its trailing actions cell still tracks that scroll offset. */}
-          <div ref={headerScrollRef} className="shrink-0 overflow-x-hidden">
+              `position: sticky` on its trailing actions cell still tracks that scroll offset.
+              `paddingRight: scrollbarWidth` mirrors the rowgroup's actual vertical scrollbar
+              width (0 when it isn't showing one) so the header's columns line up with the row
+              cells below them instead of drifting by the scrollbar's width. */}
+          <div
+            ref={headerScrollRef}
+            className="shrink-0 overflow-x-hidden"
+            style={{ paddingRight: scrollbarWidth }}
+          >
             <RecordTableHeader
               columns={columns}
               sortOptions={sortOptions}
@@ -103,6 +132,7 @@ function RecordDataTable({
           </div>
 
           <div
+            ref={rowGroupRef}
             role="rowgroup"
             className="min-h-0 flex-1 overflow-auto"
             onScroll={(event) => {
