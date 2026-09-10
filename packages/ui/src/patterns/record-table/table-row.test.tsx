@@ -45,6 +45,48 @@ describe("RecordTableRow", () => {
     await user.click(screen.getByRole("row"));
   });
 
+  it("calls onClick when Enter is pressed while the row is focused", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<RecordTableRow cells={CELLS} onClick={onClick} />);
+    screen.getByRole("row").focus();
+    await user.keyboard("{Enter}");
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("calls onClick and prevents the default scroll when Space is pressed while the row is focused", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<RecordTableRow cells={CELLS} onClick={onClick} />);
+    screen.getByRole("row").focus();
+    await user.keyboard(" ");
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("does not call onClick for other keys", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<RecordTableRow cells={CELLS} onClick={onClick} />);
+    screen.getByRole("row").focus();
+    await user.keyboard("a");
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("is focusable (tabIndex=0) when onClick is provided", () => {
+    render(<RecordTableRow cells={CELLS} onClick={vi.fn()} />);
+    expect(screen.getByRole("row")).toHaveAttribute("tabIndex", "0");
+  });
+
+  it("is not focusable when onClick is absent", () => {
+    render(<RecordTableRow cells={CELLS} />);
+    expect(screen.getByRole("row")).not.toHaveAttribute("tabIndex");
+  });
+
+  it("merges a custom className onto the row", () => {
+    render(<RecordTableRow cells={CELLS} className="custom-row-class" />);
+    expect(screen.getByRole("row")).toHaveClass("custom-row-class");
+  });
+
   it("renders selected indicator (accent bar) when selected=true", () => {
     const { container } = render(<RecordTableRow cells={CELLS} selected />);
     const accent = container.querySelector("span[aria-hidden='true'].absolute");
