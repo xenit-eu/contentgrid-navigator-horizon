@@ -6,7 +6,6 @@ import {
 } from "@contentgrid/navigator-data";
 import { Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
 import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
-import { defaultAttributeRendererComponents } from "./renderers/registry";
 
 export interface EntityItemAttributesProps {
   readonly item: EntityItem;
@@ -57,8 +56,6 @@ function AuditTimelineEntry({
  * and renders it — it fetches nothing itself.
  */
 export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProps>) {
-  // TODO component should later inspect the userPreferences to see if there are custom components for certain entity - attributes
-  const components = defaultAttributeRendererComponents;
   const profile = item.profileEntity;
 
   const attributes = item.userDefinedAttributes
@@ -82,16 +79,8 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
     <div className="space-y-4">
       {booleanAttributes.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {booleanAttributes.map(({ attr, label }) => (
-            <components.boolean
-              key={attr.value.name}
-              value={
-                attr.value.kind === AttributeKind.PLAIN
-                  ? (attr.value.value as boolean | null)
-                  : null
-              }
-              label={label}
-            />
+          {booleanAttributes.map(({ attr }) => (
+            <AttributeValueRenderer key={attr.value.name} attr={attr} variant="item-reference" />
           ))}
         </div>
       )}

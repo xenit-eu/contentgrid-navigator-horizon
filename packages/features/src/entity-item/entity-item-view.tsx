@@ -89,7 +89,6 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
   const content = (
     <>
       <div className="p-4">
-        {/* TODO add Fake EntityItemReference here when the entity is loading... */}
         {item.data ? (
           <EntityItemReference item={item.data} size="lg" />
         ) : (
