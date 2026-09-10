@@ -21,7 +21,11 @@ import {
   RecordTableRow,
   type RecordTableSortOption,
 } from "@contentgrid/ui";
-import { AttributeValueRenderer, EntityItemReference } from "../entity-item";
+import {
+  AttributeValueRenderer,
+  EntityItemReference,
+  TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
+} from "../entity-item";
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 
 export interface EntityItemCollectionTableProps {
@@ -156,7 +160,18 @@ export function EntityItemCollectionTable({
                 return { key: col.key, content: item.id };
               }
               const attr = item.findAttribute(col.key);
-              return { key: col.key, content: attr ? <AttributeValueRenderer attr={attr} /> : "—" };
+              return {
+                key: col.key,
+                content: attr ? (
+                  <AttributeValueRenderer
+                    attr={attr}
+                    variant="table"
+                    maxCharLength={TABLE_ATTRIBUTE_MAX_CHAR_LENGTH}
+                  />
+                ) : (
+                  "—"
+                ),
+              };
             }),
           ];
 

@@ -14,5 +14,8 @@ export { ensureEntityItemDetailLoaderData } from "./entity-item-loader";
 export type { EntityItemDetailLoaderContext } from "./entity-item-loader";
 export { EntityItemReference } from "./variations/entity-item-record-reference";
 export type { EntityItemReferenceProps } from "./variations/entity-item-record-reference";
-export { AttributeValueRenderer } from "./attributes/renderers/attribute-value-renderer";
+export {
+  AttributeValueRenderer,
+  TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
+} from "./attributes/renderers/attribute-value-renderer";
 export type { AttributeValueRendererProps } from "./attributes/renderers/attribute-value-renderer";

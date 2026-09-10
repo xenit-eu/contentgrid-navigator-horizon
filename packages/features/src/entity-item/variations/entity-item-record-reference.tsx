@@ -39,10 +39,16 @@ export function EntityItemReference({
   const Icon = resolveEntityCardIcon(preferences.icon);
 
   const nameAttr = nameAttribute ? item.findAttribute(nameAttribute.name) : undefined;
-  const title = nameAttr ? <AttributeValueRenderer attr={nameAttr} /> : item.id;
+  const title = nameAttr ? (
+    <AttributeValueRenderer attr={nameAttr} variant="item-reference" />
+  ) : (
+    item.id
+  );
 
   const subtitleAttr = subtitleAttribute ? item.findAttribute(subtitleAttribute.name) : undefined;
-  const subtitle = subtitleAttr ? <AttributeValueRenderer attr={subtitleAttr} /> : undefined;
+  const subtitle = subtitleAttr ? (
+    <AttributeValueRenderer attr={subtitleAttr} variant="item-reference" />
+  ) : undefined;
 
   return (
     <ItemReference
