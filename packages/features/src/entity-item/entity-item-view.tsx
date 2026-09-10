@@ -15,7 +15,10 @@ import type {
 } from "./relations/relation-shared";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
-import { EntityItemReference } from "./variations/entity-item-reference";
+import {
+  EntityItemReference,
+  EntityItemReferenceLoading,
+} from "./variations/entity-item-reference";
 
 /** Identify the item by its already-known profile and id. */
 export interface EntityItemViewByProfile {
@@ -87,7 +90,11 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
     <>
       <div className="p-4">
         {/* TODO add Fake EntityItemReference here when the entity is loading... */}
-        {item.data && <EntityItemReference item={item.data} size="lg" />}
+        {item.data ? (
+          <EntityItemReference item={item.data} size="lg" />
+        ) : (
+          <EntityItemReferenceLoading size="lg" />
+        )}
       </div>
 
       {item.isPending && <LoadingPage />}

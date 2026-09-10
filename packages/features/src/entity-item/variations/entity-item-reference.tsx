@@ -1,3 +1,4 @@
+import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { ItemReference } from "@contentgrid/ui";
 import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../preferences";
@@ -65,6 +66,32 @@ export function EntityItemReference({
       subtitle={subtitle}
       onClick={onClick}
       selected={selected}
+      size={size}
+      className={className}
+    />
+  );
+}
+
+export interface EntityItemReferenceLoadingProps {
+  readonly size?: "sm" | "default" | "lg";
+  readonly className?: string;
+}
+
+/**
+ * Placeholder shown in place of `EntityItemReference` while its `EntityItem` is still
+ * loading — the same `ItemReference` row, with a spinning icon standing in for the
+ * entity icon and a "Loading…" title, so the layout doesn't jump when the real
+ * reference swaps in.
+ */
+export function EntityItemReferenceLoading({
+  size = "default",
+  className,
+}: Readonly<EntityItemReferenceLoadingProps>) {
+  return (
+    <ItemReference
+      icon={<CircleNotch className="animate-spin" aria-hidden />}
+      muted
+      title="Loading…"
       size={size}
       className={className}
     />
