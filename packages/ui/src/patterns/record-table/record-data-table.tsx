@@ -134,6 +134,12 @@ function RecordDataTable({
           <div
             ref={rowGroupRef}
             role="rowgroup"
+            // `tabIndex={0}` makes this scrollable region keyboard-reachable on its own —
+            // required whenever its rows don't happen to carry a focusable element themselves
+            // (e.g. no row `onClick`), which axe's `scrollable-region-focusable` rule (rightly)
+            // flags: a sighted mouse user can drag-scroll a tall list, but a keyboard-only user
+            // has no way to reach it otherwise.
+            tabIndex={0}
             className="min-h-0 flex-1 overflow-auto"
             onScroll={(event) => {
               if (headerScrollRef.current) {
@@ -142,14 +148,24 @@ function RecordDataTable({
             }}
           >
             {isEmpty ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-                <Tray className="size-10" aria-hidden />
-                <p className="text-sm font-medium">No {entityTitle ?? entityName} found</p>
-                {onCreateClick && (
-                  <Button variant="outline" size="sm" onClick={onCreateClick}>
-                    Add new item to {entityTitle ?? entityName}
-                  </Button>
-                )}
+              // `role="rowgroup"` requires a `role="row"` child (which itself requires a
+              // `role="cell"`/`columnheader` child) per the ARIA table content model — axe's
+              // `aria-required-children` flags a bare div here, and would also flag the
+              // "Add new item" button below as a disallowed child of `role="table"` /
+              // `role="rowgroup"` if it weren't wrapped in one.
+              <div role="row">
+                <div
+                  role="cell"
+                  className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground"
+                >
+                  <Tray className="size-10" aria-hidden />
+                  <p className="text-sm font-medium">No {entityTitle ?? entityName} found</p>
+                  {onCreateClick && (
+                    <Button variant="outline" size="sm" onClick={onCreateClick}>
+                      Add new item to {entityTitle ?? entityName}
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               children
