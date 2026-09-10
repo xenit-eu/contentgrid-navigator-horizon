@@ -25,6 +25,14 @@ export type {
 export * from "./config";
 export { queryKeys } from "./query-keys";
 export * from "./search";
+export type { SearchRequestSpec } from "./api/requests";
+export type { FieldValue, FieldValueMap } from "./field-value";
+// Re-exported so `packages/features`/`packages/ui` can build and type raw HAL-FORMS values and
+// templates/properties (e.g. `createValues`/`HalFormValues` in `use-entity-item-create-form-state.ts`,
+// `FieldDescriptor.property` in `@contentgrid/features/entity-item-create`) without importing
+// `@contentgrid/hal-forms` directly — see ADR-007 and both packages' CLAUDE.md forbidden-imports
+// sections.
 export { createValues } from "@contentgrid/hal-forms/values";
 export type { HalFormValues } from "@contentgrid/hal-forms/values";
-export type { SearchRequestSpec } from "./api/requests";
+export type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
+export type { TypedRequestSpec } from "@contentgrid/typed-fetch";

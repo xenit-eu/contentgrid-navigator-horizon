@@ -345,6 +345,18 @@ describe("ProfileEntity — describes()", () => {
   });
 });
 
+describe("ProfileEntity — describesUrl()", () => {
+  it("returns true for a plain url string matching the collection URL", () => {
+    const entity = makeProfileEntity({ collectionHref: "/invoices" });
+    expect(entity.describesUrl("/invoices")).toBe(true);
+  });
+
+  it("returns false for a plain url string that does not match", () => {
+    const entity = makeProfileEntity({ collectionHref: "/invoices" });
+    expect(entity.describesUrl("/suppliers")).toBe(false);
+  });
+});
+
 describe("ProfileEntity — searchTemplate", () => {
   it("returns null when no search template in profile", () => {
     expect(makeProfileEntity().searchTemplate).toBeNull();

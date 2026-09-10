@@ -26,7 +26,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** A single selectable option in the picker */
-export interface EntityPickerOption {
+export interface EntityItemPickerOption {
   /** Unique identifier for this option */
   id: string;
   /** Stable href / self-link URI used as the selection value */
@@ -36,23 +36,23 @@ export interface EntityPickerOption {
 }
 
 /** Column descriptor controlling which data fields are shown */
-export interface EntityPickerColumn {
+export interface EntityItemPickerColumn {
   /** Attribute name */
   key: string;
   /** Column header label */
   header: string;
 }
 
-export interface EntityPickerProps {
+export interface EntityItemPickerProps {
   /** Controls dialog visibility */
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Title used in the dialog heading, e.g. "Invoice" */
   relationTitle: string;
   /** Current loaded page of options */
-  options: EntityPickerOption[];
+  options: EntityItemPickerOption[];
   /** Columns to display; when empty the picker falls back to the first data keys */
-  columns?: EntityPickerColumn[];
+  columns?: EntityItemPickerColumn[];
   /** True while options are being fetched */
   isLoading?: boolean;
   /** Current search query — controlled externally so the caller can debounce / fetch */
@@ -71,24 +71,27 @@ export interface EntityPickerProps {
   onNextPage?: () => void;
   /** Allow selecting multiple items at once */
   multiSelect?: boolean;
-  /** Called with the selected href(s) and display label(s) when the user confirms */
-  onSelect: (href: string, displayLabel: string) => void;
+  /**
+   * Called once, when the user confirms the dialog, with every currently selected item's
+   * href — a single-element array in single-select mode, one or more in multi-select mode.
+   */
+  onSelect: (hrefs: string[]) => void;
+  /**
+   * Rendered next to the search input when provided — e.g. a "Create new"
+   * link to the target's own create page. This component has no routing
+   * knowledge; the caller supplies the already-built node (see
+   * packages/ui/CLAUDE.md's "accept already-resolved... from the caller" rule).
+   */
+  createNewLink?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getItemLabel(item: EntityPickerOption): string {
-  const firstVal = Object.entries(item.data).find(
-    ([k, v]) => !k.startsWith("_") && k !== "id" && v != null,
-  );
-  return firstVal ? String(firstVal[1]) : item.id;
-}
-
 function resolveColumnKeys(
-  options: EntityPickerOption[],
-  columns?: EntityPickerColumn[],
+  options: EntityItemPickerOption[],
+  columns?: EntityItemPickerColumn[],
 ): string[] {
   if (columns && columns.length > 0) return columns.map((c) => c.key);
   if (!options[0]) return [];
@@ -97,7 +100,7 @@ function resolveColumnKeys(
     .slice(0, 4);
 }
 
-function resolveColumnHeaders(columnKeys: string[], columns?: EntityPickerColumn[]): string[] {
+function resolveColumnHeaders(columnKeys: string[], columns?: EntityItemPickerColumn[]): string[] {
   if (columns && columns.length > 0) return columns.map((c) => c.header);
   return columnKeys;
 }
@@ -113,7 +116,7 @@ const SKELETON_ROWS = ["s1", "s2", "s3"];
 // Main export
 // ---------------------------------------------------------------------------
 
-export function EntityPicker({
+export function EntityItemPicker({
   open,
   onOpenChange,
   relationTitle,
@@ -129,21 +132,21 @@ export function EntityPicker({
   onNextPage,
   multiSelect = false,
   onSelect,
-}: Readonly<EntityPickerProps>) {
+  createNewLink,
+}: Readonly<EntityItemPickerProps>) {
   // Single-select state
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
-  const [selectedLabel, setSelectedLabel] = useState<string>("");
 
   // Multi-select state
-  const [selectedItems, setSelectedItems] = useState<Map<string, string>>(() => new Map());
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(() => new Set());
 
-  const toggleItem = useCallback((href: string, label: string) => {
+  const toggleItem = useCallback((href: string) => {
     setSelectedItems((prev) => {
-      const next = new Map(prev);
+      const next = new Set(prev);
       if (next.has(href)) {
         next.delete(href);
       } else {
-        next.set(href, label);
+        next.add(href);
       }
       return next;
     });
@@ -151,8 +154,7 @@ export function EntityPicker({
 
   function resetState() {
     setSelectedHref(null);
-    setSelectedLabel("");
-    setSelectedItems(new Map());
+    setSelectedItems(new Set());
     onSearch("");
   }
 
@@ -162,14 +164,9 @@ export function EntityPicker({
   }
 
   function handleConfirm() {
-    if (multiSelect) {
-      for (const [href, label] of selectedItems) {
-        onSelect(href, label);
-      }
-    } else {
-      if (!selectedHref) return;
-      onSelect(selectedHref, selectedLabel);
-    }
+    const hrefs = multiSelect ? [...selectedItems] : selectedHref ? [selectedHref] : [];
+    if (hrefs.length === 0) return;
+    onSelect(hrefs);
     resetState();
     onOpenChange(false);
   }
@@ -230,10 +227,9 @@ export function EntityPicker({
                 )}
                 onClick={() => {
                   if (multiSelect) {
-                    toggleItem(item.href, getItemLabel(item));
+                    toggleItem(item.href);
                   } else {
                     setSelectedHref(item.href);
-                    setSelectedLabel(getItemLabel(item));
                   }
                 }}
               >
@@ -269,17 +265,20 @@ export function EntityPicker({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative">
-          <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
-          <Input
-            placeholder={searchPlaceholder ?? "Search..."}
-            value={searchQuery}
-            onChange={(e) => {
-              onSearch(e.target.value);
-              if (!multiSelect) setSelectedHref(null);
-            }}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
+            <Input
+              placeholder={searchPlaceholder ?? "Search..."}
+              value={searchQuery}
+              onChange={(e) => {
+                onSearch(e.target.value);
+                if (!multiSelect) setSelectedHref(null);
+              }}
+              className="pl-9"
+            />
+          </div>
+          {createNewLink}
         </div>
 
         <div className="max-h-80 overflow-auto rounded-md border">{resultsBody}</div>
@@ -287,6 +286,7 @@ export function EntityPicker({
         {(hasPreviousPage || hasNextPage) && (
           <div className="flex items-center justify-between">
             <Button
+              type="button"
               variant="outline"
               size="sm"
               disabled={!hasPreviousPage}
@@ -294,17 +294,23 @@ export function EntityPicker({
             >
               Previous
             </Button>
-            <Button variant="outline" size="sm" disabled={!hasNextPage} onClick={onNextPage}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!hasNextPage}
+              onClick={onNextPage}
+            >
               Next
             </Button>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!hasSelection}>
+          <Button type="button" onClick={handleConfirm} disabled={!hasSelection}>
             {confirmLabel}
           </Button>
         </DialogFooter>

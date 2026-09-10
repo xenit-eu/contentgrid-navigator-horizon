@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { HalObject, type Link, type SimpleLink } from "@contentgrid/hal";
+import { HalObject, type Link, SimpleLink } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
@@ -289,6 +289,13 @@ export default class ProfileEntity {
       .some(
         (desc) => desc.template.match(link.href) || desc.template.match(link.href.split("?")[0]),
       );
+  }
+
+  /** Convenience wrapper around {@link describes} for callers that only have a plain URL string
+   * (e.g. a `targetCollectionHref` read off a create-form property) and have no reason to
+   * construct a `SimpleLink` themselves. */
+  public describesUrl(href: string): boolean {
+    return this.describes(SimpleLink.to(href));
   }
 
   // ========================================

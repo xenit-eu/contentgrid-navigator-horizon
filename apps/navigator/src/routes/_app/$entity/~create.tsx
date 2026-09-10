@@ -1,5 +1,6 @@
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
+import { CreateEntityItemView } from "@contentgrid/features/entity-item-create";
 import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
@@ -8,7 +9,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  PageTitle,
 } from "@contentgrid/ui";
 
 export const Route = createFileRoute("/_app/$entity/~create")({
@@ -29,6 +29,7 @@ function RouteComponent() {
 
 function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const go = useNavigate();
+  const router = useRouter();
 
   const breadcrumbs = (
     <Breadcrumb>
@@ -62,7 +63,37 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
 
   return (
     <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs}>
-      <PageTitle header="Create" title={profile.singularName} subtitle="" />
+      <CreateEntityItemView
+        profile={profile}
+        onCreated={(item) =>
+          go({
+            to: "/$entity/$itemId",
+            params: { entity: profile.name, itemId: item.id },
+            search: {},
+          })
+        }
+        onCancel={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
+        renderCreateRelationTarget={(targetProfile) =>
+          targetProfile.createTemplate ? (
+            <Link
+              to="/$entity/~create"
+              params={{ entity: targetProfile.name }}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              Create {targetProfile.singularName}
+            </Link>
+          ) : null
+        }
+        onViewRelationItem={(targetProfile, itemId) => {
+          const location = router.buildLocation({
+            to: "/$entity/$itemId",
+            params: { entity: targetProfile.name, itemId },
+          });
+          window.open(location.href, "_blank", "noopener,noreferrer");
+        }}
+      />
     </BreadCrumbsToolBarLayout>
   );
 }

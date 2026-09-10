@@ -3,9 +3,20 @@
 Package: `@contentgrid/navigator-data`
 Purpose: Navigator-side HAL data access layer. Composes the seven
 `@contentgrid/*` core packages (Layer 1) into TanStack Query hooks, an
-ETag/`If-Match` policy, the HAL-Forms → `FieldDescriptor[]` bridge, Zod-
+ETag/`If-Match` policy, model-enrichment accessors for HAL-Forms templates
+(`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`), Zod-
 validated app config, and MSW handler fixtures. This is Layer 2 of the
 two-layer dependency model.
+
+**Per ADR-004:** the rendering-projection bridge that used to live here
+(`HalFormsTemplate` → `RenderFieldDescriptor[]`, plus the `useFormFields` hook and the `FieldRenderer`
+switch in `packages/ui`) has moved to `packages/features/src/entity-item-create/`
+(`FieldDescriptor`/`resolveCreateFieldDescriptors`/`useEntityItemCreateFormState`/`FieldRenderer`). This
+package keeps only model enrichment — it has no rendering-projection or `kind`-dispatch logic of
+its own. It re-exports a handful of `@contentgrid/hal-forms` types (`HalFormsProperty`,
+`HalFormsTemplate`, alongside the pre-existing `createValues`/`HalFormValues`) purely so
+`packages/features`/`packages/ui` can type template data they receive without importing
+`@contentgrid/hal-forms` directly (their CLAUDE.md forbidden-imports rules).
 
 Platform-wide conventions (HAL structure, HTTP semantics, error types):
 see root [`CLAUDE.md`](../../CLAUDE.md).
@@ -445,15 +456,17 @@ Do NOT derive URLs via string transforms such as `href.replace(/\/profile\//, "/
 Read `item.id`. Do NOT call `selfHref.split("/").pop()` or any
 href-parsing idiom. URL structure is an implementation detail the server can change.
 
-**5. Carry full template property metadata through the FieldDescriptor bridge.**
+**5. Model-enrichment accessors (`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`)
+must expose full template property metadata — never a lossy subset.**
 
-The HAL-Forms → `FieldDescriptor[]` bridge MUST propagate all of:
-
-- `options.inline` and `options.link` (remote enumerations) — dropping `options.link`
-  silently removes remote-option fields from forms.
-- All validation constraints: `required`, `regex`, `readOnly`, `allowed-values`.
-
-Do NOT narrow the bridge output to a lossy subset of the template shape.
+`CreateHalFormTemplate.userDefinedProperties`/`toOneRelationProperties`/`toManyRelationProperties`
+carry the raw `HalFormsProperty` (`options.inline`/`options.link`, `required`, `regex`, `readOnly`,
+etc.) alongside profile-derived metadata (`profileAttribute`/`profileRelation`). Do NOT narrow
+what these accessors expose — the rendering-projection bridge that consumes them
+(`resolveCreateFieldDescriptors` in `packages/features/src/entity-item-create/model/`, ADR-004)
+carries the raw `HalFormsProperty` straight through onto its own `FieldDescriptor.property` field
+precisely so a renderer can reach anything this package's accessors exposed; a lossy accessor
+here becomes a lossy descriptor there, with no way to recover the dropped data downstream.
 
 **6. No hardcoded attribute names — discover roles via profile constraints.**
 
@@ -782,7 +795,8 @@ Belongs here:
 
 - TanStack Query hooks for HAL resources.
 - ETag / `If-Match` policy implementation.
-- HAL-Forms → `FieldDescriptor[]` bridge (ADR-004).
+- Model-enrichment accessors for HAL-Forms templates (`CreateHalFormTemplate`,
+  `ProfileAttribute`, `ProfileRelation`) — "what the backend requires."
 - Zod-validated app config + presets.
 - MSW handler fixtures (exported for consumers).
 
@@ -790,6 +804,9 @@ Does NOT belong here:
 
 - UI components — those go in `packages/ui`.
 - Feature-specific business logic — that goes in `packages/features/<name>/`.
+- The rendering-projection bridge (`FieldDescriptor`/`resolveCreateFieldDescriptors`/
+  `FieldRenderer`/`FormContainer`, ADR-004) — "how it renders" is a
+  `packages/features/src/entity-item-create/` concern, not this package's.
 - Re-implementations of anything in `@contentgrid/hal`, `@contentgrid/hal-forms`,
   or the other Layer-1 packages.
 

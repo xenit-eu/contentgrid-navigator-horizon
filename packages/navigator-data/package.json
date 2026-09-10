@@ -12,6 +12,10 @@
       "import": "./src/config/index.ts",
       "types": "./src/config/index.ts"
     },
+    "./field-value": {
+      "import": "./src/field-value.ts",
+      "types": "./src/field-value.ts"
+    },
     "./test-fixtures/*": {
       "import": "./test-fixtures/*.ts",
       "types": "./test-fixtures/*.ts"

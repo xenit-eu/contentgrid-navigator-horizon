@@ -3,15 +3,19 @@ import { render, screen, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EntityPicker } from "./entity-picker";
-import type { EntityPickerColumn, EntityPickerOption, EntityPickerProps } from "./entity-picker";
+import { EntityItemPicker } from "./entity-item-picker";
+import type {
+  EntityItemPickerColumn,
+  EntityItemPickerOption,
+  EntityItemPickerProps,
+} from "./entity-item-picker";
 
-const OPTIONS: EntityPickerOption[] = [
+const OPTIONS: EntityItemPickerOption[] = [
   { id: "1", href: "/invoices/1", data: { number: "INV-001", amount: 100 } },
   { id: "2", href: "/invoices/2", data: { number: "INV-002", amount: 200 } },
 ];
 
-const COLUMNS: EntityPickerColumn[] = [
+const COLUMNS: EntityItemPickerColumn[] = [
   { key: "number", header: "Number" },
   { key: "amount", header: "Amount" },
 ];
@@ -27,11 +31,11 @@ const BASE_PROPS = {
   onSelect: vi.fn(),
 };
 
-function renderPicker(overrides: Partial<EntityPickerProps> = {}) {
-  return render(<EntityPicker {...BASE_PROPS} {...overrides} />);
+function renderPicker(overrides: Partial<EntityItemPickerProps> = {}) {
+  return render(<EntityItemPicker {...BASE_PROPS} {...overrides} />);
 }
 
-describe("EntityPicker — dialog visibility", () => {
+describe("EntityItemPicker — dialog visibility", () => {
   it("renders nothing when open=false", () => {
     renderPicker({ open: false });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -43,7 +47,7 @@ describe("EntityPicker — dialog visibility", () => {
   });
 });
 
-describe("EntityPicker — single-select mode (default)", () => {
+describe("EntityItemPicker — single-select mode (default)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -78,7 +82,7 @@ describe("EntityPicker — single-select mode (default)", () => {
     expect(screen.getByRole("button", { name: "Select" })).toBeEnabled();
   });
 
-  it("calls onSelect with href and label when confirmed", async () => {
+  it("calls onSelect with the selected href when confirmed", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const onOpenChange = vi.fn();
@@ -86,7 +90,7 @@ describe("EntityPicker — single-select mode (default)", () => {
     const row = screen.getByText("INV-001").closest("tr")!;
     await user.click(row);
     await user.click(screen.getByRole("button", { name: "Select" }));
-    expect(onSelect).toHaveBeenCalledWith("/invoices/1", "INV-001");
+    expect(onSelect).toHaveBeenCalledWith(["/invoices/1"]);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -137,7 +141,7 @@ describe("EntityPicker — single-select mode (default)", () => {
   });
 });
 
-describe("EntityPicker — pagination", () => {
+describe("EntityItemPicker — pagination", () => {
   it("does not show pagination controls when neither hasPreviousPage nor hasNextPage", () => {
     renderPicker();
     expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
@@ -177,24 +181,24 @@ describe("EntityPicker — pagination", () => {
   });
 });
 
-describe("EntityPicker — multi-select mode", () => {
+describe("EntityItemPicker — multi-select mode", () => {
   const multiProps = { ...BASE_PROPS, multiSelect: true };
 
   beforeEach(() => vi.clearAllMocks());
 
   it("shows 'Link Invoice' as dialog title", () => {
-    render(<EntityPicker {...multiProps} />);
+    render(<EntityItemPicker {...multiProps} />);
     expect(screen.getByText("Link Invoice")).toBeInTheDocument();
   });
 
   it("'Link' button is disabled before selection", () => {
-    render(<EntityPicker {...multiProps} />);
+    render(<EntityItemPicker {...multiProps} />);
     expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
   });
 
   it("can select multiple rows", async () => {
     const user = userEvent.setup();
-    render(<EntityPicker {...multiProps} />);
+    render(<EntityItemPicker {...multiProps} />);
     const row1 = screen.getByText("INV-001").closest("tr")!;
     const row2 = screen.getByText("INV-002").closest("tr")!;
     await user.click(row1);
@@ -204,32 +208,43 @@ describe("EntityPicker — multi-select mode", () => {
 
   it("can deselect a previously selected row by clicking again", async () => {
     const user = userEvent.setup();
-    render(<EntityPicker {...multiProps} />);
+    render(<EntityItemPicker {...multiProps} />);
     const row1 = screen.getByText("INV-001").closest("tr")!;
     await user.click(row1);
     await user.click(row1); // deselect
     expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
   });
 
-  it("calls onSelect for each selected item on confirm", async () => {
+  it("calls onSelect once with every selected href on confirm", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    render(<EntityPicker {...multiProps} onSelect={onSelect} />);
+    render(<EntityItemPicker {...multiProps} onSelect={onSelect} />);
     const row1 = screen.getByText("INV-001").closest("tr")!;
     const row2 = screen.getByText("INV-002").closest("tr")!;
     await user.click(row1);
     await user.click(row2);
     await user.click(screen.getByRole("button", { name: "Link 2 items" }));
-    expect(onSelect).toHaveBeenCalledTimes(2);
-    expect(onSelect).toHaveBeenCalledWith("/invoices/1", "INV-001");
-    expect(onSelect).toHaveBeenCalledWith("/invoices/2", "INV-002");
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(["/invoices/1", "/invoices/2"]);
   });
 });
 
-describe("EntityPicker — column fallback (no columns prop)", () => {
+describe("EntityItemPicker — createNewLink", () => {
+  it("does not render anything extra when createNewLink is omitted", () => {
+    renderPicker();
+    expect(screen.queryByText("Create new")).not.toBeInTheDocument();
+  });
+
+  it("renders the provided createNewLink node", () => {
+    renderPicker({ createNewLink: <a href="/suppliers/~create">Create new</a> });
+    expect(screen.getByText("Create new")).toBeInTheDocument();
+  });
+});
+
+describe("EntityItemPicker — column fallback (no columns prop)", () => {
   it("auto-resolves columns from option data keys", () => {
     render(
-      <EntityPicker
+      <EntityItemPicker
         open={true}
         onOpenChange={vi.fn()}
         relationTitle="item"
@@ -244,7 +259,7 @@ describe("EntityPicker — column fallback (no columns prop)", () => {
 
   it("renders object cell values as JSON rather than [object Object]", () => {
     render(
-      <EntityPicker
+      <EntityItemPicker
         open={true}
         onOpenChange={vi.fn()}
         relationTitle="item"
@@ -261,7 +276,7 @@ describe("EntityPicker — column fallback (no columns prop)", () => {
 
   it("returns empty columns when options array is empty and no columns prop", () => {
     render(
-      <EntityPicker
+      <EntityItemPicker
         open={true}
         onOpenChange={vi.fn()}
         relationTitle="item"
