@@ -78,7 +78,7 @@ function RecordTableHeader({
             // Matches RecordTableRow's `w-fit min-w-full`: without it this row's background
             // stays clamped to the (unscrolled) container width instead of growing to match the
             // rows' actual overflow width, desyncing the frozen-header scrollLeft trick visually.
-            "grid w-fit min-w-full items-center gap-3 px-4 py-2 border-b border-[#F1F4F7] dark:border-[#1B3A50] bg-muted/70",
+            "grid w-fit min-w-full items-center gap-3 px-4 py-2 border-b border-border bg-muted/70",
           )}
         >
           {columns.map((column) => {
