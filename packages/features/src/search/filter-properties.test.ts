@@ -6,6 +6,7 @@ import {
   buildFilterProperties,
   coerceFilterValue,
   extractFilterValuesFromCollectionUrl,
+  findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "./filter-properties";
 
@@ -732,5 +733,37 @@ describe("findInvalidFilterKeys", () => {
 
     expect(values.value("amount~gte").value).toBeUndefined();
     expect(invalid).toEqual(["amount~gte"]);
+  });
+});
+
+describe("findActivelyFilteredAttributeNames", () => {
+  it("returns the groupKey for a directly-filtered, non-relation property", () => {
+    const names = findActivelyFilteredAttributeNames(sharedProps, { title: "hello" });
+    expect(names).toEqual(["title"]);
+  });
+
+  it("excludes a relation-traversal property even when its filter value is present", () => {
+    const relationProp = sharedProps.find((p) => p.name === "products.product_name~prefix")!;
+    expect(relationProp.relationKey).toBeDefined();
+
+    const names = findActivelyFilteredAttributeNames(sharedProps, {
+      [relationProp.name]: "widget",
+    });
+
+    expect(names).toEqual([]);
+  });
+
+  it("de-dupes two sibling properties sharing one groupKey into a single entry", () => {
+    const names = findActivelyFilteredAttributeNames(sharedProps, {
+      "amount~gte": "10",
+      "amount~lte": "100",
+    });
+
+    expect(names).toEqual(["amount"]);
+  });
+
+  it("returns an empty array when no filters have a non-empty value", () => {
+    const names = findActivelyFilteredAttributeNames(sharedProps, { title: "", "amount~gte": "" });
+    expect(names).toEqual([]);
   });
 });

@@ -14,6 +14,7 @@ import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
+import { Label } from "../../primitives/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../../primitives/popover";
 import {
   Select,
@@ -158,10 +159,10 @@ export function AttributeSelect({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {label && <span className="text-sm font-medium">{label}</span>}
+    <div className="flex flex-col gap-1.5">
+      {label && <Label>{label}</Label>}
       <Select value={value} onValueChange={handleValueChange} disabled={!hasOptions}>
-        <SelectTrigger className="h-9 w-64" aria-label={label ?? effectivePlaceholder}>
+        <SelectTrigger className="h-9 w-full" aria-label={label ?? effectivePlaceholder}>
           <SelectValue placeholder={effectivePlaceholder}>
             {selectedOption && <AttributeOptionCompactLabel option={selectedOption} />}
           </SelectValue>
@@ -247,19 +248,27 @@ function AttributeCheckboxRow({
   );
 }
 
-export function AttributeMultiSelect({
+export interface AttributeMultiSelectContentProps {
+  /** Attributes available for selection, from `profileEntity.attributes`. */
+  attributes: readonly ProfileAttributeOption[];
+  /** Currently selected attribute names. */
+  values: readonly string[];
+  onChange: (names: readonly string[]) => void;
+  className?: string;
+}
+
+/**
+ * The checkbox-list UI for `AttributeMultiSelect`, with no popover chrome of its own — drop it
+ * into any `PopoverContent` (or compose it alongside other pickers).
+ */
+export function AttributeMultiSelectContent({
   attributes,
   values,
   onChange,
-  placeholder = "Select attributes",
-  label,
-}: Readonly<AttributeMultiSelectProps>) {
-  const [open, setOpen] = useState(false);
+  className,
+}: Readonly<AttributeMultiSelectContentProps>) {
   const { attributes: regular, systemAttributes } = groupOptions(attributes);
   const selected = new Set(values);
-  const selectedOptions = attributes.filter((option) => selected.has(option.name));
-  const hasOptions = attributes.length > 0;
-  const effectivePlaceholder = hasOptions ? placeholder : "No options available";
 
   function toggle(name: string) {
     if (selected.has(name)) {
@@ -268,6 +277,56 @@ export function AttributeMultiSelect({
       onChange([...values, name]);
     }
   }
+
+  return (
+    <div className={cn("max-h-80 overflow-x-hidden overflow-y-auto", className)}>
+      {regular.length > 0 && (
+        <div className="flex flex-col">
+          {regular.map((option) => (
+            <AttributeCheckboxRow
+              key={option.name}
+              option={option}
+              checked={selected.has(option.name)}
+              onToggle={toggle}
+            />
+          ))}
+        </div>
+      )}
+      {systemAttributes.length > 0 && (
+        <>
+          {regular.length > 0 && <div className="bg-border -mx-1 my-1 h-px" />}
+          <div className="text-muted-foreground flex items-center gap-1 px-2 py-1.5 text-xs">
+            <ShieldCheckIcon className="size-3.5" aria-hidden />
+            System attributes
+          </div>
+          <div className="flex flex-col">
+            {systemAttributes.map((option) => (
+              <AttributeCheckboxRow
+                key={option.name}
+                option={option}
+                checked={selected.has(option.name)}
+                onToggle={toggle}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function AttributeMultiSelect({
+  attributes,
+  values,
+  onChange,
+  placeholder = "Select attributes",
+  label,
+}: Readonly<AttributeMultiSelectProps>) {
+  const [open, setOpen] = useState(false);
+  const selected = new Set(values);
+  const selectedOptions = attributes.filter((option) => selected.has(option.name));
+  const hasOptions = attributes.length > 0;
+  const effectivePlaceholder = hasOptions ? placeholder : "No options available";
 
   let triggerText: string;
   if (selectedOptions.length === 0) {
@@ -279,8 +338,8 @@ export function AttributeMultiSelect({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {label && <span className="text-sm font-medium">{label}</span>}
+    <div className="flex flex-col gap-1.5">
+      {label && <Label>{label}</Label>}
       <Popover open={hasOptions && open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -289,7 +348,7 @@ export function AttributeMultiSelect({
             aria-expanded={open}
             aria-label={label ?? effectivePlaceholder}
             disabled={!hasOptions}
-            className="h-9 w-64 justify-between font-normal"
+            className="h-9 w-full justify-between font-normal"
           >
             <span
               className={cn("truncate", selectedOptions.length === 0 && "text-muted-foreground")}
@@ -300,39 +359,11 @@ export function AttributeMultiSelect({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-1" align="start">
-          <div className="max-h-80 overflow-x-hidden overflow-y-auto">
-            {regular.length > 0 && (
-              <div className="flex flex-col">
-                {regular.map((option) => (
-                  <AttributeCheckboxRow
-                    key={option.name}
-                    option={option}
-                    checked={selected.has(option.name)}
-                    onToggle={toggle}
-                  />
-                ))}
-              </div>
-            )}
-            {systemAttributes.length > 0 && (
-              <>
-                {regular.length > 0 && <div className="bg-border -mx-1 my-1 h-px" />}
-                <div className="text-muted-foreground flex items-center gap-1 px-2 py-1.5 text-xs">
-                  <ShieldCheckIcon className="size-3.5" aria-hidden />
-                  System attributes
-                </div>
-                <div className="flex flex-col">
-                  {systemAttributes.map((option) => (
-                    <AttributeCheckboxRow
-                      key={option.name}
-                      option={option}
-                      checked={selected.has(option.name)}
-                      onToggle={toggle}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <AttributeMultiSelectContent
+            attributes={attributes}
+            values={values}
+            onChange={onChange}
+          />
         </PopoverContent>
       </Popover>
     </div>

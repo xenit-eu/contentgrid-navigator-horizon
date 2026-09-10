@@ -37,6 +37,31 @@ export const WithColor: Story = {
   },
 };
 
+export const Muted: Story = {
+  args: {
+    icon: <DatabaseIcon aria-hidden />,
+    color: "oklch(0.6 0.2 30)",
+    muted: true,
+  },
+};
+
+export const Outlined: Story = {
+  args: {
+    icon: <DatabaseIcon aria-hidden />,
+    color: "oklch(0.6 0.2 30)",
+    outlined: true,
+  },
+};
+
+export const MutedOutlined: Story = {
+  args: {
+    icon: <DatabaseIcon aria-hidden />,
+    color: "oklch(0.6 0.2 30)",
+    muted: true,
+    outlined: true,
+  },
+};
+
 export const Clickable: Story = {
   args: {
     icon: <DatabaseIcon aria-hidden />,

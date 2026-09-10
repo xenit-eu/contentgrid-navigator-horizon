@@ -55,6 +55,17 @@ function invoiceProfileJson() {
           _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
           _links: {},
         },
+        {
+          name: "created_by",
+          title: "Created By",
+          type: "string",
+          readOnly: true,
+          _embedded: {
+            "blueprint:constraint": [{ type: "created-by" }],
+            "blueprint:search-param": [],
+          },
+          _links: {},
+        },
       ],
       "blueprint:relation": [],
     },
@@ -122,10 +133,91 @@ describe("EntityConfigurationDetail", () => {
     const user = userEvent.setup();
     renderDetail();
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: "Name attribute" }));
 
-    expect(screen.getByRole("option", { name: "ID" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Invoice Number" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^ID/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^Invoice Number/ })).toBeInTheDocument();
+  });
+
+  it("lists the id and user-defined attributes as subtitle-attribute options", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Subtitle attribute" }));
+
+    expect(screen.getByRole("option", { name: /^ID/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^Invoice Number/ })).toBeInTheDocument();
+  });
+
+  it("persists a subtitle-attribute override when an option is chosen", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Subtitle attribute" }));
+    await user.click(screen.getByRole("option", { name: /^Invoice Number/ }));
+
+    await waitFor(() =>
+      expect(
+        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice
+          ?.subtitleAttribute,
+      ).toBe("invoice_number"),
+    );
+  });
+
+  it("lists the id and user-defined attributes as visible-column options", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
+
+    expect(screen.getByRole("checkbox", { name: /^ID/ })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^Invoice Number/ })).toBeInTheDocument();
+  });
+
+  it("lists audit attributes as visible-column options, in a system attributes group", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
+
+    expect(screen.getByRole("checkbox", { name: /^Created By/ })).toBeInTheDocument();
+    expect(screen.getByText("System attributes")).toBeInTheDocument();
+  });
+
+  it("persists a visible-columns override for a chosen audit attribute", async () => {
+    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+      visibleColumns: [],
+    });
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
+    await user.click(screen.getByRole("checkbox", { name: /^Created By/ }));
+
+    await waitFor(() =>
+      expect(
+        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns,
+      ).toEqual(["created_by"]),
+    );
+  });
+
+  it("persists a visible-columns override when an option is chosen", async () => {
+    // Start from an explicit empty override rather than relying on the heuristic
+    // default (which may already mark columns visible), so the checkbox starts unchecked.
+    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+      visibleColumns: [],
+    });
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
+    await user.click(screen.getByRole("checkbox", { name: /^Invoice Number/ }));
+
+    await waitFor(() =>
+      expect(
+        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns,
+      ).toEqual(["invoice_number"]),
+    );
   });
 
   it("persists an icon override when a new icon is chosen", async () => {
@@ -145,11 +237,13 @@ describe("EntityConfigurationDetail", () => {
   });
 
   it("persists a color override when a swatch is chosen", async () => {
+    // The sidebar renders ColorPickerContent's swatch grid inline (no trigger/popover needed) —
+    // clicking a swatch there directly, rather than opening the header's ColorPicker popover,
+    // avoids a second ambiguous "Green" swatch when both are mounted at once.
     const user = userEvent.setup();
     renderDetail();
 
-    await user.click(screen.getByRole("button", { name: /choose color/i }));
-    await user.click(await screen.findByTitle("Green"));
+    await user.click(screen.getByTitle("Green"));
 
     await waitFor(() =>
       expect(

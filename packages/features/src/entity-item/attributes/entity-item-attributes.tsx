@@ -4,9 +4,8 @@ import {
   type EntityItemAttribute,
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
-import { AttributeValue, Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
+import { Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
 import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
-import { defaultAttributeRendererComponents } from "./renderers/registry";
 
 export interface EntityItemAttributesProps {
   readonly item: EntityItem;
@@ -17,19 +16,6 @@ function isBooleanAttribute(attr: EntityItemAttribute): boolean {
     attr.value.kind === AttributeKind.PLAIN &&
     attr.profileAttribute?.type === ProfileAttributeType.boolean
   );
-}
-
-function formatBooleanTableValue(attr: EntityItemAttribute): string {
-  if (attr.value.kind !== AttributeKind.PLAIN) {
-    return "unset";
-  }
-  if (attr.value.value === true) {
-    return "true";
-  }
-  if (attr.value.value === false) {
-    return "false";
-  }
-  return "unset";
 }
 
 function isDefined(attr: EntityItemAttribute | undefined): attr is EntityItemAttribute {
@@ -64,13 +50,12 @@ function AuditTimelineEntry({
  * Renders an entity item's user-defined attributes: audit trail up top as a
  * two-entry timeline (created date + creator, then modified date +
  * modifier), boolean attributes as a row of chips below that, then a simple
- * label/value table for every attribute — booleans included, shown as plain
- * "true"/"false"/"unset" text there. Purely presentational: it reads the
- * resolved `EntityItem` accessor and renders it — it fetches nothing itself.
+ * label/value table for every attribute — booleans included, rendered via
+ * `AttributeValueRenderer`'s `"table"` variant (plain "True"/"False"/"—" text
+ * there). Purely presentational: it reads the resolved `EntityItem` accessor
+ * and renders it — it fetches nothing itself.
  */
 export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProps>) {
-  // TODO component should later inspect the userPreferences to see if there are custom components for certain entity - attributes
-  const components = defaultAttributeRendererComponents;
   const profile = item.profileEntity;
 
   const attributes = item.userDefinedAttributes
@@ -94,16 +79,8 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
     <div className="space-y-4">
       {booleanAttributes.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {booleanAttributes.map(({ attr, label }) => (
-            <components.boolean
-              key={attr.value.name}
-              value={
-                attr.value.kind === AttributeKind.PLAIN
-                  ? (attr.value.value as boolean | null)
-                  : null
-              }
-              label={label}
-            />
+          {booleanAttributes.map(({ attr }) => (
+            <AttributeValueRenderer key={attr.value.name} attr={attr} variant="item-reference" />
           ))}
         </div>
       )}
@@ -114,11 +91,7 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
               <TableRow key={attr.value.name}>
                 <TableCell className="text-muted-foreground font-medium">{label}</TableCell>
                 <TableCell className="w-full">
-                  {isBooleanAttribute(attr) ? (
-                    <AttributeValue>{formatBooleanTableValue(attr)}</AttributeValue>
-                  ) : (
-                    <AttributeValueRenderer attr={attr} />
-                  )}
+                  <AttributeValueRenderer attr={attr} variant="table" />
                 </TableCell>
               </TableRow>
             ))}

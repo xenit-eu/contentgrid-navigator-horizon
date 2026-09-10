@@ -10,8 +10,9 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
@@ -21,6 +22,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../test-setup";
+import { useEntityDisplayPreferencesStore } from "../preferences";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
 const API_URL = "https://api.example.com";
@@ -130,10 +132,9 @@ function makeItemProfile(): ProfileEntity {
   return makeProfileEntity(itemProfileJson, PROFILE_URL, "item");
 }
 
-// A distinguishable ITEM COUNT (not just page metadata — `EntityItemCollection.pageSize` reads
-// `halSlice.items.length`), so the rendered "N items on this page" string (from
-// EntityItemCollectionTable's pagination footer) tells us unambiguously which response actually
-// got used. `_links.next` is required for that footer to render at all (`collection.hasNext`).
+// A distinguishable ITEM COUNT via `total_items_exact`, so the rendered "N items" subtitle
+// (from EntityItemCollectionView's own `PageTitle`, built from `collection.totalItems`) tells us
+// unambiguously which response actually got used.
 function collectionBody(itemCount: number) {
   const items = Array.from({ length: itemCount }, (_, i) => ({
     id: `item-${i}`,
@@ -197,7 +198,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
 
     renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
-    expect(await screen.findByText("2 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
   });
 
   it("uses pageUrl directly when it encodes the SAME filters — preserves pagination", async () => {
@@ -210,7 +211,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       filters: { "code~prefix": "abc" },
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
     expect(onRequest).toHaveBeenCalled();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
@@ -229,7 +230,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       pageUrl: `${COLLECTION_URL}?created~after=2024-01-01T10:00:00.000Z&_cursor=page2token`,
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -246,7 +247,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       pageUrl: `${COLLECTION_URL}?amount=10.5&_cursor=page2token`,
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -264,7 +265,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     });
 
     // Falls back to searchValues (page 1 of the CURRENT filters), not the mismatched page.
-    expect(await screen.findByText("2 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBeNull();
     expect(requested.searchParams.get("code~prefix")).toBe("abc");
@@ -279,6 +280,80 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       // filters omitted entirely — defaults to {}, which matches what this pageUrl encodes (none).
     });
 
-    expect(await screen.findByText("5 items on this page")).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
+  });
+});
+
+describe("EntityItemCollectionView — Columns selector", () => {
+  afterEach(() => {
+    localStorage.clear();
+    useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  });
+
+  it("renders a Columns button next to Filters", async () => {
+    setupCollectionHandler();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    expect(screen.getByRole("button", { name: /columns/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /filters/i })).toBeInTheDocument();
+  });
+
+  it("hides a column in the table when it's unchecked in the Columns popover", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+
+    expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
+  });
+
+  it("does not write the toggle to persisted preferences", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+
+    expect(useEntityDisplayPreferencesStore.getState().overrides).toEqual({});
+  });
+
+  it("resets the local column selection on remount", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    const { unmount } = renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+    expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
+    unmount();
+
+    renderCollectionView({ profile: makeItemProfile() });
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+  });
+
+  it("keeps an actively-filtered column visible even when unchecked in the picker", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+
+    await user.click(screen.getByRole("button", { name: /columns/i }));
+    await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
+
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
   });
 });

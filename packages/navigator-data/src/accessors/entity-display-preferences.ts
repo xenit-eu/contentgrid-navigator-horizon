@@ -12,6 +12,7 @@ import { z } from "zod/v4";
  */
 export const entityDisplayPreferencesSchema = z.object({
   nameAttribute: z.string().optional(),
+  subtitleAttribute: z.string().optional(),
   visibleColumns: z.array(z.string()).optional(),
   icon: z.string().optional(),
   color: z.string().optional(),

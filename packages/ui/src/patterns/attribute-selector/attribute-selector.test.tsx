@@ -2,7 +2,11 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ProfileAttributeOption } from "./attribute-selector";
-import { AttributeMultiSelect, AttributeSelect } from "./attribute-selector";
+import {
+  AttributeMultiSelect,
+  AttributeMultiSelectContent,
+  AttributeSelect,
+} from "./attribute-selector";
 
 const NAME: ProfileAttributeOption = {
   name: "name",
@@ -209,5 +213,46 @@ describe("AttributeMultiSelect", () => {
     const trigger = screen.getByRole("combobox");
     expect(trigger).toBeDisabled();
     expect(trigger).toHaveTextContent("No options available");
+  });
+});
+
+describe("AttributeMultiSelectContent", () => {
+  it("renders regular and system attributes in separate groups, with no popover chrome", () => {
+    render(<AttributeMultiSelectContent attributes={ATTRIBUTES} values={[]} onChange={vi.fn()} />);
+
+    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.getByText("Amount")).toBeInTheDocument();
+    expect(screen.getByText("System attributes")).toBeInTheDocument();
+    expect(screen.getByText("Created date")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("calls onChange with the attribute added when an unselected option is toggled", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <AttributeMultiSelectContent attributes={ATTRIBUTES} values={["name"]} onChange={onChange} />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: /Amount/ }));
+
+    expect(onChange).toHaveBeenCalledWith(["name", "amount"]);
+  });
+
+  it("calls onChange with the attribute removed when a selected option is toggled", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <AttributeMultiSelectContent
+        attributes={ATTRIBUTES}
+        values={["name", "amount"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: /Amount/ }));
+
+    expect(onChange).toHaveBeenCalledWith(["name"]);
   });
 });
