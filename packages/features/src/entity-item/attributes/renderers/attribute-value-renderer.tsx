@@ -99,7 +99,17 @@ export function AttributeValueRenderer({
   const type = attr.profileAttribute?.type;
   if (type === ProfileAttributeType.boolean) {
     const value = attr.value.value as boolean | null;
-    const label = value === true ? "Yes" : value === false ? "No" : "Not set";
+    // In the item-reference variant the chip stands alone (e.g. as an EntityItemReference
+    // title/subtitle) with no separate label nearby, so it shows the attribute's own name —
+    // same as the boolean chip row in EntityItemAttributes — rather than the value.
+    const label =
+      variant === "item-reference"
+        ? (attr.profileAttribute?.title ?? attr.profileAttribute?.name ?? "")
+        : value === true
+          ? "Yes"
+          : value === false
+            ? "No"
+            : "Not set";
     return <components.boolean value={value} label={label} variant={variant} />;
   }
   if (type === ProfileAttributeType.long || type === ProfileAttributeType.double) {

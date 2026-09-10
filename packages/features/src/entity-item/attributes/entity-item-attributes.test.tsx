@@ -155,6 +155,7 @@ describe("EntityItemAttributes", () => {
               value: new EntityItemAttributePlain("active", true),
               profileAttribute: makeProfileAttribute({
                 name: "active",
+                title: "Active",
                 type: ProfileAttributeType.boolean,
               }),
             },
