@@ -14,6 +14,7 @@ export * from "./table-row";
 export * from "./entity-selector";
 export * from "./form-renderers";
 export * from "./unsaved-changes-dialog";
+export * from "./attribute-selector";
 export * from "./user-menu";
 export * from "./icon-picker";
 export * from "./color-picker";

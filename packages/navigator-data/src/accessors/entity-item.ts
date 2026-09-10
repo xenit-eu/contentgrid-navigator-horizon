@@ -163,6 +163,34 @@ export class EntityItem {
   }
 
   /**
+   * The system-managed created-date audit attribute, or `undefined` if the profile has none.
+   */
+  public get createdDate(): EntityItemAttribute | undefined {
+    return this.auditAttributes.find((attr) => attr.profileAttribute?.isCreatedDate);
+  }
+
+  /**
+   * The system-managed modified-date audit attribute, or `undefined` if the profile has none.
+   */
+  public get modifiedDate(): EntityItemAttribute | undefined {
+    return this.auditAttributes.find((attr) => attr.profileAttribute?.isModifiedDate);
+  }
+
+  /**
+   * The system-managed created-by audit attribute, or `undefined` if the profile has none.
+   */
+  public get createdBy(): EntityItemAttribute | undefined {
+    return this.auditAttributes.find((attr) => attr.profileAttribute?.isCreatedBy);
+  }
+
+  /**
+   * The system-managed modified-by audit attribute, or `undefined` if the profile has none.
+   */
+  public get modifiedBy(): EntityItemAttribute | undefined {
+    return this.auditAttributes.find((attr) => attr.profileAttribute?.isModifiedBy);
+  }
+
+  /**
    * The HAL-FORMS "default" template for updating this entity (PATCH operation).
    *
    * Returns `null` if the current user lacks update permission or the template is missing.
