@@ -28,6 +28,7 @@ import {
   type MutationErrorDisplayProps,
   type RelationItemClickHandler,
   RelationItemSearchDialog,
+  onRelationMutationError,
 } from "./relation-shared";
 
 export function RelationToOneSection({
@@ -36,6 +37,7 @@ export function RelationToOneSection({
   onItemClick,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
+  onReload,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
@@ -43,19 +45,23 @@ export function RelationToOneSection({
 }> &
   Pick<
     MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick"
+    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onReload"
   >) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
     mutate: clearRelation,
     isPending: isClearing,
     error: clearError,
-  } = useClearRelation(relation);
+  } = useClearRelation(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const {
     mutate: setRelation,
     isPending: isSetting,
     error: setError,
-  } = useSetToOneRelation(relation);
+  } = useSetToOneRelation(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const mutationError = clearError ?? setError;
   const [linkOpen, setLinkOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
@@ -112,6 +118,7 @@ export function RelationToOneSection({
           error={mutationError}
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onReload={onReload}
         />
       )}
       {linkedItem.isPending && <Skeleton className="h-12 w-full rounded-md" />}

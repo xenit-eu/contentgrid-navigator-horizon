@@ -115,6 +115,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
                     onItemClick={onRelationItemClick}
                     onMissingRelationTargetClick={onMissingRelationTargetClick}
                     onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+                    onReload={item.refetch}
                   />
                 ))}
                 {item.data.toManyRelations.map((rel) => (
@@ -126,6 +127,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
                     onMissingRelationTargetClick={onMissingRelationTargetClick}
                     onRequiredRelationClick={onRequiredRelationClick}
                     onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+                    onReload={item.refetch}
                   />
                 ))}
               </div>

@@ -31,6 +31,7 @@ import {
   type MutationErrorDisplayProps,
   type RelationItemClickHandler,
   RelationItemSearchDialog,
+  onRelationMutationError,
 } from "./relation-shared";
 
 export function RelationToManySection({
@@ -40,6 +41,7 @@ export function RelationToManySection({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  onReload,
 }: Readonly<{
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
@@ -47,7 +49,10 @@ export function RelationToManySection({
 }> &
   Pick<
     MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
+    | "onMissingRelationTargetClick"
+    | "onBlindRelationOverwriteClick"
+    | "onRequiredRelationClick"
+    | "onReload"
   >) {
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
   const collection = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
@@ -56,23 +61,32 @@ export function RelationToManySection({
     isPending: isClearing,
     error: clearError,
   } = useClearRelation(relation, {
-    mutationOptions: { onSuccess: () => setPageUrl(undefined) },
+    mutationOptions: {
+      onSuccess: () => setPageUrl(undefined),
+      onError: onRelationMutationError(onReload),
+    },
   });
   const {
     mutate: addRelation,
     isPending: isAdding,
     error: addError,
-  } = useAddToManyRelation(relation);
+  } = useAddToManyRelation(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const {
     mutate: unlinkItem,
     isPending: isUnlinking,
     error: unlinkError,
-  } = useUnlinkRelation(relation);
+  } = useUnlinkRelation(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const {
     mutate: deleteItem,
     isPending: isDeleting,
     error: deleteError,
-  } = useDeleteRelationItem(relation);
+  } = useDeleteRelationItem(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
@@ -153,6 +167,7 @@ export function RelationToManySection({
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
           onRequiredRelationClick={onRequiredRelationClick}
+          onReload={onReload}
         />
       )}
       {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}

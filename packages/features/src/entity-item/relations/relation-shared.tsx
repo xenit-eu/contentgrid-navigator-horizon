@@ -21,6 +21,7 @@ import {
   ProblemAlert,
   type RelationConflictAlertProps,
   type ValidationAlertProps,
+  notifyReloadOnUnsatisfiedVersion,
 } from "../../problem-details";
 import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
 
@@ -30,6 +31,20 @@ import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-
  * the caller — the relation sections perform none themselves.
  */
 export type RelationItemClickHandler = (profileEntityName: string, itemId: string) => void;
+
+/**
+ * Builds an `onError` callback for a relation mutation hook's `mutationOptions`.
+ * Surfaces a reload toast when the failure is a 412 `unsatisfied-version`
+ * conflict (see `notifyReloadOnUnsatisfiedVersion`).
+ *
+ * Passed as `mutationOptions.onError`, this runs once per failed mutation
+ * attempt via TanStack Query's own mutation lifecycle — unlike a render effect
+ * keyed on the mutation's `error` field, it cannot double-fire under React
+ * StrictMode's intentional double-invoke of effects.
+ */
+export function onRelationMutationError(onReload: (() => void) | undefined) {
+  return onReload ? (error: Error) => notifyReloadOnUnsatisfiedVersion(error, onReload) : undefined;
+}
 
 // ---------------------------------------------------------------------------
 // RelationItemSearchDialog — search and select an entity item to link
@@ -170,6 +185,14 @@ export interface MutationErrorDisplayProps {
    * the affected relation's href.
    */
   readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
+  /**
+   * Fires for an `unsatisfiedVersion` (HTTP 412) problem — the item was
+   * modified concurrently. Recovery is re-fetch, re-apply, retry: this
+   * should re-fetch the parent entity item so `relation` picks up the fresh
+   * ETag. Also drives the reload toast; without it, the 412 falls back to
+   * the plain inline alert with no action.
+   */
+  readonly onReload?: () => void;
 }
 
 export function MutationErrorDisplay({
@@ -177,6 +200,7 @@ export function MutationErrorDisplay({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  onReload,
 }: Readonly<MutationErrorDisplayProps>) {
   return (
     <ProblemAlert
@@ -184,6 +208,7 @@ export function MutationErrorDisplay({
       onMissingRelationTargetClick={onMissingRelationTargetClick}
       onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
       onRequiredRelationClick={onRequiredRelationClick}
+      onRetryClick={onReload}
     ></ProblemAlert>
   );
 }
