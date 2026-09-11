@@ -77,7 +77,6 @@ vi.mock("@contentgrid/features/entity-item-collection", () => ({
   EntityItemCollectionSearchView: ({ profile }: { profile: { name: string } }) => (
     <div data-testid="entity-detail" data-entity={profile.name} />
   ),
-  Toaster: () => null,
 }));
 
 afterEach(cleanup);
