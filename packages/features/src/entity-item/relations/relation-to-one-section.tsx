@@ -28,6 +28,7 @@ import {
   type MutationErrorDisplayProps,
   type RelationItemClickHandler,
   RelationItemSearchDialog,
+  onRelationMutationError,
 } from "./relation-shared";
 
 export function RelationToOneSection({
@@ -51,12 +52,16 @@ export function RelationToOneSection({
     mutate: clearRelation,
     isPending: isClearing,
     error: clearError,
-  } = useClearRelation(relation);
+  } = useClearRelation(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const {
     mutate: setRelation,
     isPending: isSetting,
     error: setError,
-  } = useSetToOneRelation(relation);
+  } = useSetToOneRelation(relation, {
+    mutationOptions: { onError: onRelationMutationError(onReload) },
+  });
   const mutationError = clearError ?? setError;
   const [linkOpen, setLinkOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);

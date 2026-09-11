@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AttributeKind,
   type EntityItem,
@@ -31,6 +31,20 @@ import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-
  * the caller — the relation sections perform none themselves.
  */
 export type RelationItemClickHandler = (profileEntityName: string, itemId: string) => void;
+
+/**
+ * Builds an `onError` callback for a relation mutation hook's `mutationOptions`.
+ * Surfaces a reload toast when the failure is a 412 `unsatisfied-version`
+ * conflict (see `notifyReloadOnUnsatisfiedVersion`).
+ *
+ * Passed as `mutationOptions.onError`, this runs once per failed mutation
+ * attempt via TanStack Query's own mutation lifecycle — unlike a render effect
+ * keyed on the mutation's `error` field, it cannot double-fire under React
+ * StrictMode's intentional double-invoke of effects.
+ */
+export function onRelationMutationError(onReload: (() => void) | undefined) {
+  return onReload ? (error: Error) => notifyReloadOnUnsatisfiedVersion(error, onReload) : undefined;
+}
 
 // ---------------------------------------------------------------------------
 // RelationItemSearchDialog — search and select an entity item to link
@@ -188,12 +202,6 @@ export function MutationErrorDisplay({
   onRequiredRelationClick,
   onReload,
 }: Readonly<MutationErrorDisplayProps>) {
-  useEffect(() => {
-    if (onReload) {
-      notifyReloadOnUnsatisfiedVersion(error, onReload);
-    }
-  }, [error, onReload]);
-
   return (
     <ProblemAlert
       model={toProblemDisplayModel(error)}
