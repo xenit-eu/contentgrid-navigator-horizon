@@ -1,5 +1,7 @@
 import {
   GearIcon as Gear,
+  HouseIcon as House,
+  PlusIcon as Plus,
   SquaresFourIcon as SquaresFour,
   UsersIcon as Users,
 } from "@phosphor-icons/react";
@@ -11,6 +13,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarLinkButton,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -82,6 +85,51 @@ export const Collapsed: Story = {
       <main className="flex flex-1 flex-col gap-4 p-4">
         <SidebarTrigger />
         <p className="text-sm text-muted-foreground">Main content area</p>
+      </main>
+    </SidebarProvider>
+  ),
+};
+
+const LinkButtons = () => (
+  <SidebarMenu>
+    <SidebarLinkButton
+      icon={<House aria-hidden />}
+      label="Home"
+      render={(content) => <a href="#home">{content}</a>}
+    />
+    <SidebarLinkButton icon={<Plus aria-hidden />} label="Create Item" />
+  </SidebarMenu>
+);
+
+export const LinkButtonExpanded: Story = {
+  render: () => (
+    <SidebarProvider defaultOpen>
+      <Sidebar>
+        <SidebarContent>
+          <LinkButtons />
+        </SidebarContent>
+      </Sidebar>
+      <main className="flex flex-1 flex-col gap-4 p-4">
+        <SidebarTrigger />
+        <p className="text-sm text-muted-foreground">Main content area</p>
+      </main>
+    </SidebarProvider>
+  ),
+};
+
+export const LinkButtonCollapsed: Story = {
+  render: () => (
+    <SidebarProvider defaultOpen={false}>
+      <Sidebar collapsible="icon">
+        <SidebarContent>
+          <LinkButtons />
+        </SidebarContent>
+      </Sidebar>
+      <main className="flex flex-1 flex-col gap-4 p-4">
+        <SidebarTrigger />
+        <p className="text-sm text-muted-foreground">
+          Hover the icons — the label shows as a tooltip.
+        </p>
       </main>
     </SidebarProvider>
   ),

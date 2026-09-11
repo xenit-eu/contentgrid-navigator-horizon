@@ -251,6 +251,34 @@ export function applyFilterValues(
 }
 
 /**
+ * Inverse of `applyFilterValues`: given a resolved collection URL (e.g. `EntityItemCollection`'s
+ * `selfHref`/`nextHref`, or `profileEntity.searchEntityRequest(values).url`), reads back the
+ * filter values it encodes. Only query params whose name matches a known `filterProperties`
+ * entry are picked up — `_cursor`, `_sort`, `_size`, and relation-scoping `_internal_*` params
+ * never appear in `filterProperties` (see `buildFilterProperties`'s hidden-property exclusion),
+ * so they're never mistaken for a user-facing filter.
+ */
+export function extractFilterValuesFromCollectionUrl(
+  filterProperties: readonly SearchFilterProperty[],
+  collectionUrl: string,
+): Record<string, string> {
+  let params: URLSearchParams;
+  try {
+    // A placeholder base lets URL parse a relative collectionUrl — only the query string is read.
+    params = new URL(collectionUrl, "https://placeholder").searchParams;
+  } catch {
+    return {};
+  }
+
+  const knownNames = new Set(filterProperties.map((p) => p.name));
+  const result: Record<string, string> = {};
+  for (const [key, value] of params.entries()) {
+    if (knownNames.has(key)) result[key] = value;
+  }
+  return result;
+}
+
+/**
  * Names of filter keys whose current raw value fails to coerce for the matching property's
  * propertyType (e.g. non-numeric text typed into a number field). `applyFilterValues` silently
  * omits exactly these same keys from the encoded request — this is its read-only companion, so

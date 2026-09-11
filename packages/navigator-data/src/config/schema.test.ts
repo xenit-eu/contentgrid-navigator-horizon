@@ -12,7 +12,7 @@ describe("appConfigSchema", () => {
       version: 1,
       branding: { appName: "My App", logoUrl: null, logoAlt: "Logo" },
       homePage: { welcomeTitle: "Hello", welcomeSubtitle: "World" },
-      display: { defaultPageSize: 25, entityOverrides: {} },
+      display: { defaultPageSize: 25 },
       theme: { colorPreset: "green" },
       featureFlags: { betaSearch: true, newUI: false },
     };

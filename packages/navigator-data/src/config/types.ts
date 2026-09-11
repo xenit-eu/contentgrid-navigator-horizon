@@ -1,9 +1,3 @@
-export interface EntityOverride {
-  titleAttribute: string | null;
-  hiddenColumns: string[] | null;
-  defaultSort: string | null;
-}
-
 export interface AppConfig {
   version: number;
   branding: {
@@ -17,7 +11,6 @@ export interface AppConfig {
   };
   display: {
     defaultPageSize: number;
-    entityOverrides: Record<string, EntityOverride>;
   };
   theme: {
     colorPreset: string | null;

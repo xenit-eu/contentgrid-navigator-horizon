@@ -14,6 +14,10 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   };
 });
 
+vi.mock("./cross-tab-signout", () => ({
+  useCrossTabSignOut: vi.fn(),
+}));
+
 vi.mock("@contentgrid/ui", () => ({
   SignInGate: ({ onSignIn, error }: { onSignIn: () => void; error?: string }) => (
     <>

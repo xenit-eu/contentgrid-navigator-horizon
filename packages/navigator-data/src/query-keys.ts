@@ -5,9 +5,12 @@ const ENTITY_ITEM_KEY = "EntityItem";
 const ENTITY_COLLECTION_KEY = "EntitySearch";
 const ENTITY_PROFILE_KEY = "ProfileEntity";
 const PROFILE_ROOT_KEY = "ProfileRoot";
+const ENTITY_DISPLAY_DEFAULTS_KEY = "EntityDisplayDefaults";
 const TO_ONE_RELATION_KEY = "ToOneRelation";
 const TO_MANY_RELATION_KEY = "ToManyRelation";
 const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
+const COLLECTION_PAGE_KEY = "CollectionPage";
+const COLLECTION_FILTERS_KEY = "CollectionFilters";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -68,6 +71,17 @@ export const queryKeys = {
     byUrl: (profileUrl: string) => [PROFILE_ROOT_KEY, profileUrl] as const,
   },
 
+  /**
+   * Backend-provided display-preference defaults (icon/color/cardStyle/etc.), one batch fetch
+   * per backend. Deliberately its own root — not nested under `profileRoot` — so invalidating
+   * one doesn't invalidate the other. Not yet used by a live query: `useEntityDisplayDefaults`
+   * is currently stubbed pending a backend contract (see hooks/preferences/).
+   */
+  entityDisplayDefaults: {
+    /** Exact key for one backend's display-preference defaults, by profile URL. */
+    byProfileUrl: (profileUrl: string) => [ENTITY_DISPLAY_DEFAULTS_KEY, profileUrl] as const,
+  },
+
   toOneRelation: {
     /** Prefix key — invalidates ALL cached to-one relation queries for a given relation name. */
     forRelationName: (relationName: string) => [TO_ONE_RELATION_KEY, relationName] as const,
@@ -103,5 +117,15 @@ export const queryKeys = {
      */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
+  },
+
+  collectionPage: {
+    /** Exact key for the remembered current-page href of one entity's collection. */
+    byEntityName: (entityName: string) => [COLLECTION_PAGE_KEY, entityName] as const,
+  },
+
+  collectionFilters: {
+    /** Exact key for the remembered active filter values of one entity's collection. */
+    byEntityName: (entityName: string) => [COLLECTION_FILTERS_KEY, entityName] as const,
   },
 };

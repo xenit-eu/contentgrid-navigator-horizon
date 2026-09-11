@@ -1,15 +1,15 @@
 /**
  * Verifies that clicking Next/Previous actually drives real pagination
- * against the stubbed HAL endpoint. Pagination position is held in local
- * component state, not reflected in the URL (see ACC-2889 remarks) — this
- * test only covers the fetch behavior, not any URL round-trip.
- *
- * The URL's `cursor` value is always an opaque token (e.g. "page2"), never a
- * URL — the literal next/prev href it came from is remembered in an
- * in-memory registry (`packages/navigator-data/src/search/cursor-registry.ts`)
- * at the moment it's extracted, and resolved back through that registry when
- * the token reappears. Nothing in the data layer ever constructs a URL from
- * the token.
+ * against the stubbed HAL endpoint. Pagination position is deliberately kept
+ * out of the URL — an opaque cursor only ever resolves back to a real page
+ * in the session that received it from the server, so there's nothing to
+ * gain from sharing it. It's instead remembered per entity in the
+ * `QueryClient` cache (`rememberCollectionPageHref` / `recallCollectionPageHref`
+ * in `packages/navigator-data/src/search/pagination-links.ts`), read back via
+ * a `useState` lazy initializer in `EntityItemCollectionRoute`
+ * (`apps/navigator/src/routes/_app/$entity/index.tsx`) purely so it survives
+ * an unmount/remount within this session — this test only covers the fetch
+ * behavior, not any URL round-trip.
  *
  * The entity list lives at /$entity (e.g. /invoice). `_app` is a *pathless*
  * layout route, so it never appears in the URL — navigating to `/_app/invoice`
@@ -41,6 +41,8 @@ test("Next/Previous drive real pagination against the stubbed endpoint", async (
   // throw (caught below via pageerror).
   await page.getByRole("button", { name: /next/i }).click();
   await expect(page.getByText(PAGE_2_INVOICE_ID)).toBeVisible();
+  // Pagination position never touches the URL.
+  expect(page.url()).not.toContain("cursor");
 
   // Click Previous — issues a real fetch back to the HAL prev link.
   await page.getByRole("button", { name: /previous/i }).click();

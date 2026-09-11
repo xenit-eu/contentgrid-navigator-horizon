@@ -167,8 +167,9 @@ export function getOidcConfig(config: RuntimeAppConfig): AuthProviderProps {
     ...buildOidcBase(config),
     post_logout_redirect_uri: window.location.origin,
     automaticSilentRenew: true,
-    onSigninCallback: () => {
-      window.history.replaceState({}, document.title, window.location.pathname);
+    onSigninCallback: (user) => {
+      const target = typeof user?.state === "string" ? user.state : window.location.pathname;
+      window.history.replaceState({}, document.title, target);
     },
   };
 }

@@ -10,10 +10,18 @@ export * from "./accessors/entity-item";
 export * from "./accessors/entity-item-collection";
 export * from "./accessors/entity-item-to-one-relation";
 export * from "./accessors/entity-item-to-many-relation";
-export * from "./accessors/attribute-profile";
 export { ProfileRelation } from "./accessors/relation-profile";
 export { default as ProfileEntity, profileRootQuery } from "./accessors/entity-profile";
-export type { default as ProfileEntityType, EntityPreferences } from "./accessors/entity-profile";
+export type { default as ProfileEntityType } from "./accessors/entity-profile";
+export {
+  entityDisplayPreferencesSchema,
+  entityDisplayPreferencesMapSchema,
+  validateEntityDisplayPreferencesMap,
+} from "./accessors/entity-display-preferences";
+export type {
+  EntityDisplayPreferences,
+  EntityDisplayPreferencesMap,
+} from "./accessors/entity-display-preferences";
 export * from "./config";
 export { queryKeys } from "./query-keys";
 export * from "./search";

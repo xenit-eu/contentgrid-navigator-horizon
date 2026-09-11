@@ -6,7 +6,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Deep-merge source into target, returning a new object. Arrays are replaced, not merged. */
+/**
+ * Deep-merge source into target, returning a new object. Arrays are replaced, not merged.
+ * `undefined` values in `source` never overwrite a value already present in `target`.
+ *
+ * General-purpose: used for app-config loading here, and also by
+ * `useEntityDisplayPreferences` (packages/features/src/preferences) to layer backend-default
+ * and user-override entity display preferences on top of the heuristic default.
+ */
 export function deepMerge<T extends Record<string, unknown>>(
   target: T,
   source: Record<string, unknown>,

@@ -10,6 +10,7 @@ export type { ProfileFilter } from "./profile/use-profile-entity";
 export {
   useEntityItemCollection,
   useEntityItemCollectionInfiniteScroll,
+  useCachedEntityItemCollection,
 } from "./collection/use-entity-item-collection";
 export type {
   EntityCollectionParams,
@@ -59,3 +60,5 @@ export type {
   DownloadContentVariables,
   ContentDownload,
 } from "./item/use-content";
+export { useEntityDisplayDefaults } from "./preferences/use-entity-display-defaults";
+export type { UseEntityDisplayDefaultsResult } from "./preferences/use-entity-display-defaults";

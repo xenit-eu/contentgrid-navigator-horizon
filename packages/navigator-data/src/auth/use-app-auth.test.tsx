@@ -4,14 +4,11 @@ import type { User } from "oidc-client-ts";
 import { AuthContext } from "react-oidc-context";
 import type { AuthContextProps } from "react-oidc-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeTestAppConfig } from "../../test-fixtures/auth/app-config";
 import { isAuthReady, useAppAuth } from "./use-app-auth";
 
 vi.mock("./auth-config", () => ({
-  getAppConfig: () => ({
-    apiBaseUrl: "https://api.example.com",
-    authority: "https://oidc.example.com",
-    clientId: "client",
-  }),
+  getAppConfig: () => makeTestAppConfig(),
 }));
 
 function makeAuthCtx(overrides: Partial<AuthContextProps> = {}): AuthContextProps {
