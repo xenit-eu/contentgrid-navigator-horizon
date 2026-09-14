@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import { useCallback } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { LayoutInformation } from "../model/layout-information";
 import type { FieldState } from "../state/field-state";
-import { FieldRenderer, type RelationFieldData } from "./field-renderer";
+import { FieldRenderer } from "./field-renderer";
 
 export interface FormContainerProps {
   readonly fields: readonly FieldDescriptor[];
@@ -11,11 +11,6 @@ export interface FormContainerProps {
   readonly values: FieldValueMap;
   readonly onChange: (name: string, value: FieldValue) => void;
   readonly fieldState: Readonly<Record<string, FieldState>>;
-  /** See `field-renderer.tsx`'s `RelationFieldData` doc comment. Omitted entirely renders every
-   * relation field as an inert "profile unavailable" placeholder. */
-  readonly relationFieldData?: RelationFieldData;
-  /** See `field-renderer.tsx`'s `FieldRendererProps.renderBottomChildren` doc comment. */
-  readonly renderBottomChildren?: (fieldName: string) => ReactNode;
   /** See `field-renderer.tsx`'s `FieldRendererProps.onFocus`/`onBlur` doc comment. */
   readonly onFieldFocus?: (fieldName: string) => void;
   readonly onFieldBlur?: (fieldName: string) => void;
@@ -36,8 +31,6 @@ export function FormContainer({
   values,
   onChange,
   fieldState,
-  relationFieldData,
-  renderBottomChildren,
   onFieldFocus,
   onFieldBlur,
 }: Readonly<FormContainerProps>) {
@@ -51,21 +44,62 @@ export function FormContainer({
             const field = fieldsByName.get(name);
             if (!field) return null;
             return (
-              <FieldRenderer
+              <FormField
                 key={name}
                 field={field}
                 value={values[name]}
-                onChange={(value) => onChange(name, value)}
                 fieldState={fieldState[name]}
-                relationFieldData={relationFieldData}
-                renderBottomChildren={renderBottomChildren}
-                onFocus={onFieldFocus && (() => onFieldFocus(name))}
-                onBlur={onFieldBlur && (() => onFieldBlur(name))}
+                onChange={onChange}
+                onFieldFocus={onFieldFocus}
+                onFieldBlur={onFieldBlur}
               />
             );
           })}
         </div>
       ))}
     </>
+  );
+}
+
+/**
+ * Per-field wrapper around the memoized `FieldRenderer`. `FormContainer`'s own `onChange` /
+ * `onFieldFocus` / `onFieldBlur` are keyed by name, not by field, so every field needs its own
+ * curried closure — but a fresh closure per render (the previous approach: an inline arrow
+ * function built inline in the `.map()` above) gave `FieldRenderer` a "changed" prop on every
+ * render regardless of `memo`, so ALL fields re-rendered on every keystroke in any ONE field, not
+ * just the field that changed. `useCallback` here keeps each field's curried callback
+ * referentially stable across renders where `onChange`/`onFieldFocus`/`onFieldBlur` themselves
+ * don't change (see `useEntityItemCreateFormState`'s `setValue`/`touchField`, which are
+ * `useCallback`-stable for the same reason) and the field's own `name` doesn't change.
+ */
+function FormField({
+  field,
+  value,
+  fieldState,
+  onChange,
+  onFieldFocus,
+  onFieldBlur,
+}: Readonly<{
+  field: FieldDescriptor;
+  value: FieldValue;
+  fieldState: FieldState | undefined;
+  onChange: (name: string, value: FieldValue) => void;
+  onFieldFocus?: (fieldName: string) => void;
+  onFieldBlur?: (fieldName: string) => void;
+}>) {
+  const { name } = field;
+  const handleChange = useCallback((v: FieldValue) => onChange(name, v), [onChange, name]);
+  const handleFocus = useCallback(() => onFieldFocus?.(name), [onFieldFocus, name]);
+  const handleBlur = useCallback(() => onFieldBlur?.(name), [onFieldBlur, name]);
+
+  return (
+    <FieldRenderer
+      field={field}
+      value={value}
+      onChange={handleChange}
+      fieldState={fieldState}
+      onFocus={onFieldFocus && handleFocus}
+      onBlur={onFieldBlur && handleBlur}
+    />
   );
 }

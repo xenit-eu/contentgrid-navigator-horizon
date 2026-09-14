@@ -31,7 +31,6 @@ import {
   TableRow,
 } from "../../primitives/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../primitives/tooltip";
-import { RequiredMarker } from "../form-renderers/field-shell";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -56,8 +55,6 @@ export interface RelationColumn {
 export interface RelationSectionProps {
   /** Human-readable relation title, e.g. "Invoices" */
   title: string;
-  /** Renders a destructive-styled required marker next to the title, matching FieldShell/BooleanRenderer. */
-  required?: boolean;
   /** When true the section renders the to-one (many-to-one) compact card layout */
   isManyToOne?: boolean;
   /** Loaded relation items; undefined while loading */
@@ -90,15 +87,8 @@ function getItemLabel(item: RelationItem): string {
 }
 
 function resolveColumnKeys(items: RelationItem[], columns?: RelationColumn[]): string[] {
-  // Checked across every item, not just `items[0]` — a column is only dropped when NO item
-  // carries that key at all (e.g. a caller-supplied column referencing an attribute that
-  // genuinely isn't part of the target profile). Checking `items[0]` alone previously made every
-  // column vanish whenever that one item's preview data specifically hadn't resolved yet (e.g.
-  // right after an annotation set a relation field's value without going through the picker's own
-  // resolve path — see `create-entity-item-form.tsx`), even while other linked items' data was
-  // already available.
   if (columns && columns.length > 0) {
-    return columns.map((c) => c.key).filter((k) => items.some((item) => k in item.data));
+    return columns.map((c) => c.key).filter((k) => items[0] && k in items[0].data);
   }
   if (!items[0]) return [];
   return Object.keys(items[0].data).filter((k) => !k.startsWith("_") && k !== "id");
@@ -116,7 +106,6 @@ function getColumnTitle(key: string, columns?: RelationColumn[]): string {
 
 export function RelationSection({
   title,
-  required,
   isManyToOne,
   items,
   columns,
@@ -170,13 +159,9 @@ export function RelationSection({
         <Card className="py-4 gap-3">
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">
-                {title}
-                {required && <RequiredMarker />}
-              </h3>
+              <h3 className="text-sm font-semibold">{title}</h3>
               {hasItems && onLink && (
                 <Button
-                  type="button"
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground"
@@ -207,7 +192,7 @@ export function RelationSection({
                   </p>
                 </div>
                 {onLink && (
-                  <Button type="button" variant="outline" size="sm" onClick={onLink}>
+                  <Button variant="outline" size="sm" onClick={onLink}>
                     <Plus className="size-4" />
                     Link {title}
                   </Button>
@@ -237,7 +222,6 @@ export function RelationSection({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              type="button"
                               variant="ghost"
                               size="icon-sm"
                               className="text-muted-foreground hover:text-foreground"
@@ -254,7 +238,6 @@ export function RelationSection({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              type="button"
                               variant="ghost"
                               size="icon-sm"
                               className="text-muted-foreground hover:text-destructive"
@@ -290,10 +273,7 @@ export function RelationSection({
           <>
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">
-                  {title}
-                  {required && <RequiredMarker />}
-                </h3>
+                <h3 className="text-sm font-semibold">{title}</h3>
               </div>
             </CardHeader>
             <CardContent>
@@ -308,7 +288,7 @@ export function RelationSection({
                   </p>
                 </div>
                 {onLink && (
-                  <Button type="button" variant="outline" size="sm" onClick={onLink}>
+                  <Button variant="outline" size="sm" onClick={onLink}>
                     <Plus className="size-4" />
                     Link {title}
                   </Button>
@@ -321,10 +301,7 @@ export function RelationSection({
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
                 <CollapsibleTrigger className="flex items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&[data-state=open]>svg.chevron]:rotate-180">
-                  <h3 className="text-sm font-semibold">
-                    {title}
-                    {required && <RequiredMarker />}
-                  </h3>
+                  <h3 className="text-sm font-semibold">{title}</h3>
                   {!isLoading && !error && (
                     <Badge variant="secondary" className="text-xs">
                       {itemCount}
@@ -337,7 +314,7 @@ export function RelationSection({
                   />
                 </CollapsibleTrigger>
                 {hasItems && onLink && (
-                  <Button type="button" variant="outline" size="sm" onClick={onLink}>
+                  <Button variant="outline" size="sm" onClick={onLink}>
                     <Plus className="size-4" />
                     Link {title}
                   </Button>
@@ -381,7 +358,6 @@ export function RelationSection({
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
-                                      type="button"
                                       variant="ghost"
                                       size="icon-xs"
                                       className="text-muted-foreground hover:text-destructive"

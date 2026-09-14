@@ -2,15 +2,13 @@ import type { HalFormsProperty } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 
 /**
- * Fields every `FieldDescriptor` variant carries. Unlike the retired
- * `RenderFieldDescriptor` (packages/navigator-data/src/form-fields/render-field-descriptor.ts,
- * deleted by this restructure), the raw `property` is carried through unmodified rather than
- * pre-flattened into a lossy subset — a renderer that needs template metadata this shape doesn't
- * surface as its own typed field (e.g. resolving a remote option link) reads it directly off
- * `property`, instead of the bridge needing a second retrofit every time a renderer needs one
- * more constraint. `property`'s type (`HalFormsProperty`) is re-exported from
- * `@contentgrid/navigator-data`'s barrel rather than imported from `@contentgrid/hal-forms`
- * directly — see that package's CLAUDE.md forbidden-imports rule.
+ * Fields every `FieldDescriptor` variant carries. The raw `property` is carried through
+ * unmodified rather than pre-flattened into a lossy subset — a renderer that needs template
+ * metadata this shape doesn't surface as its own typed field (e.g. resolving a remote option
+ * link) reads it directly off `property`, instead of this bridge needing a new typed field every
+ * time a renderer needs one more constraint. `property`'s type (`HalFormsProperty`) is
+ * re-exported from `@contentgrid/navigator-data`'s barrel rather than imported from
+ * `@contentgrid/hal-forms` directly — see that package's CLAUDE.md forbidden-imports rule.
  */
 export interface FieldDescriptorBase {
   readonly name: string;
@@ -57,17 +55,4 @@ export type FieldDescriptor =
   | ({ readonly kind: "enum" } & FieldDescriptorBase & {
         readonly options: readonly EnumOption[];
         readonly multiValue: boolean;
-      })
-  | ({ readonly kind: "relation" } & FieldDescriptorBase & {
-        readonly cardinality: "to-one" | "to-many";
-        readonly targetHref: string;
       });
-
-/** A relation field's value must be a real href resolved through the picker's own search/select
- * flow (`render/relation-field.tsx`) — never a raw string, e.g. from an extraction annotation.
- * Shared by `create-entity-item-form.tsx` (per-field "Use extracted value" button) and
- * `create-entity-item-container.tsx` ("Apply all extracted values") so both exclusions stay in
- * sync rather than being reimplemented per call site. */
-export function isRelationField(fields: readonly FieldDescriptor[], name: string): boolean {
-  return fields.find((field) => field.name === name)?.kind === "relation";
-}

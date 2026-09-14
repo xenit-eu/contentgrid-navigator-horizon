@@ -10,6 +10,7 @@ import type {
   SearchFilterProperty,
   SearchOperator,
 } from "@contentgrid/ui";
+import { formatFieldName } from "../format-field-name";
 
 /**
  * Converts a search template's properties into pre-computed view models for FilterSidebar
@@ -366,12 +367,4 @@ function computeDateEncoding(inputKind: FilterInputKind): "iso" | "plain" | unde
   if (inputKind === "date") return "plain";
   if (inputKind === "datetime") return "iso";
   return undefined;
-}
-
-function formatFieldName(name: string): string {
-  return name
-    .replace(/[._]/g, " ")
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
 }

@@ -71,23 +71,20 @@ export interface EntityItemPickerProps {
   onNextPage?: () => void;
   /** Allow selecting multiple items at once */
   multiSelect?: boolean;
-  /**
-   * Called once, when the user confirms the dialog, with every currently selected item's
-   * href — a single-element array in single-select mode, one or more in multi-select mode.
-   */
-  onSelect: (hrefs: string[]) => void;
-  /**
-   * Rendered next to the search input when provided — e.g. a "Create new"
-   * link to the target's own create page. This component has no routing
-   * knowledge; the caller supplies the already-built node (see
-   * packages/ui/CLAUDE.md's "accept already-resolved... from the caller" rule).
-   */
-  createNewLink?: ReactNode;
+  /** Called with the selected href(s) and display label(s) when the user confirms */
+  onSelect: (href: string, displayLabel: string) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function getItemLabel(item: EntityItemPickerOption): string {
+  const firstVal = Object.entries(item.data).find(
+    ([k, v]) => !k.startsWith("_") && k !== "id" && v != null,
+  );
+  return firstVal ? String(firstVal[1]) : item.id;
+}
 
 function resolveColumnKeys(
   options: EntityItemPickerOption[],
@@ -132,21 +129,21 @@ export function EntityItemPicker({
   onNextPage,
   multiSelect = false,
   onSelect,
-  createNewLink,
 }: Readonly<EntityItemPickerProps>) {
   // Single-select state
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
+  const [selectedLabel, setSelectedLabel] = useState<string>("");
 
   // Multi-select state
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(() => new Set());
+  const [selectedItems, setSelectedItems] = useState<Map<string, string>>(() => new Map());
 
-  const toggleItem = useCallback((href: string) => {
+  const toggleItem = useCallback((href: string, label: string) => {
     setSelectedItems((prev) => {
-      const next = new Set(prev);
+      const next = new Map(prev);
       if (next.has(href)) {
         next.delete(href);
       } else {
-        next.add(href);
+        next.set(href, label);
       }
       return next;
     });
@@ -154,7 +151,8 @@ export function EntityItemPicker({
 
   function resetState() {
     setSelectedHref(null);
-    setSelectedItems(new Set());
+    setSelectedLabel("");
+    setSelectedItems(new Map());
     onSearch("");
   }
 
@@ -164,9 +162,14 @@ export function EntityItemPicker({
   }
 
   function handleConfirm() {
-    const hrefs = multiSelect ? [...selectedItems] : selectedHref ? [selectedHref] : [];
-    if (hrefs.length === 0) return;
-    onSelect(hrefs);
+    if (multiSelect) {
+      for (const [href, label] of selectedItems) {
+        onSelect(href, label);
+      }
+    } else {
+      if (!selectedHref) return;
+      onSelect(selectedHref, selectedLabel);
+    }
     resetState();
     onOpenChange(false);
   }
@@ -227,9 +230,10 @@ export function EntityItemPicker({
                 )}
                 onClick={() => {
                   if (multiSelect) {
-                    toggleItem(item.href);
+                    toggleItem(item.href, getItemLabel(item));
                   } else {
                     setSelectedHref(item.href);
+                    setSelectedLabel(getItemLabel(item));
                   }
                 }}
               >
@@ -265,20 +269,17 @@ export function EntityItemPicker({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
-            <Input
-              placeholder={searchPlaceholder ?? "Search..."}
-              value={searchQuery}
-              onChange={(e) => {
-                onSearch(e.target.value);
-                if (!multiSelect) setSelectedHref(null);
-              }}
-              className="pl-9"
-            />
-          </div>
-          {createNewLink}
+        <div className="relative">
+          <MagnifyingGlass className="text-muted-foreground absolute top-2.5 left-3 size-4" />
+          <Input
+            placeholder={searchPlaceholder ?? "Search..."}
+            value={searchQuery}
+            onChange={(e) => {
+              onSearch(e.target.value);
+              if (!multiSelect) setSelectedHref(null);
+            }}
+            className="pl-9"
+          />
         </div>
 
         <div className="max-h-80 overflow-auto rounded-md border">{resultsBody}</div>
@@ -286,7 +287,6 @@ export function EntityItemPicker({
         {(hasPreviousPage || hasNextPage) && (
           <div className="flex items-center justify-between">
             <Button
-              type="button"
               variant="outline"
               size="sm"
               disabled={!hasPreviousPage}
@@ -294,23 +294,17 @@ export function EntityItemPicker({
             >
               Previous
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!hasNextPage}
-              onClick={onNextPage}
-            >
+            <Button variant="outline" size="sm" disabled={!hasNextPage} onClick={onNextPage}>
               Next
             </Button>
           </div>
         )}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!hasSelection}>
+          <Button onClick={handleConfirm} disabled={!hasSelection}>
             {confirmLabel}
           </Button>
         </DialogFooter>

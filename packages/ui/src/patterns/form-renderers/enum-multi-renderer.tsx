@@ -2,7 +2,7 @@ import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
 import type { EnumOption } from "./enum-renderer";
-import { FieldShell } from "./field-shell";
+import { FieldShell, fieldAriaProps } from "./field-shell";
 
 export interface EnumMultiRendererProps {
   readonly name: string;
@@ -47,7 +47,7 @@ export function EnumMultiRenderer({
       {isRemote ? (
         <p className="text-sm text-muted-foreground">Options not yet loaded</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2" role="group" aria-label={label}>
           {options.map((option) => (
             <div key={option.value} className="flex items-center gap-2">
               <Checkbox
@@ -55,6 +55,7 @@ export function EnumMultiRenderer({
                 checked={selected.includes(option.value)}
                 onCheckedChange={(checked) => toggle(option.value, checked === true)}
                 disabled={readOnly}
+                {...fieldAriaProps(name, error)}
               />
               <Label htmlFor={`${name}-${option.value}`}>{option.label}</Label>
             </div>

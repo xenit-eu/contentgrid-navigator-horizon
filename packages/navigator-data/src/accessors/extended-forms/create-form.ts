@@ -29,12 +29,9 @@ import type { ProfileRelation } from "../relation-profile";
  *      doesn't imply a required-ness rule of its own; the backend decides.
  *    - Target Profile resolution is NOT done here — the profile list needed to resolve it
  *      (`useProfileEntities()`) is only available async, after this template is already needed
- *      for the create/permission gate. Callers resolve it themselves once profiles have loaded
- *      (see `CreateEntityItemContainer`'s `resolveTargetProfile` in
- *      packages/features/src/entity-item-create/, which matches via
- *      `profileEntity.describesUrl(targetCollectionHref)` rather than
- *      `profileRelation.getTargetProfile()` — this stays correct even when `profileRelation`
- *      itself is unresolved, since `targetCollectionHref` is always present on the property).
+ *      for the create/permission gate. A caller resolves it itself once profiles have loaded,
+ *      matching via `targetCollectionHref` (always present on the property) rather than
+ *      `profileRelation`, which may be unresolved.
  */
 
 /**

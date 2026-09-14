@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -19,7 +19,7 @@ const PROFILE_URL = `${API_URL}/profile`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
-function profileRootHandler(withSupplier = false) {
+function profileRootHandler() {
   return http.get(PROFILE_URL, () =>
     HttpResponse.json({
       _links: {
@@ -27,21 +27,13 @@ function profileRootHandler(withSupplier = false) {
         curies: [
           { name: "cg", href: "https://contentgrid.cloud/rels/contentgrid/{rel}", templated: true },
         ],
-        "cg:entity": [
-          { href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" },
-          ...(withSupplier
-            ? [{ href: `${PROFILE_URL}/suppliers`, name: "supplier", title: "Supplier" }]
-            : []),
-        ],
+        "cg:entity": [{ href: `${PROFILE_URL}/invoices`, name: "invoice", title: "Invoice" }],
       },
     }),
   );
 }
 
-function invoiceProfileHandler(
-  createForm: Record<string, unknown> | null = DEFAULT_CREATE_FORM,
-  relations: Record<string, unknown>[] = [],
-) {
+function invoiceProfileHandler(createForm: Record<string, unknown> | null = DEFAULT_CREATE_FORM) {
   return http.get(`${PROFILE_URL}/invoices`, () =>
     HttpResponse.json({
       name: "invoice",
@@ -60,7 +52,7 @@ function invoiceProfileHandler(
           },
         ],
       },
-      _embedded: { "blueprint:attribute": [], "blueprint:relation": relations },
+      _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
       _templates: createForm ? { "create-form": createForm } : {},
     }),
   );
@@ -76,89 +68,14 @@ const DEFAULT_CREATE_FORM = {
   ],
 };
 
-const SUPPLIER_RELATION = {
-  name: "supplier",
-  title: "Supplier",
-  description: "",
-  many_source_per_target: true,
-  many_target_per_source: false,
-  required: false,
-  _links: { "blueprint:target-entity": { href: `${PROFILE_URL}/suppliers` } },
-};
-
-const CREATE_FORM_WITH_SUPPLIER = {
-  ...DEFAULT_CREATE_FORM,
-  properties: [
-    ...DEFAULT_CREATE_FORM.properties,
-    {
-      name: "supplier",
-      type: "url",
-      options: {
-        link: { href: `${API_URL}/suppliers`, title: "Suppliers" },
-        maxItems: 1,
-        valueField: "/_links/self/href",
-      },
-    },
-  ],
-};
-
-function supplierProfileHandler() {
-  return http.get(`${PROFILE_URL}/suppliers`, () =>
-    HttpResponse.json({
-      name: "supplier",
-      title: "Supplier",
-      _links: {
-        self: { href: `${PROFILE_URL}/suppliers` },
-        describes: [
-          { href: `${API_URL}/suppliers`, name: "collection" },
-          { href: `${API_URL}/suppliers/{id}`, name: "item", templated: true },
-        ],
-      },
-      _embedded: {
-        "blueprint:attribute": [
-          { name: "name", title: "Name", type: "string", required: false },
-          { name: "city", title: "City", type: "string", required: false },
-        ],
-        "blueprint:relation": [],
-      },
-      _templates: {
-        default: { method: "HEAD", target: `${API_URL}/suppliers`, properties: [] },
-        search: { method: "GET", target: `${API_URL}/suppliers`, properties: [] },
-      },
-    }),
-  );
-}
-
-function supplierCollectionHandler(
-  items: { id: string; name: string; city?: string }[],
-  opts: { nextHref?: string } = {},
-) {
-  return http.get(`${API_URL}/suppliers`, () =>
-    HttpResponse.json({
-      _embedded: {
-        item: items.map((item) => ({
-          ...item,
-          _links: { self: { href: `${API_URL}/suppliers/${item.id}` } },
-        })),
-      },
-      _links: {
-        self: { href: `${API_URL}/suppliers` },
-        ...(opts.nextHref ? { next: { href: opts.nextHref } } : {}),
-      },
-    }),
-  );
-}
-
 function LoadInvoiceProfileAndRenderCreateForm({
   onCreated,
   onCancel,
   onDirtyChange,
-  annotations,
 }: Readonly<{
   onCreated?: (item: { id: string }) => void;
   onCancel?: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
-  annotations?: Parameters<typeof CreateEntityItemContainer>[0]["annotations"];
 }>) {
   const { data: profile } = useProfileEntity({ name: "invoice" });
   if (!profile) return <p>Loading…</p>;
@@ -168,7 +85,6 @@ function LoadInvoiceProfileAndRenderCreateForm({
       onCreated={onCreated}
       onCancel={onCancel}
       onDirtyChange={onDirtyChange}
-      annotations={annotations}
     />
   );
 }
@@ -322,143 +238,79 @@ describe("CreateEntityItemContainer", () => {
     expect(await screen.findByText("Already in use")).toBeInTheDocument();
   });
 
-  describe("annotations", () => {
-    it("applies every annotated field's extracted value in one click", async () => {
-      const user = userEvent.setup();
-      server.use(profileRootHandler(), invoiceProfileHandler());
-      renderForm({
-        annotations: {
-          invoice_number: { extractedValue: "INV-99" },
-          is_recurring: { extractedValue: true },
-        },
-      });
+  it("shows the non-field alert for a field error whose field this form doesn't render", async () => {
+    const user = userEvent.setup();
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.post(`${API_URL}/invoices`, () =>
+        HttpResponse.json(
+          {
+            type: "https://contentgrid.cloud/problems/input/validation",
+            title: "Validation failed",
+            status: 400,
+            errors: [
+              {
+                type: "https://contentgrid.cloud/problems/input/validation",
+                title: "Mandatory field",
+                detail: "This field is required",
+                field: "supplier",
+              },
+            ],
+          },
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    renderForm();
 
-      await screen.findByLabelText(/Invoice Number/);
-      await user.click(screen.getByRole("button", { name: "Apply all extracted values" }));
+    const input = await screen.findByLabelText(/Invoice Number/);
+    await user.type(input, "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
-      expect(screen.getByLabelText(/Invoice Number/)).toHaveValue("INV-99");
-      expect(screen.getByLabelText("Is Recurring")).toBeChecked();
-    });
-
-    it("does not show the apply-all button when there are no annotations", async () => {
-      server.use(profileRootHandler(), invoiceProfileHandler());
-      renderForm();
-
-      await screen.findByLabelText(/Invoice Number/);
-      expect(
-        screen.queryByRole("button", { name: "Apply all extracted values" }),
-      ).not.toBeInTheDocument();
-    });
+    // "supplier" isn't one of this create-form's rendered fields (see DEFAULT_CREATE_FORM) — with
+    // no inline field to show it against, it must still surface via the alert rather than being
+    // silently dropped.
+    expect(await screen.findByText(/This field is required/)).toBeInTheDocument();
   });
 
-  describe("relation fields", () => {
-    function setupSupplierRelation(
-      items: { id: string; name: string; city?: string }[] = [
-        { id: "1", name: "Acme Corp", city: "Amsterdam" },
-      ],
-    ) {
-      server.use(
-        profileRootHandler(true),
-        invoiceProfileHandler(CREATE_FORM_WITH_SUPPLIER, [SUPPLIER_RELATION]),
-        supplierProfileHandler(),
-        supplierCollectionHandler(items),
-      );
-    }
-
-    it("links a supplier via the picker and shows its full attribute data, not just a label", async () => {
-      const user = userEvent.setup();
-      setupSupplierRelation();
-      renderForm();
-
-      const linkButton = await screen.findByRole("button", { name: /link supplier/i });
-      await user.click(linkButton);
-
-      const dialog = await screen.findByRole("dialog");
-      await user.click(within(dialog).getByText("Acme Corp").closest("tr")!);
-      await user.click(within(dialog).getByRole("button", { name: "Select" }));
-
-      expect(await screen.findByText("Acme Corp")).toBeInTheDocument();
-      expect(await screen.findByText(/Amsterdam/)).toBeInTheDocument();
-    });
-
-    it("unlinks a supplier back to no selection", async () => {
-      const user = userEvent.setup();
-      setupSupplierRelation();
-      renderForm();
-
-      await user.click(await screen.findByRole("button", { name: /link supplier/i }));
-      const dialog = await screen.findByRole("dialog");
-      await user.click(within(dialog).getByText("Acme Corp").closest("tr")!);
-      await user.click(within(dialog).getByRole("button", { name: "Select" }));
-      await screen.findByText("Acme Corp");
-
-      await user.click(screen.getByRole("button", { name: /unlink/i }));
-      await user.click(screen.getByRole("button", { name: "Unlink" }));
-
-      expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
-      expect(await screen.findByRole("button", { name: /link supplier/i })).toBeInTheDocument();
-    });
-
-    it("submits the linked supplier as a bare href", async () => {
-      const user = userEvent.setup();
-      setupSupplierRelation();
-      let capturedBody: string | undefined;
-      server.use(
-        http.post(`${API_URL}/invoices`, async ({ request }) => {
-          capturedBody = await request.text();
-          return HttpResponse.json(
-            { invoice_number: "INV-1", _links: { self: { href: `${API_URL}/invoices/1` } } },
-            { status: 201 },
-          );
-        }),
-      );
-      renderForm();
-
-      const input = await screen.findByLabelText(/Invoice Number/);
-      await user.type(input, "INV-1");
-
-      await user.click(await screen.findByRole("button", { name: /link supplier/i }));
-      const dialog = await screen.findByRole("dialog");
-      await user.click(within(dialog).getByText("Acme Corp").closest("tr")!);
-      await user.click(within(dialog).getByRole("button", { name: "Select" }));
-      await screen.findByText("Acme Corp");
-
-      await user.click(screen.getByRole("button", { name: "Create" }));
-
-      await vi.waitFor(() => expect(capturedBody).toContain(`${API_URL}/suppliers/1`));
-    });
-
-    it("paginates the picker via next/previous", async () => {
-      const user = userEvent.setup();
-      const nextPageUrl = `${API_URL}/suppliers/page2`;
-      server.use(
-        profileRootHandler(true),
-        invoiceProfileHandler(CREATE_FORM_WITH_SUPPLIER, [SUPPLIER_RELATION]),
-        supplierProfileHandler(),
-        supplierCollectionHandler([{ id: "1", name: "Acme Corp" }], { nextHref: nextPageUrl }),
-        http.get(nextPageUrl, () =>
-          HttpResponse.json({
-            _embedded: {
-              item: [
-                {
-                  id: "2",
-                  name: "Globex Inc",
-                  _links: { self: { href: `${API_URL}/suppliers/2` } },
-                },
-              ],
-            },
-            _links: { self: { href: nextPageUrl } },
-          }),
+  it("clears a stale server error alert when a resubmit is blocked by client-side validation", async () => {
+    const user = userEvent.setup();
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.post(`${API_URL}/invoices`, () =>
+        HttpResponse.json(
+          {
+            type: "https://contentgrid.cloud/problems/input/validation",
+            title: "Validation failed",
+            status: 400,
+            errors: [
+              {
+                type: "https://contentgrid.cloud/problems/input/validation/duplicate",
+                title: "Already in use",
+                conflicting_item: `${API_URL}/invoices/existing`,
+              },
+            ],
+          },
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
         ),
-      );
-      renderForm();
+      ),
+    );
+    renderForm();
 
-      await user.click(await screen.findByRole("button", { name: /link supplier/i }));
-      const dialog = await screen.findByRole("dialog");
-      await within(dialog).findByText("Acme Corp");
+    const input = await screen.findByLabelText(/Invoice Number/);
+    await user.type(input, "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByText("Validation failed")).toBeInTheDocument();
 
-      await user.click(within(dialog).getByRole("button", { name: "Next" }));
-      await within(dialog).findByText("Globex Inc");
-    });
+    // Clearing the required field blocks the resubmit client-side, before the mutation ever
+    // fires again — the alert from the LAST server round-trip must not linger alongside the new,
+    // unrelated client-side "required" error.
+    await user.clear(input);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
+    expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
   });
 });

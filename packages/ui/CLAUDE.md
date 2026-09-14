@@ -126,9 +126,9 @@ a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch tha
 - Each renderer takes plain scalar props only: `name`, `label`, `required`, `readOnly`,
   `description?`, `value`, `onChange`, `error?`, plus type-specific constraints
   (`includesTime` for datetime, `options`/`isRemote` for enum, `min`/`max`/`step` for number,
-  etc.). Do NOT reintroduce a descriptor-object prop (`field: SomeDescriptorType`) — that was the
-  exact coupling this restructure removed. A caller unpacks its own descriptor type into these
-  props before rendering.
+  etc.). Do NOT reintroduce a descriptor-object prop (`field: SomeDescriptorType`) — that couples
+  this package to a specific descriptor shape, which is exactly what this boundary keeps out. A
+  caller unpacks its own descriptor type into these props before rendering.
 - `enum`/`enum-multi` renderers take already-resolved `options: readonly EnumOption[]`
   (`{ value: string; label: string }` — `value` is the machine token submitted to the server,
   `label` is the HAL-FORMS option's `prompt`, kept separate because attribute/enum values are
@@ -137,12 +137,6 @@ a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch tha
   themselves.
 - Remote option FETCHING stays out of `packages/ui`, unchanged: the caller (in
   `packages/features`) decides `isRemote` and supplies already-resolved `options` once loaded.
-- The one exception where a `packages/ui`-adjacent renderer needs live data —
-  `RelationToOneRenderer`/`RelationToManyRenderer` needing a target collection's candidates —
-  is solved by keeping the actual fetch (`render/relation-field.tsx`, using
-  `useEntityItemCollection`) in `packages/features`, one layer above these dumb renderers; the
-  renderers themselves still only receive an already-fetched `options: EntityItemPickerOption[]` list
-  plus pagination callbacks.
 - Why: `packages/ui` is the rendering layer; data fetching and HAL-Forms-shaped state belong in
   `packages/navigator-data`/`packages/features`. Mixing them violates the two-layer model
   (ADR-007) and would pull Layer-1 packages into the UI bundle.

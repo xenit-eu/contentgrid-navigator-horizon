@@ -11,7 +11,3 @@ export type { EnumOption, EnumRendererProps } from "./enum-renderer";
 export { RequiredMarker, FieldMessage, fieldAriaProps } from "./field-shell";
 export { EnumMultiRenderer } from "./enum-multi-renderer";
 export type { EnumMultiRendererProps } from "./enum-multi-renderer";
-export { RelationToOneRenderer } from "./relation-to-one-renderer";
-export type { RelationToOneRendererProps } from "./relation-to-one-renderer";
-export { RelationToManyRenderer } from "./relation-to-many-renderer";
-export type { RelationToManyRendererProps } from "./relation-to-many-renderer";

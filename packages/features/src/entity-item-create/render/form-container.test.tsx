@@ -1,8 +1,25 @@
+import { useCallback, useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { HalFormsProperty } from "@contentgrid/navigator-data";
+import type { FieldValue, HalFormsProperty } from "@contentgrid/navigator-data";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import { FormContainer } from "./form-container";
+
+let numberRenderCount = 0;
+vi.mock("@contentgrid/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@contentgrid/ui")>();
+  return {
+    ...actual,
+    // Counts renders of the "total" field's underlying widget — the memoization fix under test
+    // (`FieldRenderer` wrapped in `memo`, `FormField`'s per-field `useCallback` closures) is only
+    // proven by an *unaffected* field's widget never re-rendering, not by the changed field's own
+    // value showing up correctly (that's already covered above).
+    NumberRenderer: (props: Parameters<typeof actual.NumberRenderer>[0]) => {
+      numberRenderCount += 1;
+      return <actual.NumberRenderer {...props} />;
+    },
+  };
+});
 
 const DUMMY_PROPERTY = {} as unknown as HalFormsProperty;
 
@@ -78,5 +95,37 @@ describe("FormContainer", () => {
     );
     fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "Acme" } });
     expect(onChange).toHaveBeenCalledWith("name", "Acme");
+  });
+
+  it("does not re-render an untouched field's widget when a sibling field's value changes", () => {
+    function Harness() {
+      const [values, setValues] = useState<{ name: string; total: FieldValue }>({
+        name: "",
+        total: 5,
+      });
+      // Stable across renders, like `formState.setValue` — see `use-entity-item-create-form-state.ts`.
+      const onChange = useCallback((name: string, value: FieldValue) => {
+        setValues((prev) => ({ ...prev, [name]: value }));
+      }, []);
+      return (
+        <FormContainer
+          fields={[nameField, totalField]}
+          layout={{ groups: [{ fieldNames: ["name", "total"] }] }}
+          values={values}
+          onChange={onChange}
+          fieldState={{}}
+        />
+      );
+    }
+
+    numberRenderCount = 0;
+    render(<Harness />);
+    expect(numberRenderCount).toBe(1);
+
+    fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "A" } });
+    fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "Ac" } });
+    fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "Acme" } });
+
+    expect(numberRenderCount).toBe(1);
   });
 });

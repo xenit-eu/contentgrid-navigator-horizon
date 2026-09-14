@@ -96,13 +96,6 @@ until the lint enforcement above wires it.
   `packages/ui/src/patterns/`.
 - If logic touches HAL, ETags, or TanStack Query hooks → it belongs in
   `packages/navigator-data`, not in the feature.
-- **The one exception: a feature's own rendering-projection engine may fetch.** ADR-004's
-  `FieldDescriptor`/`FieldRenderer` architecture (`packages/features/src/entity-item-create/`)
-  lives here rather than in `packages/ui` specifically because its `relation` field case needs to
-  fetch a target collection via `@contentgrid/navigator-data` hooks
-  (`render/relation-field.tsx`, using `useEntityItemCollection`) — `packages/ui` is forbidden
-  from fetching (see its CLAUDE.md). Every other field kind still delegates to a plain,
-  descriptor-agnostic widget in `packages/ui/src/patterns/form-renderers/`.
 
 ---
 

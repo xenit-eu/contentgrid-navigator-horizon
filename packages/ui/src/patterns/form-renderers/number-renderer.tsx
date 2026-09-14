@@ -55,8 +55,16 @@ export function NumberRenderer({
         type="number"
         value={displayValue}
         onChange={(event) => {
-          const raw = event.target.value;
+          const input = event.target;
+          const raw = input.value;
           if (raw === "") {
+            // A native number input reports `value === ""` both when the field is genuinely
+            // empty AND while it holds an interim state a full number can start with (a lone
+            // "-", ".", or "-.") — `validity.badInput` distinguishes the two. Committing ""
+            // for the interim case would force this controlled input back to empty on every
+            // render, deleting the "-" before the user can type the digits after it, making a
+            // negative (or decimal-leading) value impossible to enter by typing.
+            if (input.validity.badInput) return;
             onChange("");
             return;
           }

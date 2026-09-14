@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { PageTitle, UnsavedChangesDialog } from "@contentgrid/ui";
 import type { RelationConflictAlertProps, ValidationAlertProps } from "../problem-details";
@@ -11,8 +11,6 @@ export interface CreateEntityItemViewProps {
   readonly onCreated?: (item: EntityItem) => void;
   /** Renders a cancel button next to submit when provided. */
   readonly onCancel?: () => void;
-  readonly renderCreateRelationTarget?: (targetProfile: ProfileEntity) => ReactNode;
-  readonly onViewRelationItem?: (targetProfile: ProfileEntity, itemId: string) => void;
   /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
   readonly onConflictingItemClick?: ValidationAlertProps["onConflictingItemClick"];
   /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
@@ -39,8 +37,6 @@ export function CreateEntityItemView({
   profile,
   onCreated,
   onCancel,
-  renderCreateRelationTarget,
-  onViewRelationItem,
   onConflictingItemClick,
   onMissingRelationTargetClick,
   onAllowedValuesClick,
@@ -66,8 +62,6 @@ export function CreateEntityItemView({
           onCreated && ((item) => unsavedChangesGuard.withoutBlocking(() => onCreated(item)))
         }
         onCancel={onCancel && (() => unsavedChangesGuard.withoutBlocking(onCancel))}
-        renderCreateRelationTarget={renderCreateRelationTarget}
-        onViewRelationItem={onViewRelationItem}
         onConflictingItemClick={onConflictingItemClick}
         onMissingRelationTargetClick={onMissingRelationTargetClick}
         onAllowedValuesClick={onAllowedValuesClick}

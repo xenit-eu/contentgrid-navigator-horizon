@@ -54,26 +54,7 @@ const invoiceProfileJson = {
         _links: {},
       },
     ],
-    "blueprint:relation": [
-      {
-        name: "supplier",
-        title: "Supplier",
-        description: "",
-        many_source_per_target: true,
-        many_target_per_source: false,
-        required: true,
-        _links: { "blueprint:target-entity": { href: "https://example.com/profile/suppliers" } },
-      },
-      {
-        name: "line_items",
-        title: "Line items",
-        description: "",
-        many_source_per_target: true,
-        many_target_per_source: true,
-        required: false,
-        _links: { "blueprint:target-entity": { href: "https://example.com/profile/line-items" } },
-      },
-    ],
+    "blueprint:relation": [],
   },
   _templates: {
     default: { method: "HEAD", target: "https://example.com/invoices", properties: [] },
@@ -108,25 +89,6 @@ const invoiceProfileJson = {
         { name: "attachment", type: "file" },
         { name: "special_note", type: "text" },
         { name: "contact_email", type: "email" },
-        {
-          name: "supplier",
-          type: "url",
-          required: true,
-          options: {
-            link: { href: "https://example.com/suppliers", title: "Suppliers" },
-            maxItems: 1,
-            valueField: "/_links/self/href",
-          },
-        },
-        {
-          name: "line_items",
-          type: "url",
-          options: {
-            link: { href: "https://example.com/line-items", title: "Line items" },
-            minItems: 0,
-            valueField: "/_links/self/href",
-          },
-        },
         {
           name: "category",
           type: "text",
@@ -249,34 +211,9 @@ describe("resolveCreateFieldDescriptors", () => {
     if (field.kind === "text") expect(field.format).toBe("email");
   });
 
-  it("maps a required to-one relation to a to-one relation descriptor", () => {
-    const { fields } = resolveCreateFieldDescriptors(makeTemplate());
-    const field = byName(fields, "supplier");
-    expect(field.kind).toBe("relation");
-    expect(field.required).toBe(true);
-    expect(field.label).toBe("Supplier");
-    if (field.kind === "relation") {
-      expect(field.cardinality).toBe("to-one");
-      expect(field.targetHref).toBe("https://example.com/suppliers");
-    }
-  });
-
-  it("maps a to-many relation to a to-many relation descriptor, required read from the template", () => {
-    const { fields } = resolveCreateFieldDescriptors(makeTemplate());
-    const field = byName(fields, "line_items");
-    expect(field.kind).toBe("relation");
-    // The fixture's "line_items" create-form property has no `required` key — this
-    // asserts `false` came from that, not from a hardcoded cardinality-based rule.
-    expect(field.required).toBe(false);
-    if (field.kind === "relation") {
-      expect(field.cardinality).toBe("to-many");
-      expect(field.targetHref).toBe("https://example.com/line-items");
-    }
-  });
-
   it("produces one descriptor per create-form property, in a single layout group", () => {
     const { fields, layout } = resolveCreateFieldDescriptors(makeTemplate());
-    expect(fields).toHaveLength(13);
+    expect(fields).toHaveLength(11);
     expect(layout.groups).toHaveLength(1);
     expect(layout.groups[0]?.fieldNames).toEqual(fields.map((field) => field.name));
   });

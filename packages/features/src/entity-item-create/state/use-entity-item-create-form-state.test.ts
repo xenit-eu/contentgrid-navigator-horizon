@@ -350,9 +350,8 @@ describe("useEntityItemCreateFormState — buildValues", () => {
   });
 
   it("omits an untouched multi-value enum/to-many-relation field's empty-array default", () => {
-    // Regression: the HAL-FORMS codec rejects an empty list for a multi-value property
-    // outright, so an untouched tags field (default `[]`) must never reach `withValue` — it
-    // previously crashed every submit that included one.
+    // The HAL-FORMS codec rejects an empty list for a multi-value property outright, so an
+    // untouched tags field (default `[]`) must never reach `withValue`.
     const { result } = renderHook(() =>
       useEntityItemCreateFormState({ fields: [nameField, tagsField] }),
     );

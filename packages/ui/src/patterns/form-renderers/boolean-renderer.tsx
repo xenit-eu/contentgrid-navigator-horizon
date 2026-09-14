@@ -52,8 +52,7 @@ export function BooleanRenderer({
         </Label>
         {/* A boolean attribute can genuinely be unset (see use-entity-form-state.ts's isEmpty
          * doc comment) — this is the only way back to that state once the checkbox has been
-         * touched, mirroring RelationToOneRenderer's "Unlink" affordance for its own
-         * undefined/unset value. */}
+         * touched. */}
         {!readOnly && value !== undefined && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>
             Clear

@@ -1,4 +1,4 @@
-import { type ReactNode, type SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useEffect, useMemo, useState } from "react";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
@@ -6,7 +6,6 @@ import {
   getValidationFieldErrors,
   toProblemDisplayModel,
   useCreateEntityItem,
-  useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
   ProblemAlert,
@@ -14,9 +13,7 @@ import {
   type ValidationAlertProps,
 } from "../problem-details";
 import { CreateEntityItemForm } from "./create-entity-item-form";
-import { isRelationField } from "./model/field-descriptor";
 import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-descriptors";
-import type { FieldAnnotation, RelationFieldData } from "./render/field-renderer";
 import type { FieldError } from "./state/field-error";
 import { toFieldErrors } from "./state/to-field-errors";
 import { useEntityItemCreateFormState } from "./state/use-entity-item-create-form-state";
@@ -27,20 +24,6 @@ export interface CreateEntityItemContainerProps {
   readonly onCreated?: (item: EntityItem) => void;
   /** Renders a cancel button next to submit when provided. */
   readonly onCancel?: () => void;
-  /**
-   * Renders a "create new" affordance inside a relation field's picker for
-   * the given target profile — e.g. a link to that profile's own create
-   * route, opened in a new tab. Omitted entirely when not provided.
-   */
-  readonly renderCreateRelationTarget?: (targetProfile: ProfileEntity) => ReactNode;
-  /**
-   * Fired when the user wants to open a linked relation item's own detail page — receives the
-   * target entity's profile and the item's real id. All navigation is left to the caller (this
-   * form has no router knowledge of its own — see `renderCreateRelationTarget` above for the same
-   * pattern). Omitted entirely (no "view details" affordance in the relation field) when not
-   * provided.
-   */
-  readonly onViewRelationItem?: (targetProfile: ProfileEntity, itemId: string) => void;
   /**
    * Fired whenever the form's dirty state changes. This form has no router or
    * navigation-guard knowledge itself — it stays usable outside a routed context and
@@ -81,24 +64,13 @@ export interface CreateEntityItemContainerProps {
    * relation name.
    */
   readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
-  /**
-   * Per-field extraction data, keyed by field name — how an externally-extracted value (from
-   * the PDF content uploaded during create) gets offered back into a field. See
-   * `render/field-renderer.tsx`'s `FieldAnnotation` doc comment.
-   */
-  readonly annotations?: Readonly<Record<string, FieldAnnotation>>;
 }
 
 /**
- * Smart component: gates on `profile.createTemplate`, loads relation profiles + the
- * `relationItemsData` cache, runs `useCreateEntityItem`, and maps server validation errors into
- * external `FieldError[]`. Renders `CreateEntityItemForm` (the `<form>`/chrome-only component)
- * once a create template is available.
- *
- * Direct replacement for the "gating + state + mutation" half of the retired, monolithic
- * `create-entity-item-form.tsx` (formerly `CreateEntityItemForm` + its inner
- * `CreateEntityItemFormFields`). Rendered by `CreateEntityItemView`, the package's public entry
- * point for both apps' route files.
+ * Smart component: gates on `profile.createTemplate`, runs `useCreateEntityItem`, and maps
+ * server validation errors into external `FieldError[]`. Renders `CreateEntityItemForm` (the
+ * `<form>`/chrome-only component) once a create template is available. Rendered by
+ * `CreateEntityItemView`, the package's public entry point for both apps' route files.
  */
 export function CreateEntityItemContainer(props: Readonly<CreateEntityItemContainerProps>) {
   const createTemplate = props.profile.createTemplate;
@@ -121,8 +93,6 @@ function CreateEntityItemContainerReady({
   createTemplate,
   onCreated,
   onCancel,
-  renderCreateRelationTarget,
-  onViewRelationItem,
   onDirtyChange,
   onConflictingItemClick,
   onMissingRelationTargetClick,
@@ -130,15 +100,10 @@ function CreateEntityItemContainerReady({
   onExpectedTypeClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-  annotations,
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
   const { fields, layout } = useMemo(
     () => resolveCreateFieldDescriptors(createTemplate),
     [createTemplate],
-  );
-  const hasRelationFields = useMemo(
-    () => fields.some((field) => field.kind === "relation"),
-    [fields],
   );
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldError[]>>({});
   const formState = useEntityItemCreateFormState({ fields, externalErrors });
@@ -147,50 +112,17 @@ function CreateEntityItemContainerReady({
     onDirtyChange?.(formState.isDirty);
   }, [formState.isDirty, onDirtyChange]);
 
-  // Disabled via queryOptionsOverride (never by skipping the hook call, per
-  // navigator-data/CLAUDE.md) when this form has no relation field — fetching
-  // every entity profile in the application is otherwise wasted work.
-  const { profiles, isLoading: profilesLoading } = useLoadedProfileEntities({
-    queryOptionsOverride: { enabled: hasRelationFields },
-  });
-  // href -> raw preview-attribute data (not `EntityItem` — see `RelationFieldProps`'
-  // `relationItemsData` doc comment in `render/relation-field.tsx` for why).
-  const [relationItemsData, setRelationItemsData] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
-  const onItemResolved = useCallback(
-    (href: string, data: Record<string, unknown>) =>
-      setRelationItemsData((prev) => ({ ...prev, [href]: data })),
-    [],
-  );
-
   const createMutation = useCreateEntityItem(profile);
-
-  // Only defined when there's at least one annotation to apply — lets `annotations` fields
-  // update (and dismiss their errors) in a single commit via `formState.setValues`, rather than
-  // requiring one `onFieldChange` call per field the way each field's own "Use extracted value"
-  // button (built by `create-entity-item-form.tsx` from the same `annotations`) already does.
-  // Excludes `relation` fields for the same reason `create-entity-item-form.tsx`'s per-field
-  // button does — see `isRelationField`'s doc comment.
-  const applicableAnnotationEntries = annotations
-    ? Object.entries(annotations).filter(([name]) => !isRelationField(fields, name))
-    : [];
-  const onApplyAllAnnotations =
-    applicableAnnotationEntries.length > 0
-      ? () =>
-          formState.setValues(
-            Object.fromEntries(
-              applicableAnnotationEntries.map(([name, annotation]) => [
-                name,
-                annotation.extractedValue,
-              ]),
-            ),
-          )
-      : undefined;
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setExternalErrors({});
+    // Clears a previous failed attempt's alert immediately, before client-side validation runs.
+    // Without this, a submit blocked by validate() (e.g. a required field newly left empty)
+    // returns early without ever calling the mutation again, so createMutation.isError/error
+    // would otherwise still be "true"/stale from the LAST server round-trip — showing an old
+    // server error alongside the new, unrelated client-side validation errors.
+    createMutation.reset();
     if (!formState.validate()) return;
 
     const values = formState.buildValues(createTemplate.template);
@@ -214,28 +146,24 @@ function CreateEntityItemContainerReady({
   // render inline, so they must always fall through to the alert below — checking only
   // "no field errors at all" left them silently dropped whenever the array was non-empty
   // but contained an entry with no `field`.
+  //
+  // The same reasoning extends to a field-scoped error whose `field` doesn't match any
+  // rendered field name (e.g. a system/audit field, or any property this attributes-only
+  // form doesn't produce a descriptor for) — `toFieldErrors` buckets it under that field
+  // name, but no `FieldRenderer` exists to show it, and it also isn't a `field === undefined`
+  // entry, so without this check it would be dropped by both paths and never reach the user.
+  const knownFieldNames = new Set(fields.map((field) => field.name));
   const submitFieldErrors = createMutation.isError
     ? getValidationFieldErrors(createMutation.error)
     : [];
   const nonFieldError =
     createMutation.isError &&
     (submitFieldErrors.length === 0 ||
-      submitFieldErrors.some((fieldError) => fieldError.field === undefined))
+      submitFieldErrors.some(
+        (fieldError) => fieldError.field === undefined || !knownFieldNames.has(fieldError.field),
+      ))
       ? createMutation.error
       : undefined;
-
-  const relationFieldData: RelationFieldData | undefined = hasRelationFields
-    ? {
-        resolveTargetProfile: (field) =>
-          profilesLoading
-            ? undefined
-            : profiles.find((candidate) => candidate.describesUrl(field.targetHref)),
-        relationItemsData,
-        onItemResolved,
-        renderCreateRelationTarget,
-        onViewRelationItem,
-      }
-    : undefined;
 
   return (
     <CreateEntityItemForm
@@ -248,9 +176,6 @@ function CreateEntityItemContainerReady({
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}
-      relationFieldData={relationFieldData}
-      annotations={annotations}
-      onApplyAllAnnotations={onApplyAllAnnotations}
       nonFieldErrorAlert={
         nonFieldError && (
           <ProblemAlert

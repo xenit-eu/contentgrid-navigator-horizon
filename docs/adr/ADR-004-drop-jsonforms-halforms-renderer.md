@@ -32,18 +32,18 @@ packages/features/src/entity-item-create   Rendering-projection engine (moved he
                                             "Where the engine lives" below)
   model/    FieldDescriptor union, LayoutInformation, resolveCreateFieldDescriptors()  (pure)
   state/    FieldError taxonomy, useEntityFormState()                                  (state)
-  render/   FieldRenderer (kind switch), relation-field.tsx, FormContainer             (render)
+  render/   FieldRenderer (kind switch), FormContainer                                (render)
 
 packages/ui/src/patterns/form-renderers    Layer — dumb widgets
   TextRenderer, NumberRenderer, BooleanRenderer, DateTimeRenderer, EnumRenderer,
-  EnumMultiRenderer, RelationToOneRenderer, RelationToManyRenderer
+  EnumMultiRenderer
   — plain scalar props (name, label, required, readOnly, value, onChange, error, ...);
     no dependency on any descriptor type, HAL, or HAL-Forms.
 ```
 
-- **`FieldDescriptor`** (`packages/features/src/entity-item-create/model/field-descriptor.ts`) is a `kind`-discriminated union (`text`, `number`, `datetime`, `boolean`, `file`, `enum`, `relation`). Every variant carries the raw `HalFormsProperty` (re-exported as a type from `@contentgrid/navigator-data`, never imported from `@contentgrid/hal-forms` directly) alongside its own typed fields — unlike the old `RenderFieldDescriptor`, nothing needs pre-flattening into a lossy subset before a renderer can use it.
+- **`FieldDescriptor`** (`packages/features/src/entity-item-create/model/field-descriptor.ts`) is a `kind`-discriminated union (`text`, `number`, `datetime`, `boolean`, `file`, `enum`). Every variant carries the raw `HalFormsProperty` (re-exported as a type from `@contentgrid/navigator-data`, never imported from `@contentgrid/hal-forms` directly) alongside its own typed fields — unlike the old `RenderFieldDescriptor`, nothing needs pre-flattening into a lossy subset before a renderer can use it.
 - **`resolveCreateFieldDescriptors()`** (`model/resolve-create-field-descriptors.ts`) is a pure function: `CreateHalFormTemplate` → `{ fields, layout }`. No React, no fetching — a direct, same-shaped replacement for the retired `create-form-to-render-fields.ts`.
-- **`FieldRenderer`** (`render/field-renderer.tsx`) is the `kind` switch, now living in `packages/features` rather than `packages/ui`. This is the one deliberate exception: `packages/ui` cannot fetch (see its CLAUDE.md), but a `relation` field's picker needs to fetch its target collection via `@contentgrid/navigator-data` hooks (`render/relation-field.tsx`). Every other `kind` delegates straight through to a `packages/ui` widget.
+- **`FieldRenderer`** (`render/field-renderer.tsx`) is the `kind` switch, living in `packages/features` rather than `packages/ui`, so the engine can evolve (a future field kind, a future fetch-backed widget) without `packages/ui` ever needing to know about `FieldDescriptor`. Every current `kind` delegates straight through to a `packages/ui` widget with no fetching involved.
 - **`FieldError`** (`state/field-error.ts`) replaces the old flat `Record<string, string>` with a two-source taxonomy — `{ source: "internal" | "external", message, problemType?, detail? }` — so a client-side required-field error and a server validation error are distinguishable, and a future annotation/extraction seam has a defined `source` to write under.
 - **`useEntityFormState()`** (`state/use-entity-form-state.ts`) replaces `useFormFields`: same dismissal-tracking/dirty-check behaviour, ported onto `FieldDescriptor[]`/`FieldError[]` instead of the old types.
 - Values/submit are unchanged: `HalFormValues<T>` + `halFormCodecs` + the existing `useCreateEntityItem` mutation hook.
@@ -52,7 +52,7 @@ packages/ui/src/patterns/form-renderers    Layer — dumb widgets
 
 One alternative considered was placing the new engine "app-level first" under `apps/navigator/src/forms/`, deferring extraction to a shared package "until a second track needs it" (citing ADR-010's cutover-first pattern). That trigger was already met at adoption time: `entity-item-create` was already `x-stability: "stable"` in `packages/features` and already consumed identically by **both** `apps/navigator` and `apps/navigator-experimental`.
 
-The actual hard constraint in this ADR is narrower than "must be app-level": it only rules out `packages/navigator-data` (model-enrichment layer) and `packages/ui` (dumb-widget layer) as homes for the rendering-projection logic. `packages/features/<feature>/` is exactly the layer designed for this per `packages/features/CLAUDE.md` — features are the unit of promotion/sharing between tracks, and no code moves between directories on promotion. The relation-fetching exception ("`packages/ui` can't fetch, but the relation case may") works identically whether `FieldRenderer` lives in `apps/navigator/src/forms/` or `packages/features/src/entity-item-create/` — `packages/features` already fetches via `navigator-data` hooks today.
+The actual hard constraint in this ADR is narrower than "must be app-level": it only rules out `packages/navigator-data` (model-enrichment layer) and `packages/ui` (dumb-widget layer) as homes for the rendering-projection logic. `packages/features/<feature>/` is exactly the layer designed for this per `packages/features/CLAUDE.md` — features are the unit of promotion/sharing between tracks, and no code moves between directories on promotion.
 
 **Decision: the engine lives inside `packages/features/src/entity-item-create/`, replacing that feature's internals in place.** Both apps get the new architecture from the same import, with no code duplication, and the old bridge could be deleted outright rather than kept alive for a "legacy path" (`packages/navigator-data/src/form-fields/*` and `packages/ui/src/patterns/form-renderers/field-renderer.tsx` had no other consumers).
 
@@ -74,11 +74,11 @@ The actual hard constraint in this ADR is narrower than "must be app-level": it 
 
 ## Export surface stays stable
 
-`packages/features/src/entity-item-create`'s public barrel keeps exporting `CreateEntityItemView` / `CreateEntityItemForm` (same names, prop-compatible) — `CreateEntityItemForm` is now an alias for the new `CreateEntityItemContainer` (the smart component owning gating, relation-profile loading, the mutation, and error mapping), which renders the new chrome-only `CreateEntityItemForm` (in `create-entity-item-form.tsx`) internally. Both apps' route files need zero or near-zero changes.
+`packages/features/src/entity-item-create`'s public barrel keeps exporting `CreateEntityItemView` / `CreateEntityItemForm` (same names, prop-compatible) — `CreateEntityItemForm` is now an alias for the new `CreateEntityItemContainer` (the smart component owning gating, the mutation, and error mapping), which renders the new chrome-only `CreateEntityItemForm` (in `create-entity-item-form.tsx`) internally. Both apps' route files need zero or near-zero changes.
 
 ## Scope of this restructure
 
-This restructure covers the create-form path only: attributes (`text`, `number`, `boolean`, `datetime`, `enum`, `file` placeholder) and relations (`relation`, both cardinalities). It does **not** cover:
+This restructure covers the create-form path's user-defined attributes only (`text`, `number`, `boolean`, `datetime`, `enum`, `file` placeholder). It does **not** cover:
 
 - Search-form reuse — `filter` and `sort` are deliberately NOT `FieldDescriptor` union members. Filtering already has a real, differently-shaped home (`packages/features/src/search/filter-properties.ts`'s `SearchFilterProperty`); sort is never a per-field concept in legacy Navigator, but a single collection-view control reading the search template's `_sort` property directly. See `model/field-descriptor.ts`'s doc comment for the full rationale.
 - The AI-extraction service itself — the `FieldError` two-source taxonomy leaves a defined `source` for a future extraction-originated error to write under, and `CreateEntityItemContainer` takes an `annotations` prop (keyed by field name, holding a `FieldAnnotation` — an interface, deliberately expandable rather than a fixed value type) so a future extraction feature can offer an externally-extracted value back into a field. Unused and empty for now, in this create-form/attributes-only restructure. Legacy Navigator's own AI-extraction integration (`ExtractionContext.tsx`) is a fuller context-driven citation/popover system; this prop is a narrower seam for the same idea, not a port of that system.
@@ -103,7 +103,6 @@ If a customer's HAL-Forms `_templates` evolves and introduces a shape `FieldDesc
 - Forms are still driven by the actual server contract (`_templates`), not by profile metadata.
 - `FieldDescriptor` is a TypeScript discriminated union — exhaustiveness checked by the compiler.
 - Model enrichment and rendering projection are now independently evolvable: a new widget or error-display change never touches `packages/navigator-data`, and a new attribute constraint never touches `packages/ui`.
-- The one "packages/ui can't fetch" exception (`relation` fields) is now structurally explicit — it lives in `packages/features`, not smuggled into `packages/ui` or worked around with prop-drilled fetch results.
 - Both `apps/navigator` and `apps/navigator-experimental` share one implementation with zero duplication.
 
 **Negative / accepted:**

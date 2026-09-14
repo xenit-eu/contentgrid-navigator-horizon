@@ -1,17 +1,14 @@
 import type { ValidationFieldError } from "@contentgrid/navigator-data";
 
 /**
- * Two-source error taxonomy replacing the old `Record<string, string>` shape from the retired
- * `useFormFields` (packages/navigator-data/src/form-fields/use-form-fields.ts):
+ * Two-source error taxonomy, distinguishing where an error originated:
  *
  * - `"internal"` — produced client-side by `use-entity-item-create-form-state.ts`'s own `validate()`
  *   (e.g. a required field left empty). Always wins over an external error for the same field
- *   (see `use-entity-item-create-form-state.ts`'s `errors` composition) — matches the old hook's
- *   client-errors-win-over-server-errors precedence.
+ *   (see `use-entity-item-create-form-state.ts`'s `errors` composition).
  * - `"external"` — produced from a server response, via `to-field-errors.ts`'s
  *   `toFieldErrors(getValidationFieldErrors(error))`. Dismissed (hidden, not mutated) as soon as
- *   the user edits that field — same dismissal behaviour the old hook had for its
- *   `serverErrors` map.
+ *   the user edits that field.
  */
 export interface FieldError {
   readonly source: "internal" | "external";

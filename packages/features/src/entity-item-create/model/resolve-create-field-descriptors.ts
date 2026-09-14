@@ -1,11 +1,10 @@
 import type {
   CreateFormProperty,
-  CreateFormRelationToManyProperty,
-  CreateFormRelationToOneProperty,
   CreateHalFormTemplate,
   HalFormsProperty,
 } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
+import { formatFieldName } from "../../format-field-name";
 import type { FieldDescriptor } from "./field-descriptor";
 import type { LayoutInformation } from "./layout-information";
 
@@ -19,23 +18,17 @@ export interface ResolvedCreateFieldDescriptors {
  * classified by `packages/navigator-data/src/accessors/extended-forms/create-form.ts`) ->
  * `FieldDescriptor[]` + a single-group `LayoutInformation`, for `render/form-container.tsx`.
  *
- * No React, no fetching — a direct replacement for the retired
- * `packages/navigator-data/src/form-fields/create-form-to-render-fields.ts`, now producing the
- * `kind`-discriminated `FieldDescriptor` union instead of `RenderFieldDescriptor`, and carrying
- * the raw `HalFormsProperty` through on every field (see `model/field-descriptor.ts`).
+ * No React, no fetching. Produces the `kind`-discriminated `FieldDescriptor` union, carrying the
+ * raw `HalFormsProperty` through on every field (see `model/field-descriptor.ts`).
  *
- * Scope note (unchanged from the retired bridge): this only covers the create-form path. It does
- * not produce a `filter`/`sort` descriptor — those are reserved union members for a future
- * search-form-aware bridge.
+ * Scope note: this only covers the create-form path's user-defined attributes (relations are out
+ * of scope for this pass). It does not produce a `filter`/`sort` descriptor either — those are
+ * reserved union members for a future search-form-aware bridge.
  */
 export function resolveCreateFieldDescriptors(
   template: CreateHalFormTemplate,
 ): ResolvedCreateFieldDescriptors {
-  const fields: FieldDescriptor[] = [
-    ...template.userDefinedProperties.map(attributeFieldDescriptor),
-    ...template.toOneRelationProperties.map((prop) => relationFieldDescriptor(prop, "to-one")),
-    ...template.toManyRelationProperties.map((prop) => relationFieldDescriptor(prop, "to-many")),
-  ];
+  const fields: FieldDescriptor[] = template.userDefinedProperties.map(attributeFieldDescriptor);
 
   return {
     fields,
@@ -58,12 +51,11 @@ function attributeFieldDescriptor(prop: CreateFormProperty): FieldDescriptor {
     return { ...base, kind: "file", multiple: property.multiValue };
   }
 
-  // Any options object — inline OR remote — makes this an "enum" descriptor, mirroring the
-  // retired bridge's buildOptionsSource. A remote source's values aren't resolved here (that's a
-  // fetching concern kept out of this pure bridge — see render/field-renderer.tsx, which reads
-  // remote-ness straight off the raw `property` carried on the descriptor), so `options` is `[]`
-  // for a remote source; the renderer treats an empty `options` + a remote property as
-  // "not yet loaded", not as "no choices".
+  // Any options object — inline OR remote — makes this an "enum" descriptor. A remote source's
+  // values aren't resolved here (that's a fetching concern kept out of this pure bridge — see
+  // render/field-renderer.tsx, which reads remote-ness straight off the raw `property` carried on
+  // the descriptor), so `options` is `[]` for a remote source; the renderer treats an empty
+  // `options` + a remote property as "not yet loaded", not as "no choices".
   if (property.options) {
     return {
       ...base,
@@ -76,7 +68,6 @@ function attributeFieldDescriptor(prop: CreateFormProperty): FieldDescriptor {
   // Compared against the raw wire-type strings (HalFormsPropertyType's own runtime values), not
   // the enum itself — @contentgrid/hal-forms/shape only re-exports HalFormsPropertyType as a type
   // under this repo's `verbatimModuleSyntax` setting, so it can't be used as a value here. Mirrors
-  // the retired create-form-to-render-fields.ts's own switch, and
   // packages/features/src/search/filter-properties.ts's mapWireTypeToInputKind.
   switch (property.type) {
     case "checkbox":
@@ -112,28 +103,10 @@ function attributeFieldDescriptor(prop: CreateFormProperty): FieldDescriptor {
   }
 }
 
-function relationFieldDescriptor(
-  prop: CreateFormRelationToOneProperty | CreateFormRelationToManyProperty,
-  cardinality: "to-one" | "to-many",
-): FieldDescriptor {
-  const { property, profileRelation, targetCollectionHref, isRequired } = prop;
-  return {
-    name: property.name,
-    label: property.prompt ?? profileRelation?.title ?? formatFieldName(property.name),
-    required: isRequired,
-    readOnly: property.readOnly,
-    description: profileRelation?.description || undefined,
-    property,
-    kind: "relation",
-    cardinality,
-    targetHref: targetCollectionHref,
-  };
-}
-
 /**
  * Only resolves an INLINE options source — a remote source's link is a data-fetching concern
  * that belongs in `render/field-renderer.tsx` (via the raw `property` carried on the
- * descriptor), not in this pure bridge. Mirrors the retired bridge's `buildOptionsSource`.
+ * descriptor), not in this pure bridge.
  *
  * Keeps each option's `prompt` alongside its `value` (via `HalFormsProperty.options.toOption`):
  * `prompt` is the HAL-FORMS spec's human-readable label, distinct from the machine `value` —
@@ -150,12 +123,4 @@ function resolveInlineOptions(property: HalFormsProperty): readonly EnumOption[]
     });
   }
   return undefined;
-}
-
-function formatFieldName(name: string): string {
-  return name
-    .replace(/[._]/g, " ")
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }

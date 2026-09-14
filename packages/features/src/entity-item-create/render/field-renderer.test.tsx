@@ -85,19 +85,6 @@ function fileField() {
   } satisfies Extract<FieldDescriptor, { kind: "file" }>;
 }
 
-function relationField() {
-  return {
-    name: "supplier",
-    label: "Supplier",
-    required: false,
-    readOnly: false,
-    kind: "relation",
-    cardinality: "to-one",
-    targetHref: "https://api.example.com/suppliers",
-    property: DUMMY_PROPERTY,
-  } satisfies Extract<FieldDescriptor, { kind: "relation" }>;
-}
-
 describe("FieldRenderer", () => {
   it("dispatches a text field to a text input", () => {
     render(<FieldRenderer field={textField()} value="Acme" onChange={vi.fn()} />);
@@ -135,11 +122,6 @@ describe("FieldRenderer", () => {
     expect(screen.getByText(/not yet supported/)).toBeInTheDocument();
   });
 
-  it("renders a profile-unavailable placeholder for a relation field with no relationFieldData", () => {
-    render(<FieldRenderer field={relationField()} value={undefined} onChange={vi.fn()} />);
-    expect(screen.getByText(/related entity profile unavailable/)).toBeInTheDocument();
-  });
-
   it("shows the first error's message for a field with errors", () => {
     render(
       <FieldRenderer
@@ -152,30 +134,20 @@ describe("FieldRenderer", () => {
     expect(screen.getByText("Name is required")).toBeInTheDocument();
   });
 
-  describe("renderBottomChildren", () => {
-    it("renders the content returned for this field's name below the widget", () => {
-      render(
-        <FieldRenderer
-          field={textField()}
-          value="Acme"
-          onChange={vi.fn()}
-          renderBottomChildren={(fieldName) => `extra for ${fieldName}`}
-        />,
-      );
-      expect(screen.getByText("extra for name")).toBeInTheDocument();
-    });
-
-    it("renders nothing extra when the callback returns null for this field", () => {
-      render(
-        <FieldRenderer
-          field={textField()}
-          value="Acme"
-          onChange={vi.fn()}
-          renderBottomChildren={(fieldName) => (fieldName === "other-field" ? "shown" : null)}
-        />,
-      );
-      expect(screen.getByRole("textbox")).toBeInTheDocument();
-      expect(screen.queryByText("shown")).not.toBeInTheDocument();
-    });
+  it("shows every error's message for a field with more than one", () => {
+    render(
+      <FieldRenderer
+        field={textField({ required: true })}
+        value=""
+        onChange={vi.fn()}
+        fieldState={{
+          errors: [
+            { source: "internal", message: "Name is required" },
+            { source: "external", message: "Already in use" },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("Name is required Already in use")).toBeInTheDocument();
   });
 });

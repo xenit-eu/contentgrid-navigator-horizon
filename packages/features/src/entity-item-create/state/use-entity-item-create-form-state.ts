@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type {
   FieldValue,
   FieldValueMap,
@@ -100,17 +100,14 @@ export interface UseEntityItemCreateFormState {
  * `undefined` so they start as controlled inputs. `boolean` seeds `undefined` rather than
  * `false` — a boolean attribute can genuinely be unset (see `isEmpty`'s doc comment below),
  * matching the legacy app's own tri-state true/false/unset `BooleanField`
- * (contentgrid-navigator/src/components/form/components/BooleanField.tsx:24-25,35-39). Fields
- * backed by a non-native-input component (`relation` to-one, `file`) also default to
- * `undefined` — for every one of these `undefined` doubles as "omit from `buildValues()`" for a
- * field the user hasn't touched yet.
+ * (contentgrid-navigator/src/components/form/components/BooleanField.tsx:24-25,35-39). A `file`
+ * field (backed by a non-native-input component) also defaults to `undefined` — `undefined`
+ * doubles as "omit from `buildValues()`" for a field the user hasn't touched yet.
  */
 function defaultValueFor(field: FieldDescriptor): FieldValue {
   switch (field.kind) {
     case "boolean":
       return undefined;
-    case "relation":
-      return field.cardinality === "to-many" ? [] : undefined;
     case "enum":
       return field.multiValue ? [] : "";
     case "file":
@@ -147,9 +144,9 @@ function isEmpty(value: FieldValue): boolean {
 }
 
 /**
- * Array-valued fields (`enum` with `multiValue`, `relation` to-many) are always a freshly-built
- * array — e.g. unlinking a relation produces a new `[]` — so plain `!==` would report a field as
- * dirty forever after it's touched, even once its content matches the initial value again.
+ * Array-valued fields (`enum` with `multiValue`) are always a freshly-built array, so plain `!==`
+ * would report a field as dirty forever after it's touched, even once its content matches the
+ * initial value again.
  */
 function valuesEqual(a: FieldValue, b: FieldValue): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -168,10 +165,7 @@ function requiredFieldEntries(
 }
 
 /**
- * Hand-rolled form-state hook operating on `FieldDescriptor[]`/`FieldError[]` (ADR-004's
- * `useFormFields` direction, carried forward by this restructure) — a direct replacement for the
- * retired `packages/navigator-data/src/form-fields/use-form-fields.ts`'s `useFormFields`, ported
- * to the new model/state types rather than reimplemented from scratch.
+ * Hand-rolled form-state hook (per ADR-004) operating on `FieldDescriptor[]`/`FieldError[]`.
  *
  * Values are stored already-typed (`FieldValue`, i.e. `HalFormsPropertyValue`), not as raw input
  * strings — coercing a native input event to the right JS type is the calling renderer's job.
@@ -215,7 +209,12 @@ export function useEntityItemCreateFormState({
     setDismissedExternalErrorFields(new Set());
   }
 
-  function dismissExternalErrors(names: readonly string[]) {
+  // Wrapped in `useCallback` (stable across renders, since each only closes over a `useState`
+  // setter) so `create-entity-item-container.tsx` can pass `setValue`/`touchField` straight
+  // through to `FormContainer` without every keystroke handing every field a "new" callback —
+  // see `render/form-container.tsx`'s `FormField` doc comment for the full memoization chain
+  // this is one link of.
+  const dismissExternalErrors = useCallback((names: readonly string[]) => {
     setDismissedExternalErrorFields((prev) => {
       const toAdd = names.filter((name) => !prev.has(name));
       if (toAdd.length === 0) return prev;
@@ -223,7 +222,7 @@ export function useEntityItemCreateFormState({
       for (const name of toAdd) next.add(name);
       return next;
     });
-  }
+  }, []);
 
   const requiredFields = useMemo(() => requiredFieldEntries(fields), [fields]);
 
@@ -235,24 +234,30 @@ export function useEntityItemCreateFormState({
     [values],
   );
 
-  function setValue(name: string, value: FieldValue) {
-    setValuesState((prev) => ({ ...prev, [name]: value }));
-    dismissExternalErrors([name]);
-  }
+  const setValue = useCallback(
+    (name: string, value: FieldValue) => {
+      setValuesState((prev) => ({ ...prev, [name]: value }));
+      dismissExternalErrors([name]);
+    },
+    [dismissExternalErrors],
+  );
 
-  function setValues(partial: FieldValueMap) {
-    setValuesState((prev) => ({ ...prev, ...partial }));
-    dismissExternalErrors(Object.keys(partial));
-  }
+  const setValues = useCallback(
+    (partial: FieldValueMap) => {
+      setValuesState((prev) => ({ ...prev, ...partial }));
+      dismissExternalErrors(Object.keys(partial));
+    },
+    [dismissExternalErrors],
+  );
 
-  function touchField(name: string) {
+  const touchField = useCallback((name: string) => {
     setTouchedFields((prev) => {
       if (prev.has(name)) return prev;
       const next = new Set(prev);
       next.add(name);
       return next;
     });
-  }
+  }, []);
 
   function validate(): boolean {
     setTouchedFields(new Set(fields.map((field) => field.name)));
@@ -264,10 +269,9 @@ export function useEntityItemCreateFormState({
   ): HalFormValues<Spec> {
     return Object.entries(values).reduce((vals, [name, value]) => {
       if (value === undefined || value === "") return vals;
-      // Also omit an empty array (the seeded default for an untouched multi-value enum /
-      // to-many relation field, mirroring isEmpty()'s array case above) — the HAL-FORMS codec
-      // rejects an empty list for a multi-value property outright, so an untouched one must be
-      // omitted, not sent.
+      // Also omit an empty array (the seeded default for an untouched multi-value enum field,
+      // mirroring isEmpty()'s array case above) — the HAL-FORMS codec rejects an empty list for a
+      // multi-value property outright, so an untouched one must be omitted, not sent.
       if (Array.isArray(value) && value.length === 0) return vals;
       return vals.withValue(name, value);
     }, createValues(template));
@@ -285,8 +289,7 @@ export function useEntityItemCreateFormState({
       fieldState[name] = { errors: fieldExternalErrors };
     }
   }
-  // Internal (client-side) errors win over external (server-side) ones for the same field —
-  // matches the retired hook's `{ ...visibleServerErrors, ...clientErrors }` precedence. Only
+  // Internal (client-side) errors win over external (server-side) ones for the same field. Only
   // shown for a touched field (see `touchField`'s doc comment above).
   for (const { name, label } of requiredFields) {
     if (touchedFields.has(name) && isEmpty(values[name])) {

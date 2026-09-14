@@ -90,9 +90,7 @@ We pay the ceremony only when the second column's pain is real. See ADR-010 for 
   re-export from it. This is also where the ADR-004 rendering-projection engine
   (`FieldDescriptor`/`resolveCreateFieldDescriptors`/`FieldRenderer`/`FormContainer`, under
   `packages/features/src/entity-item-create/`) lives — a `packages/features` feature is the unit
-  of cross-track sharing (see `packages/features/CLAUDE.md`), and the engine needs to fetch a
-  relation field's target collection via `@contentgrid/navigator-data` hooks, which
-  `packages/ui` is forbidden from doing.
+  of cross-track sharing (see `packages/features/CLAUDE.md`).
 - `apps/*` — app-level routing, layout, feature composition.
 
 ## Reconsider when
