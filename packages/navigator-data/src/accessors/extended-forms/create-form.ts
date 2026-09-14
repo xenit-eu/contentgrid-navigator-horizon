@@ -29,9 +29,7 @@ import type { ProfileRelation } from "../relation-profile";
  *      doesn't imply a required-ness rule of its own; the backend decides.
  *    - Target Profile resolution is NOT done here — the profile list needed to resolve it
  *      (`useProfileEntities()`) is only available async, after this template is already needed
- *      for the create/permission gate. A caller resolves it itself once profiles have loaded,
- *      matching via `targetCollectionHref` (always present on the property) rather than
- *      `profileRelation`, which may be unresolved.
+ *      for the create/permission gate.
  */
 
 /**
@@ -67,7 +65,7 @@ export interface CreateFormRelationToOneProperty {
 
 /**
  * Enhanced create-form property for to-many relation fields.
- * To-many relations have !maxItems || maxItems > 1.
+ * To-many relations have !maxItems || maxItems > 1 and are never required.
  */
 export interface CreateFormRelationToManyProperty {
   /** The original HAL-FORMS property */
@@ -110,6 +108,13 @@ export class CreateHalFormTemplate {
   }
 
   /**
+   * Get all content/file upload properties.
+   */
+  get contentProperties(): readonly CreateFormProperty[] {
+    return this.userDefinedProperties.filter((prop) => prop.isContent);
+  }
+
+  /**
    * Get to-one relation properties (maxItems === 1).
    * To-one relations can be required.
    */
@@ -137,6 +142,16 @@ export class CreateHalFormTemplate {
   }
 
   /**
+   * Get all relation properties (to-one + to-many).
+   */
+  get relationProperties(): readonly (
+    | CreateFormRelationToOneProperty
+    | CreateFormRelationToManyProperty
+  )[] {
+    return [...this.toOneRelationProperties, ...this.toManyRelationProperties];
+  }
+
+  /**
    * Get all properties (user-defined + relations).
    */
   get allProperties(): readonly (
@@ -144,11 +159,7 @@ export class CreateHalFormTemplate {
     | CreateFormRelationToOneProperty
     | CreateFormRelationToManyProperty
   )[] {
-    return [
-      ...this.userDefinedProperties,
-      ...this.toOneRelationProperties,
-      ...this.toManyRelationProperties,
-    ];
+    return [...this.userDefinedProperties, ...this.relationProperties];
   }
 
   /**

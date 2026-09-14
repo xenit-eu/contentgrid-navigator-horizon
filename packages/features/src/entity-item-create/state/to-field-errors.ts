@@ -17,7 +17,7 @@ export function toFieldErrors(
     const fieldError: FieldError = {
       source: "external",
       message: error.detail ?? error.title,
-      problemDetail: error,
+      validationFieldErrors: [error],
     };
     (result[error.field] ??= []).push(fieldError);
   }

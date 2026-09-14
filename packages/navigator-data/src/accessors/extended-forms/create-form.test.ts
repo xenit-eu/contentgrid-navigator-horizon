@@ -6,6 +6,8 @@
  * - toOneRelationProperties: url with maxItems===1, isRequired, targetCollectionHref
  * - toManyRelationProperties: url with maxItems !== 1, targetCollectionHref
  * - allProperties: union of all
+ * - contentProperties: userDefinedProperties filtered to isContent
+ * - relationProperties: union of to-one + to-many
  */
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
@@ -397,6 +399,30 @@ describe("CreateHalFormTemplate.allProperties", () => {
     const tmpl = makeCreateTemplate();
     // order_number, status, document + customer, products = 5
     expect(tmpl.allProperties).toHaveLength(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// contentProperties
+// ---------------------------------------------------------------------------
+
+describe("CreateHalFormTemplate.contentProperties", () => {
+  it("returns only the file-type property", () => {
+    const tmpl = makeCreateTemplate();
+    expect(tmpl.contentProperties).toHaveLength(1);
+    expect(tmpl.contentProperties[0].property.name).toBe("document");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// relationProperties
+// ---------------------------------------------------------------------------
+
+describe("CreateHalFormTemplate.relationProperties", () => {
+  it("returns to-one + to-many relations", () => {
+    const tmpl = makeCreateTemplate();
+    const names = tmpl.relationProperties.map((p) => p.property.name);
+    expect(names).toEqual(["customer", "products"]);
   });
 });
 

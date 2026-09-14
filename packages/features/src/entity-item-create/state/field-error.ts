@@ -14,9 +14,11 @@ export interface FieldError {
   readonly source: "internal" | "external";
   readonly message: string;
   /**
-   * The complete typed problem entry, for a caller that needs more than `message` — e.g. the
-   * `type` discriminant, or a variant-specific field like `conflicting_item`/`allowed_values`.
-   * Only set for `"external"` errors.
+   * The complete typed validation entries this error was built from, for a caller that needs more
+   * than `message` — e.g. the `type` discriminant, or a variant-specific field like
+   * `conflicting_item`/`allowed_values`. Not a `ProblemDetail` itself (see RFC 9457 in the root
+   * `CLAUDE.md`) — each entry is one item of a validation problem's `errors[]` array. Only set for
+   * `"external"` errors.
    */
-  readonly problemDetail?: ValidationFieldError;
+  readonly validationFieldErrors?: readonly ValidationFieldError[];
 }
