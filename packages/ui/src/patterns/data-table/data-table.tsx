@@ -86,9 +86,9 @@ export interface DataTableProps {
   onDelete?: (id: string) => void;
   /** When true, the delete confirmation dialog shows a loading state */
   isDeleting?: boolean;
-  /** Called immediately when the user clicks the inline unlink icon on a row. If undefined the unlink button is hidden. */
+  /** Called when the user confirms the unlink confirmation dialog. If undefined the unlink button is hidden. */
   onUnlink?: (id: string) => void;
-  /** When true, the unlink icon buttons are disabled */
+  /** When true, the unlink icon buttons are disabled (a mutation for some row is in progress) */
   isUnlinking?: boolean;
   /** Called when the user clicks the row itself (outside the action menu) */
   onRowClick?: (id: string) => void;
@@ -112,6 +112,7 @@ export function DataTable({
   onRowClick,
 }: Readonly<DataTableProps>) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [unlinkId, setUnlinkId] = useState<string | null>(null);
 
   function getSortIcon(key: string) {
     const isAsc = currentSort === `${key},asc`;
@@ -206,7 +207,7 @@ export function DataTable({
                                   disabled={isUnlinking}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onUnlink(row.id);
+                                    setUnlinkId(row.id);
                                   }}
                                 >
                                   <LinkBreak className="h-4 w-4" />
@@ -319,6 +320,39 @@ export function DataTable({
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {onUnlink && unlinkId && (
+        <AlertDialog
+          open={!!unlinkId}
+          onOpenChange={(open) => {
+            if (!open) setUnlinkId(null);
+          }}
+        >
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Unlink {(entityTitle ?? entityName).toLowerCase()}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Remove the link to this {(entityTitle ?? entityName).toLowerCase()}? This will not
+                delete the {(entityTitle ?? entityName).toLowerCase()} itself.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  onUnlink(unlinkId);
+                  setUnlinkId(null);
+                }}
+              >
+                Unlink
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
