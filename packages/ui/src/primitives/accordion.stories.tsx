@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./accordion";
 
 const meta = {
@@ -41,10 +41,12 @@ export const WithInteraction: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole("button", { name: /invoices/i });
-    await expect(canvas.queryByText(/three linked invoices/i)).not.toBeVisible();
+    await expect(canvas.queryByText(/three linked invoices/i)).not.toBeInTheDocument();
     await userEvent.click(trigger);
     await expect(canvas.getByText(/three linked invoices/i)).toBeVisible();
     await userEvent.click(trigger);
-    await expect(canvas.queryByText(/three linked invoices/i)).not.toBeVisible();
+    await waitFor(() =>
+      expect(canvas.queryByText(/three linked invoices/i)).not.toBeInTheDocument(),
+    );
   },
 };
