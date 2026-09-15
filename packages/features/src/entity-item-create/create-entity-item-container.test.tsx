@@ -186,21 +186,14 @@ describe("CreateEntityItemContainer", () => {
     await vi.waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
   });
 
-  it("defaults the continuous-create toggle to unchecked", async () => {
-    server.use(profileRootHandler(), invoiceProfileHandler());
-    renderForm();
-
-    expect(
-      await screen.findByRole("checkbox", { name: "Keep creating entities" }),
-    ).not.toBeChecked();
-  });
-
-  it("persists the continuous-create toggle across a remount via sessionStorage", async () => {
+  it("defaults the continuous-create toggle to unchecked, and persists it across a remount via sessionStorage", async () => {
     const user = userEvent.setup();
     server.use(profileRootHandler(), invoiceProfileHandler());
     const { unmount } = renderForm();
 
     const toggle = await screen.findByRole("checkbox", { name: "Keep creating entities" });
+    expect(toggle).not.toBeChecked();
+
     await user.click(toggle);
     expect(toggle).toBeChecked();
     unmount();
