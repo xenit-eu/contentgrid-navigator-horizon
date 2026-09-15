@@ -1,6 +1,6 @@
-import { type ReactNode, type SubmitEvent } from "react";
+import { type ReactNode, type SubmitEvent, useEffect, useRef } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
-import { Button } from "@contentgrid/ui";
+import { Button, Checkbox, Label } from "@contentgrid/ui";
 import type { FieldDescriptor } from "./model/field-descriptor";
 import type { LayoutInformation } from "./model/layout-information";
 import { FormContainer } from "./render/form-container";
@@ -31,6 +31,13 @@ export interface CreateEntityItemFormProps {
   /** Rendered as the first child inside the `<form>`, above the field list — the entity-level
    * (no `field`) validation/conflict alert computed by `create-entity-item-container.tsx`. */
   readonly nonFieldErrorAlert?: ReactNode;
+  /** "Keep creating entities" toggle state, persisted per session by the container — see
+   * `create-entity-item-container.tsx`'s `CONTINUOUS_CREATE_KEY`. */
+  readonly continuousCreate: boolean;
+  readonly onContinuousCreateChange: (value: boolean) => void;
+  /** Bumped by the container once per continuous-create reset (never on initial mount) — the
+   * signal to refocus the first field. See the `useEffect` below. */
+  readonly formResetCount: number;
 }
 
 /**
@@ -51,20 +58,48 @@ export function CreateEntityItemForm({
   isSubmitting,
   onCancel,
   nonFieldErrorAlert,
+  continuousCreate,
+  onContinuousCreateChange,
+  formResetCount,
 }: Readonly<CreateEntityItemFormProps>) {
+  const fieldsContainerRef = useRef<HTMLDivElement>(null);
+
+  // `formResetCount` starts at 0 and is only bumped after a continuous-create reset (see the
+  // container), so this never fires on the form's initial mount — only once a save has
+  // completed and the fields have been cleared back to their defaults. Focusing the first
+  // focusable descendant (in document order) is equivalent to focusing the first rendered
+  // field, without needing to single that field out from the rest of the generic field list.
+  useEffect(() => {
+    if (formResetCount === 0) return;
+    fieldsContainerRef.current
+      ?.querySelector<HTMLElement>("input, button, [role='combobox']")
+      ?.focus();
+  }, [formResetCount]);
+
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       {nonFieldErrorAlert}
 
-      <FormContainer
-        fields={fields}
-        layout={layout}
-        values={values}
-        onChange={onFieldChange}
-        onFieldFocus={onFieldFocus}
-        onFieldBlur={onFieldBlur}
-        fieldState={fieldState}
-      />
+      <div ref={fieldsContainerRef}>
+        <FormContainer
+          fields={fields}
+          layout={layout}
+          values={values}
+          onChange={onFieldChange}
+          onFieldFocus={onFieldFocus}
+          onFieldBlur={onFieldBlur}
+          fieldState={fieldState}
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="continuous-create"
+          checked={continuousCreate}
+          onCheckedChange={(checked) => onContinuousCreateChange(checked === true)}
+        />
+        <Label htmlFor="continuous-create">Keep creating entities</Label>
+      </div>
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>
