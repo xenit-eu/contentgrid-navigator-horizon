@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
@@ -11,6 +11,7 @@ import {
   createContentClient,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
+import { Toaster } from "@contentgrid/ui";
 import { server } from "../../test-setup";
 import { CreateEntityItemContainer } from "./create-entity-item-container";
 
@@ -103,6 +104,7 @@ function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateFo
           profileUrl={PROFILE_URL}
         >
           {children}
+          <Toaster />
         </NavigatorDataProvider>
       </QueryClientProvider>
     );
@@ -112,6 +114,13 @@ function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateFo
 }
 
 describe("CreateEntityItemContainer", () => {
+  // The continuous-create toggle is persisted in sessionStorage (see
+  // create-entity-item-container.tsx's CONTINUOUS_CREATE_KEY) — clear it between tests so one
+  // test's toggle state can't leak into the next.
+  afterEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it("renders one field per create-form property", async () => {
     server.use(profileRootHandler(), invoiceProfileHandler());
     renderForm();
@@ -175,6 +184,56 @@ describe("CreateEntityItemContainer", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await vi.waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+  });
+
+  it("defaults the continuous-create toggle to unchecked", async () => {
+    server.use(profileRootHandler(), invoiceProfileHandler());
+    renderForm();
+
+    expect(
+      await screen.findByRole("checkbox", { name: "Keep creating entities" }),
+    ).not.toBeChecked();
+  });
+
+  it("persists the continuous-create toggle across a remount via sessionStorage", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler());
+    const { unmount } = renderForm();
+
+    const toggle = await screen.findByRole("checkbox", { name: "Keep creating entities" });
+    await user.click(toggle);
+    expect(toggle).toBeChecked();
+    unmount();
+
+    server.use(profileRootHandler(), invoiceProfileHandler());
+    renderForm();
+    expect(await screen.findByRole("checkbox", { name: "Keep creating entities" })).toBeChecked();
+  });
+
+  it("with continuous-create on, resets the form and shows a toast instead of calling onCreated", async () => {
+    const user = userEvent.setup();
+    const onCreated = vi.fn();
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler(),
+      http.post(`${API_URL}/invoices`, () =>
+        HttpResponse.json(
+          { invoice_number: "INV-1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+          { status: 201 },
+        ),
+      ),
+    );
+    renderForm({ onCreated });
+
+    await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
+
+    const input = screen.getByLabelText(/Invoice Number/);
+    await user.type(input, "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Invoice has been successfully created!")).toBeInTheDocument();
+    await vi.waitFor(() => expect(input).toHaveValue(""));
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
   it("reports dirty state via onDirtyChange as the user edits and after a successful create", async () => {

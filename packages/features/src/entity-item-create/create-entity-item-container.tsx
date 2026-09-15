@@ -1,4 +1,5 @@
 import { type SubmitEvent, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
@@ -66,6 +67,20 @@ export interface CreateEntityItemContainerProps {
   readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
 }
 
+const CONTINUOUS_CREATE_KEY = "contentgrid-continuous-create";
+
+function readInitialContinuousCreate(): boolean {
+  return (
+    typeof window !== "undefined" && window.sessionStorage.getItem(CONTINUOUS_CREATE_KEY) === "true"
+  );
+}
+
+// Mirrors legacy Navigator's CreateInstancePage.tsx capitalizeFirstLetter — the success toast's
+// wording (and the e2e spec asserting it) is a direct port of that text.
+function capitalizeFirstLetter(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 /**
  * Smart component: gates on `profile.createTemplate`, runs `useCreateEntityItem`, and maps
  * server validation errors into external `FieldError[]`. Renders `CreateEntityItemForm` (the
@@ -107,12 +122,23 @@ function CreateEntityItemContainerReady({
   );
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldError[]>>({});
   const formState = useEntityItemCreateFormState({ fields, externalErrors });
+  const [continuousCreate, setContinuousCreateState] = useState(readInitialContinuousCreate);
+  // Bumped once per continuous-create reset, never on initial mount — see
+  // create-entity-item-form.tsx, which refocuses the first field only when this changes.
+  const [formResetCount, setFormResetCount] = useState(0);
 
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
   }, [formState.isDirty, onDirtyChange]);
 
   const createMutation = useCreateEntityItem(profile);
+
+  function setContinuousCreate(value: boolean) {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(CONTINUOUS_CREATE_KEY, String(value));
+    }
+    setContinuousCreateState(value);
+  }
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -128,12 +154,19 @@ function CreateEntityItemContainerReady({
     const values = formState.buildValues(createTemplate.template);
     createMutation.mutate(values, {
       onSuccess: (item) => {
+        toast.success(
+          `${capitalizeFirstLetter(profile.singularName)} has been successfully created!`,
+        );
         // The just-submitted values are now safely saved — nothing about them is
         // "unsaved" anymore, so isDirty (and onDirtyChange) must reflect that even if
         // the caller doesn't navigate away immediately (e.g. an embedding that stays
         // mounted after create instead of redirecting).
         formState.reset();
-        onCreated?.(item);
+        if (continuousCreate) {
+          setFormResetCount((count) => count + 1);
+        } else {
+          onCreated?.(item);
+        }
       },
       onError: (error) => {
         setExternalErrors(toFieldErrors(getValidationFieldErrors(error)));
@@ -176,6 +209,9 @@ function CreateEntityItemContainerReady({
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}
+      continuousCreate={continuousCreate}
+      onContinuousCreateChange={setContinuousCreate}
+      formResetCount={formResetCount}
       nonFieldErrorAlert={
         nonFieldError && (
           <ProblemAlert
