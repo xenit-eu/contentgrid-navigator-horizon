@@ -50,13 +50,13 @@ experimental → candidate → stable
 Rules:
 
 - A new feature starts at `"experimental"`.
-- The field must be present. Omitting it is a lint error (HZN-1.9, not yet wired).
+- The field must be present. Omitting it is meant to be a lint error, not yet wired.
 - Do NOT use any value other than the three listed above.
 - The generic build (`apps/navigator`) enforces that it imports only `stable`
-  features via an ESLint rule (HZN-1.9). This enforcement is not yet wired;
+  features via an ESLint rule. This enforcement is not yet wired;
   until it is, contributors must enforce it manually.
 - The CI bundle audit fails the generic build if `experimental` or `candidate`
-  feature code appears in the generic bundle (HZN-1.9, not yet wired).
+  feature code appears in the generic bundle — not yet wired.
 
 ---
 
@@ -70,7 +70,7 @@ Promotion = a PR that:
 1. Flips `x-stability` in the feature's `package.json`
    (e.g. `"experimental"` → `"candidate"`, or `"candidate"` → `"stable"`).
 2. For promotion to `stable`: adds the feature to `apps/navigator`'s import
-   allowlist (once HZN-1.9 lint enforcement is wired).
+   allowlist (once the lint enforcement above is wired).
 
 No code moves between directories. No fork drift. The feature code stays in
 `packages/features/<name>/`.
@@ -84,7 +84,7 @@ graph-aware — work through the full dependency chain, not just direct deps.
 
 Note: `contentgrid-stability check` is the planned CLI (referenced in ADR-006).
 It is not yet implemented as of the current phase; do the graph check manually
-until HZN-1.9 wires it.
+until the lint enforcement above wires it.
 
 ---
 

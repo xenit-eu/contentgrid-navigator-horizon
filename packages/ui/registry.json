@@ -151,15 +151,15 @@
       ]
     },
     {
-      "name": "entity-picker",
+      "name": "entity-item-picker",
       "type": "registry:ui",
-      "title": "Entity Picker",
+      "title": "Entity Item Picker",
       "description": "Dialog-based picker for selecting a ContentGrid entity item from a HAL collection.",
       "dependencies": ["lucide-react"],
       "registryDependencies": ["button", "dialog", "input", "skeleton", "table", "utils"],
       "files": [
-        { "path": "src/patterns/entity-picker/entity-picker.tsx", "type": "registry:ui" },
-        { "path": "src/patterns/entity-picker/index.ts", "type": "registry:ui" }
+        { "path": "src/patterns/entity-item-picker/entity-item-picker.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/entity-item-picker/index.ts", "type": "registry:ui" }
       ]
     },
     {

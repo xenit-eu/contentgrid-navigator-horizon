@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
+import { CreateEntityItemView } from "@contentgrid/features/entity-item-create";
 import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
@@ -8,7 +9,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  PageTitle,
 } from "@contentgrid/ui";
 
 export const Route = createFileRoute("/_app/$entity/~create")({
@@ -62,7 +62,17 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
 
   return (
     <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs}>
-      <PageTitle header="Create" title={profile.singularName} subtitle="" />
+      <CreateEntityItemView
+        profile={profile}
+        onCreated={(item) =>
+          go({
+            to: "/$entity/$itemId",
+            params: { entity: profile.name, itemId: item.id },
+            search: {},
+          })
+        }
+        onCancel={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
+      />
     </BreadCrumbsToolBarLayout>
   );
 }

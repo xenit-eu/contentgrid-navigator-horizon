@@ -67,6 +67,14 @@
     "./preferences": {
       "import": "./src/preferences/index.ts",
       "types": "./src/preferences/index.ts"
+    },
+    "./entity-item-create": {
+      "import": "./src/entity-item-create/index.ts",
+      "types": "./src/entity-item-create/index.ts"
+    },
+    "./unsaved-changes-guard": {
+      "import": "./src/unsaved-changes-guard/index.ts",
+      "types": "./src/unsaved-changes-guard/index.ts"
     }
   },
   "scripts": {
