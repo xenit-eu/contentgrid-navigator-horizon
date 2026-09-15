@@ -8,3 +8,4 @@ export { VersionConflictAlert } from "./version-conflict-alert";
 export type { VersionConflictAlertProps } from "./version-conflict-alert";
 export { GenericProblemAlert } from "./generic-problem-alert";
 export type { GenericProblemAlertProps } from "./generic-problem-alert";
+export { notifyReloadOnUnsatisfiedVersion } from "./notify-version-conflict";
