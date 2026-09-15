@@ -1,20 +1,37 @@
 import { useMemo, useState } from "react";
+import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
-  applyFilterValues,
-  buildFilterProperties,
-  extractFilterValuesFromCollectionUrl,
-  findInvalidFilterKeys,
-} from "@contentgrid/features/search";
-import {
+  EntityItem,
   type ProfileEntity,
   createValues,
   toProblemDisplayModel,
   useEntityItemCollection,
   useTypeahead,
 } from "@contentgrid/navigator-data";
-import { FilterSidebar, PageTitle } from "@contentgrid/ui";
+import {
+  AttributeMultiSelectContent,
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  FilterSidebar,
+  PageTitle,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  type RecordTableSortOption,
+} from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { EntityIconBadge } from "../layout";
+import { toAttributeOption, useColumnVisibility } from "../preferences";
+import {
+  applyFilterValues,
+  buildFilterProperties,
+  extractFilterValuesFromCollectionUrl,
+  findActivelyFilteredAttributeNames,
+  findInvalidFilterKeys,
+} from "../search/filter-properties";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
@@ -25,7 +42,7 @@ export interface EntityItemCollectionViewProps {
    */
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
-  readonly onEntityItemClick?: (itemId: string) => void;
+  readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).
@@ -35,6 +52,10 @@ export interface EntityItemCollectionViewProps {
   readonly filters?: Record<string, string>;
   /** Fired when the user changes or clears a filter; receives the full next filters map. */
   readonly onFiltersChange?: (filters: Record<string, string>) => void;
+  /** Currently active sort value, e.g. `"name,asc"`. Defaults to no sort applied. */
+  readonly currentSort?: string;
+  /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
+  readonly onSortChange?: (sort: string | undefined) => void;
 }
 
 /**
@@ -51,6 +72,8 @@ export function EntityItemCollectionView({
   onPageChange,
   filters = {},
   onFiltersChange,
+  currentSort,
+  onSortChange,
 }: Readonly<EntityItemCollectionViewProps>) {
   const searchTemplate = profile.searchTemplate;
   const filterProperties = useMemo(
@@ -61,13 +84,18 @@ export function EntityItemCollectionView({
   // undefined when there's no search template — same "disabled" signal the default (no
   // filters) mode already relied on before filtering existed, so an entity with no search
   // template behaves exactly as it did previously.
-  const searchValues = useMemo(
-    () =>
-      searchTemplate
-        ? applyFilterValues(createValues(searchTemplate.template), filterProperties, filters)
-        : undefined,
-    [searchTemplate, filterProperties, filters],
-  );
+  const searchValues = useMemo(() => {
+    if (!searchTemplate) return undefined;
+    const filtered = applyFilterValues(
+      createValues(searchTemplate.template),
+      filterProperties,
+      filters,
+    );
+    // `_sort` is always multi-value — pass a single-element array, never a plain string.
+    return currentSort && searchTemplate.sortProperty
+      ? filtered.withValue(searchTemplate.sortProperty.name, [currentSort])
+      : filtered;
+  }, [searchTemplate, filterProperties, filters, currentSort]);
 
   // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
   // that DIFFERS from the CURRENT filters (a deep link, or browser back/forward across a filter
@@ -98,6 +126,41 @@ export function EntityItemCollectionView({
   const invalidFilterKeys = useMemo(
     () => findInvalidFilterKeys(filterProperties, filters),
     [filterProperties, filters],
+  );
+
+  // Filters live in a modal (triggered from the toolbar) rather than an always-visible sidebar
+  // — this just tracks whether that modal is open.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  // Attribute names the user is actively filtering on — always shown as columns regardless of
+  // the local "Columns" selection below (see the union in EntityItemCollectionTable).
+  const activelyFilteredAttributeNames = useMemo(
+    () => findActivelyFilteredAttributeNames(filterProperties, filters),
+    [filterProperties, filters],
+  );
+
+  // A local, session-only "Columns" selector next to Filters — lets the user adjust visible
+  // columns for just this table view without touching persisted preferences (that's what
+  // `~configuration/$entity`'s "Visible columns" picker is for). Seeded once, on mount, from the
+  // currently persisted columns via a lazy initializer — it deliberately does NOT re-sync if the
+  // persisted preference changes later, so a user's in-progress local edits aren't silently
+  // overwritten mid-session. The route remounts this view per entity (`key={profile.name}`), so
+  // switching entities naturally resets this back to the new entity's persisted default — no
+  // extra reset effect needed here.
+  const persistedVisibility = useColumnVisibility(profile);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [localVisibleColumns, setLocalVisibleColumns] = useState<readonly string[]>(
+    () => persistedVisibility.visibleColumns,
+  );
+  const attributeOptions = useMemo(
+    () => [
+      ...[profile.idAttribute, ...profile.userDefinedAttributes].map((attribute) =>
+        toAttributeOption(attribute, false),
+      ),
+      ...profile.auditAttributes.map((attribute) => toAttributeOption(attribute, true)),
+    ],
+    [profile],
   );
 
   // Only one field can be typeahead-active at a time (mirrors FilterSidebar's own
@@ -141,11 +204,18 @@ export function EntityItemCollectionView({
     setActiveTypeaheadField(undefined);
   }
 
+  // A sort change invalidates whatever page cursor was in flight the same way a filter change
+  // does — hand pagination back to page one via the same callback.
+  function handleSort(option: RecordTableSortOption | undefined) {
+    onSortChange?.(option?.value);
+    onPageChange?.(undefined);
+  }
+
   const itemCountTitle = `${collection.data?.totalItems?.count ?? "-"} items ${collection.data?.totalItems?.isEstimated ? "(estimated)" : ""}`;
 
   return (
-    <>
-      <div className="p-4">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 p-4">
         <PageTitle
           header={"Entity Collection"}
           icon={<EntityIconBadge profile={profile} />}
@@ -154,37 +224,81 @@ export function EntityItemCollectionView({
         />
       </div>
 
-      <div className="flex gap-4 px-4 pb-4">
-        {filterProperties.length > 0 && (
-          <FilterSidebar
-            filterProperties={filterProperties}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onClearAll={handleClearAll}
-            invalidFilterKeys={invalidFilterKeys}
-            onTypeaheadSearch={handleTypeaheadSearch}
-            activeTypeaheadField={activeTypeaheadField}
-            typeaheadSuggestions={typeahead.results.map((r) => r.value)}
-            typeaheadIsLoading={typeahead.isLoading}
+      <div className="min-h-0 flex-1 px-4 pb-4">
+        {collection.isPending && <LoadingPage />}
+
+        {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
+
+        {collection.isSuccess && (
+          <EntityItemCollectionTable
+            className="h-full"
+            profile={profile}
+            collection={collection.data}
+            onEntityItemClick={onEntityItemClick}
+            onPageChange={onPageChange}
+            currentSort={currentSort}
+            onSort={handleSort}
+            visibleColumnNames={localVisibleColumns}
+            forcedVisibleColumnNames={activelyFilteredAttributeNames}
+            tableActions={
+              (attributeOptions.length > 0 || filterProperties.length > 0) && (
+                <>
+                  {attributeOptions.length > 0 && (
+                    <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline">
+                          <SlidersHorizontalIcon aria-hidden />
+                          Columns
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-1" align="end">
+                        <AttributeMultiSelectContent
+                          attributes={attributeOptions}
+                          values={localVisibleColumns}
+                          onChange={setLocalVisibleColumns}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  {filterProperties.length > 0 && (
+                    <Button variant="outline" onClick={() => setFiltersOpen(true)}>
+                      <Funnel aria-hidden />
+                      Filters
+                      {activeFilterCount > 0 && (
+                        <Badge variant="secondary">{activeFilterCount}</Badge>
+                      )}
+                    </Button>
+                  )}
+                </>
+              )
+            }
           />
         )}
-
-        <div className="min-w-0 flex-1 space-y-4">
-          {collection.isPending && <LoadingPage />}
-
-          {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
-
-          {collection.isSuccess && (
-            <EntityItemCollectionTable
-              profile={profile}
-              collection={collection.data}
-              onEntityItemClick={onEntityItemClick}
-              onPageChange={onPageChange}
-            />
-          )}
-        </div>
       </div>
-    </>
+
+      {filterProperties.length > 0 && (
+        <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+            {/* FilterSidebar renders its own "Filters" heading + Clear-all control below —
+                this stays visually hidden purely to satisfy Radix's accessible-name requirement
+                for DialogContent without showing a redundant second heading. */}
+            <DialogTitle className="sr-only">Filters</DialogTitle>
+            <FilterSidebar
+              className="w-full shrink rounded-none bg-transparent p-0"
+              filterProperties={filterProperties}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClearAll={handleClearAll}
+              invalidFilterKeys={invalidFilterKeys}
+              onTypeaheadSearch={handleTypeaheadSearch}
+              activeTypeaheadField={activeTypeaheadField}
+              typeaheadSuggestions={typeahead.results.map((r) => r.value)}
+              typeaheadIsLoading={typeahead.isLoading}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
   );
 }
 

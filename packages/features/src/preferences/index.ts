@@ -22,11 +22,12 @@ export {
   buildRows,
 } from "./use-column-visibility";
 export type { ColumnVisibilityConfig } from "./use-column-visibility";
+export { toAttributeOption } from "./attribute-options";
 export { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 export type { UseEntityDisplayPreferencesResult } from "./use-entity-display-preferences";
 export { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
 export { resolveEntityCardIcon } from "./resolve-entity-icon";
-export { EntityConfigurationOverview } from "./pages/entity-configuration-overview";
-export type { EntityConfigurationOverviewProps } from "./pages/entity-configuration-overview";
-export { EntityConfigurationDetail } from "./pages/entity-configuration-detail";
-export type { EntityConfigurationDetailProps } from "./pages/entity-configuration-detail";
+export { EntityConfigurationOverview } from "./views/entity-configuration-overview";
+export type { EntityConfigurationOverviewProps } from "./views/entity-configuration-overview";
+export { EntityConfigurationDetail } from "./views/entity-configuration-detail";
+export type { EntityConfigurationDetailProps } from "./views/entity-configuration-detail";

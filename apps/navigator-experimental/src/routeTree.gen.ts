@@ -89,6 +89,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/$entity/$itemId': typeof AppEntityItemIdRoute
   '/$entity/~create': typeof AppEntityChar126createRoute
+  '/~configuration/$entity': typeof AppChar126configurationEntityRoute
   '/$entity': typeof AppEntityIndexRoute
   '/~configuration': typeof AppChar126configurationIndexRoute
   '/~configuration/$entity': typeof AppChar126configurationEntityIndexRoute
