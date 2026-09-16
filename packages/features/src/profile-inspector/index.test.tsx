@@ -9,6 +9,7 @@ import {
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
 } from "@contentgrid/navigator-data";
 import { server } from "../../test-setup";
 import { ProfileInspector } from "./index";
@@ -24,6 +25,8 @@ function renderProfileInspector() {
   });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -31,6 +34,7 @@ function renderProfileInspector() {
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

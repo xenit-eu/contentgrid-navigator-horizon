@@ -15,3 +15,5 @@ export { RelationToOneRenderer } from "./relation-to-one-renderer";
 export type { RelationToOneRendererProps } from "./relation-to-one-renderer";
 export { RelationToManyRenderer } from "./relation-to-many-renderer";
 export type { RelationToManyRendererProps } from "./relation-to-many-renderer";
+export { FileRenderer } from "./file-renderer";
+export type { FileRendererProps } from "./file-renderer";

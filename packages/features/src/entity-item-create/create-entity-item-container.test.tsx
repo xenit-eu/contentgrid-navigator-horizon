@@ -9,6 +9,7 @@ import {
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { Toaster } from "@contentgrid/ui";
@@ -110,6 +111,8 @@ function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateFo
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -117,6 +120,7 @@ function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateFo
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

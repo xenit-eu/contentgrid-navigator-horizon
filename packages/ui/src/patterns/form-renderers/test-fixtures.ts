@@ -2,6 +2,7 @@ import type { BooleanRendererProps } from "./boolean-renderer";
 import type { DateTimeRendererProps } from "./datetime-renderer";
 import type { EnumMultiRendererProps } from "./enum-multi-renderer";
 import type { EnumRendererProps } from "./enum-renderer";
+import type { FileRendererProps } from "./file-renderer";
 import type { NumberRendererProps } from "./number-renderer";
 import type { RelationToManyRendererProps } from "./relation-to-many-renderer";
 import type { RelationToOneRendererProps } from "./relation-to-one-renderer";
@@ -115,6 +116,19 @@ export function relationToManyField(
     readOnly: false,
     count: 0,
     onLink: () => {},
+    ...overrides,
+  };
+}
+
+export function fileField(
+  overrides: Partial<BaseProps<FileRendererProps>> = {},
+): BaseProps<FileRendererProps> {
+  return {
+    name: "attachment",
+    label: "Attachment",
+    required: false,
+    readOnly: false,
+    multiple: false,
     ...overrides,
   };
 }

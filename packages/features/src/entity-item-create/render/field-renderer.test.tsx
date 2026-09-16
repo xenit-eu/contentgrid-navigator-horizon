@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { HalFormsProperty } from "@contentgrid/navigator-data";
 import type { FieldDescriptor } from "../model/field-descriptor";
@@ -73,7 +73,7 @@ function enumField(overrides: Partial<Extract<FieldDescriptor, { kind: "enum" }>
   } satisfies Extract<FieldDescriptor, { kind: "enum" }>;
 }
 
-function fileField() {
+function fileField(overrides: Partial<Extract<FieldDescriptor, { kind: "file" }>> = {}) {
   return {
     name: "attachment",
     label: "Attachment",
@@ -82,6 +82,7 @@ function fileField() {
     kind: "file",
     multiple: false,
     property: DUMMY_PROPERTY,
+    ...overrides,
   } satisfies Extract<FieldDescriptor, { kind: "file" }>;
 }
 
@@ -116,10 +117,32 @@ describe("FieldRenderer", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
-  it("renders a not-yet-supported placeholder for a file field", () => {
+  it("dispatches a file field to an upload dropzone", () => {
     render(<FieldRenderer field={fileField()} value={undefined} onChange={vi.fn()} />);
     expect(screen.getByText("Attachment")).toBeInTheDocument();
-    expect(screen.getByText(/not yet supported/)).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+  });
+
+  it("submits a picked file as a bare File for a single-value file field", () => {
+    const onChange = vi.fn();
+    render(<FieldRenderer field={fileField()} value={undefined} onChange={onChange} />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["content"], "invoice.pdf", { type: "application/pdf" });
+    Object.defineProperty(input, "files", { value: [file] });
+    fireEvent.change(input);
+    expect(onChange).toHaveBeenCalledWith(file);
+  });
+
+  it("submits a picked file as a one-element array for a multiValue file field", () => {
+    const onChange = vi.fn();
+    render(
+      <FieldRenderer field={fileField({ multiple: true })} value={undefined} onChange={onChange} />,
+    );
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["content"], "invoice.pdf", { type: "application/pdf" });
+    Object.defineProperty(input, "files", { value: [file] });
+    fireEvent.change(input);
+    expect(onChange).toHaveBeenCalledWith([file]);
   });
 
   it("shows the first error's message for a field with errors", () => {
