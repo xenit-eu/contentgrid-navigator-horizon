@@ -31,7 +31,9 @@ export function ModifiedDateAttributeRenderer({
   const text =
     variant === "table"
       ? formatAbsoluteDate(parsed, type)
-      : `${label}: ${formatRelativeOrAbsoluteDate(parsed)}`;
+      : variant === "item-reference"
+        ? formatRelativeOrAbsoluteDate(parsed)
+        : `${label}: ${formatRelativeOrAbsoluteDate(parsed)}`;
 
   return (
     <span className="flex min-w-0 items-center gap-1.5">
