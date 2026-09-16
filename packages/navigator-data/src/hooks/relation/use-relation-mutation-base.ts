@@ -36,7 +36,8 @@ type RelationMutationBaseParams<
  * `useClearRelation`.
  *
  * Encapsulates:
- * - `If-Match` header attachment from `relation.source.etag`
+ * - `If-Match` header attachment — currently disabled, see FIXME(ACC-3186) at the call site
+ *   below; `relation.source.etag` is the wrong etag for a relation mutation
  * - `fetchVoid` for the mutation (all three ops return 204)
  * - `onSettled` → relation read-key invalidation only (relation responses must
  *   be refetched; entity items themselves do not change when a relation is set/cleared)
@@ -63,8 +64,18 @@ export function useRelationMutationBase<
       // Build op-specific request (PUT / POST / DELETE with text/uri-list body).
       const baseReq = buildRequest(input);
 
-      // Attach If-Match from the source item ETag (conditional request per RFC 9110).
-      const req = addIfMatchHeader(baseReq, relation.source.etag);
+      // FIXME(ACC-3186): sends no If-Match at all — optimistic-concurrency protection is
+      // OFF for useSetToOneRelation / useAddToManyRelation / useClearRelation until this
+      // is fixed. relation.source.etag (the previous value here) is the WRONG etag: per
+      // https://docs.contentgrid.com/guides/09_app_api/02_api_usage/index.html#conditional-requests
+      // to-one/to-many relations are their own conditional-request resource with their own
+      // ETag, distinct from both the source and target entity items. That ETag is only
+      // exposed on the 302 response returned when GETing the relation link itself — our
+      // fetch client (see hal-client.ts) follows redirects by default, so that intermediate
+      // response and its ETag header are never seen by this code. Needs a manual-redirect
+      // fetch path to capture the relation's own ETag before this can send a correct
+      // If-Match. Passing null is a deliberate stopgap, not a fix.
+      const req = addIfMatchHeader(baseReq, null);
 
       // Execute mutation — 204 No Content.
       await fetchVoid(apiFetch, req);
