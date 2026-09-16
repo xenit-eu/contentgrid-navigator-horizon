@@ -109,7 +109,7 @@ export function EntityConfigurationOverview({
   );
 }
 
-function EntityConfigurationCard({
+export function EntityConfigurationCard({
   profile,
   onSelect,
 }: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {

@@ -15,6 +15,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppEntityRouteImport } from './routes/_app/$entity'
 import { Route as AppChar126configurationIndexRouteImport } from './routes/_app/~configuration/index'
 import { Route as AppEntityIndexRouteImport } from './routes/_app/$entity/index'
+import { Route as AppChar126configurationTabbedRouteImport } from './routes/_app/~configuration/tabbed'
 import { Route as AppChar126configurationEntityRouteImport } from './routes/_app/~configuration/$entity'
 import { Route as AppEntityChar126createRouteImport } from './routes/_app/$entity/~create'
 import { Route as AppEntityItemIdRouteImport } from './routes/_app/$entity/$itemId'
@@ -50,6 +51,12 @@ const AppEntityIndexRoute = AppEntityIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppEntityRoute,
 } as any)
+const AppChar126configurationTabbedRoute =
+  AppChar126configurationTabbedRouteImport.update({
+    id: '/~configuration/tabbed',
+    path: '/~configuration/tabbed',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppChar126configurationEntityRoute =
   AppChar126configurationEntityRouteImport.update({
     id: '/~configuration/$entity',
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/$entity/$itemId': typeof AppEntityItemIdRoute
   '/$entity/~create': typeof AppEntityChar126createRoute
   '/~configuration/$entity': typeof AppChar126configurationEntityRouteWithChildren
+  '/~configuration/tabbed': typeof AppChar126configurationTabbedRoute
   '/$entity/': typeof AppEntityIndexRoute
   '/~configuration/': typeof AppChar126configurationIndexRoute
   '/~configuration/$entity/': typeof AppChar126configurationEntityIndexRoute
@@ -89,7 +97,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/$entity/$itemId': typeof AppEntityItemIdRoute
   '/$entity/~create': typeof AppEntityChar126createRoute
-  '/~configuration/$entity': typeof AppChar126configurationEntityRoute
+  '/~configuration/tabbed': typeof AppChar126configurationTabbedRoute
   '/$entity': typeof AppEntityIndexRoute
   '/~configuration': typeof AppChar126configurationIndexRoute
   '/~configuration/$entity': typeof AppChar126configurationEntityIndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/_app/$entity/$itemId': typeof AppEntityItemIdRoute
   '/_app/$entity/~create': typeof AppEntityChar126createRoute
   '/_app/~configuration/$entity': typeof AppChar126configurationEntityRouteWithChildren
+  '/_app/~configuration/tabbed': typeof AppChar126configurationTabbedRoute
   '/_app/$entity/': typeof AppEntityIndexRoute
   '/_app/~configuration/': typeof AppChar126configurationIndexRoute
   '/_app/~configuration/$entity/': typeof AppChar126configurationEntityIndexRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/$entity/$itemId'
     | '/$entity/~create'
     | '/~configuration/$entity'
+    | '/~configuration/tabbed'
     | '/$entity/'
     | '/~configuration/'
     | '/~configuration/$entity/'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$entity/$itemId'
     | '/$entity/~create'
+    | '/~configuration/tabbed'
     | '/$entity'
     | '/~configuration'
     | '/~configuration/$entity'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_app/$entity/$itemId'
     | '/_app/$entity/~create'
     | '/_app/~configuration/$entity'
+    | '/_app/~configuration/tabbed'
     | '/_app/$entity/'
     | '/_app/~configuration/'
     | '/_app/~configuration/$entity/'
@@ -190,6 +202,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$entity/'
       preLoaderRoute: typeof AppEntityIndexRouteImport
       parentRoute: typeof AppEntityRoute
+    }
+    '/_app/~configuration/tabbed': {
+      id: '/_app/~configuration/tabbed'
+      path: '/~configuration/tabbed'
+      fullPath: '/~configuration/tabbed'
+      preLoaderRoute: typeof AppChar126configurationTabbedRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/~configuration/$entity': {
       id: '/_app/~configuration/$entity'
@@ -257,6 +276,7 @@ interface AppRouteChildren {
   AppEntityRoute: typeof AppEntityRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppChar126configurationEntityRoute: typeof AppChar126configurationEntityRouteWithChildren
+  AppChar126configurationTabbedRoute: typeof AppChar126configurationTabbedRoute
   AppChar126configurationIndexRoute: typeof AppChar126configurationIndexRoute
 }
 
@@ -265,6 +285,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppChar126configurationEntityRoute:
     AppChar126configurationEntityRouteWithChildren,
+  AppChar126configurationTabbedRoute: AppChar126configurationTabbedRoute,
   AppChar126configurationIndexRoute: AppChar126configurationIndexRoute,
 }
 

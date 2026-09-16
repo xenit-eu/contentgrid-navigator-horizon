@@ -24,6 +24,10 @@ export interface EntityConfigurationDetailProps {
   readonly profile: ProfileEntity;
   /** Called when the close button is clicked (e.g. navigate back to the configuration list). */
   readonly onClose?: () => void;
+  /** Renders without the outer `EntityCard` chrome (title, description, close button, icon
+   * badge) — for embedding inline where a surrounding layout already provides that context,
+   * e.g. `EntityConfigurationOverviewTabbed`'s vertical tab panel. Defaults to `true`. */
+  readonly showInCard?: boolean;
 }
 
 const PREVIEW_TABS = [
@@ -48,6 +52,7 @@ const PREVIEW_TABS = [
 export function EntityConfigurationDetail({
   profile,
   onClose,
+  showInCard = true,
 }: Readonly<EntityConfigurationDetailProps>) {
   const { preferences, setOverride } = useEntityDisplayPreferences(profile);
   const regularOptions = [profile.idAttribute, ...profile.userDefinedAttributes].map((attribute) =>
@@ -60,6 +65,77 @@ export function EntityConfigurationDetail({
   // (e.g. "modified date") — buildColumns() renders a column for any visible audit attribute too.
   const attributeOptions = [...regularOptions, ...systemOptions];
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
+
+  const body = (
+    <div className="@container">
+      <div className="flex flex-col gap-6 @3xl:flex-row">
+        <div className="min-w-0 flex-1">
+          <TabbedLayout
+            tabs={PREVIEW_TABS.map((tab) => ({ ...tab, active: tab.key === activeTab }))}
+            renderTabLink={(tab, label) => (
+              <TabLink
+                key={tab.key}
+                href="#"
+                active={tab.active}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setActiveTab(tab.key as (typeof PREVIEW_TABS)[number]["key"]);
+                }}
+              >
+                {label}
+              </TabLink>
+            )}
+          >
+            {activeTab === "item" && <EntityItemPreview profile={profile} />}
+            {activeTab === "collection" && <EntityTablePreview profile={profile} />}
+            {activeTab === "create" && <EntityCreateFormPreview profile={profile} />}
+          </TabbedLayout>
+        </div>
+
+        <div className="bg-border hidden w-px self-stretch @3xl:block" aria-hidden />
+
+        <div className="space-y-4 @3xl:w-72 @3xl:shrink-0">
+          <ColorPickerContent
+            value={preferences.color}
+            onChange={(color) => setOverride({ color })}
+          />
+
+          <div className="space-y-1.5">
+            <Label>Icon</Label>
+            <IconPicker value={preferences.icon} onChange={(icon) => setOverride({ icon })} />
+          </div>
+
+          <AttributeSelect
+            label="Name attribute"
+            attributes={attributeOptions}
+            value={preferences.nameAttribute}
+            onSelect={(attribute) => setOverride({ nameAttribute: attribute.name })}
+            placeholder="Choose attribute"
+          />
+
+          <AttributeSelect
+            label="Subtitle attribute"
+            attributes={attributeOptions}
+            value={preferences.subtitleAttribute}
+            onSelect={(attribute) => setOverride({ subtitleAttribute: attribute.name })}
+            placeholder="Choose attribute"
+          />
+
+          <AttributeMultiSelect
+            label="Visible columns"
+            attributes={attributeOptions}
+            values={preferences.visibleColumns ?? []}
+            onChange={(names) => setOverride({ visibleColumns: [...names] })}
+            placeholder="Choose columns"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!showInCard) {
+    return body;
+  }
 
   return (
     <EntityCard
@@ -81,70 +157,7 @@ export function EntityConfigurationDetail({
         </ColorPicker>
       }
     >
-      <div className="@container">
-        <div className="flex flex-col gap-6 @3xl:flex-row">
-          <div className="min-w-0 flex-1">
-            <TabbedLayout
-              tabs={PREVIEW_TABS.map((tab) => ({ ...tab, active: tab.key === activeTab }))}
-              renderTabLink={(tab, label) => (
-                <TabLink
-                  key={tab.key}
-                  href="#"
-                  active={tab.active}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setActiveTab(tab.key as (typeof PREVIEW_TABS)[number]["key"]);
-                  }}
-                >
-                  {label}
-                </TabLink>
-              )}
-            >
-              {activeTab === "item" && <EntityItemPreview profile={profile} />}
-              {activeTab === "collection" && <EntityTablePreview profile={profile} />}
-              {activeTab === "create" && <EntityCreateFormPreview profile={profile} />}
-            </TabbedLayout>
-          </div>
-
-          <div className="bg-border hidden w-px self-stretch @3xl:block" aria-hidden />
-
-          <div className="space-y-4 @3xl:w-72 @3xl:shrink-0">
-            <ColorPickerContent
-              value={preferences.color}
-              onChange={(color) => setOverride({ color })}
-            />
-
-            <div className="space-y-1.5">
-              <Label>Icon</Label>
-              <IconPicker value={preferences.icon} onChange={(icon) => setOverride({ icon })} />
-            </div>
-
-            <AttributeSelect
-              label="Name attribute"
-              attributes={attributeOptions}
-              value={preferences.nameAttribute}
-              onSelect={(attribute) => setOverride({ nameAttribute: attribute.name })}
-              placeholder="Choose attribute"
-            />
-
-            <AttributeSelect
-              label="Subtitle attribute"
-              attributes={attributeOptions}
-              value={preferences.subtitleAttribute}
-              onSelect={(attribute) => setOverride({ subtitleAttribute: attribute.name })}
-              placeholder="Choose attribute"
-            />
-
-            <AttributeMultiSelect
-              label="Visible columns"
-              attributes={attributeOptions}
-              values={preferences.visibleColumns ?? []}
-              onChange={(names) => setOverride({ visibleColumns: [...names] })}
-              placeholder="Choose columns"
-            />
-          </div>
-        </div>
-      </div>
+      {body}
     </EntityCard>
   );
 }
