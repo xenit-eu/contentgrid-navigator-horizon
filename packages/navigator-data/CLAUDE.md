@@ -332,7 +332,8 @@ Each class carries:
 - `name` — the relation name (matches the `name` field on the `cg:relation` link)
 - `link` — the `cg:relation` navigation link on the source item
 - `profileRelation` — the `ProfileRelation` schema (cardinality, target entity name, title)
-- `source` — the source `EntityItem` (used by mutation hooks for `If-Match` via `relation.source.etag`)
+- `source` — the source `EntityItem`. **Not currently used for `If-Match`** — see FIXME(ACC-3186)
+  below; `relation.source.etag` was found to be the wrong etag for a relation mutation.
 
 `EntityItemToOneRelation` key members:
 
@@ -386,8 +387,24 @@ All relation mutation hooks accept `(relation, options?)` — no `targetProfile`
 internally the same way the read hooks do it (`useProfileEntities()` + `getTargetProfile`). They
 return `UseMutationResult<void, Error, TInput>`.
 
-`If-Match` is attached by the mutation hook from `relation.source.etag` — the request builders
-(`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) do NOT attach it.
+**FIXME(ACC-3186):** `useSetToOneRelation` / `useAddToManyRelation` / `useClearRelation` (the three
+hooks built on the shared `useRelationMutationBase`) currently send **no** `If-Match` header at all —
+optimistic-concurrency protection is off for these three ops. They previously sent
+`relation.source.etag`, but that is the wrong etag: per the
+[platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/02_api_usage/index.html#conditional-requests),
+a to-one/to-many relation is its own conditional-request resource with its own `ETag`, separate from
+both the source and target entity items. That etag is only exposed on the 302 response returned when
+GETing the relation link itself; this package's fetch client follows redirects by default (see
+`src/api/hal-client.ts`), so the intermediate response and its `ETag` header are never seen today. Do
+NOT reintroduce `relation.source.etag` as a fix — it will pass validation locally but sends the wrong
+precondition. The real fix needs a manual-redirect fetch path to capture the relation's own etag. See
+`use-relation-mutation-base.ts` for the FIXME at the call site and the skipped test in
+`use-set-to-one-relation.test.tsx`.
+
+`useUnlinkRelation` and `useDeleteRelationItem` are unaffected — they gate `If-Match` on the
+**target** item's own etag (`item.etag`), which is a different, still-correct case. The request
+builders (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) never attach
+`If-Match` themselves regardless — that responsibility always belongs to the mutation hook.
 
 - `useSetToOneRelation(relation, options?)` — TInput `string`; on settle, invalidates `queryKeys.toOneRelation.byUrl` for the relation read key AND `queryKeys.entityItem.byUrl` for the source item.
 - `useAddToManyRelation(relation, options?)` — TInput `string[]`; on settle, invalidates `queryKeys.toManyRelation.byUrl` for the relation read key AND `queryKeys.entityItem.byUrl` for the source item.
@@ -596,8 +613,11 @@ import { addIfMatchHeader } from "../api/hal-client";
 const req = addIfMatchHeader(baseReq, entityItem.etag);
 ```
 
-For relation mutations the hook reads `relation.source.etag` — the relation accessor does NOT
-attach `If-Match` in its request builder.
+For `useUnlinkRelation` / `useDeleteRelationItem`, the hook reads the **target** item's own
+`item.etag` — the relation accessor does NOT attach `If-Match` in its request builder. For
+`useSetToOneRelation` / `useAddToManyRelation` / `useClearRelation`, see the
+FIXME(ACC-3186) note under "Relation mutation hooks" above — these currently send no `If-Match`
+at all; `relation.source.etag` is not a valid substitute.
 
 Send the stored ETag verbatim — quotes included. Skip the header only when `etag === null`
 (e.g. immediately after a create, before the first GET of that item).
