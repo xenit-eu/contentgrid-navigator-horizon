@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { EyeIcon, PlusCircleIcon, TableIcon, XIcon as X } from "@phosphor-icons/react";
+import { XIcon as X } from "@phosphor-icons/react";
 import { type ProfileEntity } from "@contentgrid/navigator-data";
 import {
   AttributeMultiSelect,
@@ -30,20 +30,14 @@ const PREVIEW_TABS = [
   {
     key: "item",
     label: "Item Preview",
-    icon: <EyeIcon aria-hidden />,
-    iconColor: "oklch(0.55 0.18 250)",
   },
   {
     key: "collection",
     label: "Collection Preview",
-    icon: <TableIcon aria-hidden />,
-    iconColor: "oklch(0.58 0.14 190)",
   },
   {
     key: "create",
     label: "Create Form",
-    icon: <PlusCircleIcon aria-hidden />,
-    iconColor: "oklch(0.65 0.18 55)",
   },
 ] as const;
 
