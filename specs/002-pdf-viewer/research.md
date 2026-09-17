@@ -430,7 +430,12 @@ lost; 2, 5, 6, 7 and 8 concern spec 002.
 2. **Rendition service authentication and contract.** No token (original), exchanged extension token
    (Imelda), or forwarded user token? Is the 202 + `Location` + poll contract and the
    `invalid-conversion` problem type the supported API? Does the service expose `Location` via CORS?
-   Owner: platform team; ticket ACC-2960. → spec FR-023 (the only open clarification in spec 002).
+   Owner: platform team; ticket ACC-2960. → **Answered 2026-09-17 (Ranec, via Nick):** the endpoint
+   goes in deployment config, and the token exchange comes "for free" from TokenMonger (the platform's
+   token-exchange component). Encoded in spec FR-023 and its Clarifications section. Still open: the
+   response contract itself (202 + `Location` + poll, `invalid-conversion`) and CORS exposure of
+   `Location`. Note Horizon's `packages/navigator-data/src/auth` has no exchange client yet; the plan
+   must add one (Imelda's origin-keyed token selection is the reference shape).
 3. **PDFium scripting posture** in the `@embedpdf` build (replaces the pdf.js `isEvalSupported` question
    in ADR-011 / ACC-2904). Needed by spec 002's FR-026 as well as by the annotation story. → plan.
 4. **Coordinate mapping** from fractional top-left boxes to the `@embedpdf` annotation `rect`

@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-17
 
-**Status**: Draft — awaiting review and `/speckit-clarify`
+**Status**: Draft — clarified 2026-09-17, awaiting review
 
 **Input**: User description: "PDF viewer for the entity content-focus page: renders content attributes of mimetype application/pdf, with the production toolbar, and rendition-aware preview via the rendition service. Check how the original navigator implemented it and what Imelda used. Different file types may be transformed to a PDF by the rendition service; other file types are not part of this story. This only has to handle the mimetype pdf. The annotation part is not part of this story; this just makes sure the PDF viewer is there and the toolbar is present."
 
@@ -29,6 +29,12 @@
 - Byte-range / progressive download of large PDFs (explicitly deferred in the roadmap, Phase 6A).
 - Page rotation and thumbnail sidebar (never shipped in production; not requested).
 - The attribute-focus layout for entities without a content attribute (mockup page 04) beyond the routing rule that selects between the two layouts.
+
+## Clarifications
+
+### Session 2026-09-17
+
+- Q: How does the viewer authenticate to the rendition service, and where does its endpoint come from? → A: The endpoint is deployment configuration, not a HAL link. Requests carry a token obtained through the platform's token-exchange facility (TokenMonger), which the platform already provides; the user's own API token is never forwarded and unauthenticated calls are not allowed. The response contract (accepted plus job location, poll until ready, explicit "cannot convert" problem) remains an observed-behaviour assumption until ACC-2960 documents it. (Answer from Ranec, relayed 2026-09-17.)
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -142,7 +148,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-020**: When a rendition is displayed the system MUST indicate that a converted preview is shown, MUST deliver the original file on Download, and MUST print the rendition as displayed.
 - **FR-021**: The system MUST stop polling for a rendition as soon as the viewer is closed, the attribute changes or the item changes.
 - **FR-022**: When no rendition endpoint is configured the system MUST show "Preview not available" with Download for non-PDF files and MUST NOT contact any service.
-- **FR-023**: The system MUST authenticate its requests to the rendition service using [NEEDS CLARIFICATION: the original Navigator sends no credentials to the rendition service (different origin, token hook does not fire) while the Imelda frontend uses an exchanged extension token selected by origin; the platform team must confirm the intended mechanism and the service's response contract (accepted + job location + poll) before implementation — tracked by ACC-2960].
+- **FR-023**: The system MUST authenticate every request to the rendition service (the initial request and each poll) with a token obtained through the platform's token-exchange facility (TokenMonger) for that service. It MUST NOT forward the user's own API token and MUST NOT call the service unauthenticated. If no exchanged token can be obtained, the system MUST treat the rendition as unavailable (FR-022 behaviour) rather than fall back to an unauthenticated call.
 
 **States and errors**
 
@@ -187,7 +193,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 ## Assumptions
 
-- **Rendition protocol as observed.** The rendition service answers a request with "accepted" plus a job location, the job answers "pending" until the PDF is ready, and an explicit "cannot convert" problem exists. This is reverse-engineered from the original Navigator and Imelda and is not yet documented by the platform (ACC-2960); FR-023 records the open point.
+- **Rendition protocol as observed.** The rendition service answers a request with "accepted" plus a job location, the job answers "pending" until the PDF is ready, and an explicit "cannot convert" problem exists. This is reverse-engineered from the original Navigator and Imelda and is not yet documented by the platform (ACC-2960). Authentication and endpoint discovery are settled (see Clarifications); the response contract is the remaining assumption.
 - **Download always delivers the original file**, never a rendition.
 - **Byte-range streaming is out of scope**; the whole file is downloaded before rendering, as in production today.
 - **Rotation and thumbnails are not required**; neither exists in production nor in the tickets.
@@ -199,7 +205,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 ### Dependencies and references
 
-- **Platform touchpoints**: the entity profile's content attributes; the entity item's content metadata and its `cg:content` links; RFC 9457 problem details, including `https://contentgrid.cloud/problems/renditions/invalid-conversion`; the rendition service endpoint (deployment configuration).
+- **Platform touchpoints**: the entity profile's content attributes; the entity item's content metadata and its `cg:content` links; RFC 9457 problem details, including `https://contentgrid.cloud/problems/renditions/invalid-conversion`; the rendition service endpoint (deployment configuration); the platform's token exchange (TokenMonger) for the rendition service's token.
 - **Decisions**: ADR-011 (PDF stack and fallback triggers), ADR-003 (primitive versus pattern boundary), ADR-006 (three-track delivery), ADR-009 (visual regression), ADR-014 (MSW contract tests).
 - **Tickets consolidated by this spec**: ACC-2902 (HZN-6A.1 toolbar), ACC-2903 (HZN-6A.2 rendition-aware preview), ACC-2904 (HZN-6A.3 scripting posture). Follow-up annotation story: ACC-2905, ACC-2907, ACC-2908, ACC-2911, ACC-2912. Related platform work: ACC-2960 (document rendition system), ACC-3074 (rendition service 500 instead of 4xx), ACC-1668 (rendition kept answering "pending").
 - **Design**: `contentgrid-navigator-mockup 2.html`, pages 03 and 04.
