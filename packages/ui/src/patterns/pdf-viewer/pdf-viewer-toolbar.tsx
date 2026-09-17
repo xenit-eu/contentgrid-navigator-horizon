@@ -8,6 +8,7 @@ import {
   DownloadIcon,
   MagnifyingGlassMinusIcon,
   MagnifyingGlassPlusIcon,
+  PrinterIcon,
 } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
@@ -19,8 +20,11 @@ import {
   DropdownMenuTrigger,
 } from "../../primitives/dropdown-menu";
 import { Input } from "../../primitives/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../primitives/tooltip";
+import { TooltipProvider } from "../../primitives/tooltip";
+import { IconButton } from "./pdf-viewer-icon-button";
 import { DEFAULT_PDF_VIEWER_LABELS, type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
+import { PdfViewerSearchPopover } from "./pdf-viewer-search-popover";
+import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
 import type {
   PdfDocumentPhase,
   PdfViewerPageState,
@@ -38,45 +42,19 @@ export interface PdfViewerToolbarProps {
   readonly end?: ReactNode;
   readonly showPageNavigation: boolean;
   readonly showZoom: boolean;
+  readonly showSearch: boolean;
+  readonly showPrint: boolean;
   readonly showFullscreen: boolean;
   readonly onDownload?: () => void;
   readonly documentState: PdfDocumentPhase;
   readonly page: PdfViewerPageState;
   readonly zoom: PdfViewerZoomState;
+  readonly search: PdfViewerSearchState;
   readonly fullscreen: boolean;
   readonly actions: PdfViewerStateActions;
+  readonly searchActions: PdfViewerSearchActions;
   readonly labels: PdfViewerLabels;
   readonly className?: string;
-}
-
-function IconButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: Readonly<{
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}>) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={label}
-          disabled={disabled}
-          onClick={onClick}
-        >
-          {children}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
 }
 
 function PageNavigation({
@@ -199,23 +177,28 @@ export function PdfViewerToolbar({
   end,
   showPageNavigation,
   showZoom,
+  showSearch,
+  showPrint,
   showFullscreen,
   onDownload,
   documentState,
   page,
   zoom,
+  search,
   fullscreen,
   actions,
+  searchActions,
   labels,
   className,
 }: Readonly<PdfViewerToolbarProps>) {
   const ready = documentState === "ready";
 
-  // Announce the latest of a page or a zoom change through one shared
+  // Announce the latest of a page, zoom or search change through one shared
   // live region — whichever changed most recently is what gets announced.
   const [announcement, setAnnouncement] = useState("");
   const previousPage = useRef(page.current);
   const previousZoom = useRef(zoom.level);
+  const previousSearch = useRef(`${search.total}:${search.activeIndex}`);
 
   useEffect(() => {
     if (!ready || page.current === previousPage.current) return;
@@ -231,6 +214,29 @@ export function PdfViewerToolbar({
     setAnnouncement(formatLabel(labels.zoomAnnouncement, { percent: zoom.level }));
   }, [ready, zoom.level, labels.zoomAnnouncement]);
 
+  useEffect(() => {
+    const key = `${search.total}:${search.activeIndex}`;
+    if (!ready || key === previousSearch.current) return;
+    previousSearch.current = key;
+    if (search.total > 0) {
+      setAnnouncement(
+        formatLabel(labels.searchAnnouncement, {
+          index: search.activeIndex + 1,
+          total: search.total,
+        }),
+      );
+    } else if (search.query) {
+      setAnnouncement(labels.searchNoResults);
+    }
+  }, [
+    ready,
+    search.total,
+    search.activeIndex,
+    search.query,
+    labels.searchAnnouncement,
+    labels.searchNoResults,
+  ]);
+
   return (
     <TooltipProvider>
       <div className={cn("bg-background flex items-center gap-2 border-b px-2 py-1.5", className)}>
@@ -239,10 +245,20 @@ export function PdfViewerToolbar({
           <PageNavigation page={page} ready={ready} actions={actions} labels={labels} />
         )}
         {showZoom && <ZoomControls zoom={zoom} ready={ready} actions={actions} labels={labels} />}
-        {/* Search and print controls join here (US3, T035/T036) — this flex
-            row and the shared `actions`/`labels` shapes already accommodate
-            them without restructuring. */}
         <div className="flex-1" />
+        {showSearch && (
+          <PdfViewerSearchPopover
+            search={search}
+            searchActions={searchActions}
+            ready={ready}
+            labels={labels}
+          />
+        )}
+        {showPrint && (
+          <IconButton label={labels.print} disabled={!ready} onClick={actions.print}>
+            <PrinterIcon />
+          </IconButton>
+        )}
         {onDownload && (
           <IconButton label={labels.download} disabled={!ready} onClick={onDownload}>
             <DownloadIcon />

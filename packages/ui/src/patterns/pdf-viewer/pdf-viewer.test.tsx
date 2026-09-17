@@ -9,7 +9,7 @@
  * dependency at all.
  */
 import type { ReactNode } from "react";
-import { PdfErrorCode } from "@embedpdf/models";
+import { MatchFlag, PdfErrorCode } from "@embedpdf/models";
 import { ZoomMode } from "@embedpdf/plugin-zoom";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,8 +17,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PdfViewerErrorBoundary } from "./pdf-viewer";
 import { DEFAULT_PDF_VIEWER_LABELS } from "./pdf-viewer-labels";
 import { PdfViewerToolbar, type PdfViewerToolbarProps } from "./pdf-viewer-toolbar";
-import { useDocumentLifecycle, usePdfViewerActiveState } from "./use-pdf-viewer-state";
-import type { PdfViewerStateActions } from "./use-pdf-viewer-state";
+import { ZERO_SEARCH, useDocumentLifecycle, usePdfViewerActiveState } from "./use-pdf-viewer-state";
+import type { PdfViewerSearchActions, PdfViewerStateActions } from "./use-pdf-viewer-state";
 
 // ---------------------------------------------------------------------------
 // PdfViewerToolbar — pure, controlled component
@@ -33,20 +33,44 @@ function makeActions(overrides: Partial<PdfViewerStateActions> = {}): PdfViewerS
     zoomOut: vi.fn(),
     setZoom: vi.fn(),
     toggleFullscreen: vi.fn(),
+    print: vi.fn(),
     ...overrides,
   };
 }
 
-function renderToolbar(overrides: Partial<PdfViewerToolbarProps> = {}, actions = makeActions()) {
+function makeSearchActions(
+  overrides: Partial<PdfViewerSearchActions> = {},
+): PdfViewerSearchActions {
+  return {
+    setQuery: vi.fn(),
+    nextMatch: vi.fn(),
+    previousMatch: vi.fn(),
+    toggleMatchCase: vi.fn(),
+    toggleWholeWord: vi.fn(),
+    clearSearch: vi.fn(),
+    setOpen: vi.fn(),
+    ...overrides,
+  };
+}
+
+function renderToolbar(
+  overrides: Partial<PdfViewerToolbarProps> = {},
+  actions = makeActions(),
+  searchActions = makeSearchActions(),
+) {
   const props: PdfViewerToolbarProps = {
     showPageNavigation: true,
     showZoom: true,
+    showSearch: true,
+    showPrint: true,
     showFullscreen: true,
     documentState: "ready",
     page: { current: 2, total: 5 },
     zoom: { mode: "custom", level: 100 },
+    search: ZERO_SEARCH,
     fullscreen: false,
     actions,
+    searchActions,
     labels: DEFAULT_PDF_VIEWER_LABELS,
     ...overrides,
   };
@@ -140,12 +164,16 @@ describe("PdfViewerToolbar", () => {
       <PdfViewerToolbar
         showPageNavigation
         showZoom
+        showSearch
+        showPrint
         showFullscreen
         documentState="ready"
         page={{ current: 1, total: 5 }}
         zoom={{ mode: "custom", level: 100 }}
+        search={ZERO_SEARCH}
         fullscreen={false}
         actions={makeActions()}
+        searchActions={makeSearchActions()}
         labels={DEFAULT_PDF_VIEWER_LABELS}
       />,
     );
@@ -153,16 +181,291 @@ describe("PdfViewerToolbar", () => {
       <PdfViewerToolbar
         showPageNavigation
         showZoom
+        showSearch
+        showPrint
         showFullscreen
         documentState="ready"
         page={{ current: 2, total: 5 }}
         zoom={{ mode: "custom", level: 100 }}
+        search={ZERO_SEARCH}
         fullscreen={false}
         actions={makeActions()}
+        searchActions={makeSearchActions()}
         labels={DEFAULT_PDF_VIEWER_LABELS}
       />,
     );
     expect(screen.getByRole("status")).toHaveTextContent("Page 2 of 5");
+  });
+
+  // -------------------------------------------------------------------------
+  // Search and print controls (T035/T036) — pure/controlled, same as the
+  // page/zoom controls above: the plugin-driven logic itself lives in
+  // `usePdfViewerActiveState` (tested further below with the plugin hooks
+  // mocked), so these assert only what the toolbar renders from its props.
+  // -------------------------------------------------------------------------
+
+  it("disables the print button until the document is ready", () => {
+    renderToolbar({ documentState: "opening" });
+    expect(screen.getByLabelText("Print")).toBeDisabled();
+  });
+
+  it("calls actions.print when the print button is clicked", async () => {
+    const actions = renderToolbar();
+    await userEvent.click(screen.getByLabelText("Print"));
+    expect(actions.print).toHaveBeenCalled();
+  });
+
+  it("clicking the search trigger requests the popover open", async () => {
+    const searchActions = makeSearchActions();
+    renderToolbar({}, makeActions(), searchActions);
+    await userEvent.click(screen.getByLabelText("Search"));
+    expect(searchActions.setOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("reports typing in the search input through searchActions.setQuery", async () => {
+    const searchActions = makeSearchActions();
+    // The popover is a fully controlled component (like `fullscreen` above) —
+    // `open: true` here stands in for the state a real `setOpen(true)` call
+    // would flow back down as.
+    renderToolbar({ search: { ...ZERO_SEARCH, open: true } }, makeActions(), searchActions);
+    const input = await screen.findByLabelText("Search in document");
+    await userEvent.type(input, "a");
+    expect(searchActions.setQuery).toHaveBeenCalledWith("a");
+  });
+
+  it("shows the n-of-m indicator once results exist, and the no-matches label once a query finds none", () => {
+    const { rerender } = render(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{
+          query: "a",
+          total: 3,
+          activeIndex: 1,
+          matchCase: false,
+          wholeWord: false,
+          open: true,
+        }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={makeSearchActions()}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    // Scoped to the visible `<span>` indicator, not the `role="status"` live
+    // region — both can carry the same text.
+    expect(screen.getByText("2 of 3", { selector: "span" })).toBeInTheDocument();
+
+    rerender(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{
+          query: "zz",
+          total: 0,
+          activeIndex: -1,
+          matchCase: false,
+          wholeWord: false,
+          open: true,
+        }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={makeSearchActions()}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    expect(screen.getByText("No matches found", { selector: "span" })).toBeInTheDocument();
+    expect(screen.queryByText(/of 3/, { selector: "span" })).not.toBeInTheDocument();
+  });
+
+  it("clearing the search removes the n-of-m emphasis once the parent reflects the cleared state", () => {
+    const { rerender } = render(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{
+          query: "a",
+          total: 2,
+          activeIndex: 0,
+          matchCase: false,
+          wholeWord: false,
+          open: true,
+        }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={makeSearchActions()}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
+
+    // `clearSearch` (`stopSearch` on the plugin) resets query/results/total
+    // but leaves the popover open — the toolbar is purely controlled, so once
+    // the parent reflects that cleared state the n-of-m emphasis is gone even
+    // though the popover itself stays visible.
+    rerender(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{ ...ZERO_SEARCH, open: true }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={makeSearchActions()}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    expect(screen.getByLabelText("Search in document")).toHaveValue("");
+    expect(screen.queryByText(/of 2/)).not.toBeInTheDocument();
+  });
+
+  it("Enter navigates to the next match and Shift+Enter to the previous", async () => {
+    const searchActions = makeSearchActions();
+    renderToolbar(
+      {
+        search: {
+          query: "a",
+          total: 3,
+          activeIndex: 0,
+          matchCase: false,
+          wholeWord: false,
+          open: true,
+        },
+      },
+      makeActions(),
+      searchActions,
+    );
+    const input = screen.getByLabelText("Search in document");
+    await userEvent.type(input, "{Enter}");
+    expect(searchActions.nextMatch).toHaveBeenCalled();
+    await userEvent.type(input, "{Shift>}{Enter}{/Shift}");
+    expect(searchActions.previousMatch).toHaveBeenCalled();
+  });
+
+  it("previous/next/clear are disabled without results, and clear calls clearSearch", async () => {
+    const searchActions = makeSearchActions();
+    renderToolbar(
+      { search: { ...ZERO_SEARCH, query: "a", open: true } },
+      makeActions(),
+      searchActions,
+    );
+    expect(screen.getByLabelText("Previous match")).toBeDisabled();
+    expect(screen.getByLabelText("Next match")).toBeDisabled();
+    await userEvent.click(screen.getByLabelText("Clear search"));
+    expect(searchActions.clearSearch).toHaveBeenCalled();
+  });
+
+  it("toggles match-case and whole-word and reflects their checked state", async () => {
+    const searchActions = makeSearchActions();
+    const { rerender } = render(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{ ...ZERO_SEARCH, open: true }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={searchActions}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    await userEvent.click(screen.getByLabelText("Match case"));
+    expect(searchActions.toggleMatchCase).toHaveBeenCalled();
+    await userEvent.click(screen.getByLabelText("Whole word"));
+    expect(searchActions.toggleWholeWord).toHaveBeenCalled();
+
+    rerender(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{ ...ZERO_SEARCH, matchCase: true, wholeWord: true, open: true }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={searchActions}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    expect(screen.getByLabelText("Match case")).toBeChecked();
+    expect(screen.getByLabelText("Whole word")).toBeChecked();
+  });
+
+  it("announces the active match position through the live region", () => {
+    const { rerender } = render(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={ZERO_SEARCH}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={makeSearchActions()}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    rerender(
+      <PdfViewerToolbar
+        showPageNavigation
+        showZoom
+        showSearch
+        showPrint
+        showFullscreen
+        documentState="ready"
+        page={{ current: 1, total: 1 }}
+        zoom={{ mode: "custom", level: 100 }}
+        search={{
+          query: "a",
+          total: 4,
+          activeIndex: 2,
+          matchCase: false,
+          wholeWord: false,
+          open: true,
+        }}
+        fullscreen={false}
+        actions={makeActions()}
+        searchActions={makeSearchActions()}
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Match 3 of 4");
   });
 });
 
@@ -223,6 +526,8 @@ const mockDocumentManagerCapability = vi.fn();
 const mockDocumentState = vi.fn();
 const mockScroll = vi.fn();
 const mockZoom = vi.fn();
+const mockSearch = vi.fn();
+const mockPrint = vi.fn();
 
 vi.mock("@embedpdf/plugin-document-manager/react", () => ({
   useDocumentManagerCapability: () => mockDocumentManagerCapability(),
@@ -235,6 +540,17 @@ vi.mock("@embedpdf/plugin-scroll/react", () => ({
 }));
 vi.mock("@embedpdf/plugin-zoom/react", () => ({
   useZoom: (documentId: string) => mockZoom(documentId),
+}));
+// `useSearch`/`usePrint` never throw for an unregistered document id (unlike
+// `useScroll`/`useZoom` — see `use-pdf-viewer-state.ts`'s doc comment), but
+// their real implementations depend on `@embedpdf/core/react`'s
+// `useCapability`/`usePlugin`, which the mock above does not provide — so
+// they must be mocked directly here too, same as scroll/zoom.
+vi.mock("@embedpdf/plugin-search/react", () => ({
+  useSearch: (documentId: string) => mockSearch(documentId),
+}));
+vi.mock("@embedpdf/plugin-print/react", () => ({
+  usePrint: (documentId: string) => mockPrint(documentId),
 }));
 
 function taskOf<T>(result: T) {
@@ -252,6 +568,17 @@ const DEFAULT_ZOOM_STATE = {
   isMarqueeZoomActive: false,
 };
 
+const DEFAULT_SEARCH_STATE = {
+  flags: [] as MatchFlag[],
+  results: [],
+  total: 0,
+  activeResultIndex: -1,
+  showAllResults: true,
+  query: "",
+  loading: false,
+  active: false,
+};
+
 function setUpDefaultMocks() {
   openDocumentBuffer.mockReset();
   closeDocument.mockReset().mockReturnValue({ wait: (resolve: () => void) => resolve() });
@@ -267,6 +594,17 @@ function setUpDefaultMocks() {
     provides: { requestZoom: vi.fn(), zoomIn: vi.fn(), zoomOut: vi.fn() },
     state: DEFAULT_ZOOM_STATE,
   });
+  mockSearch.mockReturnValue({
+    provides: {
+      searchAllPages: vi.fn(),
+      nextResult: vi.fn(),
+      previousResult: vi.fn(),
+      setFlags: vi.fn(),
+      stopSearch: vi.fn(),
+    },
+    state: DEFAULT_SEARCH_STATE,
+  });
+  mockPrint.mockReturnValue({ provides: { print: vi.fn() } });
 }
 
 describe("useDocumentLifecycle", () => {
@@ -409,5 +747,355 @@ describe("usePdfViewerActiveState", () => {
     rerender({ documentState: "ready" });
     expect(onDocumentOpened).toHaveBeenCalledTimes(1);
     expect(onDocumentOpened).toHaveBeenCalledWith({ pageCount: 7 });
+  });
+
+  // -------------------------------------------------------------------------
+  // Search and print (T035/T036). `useSearch`/`usePrint` are mocked the same
+  // way as scroll/zoom above. The plugin's own search-session lifecycle
+  // (wrap-around navigation, resetting results on a new/forced search) is
+  // verified by reading the compiled `@embedpdf/plugin-search` source (see
+  // `use-pdf-viewer-state.ts`'s doc comment) — these tests cover what this
+  // hook itself is responsible for: deriving `matchCase`/`wholeWord` from the
+  // plugin's `flags`, building the next `flags` array on toggle, and
+  // delegating each action to the right plugin method.
+  // -------------------------------------------------------------------------
+
+  it("derives matchCase/wholeWord from the plugin's flags and passes query/total/activeIndex through", () => {
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags: vi.fn(),
+        stopSearch: vi.fn(),
+      },
+      state: {
+        ...DEFAULT_SEARCH_STATE,
+        flags: [MatchFlag.MatchCase],
+        query: "hello",
+        total: 3,
+        activeResultIndex: 1,
+      },
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    expect(result.current.search).toEqual({
+      query: "hello",
+      total: 3,
+      activeIndex: 1,
+      matchCase: true,
+      wholeWord: false,
+      open: false,
+    });
+  });
+
+  it("setQuery delegates to searchAllPages, including an empty string (the plugin's own clear path)", () => {
+    const searchAllPages = vi.fn();
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages,
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags: vi.fn(),
+        stopSearch: vi.fn(),
+      },
+      state: DEFAULT_SEARCH_STATE,
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    result.current.searchActions.setQuery("hello");
+    expect(searchAllPages).toHaveBeenCalledWith("hello");
+    result.current.searchActions.setQuery("");
+    expect(searchAllPages).toHaveBeenCalledWith("");
+  });
+
+  it("nextMatch/previousMatch delegate to the plugin's nextResult/previousResult", () => {
+    const nextResult = vi.fn();
+    const previousResult = vi.fn();
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult,
+        previousResult,
+        setFlags: vi.fn(),
+        stopSearch: vi.fn(),
+      },
+      state: DEFAULT_SEARCH_STATE,
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    result.current.searchActions.nextMatch();
+    expect(nextResult).toHaveBeenCalled();
+    result.current.searchActions.previousMatch();
+    expect(previousResult).toHaveBeenCalled();
+  });
+
+  it("toggleMatchCase adds the flag without dropping an existing whole-word flag, and removes it on toggle-off", () => {
+    const setFlags = vi.fn();
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags,
+        stopSearch: vi.fn(),
+      },
+      state: { ...DEFAULT_SEARCH_STATE, flags: [MatchFlag.MatchWholeWord] },
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    result.current.searchActions.toggleMatchCase();
+    expect(setFlags).toHaveBeenCalledWith([MatchFlag.MatchWholeWord, MatchFlag.MatchCase]);
+  });
+
+  it("toggleWholeWord removes the flag when it is already set", () => {
+    const setFlags = vi.fn();
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags,
+        stopSearch: vi.fn(),
+      },
+      state: { ...DEFAULT_SEARCH_STATE, flags: [MatchFlag.MatchCase, MatchFlag.MatchWholeWord] },
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    result.current.searchActions.toggleWholeWord();
+    expect(setFlags).toHaveBeenCalledWith([MatchFlag.MatchCase]);
+  });
+
+  it("clearSearch calls stopSearch (resets query/results/total/activeIndex and emphasis in one call)", () => {
+    const stopSearch = vi.fn();
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags: vi.fn(),
+        stopSearch,
+      },
+      state: DEFAULT_SEARCH_STATE,
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    result.current.searchActions.clearSearch();
+    expect(stopSearch).toHaveBeenCalled();
+  });
+
+  it("setOpen(false) also stops the search session; setOpen(true) does not", () => {
+    const stopSearch = vi.fn();
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags: vi.fn(),
+        stopSearch,
+      },
+      state: DEFAULT_SEARCH_STATE,
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    act(() => result.current.searchActions.setOpen(true));
+    expect(stopSearch).not.toHaveBeenCalled();
+    expect(result.current.search.open).toBe(true);
+    act(() => result.current.searchActions.setOpen(false));
+    expect(stopSearch).toHaveBeenCalled();
+    expect(result.current.search.open).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Scroll the active match into view (FR-014). Neither the plugin nor any
+  // installed `@embedpdf/*` package does this on its own (confirmed by
+  // reading the compiled `@embedpdf/plugin-search` source and grepping every
+  // installed `@embedpdf/*` package for a consumer of `onActiveResultChange`
+  // — there is none), so `use-pdf-viewer-search.ts` derives the active
+  // result's page from `searchState.results[activeResultIndex]` and calls
+  // `scroll.scrollToPage` itself. `minimal.pdf`/`js-in-pdf.pdf` are both
+  // single-page, so this can only be exercised with mocked multi-page
+  // results, never by the real fixtures.
+  // -------------------------------------------------------------------------
+
+  it("scrolls the active match's page into view when a fresh search finds its first result", () => {
+    const scrollToPage = vi.fn();
+    mockScroll.mockReturnValue({
+      provides: { scrollToPage, scrollToPreviousPage: vi.fn(), scrollToNextPage: vi.fn() },
+      state: { currentPage: 1, totalPages: 5 },
+    });
+    mockSearch.mockReturnValue({
+      provides: {
+        searchAllPages: vi.fn(),
+        nextResult: vi.fn(),
+        previousResult: vi.fn(),
+        setFlags: vi.fn(),
+        stopSearch: vi.fn(),
+      },
+      state: {
+        ...DEFAULT_SEARCH_STATE,
+        query: "hello",
+        total: 2,
+        activeResultIndex: 0,
+        results: [
+          {
+            pageIndex: 2,
+            charIndex: 10,
+            charCount: 5,
+            rects: [{ origin: { x: 12, y: 34 }, size: { width: 20, height: 10 } }],
+            context: {},
+          },
+          {
+            pageIndex: 4,
+            charIndex: 3,
+            charCount: 5,
+            rects: [{ origin: { x: 1, y: 2 }, size: { width: 20, height: 10 } }],
+            context: {},
+          },
+        ],
+      },
+    });
+
+    renderHook(() => usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }));
+
+    // `SearchResult.pageIndex` is 0-based; `scrollToPage` takes a 1-based
+    // `pageNumber`. `pageCoordinates` come straight from the match's own
+    // rect origin (the same page-local, unscaled space `SearchLayer` draws
+    // its highlight from), centered via `alignX`/`alignY: 50`.
+    expect(scrollToPage).toHaveBeenCalledWith({
+      pageNumber: 3,
+      pageCoordinates: { x: 12, y: 34 },
+      behavior: "smooth",
+      alignX: 50,
+      alignY: 50,
+    });
+  });
+
+  it("scrolls again when the active match moves to a different page (next/previous or a new search)", () => {
+    const scrollToPage = vi.fn();
+    mockScroll.mockReturnValue({
+      provides: { scrollToPage, scrollToPreviousPage: vi.fn(), scrollToNextPage: vi.fn() },
+      state: { currentPage: 1, totalPages: 5 },
+    });
+    const results = [
+      {
+        pageIndex: 2,
+        charIndex: 10,
+        charCount: 5,
+        rects: [{ origin: { x: 12, y: 34 }, size: { width: 20, height: 10 } }],
+        context: {},
+      },
+      {
+        pageIndex: 4,
+        charIndex: 3,
+        charCount: 5,
+        rects: [{ origin: { x: 1, y: 2 }, size: { width: 20, height: 10 } }],
+        context: {},
+      },
+    ];
+    const searchProvides = {
+      searchAllPages: vi.fn(),
+      nextResult: vi.fn(),
+      previousResult: vi.fn(),
+      setFlags: vi.fn(),
+      stopSearch: vi.fn(),
+    };
+    mockSearch.mockReturnValue({
+      provides: searchProvides,
+      state: { ...DEFAULT_SEARCH_STATE, query: "hello", total: 2, activeResultIndex: 0, results },
+    });
+
+    const { rerender } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    expect(scrollToPage).toHaveBeenCalledTimes(1);
+
+    mockSearch.mockReturnValue({
+      provides: searchProvides,
+      state: { ...DEFAULT_SEARCH_STATE, query: "hello", total: 2, activeResultIndex: 1, results },
+    });
+    rerender();
+
+    expect(scrollToPage).toHaveBeenCalledTimes(2);
+    expect(scrollToPage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageNumber: 5, pageCoordinates: { x: 1, y: 2 } }),
+    );
+  });
+
+  it("does not scroll again on a re-render where the active match is unchanged", () => {
+    const scrollToPage = vi.fn();
+    mockScroll.mockReturnValue({
+      provides: { scrollToPage, scrollToPreviousPage: vi.fn(), scrollToNextPage: vi.fn() },
+      state: { currentPage: 1, totalPages: 5 },
+    });
+    const results = [
+      {
+        pageIndex: 2,
+        charIndex: 10,
+        charCount: 5,
+        rects: [{ origin: { x: 12, y: 34 }, size: { width: 20, height: 10 } }],
+        context: {},
+      },
+    ];
+    const searchProvides = {
+      searchAllPages: vi.fn(),
+      nextResult: vi.fn(),
+      previousResult: vi.fn(),
+      setFlags: vi.fn(),
+      stopSearch: vi.fn(),
+    };
+    mockSearch.mockReturnValue({
+      provides: searchProvides,
+      state: { ...DEFAULT_SEARCH_STATE, query: "hello", total: 1, activeResultIndex: 0, results },
+    });
+
+    const { rerender } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    expect(scrollToPage).toHaveBeenCalledTimes(1);
+
+    // A new `results` array reference (the plugin dispatches a fresh array on
+    // every action, per the compiled reducer) but the *active* result's own
+    // identity (page + char index) is unchanged — must not scroll again.
+    mockSearch.mockReturnValue({
+      provides: searchProvides,
+      state: {
+        ...DEFAULT_SEARCH_STATE,
+        query: "hello",
+        total: 1,
+        activeResultIndex: 0,
+        results: [...results],
+      },
+    });
+    rerender();
+
+    expect(scrollToPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not scroll when there is no active match", () => {
+    const scrollToPage = vi.fn();
+    mockScroll.mockReturnValue({
+      provides: { scrollToPage, scrollToPreviousPage: vi.fn(), scrollToNextPage: vi.fn() },
+      state: { currentPage: 1, totalPages: 5 },
+    });
+    renderHook(() => usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }));
+    expect(scrollToPage).not.toHaveBeenCalled();
+  });
+
+  it("actions.print calls the print plugin's print method", () => {
+    const print = vi.fn();
+    mockPrint.mockReturnValue({ provides: { print } });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    result.current.actions.print();
+    expect(print).toHaveBeenCalled();
   });
 });

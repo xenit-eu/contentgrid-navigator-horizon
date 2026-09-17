@@ -8,8 +8,10 @@ import {
   InteractionManagerPluginPackage,
   PagePointerProvider,
 } from "@embedpdf/plugin-interaction-manager/react";
+import { PrintPluginPackage } from "@embedpdf/plugin-print/react";
 import { RenderLayer, RenderPluginPackage } from "@embedpdf/plugin-render/react";
 import { ScrollPluginPackage, ScrollStrategy, Scroller } from "@embedpdf/plugin-scroll/react";
+import { SearchLayer, SearchPluginPackage } from "@embedpdf/plugin-search/react";
 import { SelectionLayer, SelectionPluginPackage } from "@embedpdf/plugin-selection/react";
 import { Viewport, ViewportPluginPackage } from "@embedpdf/plugin-viewport/react";
 import { ZoomPluginPackage } from "@embedpdf/plugin-zoom/react";
@@ -23,12 +25,16 @@ import { DEFAULT_PDF_VIEWER_LABELS, type PdfViewerLabels } from "./pdf-viewer-la
 import { PdfViewerToolbar } from "./pdf-viewer-toolbar";
 import {
   NOOP_ACTIONS,
+  NOOP_SEARCH_ACTIONS,
   type PdfDocumentPhase,
   type PdfViewerPageState,
+  type PdfViewerSearchActions,
+  type PdfViewerSearchState,
   type PdfViewerStateActions,
   type PdfViewerZoomState,
   type PdfZoomInput,
   ZERO_PAGE,
+  ZERO_SEARCH,
   ZERO_ZOOM,
   useDocumentLifecycle,
   usePdfViewerActiveState,
@@ -44,9 +50,7 @@ export interface PdfViewerToolbarOptions {
   readonly start?: ReactNode;
   readonly pageNavigation?: boolean;
   readonly zoom?: boolean;
-  /** Reserved for T035 (US3) — has no effect until the search plugin is wired. */
   readonly search?: boolean;
-  /** Reserved for T036 (US3) — has no effect until the print plugin is wired. */
   readonly print?: boolean;
   readonly fullscreen?: boolean;
   /** Slot after the built-in actions. */
@@ -135,6 +139,8 @@ function usePdfViewerPlugins(initialZoom: PdfZoomInput): PluginBatchRegistration
       createPluginRegistration(ZoomPluginPackage, {
         defaultZoomLevel: zoomInputToLevel(initialZoomRef.current),
       }),
+      createPluginRegistration(SearchPluginPackage),
+      createPluginRegistration(PrintPluginPackage),
       createPluginRegistration(SelectionPluginPackage),
       createPluginRegistration(InteractionManagerPluginPackage),
     ],
@@ -179,8 +185,10 @@ interface PdfViewerChromeProps {
   readonly documentState: PdfDocumentPhase;
   readonly page: PdfViewerPageState;
   readonly zoom: PdfViewerZoomState;
+  readonly search: PdfViewerSearchState;
   readonly fullscreen: boolean;
   readonly actions: PdfViewerStateActions;
+  readonly searchActions: PdfViewerSearchActions;
   readonly resolvedToolbar: PdfViewerToolbarOptions | false;
   readonly labels: PdfViewerLabels;
   readonly onDownload?: () => void;
@@ -191,8 +199,10 @@ function PdfViewerChrome({
   documentState,
   page,
   zoom,
+  search,
   fullscreen,
   actions,
+  searchActions,
   resolvedToolbar,
   labels,
   onDownload,
@@ -205,13 +215,17 @@ function PdfViewerChrome({
           end={resolvedToolbar.end}
           showPageNavigation={resolvedToolbar.pageNavigation ?? true}
           showZoom={resolvedToolbar.zoom ?? true}
+          showSearch={resolvedToolbar.search ?? true}
+          showPrint={resolvedToolbar.print ?? true}
           showFullscreen={resolvedToolbar.fullscreen ?? true}
           onDownload={onDownload}
           documentState={documentState}
           page={page}
           zoom={zoom}
+          search={search}
           fullscreen={fullscreen}
           actions={actions}
+          searchActions={searchActions}
           labels={labels}
         />
       )}
@@ -229,6 +243,10 @@ function PdfViewerChrome({
                       style={{ pointerEvents: "none" }}
                     />
                     <SelectionLayer documentId={documentId} pageIndex={pageIndex} />
+                    {/* Distinct from selection: yellow/amber match highlights vs.
+                        the primitive's selection-color rects (SearchLayer's own
+                        defaults — #FFFF00 all matches, #FFBF00 active match). */}
+                    <SearchLayer documentId={documentId} pageIndex={pageIndex} />
                   </PagePointerProvider>
                 )}
               />
@@ -269,7 +287,7 @@ function PdfViewerActiveSession({
   labels,
   onDownload,
 }: Readonly<PdfViewerActiveSessionProps>) {
-  const { page, zoom, fullscreen, actions } = usePdfViewerActiveState({
+  const { page, zoom, search, fullscreen, actions, searchActions } = usePdfViewerActiveState({
     documentId,
     documentState,
     fullscreenTarget,
@@ -282,8 +300,10 @@ function PdfViewerActiveSession({
       documentState={documentState}
       page={page}
       zoom={zoom}
+      search={search}
       fullscreen={fullscreen}
       actions={actions}
+      searchActions={searchActions}
       resolvedToolbar={resolvedToolbar}
       labels={labels}
       onDownload={onDownload}
@@ -336,8 +356,10 @@ function PdfViewerBody({
         documentState={documentState}
         page={ZERO_PAGE}
         zoom={ZERO_ZOOM}
+        search={ZERO_SEARCH}
         fullscreen={false}
         actions={NOOP_ACTIONS}
+        searchActions={NOOP_SEARCH_ACTIONS}
         resolvedToolbar={resolvedToolbar}
         labels={labels}
         onDownload={onDownload}

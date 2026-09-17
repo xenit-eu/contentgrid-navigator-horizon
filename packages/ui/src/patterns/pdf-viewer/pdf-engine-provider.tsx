@@ -50,6 +50,16 @@ export interface PdfEngineProviderProps {
  * moment a different one replaces it, so at most one live engine — and one
  * live wasm worker — exists at a time regardless of how many times the
  * underlying hook's effect re-ran.
+ *
+ * Genuine unmount (not a Strict-Mode replacement) is **not** handled here on
+ * purpose: `usePdfiumEngine` already destroys the engine it created in its
+ * own effect cleanup (`node_modules/@embedpdf/engines/dist/react/index.js`,
+ * the `useEffect` in `usePdfiumEngine` — cleanup calls
+ * `engineRef.current?.closeAllDocuments?.().wait(() => engineRef.current?.destroy?.(), ignore)`
+ * unconditionally, i.e. on every unmount of the component calling the hook,
+ * not only on a Strict-Mode re-run). Adding a second destroy call here for
+ * the terminal engine on our own unmount would double-free it. See the unit
+ * test "does not double-destroy the engine on unmount" below.
  */
 export function PdfEngineProvider({ wasmUrl, children }: Readonly<PdfEngineProviderProps>) {
   const { engine, isLoading, error } = usePdfiumEngine({

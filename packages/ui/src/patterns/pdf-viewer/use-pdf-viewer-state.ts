@@ -1,18 +1,32 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDocumentState } from "@embedpdf/core/react";
-import { PdfErrorCode, ignore } from "@embedpdf/models";
-import { useDocumentManagerCapability } from "@embedpdf/plugin-document-manager/react";
+import { ignore } from "@embedpdf/models";
+import { usePrint } from "@embedpdf/plugin-print/react";
 import { useScroll } from "@embedpdf/plugin-scroll/react";
 import { ZoomMode } from "@embedpdf/plugin-zoom";
 import type { ZoomLevel } from "@embedpdf/plugin-zoom";
 import { useZoom } from "@embedpdf/plugin-zoom/react";
+import type { PdfDocumentPhase } from "./use-pdf-viewer-document-lifecycle";
+import { useDocumentSearchState } from "./use-pdf-viewer-search";
+import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
+
+export {
+  useDocumentLifecycle,
+  type PdfDocumentPhase,
+  type DocumentLifecycleState,
+  type UseDocumentLifecycleOptions,
+} from "./use-pdf-viewer-document-lifecycle";
+export {
+  ZERO_SEARCH,
+  NOOP_SEARCH_ACTIONS,
+  type PdfViewerSearchState,
+  type PdfViewerSearchActions,
+} from "./use-pdf-viewer-search";
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
-
-export type PdfDocumentPhase = "idle" | "opening" | "ready" | "protected" | "invalid";
 
 export type PdfZoomMode = "fit-width" | "fit-page" | "custom";
 
@@ -39,6 +53,8 @@ export interface PdfViewerStateActions {
   zoomOut: () => void;
   setZoom: (level: PdfZoomInput) => void;
   toggleFullscreen: () => void;
+  /** Prints the displayed document (all pages) via the print plugin's hidden frame. */
+  print: () => void;
 }
 
 /** The `page`/`zoom`/`fullscreen` triple with no document open: every control reads as inert. */
@@ -52,6 +68,7 @@ export const NOOP_ACTIONS: PdfViewerStateActions = {
   zoomOut: () => {},
   setZoom: () => {},
   toggleFullscreen: () => {},
+  print: () => {},
 };
 
 // ---------------------------------------------------------------------------
@@ -71,110 +88,6 @@ function zoomLevelToMode(level: ZoomLevel): PdfZoomMode {
 }
 
 // ---------------------------------------------------------------------------
-// Document lifecycle — safe to call unconditionally
-// ---------------------------------------------------------------------------
-
-export interface UseDocumentLifecycleOptions {
-  /** The document bytes to display; a new reference (re)opens the document. */
-  bytes: ArrayBuffer;
-  /** Used as the document's display name inside the engine (not a URL). */
-  filename: string;
-}
-
-export interface DocumentLifecycleState {
-  readonly documentId: string | null;
-  readonly documentState: PdfDocumentPhase;
-}
-
-/**
- * Opens/closes the document as `bytes` changes and derives the document's
- * phase. Deliberately does **not** touch the scroll or zoom plugins: both
- * throw ("Zoom state not found for document: ...") when queried for a
- * document id that was never registered, so — unlike `useDocumentState`,
- * which is documented to accept `null` — they must only ever be called with
- * a real, already-open document id. `usePdfViewerActiveState` below is the
- * half of this hook that is safe to call only once `documentId` is known;
- * `pdf-viewer.tsx` mounts the component that calls it conditionally on that.
- */
-export function useDocumentLifecycle({
-  bytes,
-  filename,
-}: UseDocumentLifecycleOptions): DocumentLifecycleState {
-  const { provides: documentManager } = useDocumentManagerCapability();
-  const [documentId, setDocumentId] = useState<string | null>(null);
-  // "opening" is set the moment `openDocumentBuffer` is called, not only
-  // once a document id comes back — the open call itself can take a beat.
-  const [localPhase, setLocalPhase] = useState<"idle" | "opening" | "invalid" | "protected">(
-    "idle",
-  );
-
-  const rawDocumentState = useDocumentState(documentId);
-
-  // -----------------------------------------------------------------------
-  // Open the document whenever `bytes` (re)opens; close-after-open guard
-  // (upstream #754: closing a still-loading document leaks). A document is
-  // only ever closed once we actually hold its id — either by this effect's
-  // own cleanup, or, if the id only becomes known after the effect was
-  // already cleaned up (React Strict-Mode double-invoke, or `bytes`
-  // changing again before the previous open settled), by the success
-  // callback itself noticing it is stale and closing what it just opened.
-  // -----------------------------------------------------------------------
-  useEffect(() => {
-    if (!documentManager) {
-      setLocalPhase("idle");
-      return;
-    }
-
-    let cancelled = false;
-    let openedDocumentId: string | null = null;
-
-    setDocumentId(null);
-    setLocalPhase("opening");
-
-    const openTask = documentManager.openDocumentBuffer({ buffer: bytes, name: filename });
-    openTask.wait(
-      (response) => {
-        if (cancelled) {
-          documentManager.closeDocument(response.documentId);
-          return;
-        }
-        openedDocumentId = response.documentId;
-        setDocumentId(response.documentId);
-      },
-      (error) => {
-        if (cancelled) return;
-        setLocalPhase(error.reason.code === PdfErrorCode.Password ? "protected" : "invalid");
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      if (openedDocumentId) {
-        documentManager.closeDocument(openedDocumentId).wait(ignore, ignore);
-      }
-    };
-  }, [documentManager, bytes, filename]);
-
-  const documentState: PdfDocumentPhase = useMemo(() => {
-    if (localPhase === "invalid" || localPhase === "protected") return localPhase;
-    if (!documentId) return localPhase;
-    if (!rawDocumentState) return "opening";
-    switch (rawDocumentState.status) {
-      case "loading":
-        return "opening";
-      case "loaded":
-        return "ready";
-      case "error":
-        return rawDocumentState.errorCode === PdfErrorCode.Password ? "protected" : "invalid";
-      default:
-        return "opening";
-    }
-  }, [localPhase, documentId, rawDocumentState]);
-
-  return { documentId, documentState };
-}
-
-// ---------------------------------------------------------------------------
 // Active-session state — only call once `documentId` is a real, open id
 // ---------------------------------------------------------------------------
 
@@ -190,18 +103,31 @@ export interface UsePdfViewerActiveStateOptions {
 export interface PdfViewerActiveState {
   readonly page: PdfViewerPageState;
   readonly zoom: PdfViewerZoomState;
+  readonly search: PdfViewerSearchState;
   readonly fullscreen: boolean;
   readonly actions: PdfViewerStateActions;
+  readonly searchActions: PdfViewerSearchActions;
 }
 
 /**
- * Composes the scroll and zoom plugin hooks for one already-open document
- * into page/zoom/fullscreen state, plus the native-Fullscreen-API glue.
+ * Composes the scroll, zoom and print plugin hooks for one already-open
+ * document into page/zoom/fullscreen state (plus the native-Fullscreen-API
+ * glue) and the `print()` action; delegates search to
+ * `useDocumentSearchState` (`use-pdf-viewer-search.ts`) since it has a clean
+ * input/output boundary of its own (`documentId` + the scroll scope in,
+ * `search`/`searchActions` out).
  *
- * Extension seam: this hook returns one named slice per concern
- * (`page`, `zoom`, `fullscreen`, `actions`). A future `search` (T035) or
- * `print` (T036) slice is additive — it does not require reshaping any of
- * the fields above.
+ * Extension seam: this hook returns one named slice per concern (`page`,
+ * `zoom`, `search`, `fullscreen`, `actions`, `searchActions`) — `search`/
+ * `searchActions` (T035) and `actions.print` (T036) were added additively,
+ * with no reshaping of the fields above them.
+ *
+ * `usePrint` (unlike `useScroll`/`useZoom`) never throws for a document id
+ * whose plugin-scoped state isn't initialized yet — it falls back to a
+ * `null` result instead (verified against the compiled
+ * `@embedpdf/plugin-print` `/react` source) — so no extra gating is needed
+ * for it beyond the existing "only mounted once `documentId` is real" rule
+ * this hook already relies on.
  */
 export function usePdfViewerActiveState({
   documentId,
@@ -212,6 +138,8 @@ export function usePdfViewerActiveState({
   const rawDocumentState = useDocumentState(documentId);
   const { provides: scroll, state: scrollState } = useScroll(documentId);
   const { provides: zoom, state: zoomState } = useZoom(documentId);
+  const { provides: print } = usePrint(documentId);
+  const { search, searchActions } = useDocumentSearchState({ documentId, scroll });
 
   // Fire `onDocumentOpened` exactly once per document that reaches "ready".
   const announcedDocumentIdRef = useRef<string | null>(null);
@@ -294,9 +222,14 @@ export function usePdfViewerActiveState({
     }
   }, [fullscreenTarget, zoom, zoomState.zoomLevel]);
 
+  const printAction = useCallback(() => {
+    print?.print();
+  }, [print]);
+
   return {
     page,
     zoom: zoomView,
+    search,
     fullscreen,
     actions: {
       goToPage,
@@ -306,6 +239,8 @@ export function usePdfViewerActiveState({
       zoomOut,
       setZoom,
       toggleFullscreen,
+      print: printAction,
     },
+    searchActions,
   };
 }

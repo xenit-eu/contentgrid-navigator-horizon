@@ -26,6 +26,20 @@ export interface PdfViewerLabels {
   readonly pageAnnouncement: string;
   /** Template with a `{percent}` placeholder. */
   readonly zoomAnnouncement: string;
+  /** Opens the search popover; also its accessible name. */
+  readonly search: string;
+  readonly searchInputLabel: string;
+  readonly searchPreviousMatch: string;
+  readonly searchNextMatch: string;
+  readonly searchMatchCase: string;
+  readonly searchWholeWord: string;
+  readonly searchClear: string;
+  readonly searchNoResults: string;
+  /** Template with `{index}` and `{total}` placeholders — the visible "n of m" indicator. */
+  readonly searchResultTemplate: string;
+  /** Template with `{index}` and `{total}` placeholders, announced through the live region. */
+  readonly searchAnnouncement: string;
+  readonly print: string;
 }
 
 export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
@@ -47,6 +61,17 @@ export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
   engineError: "The PDF viewer failed to start.",
   pageAnnouncement: "Page {current} of {total}",
   zoomAnnouncement: "Zoom {percent}%",
+  search: "Search",
+  searchInputLabel: "Search in document",
+  searchPreviousMatch: "Previous match",
+  searchNextMatch: "Next match",
+  searchMatchCase: "Match case",
+  searchWholeWord: "Whole word",
+  searchClear: "Clear search",
+  searchNoResults: "No matches found",
+  searchResultTemplate: "{index} of {total}",
+  searchAnnouncement: "Match {index} of {total}",
+  print: "Print",
 };
 
 /** Replaces `{key}` placeholders in `template` with `values[key]`. */

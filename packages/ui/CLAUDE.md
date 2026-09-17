@@ -146,14 +146,25 @@ a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch tha
 ## `PdfViewer` pattern (`src/patterns/pdf-viewer/`)
 
 Headless `@embedpdf/core` + plugin composition with a shadcn toolbar (page
-navigation, zoom, download, fullscreen; text selection enabled). See
-`specs/002-pdf-viewer/contracts/pdf-viewer-pattern.md` for the full props
-contract. Files: `pdf-viewer.tsx` (composition + `PdfViewerErrorBoundary`),
+navigation, zoom, search, print, download, fullscreen; text selection
+enabled). See `specs/002-pdf-viewer/contracts/pdf-viewer-pattern.md` for the
+full props contract. Files: `pdf-viewer.tsx` (composition + `PdfViewerErrorBoundary`),
 `pdf-engine-provider.tsx` (shared PDFium/WASM engine + Strict-Mode
-double-invoke guard, upstream #700), `use-pdf-viewer-state.ts`
-(`useDocumentLifecycle` + `usePdfViewerActiveState`, split — see below),
-`pdf-viewer-toolbar.tsx`, `pdf-viewer-labels.ts`, `fixtures/` (hand-built
-`minimal.pdf` / `js-in-pdf.pdf`, `generate-fixtures.py`).
+double-invoke guard, upstream #700), `use-pdf-viewer-document-lifecycle.ts`
+(`useDocumentLifecycle`), `use-pdf-viewer-state.ts` (`usePdfViewerActiveState`
+— page/zoom/fullscreen/print), `use-pdf-viewer-search.ts`
+(`useDocumentSearchState` — search state/actions, split out because it has a
+clean input/output boundary of its own; `use-pdf-viewer-state.ts` re-exports
+its public types so existing imports don't need updating), `pdf-viewer-toolbar.tsx`,
+`pdf-viewer-icon-button.tsx` (shared `IconButton`, used by both the toolbar
+and the search popover), `pdf-viewer-search-popover.tsx`
+(`PdfViewerSearchPopover`), `pdf-viewer-labels.ts`, `pdf-viewer-story-helpers.tsx`
+(shared story harness — not a `*.stories.tsx` file itself, so Storybook's
+story glob skips it), `fixtures/` (hand-built `minimal.pdf` / `js-in-pdf.pdf`,
+`generate-fixtures.py`). Stories live in two files sharing one `title`
+(`Patterns/PdfViewer`, same sidebar group): `pdf-viewer.stories.tsx` (visual/
+a11y snapshots) and `pdf-viewer.interaction.stories.tsx` (`WithInteraction`
+only — see below).
 
 - **`wasmUrl` must be an absolute, self-hosted URL — never a CDN URL.**
   `usePdfiumEngine` defaults to fetching `pdfium.wasm` from jsDelivr when no
@@ -176,11 +187,12 @@ under the conditions [...]`). Found by actually building Storybook, not
   synchronously (`"Zoom state not found for document: ..."`) for a document
   id that was never registered — found by running the stories under real
   Chromium (jsdom/Vitest can't catch this; the real engine can). This is why
-  `use-pdf-viewer-state.ts` is split into `useDocumentLifecycle` (safe to
-  call unconditionally: document-manager + `useDocumentState` only) and
-  `usePdfViewerActiveState` (scroll + zoom; `pdf-viewer.tsx`'s
-  `PdfViewerActiveSession` component mounts it only once a real document id
-  exists) rather than one hook that substitutes `documentId ?? ""`.
+  `useDocumentLifecycle` (`use-pdf-viewer-document-lifecycle.ts`, safe to call
+  unconditionally: document-manager + `useDocumentState` only) is a separate
+  hook from `usePdfViewerActiveState` (`use-pdf-viewer-state.ts` — scroll +
+  zoom + print + search; `pdf-viewer.tsx`'s `PdfViewerActiveSession`
+  component mounts it only once a real document id exists) rather than one
+  hook that substitutes `documentId ?? ""`.
 - **Engine-init failures are unreliable to trigger and largely unobservable
   from the outside** (upstream #632): a bad `wasmUrl` genuinely fails to
   compile inside the engine's worker (a real `WebAssembly.instantiate():
@@ -195,13 +207,98 @@ BufferSource argument is empty` reaches the console), but
   only when it isn't already wrapped by one (`useAmbientPdfEngineStatus()`
   returns `undefined`) — wrap several `PdfViewer`s in one `PdfEngineProvider`
   to share a single engine/worker instead of creating one per viewer.
-- Search and print (US3) are deliberately not wired yet — `use-pdf-viewer-state.ts`
-  returns one named slice per concern (`page`, `zoom`, `fullscreen`,
-  `actions`) and the toolbar has a marked insertion point, specifically so
-  those land as additive slices later, not a restructure.
+- **Search and print (US3) are wired**: `SearchPluginPackage` and
+  `PrintPluginPackage` are registered from their `/react` subpaths — the
+  print package from `/react` auto-mounts its `PrintFrame` utility (the
+  hidden iframe that does the real `contentWindow.print()`; it's a single
+  export built via `createPluginPackage(...).addUtility(PrintFrame).build()`,
+  not a separately-named `WithAutoMount` export); the search one has no
+  auto-mount utility, so `SearchLayer` is mounted explicitly per page, styled
+  distinctly from `SelectionLayer` via its own default highlight colors).
+  `use-pdf-viewer-search.ts`'s `useDocumentSearchState` returns
+  `search`/`searchActions` (`PdfViewerSearchState`/`PdfViewerSearchActions`),
+  composed into `usePdfViewerActiveState`'s result as an additive slice
+  alongside `actions.print` — no reshaping of the existing
+  `page`/`zoom`/`fullscreen`/`actions` fields, matching the seam this file
+  used to document as reserved.
+  - `matchCase`/`wholeWord` map to `MatchFlag.MatchCase` (`1`) /
+    `MatchFlag.MatchWholeWord` (`2`) from `@embedpdf/models` — confirmed from
+    `node_modules/@embedpdf/models/dist/pdf.d.ts`, not documented anywhere
+    else. Toggling calls the plugin's `setFlags` with the flags array with
+    that member added/removed; the plugin re-searches automatically if a
+    search is already active.
+  - `useSearch`/`usePrint` (unlike `useScroll`/`useZoom`) never throw for an
+    unregistered document id — both gracefully fall back to an empty/`null`
+    result (verified against the compiled `@embedpdf/plugin-search` /
+    `@embedpdf/plugin-print` `/react` sources) — so they need no extra
+    gating beyond the existing "only mounted once `documentId` is real" rule.
+  - **The active match is scrolled into view (FR-014) by our own code, not
+    by the plugin.** Neither `@embedpdf/plugin-search` nor any other
+    installed `@embedpdf/*` package does this: `nextResult`/`previousResult`/
+    a fresh search only dispatch `setActiveResultIndex` and notify
+    `onActiveResultChange` — confirmed by reading the compiled
+    `plugin-search` source and grepping every installed `@embedpdf/*` package
+    for a consumer of that event (there is none). `useDocumentSearchState`
+    derives the active result's page from
+    `searchState.results[activeResultIndex]` and calls
+    `scroll.scrollToPage({ pageNumber: pageIndex + 1, pageCoordinates: rect.origin, behavior: "smooth", alignX: 50, alignY: 50 })`
+    itself, deduplicated by the active result's own identity
+    (`pageIndex:charIndex`, not "already on the current page" — a page can
+    hold more than one match, and being on the right page doesn't guarantee
+    the specific rect is still in the viewport). `SearchResult.rects[0].origin`
+    is in the same page-local, unscaled coordinate space
+    `ScrollToPageOptions.pageCoordinates` expects (confirmed from
+    `@embedpdf/plugin-scroll`'s compiled `getScrollPositionForPage`) — the
+    same values `SearchLayer` itself draws its highlight rects from,
+    pre-scale. `scroll` (`useScroll(documentId).provides`) is threaded into
+    `useDocumentSearchState` by `usePdfViewerActiveState` rather than
+    obtained via a second `useScroll` call there.
+  - "Clear" and closing the search popover both call the plugin's
+    `stopSearch()`, which resets `query`/`results`/`total`/`activeResultIndex`
+    to their initial values in one dispatch (confirmed from the compiled
+    `plugin-search` reducer) — there is no separate "clear" action to keep in
+    sync.
+  - The search `Popover`'s content (`pdf-viewer-search-popover.tsx`) renders
+    through a Radix `Portal` into `document.body`, not into the story's
+    `canvasElement` — same as the zoom preset `DropdownMenu` above it. A
+    story's `play()` must query it via `within(document.body)`, matching
+    `dropdown-menu.stories.tsx`'s existing interaction story.
+  - **Storybook harness quirk, not a component bug**: in a `play()` function,
+    a Radix `Popover` that is opened and then must stay open across a
+    `step(name, fn)` **boundary** (i.e. the popover needs to survive into the
+    _next_ `step()` call) can get dismissed by the harness itself — verified
+    empirically under real Chromium that the popover stays open and fully
+    interactive for as long as everything (open, type, navigate, toggle,
+    clear) happens inside **one** `step()` call, and only closes exactly at
+    the transition to the next one. `WithInteraction` below keeps the whole
+    search sequence in a single step, before any other step boundary, rather
+    than fighting this.
+- **`WithInteraction` story convention**: `apps/storybook/tests/interaction.spec.ts`
+  only runs `play()` for a story whose CSF export is named exactly
+  `WithInteraction` (display name "With Interaction"); every other story here
+  is a pure visual/a11y snapshot with no `play()` at all. `WithInteraction`
+  lives in its own file, `pdf-viewer.interaction.stories.tsx` (`pdf-viewer.stories.tsx`
+  was growing past ~500 lines and this one story alone was ~130 of them) —
+  it shares the same `title: "Patterns/PdfViewer"` as the visual file, so
+  both land under the same Storybook sidebar group, and only the visual
+  file's `meta` carries the `autodocs` tag (a second copy on the interaction
+  file's `meta` would generate a duplicate "Docs" page for the same title).
+  `WithInteraction` is tagged `no-visual-test` (also excluded from
+  `test:visual` and, importantly, from `test:a11y` — a `play()`-bearing story
+  races the addon-a11y auto-scan against `AxeBuilder.analyze()`, see
+  `apps/storybook/tests/accessibility.spec.ts`). A story that must keep its
+  own `play()` for some other reason should carry that same tag.
+  `WithInteraction` consolidates every behavioural check for this pattern,
+  including the FR-026/SC-005 no-script-execution proof (`js-in-pdf.pdf`,
+  stubbing `window.alert`/`confirm`/`prompt`) and the full search/print flow.
+  Both story files share their harness (`PdfViewerHarness`/`StoryFrame`/
+  `wasmUrl`) via `pdf-viewer-story-helpers.tsx`, named without `.stories.` so
+  Storybook's `**/*.stories.@(ts|tsx)` glob (`apps/storybook/.storybook/main.ts`)
+  doesn't pick it up as a story module in its own right.
 - New stories needing Playwright visual baselines (pinned Linux image, not
   generated in this change): `Patterns/PdfViewer` — `Default`,
-  `ToolbarMinimal`, `Protected`, `Invalid`, `EngineFailure`, `JsInPdf`.
+  `ToolbarMinimal`, `Protected`, `Invalid`, `EngineFailure`, `JsInPdf`,
+  `SearchOpen`, `SearchNoResults`, `PrintReady`.
 
 ---
 

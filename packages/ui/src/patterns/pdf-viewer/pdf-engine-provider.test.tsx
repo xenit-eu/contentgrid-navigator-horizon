@@ -94,4 +94,22 @@ describe("PdfEngineProvider", () => {
     expect(firstEngine.destroy).toHaveBeenCalled();
     expect(secondEngine.destroy).not.toHaveBeenCalled();
   });
+
+  it("does not double-destroy the engine on unmount (usePdfiumEngine's own hook already tears it down on unmount — node_modules/@embedpdf/engines/dist/react/index.js:37-45)", () => {
+    const engine = { closeAllDocuments: vi.fn(), destroy: vi.fn() };
+    mockUsePdfiumEngine.mockReturnValue({ engine, isLoading: false, error: null });
+    const { unmount } = render(
+      <PdfEngineProvider wasmUrl="https://example.test/pdfium.wasm">
+        <StatusProbe />
+      </PdfEngineProvider>,
+    );
+
+    unmount();
+
+    // `PdfEngineProvider`'s own guard effect only destroys a *replaced* engine
+    // (see the "Strict-Mode double-invoke guard" test above) — it registers no
+    // unmount cleanup of its own, so the terminal engine is destroyed exactly
+    // once, by `usePdfiumEngine`'s own effect cleanup (mocked out here).
+    expect(engine.destroy).not.toHaveBeenCalled();
+  });
 });

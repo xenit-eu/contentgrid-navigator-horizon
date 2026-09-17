@@ -1,57 +1,53 @@
-import { useEffect, useState } from "react";
-// `@embedpdf/pdfium`'s own wasm binary, self-hosted (never a CDN URL) —
-// resolved to an absolute URL the worker can load from any origin. Note:
-// the package's `exports` map only exposes this at the `./pdfium.wasm`
-// subpath (not `./dist/pdfium.wasm`, despite that being the file's real
-// location inside the package) — `./dist/pdfium.wasm?url` fails to resolve
-// under Vite/Rolldown's `exports`-conditions resolution.
-import pdfiumWasmUrl from "@embedpdf/pdfium/pdfium.wasm?url";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { fn } from "storybook/test";
 import jsInPdfUrl from "./fixtures/js-in-pdf.pdf?url";
 import minimalPdfUrl from "./fixtures/minimal.pdf?url";
 import { PdfViewer } from "./pdf-viewer";
 import { DEFAULT_PDF_VIEWER_LABELS } from "./pdf-viewer-labels";
+import { PdfViewerHarness, StoryFrame, wasmUrl } from "./pdf-viewer-story-helpers";
 import { PdfViewerToolbar } from "./pdf-viewer-toolbar";
-
-const wasmUrl = new URL(pdfiumWasmUrl, window.location.href).href;
+import { type PdfViewerSearchActions, ZERO_SEARCH } from "./use-pdf-viewer-search";
+import type { PdfViewerStateActions } from "./use-pdf-viewer-state";
 
 // ---------------------------------------------------------------------------
-// Fixture loading — stories receive a `src` and fetch it themselves so the
-// same harness works for every story below.
+// Mock toolbar state/actions — used by the "mocked" stories (`Protected`,
+// `EngineFailure`, `SearchOpen`, `SearchNoResults`, `PrintReady`) that render
+// `PdfViewerToolbar` directly against a hand-picked state instead of driving
+// a real engine to it, matching the state exactly so the story is visually
+// identical to what `PdfViewer` itself would render.
 // ---------------------------------------------------------------------------
 
-function usePdfBytes(src: string): ArrayBuffer | null {
-  const [bytes, setBytes] = useState<ArrayBuffer | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setBytes(null);
-    fetch(src)
-      .then((response) => response.arrayBuffer())
-      .then((buffer) => {
-        if (!cancelled) setBytes(buffer);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [src]);
-
-  return bytes;
+function makeMockActions(overrides: Partial<PdfViewerStateActions> = {}): PdfViewerStateActions {
+  return {
+    goToPage: fn(),
+    previousPage: fn(),
+    nextPage: fn(),
+    zoomIn: fn(),
+    zoomOut: fn(),
+    setZoom: fn(),
+    toggleFullscreen: fn(),
+    print: fn(),
+    ...overrides,
+  };
 }
 
-function PdfViewerHarness(
-  props: Omit<React.ComponentProps<typeof PdfViewer>, "bytes"> & { src: string },
-) {
-  const { src, ...rest } = props;
-  const bytes = usePdfBytes(src);
-  if (!bytes) return <div className="p-8 text-sm text-muted-foreground">Loading fixture…</div>;
-  return <PdfViewer {...rest} bytes={bytes} />;
+function makeMockSearchActions(
+  overrides: Partial<PdfViewerSearchActions> = {},
+): PdfViewerSearchActions {
+  return {
+    setQuery: fn(),
+    nextMatch: fn(),
+    previousMatch: fn(),
+    toggleMatchCase: fn(),
+    toggleWholeWord: fn(),
+    clearSearch: fn(),
+    setOpen: fn(),
+    ...overrides,
+  };
 }
 
-function StoryFrame({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <div className="h-[520px] w-[420px] overflow-hidden rounded-md border">{children}</div>;
-}
+const READY_PAGE = { current: 1, total: 1 };
+const READY_ZOOM = { mode: "fit-width" as const, level: 100 };
 
 // ---------------------------------------------------------------------------
 // Meta
@@ -79,7 +75,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // ---------------------------------------------------------------------------
-// Stories
+// Visual / a11y stories — no `play()`. Functional coverage (including the
+// FR-026/SC-005 no-script-execution proof and the search/print controls) all
+// lives in `WithInteraction` (`pdf-viewer.interaction.stories.tsx`), tagged
+// `no-visual-test` and excluded from both the visual-regression and axe
+// suites (a `play()`-bearing story races the a11y addon's own auto-scan
+// against `AxeBuilder.analyze()` — see `apps/storybook/tests/accessibility.spec.ts`
+// — and an in-flight `play()` mid-screenshot makes visual snapshots
+// non-deterministic).
 // ---------------------------------------------------------------------------
 
 export const Default: Story = {
@@ -95,44 +98,6 @@ export const Default: Story = {
       />
     </StoryFrame>
   ),
-  play: async ({ canvasElement, step }) => {
-    const canvas = within(canvasElement);
-
-    await step("document opens and the toolbar becomes enabled", async () => {
-      const zoomIn = await canvas.findByLabelText("Zoom in", {}, { timeout: 10_000 });
-      await waitFor(() => expect(zoomIn).toBeEnabled(), { timeout: 10_000 });
-    });
-
-    await step("zoom controls change the displayed level", async () => {
-      const zoomIn = await canvas.findByLabelText("Zoom in");
-      const zoomLevel = await canvas.findByLabelText("Zoom level");
-      const before = zoomLevel.textContent;
-      await userEvent.click(zoomIn);
-      await waitFor(() => expect(zoomLevel.textContent).not.toBe(before));
-    });
-
-    await step("zoom out returns towards the original level", async () => {
-      const zoomOut = await canvas.findByLabelText("Zoom out");
-      await userEvent.click(zoomOut);
-    });
-
-    await step("jumping to page 1 keeps the single-page document on page 1", async () => {
-      const pageInput = await canvas.findByLabelText("Current page");
-      await userEvent.clear(pageInput);
-      await userEvent.type(pageInput, "1{Enter}");
-      await expect(pageInput).toHaveValue("1");
-    });
-
-    await step("download button is present and clickable", async () => {
-      const download = await canvas.findByLabelText("Download");
-      await userEvent.click(download);
-    });
-
-    await step("fullscreen toggle does not throw", async () => {
-      const fullscreenButton = await canvas.findByLabelText("Enter fullscreen");
-      await userEvent.click(fullscreenButton);
-    });
-  },
 };
 
 export const ToolbarMinimal: Story = {
@@ -146,12 +111,6 @@ export const ToolbarMinimal: Story = {
       />
     </StoryFrame>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByLabelText("Previous page")).toBeInTheDocument();
-    await expect(canvas.queryByLabelText("Zoom in")).not.toBeInTheDocument();
-    await expect(canvas.queryByLabelText("Enter fullscreen")).not.toBeInTheDocument();
-  },
 };
 
 /**
@@ -169,21 +128,17 @@ export const Protected: Story = {
         <PdfViewerToolbar
           showPageNavigation
           showZoom
+          showSearch
+          showPrint
           showFullscreen
           onDownload={fn()}
           documentState="protected"
           page={{ current: 0, total: 0 }}
           zoom={{ mode: "fit-width", level: 100 }}
+          search={ZERO_SEARCH}
           fullscreen={false}
-          actions={{
-            goToPage: fn(),
-            previousPage: fn(),
-            nextPage: fn(),
-            zoomIn: fn(),
-            zoomOut: fn(),
-            setZoom: fn(),
-            toggleFullscreen: fn(),
-          }}
+          actions={makeMockActions()}
+          searchActions={makeMockSearchActions()}
           labels={DEFAULT_PDF_VIEWER_LABELS}
         />
         <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-center text-sm">
@@ -192,11 +147,6 @@ export const Protected: Story = {
       </div>
     </StoryFrame>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByText(DEFAULT_PDF_VIEWER_LABELS.protectedDocument)).toBeInTheDocument();
-    await expect(canvas.getByLabelText("Previous page")).toBeDisabled();
-  },
 };
 
 export const Invalid: Story = {
@@ -210,12 +160,6 @@ export const Invalid: Story = {
       />
     </StoryFrame>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      await canvas.findByText(DEFAULT_PDF_VIEWER_LABELS.invalidDocument, {}, { timeout: 10_000 }),
-    ).toBeInTheDocument();
-  },
 };
 
 /**
@@ -239,16 +183,13 @@ export const EngineFailure: Story = {
       </div>
     </StoryFrame>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByText(DEFAULT_PDF_VIEWER_LABELS.engineError)).toBeInTheDocument();
-  },
 };
 
 /**
  * Proves FR-026 / SC-005: PDFium is a WASM build with no JavaScript engine
  * compiled in, so an `/OpenAction` running `app.alert('x')` never executes.
- * The `play()` step spies on `window.alert` and fails if it is ever called.
+ * The no-dialog assertion itself lives in `WithInteraction`'s `play()`; this
+ * story stays a pure visual/a11y snapshot of the rendered document.
  */
 export const JsInPdf: Story = {
   render: () => (
@@ -256,22 +197,102 @@ export const JsInPdf: Story = {
       <PdfViewerHarness src={jsInPdfUrl} filename="js-in-pdf.pdf" wasmUrl={wasmUrl} />
     </StoryFrame>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    let dialogFired = false;
-    const originalAlert = window.alert;
-    window.alert = () => {
-      dialogFired = true;
-    };
+};
 
-    try {
-      await canvas.findByLabelText("Previous page", {}, { timeout: 10_000 });
-      // Give the engine a moment past "opened" in case any scripting path
-      // fires asynchronously.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await expect(dialogFired).toBe(false);
-    } finally {
-      window.alert = originalAlert;
-    }
-  },
+/**
+ * Mocked (same rationale as `Protected`): shows the search popover open with
+ * three matches found and the second one active.
+ */
+export const SearchOpen: Story = {
+  render: () => (
+    <StoryFrame>
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+        <PdfViewerToolbar
+          showPageNavigation
+          showZoom
+          showSearch
+          showPrint
+          showFullscreen
+          onDownload={fn()}
+          documentState="ready"
+          page={READY_PAGE}
+          zoom={READY_ZOOM}
+          search={{
+            query: "Hello",
+            total: 3,
+            activeIndex: 1,
+            matchCase: false,
+            wholeWord: false,
+            open: true,
+          }}
+          fullscreen={false}
+          actions={makeMockActions()}
+          searchActions={makeMockSearchActions()}
+          labels={DEFAULT_PDF_VIEWER_LABELS}
+        />
+        <div className="bg-muted flex flex-1 items-center justify-center text-sm">Hello</div>
+      </div>
+    </StoryFrame>
+  ),
+};
+
+/** Mocked (same rationale as `Protected`): the search popover open with a query that matched nothing. */
+export const SearchNoResults: Story = {
+  render: () => (
+    <StoryFrame>
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+        <PdfViewerToolbar
+          showPageNavigation
+          showZoom
+          showSearch
+          showPrint
+          showFullscreen
+          onDownload={fn()}
+          documentState="ready"
+          page={READY_PAGE}
+          zoom={READY_ZOOM}
+          search={{
+            query: "notfound",
+            total: 0,
+            activeIndex: -1,
+            matchCase: false,
+            wholeWord: false,
+            open: true,
+          }}
+          fullscreen={false}
+          actions={makeMockActions()}
+          searchActions={makeMockSearchActions()}
+          labels={DEFAULT_PDF_VIEWER_LABELS}
+        />
+        <div className="bg-muted flex flex-1 items-center justify-center text-sm">Hello</div>
+      </div>
+    </StoryFrame>
+  ),
+};
+
+/** Mocked (same rationale as `Protected`): a ready document with the print control enabled. */
+export const PrintReady: Story = {
+  render: () => (
+    <StoryFrame>
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+        <PdfViewerToolbar
+          showPageNavigation
+          showZoom
+          showSearch
+          showPrint
+          showFullscreen
+          onDownload={fn()}
+          documentState="ready"
+          page={READY_PAGE}
+          zoom={READY_ZOOM}
+          search={ZERO_SEARCH}
+          fullscreen={false}
+          actions={makeMockActions()}
+          searchActions={makeMockSearchActions()}
+          labels={DEFAULT_PDF_VIEWER_LABELS}
+        />
+        <div className="bg-muted flex flex-1 items-center justify-center text-sm">Hello</div>
+      </div>
+    </StoryFrame>
+  ),
 };

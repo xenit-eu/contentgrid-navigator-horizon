@@ -324,8 +324,12 @@ npm registry and jsDelivr file listings for `@embedpdf/*@2.15.0`, and the EmbedP
 
 ### 8.2 WASM and worker: self-hosted, absolute URL, `blob:` worker, fonts off
 
-- **Decision**: import `@embedpdf/pdfium/dist/pdfium.wasm?url` in the feature (Vite emits a hashed
-  asset), turn it absolute with `new URL(url, window.location.href).href`, pass it as `wasmUrl` to
+- **Decision**: import `@embedpdf/pdfium/pdfium.wasm?url` in the feature (Vite emits a hashed
+  asset — **not** `.../dist/pdfium.wasm?url`: the package's `exports` map only publishes the
+  `./pdfium.wasm` subpath, even though that isn't the file's real on-disk location, and the
+  `dist/...` path 404s under Vite/Rolldown's `exports`-conditions resolution, confirmed while
+  building `packages/ui`'s Storybook — see `packages/ui/CLAUDE.md`), turn it absolute with
+  `new URL(url, window.location.href).href`, pass it as `wasmUrl` to
   `usePdfiumEngine({ wasmUrl, worker: true })`; set `fontFallback: { fonts: {} }` (not `null`, see
   #631) so no glyph fonts are fetched from jsDelivr; document `worker-src blob:` (and `connect-src`
   for the rendition origin) as CSP requirements for deployment.
