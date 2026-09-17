@@ -195,7 +195,7 @@ describe("CreateEntityItemContainer", () => {
     server.use(profileRootHandler(), invoiceProfileHandler());
     const { unmount } = renderForm();
 
-    const toggle = await screen.findByRole("checkbox", { name: "Keep creating entities" });
+    const toggle = await screen.findByRole("switch", { name: "Keep creating entities" });
     expect(toggle).not.toBeChecked();
 
     await user.click(toggle);
@@ -204,7 +204,7 @@ describe("CreateEntityItemContainer", () => {
 
     server.use(profileRootHandler(), invoiceProfileHandler());
     renderForm();
-    expect(await screen.findByRole("checkbox", { name: "Keep creating entities" })).toBeChecked();
+    expect(await screen.findByRole("switch", { name: "Keep creating entities" })).toBeChecked();
   });
 
   it("with continuous-create on, resets the form and shows a toast instead of calling onCreated", async () => {
@@ -213,7 +213,7 @@ describe("CreateEntityItemContainer", () => {
     server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
     renderForm({ onCreated });
 
-    await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
+    await user.click(await screen.findByRole("switch", { name: "Keep creating entities" }));
 
     const input = screen.getByLabelText(/Invoice Number/);
     await user.type(input, "INV-1");
@@ -230,7 +230,7 @@ describe("CreateEntityItemContainer", () => {
     server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
     renderForm({ onCreated });
 
-    await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
+    await user.click(await screen.findByRole("switch", { name: "Keep creating entities" }));
     await user.type(screen.getByLabelText(/Invoice Number/), "INV-1");
     await user.click(screen.getByRole("button", { name: "Create" }));
     await screen.findByText("Invoice has been successfully created!");
@@ -276,7 +276,7 @@ describe("CreateEntityItemContainer", () => {
     );
     renderForm();
 
-    await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
+    await user.click(await screen.findByRole("switch", { name: "Keep creating entities" }));
 
     const statusTrigger = screen.getByRole("combobox", { name: "Status" });
     await user.click(statusTrigger);

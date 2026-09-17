@@ -1,6 +1,6 @@
 import { type ReactNode, type SubmitEvent, useEffect, useRef } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
-import { Button, Checkbox, Label } from "@contentgrid/ui";
+import { Button, Label, Switch } from "@contentgrid/ui";
 import type { FieldDescriptor } from "./model/field-descriptor";
 import type { LayoutInformation } from "./model/layout-information";
 import { FormContainer } from "./render/form-container";
@@ -92,7 +92,7 @@ export function CreateEntityItemForm({
         />
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         <div className="flex gap-2">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Creating…" : "Create"}
@@ -105,12 +105,14 @@ export function CreateEntityItemForm({
         </div>
 
         <div className="flex items-center gap-2">
-          <Checkbox
+          <Switch
             id="continuous-create"
             checked={continuousCreate}
-            onCheckedChange={(checked) => onContinuousCreateChange(checked === true)}
+            onCheckedChange={onContinuousCreateChange}
           />
-          <Label htmlFor="continuous-create">Keep creating entities</Label>
+          <Label htmlFor="continuous-create" className="text-muted-foreground font-normal">
+            Keep creating entities
+          </Label>
         </div>
       </div>
     </form>
