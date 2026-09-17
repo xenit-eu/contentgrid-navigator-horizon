@@ -34,7 +34,7 @@
 
 ### Session 2026-09-17
 
-- Q: How does the viewer authenticate to the rendition service, and where does its endpoint come from? → A: The endpoint is deployment configuration, not a HAL link. Requests carry a token obtained through the platform's token-exchange facility (TokenMonger), which the platform already provides; the user's own API token is never forwarded and unauthenticated calls are not allowed. The response contract (accepted plus job location, poll until ready, explicit "cannot convert" problem) remains an observed-behaviour assumption until ACC-2960 documents it. (Answer from Ranec, relayed 2026-09-17.)
+- Q: How does the viewer authenticate to the rendition service, and where does its endpoint come from? → A: The endpoint is deployment configuration, not a HAL link. The viewer calls it with the same authenticated client it uses for content downloads (the user's own access token in the `Authorization` header); the frontend performs no token exchange — TokenMonger takes care of whatever exchange the rendition service needs on the platform side. Assumption to confirm with the platform team: the service accepts the user's access token and allows the Navigator origin (CORS). The response contract (accepted plus job location, poll until ready, explicit "cannot convert" problem) remains an observed-behaviour assumption until ACC-2960 documents it. (Answer from Ranec, relayed 2026-09-17; frontend-side exchange removed the same day after Nick's correction: TokenMonger takes care of it.)
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -146,7 +146,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-020**: When a rendition is displayed the system MUST indicate that a converted preview is shown, MUST deliver the original file on Download, and MUST print the rendition as displayed.
 - **FR-021**: The system MUST stop polling for a rendition as soon as the viewer is closed, the attribute changes or the item changes.
 - **FR-022**: When no rendition endpoint is configured the system MUST show "Preview not available" with Download for non-PDF files and MUST NOT contact any service.
-- **FR-023**: The system MUST authenticate every request to the rendition service (the initial request and each poll) with a token obtained through the platform's token-exchange facility (TokenMonger) for that service. It MUST NOT forward the user's own API token and MUST NOT call the service unauthenticated. If no exchanged token can be obtained, the system MUST treat the rendition as unavailable (FR-022 behaviour) rather than fall back to an unauthenticated call.
+- **FR-023**: The system MUST call the rendition service (the initial request and each poll) with the same authenticated content client it uses to download files, sending the user's access token in the `Authorization` header only. It MUST NOT perform a token exchange itself and MUST NOT call the service unauthenticated; any exchange the service needs to read the source file is the platform's responsibility (TokenMonger).
 
 **States and errors**
 
@@ -203,7 +203,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 ### Dependencies and references
 
-- **Platform touchpoints**: the entity profile's content attributes; the entity item's content metadata and its `cg:content` links; RFC 9457 problem details, including `https://contentgrid.cloud/problems/renditions/invalid-conversion`; the rendition service endpoint (deployment configuration); the platform's token exchange (TokenMonger) for the rendition service's token.
+- **Platform touchpoints**: the entity profile's content attributes; the entity item's content metadata and its `cg:content` links; RFC 9457 problem details, including `https://contentgrid.cloud/problems/renditions/invalid-conversion`; the rendition service endpoint (deployment configuration); TokenMonger on the platform side for any exchange the rendition service needs.
 - **Decisions**: ADR-011 (PDF stack and fallback triggers), ADR-003 (primitive versus pattern boundary), ADR-006 (three-track delivery), ADR-009 (visual regression), ADR-014 (MSW contract tests).
 - **Tickets consolidated by this spec**: ACC-2902 (HZN-6A.1 toolbar), ACC-2903 (HZN-6A.2 rendition-aware preview), ACC-2904 (HZN-6A.3 scripting posture). Follow-up annotation story: ACC-2905, ACC-2907, ACC-2908, ACC-2911, ACC-2912. Related platform work: ACC-2960 (document rendition system), ACC-3074 (rendition service 500 instead of 4xx), ACC-1668 (rendition kept answering "pending").
 - **Design**: `contentgrid-navigator-mockup 2.html`, pages 03 and 04.

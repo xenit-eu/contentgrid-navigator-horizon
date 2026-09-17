@@ -32,7 +32,7 @@
 ## Notes
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
-- The former open clarification is resolved: authentication (FR-023) goes through the platform's token exchange (TokenMonger) and the endpoint is deployment configuration (FR-029). The rendition response contract remains an assumption until ACC-2960 documents it.
+- The former open clarification is resolved: the viewer calls the rendition service with its normal authenticated client and performs no exchange itself (FR-023; TokenMonger handles that on the platform side), and the endpoint is deployment configuration (FR-029). The rendition response contract remains an assumption until ACC-2960 documents it.
 - Deliberate template deviations: a `## Scope` section before User Scenarios (the checklist demands a bounded scope and this feature has many adjacent stories) and a `### Dependencies and references` sub-section under Assumptions. Both are additive; every template section keeps its name and order.
 - Scope change 2026-09-17: the annotation / extraction-highlight overlay was removed from this spec at the product owner's request, and its research was taken out of `research.md` at review (available in this branch's git history, commit 579bd325) for the follow-up story.
 - Review path: human review of `spec.md` in the pull request → `/speckit-plan` (reads `research.md`) → `/speckit-tasks`.
