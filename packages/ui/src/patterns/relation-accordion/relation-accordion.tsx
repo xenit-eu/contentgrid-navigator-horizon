@@ -31,7 +31,7 @@ export function RelationAccordion({ title, actions, children }: Readonly<Relatio
         <AccordionItem value="relation" className="border-none">
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between gap-2">
-              <AccordionTrigger className="flex-none gap-2 p-0 hover:no-underline [&_svg]:size-4">
+              <AccordionTrigger className="flex-none gap-2 p-0 hover:no-underline [&_svg]:size-4 [&_svg]:box-content [&_svg]:rounded-full [&_svg]:p-1 [&_svg]:-m-1 [&_svg]:transition-colors [&:hover_svg]:bg-accent">
                 <span className="text-sm font-semibold">{title}</span>
               </AccordionTrigger>
               {actions && <div className="flex items-center gap-2">{actions}</div>}

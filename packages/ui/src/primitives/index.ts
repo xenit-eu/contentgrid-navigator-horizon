@@ -34,6 +34,7 @@ export * from "./tooltip";
 export * from "./text-field";
 export * from "./search-field";
 export * from "./chip";
+export * from "./count-indicator-chip";
 export * from "./selection-chip";
 export * from "./status-pill";
 export * from "./banner";

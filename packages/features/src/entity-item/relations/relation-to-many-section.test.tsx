@@ -291,18 +291,18 @@ describe("RelationToManySection", () => {
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 
-  it("hides the Add button when canAdd is false", () => {
+  it("hides the Link button when canAdd is false", () => {
     mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
     renderSection({ relation: makeRelation({ canAdd: false }) });
-    expect(screen.queryByRole("button", { name: "Add" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Link" })).not.toBeInTheDocument();
   });
 
-  it("opens the link dialog when the Add button is clicked", async () => {
+  it("opens the link dialog when the Link button is clicked", async () => {
     const user = userEvent.setup();
     mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
     renderSection({ relation: makeRelation({ canAdd: true }) });
 
-    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.click(screen.getByRole("button", { name: "Link" }));
     expect(await screen.findByText(/link invoices/i)).toBeInTheDocument();
   });
 

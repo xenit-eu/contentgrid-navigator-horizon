@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { LinkBreakIcon as LinkBreak } from "@phosphor-icons/react";
+import { LinkBreakIcon as LinkBreak, PlusIcon } from "@phosphor-icons/react";
 import {
   type EntityItemToManyRelation,
   type ProfileEntity,
@@ -19,12 +19,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Badge,
   Button,
+  CountIndicatorChip,
   DataTable,
   RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
+import { EntityItemCountLabel } from "../../entity-item-collection";
 import { buildColumns, buildRows, useColumnVisibility } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
 import {
@@ -102,15 +103,12 @@ export function RelationToManySection({
     <>
       <RelationAccordion
         title={
-          <>
-            {title}
+          <span className="inline-flex items-center gap-2">
             {total !== undefined && (
-              <Badge variant="secondary" className="text-xs">
-                {total.count.toLocaleString()} item{total.count === 1 ? "" : "s"}
-                {total.isEstimated && " (est.)"}
-              </Badge>
+              <CountIndicatorChip count={total.count} isEstimated={total.isEstimated} />
             )}
-          </>
+            {title}
+          </span>
         }
         actions={
           <>
@@ -122,7 +120,8 @@ export function RelationToManySection({
                   disabled={isAdding}
                   onClick={() => setAddOpen(true)}
                 >
-                  Add
+                  <PlusIcon className="size-4" />
+                  Link
                 </Button>
                 <RelationItemSearchDialog
                   targetProfile={targetProfile}
@@ -135,7 +134,7 @@ export function RelationToManySection({
             {canUnlinkAll && (
               <Button
                 type="button"
-                variant="outline"
+                variant="destructive"
                 size="sm"
                 disabled={isClearing}
                 onClick={() => setConfirmUnlinkAll(true)}
@@ -221,8 +220,13 @@ export function RelationToManySection({
             <AlertDialogHeader>
               <AlertDialogTitle>Unlink all {title.toLowerCase()}</AlertDialogTitle>
               <AlertDialogDescription>
-                Remove {total?.count ?? "all"} linked item{total?.count === 1 ? "" : "s"}? This will
-                not delete the {title.toLowerCase()} themselves.
+                Remove{" "}
+                {total ? (
+                  <EntityItemCountLabel count={total.count} noun="linked item" />
+                ) : (
+                  "all linked items"
+                )}
+                ? This will not delete the {title.toLowerCase()} themselves.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
