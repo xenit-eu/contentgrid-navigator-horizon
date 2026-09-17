@@ -30,9 +30,12 @@ export interface EntityItemContentFocusViewProps {
 
 - `ContentFocusLayout` — `grid-template-columns: 1fr 360px`, side panel collapsible, fills height
   (FR-015), hosts fullscreen.
-- `ContentPreviewPanel({ entityItem, attributeName })` — owns `useContentPreview` and
+- `ContentPreviewPanel({ entityItem, attributeName, toolbarStart? })` — owns `useContentPreview` and
   `useDownloadContent`; lazy-loads `PdfViewer`; converts `PreviewSource` + viewer callbacks into the
-  FR-024 state; Download delivers the original bytes via an object URL and revokes it.
+  FR-024 state; Download delivers the original bytes via an object URL and revokes it. `toolbarStart`
+  is the view's `ContentAttributeSelector` node, forwarded into the mounted `PdfViewer`'s toolbar
+  `start` slot — the panel has no attribute-selection logic of its own; it only has somewhere to put
+  that node once the viewer actually mounts (the `ready` state).
 - `ContentPreviewFrame` — presentational: `state` prop → skeleton / message / drop zone / viewer; every
   state has a story. The "No file" state renders `@contentgrid/ui`'s `FileUploadZone` with a
   feature-supplied `onFileChange` that is a no-op until the content-upload story wires it.
@@ -40,7 +43,9 @@ export interface EntityItemContentFocusViewProps {
 ## Host (app) responsibilities
 
 - `apps/navigator-experimental/src/routes/_app/$entity/$itemId.tsx` mounts the view with
-  `entityName`, `itemId`, breadcrumbs and navigation callbacks; nothing else.
+  `entityName`, `itemId`, and navigation callbacks only — it passes no `toolbar` override, so the
+  view's own default breadcrumbs (Home → `profileEntity.pluralName` → item id) render as-is; the
+  route only needs `toolbar` when it wants different chrome.
 - Provide CSP: `worker-src blob:`; `connect-src` includes the rendition origin; `script-src` unchanged
   (the wasm is fetched, not inlined).
 

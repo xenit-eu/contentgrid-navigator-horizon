@@ -206,6 +206,35 @@ story starts. If that story later hits one of the fallback trigger conditions ag
 headless `@embedpdf/core` build instead of the drop-in viewer, evaluate it against the same
 four conditions; nothing here changes that evaluation.
 
+### Consequences (2026-09-17 amendment)
+
+**Positive:**
+
+- The headless build sidesteps every drop-in-viewer blocker found in research (nonce-less style
+  injection, shadow-DOM theming/scroll-lock conflicts, the ~9.7 MB/30-plugin footprint) without
+  leaving the `@embedpdf` family this ADR committed to.
+- The scripting-posture guarantee (CVE-2024-4367's original concern, reframed for PDFium/WASM)
+  is a committed, automated check — the `JsInPdf` Storybook `play()` assertion — not a one-time
+  manual verification, so a regression here fails visibly rather than silently.
+- Self-hosting `pdfium.wasm` (no CDN) and building our own shadcn toolbar keep this feature
+  inside the project's existing no-third-party-asset and design-system conventions, rather than
+  inheriting the drop-in viewer's own asset/style choices.
+
+**Negative / accepted:**
+
+- More upfront integration work than the drop-in viewer would have needed: this feature owns
+  its own toolbar (page navigation, zoom, search, print, download, fullscreen) instead of
+  getting one for free, and wires eight or nine individual plugins rather than one package.
+- New deployment surface the original decision didn't carry: a `blob:` module worker (CSP
+  `worker-src blob:`), and — once rendition-aware preview is in the picture — a second CSP
+  `connect-src` origin plus CORS/`Authorization`/`Location`-exposure requirements on the
+  rendition service (see this feature's `CLAUDE.md` "Deployment requirements" section). These
+  are now real conditions an operator must satisfy before this feature works in production, not
+  just a library choice.
+- The rendition service's response contract itself is still reverse-engineered, not
+  platform-documented — tracked as an open confirmation in ACC-2960, unchanged by this
+  amendment (it was already an open item; the headless-build decision doesn't resolve it).
+
 ---
 
 **Hub:** [[README|ADR Index]]
