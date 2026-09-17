@@ -134,8 +134,9 @@ export function RelationToManySection({
             {canUnlinkAll && (
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
                 size="sm"
+                className="text-destructive hover:text-destructive"
                 disabled={isClearing}
                 onClick={() => setConfirmUnlinkAll(true)}
               >
