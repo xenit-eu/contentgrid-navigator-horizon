@@ -92,6 +92,8 @@ src/hooks/
   collection/  # entity collection queries and pagination helpers
   item/        # single entity-item queries and item mutations (create/update/delete/content)
   relation/    # relation read queries and relation mutations
+  preview/     # content-preview query (useContentPreview) — see Content preview and renditions
+  preferences/ # backend-provided display-preference defaults (useEntityDisplayDefaults)
   context.tsx  # NavigatorDataProvider / useNavigatorData
   index.ts     # single public barrel — all hooks re-exported from here
 ```
@@ -712,6 +714,66 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
 - Content helpers live in `src/api/content-types.ts`: `contentDispositionAttachment(filename)`,
   `parseContentDisposition(header)`.
 - 412/415 surface as `ProblemDetailError`; the hook does not auto-retry.
+
+---
+
+## Content preview and renditions
+
+`useContentPreview(entityItem, attributeName, options?)` (`src/hooks/preview/use-content-preview.ts`)
+turns a content attribute into displayable PDF bytes for the PDF viewer feature (spec
+`002-pdf-viewer`): the stored file directly when it is already a PDF, or — when a non-PDF file is
+stored and a rendition endpoint is configured — the platform's PDF rendition of it.
+
+**Rules:**
+
+- Throws synchronously (during render, not inside `queryFn`) when `attributeName` does not name a
+  content attribute of the item — a caller programming error, not a state to render around.
+- Query key: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)` — its own root, never
+  invalidated by an entity item or collection mutation. The ETag in the key means a re-upload onto
+  the same attribute produces a new key automatically (a stale preview is never served after a
+  re-upload); it is NOT invalidated by any relation/entity-item cache invalidation.
+- **Uses `contentFetch` for everything — the stored download AND every rendition request/poll.**
+  Never `apiFetch`. The frontend performs no token exchange: the rendition service receives the same
+  Bearer credential as a content download; TokenMonger handles whatever exchange it needs on the
+  platform side (research.md §8.3 of spec 002-pdf-viewer). Rendition config is delivered like
+  `apiBaseUrl`/OIDC — through `RuntimeAppConfig`/Liaison, not a separate client.
+- `retry: false`, `staleTime: Infinity`, `gcTime: 300_000` — a failed download/rendition is not
+  silently retried (the caller's Retry action is `refetch()`); a specific ETag's content never goes
+  stale on its own.
+- Mimetype classification: `isPdfMimetype`/`needsRendition` (`src/preview/content-mimetype.ts`) —
+  pure string functions, exact complements of each other.
+- Rendition protocol: `requestRendition(fetch, uriTemplate, contentHref, options)`
+  (`src/preview/rendition-job.ts`) is a pure async state machine, no React/TanStack — expands the
+  configured `{?url}` URI template with `@contentgrid/uri-template` (the content href passed only as
+  the template's opaque `url` value, never otherwise built into a path), then follows the
+  `202 + Location` → poll → terminal contract in `specs/002-pdf-viewer/contracts/rendition-service.md`.
+  Poll-first-then-wait: a job that already finished is never delayed by a sleep. Honours `signal`
+  throughout (an aborted request rejects with a named `AbortError` `DOMException`, not a plain
+  `Error`). `RenditionTimeoutError` when no terminal answer arrives within the ceiling;
+  `RenditionProtocolError` only for a genuine protocol violation — a `202` with no `Location`
+  header, or an unexpected 2xx status (not `200`/`202`) — identically on the initial request
+  and on a poll. Any other failure (a typed or opaque problem, a network error) propagates
+  unchanged in both phases (`ProblemDetailError` or a plain `Error`) rather than being
+  wrapped, so the real problem detail still reaches display code.
+- `RENDITION_INVALID_CONVERSION` (`src/api/problem-details/constants.ts`) is a problem `type` from
+  the rendition service, not the ContentGrid Application API — modeled (interface +
+  `ContentGridProblemDetail` union member) purely so `isProblemOfType` narrows it uniformly, but
+  deliberately given no dedicated `ProblemDisplayModel` kind — `toProblemDisplayModel` falls through
+  to `kind: "unknown"` for it.
+- Configuration: `RuntimeAppConfig.renditionUri` (a `{?url}` URI template), `renditionPollIntervalMs`
+  (default 2000), `renditionTimeoutMs` (default 60000) — from Liaison `config.js`'s `v1.renditionUri`
+  etc. (`auth/auth-config.ts`), the dev-config override, or `VITE_RENDITION_URI` (env fallback for
+  `renditionUri` only — the two numeric fields have no env fallback). Invalid values (a
+  `renditionUri` missing `{?url}`, an interval below 250ms, a timeout below the effective interval)
+  are dropped with a `console.warn`, never thrown — a misconfigured rendition endpoint must not block
+  the rest of the app. `useAppAuth()` reads the validated config and fills in the two defaults,
+  producing `NavigatorDataContextValue.renditionUri`/`renditionPolling` — `useContentPreview` treats
+  `renditionUri === undefined` as "renditions disabled" (`{ kind: "unavailable" }`), never as a
+  transient error.
+- Tests: `test-fixtures/msw/handlers.ts`'s `createRenditionHandlers({ url, jobUrl, pendingPolls,
+outcome })` simulates one rendition job (`"ready" | "invalid-conversion" | "error" | "never"`); use
+  `vi.useFakeTimers()` + `vi.advanceTimersByTimeAsync`/`runAllTimersAsync` to flush the poll interval
+  in a hook test — `onUnhandledRequest: "error"` (`test-setup.ts`) means every poll must be matched.
 
 ---
 

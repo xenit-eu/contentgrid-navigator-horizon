@@ -45,16 +45,26 @@ or item mutations; `gcTime` 5 min, `staleTime` Infinity.
 
 Internal state machine of `requestRendition(fetch, uriTemplate, contentHref, options)`.
 
+The initial request and every poll of the job URL are governed by the **same** response
+contract — a poll is not a special case:
+
 ```text
-requested ──202 + Location──▶ pending ──200──▶ ready(bytes)
-    │                            │   └─202──▶ pending (after intervalMs; abort → cancelled)
-    │                            ├─ invalid-conversion problem ──▶ unsupported
-    │                            ├─ other non-2xx / network ──▶ failed(problem | Error)
-    │                            └─ now ≥ deadline ──▶ timedOut
-    ├─ 200 directly ──▶ ready(bytes)            (service may answer immediately)
-    ├─ invalid-conversion problem ──▶ unsupported
-    └─ other non-2xx / missing Location ──▶ failed(RenditionProtocolError)
+requested / pending ──200──▶ ready(bytes)
+requested ──202 + Location──▶ pending
+pending ──202──▶ pending (after intervalMs; abort → cancelled)
+pending ──now ≥ deadline──▶ timedOut
+
+Either `requested` or `pending`, identically:
+    ── problem invalid-conversion ──▶ unsupported
+    ── other non-2xx / network ──▶ failed(problem | Error)
+    ── 202 without Location, or an unexpected 2xx (not 200/202) ──▶ failed(RenditionProtocolError)
 ```
+
+`RenditionProtocolError` is reserved for the service violating the documented contract itself
+(no `Location` on a `202`, or a 2xx status the contract doesn't define) — never for an
+application-level failure. A typed problem (including `invalid-conversion`) or an opaque
+problem/network error is never wrapped, on the initial request or a poll alike; the caller
+sees the real `problem | Error`.
 
 **Fields**: `uriTemplate` (from config, `{?url}` expanded with the content href as an opaque value),
 `intervalMs` (default 2000), `timeoutMs` (default 60000), `signal` (from the query), `jobUrl`

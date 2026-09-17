@@ -17,7 +17,7 @@
 //     path }`) — e.g. a NUL byte (`U+0000`) in a string value/filter. Not RFC 9457.
 // Treat any `ProblemDetail` whose `type` is undefined as opaque.
 import type { ProblemDetail } from "@contentgrid/problem-details";
-import { ContentGridProblemType } from "./constants";
+import { ContentGridProblemType, RENDITION_INVALID_CONVERSION } from "./constants";
 
 export * from "./constants";
 export * from "./guards";
@@ -406,6 +406,21 @@ export interface RequiredRelationProblem extends ProblemDetail {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Rendition service — NOT part of the ContentGrid Application API above (see
+// RENDITION_INVALID_CONVERSION's doc comment in ./constants); modeled here only so
+// `isProblemOfType` narrows it like every other problem type.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * When it occurs: the platform's rendition service cannot convert a content attribute's
+ * stored file to PDF (unsupported source format). Frontend behaviour: "Preview not
+ * available" + Download — this is a normal outcome, not an error to alert on.
+ */
+export interface RenditionInvalidConversionProblem extends ProblemDetail {
+  readonly type: typeof RENDITION_INVALID_CONVERSION;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Union of all typed ContentGrid problem details
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -415,6 +430,9 @@ export interface RequiredRelationProblem extends ProblemDetail {
  * Narrow with the `type` field against {@link ContentGridProblemType}. Responses
  * that are not `application/problem+json` (opaque `403`, Spring `500`) do not
  * appear here — they surface as the bare {@link ProblemDetail} with no `type`.
+ *
+ * One member, {@link RenditionInvalidConversionProblem}, comes from the platform's
+ * rendition service rather than the Application API proper — see its own doc comment.
  */
 export type ContentGridProblemDetail =
   | ValidationProblemDetail
@@ -435,4 +453,5 @@ export type ContentGridProblemDetail =
   | NotFoundRelationItemProblem
   | NotFoundContentProblem
   | BlindRelationOverwriteProblem
-  | RequiredRelationProblem;
+  | RequiredRelationProblem
+  | RenditionInvalidConversionProblem;

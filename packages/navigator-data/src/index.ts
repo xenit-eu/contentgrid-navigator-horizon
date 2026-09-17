@@ -23,6 +23,7 @@ export type {
   EntityDisplayPreferencesMap,
 } from "./accessors/entity-display-preferences";
 export * from "./config";
+export * from "./preview";
 export { queryKeys } from "./query-keys";
 export * from "./search";
 export type { SearchRequestSpec } from "./api/requests";
