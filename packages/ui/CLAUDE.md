@@ -143,6 +143,68 @@ a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch tha
 
 ---
 
+## `PdfViewer` pattern (`src/patterns/pdf-viewer/`)
+
+Headless `@embedpdf/core` + plugin composition with a shadcn toolbar (page
+navigation, zoom, download, fullscreen; text selection enabled). See
+`specs/002-pdf-viewer/contracts/pdf-viewer-pattern.md` for the full props
+contract. Files: `pdf-viewer.tsx` (composition + `PdfViewerErrorBoundary`),
+`pdf-engine-provider.tsx` (shared PDFium/WASM engine + Strict-Mode
+double-invoke guard, upstream #700), `use-pdf-viewer-state.ts`
+(`useDocumentLifecycle` + `usePdfViewerActiveState`, split — see below),
+`pdf-viewer-toolbar.tsx`, `pdf-viewer-labels.ts`, `fixtures/` (hand-built
+`minimal.pdf` / `js-in-pdf.pdf`, `generate-fixtures.py`).
+
+- **`wasmUrl` must be an absolute, self-hosted URL — never a CDN URL.**
+  `usePdfiumEngine` defaults to fetching `pdfium.wasm` from jsDelivr when no
+  `wasmUrl` is given; this pattern always passes one explicitly and disables
+  the font-fallback CDN too (`fontFallback: { fonts: {} }`, not `null` —
+  `null` still hits the CDN per upstream #631).
+  - **`@embedpdf/pdfium`'s own `exports` map only exposes the wasm binary at
+    the `./pdfium.wasm` subpath**, i.e. `import wasmUrl from
+"@embedpdf/pdfium/pdfium.wasm?url"` — **not** `.../dist/pdfium.wasm?url`,
+    even though that is the file's real on-disk location inside the package.
+    The `dist/...` path fails to resolve under Vite/Rolldown's
+    `exports`-conditions resolution (`"./dist/pdfium.wasm" is not exported
+under the conditions [...]`). Found by actually building Storybook, not
+    from the package's types.
+- **CSP**: the engine's worker is a `blob:` module worker → deployments need
+  `worker-src blob:`. No other third-party origin is contacted (FR-027).
+- **`useScroll`/`useZoom` (and any other per-document plugin hook) must never
+  be called with a placeholder/empty document id.** Unlike
+  `useDocumentState`, which is documented to accept `null`, these throw
+  synchronously (`"Zoom state not found for document: ..."`) for a document
+  id that was never registered — found by running the stories under real
+  Chromium (jsdom/Vitest can't catch this; the real engine can). This is why
+  `use-pdf-viewer-state.ts` is split into `useDocumentLifecycle` (safe to
+  call unconditionally: document-manager + `useDocumentState` only) and
+  `usePdfViewerActiveState` (scroll + zoom; `pdf-viewer.tsx`'s
+  `PdfViewerActiveSession` component mounts it only once a real document id
+  exists) rather than one hook that substitutes `documentId ?? ""`.
+- **Engine-init failures are unreliable to trigger and largely unobservable
+  from the outside** (upstream #632): a bad `wasmUrl` genuinely fails to
+  compile inside the engine's worker (a real `WebAssembly.instantiate():
+BufferSource argument is empty` reaches the console), but
+  `usePdfiumEngine` doesn't propagate that into its `{ error }` result — the
+  hook still resolves to a working engine. `PdfEngineProvider` here still
+  exposes `{ status: "error" }` for the cases the hook does surface, but the
+  `EngineFailure` story mocks the resulting UI rather than the trigger,
+  because no known prop combination reproduces the real failure
+  deterministically.
+- **One engine per subtree**: `PdfViewer` creates its own `PdfEngineProvider`
+  only when it isn't already wrapped by one (`useAmbientPdfEngineStatus()`
+  returns `undefined`) — wrap several `PdfViewer`s in one `PdfEngineProvider`
+  to share a single engine/worker instead of creating one per viewer.
+- Search and print (US3) are deliberately not wired yet — `use-pdf-viewer-state.ts`
+  returns one named slice per concern (`page`, `zoom`, `fullscreen`,
+  `actions`) and the toolbar has a marked insertion point, specifically so
+  those land as additive slices later, not a restructure.
+- New stories needing Playwright visual baselines (pinned Linux image, not
+  generated in this change): `Patterns/PdfViewer` — `Default`,
+  `ToolbarMinimal`, `Protected`, `Invalid`, `EngineFailure`, `JsInPdf`.
+
+---
+
 ## peerDep policy
 
 `react` and `react-dom` are `peerDependencies`. Do not move them to
