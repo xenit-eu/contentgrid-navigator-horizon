@@ -86,14 +86,59 @@ Chrome DevTools, "Fast 4G"/20 Mbit/s throttling, cold cache: open a 20-page ≤ 
 painted ≤ 3 s (record wasm and document transfer separately). Warm cache: ≤ 1 s. Page/zoom changes feel
 instant (≤ 200 ms) on a 200-page fixture.
 
+**Results (2026-09-17)** — Apple M5, Chromium 149.0.7827.55 (Playwright 1.61.1 bundled),
+`navigator-experimental` dev server against the MSW dev fixtures. Emulation: CDP
+`Network.emulateNetworkConditions` at 20 Mbit/s down/up, 40 ms latency; cache disabled for cold runs,
+enabled for warm. 3 samples (first paint) / 5 samples (page, zoom) per row; medians below.
+
+| Measurement               | Fixture                    | Median | Target   | Result |
+| ------------------------- | -------------------------- | ------ | -------- | ------ |
+| First page painted (cold) | 20-page `twenty-pages.pdf` | 7.77 s | ≤ 3 s    | FAIL   |
+| First page painted (warm) | 20-page                    | 3.94 s | ≤ 1 s    | FAIL   |
+| Page jump                 | 20-page                    | 7 ms   | ≤ 200 ms | PASS   |
+| Zoom in                   | 20-page                    | 45 ms  | ≤ 200 ms | PASS   |
+| Page jump                 | 200-page (generated)       | 7 ms   | ≤ 200 ms | PASS   |
+| Zoom in                   | 200-page (generated)       | 49 ms  | ≤ 200 ms | PASS   |
+
+Transfer sizes: `pdfium*.wasm` 4.63 MB; `twenty-pages.pdf` 5.6 kB. **Verdict**: SC-002 (page/zoom
+≤ 200 ms) met at both 20 and 200 pages. SC-001 (first page ≤ 3 s cold / ≤ 1 s warm) is **not met** at
+either threshold — the ~4.6 MB `pdfium.wasm` fetch + instantiation dominates first paint, independent
+of document size. "Next page" was disabled by an unrelated bug hit during this run (total-page count
+stuck at 0 on first load), so page-navigation latency was measured via direct page-number entry
+instead; the 200-page fixture was generated with
+`packages/navigator-data/test-fixtures/pdf/generate-fixtures.py`'s `build_pdf()` and served only via a
+test-harness network substitution — no fixture file was added to the repo. Full findings in
+`browser-verification.md` (session scratchpad).
+
+**Caveat**: these numbers were measured against the Vite dev server — unbundled ES modules, no
+compression, no long-lived caching — so the first-paint rows above are not representative of a
+production deployment. `pdfium.wasm` is 4.63 MB raw but 2.13 MB gzip / 1.64 MB brotli, and in
+production it is served once with a content-hashed filename and cached by the browser thereafter.
+SC-001 must be re-measured against a production build behind the real gateway before promotion;
+SC-002 (page/zoom latency) is unaffected by bundling/compression and holds as measured.
+
 ## End-to-end
 
 ```bash
-pnpm --filter navigator test:e2e -- --grep "content focus"
+pnpm --filter navigator-experimental dev            # boots the experimental app on :5174
+NAVIGATOR_EXPERIMENTAL_URL=http://localhost:5174 pnpm --filter navigator exec playwright \
+  test content-focus.spec.ts
 ```
 
-The scenario logs in, opens a fixture item with `fixtures/Bob.pdf`, asserts the viewer, page indicator,
-download filename and the attribute panel; runs in all four Playwright projects.
+Targets `apps/navigator-experimental` directly — this feature is experimental-only, and `apps/navigator`
+has no route that renders it. Runs against the app's MSW dev fixtures (`doc-1`/`doc-2`/`doc-3` in
+`src/mocks/content-focus-handlers.ts` and `rendition-handlers.ts`), so there is no login step and no
+`.env.test` credentials, unlike every other spec in this directory. The whole `describe` block is
+skipped when `NAVIGATOR_EXPERIMENTAL_URL` is unset; otherwise it runs in all four of `apps/navigator`'s
+Playwright projects (chromium/firefox × large/small viewport — per-project browser/viewport settings,
+independent of `baseURL`). Asserts the single- and multi-page viewer, page indicator, zoom, content-
+attribute switching, download filename, and both rendition outcomes (`ready`, `invalid-conversion`).
+This spec currently cannot pass against the dev fixtures because of a pre-existing crash on `main`:
+`ProfileEntity.getDefaultPreferences()` (`packages/navigator-data/src/accessors/entity-profile.ts`)
+non-null-asserts `idAttribute`, and the shared demo "invoice" profile in
+`packages/navigator-data/test-fixtures/hal/fixtures.ts` has no attributes, so `SidebarEntityNav`
+throws on every route; the "document" fixture now carries an `id` attribute, and the invoice
+fixture fix is tracked separately.
 
 ## Definition of done for the plan
 
