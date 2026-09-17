@@ -34,3 +34,10 @@ export const Unknown: Story = {
     count: null,
   },
 };
+
+export const Solid: Story = {
+  args: {
+    count: 42,
+    variant: "solid",
+  },
+};

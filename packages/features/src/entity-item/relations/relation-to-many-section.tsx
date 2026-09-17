@@ -77,6 +77,7 @@ export function RelationToManySection({
   } = useDeleteRelationItem(relation);
   const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(true);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
@@ -102,10 +103,16 @@ export function RelationToManySection({
   return (
     <>
       <RelationAccordion
+        open={accordionOpen}
+        onOpenChange={setAccordionOpen}
         title={
           <span className="inline-flex items-center gap-2">
             {total !== undefined && (
-              <CountIndicatorChip count={total.count} isEstimated={total.isEstimated} />
+              <CountIndicatorChip
+                variant="solid"
+                count={total.count}
+                isEstimated={total.isEstimated}
+              />
             )}
             {title}
           </span>
@@ -127,7 +134,10 @@ export function RelationToManySection({
                   targetProfile={targetProfile}
                   open={addOpen}
                   onOpenChange={setAddOpen}
-                  onSelect={(item) => addRelation([item.selfLink.href])}
+                  onSelect={(item) => {
+                    addRelation([item.selfLink.href]);
+                    setAccordionOpen(true);
+                  }}
                 />
               </>
             )}

@@ -14,6 +14,10 @@ export interface RelationAccordionProps {
   actions?: ReactNode;
   /** The section's own content (table, list, loading/error state), shown when expanded */
   children: ReactNode;
+  /** Controls expanded state. Omit to let the accordion manage its own state, expanded by default. */
+  open?: boolean;
+  /** Called with the new expanded state on trigger click. Required when `open` is provided. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -24,10 +28,23 @@ export interface RelationAccordionProps {
  * `actions`, so this stays a simple, reusable import wherever a collapsible section is needed,
  * instead of every caller re-implementing the Card+Accordion boilerplate from scratch.
  */
-export function RelationAccordion({ title, actions, children }: Readonly<RelationAccordionProps>) {
+export function RelationAccordion({
+  title,
+  actions,
+  children,
+  open,
+  onOpenChange,
+}: Readonly<RelationAccordionProps>) {
+  const controlledProps =
+    open === undefined
+      ? { defaultValue: "relation" }
+      : {
+          value: open ? "relation" : "",
+          onValueChange: (value: string) => onOpenChange?.(value === "relation"),
+        };
   return (
     <Card className="py-4 gap-4">
-      <Accordion type="single" collapsible defaultValue="relation">
+      <Accordion type="single" collapsible {...controlledProps}>
         <AccordionItem value="relation" className="border-none">
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between gap-2">
