@@ -13,6 +13,8 @@ export interface UseEntityDisplayPreferencesResult {
   readonly preferences: EntityDisplayPreferences;
   /** `preferences.nameAttribute` resolved against the profile, or `undefined` if unresolvable. */
   readonly nameAttribute: ProfileAttribute | undefined;
+  /** `preferences.subtitleAttribute` resolved against the profile, or `undefined` if unresolvable. */
+  readonly subtitleAttribute: ProfileAttribute | undefined;
   /** Persist a partial override for this entity, scoped to the current backend. */
   readonly setOverride: (partial: Partial<EntityDisplayPreferences>) => void;
 }
@@ -59,6 +61,9 @@ export function useEntityDisplayPreferences(
     preferences,
     nameAttribute: preferences.nameAttribute
       ? profileEntity?.getAttribute(preferences.nameAttribute)
+      : undefined,
+    subtitleAttribute: preferences.subtitleAttribute
+      ? profileEntity?.getAttribute(preferences.subtitleAttribute)
       : undefined,
     setOverride: (partial) => {
       if (!entityName) return; // no resolved entity to scope this override to

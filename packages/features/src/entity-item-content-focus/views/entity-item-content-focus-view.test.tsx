@@ -21,14 +21,21 @@ import {
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
+  type AuthenticationTokenSupplier,
   type EntityItem,
   EntityItemAttributeContent,
+  NavigatorDataProvider,
   type ProfileAttribute,
   type ProfileEntity,
+  createApiClient,
+  createContentClient,
   useEntityItem,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import { EntityItemContentFocusView } from "./entity-item-content-focus-view";
+
+const PROFILE_URL = "https://api.example.com/profile/order";
+const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
 /**
  * The view's default breadcrumbs use `@tanstack/react-router`'s `Link` (T028 fix — see
@@ -36,6 +43,12 @@ import { EntityItemContentFocusView } from "./entity-item-content-focus-view";
  * minimal in-memory router already established in
  * `app-info-pages/not-found-page.test.tsx` rather than mocking `Link` away — a mock would hide a
  * genuine "does this actually render under a real router" regression.
+ *
+ * Also wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useProfileEntity`/
+ * `useEntityItem` are mocked below): `EntityItemView`'s `EntityItemReference` header (stable
+ * `entity-item` feature) calls `useEntityDisplayPreferences`, which reads `useNavigatorData()`
+ * directly, so any render of the FR-001 fallback body needs a provider in scope even though no
+ * real fetch ever happens — same pattern as `entity-item/variations/entity-item-reference.test.tsx`.
  */
 function renderView(children: ReactNode) {
   const rootRoute = createRootRoute({ component: () => <Outlet /> });
@@ -48,7 +61,15 @@ function renderView(children: ReactNode) {
     routeTree: rootRoute.addChildren([indexRoute]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <NavigatorDataProvider
+      apiFetch={createApiClient(noopSupplier)}
+      contentFetch={createContentClient(noopSupplier)}
+      profileUrl={PROFILE_URL}
+    >
+      <RouterProvider router={router} />
+    </NavigatorDataProvider>,
+  );
 }
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
@@ -94,6 +115,12 @@ function makeProfile(options: {
     hasContentAttributes,
     attributes,
     userDefinedAttributes: attributes,
+    // `EntityItemView`'s `EntityItemReference` header (stable `entity-item` feature) calls
+    // `useEntityDisplayPreferences`, which unconditionally calls `getDefaultPreferences()` on
+    // whatever profile it's handed — this fake profile has no real heuristic to run, so it
+    // stubs the method with an empty (all-optional) result rather than reimplementing
+    // `ProfileEntity.getDefaultPreferences()`'s real name/icon-inference logic here.
+    getDefaultPreferences: () => ({}),
   } as unknown as ProfileEntity;
 }
 
@@ -148,10 +175,13 @@ describe("EntityItemContentFocusView", () => {
     const item = makeEntityItem({ profileEntity: profile });
     mockHooks(profile, item);
 
-    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    const { container } = renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
 
-    // EntityItemView's own PageTitle, rendered by its "toolbar={false}" body.
-    expect(await screen.findByText("Entity Detail")).toBeInTheDocument();
+    // EntityItemView's own item-reference header (`data-slot="item-reference"`), rendered by its
+    // "toolbar={false}" body — wait for the breadcrumb trail first since the router's initial
+    // route match resolves asynchronously (see the top-of-file note).
+    await screen.findByRole("link", { name: "Orders" });
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });
 

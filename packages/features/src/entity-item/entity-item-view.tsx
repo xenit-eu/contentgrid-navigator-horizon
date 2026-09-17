@@ -5,7 +5,7 @@ import {
   useEntityItem,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { PageTitle, Separator } from "@contentgrid/ui";
+import { Separator } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemAttributes } from "./attributes/entity-item-attributes";
@@ -15,6 +15,10 @@ import type {
 } from "./relations/relation-shared";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
+import {
+  EntityItemReference,
+  EntityItemReferenceLoading,
+} from "./variations/entity-item-reference";
 
 /** Identify the item by its already-known profile and id. */
 export interface EntityItemViewByProfile {
@@ -82,16 +86,14 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
   );
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
-  // In url mode the profile/id aren't known until the item resolves —
-  // `item.data.profileEntity` is the source of truth either way once loaded.
-  const displayItemId = "itemId" in props ? props.itemId : (item.data?.id ?? "…");
-  const displayEntityLabel =
-    "profile" in props ? props.profile.pluralName : (item.data?.profileEntity.pluralName ?? "…");
-
   const content = (
     <>
       <div className="p-4">
-        <PageTitle header="Entity Detail" title={displayItemId} subtitle={displayEntityLabel} />
+        {item.data ? (
+          <EntityItemReference item={item.data} size="lg" />
+        ) : (
+          <EntityItemReferenceLoading size="lg" />
+        )}
       </div>
 
       {item.isPending && <LoadingPage />}
