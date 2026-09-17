@@ -191,7 +191,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 ## Assumptions
 
-- **Rendition protocol as observed.** The rendition service answers a request with "accepted" plus a job location, the job answers "pending" until the PDF is ready, and an explicit "cannot convert" problem exists. This is reverse-engineered from the original Navigator and a second in-house frontend and is not yet documented by the platform (ACC-2960). Authentication and endpoint discovery are settled (see Clarifications); the response contract is the remaining assumption.
+- **Rendition protocol as observed.** The rendition service answers a request with "accepted" plus a job location, the job answers "pending" until the PDF is ready, and an explicit "cannot convert" problem exists. This is reverse-engineered from the original Navigator and is not yet documented by the platform (ACC-2960). Authentication and endpoint discovery are settled (see Clarifications); the response contract is the remaining assumption.
 - **Download always delivers the original file**, never a rendition.
 - **Byte-range streaming is out of scope**; the whole file is downloaded before rendering, as in production today.
 - **Rotation and thumbnails are not required**; neither exists in production nor in the tickets.

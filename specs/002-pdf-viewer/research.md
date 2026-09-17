@@ -6,14 +6,13 @@ does not have to rediscover it. This file is input to the plan; it contains no r
 
 Sources examined (all read-only):
 
-| Source                      | Location                                                                           | State examined                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Original Navigator          | `xenit-eu/contentgrid-navigator`, local clone `~/CODE/contentgrid-navigator`       | `main` at `a8195446` (2026-09-16)                                 |
-| Second in-house frontend    | a customer delivery on the same viewer library; not named here, no code reproduced | 2026-09-15 (commit deliberately not recorded: identifying detail) |
-| Prototype                   | `~/CODE/contentgrid-navigator-prototype`                                           | `c3c0e91` (2026-03-18)                                            |
-| Horizon (this repo)         | `packages/navigator-data`, `packages/features`, `apps/navigator`                   | `main` at `35ff6b1e`                                              |
-| Design mockup               | `~/Downloads/contentgrid-navigator-mockup 2.html`, pages 03/04                     | 2026-06-10                                                        |
-| npm registry, EmbedPDF docs | see §6                                                                             | 2026-09-17                                                        |
+| Source                      | Location                                                                     | State examined                    |
+| --------------------------- | ---------------------------------------------------------------------------- | --------------------------------- |
+| Original Navigator          | `xenit-eu/contentgrid-navigator`, local clone `~/CODE/contentgrid-navigator` | `main` at `a8195446` (2026-09-16) |
+| Prototype                   | `~/CODE/contentgrid-navigator-prototype`                                     | `c3c0e91` (2026-03-18)            |
+| Horizon (this repo)         | `packages/navigator-data`, `packages/features`, `apps/navigator`             | `main` at `35ff6b1e`              |
+| Design mockup               | `~/Downloads/contentgrid-navigator-mockup 2.html`, pages 03/04               | 2026-06-10                        |
+| npm registry, EmbedPDF docs | see §5                                                                       | 2026-09-17                        |
 
 The code excerpts below are condensed from the sources (logic unchanged, formatting compacted;
 `path:line` points at the real source). The annotation / extraction-highlight overlay is out of scope
@@ -28,7 +27,7 @@ history (commit 579bd325).
 
 - `pdfjs-dist ^3.3.122` (resolved 3.11.174), `@react-pdf-viewer/core|default-layout|highlight ^3.11–3.12`,
   plus **undeclared** transitive imports of `@react-pdf-viewer/toolbar|zoom|get-file|print|full-screen|search`.
-  `@react-pdf-viewer` has had **no release since 2023-03** (see §6) — not a viable base.
+  `@react-pdf-viewer` has had **no release since 2023-03** (see §5) — not a viable base.
 - One global pdf.js worker for the app lifetime: `<Worker workerUrl={pdfWorkerUrl}>` wraps the whole
   authenticated tree (`src/app/App.tsx:110-121`).
 
@@ -132,7 +131,9 @@ non-PDF/image/video mimetype (including plain text) is sent to the service.
 **Authentication gap**: the shared fetch attaches a Bearer token only when
 `request.url.startsWith(apiBaseUrl)` (`authentication.ts:15-31`). The rendition service is on another
 origin, so **no user token is sent** to the initial request or the polls. Resolved for the new
-implementation in §7, question 1.
+implementation in §6, question 1. Note for the implementation: the job `Location` header is only
+readable cross-origin if the service sends `Access-Control-Expose-Headers: Location`; confirm with the
+platform team (ACC-2960).
 
 ### 1.5 States, config, tests, history
 
@@ -158,39 +159,14 @@ authentication.
 
 ---
 
-## 2. Second in-house frontend (same viewer library — datapoint, not a reference)
-
-A customer delivery built on `@embedpdf/react-pdf-viewer` (^2.5.0 since its first commit). It is not a
-quality benchmark and is not named in this public repository; no code is reproduced. Lessons that carry
-over:
-
-- Fetch → `Blob` → object URL → viewer `src`; the `cg:content` link resolved by name; the viewer wrapped
-  in an error boundary so a third-party crash cannot take the page down.
-- Toolbar deliberately minimal: zoom (fit-width default, presets 25–400%, fit-page), download (library
-  export command), fullscreen; everything else disabled via `disabledCategories`.
-- Rendition: same 202 + `Location` + poll contract, but with a **positive list** of Office mimetypes and
-  extensions (doc/docx/xls/xlsx/ppt/pptx/rtf/odt/ods/odp), **poll-first-then-wait**, 1.5 s interval,
-  **60 s ceiling**, `invalid-conversion` as a soft null, `AbortSignal` cancellation, and the observation
-  that `Location` is only readable cross-origin because the service sends
-  `Access-Control-Expose-Headers: Location`. Rendition requests are authenticated with an **exchanged
-  token selected by origin** in the shared auth hook — the same model the platform confirmed for
-  Horizon (§7, question 1).
-- Gotchas for any `@embedpdf` host: the viewer renders inside a **shadow DOM** (`embedpdf-container`),
-  so (a) theming required injecting a `<style>` into the shadow root via a `MutationObserver`, and (b)
-  inside a Radix `Dialog` the `react-remove-scroll` lock cancelled wheel events over the viewer until
-  `stopPropagation` was added on a wrapper.
-- No tests for the viewer.
-
----
-
-## 3. Prototype (`contentgrid-navigator-prototype`)
+## 2. Prototype (`contentgrid-navigator-prototype`)
 
 - `@embedpdf/react-pdf-viewer ^2.5.0`, `pdfjs-dist ^5.4.624`; nothing configured for the engine/worker.
 - `ContentPreview` in `src/components/entities/entity-detail-card.tsx:58-318`; gate
   `mimetype.startsWith("image/") || mimetype === "application/pdf"`; images via `<img>`, PDFs via
   `<PDFViewer>` with `src` = object URL of an authenticated fetch.
-- Toolbar: zoom + download + fullscreen only; `disabledCategories` identical to the list in §2, so
-  selection, navigation, rotate, sidebar, print and search are all off. Same shadow-DOM style injection
+- Toolbar: zoom + download + fullscreen only; `disabledCategories` turns off annotation, redaction,
+  selection, navigation, rotate, sidebar, print and search. Same shadow-DOM style injection
   for focus rings.
 - **Anti-pattern to avoid**: `getContentHref()` guesses CURIE rel names (`cg:<attr>`, `d:<attr>`, full
   URLs) by hand — forbidden by this repo's rules; Horizon's `EntityItem.contentLink()` does it right.
@@ -198,7 +174,7 @@ over:
 
 ---
 
-## 4. Horizon today (what exists, what is missing)
+## 3. Horizon today (what exists, what is missing)
 
 Exists in `packages/navigator-data`:
 
@@ -220,7 +196,7 @@ Exists in `packages/navigator-data`:
 Missing:
 
 - Any preview layer: no blob-URL lifecycle hook, no rendition selection/polling, no viewer component.
-- A token-exchange client for the rendition service's origin (§7, question 1).
+- A token-exchange client for the rendition service's origin (§6, question 1).
 - The content-focus/attribute-focus branch: `packages/features/src/entity-item/entity-item-view.tsx`
   renders one flat attribute list for every entity; the route
   `apps/navigator/src/routes/_app/$entity/$itemId.tsx` has no viewer logic.
@@ -233,7 +209,7 @@ ACC-2903 names `packages/navigator-data/src/preview/rendition-helper.ts`.
 
 ---
 
-## 5. Design mockup (page 03 content-focus, page 04 attribute-focus)
+## 4. Design mockup (page 03 content-focus, page 04 attribute-focus)
 
 - Layout: `grid-template-columns: 1fr 360px` — viewer left, 360 px side panel right. Page 04 drops the
   viewer entirely for a two-column attributes/relations layout. Legend: _"03/04 InstancePage →
@@ -247,7 +223,7 @@ ACC-2903 names `packages/navigator-data/src/preview/rendition-helper.ts`.
 
 ---
 
-## 6. Stack state on 2026-09-17 (feeds the plan and ADR-011)
+## 5. Stack state on 2026-09-17 (feeds the plan and ADR-011)
 
 npm registry (stable releases; repo rule: `minimumReleaseAge` 14 days):
 
@@ -269,32 +245,32 @@ EmbedPDF facts relevant to ADR-011 and the spec:
   `openDocumentBuffer({ buffer: ArrayBuffer, name })` exists, so the authenticated-fetch → bytes → viewer
   pattern is supported (matches FR-005). Events: `onDocumentOpened`, `onDocumentClosed`,
   `onDocumentError`.
-- Ready-made viewer (`@embedpdf/react-pdf-viewer`): shadow DOM (see §2 gotchas), `disabledCategories`,
+- Ready-made viewer (`@embedpdf/react-pdf-viewer`): renders inside a shadow DOM (`embedpdf-container`),
+  `disabledCategories`,
   custom `ui.schema` toolbars, theme tokens, document permission handling
-  (`enforceDocumentPermissions`, `useDocumentPermissions()`), `tabBar`. Alternative: the headless
-  `@embedpdf/core` plugins with our own shadcn toolbar — avoids the shadow-DOM styling and Radix scroll
-  issues and matches the mockup exactly, at the cost of assembling the toolbar ourselves.
+  (`enforceDocumentPermissions`, `useDocumentPermissions()`), `tabBar`. Known integration gotchas of the shadow DOM: theming needs a `<style>` injected into the shadow root, and inside a Radix `Dialog` the `react-remove-scroll` lock cancels wheel events over the viewer unless a wrapper stops propagation. Alternative: the headless `@embedpdf/core` plugins with our own shadcn toolbar — avoids both issues and matches the mockup exactly, at the cost of assembling the toolbar ourselves.
 - Security docs cover PDF permission flags and encryption only; nothing on script execution or
   untrusted-document sandboxing.
 
 ---
 
-## 7. Open questions for the plan
+## 6. Open questions for the plan
 
 1. **Rendition service authentication and endpoint** — **answered 2026-09-17** (platform side): the
    endpoint goes in deployment configuration (`VITE_RENDITION_URI` / Liaison, not a HAL link) and the
    token exchange comes "for free" from TokenMonger, the platform's token-exchange component. Encoded in
    spec FR-023 and its Clarifications section. Still to confirm with the platform team: the response
    contract itself (202 + `Location` + poll, `invalid-conversion`) and CORS exposure of `Location`
-   (ticket ACC-2960). Horizon has no exchange client yet (§4); the origin-keyed token selection used by
-   the frontend in §2 is the reference shape.
+   (ticket ACC-2960). Horizon has no exchange client yet (§3); an origin-keyed token selection in the
+   shared auth hook is the natural shape.
 2. **PDFium scripting posture** in the `@embedpdf` build (replaces the pdf.js `isEvalSupported` question
    in ADR-011 / ACC-2904). Needed by FR-026. → plan.
-3. **Ready-made viewer vs headless plugins.** Shadow DOM theming and Radix scroll-lock interactions
-   observed in the frontend in §2 and the prototype argue for headless + our own toolbar; ACC-2902
-   assumes plugins either way. → plan.
+3. **Ready-made viewer vs headless plugins.** The shadow-DOM theming and Radix scroll-lock gotchas (§5)
+   and the prototype's style-injection workaround argue for headless + our own toolbar; ACC-2902 assumes
+   plugins either way. → plan.
 4. **Rendition candidates: positive list or negative rule?** Original: everything not pdf/image/video
-   (plain text goes to the service too). The frontend in §2: Office positive list. Spec default (FR-016,
+   (plain text goes to the service too). Alternative: an Office positive list (doc/docx/xls/xlsx/ppt/pptx/
+   rtf/odt/ods/odp). Spec default (FR-016,
    US2 sc. 8): any non-PDF including missing/generic mimetype, when a service is configured. → confirm
    with product.
 5. **Download of the original when a rendition is shown** is the spec default; confirm.
@@ -303,7 +279,7 @@ EmbedPDF facts relevant to ADR-011 and the spec:
 
 ---
 
-## 8. Behaviours the spec deliberately preserves or fixes
+## 7. Behaviours the spec deliberately preserves or fixes
 
 Preserved from production: rendition 202/poll flow with `invalid-conversion` as soft failure; "Rendering
 preview" caption; no stale content during rendition; fullscreen keeps a sane zoom; download in every
