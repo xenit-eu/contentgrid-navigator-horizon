@@ -92,24 +92,26 @@ export function CreateEntityItemForm({
         />
       </div>
 
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="continuous-create"
-          checked={continuousCreate}
-          onCheckedChange={(checked) => onContinuousCreateChange(checked === true)}
-        />
-        <Label htmlFor="continuous-create">Keep creating entities</Label>
-      </div>
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating…" : "Create"}
-        </Button>
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+      <div className="flex items-center gap-4">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating…" : "Create"}
           </Button>
-        )}
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="continuous-create"
+            checked={continuousCreate}
+            onCheckedChange={(checked) => onContinuousCreateChange(checked === true)}
+          />
+          <Label htmlFor="continuous-create">Keep creating entities</Label>
+        </div>
       </div>
     </form>
   );

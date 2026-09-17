@@ -40,9 +40,10 @@ export interface EnumRendererProps {
  * mapped back to `""` in `onChange`; only offered for non-required fields, mirroring
  * `BooleanRenderer`'s "Clear" affordance for the same problem on boolean fields.
  *
- * `UNSET` is never passed as the controlled `value` — an untouched or just-cleared field
- * always renders as `selected` (`undefined`), so the trigger shows the neutral "Select…"
- * placeholder rather than the `(none)` item's own label.
+ * `UNSET` is never passed as the controlled `value` — the root's `value` is always `""` for an
+ * untouched or just-cleared field (Radix's `shouldShowPlaceholder` treats `""` the same as
+ * `undefined`), so the trigger shows the neutral "Select…" placeholder rather than the
+ * `(none)` item's own label.
  */
 const UNSET = "__unset__";
 
@@ -60,7 +61,13 @@ export function EnumRenderer({
   onFocus,
   onBlur,
 }: Readonly<EnumRendererProps>) {
-  const selected = typeof value === "string" && value !== "" ? value : undefined;
+  // Always a defined string (never `undefined`) so the underlying Radix `Select` stays
+  // controlled for the field's entire lifetime. Radix's `useControllableState` decides
+  // controlled-vs-uncontrolled per render from `value !== undefined`; passing `undefined` here
+  // whenever the field is unselected would flip it to uncontrolled on every clear/reset, and its
+  // internal fallback state — last written on the selection that preceded the clear — would then
+  // resurface as the displayed value instead of the intended empty state.
+  const selected = typeof value === "string" ? value : "";
   // Excluded for a remote options source — its options haven't loaded yet (the trigger is
   // disabled and shows "Options not yet loaded"), so there's nothing to clear back to "none" from.
   const canUnset = !required && !isRemote;

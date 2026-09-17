@@ -9,12 +9,13 @@ import {
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ richColors = true, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      richColors={richColors}
       className="toaster group"
       icons={{
         success: <CheckCircle className="size-4" />,
@@ -29,6 +30,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          // Sonner's own richColors green (a generic mint) clashes with this app's
+          // ocean/sky palette — point its success triad at the same green StatusPill
+          // already uses for its "success" variant instead.
+          "--success-bg": "var(--success)",
+          "--success-border": "var(--success-border)",
+          "--success-text": "var(--success-foreground)",
         } as React.CSSProperties
       }
       {...props}

@@ -69,6 +69,22 @@ const DEFAULT_CREATE_FORM = {
   ],
 };
 
+/** MSW handler for a successful create POST. `extra` merges into the response body — e.g. an
+ * `status` value for a test exercising the allowed-values field. */
+function createdInvoiceHandler(extra: Record<string, unknown> = {}) {
+  return http.post(`${API_URL}/invoices`, () =>
+    HttpResponse.json(
+      {
+        id: "1",
+        invoice_number: "INV-1",
+        _links: { self: { href: `${API_URL}/invoices/1` } },
+        ...extra,
+      },
+      { status: 201 },
+    ),
+  );
+}
+
 function LoadInvoiceProfileAndRenderCreateForm({
   onCreated,
   onCancel,
@@ -164,19 +180,7 @@ describe("CreateEntityItemContainer", () => {
   it("submits the entered values and calls onCreated on success", async () => {
     const user = userEvent.setup();
     const onCreated = vi.fn();
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.post(`${API_URL}/invoices`, () =>
-        HttpResponse.json(
-          {
-            invoice_number: "INV-1",
-            _links: { self: { href: `${API_URL}/invoices/1` } },
-          },
-          { status: 201 },
-        ),
-      ),
-    );
+    server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
     renderForm({ onCreated });
 
     const input = await screen.findByLabelText(/Invoice Number/);
@@ -206,16 +210,7 @@ describe("CreateEntityItemContainer", () => {
   it("with continuous-create on, resets the form and shows a toast instead of calling onCreated", async () => {
     const user = userEvent.setup();
     const onCreated = vi.fn();
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.post(`${API_URL}/invoices`, () =>
-        HttpResponse.json(
-          { invoice_number: "INV-1", _links: { self: { href: `${API_URL}/invoices/1` } } },
-          { status: 201 },
-        ),
-      ),
-    );
+    server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
     renderForm({ onCreated });
 
     await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
@@ -229,22 +224,80 @@ describe("CreateEntityItemContainer", () => {
     expect(onCreated).not.toHaveBeenCalled();
   });
 
+  it("navigates to the created item via the success toast's action, even mid continuous-create", async () => {
+    const user = userEvent.setup();
+    const onCreated = vi.fn();
+    server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
+    renderForm({ onCreated });
+
+    await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
+    await user.type(screen.getByLabelText(/Invoice Number/), "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await screen.findByText("Invoice has been successfully created!");
+
+    await user.click(screen.getByRole("button", { name: "View" }));
+
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: "1" }));
+  });
+
+  it("omits the toast's action when the caller supplies no onCreated to navigate with", async () => {
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
+    renderForm();
+
+    await user.type(await screen.findByLabelText(/Invoice Number/), "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Invoice has been successfully created!")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+  });
+
+  it("resets an allowed-values field's select display after a continuous-create reset", async () => {
+    // End-to-end coverage (real create-form pipeline, not just the isolated EnumRenderer unit
+    // test) for a regression where the trigger kept showing the previously selected option
+    // after the form reset — see enum-renderer.tsx's `selected` doc comment. The allowed-values
+    // field is listed FIRST so the reset's auto-refocus (create-entity-item-form.tsx's
+    // `formResetCount` effect, which focuses the first focusable field) lands on the Select's
+    // own trigger, not some unrelated field.
+    const user = userEvent.setup();
+    server.use(
+      profileRootHandler(),
+      invoiceProfileHandler({
+        method: "POST",
+        target: `${API_URL}/invoices`,
+        contentType: "application/json",
+        properties: [
+          { name: "status", type: "text", options: { maxItems: 1, inline: ["draft", "sent"] } },
+          { name: "invoice_number", type: "text", required: true },
+        ],
+      }),
+      createdInvoiceHandler({ status: "draft" }),
+    );
+    renderForm();
+
+    await user.click(await screen.findByRole("checkbox", { name: "Keep creating entities" }));
+
+    const statusTrigger = screen.getByRole("combobox", { name: "Status" });
+    await user.click(statusTrigger);
+    await user.click(await screen.findByRole("option", { name: "draft" }));
+    expect(statusTrigger).toHaveTextContent("draft");
+
+    await user.type(screen.getByLabelText(/Invoice Number/), "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await screen.findByText("Invoice has been successfully created!");
+
+    await vi.waitFor(() => expect(screen.getByLabelText(/Invoice Number/)).toHaveValue(""));
+    expect(statusTrigger).toHaveTextContent("Select…");
+  });
+
   it("reports dirty state via onDirtyChange as the user edits and after a successful create", async () => {
     // This form has no router/navigation-guard knowledge of its own (see
     // packages/features/src/unsaved-changes-guard) — a caller that wants to warn on
     // navigating away with unsaved changes tracks this signal itself.
     const user = userEvent.setup();
     const onDirtyChange = vi.fn();
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.post(`${API_URL}/invoices`, () =>
-        HttpResponse.json(
-          { invoice_number: "INV-1", _links: { self: { href: `${API_URL}/invoices/1` } } },
-          { status: 201 },
-        ),
-      ),
-    );
+    server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
     renderForm({ onDirtyChange });
 
     const input = await screen.findByLabelText(/Invoice Number/);
