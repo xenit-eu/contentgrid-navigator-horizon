@@ -6,9 +6,9 @@
 
 **Status**: Draft — clarified 2026-09-17, awaiting review
 
-**Input**: User description: "PDF viewer for the entity content-focus page: renders content attributes of mimetype application/pdf, with the production toolbar, and rendition-aware preview via the rendition service. Check how the original navigator implemented it and what Imelda used. Different file types may be transformed to a PDF by the rendition service; other file types are not part of this story. This only has to handle the mimetype pdf. The annotation part is not part of this story; this just makes sure the PDF viewer is there and the toolbar is present."
+**Input**: User description: "PDF viewer for the entity content-focus page: renders content attributes of mimetype application/pdf, with the production toolbar, and rendition-aware preview via the rendition service. Check how the original navigator implemented it. Different file types may be transformed to a PDF by the rendition service; other file types are not part of this story. This only has to handle the mimetype pdf. The annotation part is not part of this story; this just makes sure the PDF viewer is there and the toolbar is present."
 
-**Research**: [`research.md`](research.md) records how the original Navigator, the Imelda frontend and the prototype implement this today, the current state of the rendering stack, and the Jira tickets this spec consolidates. It also keeps the findings on the annotation overlay for the follow-up story. It is input to `/speckit-plan`, not part of the requirements.
+**Research**: [`research.md`](research.md) records how the original Navigator and the prototype implement this today, the current state of the rendering stack, and the open questions for the plan. It is input to `/speckit-plan`, not part of the requirements.
 
 ## Scope
 
@@ -21,11 +21,11 @@
 
 **Out of scope** (tracked elsewhere or deferred)
 
-- The extraction highlight ("annotation") overlay and everything that produces or consumes it: extract service, classify-create, click-to-fill popover, citation navigation (HZN-6B.x and HZN-6A.4). A follow-up story; `research.md` §1.4 and §7 keep what was learned so it is not lost.
+- The extraction highlight ("annotation") overlay and everything that produces or consumes it: extract service, classify-create, click-to-fill popover, citation navigation (HZN-6B.x and HZN-6A.4). A follow-up story. The research on it was taken out of this spec at review and stays available in the git history of this branch (commit 579bd325).
 - User-authored annotations: comments, drawing, stamps, redaction, form filling inside the PDF.
 - Native previews of images, video or any non-PDF format that is not converted to PDF (HZN-6A.5, ACC-2906).
 - Previewing a locally selected file before it is saved (belongs to the content upload / create story; the viewer receives its document as bytes, so it can be reused there).
-- Replacing or uploading the file from the viewer toolbar (content upload story).
+- The upload flow itself (replacing a file from the toolbar, upload progress, upload errors): the content-upload story. This spec only requires that the "No file" state hosts the drag-and-drop area (Story 1, scenario 5).
 - Byte-range / progressive download of large PDFs (explicitly deferred in the roadmap, Phase 6A).
 - Page rotation and thumbnail sidebar (never shipped in production; not requested).
 - The attribute-focus layout for entities without a content attribute (mockup page 04) beyond the routing rule that selects between the two layouts.
@@ -48,16 +48,15 @@ A user opens an entity item that has a content attribute holding a PDF. The page
 
 **Acceptance Scenarios**:
 
-1. **Given** an entity item whose content attribute holds a PDF and whose content link is present, **When** the detail page opens, **Then** the content-focus layout is shown with page 1 rendered, the indicator "1 / N", and the attribute panel alongside.
+1. **Given** an entity item whose content attribute holds a PDF, **When** the detail page opens, **Then** the content-focus layout is shown with page 1 rendered, the indicator "1 / N", and the attribute panel alongside.
 2. **Given** page 1 of a 3-page document is shown, **When** the user activates "next page", **Then** page 2 is shown and the indicator reads "2 / 3"; "previous page" is disabled on page 1 and "next page" on page 3.
 3. **Given** the document is shown at fit-width (the default), **When** the user zooms in, **Then** the zoom increases to the next preset and the indicator shows the percentage; fit-width and fit-page remain selectable; scrolling continuously through pages keeps the page indicator in sync.
 4. **Given** an entity item has two content attributes that both hold a file, **When** the page opens, **Then** the first one in profile order is shown and an attribute selector lets the user switch; switching cancels any load still in flight and never shows the previous document while the new one loads.
-5. **Given** an entity item has a content attribute but no file stored in it, **When** the page opens, **Then** the viewer area shows a "No file" state without any error and the layout stays content-focus.
+5. **Given** an entity item has a content attribute but no file stored in it, **When** the page opens, **Then** the viewer area shows a "No file" state without any error, offers a drag-and-drop area to upload a file for that attribute (the upload behaviour itself is specified in the content-upload story), and the layout stays content-focus.
 6. **Given** an entity whose profile has no content attribute, **When** its detail page opens, **Then** the attribute-focus layout is used and no viewer is rendered.
-7. **Given** the content link for the attribute is absent (the user is not permitted to read it), **When** the page opens, **Then** no viewer and no download action are offered for that attribute and no request for its bytes is made.
-8. **Given** a document is displayed, **When** the user activates Download, **Then** the original file is delivered with its original filename using the user's own credentials.
-9. **Given** a document is displayed, **When** the user enters fullscreen and later leaves it, **Then** the viewer fills the screen and afterwards returns to the content-focus layout with the same zoom mode as before.
-10. **Given** the document is still loading, **When** the user navigates away, **Then** loading stops and the document's resources are released.
+7. **Given** a document is displayed, **When** the user activates Download, **Then** the original file is delivered with its original filename using the user's own credentials.
+8. **Given** a document is displayed, **When** the user enters fullscreen and later leaves it, **Then** the viewer fills the screen and afterwards returns to the content-focus layout with the same zoom mode as before.
+9. **Given** the document is still loading, **When** the user navigates away, **Then** loading stops and the document's resources are released.
 
 ---
 
@@ -101,9 +100,8 @@ A user searches for a word inside the document, steps through the matches, and p
 
 ### Edge Cases
 
-- Content attribute metadata present but the content link absent: not permitted, treated as "not viewable", no request (ABAC deny-by-default).
-- The byte request returns 404: treated as "no content or not permitted", not as a system failure.
-- The byte request returns 401/403/5xx or a problem-details body: an error state with the problem title and a Retry action; Download stays available if the link is present.
+- The byte request returns 404: the attribute holds no file; treated as the "No file" state, not as a system failure.
+- The byte request returns 401/403/5xx or a problem-details body: an error state with the problem title and a Retry action; Download stays available.
 - Corrupt or truncated PDF: "This file cannot be displayed" with Download.
 - Password-protected PDF: a "Protected document" state with Download; the viewer never tries to bypass the protection.
 - Zero-page or extremely long (hundreds of pages) PDF: no crash; navigation still works; pages render lazily.
@@ -121,7 +119,7 @@ A user searches for a word inside the document, steps through the matches, and p
 **Discovery and gating**
 
 - **FR-001**: The system MUST choose the content-focus layout for an entity item if and only if its entity profile declares at least one content attribute; otherwise it MUST use the attribute-focus layout.
-- **FR-002**: The system MUST take the presence of a file, its mimetype, filename and size from the content attribute's metadata on the entity item, and the file's location exclusively from the item's content link for that attribute. When that link is absent the attribute MUST be treated as not viewable and no request for its bytes MUST be made.
+- **FR-002**: The system MUST take the presence of a file, its mimetype, filename and size from the content attribute's metadata on the entity item, and the file's location exclusively from the item's content link for that attribute. A 404 from that link means the attribute holds no file.
 - **FR-003**: The system MUST recognise a file as PDF when its mimetype, ignoring parameters and letter case, is `application/pdf`.
 - **FR-004**: When more than one content attribute of the item holds a file, the system MUST offer an attribute selector, default to the first attribute in profile order, and cancel any in-flight load when the selection changes.
 
@@ -134,7 +132,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-009**: Users MUST be able to zoom in and out through presets from 25% to 400%, choose fit-width (default) and fit-page, and see the current level; the chosen zoom mode MUST survive entering and leaving fullscreen.
 - **FR-010**: Users MUST be able to select and copy text in text-based PDFs.
 - **FR-011**: Users MUST be able to toggle fullscreen; leaving it MUST restore the content-focus layout.
-- **FR-012**: Users MUST be able to download the original file with its original filename using their own credentials from every state in which a file exists and the content link is present, including "Preview not available" and error states.
+- **FR-012**: Users MUST be able to download the original file with its original filename using their own credentials from every state in which a file exists, including the "Preparing preview" loading state, "Preview not available" and error states.
 - **FR-013**: Users MUST be able to print the displayed document (native PDF or rendition), all pages.
 - **FR-014**: Users MUST be able to search the document's text, see the match count and current position, step forwards and backwards (including Enter / Shift+Enter), toggle match-case and whole-word, and clear the search; the current match MUST be scrolled into view and emphasised.
 - **FR-015**: The viewer MUST fill the available height of the content-focus layout without clipping or nested scrollbars and MUST re-layout on window resize, fullscreen changes and side-panel collapse.
@@ -144,7 +142,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-016**: When the file is not a PDF and a rendition endpoint is configured for the deployment, the system MUST request a PDF rendition of the stored file and display the result as a PDF with every viewer feature.
 - **FR-017**: The system MUST treat rendition preparation as asynchronous: accept a "pending" answer, re-check at a fixed interval (default 2 seconds), and stop with a visible failure and a Retry action once a configurable ceiling (default 60 seconds) is exceeded.
 - **FR-018**: The system MUST treat the service's "cannot convert this file" outcome as a normal result shown as "Preview not available" with Download, and any other failure as an error state with Retry and Download.
-- **FR-019**: The system MUST request a rendition only for a file whose content link is present and MUST identify the source file to the service by that link.
+- **FR-019**: The system MUST request a rendition only when the content attribute holds a file (its metadata says so and its content link does not answer 404) and MUST identify the source file to the service by that link.
 - **FR-020**: When a rendition is displayed the system MUST indicate that a converted preview is shown, MUST deliver the original file on Download, and MUST print the rendition as displayed.
 - **FR-021**: The system MUST stop polling for a rendition as soon as the viewer is closed, the attribute changes or the item changes.
 - **FR-022**: When no rendition endpoint is configured the system MUST show "Preview not available" with Download for non-PDF files and MUST NOT contact any service.
@@ -152,7 +150,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 **States and errors**
 
-- **FR-024**: The system MUST render a distinct, tested state for each of: no file; not permitted; bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; protected document; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists and the content link is present, and Retry where a retry can succeed.
+- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; protected document; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed.
 - **FR-025**: A failure inside the embedded document renderer MUST be contained to the viewer area; the rest of the detail page MUST remain usable.
 
 **Security**
@@ -174,7 +172,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 - **Content attribute**: An attribute of the entity profile that holds a file. Identifies which attributes can be previewed; there may be several per entity.
 - **Content metadata**: What the entity item says about a content attribute's file: whether a file exists, its mimetype, filename and size. Drives the "no file" state and the PDF-versus-rendition decision.
-- **Content link**: The item's permission-gated pointer to the file bytes for one content attribute. Its absence means "not permitted"; it is the only source of the file's location and the identifier passed to the rendition service.
+- **Content link**: The item's pointer to the file bytes for one content attribute. It is the only source of the file's location and the identifier passed to the rendition service. When no file is stored, the link answers 404.
 - **Preview source**: What the viewer is asked to show: a stored PDF, or a rendition of a stored non-PDF file.
 - **Rendition job**: The lifecycle of one conversion request: requested → pending → ready, or unsupported, failed, timed out, cancelled.
 
@@ -193,7 +191,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 ## Assumptions
 
-- **Rendition protocol as observed.** The rendition service answers a request with "accepted" plus a job location, the job answers "pending" until the PDF is ready, and an explicit "cannot convert" problem exists. This is reverse-engineered from the original Navigator and Imelda and is not yet documented by the platform (ACC-2960). Authentication and endpoint discovery are settled (see Clarifications); the response contract is the remaining assumption.
+- **Rendition protocol as observed.** The rendition service answers a request with "accepted" plus a job location, the job answers "pending" until the PDF is ready, and an explicit "cannot convert" problem exists. This is reverse-engineered from the original Navigator and a second in-house frontend and is not yet documented by the platform (ACC-2960). Authentication and endpoint discovery are settled (see Clarifications); the response contract is the remaining assumption.
 - **Download always delivers the original file**, never a rendition.
 - **Byte-range streaming is out of scope**; the whole file is downloaded before rendering, as in production today.
 - **Rotation and thumbnails are not required**; neither exists in production nor in the tickets.
@@ -201,7 +199,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **The design mockup page 03 is the visual source of truth** for the content-focus layout and toolbar order (attribute selector, page navigation, zoom, then download and fullscreen at the right). Search and print are added on top of it because production has them and HZN-6A.1 requires them.
 - **The attribute-focus layout** (page 04) is delivered by the entity-detail feature; this spec only requires the routing rule (FR-001).
 - **Existing platform capabilities are reused**: content presence, mimetype and filename come from the item's content metadata; the file location from the item's content link; a credentialed download capability already exists.
-- **The annotation overlay is a follow-up story.** Nothing in this story may make it impossible: the viewer receives its document as bytes, exposes page navigation, and is delivered as a reusable component the follow-up can extend. Its requirements and open questions live in `research.md` §1.4, §7 and §8, not here.
+- **The annotation overlay is a follow-up story.** Nothing in this story may make it impossible: the viewer receives its document as bytes, exposes page navigation, and is delivered as a reusable component the follow-up can extend. Its requirements and open questions are not part of this spec; the research behind them is in this branch's git history (commit 579bd325).
 
 ### Dependencies and references
 

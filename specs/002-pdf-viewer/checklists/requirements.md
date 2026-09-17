@@ -19,7 +19,7 @@
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
-- [x] Scope is clearly bounded (explicit In/Out scope section; the annotation overlay, native image/video previews, local-file preview, upload, byte-range streaming and rotation/thumbnails are excluded)
+- [x] Scope is clearly bounded (explicit In/Out scope section; the annotation overlay, native image/video previews, local-file preview, the upload flow, byte-range streaming and rotation/thumbnails are excluded; the "No file" state hosting the drop zone is in)
 - [x] Dependencies and assumptions identified
 
 ## Feature Readiness
@@ -34,5 +34,5 @@
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
 - The former open clarification is resolved: authentication (FR-023) goes through the platform's token exchange (TokenMonger) and the endpoint is deployment configuration (FR-029). The rendition response contract remains an assumption until ACC-2960 documents it.
 - Deliberate template deviations: a `## Scope` section before User Scenarios (the checklist demands a bounded scope and this feature has many adjacent stories) and a `### Dependencies and references` sub-section under Assumptions. Both are additive; every template section keeps its name and order.
-- Scope change 2026-09-17: the annotation / extraction-highlight overlay was removed from this spec at the product owner's request. Its research is retained in `research.md` (§1.4, §7, §8) for the follow-up story.
+- Scope change 2026-09-17: the annotation / extraction-highlight overlay was removed from this spec at the product owner's request, and its research was taken out of `research.md` at review (available in this branch's git history, commit 579bd325) for the follow-up story.
 - Review path: human review of `spec.md` in the pull request → `/speckit-plan` (reads `research.md`) → `/speckit-tasks`.
