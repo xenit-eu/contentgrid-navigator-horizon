@@ -7,7 +7,7 @@ const countIndicatorChipVariants = cva(
     variants: {
       variant: {
         default: "border border-border text-foreground",
-        solid: "border border-[var(--steel)] bg-secondary text-secondary-foreground",
+        solid: "border border-border bg-[var(--ocean)] text-primary-foreground",
       },
     },
     defaultVariants: {
