@@ -23,4 +23,18 @@ describe("ModifiedDateAttributeRenderer", () => {
     }).format(new Date(value));
     expect(screen.getByText(`Modified: ${expected}`)).toBeInTheDocument();
   });
+
+  it("omits the attribute label in the item-reference variant", () => {
+    const value = "2016-06-21T00:00:00.000Z";
+    render(
+      <ModifiedDateAttributeRenderer value={value} label="Modified" variant="item-reference" />,
+    );
+    const expected = new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(value));
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText(`Modified: ${expected}`)).not.toBeInTheDocument();
+  });
 });

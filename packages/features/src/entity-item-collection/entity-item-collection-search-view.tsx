@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ProfileEntity } from "@contentgrid/navigator-data";
+import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
@@ -19,6 +19,10 @@ export interface EntityItemCollectionSearchViewProps {
   readonly filters?: Record<string, string>;
   /** Fired when the user changes or clears a filter; receives the full next filters map. */
   readonly onFiltersChange?: (filters: Record<string, string>) => void;
+  /** Currently active sort value, e.g. `"name,asc"`. Defaults to no sort applied. */
+  readonly currentSort?: string;
+  /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
+  readonly onSortChange?: (sort: string | undefined) => void;
   /**
    * Render the breadcrumb toolbar on top; otherwise the content is wrapped in
    * a plain {@link PageLayout}. Defaults to `false`.
@@ -29,7 +33,7 @@ export interface EntityItemCollectionSearchViewProps {
   /** Actions / buttons shown at the end of the toolbar (only when `toolbar` is true). */
   readonly actions?: ReactNode;
   /** Fired when an entity item row is clicked; receives the item id. */
-  readonly onEntityItemClick?: (itemId: string) => void;
+  readonly onEntityItemClick?: (item: EntityItem) => void;
 }
 
 /**
