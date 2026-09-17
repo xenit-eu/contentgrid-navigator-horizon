@@ -78,6 +78,20 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
     "blueprint:attribute": [],
   };
 
+  // Mirrors the platform's system `id` attribute (see `entity-profiles-dump.json`, e.g. the
+  // "customer" profile): a real ContentGrid profile always carries this, and
+  // `ProfileEntity.getDefaultPreferences()` falls back to `idAttribute` and crashes without one.
+  const idAttribute = {
+    name: "id",
+    title: "id",
+    type: "string",
+    description: null,
+    readOnly: true,
+    required: false,
+    _embedded: noConstraints,
+    _links: {},
+  };
+
   // A content attribute's `blueprint:attribute` shape (root CLAUDE.md: `type: "object"` with
   // embedded filename/mimetype/length children) — shared by both content attributes below
   // ("file" and "receipt") so `doc-3` can exercise `ContentAttributeSelector`, which only renders
@@ -136,6 +150,7 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
     description: "A demo entity for the content-focus PDF viewer feature.",
     _embedded: {
       "blueprint:attribute": [
+        idAttribute,
         contentAttributeSchema("file", "File"),
         contentAttributeSchema("receipt", "Receipt"),
       ],

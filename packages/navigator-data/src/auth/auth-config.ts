@@ -193,7 +193,17 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
     if (!apiBaseUrl) {
       throw new Error("VITE_API_BASE_URL is required for dev token mode.");
     }
-    cachedConfig = { authority: "", clientId: "", apiBaseUrl };
+    cachedConfig = {
+      authority: "",
+      clientId: "",
+      apiBaseUrl,
+      // Same env-var rendition fallback as the non-dev-token branch below — dev token mode
+      // still needs a rendition endpoint configured for the PDF viewer's rendition path to
+      // engage (see "Content preview and renditions" in this package's CLAUDE.md).
+      ...validateRenditionSettings({
+        renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
+      }),
+    };
     return cachedConfig;
   }
 

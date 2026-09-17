@@ -152,12 +152,22 @@ export function usePdfViewerActiveState({
   }, [documentState, documentId, rawDocumentState, scrollState.totalPages, onDocumentOpened]);
 
   // Page state — mounted (meaningfully non-zero) only once ready (#691).
+  // `total` prefers `rawDocumentState.document.pageCount` over `scrollState.totalPages`:
+  // `useScroll`'s local `totalPages` is a one-time sync read taken when `documentId` is set
+  // (before the async engine parse finishes), corrected only via `onPageChange`, which fires
+  // solely on a *current*-page change — never on open, since every document starts on page 1.
+  // `rawDocumentState.document.pageCount` has no such race: it is set atomically with
+  // `status: "loaded"` in the same core reducer dispatch that `documentState === "ready"`
+  // itself derives from.
   const page: PdfViewerPageState = useMemo(
     () => ({
       current: documentState === "ready" ? scrollState.currentPage : 0,
-      total: documentState === "ready" ? scrollState.totalPages : 0,
+      total:
+        documentState === "ready"
+          ? (rawDocumentState?.document?.pageCount ?? scrollState.totalPages)
+          : 0,
     }),
-    [documentState, scrollState.currentPage, scrollState.totalPages],
+    [documentState, scrollState.currentPage, scrollState.totalPages, rawDocumentState],
   );
 
   const goToPage = useCallback(

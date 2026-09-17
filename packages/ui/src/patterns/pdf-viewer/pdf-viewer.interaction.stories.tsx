@@ -93,6 +93,14 @@ export const WithInteraction: Story = {
         "js-in-pdf.pdf's /OpenAction JavaScript never runs (FR-026/SC-005: PDFium has no JS engine)",
         async () => {
           await canvas.findByLabelText("Previous page", {}, { timeout: 10_000 });
+          // Regression check for the "of 0" bug: on the very first document a
+          // freshly created engine opens, the toolbar's total-page count must
+          // reflect the real page count (this single-page fixture) and not a
+          // stale "of 0" left over from a still-in-flight parse (see
+          // use-pdf-viewer-state.ts's doc comment on `page`).
+          await waitFor(() => expect(canvas.getByText("of 1")).toBeInTheDocument(), {
+            timeout: 10_000,
+          });
           // Give the engine a moment past "opened" in case any scripting path
           // fires asynchronously.
           await new Promise((resolve) => setTimeout(resolve, 500));
@@ -104,6 +112,9 @@ export const WithInteraction: Story = {
         await userEvent.click(canvas.getByTestId("load-minimal-doc"));
         const zoomIn = await canvas.findByLabelText("Zoom in", {}, { timeout: 10_000 });
         await waitFor(() => expect(zoomIn).toBeEnabled(), { timeout: 10_000 });
+        await waitFor(() => expect(canvas.getByText("of 1")).toBeInTheDocument(), {
+          timeout: 10_000,
+        });
       });
 
       // Search runs right after the document opens, before any other step —

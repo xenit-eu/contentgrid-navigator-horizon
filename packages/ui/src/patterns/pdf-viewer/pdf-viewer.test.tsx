@@ -705,6 +705,38 @@ describe("usePdfViewerActiveState", () => {
     expect(result.current.page).toEqual({ current: 0, total: 0 });
   });
 
+  it("falls back to the core document's pageCount when the scroll plugin's totalPages is stale on open", () => {
+    // Reproduces the "of 0" bug: `useScroll`'s local `totalPages` is seeded by
+    // a one-time synchronous read taken the instant `documentId` is set —
+    // before the real (async) engine parse finishes — and is only corrected
+    // by the plugin's `onPageChange` event, which never fires on open because
+    // the *current* page stays 1 throughout (see the doc comment on `page` in
+    // use-pdf-viewer-state.ts). A document opened on a still-initializing
+    // engine can reach `documentState === "ready"` while the scroll plugin's
+    // own state is still the pre-load default (`totalPages: 0`) — this test
+    // pins exactly that combination.
+    mockDocumentState.mockReturnValue({
+      id: "doc-1",
+      status: "loaded",
+      error: null,
+      document: {
+        id: "doc-1",
+        pageCount: 20,
+        pages: [],
+        isEncrypted: false,
+        isOwnerUnlocked: true,
+      },
+    });
+    mockScroll.mockReturnValue({
+      provides: { scrollToPage: vi.fn(), scrollToPreviousPage: vi.fn(), scrollToNextPage: vi.fn() },
+      state: { currentPage: 1, totalPages: 0 },
+    });
+    const { result } = renderHook(() =>
+      usePdfViewerActiveState({ documentId: "doc-1", documentState: "ready" }),
+    );
+    expect(result.current.page).toEqual({ current: 1, total: 20 });
+  });
+
   it("preserves the zoom mode across a fullscreen toggle", async () => {
     const requestZoom = vi.fn();
     mockZoom.mockReturnValue({

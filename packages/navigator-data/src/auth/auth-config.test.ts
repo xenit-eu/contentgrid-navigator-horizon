@@ -104,6 +104,37 @@ describe("loadAppConfig — env var path", () => {
     const { loadAppConfig } = await import("./auth-config");
     await expect(loadAppConfig()).rejects.toThrow("VITE_API_BASE_URL is required");
   });
+
+  it("reads VITE_RENDITION_URI in dev token mode", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 404 }));
+    vi.stubEnv("VITE_DEV_TOKEN", "my-dev-token");
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.local");
+    vi.stubEnv("VITE_RENDITION_URI", "https://renditions.example.com/get/pdf{?url}");
+    const { loadAppConfig } = await import("./auth-config");
+    const cfg = await loadAppConfig();
+    expect(cfg.renditionUri).toBe("https://renditions.example.com/get/pdf{?url}");
+  });
+
+  it("leaves renditionUri undefined in dev token mode when VITE_RENDITION_URI is unset", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 404 }));
+    vi.stubEnv("VITE_DEV_TOKEN", "my-dev-token");
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.local");
+    const { loadAppConfig } = await import("./auth-config");
+    const cfg = await loadAppConfig();
+    expect(cfg.renditionUri).toBeUndefined();
+  });
+
+  it("drops an invalid VITE_RENDITION_URI in dev token mode and warns, same as the env-var branch", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 404 }));
+    vi.stubEnv("VITE_DEV_TOKEN", "my-dev-token");
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.local");
+    vi.stubEnv("VITE_RENDITION_URI", "https://renditions.example.com/get/pdf"); // missing {?url}
+    const { loadAppConfig } = await import("./auth-config");
+    const cfg = await loadAppConfig();
+    expect(cfg.renditionUri).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUri"));
+  });
 });
 
 describe("loadAppConfig — caching", () => {
