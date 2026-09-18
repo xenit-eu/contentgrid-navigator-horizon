@@ -25,9 +25,9 @@ import {
   RelationItemSearchDialog,
 } from "../../entity-item";
 import { EntityItemCollectionTable } from "../../entity-item-collection";
-import type { FieldDescriptor } from "../model/field-descriptor";
+import type { HalFormsField } from "../model/hal-forms-field";
 
-type RelationFieldDescriptor = Extract<FieldDescriptor, { kind: "relation" }>;
+type RelationHalFormsField = Extract<HalFormsField, { kind: "relation" }>;
 
 /**
  * Linked items are fetched only to display them: once cached they're never refetched (legacy
@@ -40,7 +40,7 @@ const LINKED_ITEM_QUERY_OPTIONS = {
 } as const;
 
 export interface RelationFieldProps {
-  readonly field: RelationFieldDescriptor;
+  readonly field: RelationHalFormsField;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly onBlur?: () => void;
