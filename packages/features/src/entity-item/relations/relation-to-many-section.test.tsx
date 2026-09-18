@@ -11,6 +11,7 @@ import {
   type ProfileEntity,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
   useAddToManyRelation,
   useClearRelation,
   useDeleteRelationItem,
@@ -199,6 +200,8 @@ function renderSection(props: Partial<Parameters<typeof RelationToManySection>[0
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
 
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
@@ -206,6 +209,7 @@ function renderSection(props: Partial<Parameters<typeof RelationToManySection>[0
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
         >
           {children}
