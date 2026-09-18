@@ -26,3 +26,4 @@ export * from "./icon-color-picker";
 export * from "./theme-selector";
 export * from "./pdf-viewer";
 export * from "./tabbed-layout";
+export * from "./autocomplete-renderer";
