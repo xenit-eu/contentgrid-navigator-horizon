@@ -12,8 +12,8 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../../test-setup";
-import type { FieldDescriptor } from "../model/field-descriptor";
-import { resolveCreateFieldDescriptors } from "../model/resolve-create-field-descriptors";
+import type { HalFormsField } from "../model/hal-forms-field";
+import { resolveHalFormsFields } from "../model/resolve-hal-forms-fields";
 import { RelationField } from "./relation-field";
 
 const API_URL = "https://api.example.com";
@@ -114,9 +114,9 @@ const INVOICE_PROFILE = makeProfileEntity(
   `${API_URL}/profile/invoices`,
   "invoice",
 );
-const FIELDS = resolveCreateFieldDescriptors(INVOICE_PROFILE.createTemplate!).fields;
+const FIELDS = resolveHalFormsFields(INVOICE_PROFILE.createTemplate!).fields;
 const relationField = (name: string) =>
-  FIELDS.find((field) => field.name === name) as Extract<FieldDescriptor, { kind: "relation" }>;
+  FIELDS.find((field) => field.name === name) as Extract<HalFormsField, { kind: "relation" }>;
 
 function relationItem(collectionUrl: string, id: string, name: string) {
   return { id, name, _links: { self: { href: `${collectionUrl}/${id}` } } };
