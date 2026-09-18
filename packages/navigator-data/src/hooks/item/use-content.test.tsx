@@ -429,6 +429,44 @@ describe("useUploadContent — cancel", () => {
     expect(result.current.isError).toBe(false);
     expect(result.current.progress).toBe(0);
   });
+
+  it("does not resurrect the cancelled attempt as an error once its aborted promise settles", async () => {
+    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
+    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
+
+    const entityItem = makeEntityItemWithContentLink('"v1"');
+    const onError = vi.fn();
+    const { result } = renderHook(
+      () => useUploadContent(entityItem, "document", { mutationOptions: { onError } }),
+      { wrapper: makeWrapper() },
+    );
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
+
+    act(() => {
+      getLastXhr()?.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 100 });
+    });
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    // Flush the microtasks the aborted mutationFn's rejection resolves on — this is where the
+    // bug surfaced: onError fired here and flipped the already-reset hook back into an error state.
+    await act(async () => {
+      for (let i = 0; i < 20; i++) {
+        await Promise.resolve();
+      }
+    });
+
+    expect(result.current.isIdle).toBe(true);
+    expect(result.current.isError).toBe(false);
+    expect(onError).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

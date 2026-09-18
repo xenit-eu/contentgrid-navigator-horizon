@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { checkResponse } from "@contentgrid/problem-details";
@@ -122,6 +122,12 @@ export function useUploadContent(
 
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  // Set by `cancel()` right before aborting, so the mutation's `onError` below can tell an
+  // intentional cancellation apart from a real transport failure — the abort settles the
+  // mutationFn promise asynchronously (as either an AbortError or, depending on the browser,
+  // a raced `onerror`/"Network request failed"), well after `cancel()` has already reset the
+  // UI to idle. Without this flag that later rejection re-surfaces as a visible upload error.
+  const cancelledRef = useRef(false);
 
   // Stable dispatcher so the upload client (built once via useMemo) never needs
   // recreating when the caller passes an inline onProgress arrow.
@@ -142,6 +148,7 @@ export function useUploadContent(
   const mutation = useMutation({
     mutationFn: async ({ file, contentType, filename }: UploadContentVariables) => {
       setProgress(0);
+      cancelledRef.current = false;
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -165,7 +172,11 @@ export function useUploadContent(
         );
         return new EntityItem(object, profileEntity, etag);
       } finally {
-        abortRef.current = null;
+        // Only clear the ref if it's still this attempt's controller — a stale attempt
+        // settling after a newer one has already started must not clear the newer one's.
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
       }
     },
     onSuccess: async (item, variables, onMutateResult, context) => {
@@ -184,14 +195,32 @@ export function useUploadContent(
     },
     onError: async (error, variables, onMutateResult, context) => {
       setProgress(0);
+      // An intentional cancel() already reset the UI to idle — don't let this attempt's
+      // delayed rejection (AbortError, or a browser that races it into "onerror" instead)
+      // resurrect it as a visible upload failure.
+      if (cancelledRef.current) {
+        cancelledRef.current = false;
+        return;
+      }
       // 412/415 etc. must still surface to the caller — never swallowed.
       await onError?.(error, variables, onMutateResult, context);
     },
     ...restMutationOptions,
   });
 
+  // Abort an in-flight upload if the consumer unmounts mid-request — otherwise the XHR keeps
+  // running in the background and its onSuccess/onError still fire against a gone component.
+  useEffect(
+    () => () => {
+      cancelledRef.current = true;
+      abortRef.current?.abort();
+    },
+    [],
+  );
+
   const { reset } = mutation;
   const cancel = useCallback(() => {
+    cancelledRef.current = true;
     abortRef.current?.abort();
     abortRef.current = null;
     setProgress(0);

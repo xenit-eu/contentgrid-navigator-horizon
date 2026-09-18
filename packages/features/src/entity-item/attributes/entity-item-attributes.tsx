@@ -5,7 +5,6 @@ import {
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
 import { Table, TableBody, TableCell, TableRow } from "@contentgrid/ui";
-import { ContentAttributeCell } from "./content-attribute-cell";
 import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
 
 export interface EntityItemAttributesProps {
@@ -92,11 +91,7 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
               <TableRow key={attr.value.name}>
                 <TableCell className="text-muted-foreground font-medium">{label}</TableCell>
                 <TableCell className="w-full">
-                  {attr.value.kind === AttributeKind.CONTENT ? (
-                    <ContentAttributeCell item={item} value={attr.value} />
-                  ) : (
-                    <AttributeValueRenderer attr={attr} variant="table" />
-                  )}
+                  <AttributeValueRenderer attr={attr} variant="table" />
                 </TableCell>
               </TableRow>
             ))}
