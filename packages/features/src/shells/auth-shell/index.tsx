@@ -20,7 +20,7 @@ interface AuthShellProps {
  * `AuthShell`'s other auth-reactive UI decisions.
  */
 export function AuthShell({ children }: Readonly<AuthShellProps>) {
-  const { auth, apiFetch, contentFetch, profileUrl } = useAppAuth();
+  const { auth, apiFetch, contentFetch, createContentUploadFetch, profileUrl } = useAppAuth();
   useCrossTabSignOut();
 
   if (isAuthReady(auth)) {
@@ -28,6 +28,7 @@ export function AuthShell({ children }: Readonly<AuthShellProps>) {
       <NavigatorDataProvider
         apiFetch={apiFetch}
         contentFetch={contentFetch}
+        createContentUploadFetch={createContentUploadFetch}
         profileUrl={profileUrl}
       >
         {children}

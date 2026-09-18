@@ -2,6 +2,7 @@ import type { BooleanRendererProps } from "./boolean-renderer";
 import type { DateTimeRendererProps } from "./datetime-renderer";
 import type { EnumMultiRendererProps } from "./enum-multi-renderer";
 import type { EnumRendererProps } from "./enum-renderer";
+import type { FileRendererProps } from "./file-renderer";
 import type { NumberRendererProps } from "./number-renderer";
 import type { TextRendererProps } from "./text-renderer";
 
@@ -86,6 +87,19 @@ export function enumMultiField(
     required: false,
     readOnly: false,
     options: INLINE_STATUS_OPTIONS,
+    ...overrides,
+  };
+}
+
+export function fileField(
+  overrides: Partial<BaseProps<FileRendererProps>> = {},
+): BaseProps<FileRendererProps> {
+  return {
+    name: "attachment",
+    label: "Attachment",
+    required: false,
+    readOnly: false,
+    multiple: false,
     ...overrides,
   };
 }

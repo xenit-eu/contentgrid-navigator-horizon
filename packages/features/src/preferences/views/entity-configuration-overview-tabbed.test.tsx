@@ -9,6 +9,7 @@ import {
   type ProfileEntity,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
@@ -79,6 +80,8 @@ function renderOverview(onSelectEntity: (profile: ProfileEntity) => void = vi.fn
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
 
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
@@ -86,6 +89,7 @@ function renderOverview(onSelectEntity: (profile: ProfileEntity) => void = vi.fn
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
         >
           {children}
