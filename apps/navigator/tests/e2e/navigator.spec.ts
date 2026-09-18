@@ -342,16 +342,16 @@ test("Create Entity Continuous mode", async ({ page, login, selectSidebarEntity 
 
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByLabel("Name").click();
-  await page.getByRole("checkbox", { name: "Keep creating entities" }).check();
-  await expect(page.getByRole("checkbox", { name: "Keep creating entities" })).toBeChecked();
+  await page.getByRole("switch", { name: "Keep creating entities" }).check();
+  await expect(page.getByRole("switch", { name: "Keep creating entities" })).toBeChecked();
 
   await page.getByLabel("Name").fill("two");
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByText("Create-allowed has been")).toBeVisible();
 
   await page.getByLabel("Name").click();
-  await page.getByRole("checkbox", { name: "Keep creating entities" }).uncheck();
-  await expect(page.getByRole("checkbox", { name: "Keep creating entities" })).not.toBeChecked();
+  await page.getByRole("switch", { name: "Keep creating entities" }).uncheck();
+  await expect(page.getByRole("switch", { name: "Keep creating entities" })).not.toBeChecked();
   await page.getByLabel("Name").click();
   await page.getByLabel("Name").fill("three");
   await page.getByRole("button", { name: "Create" }).click();
