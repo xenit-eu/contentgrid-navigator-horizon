@@ -25,3 +25,4 @@ export * from "./color-picker";
 export * from "./icon-color-picker";
 export * from "./theme-selector";
 export * from "./tabbed-layout";
+export * from "./autocomplete-renderer";
