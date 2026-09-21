@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "react-oidc-context";
-import { createApiClient, createContentClient, createContentUploadClient } from "../api/client";
+import { createApiClient, createContentClient } from "../api/client";
 import type { TypedFetch } from "../api/client";
 import {
   DEFAULT_RENDITION_POLL_INTERVAL_MS,
@@ -18,12 +18,6 @@ export interface AppAuthResult {
    * Use exclusively for PUT/GET to cg:content links.
    */
   contentFetch: TypedFetch;
-  /**
-   * Factory for a progress-reporting binary upload client — same bearer-auth +
-   * problem-details hook chain as `contentFetch`, backed by XHR instead of fetch
-   * so upload progress can be reported. See `createContentUploadClient`.
-   */
-  createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch;
   profileUrl: string;
   /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUri`. */
   renditionUri?: string;
@@ -59,13 +53,11 @@ export function useAppAuth(): AppAuthResult {
   const authRef = useRef(auth);
   authRef.current = auth;
 
-  const { apiFetch, contentFetch, createContentUploadFetch } = useMemo(() => {
+  const { apiFetch, contentFetch } = useMemo(() => {
     const supplier = createOidcTokenSupplier(async () => authRef.current.user ?? null);
     return {
       apiFetch: createApiClient(supplier),
       contentFetch: createContentClient(supplier),
-      createContentUploadFetch: (onProgress?: (percentage: number) => void) =>
-        createContentUploadClient(supplier, onProgress),
     };
   }, []); // created once; token is read via ref on each request
 
@@ -101,7 +93,6 @@ export function useAppAuth(): AppAuthResult {
     auth,
     apiFetch,
     contentFetch,
-    createContentUploadFetch,
     profileUrl: `${apiBaseUrl}/profile`,
     renditionUri,
     renditionPolling,

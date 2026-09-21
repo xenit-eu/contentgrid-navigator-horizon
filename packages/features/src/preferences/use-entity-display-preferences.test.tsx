@@ -7,7 +7,6 @@ import {
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
-  createContentUploadClient,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
@@ -67,8 +66,6 @@ function renderUseEntityDisplayPreferences(profileUrl = PROFILE_URL) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
-  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
-    createContentUploadClient(noopSupplier, onProgress);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -76,7 +73,6 @@ function renderUseEntityDisplayPreferences(profileUrl = PROFILE_URL) {
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
-          createContentUploadFetch={createContentUploadFetch}
           profileUrl={profileUrl}
         >
           {children}
