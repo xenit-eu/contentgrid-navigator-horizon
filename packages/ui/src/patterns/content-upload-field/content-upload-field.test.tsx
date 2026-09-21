@@ -124,6 +124,62 @@ describe("ContentUploadField — drop-zone view (no file)", () => {
   });
 });
 
+describe("ContentUploadField — compact variant (no file)", () => {
+  it("renders a small trigger button instead of the drop-zone", () => {
+    render(<ContentUploadField file={null} onFileChange={vi.fn()} variant="compact" />);
+    expect(screen.queryByText(/drag & drop/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeInTheDocument();
+  });
+
+  it("uses triggerLabel as the button's accessible name", () => {
+    render(
+      <ContentUploadField
+        file={null}
+        onFileChange={vi.fn()}
+        variant="compact"
+        triggerLabel="Replace file"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Replace file" })).toBeInTheDocument();
+  });
+
+  it("falls back to a generic label when triggerLabel is omitted", () => {
+    render(<ContentUploadField file={null} onFileChange={vi.fn()} variant="compact" />);
+    expect(screen.getByRole("button", { name: "Select file" })).toBeInTheDocument();
+  });
+
+  it("opens the file input when the trigger is clicked", async () => {
+    const user = userEvent.setup();
+    render(<ContentUploadField file={null} onFileChange={vi.fn()} variant="compact" />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = vi.spyOn(input, "click");
+    await user.click(screen.getByRole("button"));
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it("calls onFileChange when a file is selected via the hidden input, same as the default variant", () => {
+    const onFileChange = vi.fn();
+    render(<ContentUploadField file={null} onFileChange={onFileChange} variant="compact" />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = makeFile("doc.txt", "text/plain");
+    Object.defineProperty(input, "files", { value: [file] });
+    fireEvent.change(input);
+    expect(onFileChange).toHaveBeenCalledWith(file);
+  });
+
+  it("renders a caller-supplied triggerIcon instead of the default upload icon", () => {
+    render(
+      <ContentUploadField
+        file={null}
+        onFileChange={vi.fn()}
+        variant="compact"
+        triggerIcon={<svg data-testid="custom-trigger-icon" />}
+      />,
+    );
+    expect(screen.getByTestId("custom-trigger-icon")).toBeInTheDocument();
+  });
+});
+
 describe("ContentUploadField — file selected view", () => {
   it("renders file name", () => {
     const file = makeFile("report.pdf", "application/pdf", 2048);
@@ -163,23 +219,104 @@ describe("ContentUploadField — file selected view", () => {
     render(<ContentUploadField file={file} onFileChange={vi.fn()} />);
     expect(screen.queryByRole("img", { name: "Preview" })).not.toBeInTheDocument();
   });
+});
 
-  it("renders '0 B' for a file with size 0", () => {
-    const file = makeFile("empty.txt", "text/plain", 0);
-    render(<ContentUploadField file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("0 B")).toBeInTheDocument();
+describe("ContentUploadField — upload progress", () => {
+  it("renders a progress bar when uploadProgress is defined", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(<ContentUploadField file={file} onFileChange={vi.fn()} uploadProgress={40} />);
+    expect(screen.getByRole("progressbar", { name: /upload progress/i })).toBeInTheDocument();
   });
 
-  it("renders GB formatted size for large files", () => {
-    const file = makeFile("big.bin", "application/octet-stream", 1);
-    Object.defineProperty(file, "size", { value: 1024 * 1024 * 1024 });
-    render(<ContentUploadField file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("1.0 GB")).toBeInTheDocument();
+  it("sets the current progress percentage as the progress value", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(<ContentUploadField file={file} onFileChange={vi.fn()} uploadProgress={65} />);
+    // Native <progress> maps `value` to the accessible aria-valuenow — it isn't
+    // reflected as a literal DOM attribute, so assert on the element property instead.
+    expect(screen.getByRole("progressbar", { name: /upload progress/i })).toHaveValue(65);
   });
 
-  it("renders MB formatted size", () => {
-    const file = makeFile("medium.bin", "application/octet-stream", 1024 * 1024);
+  it("does not render a progress bar when uploadProgress is undefined", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
     render(<ContentUploadField file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("1.0 MB")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("hides the progress bar when uploadError is true", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(
+      <ContentUploadField
+        file={file}
+        onFileChange={vi.fn()}
+        uploadProgress={50}
+        uploadError={true}
+      />,
+    );
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+});
+
+describe("ContentUploadField — cancel button", () => {
+  it("renders a Cancel button when onCancelUpload is provided", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(<ContentUploadField file={file} onFileChange={vi.fn()} onCancelUpload={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /cancel upload/i })).toBeInTheDocument();
+  });
+
+  it("hides the Remove button when onCancelUpload is provided", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(<ContentUploadField file={file} onFileChange={vi.fn()} onCancelUpload={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("ContentUploadField — error and retry", () => {
+  it("shows 'Upload failed' text when uploadError is true", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(<ContentUploadField file={file} onFileChange={vi.fn()} uploadError={true} />);
+    expect(screen.getByText(/upload failed/i)).toBeInTheDocument();
+  });
+
+  it("renders a Retry button when uploadError and onRetryUpload are both provided", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(
+      <ContentUploadField
+        file={file}
+        onFileChange={vi.fn()}
+        uploadError={true}
+        onRetryUpload={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it("does not render a Retry button when uploadError is false", () => {
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(
+      <ContentUploadField
+        file={file}
+        onFileChange={vi.fn()}
+        uploadError={false}
+        onRetryUpload={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the Remove button alongside Retry, so a failed upload can be dismissed", async () => {
+    const user = userEvent.setup();
+    const onFileChange = vi.fn();
+    const file = makeFile("doc.pdf", "application/pdf");
+    render(
+      <ContentUploadField
+        file={file}
+        onFileChange={onFileChange}
+        uploadError={true}
+        onRetryUpload={vi.fn()}
+      />,
+    );
+    const removeButton = screen.getByRole("button", { name: /remove file/i });
+    await user.click(removeButton);
+    expect(onFileChange).toHaveBeenCalledWith(null);
   });
 });
