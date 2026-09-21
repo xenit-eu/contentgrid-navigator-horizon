@@ -2,7 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { useDownloadContent, useUploadContent } from "@contentgrid/navigator-data";
+import {
+  ProblemDetailError,
+  useDownloadContent,
+  useUploadContent,
+} from "@contentgrid/navigator-data";
 import { ContentAttributeRenderer } from "./content-attribute-renderer";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
@@ -15,13 +19,16 @@ const cancel = vi.fn();
 const reset = vi.fn();
 const downloadMutate = vi.fn();
 
-function mockUploadState(state: Partial<{ progress: number; isError: boolean }> = {}) {
+function mockUploadState(
+  state: Partial<{ progress: number; isError: boolean; error: unknown }> = {},
+) {
   vi.mocked(useUploadContent).mockReturnValue({
     mutate,
     cancel,
     reset,
     progress: state.progress ?? 0,
     isError: state.isError ?? false,
+    error: state.error ?? null,
   } as unknown as ReturnType<typeof useUploadContent>);
 }
 
@@ -150,6 +157,31 @@ describe("ContentAttributeRenderer", () => {
       await userEvent.click(screen.getByRole("button", { name: "Retry" }));
 
       expect(mutate).toHaveBeenCalledWith({ file });
+    });
+
+    it("renders the real problem detail (not just a generic message) once the upload errors", async () => {
+      const error = new ProblemDetailError({
+        status: 415,
+        title: "Unsupported Media Type",
+        detail: "The file type 'application/x-msdownload' is not permitted for this attribute.",
+        type: "https://contentgrid.cloud/problems/unsupported-media-type",
+      });
+      mockUploadState({ isError: true, error });
+      const { container } = render(
+        <ContentAttributeRenderer
+          metadata={{ filename: "invoice.pdf", length: 1024 }}
+          entityItem={makeEntityItem(true)}
+          attributeName="file"
+        />,
+      );
+      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      await userEvent.upload(input, new File(["x"], "replacement.exe"));
+
+      expect(
+        screen.getByText(
+          "The file type 'application/x-msdownload' is not permitted for this attribute.",
+        ),
+      ).toBeInTheDocument();
     });
 
     it("lets the user dismiss a failed upload back to the plain metadata view, without retrying", async () => {

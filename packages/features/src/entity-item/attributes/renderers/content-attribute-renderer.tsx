@@ -1,8 +1,13 @@
 import { type ReactNode, useCallback, useState } from "react";
 import { DownloadSimpleIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { useDownloadContent, useUploadContent } from "@contentgrid/navigator-data";
+import {
+  toProblemDisplayModel,
+  useDownloadContent,
+  useUploadContent,
+} from "@contentgrid/navigator-data";
 import { AttributeValue, Button, ContentUploadField, formatFileSize } from "@contentgrid/ui";
+import { ProblemAlert } from "../../../problem-details";
 
 export interface ContentAttributeRendererProps {
   readonly metadata: { readonly filename: string | null; readonly length: number } | null;
@@ -118,9 +123,13 @@ function ReplaceableContentValue({
 }>) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  const { mutate, progress, isError, cancel, reset } = useUploadContent(entityItem, attributeName, {
-    mutationOptions: { onSuccess: () => setPendingFile(null) },
-  });
+  const { mutate, progress, isError, error, cancel, reset } = useUploadContent(
+    entityItem,
+    attributeName,
+    {
+      mutationOptions: { onSuccess: () => setPendingFile(null) },
+    },
+  );
 
   const handleFileSelect = useCallback(
     (file: File | null) => {
@@ -147,14 +156,20 @@ function ReplaceableContentValue({
 
   if (pendingFile) {
     return (
-      <ContentUploadField
-        file={pendingFile}
-        onFileChange={handleFileSelect}
-        uploadProgress={progress}
-        uploadError={isError}
-        onCancelUpload={isError ? undefined : handleCancel}
-        onRetryUpload={isError ? handleRetry : undefined}
-      />
+      <div className="flex flex-col gap-2">
+        <ContentUploadField
+          file={pendingFile}
+          onFileChange={handleFileSelect}
+          uploadProgress={progress}
+          uploadError={isError}
+          onCancelUpload={isError ? undefined : handleCancel}
+          onRetryUpload={isError ? handleRetry : undefined}
+        />
+        {/* No onRetryClick: content upload never sends If-Match, so the unsatisfiedVersion (412)
+            kind that callback is for can never occur here — retry is already offered above via
+            ContentUploadField's own Retry button. */}
+        {error && <ProblemAlert model={toProblemDisplayModel(error)} />}
+      </div>
     );
   }
 
