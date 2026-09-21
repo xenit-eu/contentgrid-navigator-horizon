@@ -24,4 +24,5 @@ export * from "./icon-picker";
 export * from "./color-picker";
 export * from "./icon-color-picker";
 export * from "./theme-selector";
+export * from "./pdf-viewer";
 export * from "./tabbed-layout";

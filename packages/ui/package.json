@@ -16,9 +16,9 @@
     "./tailwind-preset": "./tailwind-preset.ts"
   },
   "peerDependencies": {
+    "@contentgrid/navigator-data": "workspace:*",
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0",
-    "@contentgrid/navigator-data": "workspace:*"
+    "react-dom": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -28,11 +28,24 @@
     "test:visual:update": "pnpm --filter storybook run visual:update"
   },
   "dependencies": {
+    "@embedpdf/core": "2.15.0",
+    "@embedpdf/engines": "2.15.0",
+    "@embedpdf/models": "2.15.0",
+    "@embedpdf/pdfium": "2.15.0",
+    "@embedpdf/plugin-document-manager": "2.15.0",
+    "@embedpdf/plugin-interaction-manager": "2.15.0",
+    "@embedpdf/plugin-print": "2.15.0",
+    "@embedpdf/plugin-render": "2.15.0",
+    "@embedpdf/plugin-scroll": "2.15.0",
+    "@embedpdf/plugin-search": "2.15.0",
+    "@embedpdf/plugin-selection": "2.15.0",
+    "@embedpdf/plugin-viewport": "2.15.0",
+    "@embedpdf/plugin-zoom": "2.15.0",
     "@fontsource/open-sans": "5.2.7",
+    "@phosphor-icons/react": "2.1.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "@phosphor-icons/react": "2.1.10",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react-day-picker": "^10.0.0",
