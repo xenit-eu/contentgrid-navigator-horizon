@@ -6,7 +6,7 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels, contentDispositionAttachment } from "../api";
+import { cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
@@ -392,6 +392,18 @@ export class EntityItem {
   }
 
   /**
+   * Whether the current user is permitted to download (GET) binary content for this attribute.
+   *
+   * Derived from `contentLink` presence — same ABAC gate as `canUploadContent`.
+   *
+   * @param attributeName - The name of the content attribute
+   * @returns true when download is permitted
+   */
+  public canDownloadContent(attributeName: string): boolean {
+    return this.contentLink(attributeName) !== null;
+  }
+
+  /**
    * Builds a PUT Request for uploading binary content to a content attribute.
    *
    * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
@@ -405,14 +417,15 @@ export class EntityItem {
    *
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
-   * @param opts - Optional overrides for Content-Type and filename
+   * @param opts - Optional overrides for Content-Type and filename, and an
+   *               AbortSignal to allow the caller to cancel an in-flight upload
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public uploadContentRequest(
     attributeName: string,
     file: Blob | File,
-    opts?: { contentType?: string; filename?: string },
+    opts?: { contentType?: string; filename?: string; signal?: AbortSignal },
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -421,28 +434,25 @@ export class EntityItem {
       );
     }
 
-    const contentType =
-      opts?.contentType ??
-      (file instanceof File && file.type ? file.type : "application/octet-stream");
+    const contentType = opts?.contentType ?? (file.type || "application/octet-stream");
 
     const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
 
-    const headers: Record<string, string> = {
-      "Content-Type": contentType,
-    };
+    // Re-wrap only when the desired type differs from what the Blob/File already carries —
+    // FormData reads the part's Content-Type off the Blob itself, there's no separate override.
+    const filePart = file.type === contentType ? file : new Blob([file], { type: contentType });
 
+    const formData = new FormData();
     if (filename) {
-      headers["Content-Disposition"] = contentDispositionAttachment(filename);
-    }
-
-    if (this.etag !== null) {
-      headers["If-Match"] = this.etag;
+      formData.append("file", filePart, filename);
+    } else {
+      formData.append("file", filePart);
     }
 
     return new Request(link.href, {
       method: "PUT",
-      body: file,
-      headers,
+      body: formData,
+      signal: opts?.signal,
     });
   }
 

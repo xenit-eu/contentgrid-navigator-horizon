@@ -1,3 +1,4 @@
+import { PencilSimpleIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { ContentUploadField } from "./content-upload-field";
@@ -15,6 +16,19 @@ export const Empty: Story = {
   args: {
     file: null,
     onFileChange: fn(),
+  },
+};
+
+export const Compact: Story = {
+  args: {
+    file: null,
+    onFileChange: fn(),
+    variant: "compact",
+    triggerLabel: "Replace file",
+    // The default triggerIcon (an upload arrow) reads as "add a new file" — for a compact
+    // trigger sitting next to a value that already exists, a "change this" icon like a pencil
+    // communicates the replace affordance more clearly. See content-attribute-renderer.tsx.
+    triggerIcon: <PencilSimpleIcon />,
   },
 };
 
@@ -69,5 +83,55 @@ export const RemoveFileInteraction: Story = {
     // Clicking remove passes null to onFileChange
     await userEvent.click(removeBtn);
     await expect(args.onFileChange).toHaveBeenCalledWith(null);
+  },
+};
+
+export const Uploading: Story = {
+  args: {
+    file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
+    onFileChange: fn(),
+    uploadProgress: 45,
+    onCancelUpload: fn(),
+  },
+};
+
+export const UploadError: Story = {
+  args: {
+    file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
+    onFileChange: fn(),
+    uploadError: true,
+    onRetryUpload: fn(),
+  },
+};
+
+export const CancelInteraction: Story = {
+  tags: ["no-visual-test"],
+  args: {
+    file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
+    onFileChange: fn(),
+    uploadProgress: 45,
+    onCancelUpload: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const cancelBtn = canvas.getByRole("button", { name: /cancel upload/i });
+    await userEvent.click(cancelBtn);
+    await expect(args.onCancelUpload).toHaveBeenCalledOnce();
+  },
+};
+
+export const RetryInteraction: Story = {
+  tags: ["no-visual-test"],
+  args: {
+    file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
+    onFileChange: fn(),
+    uploadError: true,
+    onRetryUpload: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const retryBtn = canvas.getByRole("button", { name: /retry/i });
+    await userEvent.click(retryBtn);
+    await expect(args.onRetryUpload).toHaveBeenCalledOnce();
   },
 };

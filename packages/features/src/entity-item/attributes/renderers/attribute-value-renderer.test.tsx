@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
+  type EntityItem,
   type EntityItemAttribute,
   EntityItemAttributeContent,
   EntityItemAttributeNested,
@@ -46,7 +47,12 @@ const { spyRenderers } = vi.hoisted(() => {
     ),
     createdBy: ({ value, label }) => <span data-testid="r-createdBy">{`${label}:${value}`}</span>,
     modifiedBy: ({ value, label }) => <span data-testid="r-modifiedBy">{`${label}:${value}`}</span>,
-    content: ({ metadata }) => <span data-testid="r-content">{JSON.stringify(metadata)}</span>,
+    content: ({ metadata, entityItem, attributeName }) => (
+      <span data-testid="r-content">
+        {JSON.stringify(metadata)}:{attributeName}:
+        {entityItem ? "has-entity-item" : "no-entity-item"}
+      </span>
+    ),
     unknown: () => <span data-testid="r-unknown" />,
   };
   return { spyRenderers };
@@ -67,7 +73,26 @@ describe("AttributeValueRenderer", () => {
       value: new EntityItemAttributeContent("file", metadata, DUMMY_LINK),
       profileAttribute: makeProfileAttribute(),
     });
-    expect(screen.getByTestId("r-content")).toHaveTextContent(JSON.stringify(metadata));
+    expect(screen.getByTestId("r-content")).toHaveTextContent(
+      `${JSON.stringify(metadata)}:file:no-entity-item`,
+    );
+  });
+
+  it("threads entityItem and the attribute's name through to the content renderer", () => {
+    const metadata = { filename: "invoice.pdf", length: 1024, mimetype: "application/pdf" };
+    const entityItem = {} as EntityItem;
+    render(
+      <AttributeValueRenderer
+        attr={{
+          value: new EntityItemAttributeContent("file", metadata, DUMMY_LINK),
+          profileAttribute: makeProfileAttribute(),
+        }}
+        entityItem={entityItem}
+      />,
+    );
+    expect(screen.getByTestId("r-content")).toHaveTextContent(
+      `${JSON.stringify(metadata)}:file:has-entity-item`,
+    );
   });
 
   it("renders nothing for NESTED attributes", () => {
