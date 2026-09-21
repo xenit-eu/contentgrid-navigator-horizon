@@ -1,4 +1,5 @@
 import { type SubmitEvent, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
@@ -12,6 +13,7 @@ import {
   type RelationConflictAlertProps,
   type ValidationAlertProps,
 } from "../problem-details";
+import { capitalizeFirstLetter } from "../string-utils";
 import { CreateEntityItemForm } from "./create-entity-item-form";
 import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-descriptors";
 import type { FieldError } from "./state/field-error";
@@ -66,6 +68,14 @@ export interface CreateEntityItemContainerProps {
   readonly onRequiredRelationClick?: RelationConflictAlertProps["onRequiredRelationClick"];
 }
 
+const CONTINUOUS_CREATE_KEY = "contentgrid-continuous-create";
+
+function readInitialContinuousCreate(): boolean {
+  return (
+    typeof window !== "undefined" && window.sessionStorage.getItem(CONTINUOUS_CREATE_KEY) === "true"
+  );
+}
+
 /**
  * Smart component: gates on `profile.createTemplate`, runs `useCreateEntityItem`, and maps
  * server validation errors into external `FieldError[]`. Renders `CreateEntityItemForm` (the
@@ -107,12 +117,25 @@ function CreateEntityItemContainerReady({
   );
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldError[]>>({});
   const formState = useEntityItemCreateFormState({ fields, externalErrors });
+  const [continuousCreateMode, setContinuousCreateModeState] = useState<boolean>(
+    readInitialContinuousCreate,
+  );
+  // Bumped once per continuous-create reset, never on initial mount — see
+  // create-entity-item-form.tsx, which refocuses the first field only when this changes.
+  const [formResetCount, setFormResetCount] = useState(0);
 
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
   }, [formState.isDirty, onDirtyChange]);
 
   const createMutation = useCreateEntityItem(profile);
+
+  function setContinuousCreateMode(value: boolean) {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(CONTINUOUS_CREATE_KEY, String(value));
+    }
+    setContinuousCreateModeState(value);
+  }
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -128,12 +151,23 @@ function CreateEntityItemContainerReady({
     const values = formState.buildValues(createTemplate.template);
     createMutation.mutate(values, {
       onSuccess: (item) => {
+        toast.success(
+          `${capitalizeFirstLetter(profile.singularName)} has been successfully created!`,
+          // In continuous-create mode the form stays put instead of following `onCreated` (see
+          // below) — this action is the only way to reach the item that toast is about, without
+          // waiting to finish the whole create session first.
+          onCreated ? { action: { label: "View", onClick: () => onCreated(item) } } : undefined,
+        );
         // The just-submitted values are now safely saved — nothing about them is
         // "unsaved" anymore, so isDirty (and onDirtyChange) must reflect that even if
         // the caller doesn't navigate away immediately (e.g. an embedding that stays
         // mounted after create instead of redirecting).
         formState.reset();
-        onCreated?.(item);
+        if (continuousCreateMode) {
+          setFormResetCount((count) => count + 1);
+        } else {
+          onCreated?.(item);
+        }
       },
       onError: (error) => {
         setExternalErrors(toFieldErrors(getValidationFieldErrors(error)));
@@ -176,6 +210,9 @@ function CreateEntityItemContainerReady({
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}
+      continuousCreate={continuousCreateMode}
+      onContinuousCreateChange={setContinuousCreateMode}
+      formResetCount={formResetCount}
       nonFieldErrorAlert={
         nonFieldError && (
           <ProblemAlert

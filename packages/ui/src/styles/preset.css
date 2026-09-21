@@ -136,6 +136,12 @@
   --accent-foreground: var(--ocean);
   --destructive: var(--danger);
   --destructive-foreground: #ffffff;
+  /* Success surface — same green identity as StatusPill's "success" variant
+   * (status-pill.tsx), reused here for the Sonner Toaster's success toast so
+   * the two don't drift into different greens. */
+  --success: rgba(47, 122, 85, 0.1);
+  --success-border: rgba(47, 122, 85, 0.35);
+  --success-foreground: #266b49;
   --border: var(--line);
   --input: var(--line);
   --ring: var(--sky);
@@ -202,6 +208,10 @@
   --accent-foreground: var(--dark-surface);
   --destructive: #f87171; /* red-400 — lifted for dark-bg contrast */
   --destructive-foreground: #ffffff;
+  /* Same green identity as StatusPill's dark "success" variant. */
+  --success: rgba(111, 211, 161, 0.16);
+  --success-border: rgba(111, 211, 161, 0.4);
+  --success-foreground: #6fd3a1;
   --border: var(--dark-line);
   --input: var(--dark-line);
   --ring: var(--dark-accent);
