@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { LinkBreakIcon as LinkBreak, PlusIcon } from "@phosphor-icons/react";
 import {
   type EntityItemToManyRelation,
   type ProfileEntity,
@@ -18,12 +19,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-  Badge,
   Button,
+  CountIndicatorChip,
   DataTable,
+  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
+import { EntityItemCountLabel } from "../../entity-item-collection";
 import { buildColumns, buildRows, useColumnVisibility } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
 import {
@@ -75,6 +77,7 @@ export function RelationToManySection({
   } = useDeleteRelationItem(relation);
   const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(true);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
@@ -88,6 +91,9 @@ export function RelationToManySection({
     [collection.isSuccess, collection.data, columns],
   );
   const total = collection.isSuccess ? collection.data.totalItems : undefined;
+  const canUnlinkAll =
+    relation.canClear && collection.isSuccess && collection.data.items.length > 0;
+  const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
 
   function onRowClick(id: string) {
     if (!targetProfile) return;
@@ -95,125 +101,160 @@ export function RelationToManySection({
   }
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <div className="flex items-center gap-2">
-          {total !== undefined && (
-            <Badge variant="secondary">
-              {total.count.toLocaleString()} item{total.count === 1 ? "" : "s"}
-              {total.isEstimated && " (est.)"}
-            </Badge>
-          )}
-          {relation.canAdd && targetProfile && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isAdding}
-                onClick={() => setAddOpen(true)}
-              >
-                Add
-              </Button>
-              <RelationItemSearchDialog
-                targetProfile={targetProfile}
-                open={addOpen}
-                onOpenChange={setAddOpen}
-                onSelect={(item) => addRelation([item.selfLink.href])}
+    <>
+      <RelationAccordion
+        open={accordionOpen}
+        onOpenChange={setAccordionOpen}
+        title={
+          <span className="inline-flex items-center gap-2">
+            {total !== undefined && (
+              <CountIndicatorChip
+                variant="solid"
+                count={total.count}
+                isEstimated={total.isEstimated}
               />
-            </>
-          )}
-          {relation.canClear && collection.isSuccess && collection.data.items.length > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isClearing}>
-                  {isClearing ? "Clearing…" : "Clear all"}
+            )}
+            {title}
+          </span>
+        }
+        actions={
+          <>
+            {relation.canAdd && targetProfile && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isAdding}
+                  onClick={() => setAddOpen(true)}
+                >
+                  <PlusIcon className="size-4" />
+                  Link
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Clear all {title}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will remove all {total?.count.toLocaleString() ?? "linked"} item
-                    {total?.count === 1 ? "" : "s"}. The items themselves will not be deleted.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => clearRelation()}>Clear all</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-        </div>
-      </div>
-      {mutationError && (
-        <MutationErrorDisplay
-          error={mutationError}
-          onMissingRelationTargetClick={onMissingRelationTargetClick}
-          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-          onRequiredRelationClick={onRequiredRelationClick}
-        />
-      )}
-      {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
-      {collection.isError && (
-        <ProblemAlert model={toProblemDisplayModel(collection.error)}></ProblemAlert>
-      )}
-      {collection.isSuccess && collection.data.isEmpty && (
-        <p className="text-sm text-muted-foreground">No items linked</p>
-      )}
-      {collection.isSuccess && !collection.data.isEmpty && (
-        <div className="space-y-3">
-          <DataTable
-            entityName={relation.name}
-            entityTitle={title}
-            columns={columns}
-            rows={rows}
-            onRowClick={onRowClick}
-            onUnlink={
-              relation.canUnlinkItem
-                ? (id) => {
-                    const item = collection.data.findById(id);
-                    if (item) unlinkItem(item);
-                  }
-                : undefined
-            }
-            isUnlinking={isUnlinking}
-            onDelete={
-              collection.data.items.some((i) => i.canDelete)
-                ? (id) => {
-                    const item = collection.data.findById(id);
-                    if (item?.canDelete) deleteItem(item);
-                  }
-                : undefined
-            }
-            isDeleting={isDeleting}
+                <RelationItemSearchDialog
+                  targetProfile={targetProfile}
+                  open={addOpen}
+                  onOpenChange={setAddOpen}
+                  onSelect={(item) => {
+                    addRelation([item.selfLink.href]);
+                    setAccordionOpen(true);
+                  }}
+                />
+              </>
+            )}
+            {canUnlinkAll && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                disabled={isClearing}
+                onClick={() => setConfirmUnlinkAll(true)}
+              >
+                <LinkBreak className="size-4" />
+                {isClearing ? "Unlinking…" : "Unlink all"}
+              </Button>
+            )}
+          </>
+        }
+      >
+        {mutationError && (
+          <MutationErrorDisplay
+            error={mutationError}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
           />
-          {(collection.data.hasNext || collection.data.hasPrevious) && (
-            <div className="flex items-center justify-between pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!collection.data.hasPrevious}
-                onClick={() => setPageUrl(collection.data.prevHref)}
+        )}
+        {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
+        {collection.isError && (
+          <ProblemAlert model={toProblemDisplayModel(collection.error)}></ProblemAlert>
+        )}
+        {collection.isSuccess && collection.data.isEmpty && (
+          <p className="text-sm text-muted-foreground">No items linked</p>
+        )}
+        {collection.isSuccess && !collection.data.isEmpty && (
+          <div className="space-y-3">
+            <DataTable
+              entityName={relation.name}
+              entityTitle={title}
+              columns={columns}
+              rows={rows}
+              onRowClick={onRowClick}
+              onUnlink={
+                relation.canUnlinkItem
+                  ? (id) => {
+                      const item = collection.data.findById(id);
+                      if (item) unlinkItem(item);
+                    }
+                  : undefined
+              }
+              isUnlinking={isUnlinking}
+              onDelete={
+                collection.data.items.some((i) => i.canDelete)
+                  ? (id) => {
+                      const item = collection.data.findById(id);
+                      if (item?.canDelete) deleteItem(item);
+                    }
+                  : undefined
+              }
+              isDeleting={isDeleting}
+            />
+            {(collection.data.hasNext || collection.data.hasPrevious) && (
+              <div className="flex items-center justify-between pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!collection.data.hasPrevious}
+                  onClick={() => setPageUrl(collection.data.prevHref)}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {collection.data.pageSize} items on this page
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!collection.data.hasNext}
+                  onClick={() => setPageUrl(collection.data.nextHref)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </RelationAccordion>
+      {canUnlinkAll && (
+        <AlertDialog open={confirmUnlinkAll} onOpenChange={setConfirmUnlinkAll}>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unlink all {title.toLowerCase()}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Remove{" "}
+                {total ? (
+                  <EntityItemCountLabel count={total.count} noun="linked item" />
+                ) : (
+                  "all linked items"
+                )}
+                ? This will not delete the {title.toLowerCase()} themselves.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  clearRelation();
+                  setConfirmUnlinkAll(false);
+                }}
               >
-                Previous
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                {collection.data.pageSize} items on this page
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!collection.data.hasNext}
-                onClick={() => setPageUrl(collection.data.nextHref)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </div>
+                Unlink all
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
-    </div>
+    </>
   );
 }
