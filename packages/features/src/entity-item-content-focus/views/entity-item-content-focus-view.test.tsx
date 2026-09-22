@@ -1,6 +1,9 @@
 /**
  * Tests for `EntityItemContentFocusView`'s own orchestration logic: the FR-001 layout branch,
- * default content-attribute selection, and attribute-selector switching. `useProfileEntity`/
+ * default content-attribute selection, attribute-selector switching, and the default breadcrumb
+ * trail's app-owned routing (Principle VIII: the view derives crumb LABELS from data it
+ * resolved, but knows no routes of its own — clicking a crumb fires a plain callback the host
+ * supplies; an omitted callback renders that crumb as plain text). `useProfileEntity`/
  * `useEntityItem` are mocked directly — the real HAL round trip they perform is already covered
  * by navigator-data's own hook tests (ADR-014); this view's job is choosing what to render from
  * their results, not re-proving the fetch itself. `ContentPreviewPanel` and
@@ -10,14 +13,6 @@
  * (`packages/ui/src/primitives/select.test.tsx` never opens the popup either).
  */
 import type { ReactNode } from "react";
-import {
-  Outlet,
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -38,36 +33,22 @@ const PROFILE_URL = "https://api.example.com/profile/order";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
 /**
- * The view's default breadcrumbs use `@tanstack/react-router`'s `Link` (T028 fix — see
- * `entity-item-content-focus-view.tsx`), which throws without a real router context. Mirrors the
- * minimal in-memory router already established in
- * `app-info-pages/not-found-page.test.tsx` rather than mocking `Link` away — a mock would hide a
- * genuine "does this actually render under a real router" regression.
- *
- * Also wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useProfileEntity`/
+ * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useProfileEntity`/
  * `useEntityItem` are mocked below): `EntityItemView`'s `EntityItemReference` header (stable
  * `entity-item` feature) calls `useEntityDisplayPreferences`, which reads `useNavigatorData()`
  * directly, so any render of the FR-001 fallback body needs a provider in scope even though no
  * real fetch ever happens — same pattern as `entity-item/variations/entity-item-reference.test.tsx`.
+ * No router context is needed here (unlike an earlier version of this test) — the view no
+ * longer renders a `Link`; its default breadcrumbs are plain buttons/text driven by props.
  */
 function renderView(children: ReactNode) {
-  const rootRoute = createRootRoute({ component: () => <Outlet /> });
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/",
-    component: () => <>{children}</>,
-  });
-  const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
   return render(
     <NavigatorDataProvider
       apiFetch={createApiClient(noopSupplier)}
       contentFetch={createContentClient(noopSupplier)}
       profileUrl={PROFILE_URL}
     >
-      <RouterProvider router={router} />
+      {children}
     </NavigatorDataProvider>,
   );
 }
@@ -166,11 +147,7 @@ function mockHooks(profileEntity: ProfileEntity, item: EntityItem) {
 }
 
 describe("EntityItemContentFocusView", () => {
-  // The router's initial route match resolves asynchronously (TanStack Router), so every
-  // assertion below is a `find*` (not a synchronous `get*`) even though nothing else in the
-  // component tree is otherwise async — see `not-found-page.test.tsx` for the same pattern.
-
-  it("renders the existing EntityItemView body when the entity has no content attributes (FR-001)", async () => {
+  it("renders the existing EntityItemView body when the entity has no content attributes (FR-001)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
     mockHooks(profile, item);
@@ -178,9 +155,7 @@ describe("EntityItemContentFocusView", () => {
     const { container } = renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
 
     // EntityItemView's own item-reference header (`data-slot="item-reference"`), rendered by its
-    // "toolbar={false}" body — wait for the breadcrumb trail first since the router's initial
-    // route match resolves asynchronously (see the top-of-file note).
-    await screen.findByRole("link", { name: "Orders" });
+    // "toolbar={false}" body.
     expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });
@@ -242,19 +217,57 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.queryByText("content-preview-panel:document")).not.toBeInTheDocument();
   });
 
-  it("builds default breadcrumbs from the profile (Home / plural name / item id) when the host supplies none", async () => {
+  it("builds default breadcrumb LABELS from the profile (Home / plural name / item id) when the host supplies none", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
     mockHooks(profile, item);
 
     renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
 
-    expect(await screen.findByRole("link", { name: "Home" })).toBeInTheDocument();
     // The plural display title from the profile, not the raw entityName ("order").
-    expect(screen.getByRole("link", { name: "Orders" })).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Orders")).toBeInTheDocument();
     // `BreadcrumbPage` renders the current page as `role="link"` too (ui-library convention) —
     // scoped by that role, not `getByText`, since the item id ("1") also appears in
     // `EntityItemView`'s own `<h1>` heading below.
     expect(screen.getByRole("link", { name: "1" })).toBeInTheDocument();
+  });
+
+  it("renders Home/collection crumbs as plain, non-interactive text when no click callbacks are supplied (Principle VIII: the view has no route knowledge of its own)", () => {
+    const profile = makeProfile({ hasContentAttributes: false });
+    const item = makeEntityItem({ profileEntity: profile });
+    mockHooks(profile, item);
+
+    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+
+    expect(screen.queryByRole("button", { name: "Home" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Orders" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
+  });
+
+  it("renders Home/collection crumbs as interactive buttons and fires onHomeClick/onCollectionClick when supplied by the host", () => {
+    const profile = makeProfile({ hasContentAttributes: false });
+    const item = makeEntityItem({ profileEntity: profile });
+    mockHooks(profile, item);
+
+    const onHomeClick = vi.fn();
+    const onCollectionClick = vi.fn();
+
+    renderView(
+      <EntityItemContentFocusView
+        entityName="order"
+        itemId="1"
+        onHomeClick={onHomeClick}
+        onCollectionClick={onCollectionClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    expect(onHomeClick).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
+    // Called with the profile's `name` (routing identifier), not the displayed `pluralName`.
+    expect(onCollectionClick).toHaveBeenCalledWith("order");
   });
 });

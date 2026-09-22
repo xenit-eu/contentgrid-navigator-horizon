@@ -28,7 +28,7 @@ export function selectDefaultContentAttribute(
     return undefined;
   }
 
-  const nameWithFile = contentAttributeNames.find((name) =>
+  const firstContentAttributeNameWithFile = contentAttributeNames.find((name) =>
     entityItem.attributes.some(
       (attr) =>
         attr.value.name === name &&
@@ -37,5 +37,5 @@ export function selectDefaultContentAttribute(
     ),
   );
 
-  return nameWithFile ?? contentAttributeNames[0];
+  return firstContentAttributeNameWithFile ?? contentAttributeNames[0];
 }

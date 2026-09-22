@@ -122,6 +122,13 @@ function EntityItemDetailRoute({
       <EntityItemContentFocusView
         entityName={entityName}
         itemId={itemId}
+        onHomeClick={() => go({ to: "/", search: {} })}
+        onCollectionClick={(relatedEntityName) =>
+          // Empty search, not `(prev) => prev`: filters aren't carried in this page's URL (see
+          // the list route's `onEntityItemClick`) — the list restores its earlier filters and
+          // page position from the QueryClient-remembered page href instead.
+          go({ to: "/$entity", params: { entity: relatedEntityName }, search: {} })
+        }
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           go({
             to: "/$entity/$itemId",

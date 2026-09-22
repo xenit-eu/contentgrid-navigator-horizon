@@ -1,16 +1,4 @@
-import { AttributeKind, type EntityItem } from "@contentgrid/navigator-data";
-
-/**
- * Mirrors the shape of navigator-data's (unexported) `ContentMetadata` interface structurally,
- * so this feature can name the type without importing it — `EntityItemAttributeContent.metadata`
- * is `ContentMetadata | null` but that interface has no `export` keyword in
- * `accessors/entity-item.ts`, so it isn't part of the package's public API surface.
- */
-export interface ContentAttributeMetadata {
-  readonly length: number;
-  readonly mimetype: string;
-  readonly filename: string | null;
-}
+import { AttributeKind, type ContentMetadata, type EntityItem } from "@contentgrid/navigator-data";
 
 /**
  * Reads a content attribute's metadata off an already-resolved `EntityItem`, without throwing —
@@ -21,8 +9,8 @@ export interface ContentAttributeMetadata {
 export function getContentAttributeMetadata(
   entityItem: EntityItem,
   attributeName: string,
-): ContentAttributeMetadata | null | undefined {
-  const attribute = entityItem.attributes.find((attr) => attr.value.name === attributeName);
+): ContentMetadata | null | undefined {
+  const attribute = entityItem.findAttribute(attributeName);
   if (attribute === undefined || attribute.value.kind !== AttributeKind.CONTENT) {
     return undefined;
   }

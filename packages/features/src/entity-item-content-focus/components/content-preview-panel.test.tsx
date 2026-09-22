@@ -82,14 +82,18 @@ function makeStubEntityItem(options: {
   etag?: string | null;
 }): EntityItem {
   const { attributeName, metadata, etag = '"v1"' } = options;
+  const attributes = [
+    {
+      value: new EntityItemAttributeContent(attributeName, metadata, {
+        href: CONTENT_URL,
+      } as never),
+    },
+  ];
   return {
-    attributes: [
-      {
-        value: new EntityItemAttributeContent(attributeName, metadata, {
-          href: CONTENT_URL,
-        } as never),
-      },
-    ],
+    attributes,
+    // `getContentAttributeMetadata` calls the real `EntityItem.findAttribute` — mirror its
+    // lookup here instead of hand-rolling a `.attributes.find(...)` in the stub.
+    findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
     etag,
     downloadContentRequest: (
       _attrName: string,
@@ -121,10 +125,13 @@ function makeStubEntityItemWithAttributes(
   }[],
   etag: string | null = '"v1"',
 ): EntityItem {
+  const attributes = attrs.map((attr) => ({
+    value: new EntityItemAttributeContent(attr.name, attr.metadata, { href: attr.url } as never),
+  }));
   return {
-    attributes: attrs.map((attr) => ({
-      value: new EntityItemAttributeContent(attr.name, attr.metadata, { href: attr.url } as never),
-    })),
+    attributes,
+    // See the matching comment in `makeStubEntityItem` above.
+    findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
     etag,
     downloadContentRequest: (
       attrName: string,

@@ -1,5 +1,4 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import {
   type EntityItem,
   type ProfileEntity,
@@ -54,6 +53,18 @@ export interface EntityItemContentFocusViewProps extends Pick<
   /** Fired when the user clicks through to a related entity item, from either a to-one or
    * to-many relation section in the side panel. */
   readonly onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
+  /**
+   * Fired when the user clicks the default breadcrumb trail's "Home" crumb. The view itself
+   * has no route knowledge (Principle VIII) — omit this to render that crumb as plain,
+   * non-interactive text instead of a dead link.
+   */
+  readonly onHomeClick?: () => void;
+  /**
+   * Fired when the user clicks the default breadcrumb trail's collection crumb, with the
+   * profile entity's name. Omit this to render that crumb as plain, non-interactive text
+   * instead of a dead link.
+   */
+  readonly onCollectionClick?: (entityName: string) => void;
 }
 
 function resolveToolbar(
@@ -98,6 +109,8 @@ function EntityItemContentFocusViewBody({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  onHomeClick,
+  onCollectionClick,
 }: Readonly<EntityItemContentFocusViewProps & { profileEntity: ProfileEntity }>) {
   const item = useEntityItem({ profileEntity, entityId: itemId });
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
@@ -119,32 +132,39 @@ function EntityItemContentFocusViewBody({
     onRelationItemClick?.({ entityName: relatedEntityName, itemId: relatedItemId });
   }
 
-  // Home -> collection -> item id, matching what apps/navigator-experimental's route built
-  // itself before this view existed (Principle VIII: the view derives its own default
-  // breadcrumbs from the profile/item it already resolved; a host overrides via `toolbar` only
-  // when it needs different chrome). `Link`'s `to`/`params`/`search` are cast past this
-  // package's generic (app-agnostic) route typing — the same pattern already used in
-  // `layout/sidebar-entity-nav.tsx` for the identical reason.
-  const linkClassName =
+  // Home -> collection -> item id: the view derives the LABELS from the profile/item it already
+  // resolved (Principle VIII), but has no route knowledge of its own — clicking a crumb fires a
+  // plain callback (`onHomeClick`/`onCollectionClick`) supplied by the host app, which owns the
+  // actual routing. A crumb with no callback renders as plain, non-interactive text rather than
+  // a dead link. A host overrides the whole trail via `toolbar` when it needs different chrome.
+  const interactiveCrumbClassName =
     "text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer";
+  const staticCrumbClassName = "text-sm text-muted-foreground";
   const defaultBreadcrumbs = (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <Link to={"/" as string} search={{} as Record<string, never>} className={linkClassName}>
-            Home
-          </Link>
+          {onHomeClick ? (
+            <button type="button" onClick={onHomeClick} className={interactiveCrumbClassName}>
+              Home
+            </button>
+          ) : (
+            <span className={staticCrumbClassName}>Home</span>
+          )}
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <Link
-            to={"/$entity" as string}
-            params={{ entity: profileEntity.name } as Record<string, string>}
-            search={{} as Record<string, never>}
-            className={linkClassName}
-          >
-            {profileEntity.pluralName}
-          </Link>
+          {onCollectionClick ? (
+            <button
+              type="button"
+              onClick={() => onCollectionClick(profileEntity.name)}
+              className={interactiveCrumbClassName}
+            >
+              {profileEntity.pluralName}
+            </button>
+          ) : (
+            <span className={staticCrumbClassName}>{profileEntity.pluralName}</span>
+          )}
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
@@ -185,13 +205,20 @@ function EntityItemContentFocusViewBody({
     </>
   );
 
+  // When the content-focus body is what renders (profileEntity.hasContentAttributes), the
+  // preview panel should run edge to edge rather than sit inside the standard page gutters —
+  // drop horizontal padding only, keeping the vertical rhythm. The EntityItemView fallback body
+  // keeps the standard padding on both axes.
+  const contentPadding = profileEntity.hasContentAttributes ? "vertical" : true;
+
   if (resolvedToolbar === false) {
-    return <PageLayout>{content}</PageLayout>;
+    return <PageLayout padded={contentPadding}>{content}</PageLayout>;
   }
   return (
     <BreadCrumbsToolBarLayout
       breadcrumbs={resolvedToolbar.breadcrumbs}
       actions={resolvedToolbar.actions}
+      contentPadded={contentPadding}
     >
       {content}
     </BreadCrumbsToolBarLayout>
