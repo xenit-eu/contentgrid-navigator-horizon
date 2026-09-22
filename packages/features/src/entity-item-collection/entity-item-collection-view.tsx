@@ -13,9 +13,6 @@ import {
   AttributeMultiSelectContent,
   Badge,
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
   PageTitle,
   Popover,
   PopoverContent,
@@ -23,12 +20,7 @@ import {
   type RecordTableSortOption,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
-import {
-  type FieldState,
-  HalFormsContainer,
-  type HalFormsField,
-  resolveHalFormsFields,
-} from "../hal-forms";
+import { type FieldState, type HalFormsField, resolveHalFormsFields } from "../hal-forms";
 import { EntityIconBadge } from "../layout";
 import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
@@ -39,6 +31,7 @@ import {
   findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
+import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
@@ -351,30 +344,18 @@ export function EntityItemCollectionView({
       </div>
 
       {filterProperties.length > 0 && (
-        <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
-            <div className="mb-4 flex items-center justify-between">
-              <DialogTitle className="text-base font-semibold">Filters</DialogTitle>
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-sm text-muted-foreground"
-                  onClick={handleClearAll}
-                >
-                  Clear all
-                </Button>
-              )}
-            </div>
-            <HalFormsContainer
-              fields={fields}
-              layout={layout}
-              values={values}
-              onChange={handleHalFormChange}
-              fieldState={fieldState}
-            />
-          </DialogContent>
-        </Dialog>
+        <EntityItemCollectionFilterDialog
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          activeFilterCount={activeFilterCount}
+          onClearAll={handleClearAll}
+          fields={fields}
+          layout={layout}
+          values={values}
+          onChange={handleHalFormChange}
+          fieldState={fieldState}
+          totalItems={collection.data?.totalItems}
+        />
       )}
     </div>
   );
