@@ -6,6 +6,7 @@ interface SelectionChipProps {
   readonly onClick?: () => void;
   readonly className?: string;
   readonly size?: "default" | "sm";
+  readonly disabled?: boolean;
 }
 
 function SelectionChip({
@@ -14,6 +15,7 @@ function SelectionChip({
   onClick,
   className,
   size = "default",
+  disabled = false,
 }: SelectionChipProps) {
   return (
     <button
@@ -21,10 +23,12 @@ function SelectionChip({
       data-slot="selection-chip"
       aria-pressed={selected}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "inline-flex items-center whitespace-nowrap cursor-pointer border transition-colors",
+        "inline-flex items-center whitespace-nowrap border transition-colors",
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         size === "sm"
-          ? "px-[10px] py-[5px] rounded-[6px] text-[13px]"
+          ? "px-[10px] py-[5px] rounded-[6px] text-[12px]"
           : "px-[14px] py-[7px] rounded-[8px] text-[13px]",
         selected
           ? "bg-[#084772] dark:bg-[#1F9FE0] text-white dark:text-[#04202F] border-[#084772] dark:border-[#1F9FE0] font-semibold"
