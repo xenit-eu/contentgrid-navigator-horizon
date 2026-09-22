@@ -203,6 +203,21 @@ describe("resolveHalFormsFields search-form autocomplete", () => {
     expect(status?.kind).toBe("text");
   });
 
+  it("keeps a datetime attribute's exact-match field alongside its ~after/~before range siblings", () => {
+    const { fields } = resolveHalFormsFields(makeSearchTemplate());
+    expect(fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(["due_date", "due_date~after", "due_date~before"]),
+    );
+  });
+
+  it("labels a directional range field with just its direction word, not the attribute name", () => {
+    const { fields } = resolveHalFormsFields(makeSearchTemplate());
+    const after = fields.find((field) => field.name === "due_date~after");
+    const before = fields.find((field) => field.name === "due_date~before");
+    expect(after?.label).toBe("After");
+    expect(before?.label).toBe("Before");
+  });
+
   it("does not inherit the relation's description onto its own relation-scoped fields", () => {
     const { fields } = resolveHalFormsFields(makeSearchTemplate());
     const companyName = fields.find((field) => field.name === "company.name~prefix");
@@ -257,6 +272,24 @@ const contactSearchProfileJson = {
         },
         _links: {},
       },
+      {
+        name: "due_date",
+        title: "Due date",
+        type: "datetime",
+        description: "",
+        readOnly: false,
+        required: false,
+        _embedded: {
+          "blueprint:constraint": [],
+          "blueprint:search-param": [
+            { name: "due_date", title: "Due date", type: "exact-match" },
+            { name: "due_date~after", title: "Due date after", type: "greater-than" },
+            { name: "due_date~before", title: "Due date before", type: "less-than" },
+          ],
+          "blueprint:attribute": [],
+        },
+        _links: {},
+      },
     ],
     "blueprint:relation": [
       {
@@ -279,6 +312,9 @@ const contactSearchProfileJson = {
       properties: [
         { name: "name~prefix", type: "text" },
         { name: "status", type: "text" },
+        { name: "due_date", type: "datetime" },
+        { name: "due_date~after", type: "datetime" },
+        { name: "due_date~before", type: "datetime" },
         { name: "company.name~prefix", type: "text" },
       ],
     },

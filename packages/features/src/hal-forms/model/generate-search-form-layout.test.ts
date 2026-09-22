@@ -53,6 +53,7 @@ const taskProfileJson = {
         _embedded: {
           "blueprint:constraint": [],
           "blueprint:search-param": [
+            { name: "due_date", title: "Due date", type: "exact-match" },
             { name: "due_date~after", title: "Due date after", type: "greater-than" },
             { name: "due_date~before", title: "Due date before", type: "less-than" },
           ],
@@ -97,6 +98,7 @@ const taskProfileJson = {
       target: "https://example.com/tasks",
       properties: [
         { name: "status", type: "text" },
+        { name: "due_date", type: "datetime" },
         { name: "due_date~after", type: "datetime" },
         { name: "due_date~before", type: "datetime" },
         { name: "priority~gte", type: "number" },
@@ -162,6 +164,23 @@ describe("generateSearchFormLayout", () => {
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows[0]).toEqual({ fieldNames: ["status"] });
+  });
+
+  it("gives a datetime attribute's exact-match field its own row, directly above its paired range row", () => {
+    const fields = [
+      textField("status", "Status"),
+      textField("due_date", "Due date"),
+      textField("due_date~after", "Due date after"),
+      textField("due_date~before", "Due date before"),
+      textField("priority~gte", "Priority from"),
+    ];
+    const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
+    expect(layout.sections[0].rows).toEqual([
+      { fieldNames: ["status"] },
+      { fieldNames: ["due_date"] },
+      { fieldNames: ["due_date~after", "due_date~before"] },
+      { fieldNames: ["priority~gte"] },
+    ]);
   });
 
   it("only pairs fields that are actually present, ignoring a range sibling that didn't survive", () => {
