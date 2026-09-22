@@ -157,12 +157,13 @@ function attributeHalFormsField(prop: CreateFormProperty): HalFormsField {
  * never fetches anything itself).
  *
  * A directional range property (`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before`/`~from`/`~until`)
- * gets its direction ("After"/"Before"/"From"/"Until") appended to its label — `property.prompt`/
- * `profileAttribute?.title` alone would give every sibling sharing one `groupKey` the SAME label
- * (e.g. two fields both just called "Created"), which is exactly the ambiguity the former
- * `filter-sidebar.tsx`'s separate `directionLabel` sub-badge existed to avoid. `HalFormsField` has
- * no equivalent side-channel for a sub-label, so it's folded into the one label this type does
- * have instead.
+ * uses its bare direction word ("After"/"Before"/"From"/"Until") as its whole label, rather than
+ * `property.prompt`/`profileAttribute?.title` — the attribute's own name is already shown once,
+ * either as the exact-match sibling's label directly above this row (`generate-search-form-layout.ts`
+ * places it there) or, if there's no such sibling, on the section/field context surrounding it, so
+ * repeating it on every direction variant is redundant. The former `filter-sidebar.tsx` reached
+ * the same "After"/"Before" label via a separate `directionLabel` sub-badge; `HalFormsField` has
+ * no equivalent side-channel for a sub-label, so the direction word IS the label here instead.
  *
  * Search-only filtering happens in `resolveSearchFields`, ported from
  * `packages/features/src/search/filter-properties.ts`'s `buildFilterProperties`: the `hidden`
@@ -183,7 +184,7 @@ function searchPropertyHalFormsField(
   const direction = directionLabel(sp);
   const base: FieldMappingInput = {
     name: property.name,
-    label: direction ? `${baseLabel} ${direction}` : baseLabel,
+    label: direction ?? baseLabel,
     required: false,
     readOnly: false,
     // The relation's own description belongs on that relation's section header
@@ -218,7 +219,7 @@ function resolveSearchFields(template: SearchHalFormTemplate): HalFormsField[] {
     field: searchPropertyHalFormsField(sp, template.profileEntity),
   }));
   return mapped
-    .filter(({ sp, field }) => !isRedundantSearchField(sp, field.kind, properties))
+    .filter(({ sp }) => !isRedundantSearchField(sp, properties))
     .map(({ field }) => field);
 }
 
@@ -276,25 +277,18 @@ function searchOperatorOf(sp: SearchHalFormTemplateProperty): string {
   return KNOWN_SEARCH_OPERATORS.has(sp.searchType) ? sp.searchType : "exact-match";
 }
 
-function isDirectional(operator: string): boolean {
-  return (
-    operator === "greater-than" ||
-    operator === "greater-than-or-equal" ||
-    operator === "less-than" ||
-    operator === "less-than-or-equal"
-  );
-}
-
 /**
  * Ported from `filter-properties.ts`'s `isRedundantExactMatch`/`isRedundantStrictRangeBound`: an
  * exact-match property is redundant once a narrower (prefix/full-text) sibling exists for the
- * same `groupKey`, or — for a datetime/datetime-local attribute only — a range/direction sibling
- * exists; a strict range bound (`greater-than`/`less-than`) is redundant once its inclusive
- * equivalent (`greater-than-or-equal`/`less-than-or-equal`) exists for the same `groupKey`.
+ * same `groupKey`. Unlike that module, a datetime/date attribute's exact-match property is kept
+ * even when a range/direction (`~after`/`~before`) sibling exists for the same `groupKey` — both
+ * are shown, the exact-match property in its own row and the range pair in the row below it
+ * (`generate-search-form-layout.ts` handles that placement). A strict range bound
+ * (`greater-than`/`less-than`) is redundant once its inclusive equivalent
+ * (`greater-than-or-equal`/`less-than-or-equal`) exists for the same `groupKey`.
  */
 function isRedundantSearchField(
   sp: SearchHalFormTemplateProperty,
-  kind: HalFormsField["kind"],
   allProperties: readonly SearchHalFormTemplateProperty[],
 ): boolean {
   const operator = searchOperatorOf(sp);
@@ -303,11 +297,7 @@ function isRedundantSearchField(
   if (operator === "exact-match") {
     return siblings.some((other) => {
       const otherOperator = searchOperatorOf(other);
-      return (
-        otherOperator === "prefix-match" ||
-        otherOperator === "full-text" ||
-        (isDirectional(otherOperator) && kind === "datetime")
-      );
+      return otherOperator === "prefix-match" || otherOperator === "full-text";
     });
   }
 
