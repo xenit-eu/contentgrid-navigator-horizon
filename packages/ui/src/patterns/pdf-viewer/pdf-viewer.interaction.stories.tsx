@@ -98,7 +98,7 @@ export const WithInteraction: Story = {
           // reflect the real page count (this single-page fixture) and not a
           // stale "of 0" left over from a still-in-flight parse (see
           // use-pdf-viewer-state.ts's doc comment on `page`).
-          await waitFor(() => expect(canvas.getByText("of 1")).toBeInTheDocument(), {
+          await waitFor(() => expect(canvas.getByText("/ 1")).toBeInTheDocument(), {
             timeout: 10_000,
           });
           // Give the engine a moment past "opened" in case any scripting path
@@ -112,7 +112,7 @@ export const WithInteraction: Story = {
         await userEvent.click(canvas.getByTestId("load-minimal-doc"));
         const zoomIn = await canvas.findByLabelText("Zoom in", {}, { timeout: 10_000 });
         await waitFor(() => expect(zoomIn).toBeEnabled(), { timeout: 10_000 });
-        await waitFor(() => expect(canvas.getByText("of 1")).toBeInTheDocument(), {
+        await waitFor(() => expect(canvas.getByText("/ 1")).toBeInTheDocument(), {
           timeout: 10_000,
         });
       });

@@ -46,7 +46,7 @@ export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
   previousPage: "Previous page",
   nextPage: "Next page",
   pageNumberInput: "Current page",
-  pageCountSeparator: "of",
+  pageCountSeparator: "/",
   zoomOut: "Zoom out",
   zoomIn: "Zoom in",
   zoomLevel: "Zoom level",

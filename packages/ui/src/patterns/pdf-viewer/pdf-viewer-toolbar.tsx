@@ -107,7 +107,7 @@ function PageNavigation({
           }
         }}
       />
-      <span className="text-muted-foreground text-sm" aria-hidden>
+      <span className="text-muted-foreground text-sm whitespace-nowrap" aria-hidden>
         {labels.pageCountSeparator} {page.total}
       </span>
       <IconButton
