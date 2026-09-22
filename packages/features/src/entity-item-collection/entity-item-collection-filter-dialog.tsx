@@ -1,3 +1,4 @@
+import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
 import type { CollectionTotalCount, FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Button, Dialog, DialogContent, DialogTitle } from "@contentgrid/ui";
 import {
@@ -22,6 +23,12 @@ export interface EntityItemCollectionFilterDialogProps {
    * unknown (e.g. still loading). Drives the footer's "Show N items" label, including the
    * "(estimated)" suffix. */
   readonly totalItems: CollectionTotalCount | undefined;
+  /** Whether the collection query for the currently-applied filters is in flight (the caller's own
+   * `collection.isFetching` — covers both the very first load and every filter-triggered
+   * refetch). `totalItems` is `placeholderData`-backed and so may still show the PREVIOUS
+   * filters' count while this is true; the footer's "Show N items" button surfaces a spinner so
+   * that stale count doesn't read as already up to date. */
+  readonly isLoading: boolean;
 }
 
 /**
@@ -35,7 +42,8 @@ export interface EntityItemCollectionFilterDialogProps {
  * Filtering itself is already live — every `HalFormsContainer` field change round-trips through
  * `onChange` to the caller's `onFiltersChange` immediately (see `EntityItemCollectionView`'s own
  * doc comment). The footer's "Show N items" button doesn't apply anything itself; it just closes
- * the dialog onto results the table is already showing.
+ * the dialog onto results the table is already showing — while `isLoading`, it also shows a
+ * spinner, since `totalItems` may still be the previous filters' count at that point.
  */
 export function EntityItemCollectionFilterDialog({
   open,
@@ -48,6 +56,7 @@ export function EntityItemCollectionFilterDialog({
   onChange,
   fieldState,
   totalItems,
+  isLoading,
 }: Readonly<EntityItemCollectionFilterDialogProps>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,6 +87,7 @@ export function EntityItemCollectionFilterDialog({
             <span />
           )}
           <Button size="sm" onClick={() => onOpenChange(false)}>
+            {isLoading && <CircleNotch className="size-4 animate-spin" aria-hidden />}
             Show {totalItems?.count ?? "-"} items{totalItems?.isEstimated && " (estimated)"}
           </Button>
         </div>

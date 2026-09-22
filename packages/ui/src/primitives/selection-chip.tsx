@@ -5,9 +5,16 @@ interface SelectionChipProps {
   readonly label: string;
   readonly onClick?: () => void;
   readonly className?: string;
+  readonly size?: "default" | "sm";
 }
 
-function SelectionChip({ selected = false, label, onClick, className }: SelectionChipProps) {
+function SelectionChip({
+  selected = false,
+  label,
+  onClick,
+  className,
+  size = "default",
+}: SelectionChipProps) {
   return (
     <button
       type="button"
@@ -15,7 +22,10 @@ function SelectionChip({ selected = false, label, onClick, className }: Selectio
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center px-[14px] py-[7px] rounded-[8px] text-[13px] whitespace-nowrap cursor-pointer border transition-colors",
+        "inline-flex items-center whitespace-nowrap cursor-pointer border transition-colors",
+        size === "sm"
+          ? "px-[10px] py-[5px] rounded-[6px] text-[13px]"
+          : "px-[14px] py-[7px] rounded-[8px] text-[13px]",
         selected
           ? "bg-[#084772] dark:bg-[#1F9FE0] text-white dark:text-[#04202F] border-[#084772] dark:border-[#1F9FE0] font-semibold"
           : "bg-[#FAFDFF] dark:bg-[#13314A] text-[#0E2436] dark:text-[#EAF4FB] border-[#C5D6E2] dark:border-[#335269] font-normal",
