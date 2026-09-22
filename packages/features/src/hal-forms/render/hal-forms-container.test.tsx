@@ -127,7 +127,7 @@ describe("HalFormsContainer", () => {
     expect(screen.queryByRole("button", { name: "Contact" })).not.toBeInTheDocument();
   });
 
-  it("expands a collapsible section's rows by default and collapses them on toggle", async () => {
+  it("collapses a collapsible section's rows by default and expands them on toggle", async () => {
     const user = userEvent.setup();
     render(
       <HalFormsContainer
@@ -141,10 +141,10 @@ describe("HalFormsContainer", () => {
       />,
     );
 
-    expect(screen.getByLabelText(/Name/)).toBeVisible();
+    expect(screen.queryByLabelText(/Name/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Contact" }));
 
-    expect(screen.queryByLabelText(/Name/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Name/)).toBeVisible();
   });
 });
