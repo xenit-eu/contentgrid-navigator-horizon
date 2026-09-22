@@ -37,3 +37,16 @@ export const Group: Story = {
     </div>
   ),
 };
+
+export const Small: Story = {
+  args: {
+    label: "True",
+    size: "sm",
+  },
+  render: () => (
+    <div className="flex items-center gap-2">
+      <SelectionChip label="True" size="sm" selected={true} />
+      <SelectionChip label="False" size="sm" selected={false} />
+    </div>
+  ),
+};

@@ -49,4 +49,18 @@ describe("SelectionChip", () => {
     const btn = container.querySelector("[data-slot='selection-chip']");
     expect(btn?.className).toContain("font-normal");
   });
+
+  it("defaults to the default size's padding/text classes", () => {
+    const { container } = render(<SelectionChip label="All" />);
+    const btn = container.querySelector("[data-slot='selection-chip']");
+    expect(btn?.className).toContain("px-[14px]");
+    expect(btn?.className).toContain("text-[13px]");
+  });
+
+  it("applies the sm size's smaller padding/text classes", () => {
+    const { container } = render(<SelectionChip label="All" size="sm" />);
+    const btn = container.querySelector("[data-slot='selection-chip']");
+    expect(btn?.className).toContain("px-[10px]");
+    expect(btn?.className).toContain("text-[12px]");
+  });
 });

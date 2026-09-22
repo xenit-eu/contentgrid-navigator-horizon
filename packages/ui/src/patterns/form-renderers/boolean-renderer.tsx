@@ -1,7 +1,8 @@
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
+import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
-import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
+import { SelectionChip } from "../../primitives/selection-chip";
 import { FieldMessage, RequiredMarker, fieldAriaProps } from "./field-shell";
 
 export interface BooleanRendererProps {
@@ -18,8 +19,16 @@ export interface BooleanRendererProps {
 }
 
 /**
- * Doesn't use `FieldShell` — a checkbox's label sits beside the control, not
- * above it, so the shared above-the-input layout doesn't fit here.
+ * Two mutually-exclusive chips ("True"/"False", `SelectionChip`'s `sm` size) rather than a
+ * checkbox, plus the same "Clear" affordance the earlier checkbox-based renderer used to reset
+ * back to unset — a boolean attribute can genuinely be unset (see `use-entity-form-state.ts`'s
+ * `isEmpty` doc comment), and "Clear" being visible IS the unset feedback: its absence means the
+ * field is already unset, its presence means a value is set and can be reset. A third "Unset"
+ * chip was tried instead, but non-blue-when-active gave no feedback that it was the active
+ * state, so this reverts to "Clear" (now sized to match the chips).
+ *
+ * Doesn't use `FieldShell` — its single-child, above-the-input layout doesn't fit a row of
+ * chips-plus-button (and `id`/`aria-*` here belong on the chip group, not on a single control).
  */
 export function BooleanRenderer({
   name,
@@ -33,26 +42,37 @@ export function BooleanRenderer({
   onFocus,
   onBlur,
 }: Readonly<BooleanRendererProps>) {
+  function select(next: FieldValue) {
+    if (!readOnly) onChange(next);
+  }
+
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id={name}
-          name={name}
-          checked={value === undefined ? "indeterminate" : value === true}
-          onCheckedChange={(checked) => onChange(checked === true)}
-          disabled={readOnly}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          {...fieldAriaProps(name, error)}
+      <Label htmlFor={name}>
+        {label}
+        {required && <RequiredMarker />}
+      </Label>
+      <div
+        id={name}
+        role="group"
+        aria-label={label}
+        className={cn("flex items-center gap-2", readOnly && "pointer-events-none opacity-50")}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        {...fieldAriaProps(name, error)}
+      >
+        <SelectionChip
+          label="True"
+          size="sm"
+          selected={value === true}
+          onClick={() => select(true)}
         />
-        <Label htmlFor={name}>
-          {label}
-          {required && <RequiredMarker />}
-        </Label>
-        {/* A boolean attribute can genuinely be unset (see use-entity-form-state.ts's isEmpty
-         * doc comment) — this is the only way back to that state once the checkbox has been
-         * touched. */}
+        <SelectionChip
+          label="False"
+          size="sm"
+          selected={value === false}
+          onClick={() => select(false)}
+        />
         {!readOnly && value !== undefined && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>
             Clear
