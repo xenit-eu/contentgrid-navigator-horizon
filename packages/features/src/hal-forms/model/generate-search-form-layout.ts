@@ -5,8 +5,14 @@ import type { FieldRow, FieldSection, LayoutSchema } from "./layout-schema";
 /**
  * FR-018/019/020, FR-028: a search form's default layout schema when no explicit one is
  * supplied. Pairs a property's `~before`/`~after` range variants onto one row wherever both
- * survived into `fields`; every other field gets its own full-width row, in `fields` order.
- * Rows are then grouped into sections (FR-028): every relation-traversal property (e.g.
+ * survived into `fields`; every other field — including a datetime/date attribute's own
+ * exact-match property, which `resolve-hal-forms-fields.ts` deliberately keeps alongside its
+ * `~before`/`~after` siblings rather than suppressing as redundant — gets its own full-width row,
+ * in `fields` order. Only a field that is itself one of the two range/direction variants (i.e.
+ * has a `directionLabel`) is eligible for pairing; an exact-match sibling sharing the same
+ * `groupKey` never gets swept into that pair, so it renders as its own row, with the paired
+ * range row immediately below it (in `fields` order). Rows are then grouped into sections
+ * (FR-028): every relation-traversal property (e.g.
  * "customer.name") is placed into a collapsible section named for its relation, one section per
  * relation, in first-appearance order; every direct (non-relation) property stays in a single
  * plain, non-collapsible leading section — the same flat shape this generator always produced,
@@ -53,9 +59,10 @@ export function generateSearchFormLayout(
   for (const field of fields) {
     if (placedNames.has(field.name)) continue;
 
+    const isRangeField = directionLabelByName.get(field.name) !== undefined;
     const groupKey = groupKeyByName.get(field.name);
     const rangeSiblings =
-      groupKey !== undefined ? rangeSiblingsByGroupKey.get(groupKey) : undefined;
+      isRangeField && groupKey !== undefined ? rangeSiblingsByGroupKey.get(groupKey) : undefined;
 
     if (rangeSiblings?.length === 2) {
       const names = rangeSiblings.map((sibling) => sibling.name);

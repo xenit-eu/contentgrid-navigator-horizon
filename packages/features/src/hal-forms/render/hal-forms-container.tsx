@@ -48,18 +48,22 @@ export function HalFormsContainer({
   return (
     <>
       {layout.sections.map((section, sectionIndex) => (
-        <FieldSectionView
+        <div
           key={section.title ?? sectionIndex}
-          section={section}
-          fieldsByName={fieldsByName}
-          values={values}
-          onChange={onChange}
-          fieldState={fieldState}
-          onFieldFocus={onFieldFocus}
-          onFieldBlur={onFieldBlur}
-          onRelationItemClick={onRelationItemClick}
-          onRelationItemCreateNew={onRelationItemCreateNew}
-        />
+          className={sectionIndex < layout.sections.length - 1 ? "border-b pb-4" : undefined}
+        >
+          <FieldSectionView
+            section={section}
+            fieldsByName={fieldsByName}
+            values={values}
+            onChange={onChange}
+            fieldState={fieldState}
+            onFieldFocus={onFieldFocus}
+            onFieldBlur={onFieldBlur}
+            onRelationItemClick={onRelationItemClick}
+            onRelationItemCreateNew={onRelationItemCreateNew}
+          />
+        </div>
       ))}
     </>
   );
@@ -133,7 +137,7 @@ function FieldSectionView({
         <AccordionTrigger type="button" className="py-0 hover:no-underline">
           {header}
         </AccordionTrigger>
-        <AccordionContent>{rows}</AccordionContent>
+        <AccordionContent className="mt-4">{rows}</AccordionContent>
       </AccordionItem>
     </Accordion>
   );
