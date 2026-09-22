@@ -42,11 +42,15 @@ export function isPdfMimetype(mimetype: string | null | undefined): boolean {
 }
 
 /**
- * Whether a mimetype requires the rendition service before it can be previewed as PDF.
+ * Whether a mimetype must be converted before it can be shown in the PDF viewer.
  *
- * Simply `!isPdfMimetype(mimetype)` — every non-PDF mimetype needs a rendition, including
- * a missing mimetype and the generic `application/octet-stream` / `binary/octet-stream`
- * placeholders the platform uses when it does not know the real type.
+ * Simply `!isPdfMimetype(mimetype)`. Within this feature's scope, every non-PDF mimetype is
+ * a conversion candidate, including a missing mimetype and the generic
+ * `application/octet-stream` / `binary/octet-stream` placeholders the platform uses when it
+ * does not know the real type. This is NOT a claim that the platform itself lacks native
+ * preview for those types — images and video are natively previewable and will stop being
+ * conversion candidates once that native preview path lands in the PDF viewer (out of scope
+ * here; tracked as HZN-6A.5 / ACC-2906, see spec 002-pdf-viewer's Out of scope section).
  *
  * @example
  * needsRendition("application/pdf") // false

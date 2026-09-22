@@ -61,7 +61,7 @@ function findContentAttribute(
   entityItem: EntityItem,
   attributeName: string,
 ): EntityItemAttributeContent {
-  const attribute = entityItem.attributes.find((attr) => attr.value.name === attributeName);
+  const attribute = entityItem.findAttribute(attributeName);
   if (attribute === undefined || attribute.value.kind !== AttributeKind.CONTENT) {
     throw new Error(
       `'${attributeName}' is not a content attribute on entity '${entityItem.profileEntity.name}'`,
