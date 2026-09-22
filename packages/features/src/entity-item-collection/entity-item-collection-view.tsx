@@ -355,6 +355,7 @@ export function EntityItemCollectionView({
           onChange={handleHalFormChange}
           fieldState={fieldState}
           totalItems={collection.data?.totalItems}
+          isLoading={collection.isFetching}
         />
       )}
     </div>
