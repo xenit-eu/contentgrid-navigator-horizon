@@ -42,7 +42,17 @@ export function PdfViewerHarness(
 ) {
   const { src, ...rest } = props;
   const bytes = usePdfBytes(src);
-  if (!bytes) return <div className="p-8 text-sm text-muted-foreground">Loading fixture…</div>;
+  // `aria-busy` here keeps the busy chain gap-free from the story's very
+  // first commit through to the first page painting — every later state
+  // (engine loading, opening, ready-but-unpainted) is already busy; this is
+  // the one the `async-content` visual-harness wait would otherwise miss.
+  if (!bytes) {
+    return (
+      <div aria-busy="true" className="p-8 text-sm text-muted-foreground">
+        Loading fixture…
+      </div>
+    );
+  }
   return <PdfViewer {...rest} bytes={bytes} />;
 }
 

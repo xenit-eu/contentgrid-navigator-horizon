@@ -86,6 +86,14 @@ type Story = StoryObj<typeof meta>;
 // ---------------------------------------------------------------------------
 
 export const Default: Story = {
+  // `async-content`: this story mounts a real PDFium/WASM engine — it is
+  // `aria-busy` from its first commit (see `PdfViewerHarness`'s fixture-
+  // loading placeholder) until the first page paints, and the visual harness
+  // (`visual.spec.ts`) waits for that before screenshotting (ADR-009). Only
+  // the stories that mount the real engine (`Default`, `ToolbarMinimal`,
+  // `Invalid`, `JsInPdf`) carry this tag — the mocked stories below never
+  // render `aria-busy="true"`, so the wait would be a pointless no-op there.
+  tags: ["async-content"],
   render: () => (
     <StoryFrame>
       <PdfViewerHarness
@@ -101,6 +109,8 @@ export const Default: Story = {
 };
 
 export const ToolbarMinimal: Story = {
+  // `async-content` — see `Default`.
+  tags: ["async-content"],
   render: () => (
     <StoryFrame>
       <PdfViewerHarness
@@ -150,6 +160,10 @@ export const Protected: Story = {
 };
 
 export const Invalid: Story = {
+  // `async-content` — see `Default`. This one mounts the real engine too,
+  // just to a terminal `"invalid"` state (busy until that message replaces
+  // the loading placeholder) rather than a painted page.
+  tags: ["async-content"],
   render: () => (
     <StoryFrame>
       <PdfViewer
@@ -192,6 +206,8 @@ export const EngineFailure: Story = {
  * story stays a pure visual/a11y snapshot of the rendered document.
  */
 export const JsInPdf: Story = {
+  // `async-content` — see `Default`.
+  tags: ["async-content"],
   render: () => (
     <StoryFrame>
       <PdfViewerHarness src={jsInPdfUrl} filename="js-in-pdf.pdf" wasmUrl={wasmUrl} />

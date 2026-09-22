@@ -22,7 +22,7 @@ import {
 import { Input } from "../../primitives/input";
 import { TooltipProvider } from "../../primitives/tooltip";
 import { IconButton } from "./pdf-viewer-icon-button";
-import { DEFAULT_PDF_VIEWER_LABELS, type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
+import { type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
 import { PdfViewerSearchPopover } from "./pdf-viewer-search-popover";
 import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
 import type {
@@ -98,7 +98,7 @@ function PageNavigation({
         inputMode="numeric"
         disabled={!ready}
         value={inputValue}
-        onChange={(event) => setInputValue(event.target.value.replace(/[^0-9]/g, ""))}
+        onChange={(event) => setInputValue(event.target.value.replace(/\D/g, ""))}
         onBlur={commitJump}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
@@ -281,6 +281,3 @@ export function PdfViewerToolbar({
     </TooltipProvider>
   );
 }
-
-export { DEFAULT_PDF_VIEWER_LABELS };
-export type { PdfViewerLabels };

@@ -95,6 +95,36 @@ describe("PdfEngineProvider", () => {
     expect(secondEngine.destroy).not.toHaveBeenCalled();
   });
 
+  it("still destroys a stale duplicate engine when closeAllDocuments itself fails", () => {
+    const firstEngine = {
+      closeAllDocuments: vi.fn().mockReturnValue({
+        // `wait(resolve, reject)` — simulate the reject path.
+        wait: (_resolve: () => void, reject: () => void) => reject(),
+      }),
+      destroy: vi.fn(),
+    };
+    const secondEngine = { closeAllDocuments: vi.fn(), destroy: vi.fn() };
+
+    mockUsePdfiumEngine.mockReturnValue({ engine: firstEngine, isLoading: false, error: null });
+    const { rerender } = render(
+      <PdfEngineProvider wasmUrl="https://example.test/pdfium.wasm">
+        <StatusProbe />
+      </PdfEngineProvider>,
+    );
+
+    mockUsePdfiumEngine.mockReturnValue({ engine: secondEngine, isLoading: false, error: null });
+    rerender(
+      <PdfEngineProvider wasmUrl="https://example.test/pdfium.wasm">
+        <StatusProbe />
+      </PdfEngineProvider>,
+    );
+
+    // Still torn down even though `closeAllDocuments` reported failure — a
+    // stale engine must never be left dangling just because its documents
+    // didn't close cleanly.
+    expect(firstEngine.destroy).toHaveBeenCalled();
+  });
+
   it("does not double-destroy the engine on unmount (usePdfiumEngine's own hook already tears it down on unmount — node_modules/@embedpdf/engines/dist/react/index.js:37-45)", () => {
     const engine = { closeAllDocuments: vi.fn(), destroy: vi.fn() };
     mockUsePdfiumEngine.mockReturnValue({ engine, isLoading: false, error: null });

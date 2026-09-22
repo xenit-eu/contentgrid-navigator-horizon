@@ -1,7 +1,6 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDocumentState } from "@embedpdf/core/react";
-import { ignore } from "@embedpdf/models";
 import { usePrint } from "@embedpdf/plugin-print/react";
 import { useScroll } from "@embedpdf/plugin-scroll/react";
 import { ZoomMode } from "@embedpdf/plugin-zoom";
@@ -214,22 +213,27 @@ export function usePdfViewerActiveState({
   const toggleFullscreen = useCallback(() => {
     const target = fullscreenTarget?.current ?? document.documentElement;
     const preservedLevel = zoomState.zoomLevel;
-    const restoreZoom = () => {
-      zoom?.requestZoom(preservedLevel);
-    };
-    // The Fullscreen API can reject *or* throw synchronously (disabled by a
-    // Permissions-Policy, not a real user gesture, ...) depending on the
-    // browser and embedding context; guard both so a denial never surfaces
-    // as an unhandled exception.
-    try {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().then(restoreZoom, ignore);
-      } else {
-        target.requestFullscreen().then(restoreZoom, ignore);
+
+    // The Fullscreen API can reject its promise *or* throw synchronously
+    // (disabled by a Permissions-Policy, not a real user gesture, ...)
+    // depending on the browser and embedding context — both mean "not
+    // permitted", so this no-ops either way rather than surfacing an
+    // unhandled exception. `requestFullscreen`/`exitFullscreen` are still
+    // called synchronously, before the first `await`, so callers observing
+    // just the call (not its outcome) see it immediately.
+    async function run() {
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else {
+          await target.requestFullscreen();
+        }
+        zoom?.requestZoom(preservedLevel);
+      } catch {
+        // Fullscreen not permitted in this context — no-op.
       }
-    } catch {
-      // Fullscreen not permitted in this context — no-op.
     }
+    void run();
   }, [fullscreenTarget, zoom, zoomState.zoomLevel]);
 
   const printAction = useCallback(() => {

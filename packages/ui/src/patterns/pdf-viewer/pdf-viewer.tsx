@@ -1,4 +1,12 @@
-import { Component, type ReactNode, type RefObject, useEffect, useMemo, useRef } from "react";
+import {
+  Component,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPluginRegistration } from "@embedpdf/core";
 import { EmbedPDF } from "@embedpdf/core/react";
 import type { PluginBatchRegistrations } from "@embedpdf/core/react";
@@ -152,25 +160,169 @@ function usePdfViewerPlugins(initialZoom: PdfZoomInput): PluginBatchRegistration
 // Status message shown in the content area for every non-"ready" state
 // ---------------------------------------------------------------------------
 
-function PdfViewerStatusMessage({
+/**
+ * `aria-busy` is `true` for `idle`/`opening` (still loading — nothing to show
+ * yet, or the document is being parsed) and `false` for `protected`/`invalid`
+ * (a terminal, resolved state — the message itself IS the result, not a sign
+ * more is coming). Rendered even for `idle` (no message text) so the busy
+ * signal exists from the very first paint, not only once the "opening"
+ * message text appears a tick later. `ready` renders nothing here — the real
+ * content takes over (see `PdfViewerChrome`'s content-area `aria-busy`,
+ * which picks up the busy signal from `ready` through first paint).
+ */
+// Maps each terminal/loading phase to its label field; `idle`/`ready` have
+// no message of their own (looked up as `undefined` below -> no text).
+const STATUS_MESSAGE_KEY: Partial<Record<PdfDocumentPhase, keyof PdfViewerLabels>> = {
+  protected: "protectedDocument",
+  invalid: "invalidDocument",
+  opening: "openingDocument",
+};
+
+export function PdfViewerStatusMessage({
   documentState,
   labels,
 }: Readonly<{ documentState: PdfDocumentPhase; labels: PdfViewerLabels }>) {
   if (documentState === "ready") return null;
-  const message =
-    documentState === "protected"
-      ? labels.protectedDocument
-      : documentState === "invalid"
-        ? labels.invalidDocument
-        : documentState === "opening"
-          ? labels.openingDocument
-          : null;
-  if (!message) return null;
+  const key = STATUS_MESSAGE_KEY[documentState];
+  const message = key ? labels[key] : null;
   return (
-    <div className="text-muted-foreground flex h-full w-full items-center justify-center p-8 text-center text-sm">
+    <div
+      aria-busy={documentState === "idle" || documentState === "opening"}
+      className="text-muted-foreground flex h-full w-full items-center justify-center p-8 text-center text-sm"
+    >
       {message}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// First-page paint signal — `RenderLayer` (`@embedpdf/plugin-render`) renders
+// each page's bitmap asynchronously with no completion event, so
+// `documentState === "ready"` only means the *document* parsed; the first
+// page's pixels can still be a beat away, and that gap is indistinguishable
+// from "never started" to a screenshot-stability check (the actual cause of
+// blank-content-area visual baselines). This hook watches the content-area
+// element (`PdfViewerChrome`'s own div, via `contentRef`) for an `<img>`
+// anywhere in its subtree, not a ref on `RenderLayer`'s own per-page output —
+// `Scroller` only decides which pages to render after its own layout pass,
+// at least one render behind `documentState` reaching `"ready"`, so a ref
+// scoped that low would still be `null` when this hook's effect first runs.
+//
+// A single "first image loaded" check is not enough: `@embedpdf/plugin-zoom`
+// recalculates scale on load AND again, debounced 150ms, once the viewport
+// reports its size (every "fit-width"/"fit-page"/"automatic" zoom mode —
+// `initialZoom`'s default). Each recalculation swaps the same `<img>`'s
+// `src` and, in `RenderLayer`'s own effect cleanup, revokes the *previous*
+// blob: URL. If that revoke lands before the image mid-decode has actually
+// decoded, the browser reports it as loaded (`complete: true`) but broken
+// (`naturalWidth: 0`) — a real production bug this hook must not mistake for
+// "painted". So the settle check below re-queries the DOM at fire time
+// (never trusts a captured reference) and requires `complete && naturalWidth
+// > 0`, re-arming on `load` *and* `error` for every image/src change.
+//
+// A generous outer timeout clears the signal regardless, so a genuine render
+// failure degrades to a visibly-blank area rather than leaving `aria-busy`
+// stuck forever for real assistive tech. It's deliberately longer than the
+// visual harness's own `async-content` wait (30s, `visual.spec.ts`) so a
+// genuine stall fails that wait loudly instead of this hook silently masking
+// it by declaring "painted" first; only a run hung a full minute falls back
+// to this.
+// ---------------------------------------------------------------------------
+
+export const FIRST_PAGE_PAINT_TIMEOUT_MS = 60_000;
+const PAINT_SETTLE_MS = 400;
+
+export function useFirstPagePainted(active: boolean): {
+  readonly painted: boolean;
+  readonly contentRef: RefObject<HTMLDivElement | null>;
+} {
+  const [painted, setPainted] = useState(false);
+  // Attached to `PdfViewerChrome`'s content-area div — see the doc comment
+  // above for why it must be that stable element, not a ref on a page's own
+  // (later, conditionally-mounted) `RenderLayer` output.
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!active || painted) return;
+
+    const container = contentRef.current;
+    let disposed = false;
+    let settleTimeoutId: number | undefined;
+    let currentImg: HTMLImageElement | null = null;
+    let removeImgListeners: (() => void) | undefined;
+
+    const clearSettleTimer = () => {
+      if (settleTimeoutId !== undefined) {
+        window.clearTimeout(settleTimeoutId);
+        settleTimeoutId = undefined;
+      }
+    };
+
+    // Re-armed by every relevant event (image inserted, its `src` swapped,
+    // it loading, or it erroring); only fires this check once nothing has
+    // happened for `PAINT_SETTLE_MS`. Re-queries the DOM rather than trusting
+    // a captured reference: `complete` alone can't tell a real paint from a
+    // broken image (see the doc comment above — a `src` swap can revoke the
+    // blob: URL an in-flight decode was still using).
+    const scheduleSettleCheck = () => {
+      clearSettleTimer();
+      settleTimeoutId = window.setTimeout(() => {
+        if (disposed || !container) return;
+        const img = container.querySelector("img");
+        if (img?.complete && img.naturalWidth > 0) setPainted(true);
+        // Missing, still loading, or broken/revoked — wait for the next
+        // mutation/load/error event to reschedule; nothing to do here.
+      }, PAINT_SETTLE_MS);
+    };
+
+    // Re-attaches `load`/`error` listeners only when the watched element
+    // itself changes (never twice on the same node), but re-arms the settle
+    // timer on EVERY call — including a `src` swap of the image already
+    // being watched, which the `attributes`/`attributeFilter: ["src"]`
+    // observer config below reports as its own mutation callback.
+    const watchImage = (img: HTMLImageElement) => {
+      if (img !== currentImg) {
+        removeImgListeners?.();
+        currentImg = img;
+        const onSettleEvent = () => scheduleSettleCheck();
+        img.addEventListener("load", onSettleEvent);
+        img.addEventListener("error", onSettleEvent);
+        removeImgListeners = () => {
+          img.removeEventListener("load", onSettleEvent);
+          img.removeEventListener("error", onSettleEvent);
+        };
+      }
+      scheduleSettleCheck();
+    };
+
+    let observer: MutationObserver | undefined;
+    if (container) {
+      const checkForImage = () => {
+        const img = container.querySelector("img");
+        if (img) watchImage(img);
+        else scheduleSettleCheck();
+      };
+      observer = new MutationObserver(checkForImage);
+      observer.observe(container, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["src"],
+      });
+      checkForImage();
+    }
+
+    const timeoutId = window.setTimeout(() => setPainted(true), FIRST_PAGE_PAINT_TIMEOUT_MS);
+    return () => {
+      disposed = true;
+      observer?.disconnect();
+      removeImgListeners?.();
+      clearSettleTimer();
+      window.clearTimeout(timeoutId);
+    };
+  }, [active, painted]);
+
+  return { painted, contentRef };
 }
 
 // ---------------------------------------------------------------------------
@@ -207,6 +359,12 @@ function PdfViewerChrome({
   labels,
   onDownload,
 }: Readonly<PdfViewerChromeProps>) {
+  // Only tracks paint while `ready` (see `useFirstPagePainted`'s own doc
+  // comment) — mounted here rather than in `PdfViewerActiveSession` because
+  // this component is what owns the content-area element `aria-busy` is set
+  // on, and both the "ready" and "placeholder" render paths go through it.
+  const { painted: firstPagePainted, contentRef } = useFirstPagePainted(documentState === "ready");
+
   return (
     <>
       {resolvedToolbar !== false && (
@@ -229,7 +387,20 @@ function PdfViewerChrome({
           labels={labels}
         />
       )}
-      <div className="relative min-h-0 flex-1">
+      {/* `aria-busy` here only ever covers the `ready`-but-unpainted gap —
+          `idle`/`opening`/`protected`/`invalid` are covered by
+          `PdfViewerStatusMessage`'s own `aria-busy` below, mutually
+          exclusive with this branch (see its doc comment). Together these
+          give the visual-regression harness (`visual.spec.ts`) a generic
+          `[aria-busy="true"]` signal to wait out before it screenshots a story
+          tagged `async-content` (ADR-009) — stories that load a real document
+          through the PDFium/WASM engine opt in via that tag; a permanently-busy
+          loading state must NOT carry it. */}
+      <div
+        ref={contentRef}
+        className="relative min-h-0 flex-1"
+        aria-busy={documentState === "ready" && !firstPagePainted}
+      >
         {documentState === "ready" && documentId ? (
           <GlobalPointerProvider documentId={documentId}>
             <Viewport documentId={documentId} className="bg-muted h-full w-full overflow-auto">
@@ -444,7 +615,13 @@ function PdfViewerWithEngine({
           }
         </EmbedPDF>
       ) : (
-        <div className="text-muted-foreground flex h-full w-full items-center justify-center p-8 text-center text-sm">
+        // `aria-busy` only while the engine is genuinely still loading — an
+        // `"error"` status is terminal (the message IS the result), same
+        // convention as `PdfViewerStatusMessage` below it in the tree.
+        <div
+          aria-busy={engineStatus.status === "loading"}
+          className="text-muted-foreground flex h-full w-full items-center justify-center p-8 text-center text-sm"
+        >
           {engineStatus.status === "error" ? labels.engineError : labels.openingDocument}
         </div>
       )}

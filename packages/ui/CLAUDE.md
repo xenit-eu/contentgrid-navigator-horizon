@@ -287,7 +287,20 @@ BufferSource argument is empty` reaches the console), but
   `test:visual` and, importantly, from `test:a11y` — a `play()`-bearing story
   races the addon-a11y auto-scan against `AxeBuilder.analyze()`, see
   `apps/storybook/tests/accessibility.spec.ts`). A story that must keep its
-  own `play()` for some other reason should carry that same tag.
+  own `play()` for some other reason should carry that same tag. Four of the
+  visual file's own stories — `Default`/`ToolbarMinimal`/`Invalid`/`JsInPdf`,
+  each individually tagged, not the shared `meta` — mount a real PDFium/WASM
+  engine, so the content area reports `aria-busy="true"` until the first page
+  paints (or, for `Invalid`, until the terminal invalid-document message
+  replaces it); `apps/storybook/tests/visual.spec.ts` waits for that to clear
+  before screenshotting — opt-in per story (not a generic wait) so a
+  permanently-busy loading-state story never times the harness out. The five
+  mocked stories (`Protected`/`EngineFailure`/`SearchOpen`/`SearchNoResults`/
+  `PrintReady`) never render `aria-busy="true"`, so they don't carry the tag.
+  `PdfViewerHarness`'s own
+  "Loading fixture…" placeholder (`pdf-viewer-story-helpers.tsx`, shown while
+  it fetches the story's PDF bytes) is busy too, so the story is busy from
+  its very first commit rather than leaving a gap the harness could race.
   `WithInteraction` consolidates every behavioural check for this pattern,
   including the FR-026/SC-005 no-script-execution proof (`js-in-pdf.pdf`,
   stubbing `window.alert`/`confirm`/`prompt`) and the full search/print flow.

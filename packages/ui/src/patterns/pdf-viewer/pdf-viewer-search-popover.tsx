@@ -28,6 +28,18 @@ export interface PdfViewerSearchPopoverProps {
  * Must be rendered inside a `TooltipProvider` (for its `IconButton`s) — the
  * toolbar wraps its whole render tree in one.
  */
+/** "n of m" once there are results, the no-results label once a query found none, else nothing. */
+function searchPositionLabel(search: PdfViewerSearchState, labels: PdfViewerLabels): string | null {
+  if (search.total > 0) {
+    return formatLabel(labels.searchResultTemplate, {
+      index: search.activeIndex + 1,
+      total: search.total,
+    });
+  }
+  if (search.query.length > 0) return labels.searchNoResults;
+  return null;
+}
+
 export function PdfViewerSearchPopover({
   search,
   searchActions,
@@ -36,14 +48,7 @@ export function PdfViewerSearchPopover({
 }: Readonly<PdfViewerSearchPopoverProps>) {
   const hasQuery = search.query.length > 0;
   const hasResults = search.total > 0;
-  const positionLabel = hasResults
-    ? formatLabel(labels.searchResultTemplate, {
-        index: search.activeIndex + 1,
-        total: search.total,
-      })
-    : hasQuery
-      ? labels.searchNoResults
-      : null;
+  const positionLabel = searchPositionLabel(search, labels);
 
   return (
     <Popover open={search.open} onOpenChange={searchActions.setOpen}>
