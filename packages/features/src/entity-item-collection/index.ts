@@ -1,3 +1,7 @@
+export {
+  EntityItemCollectionFilterDialog,
+  type EntityItemCollectionFilterDialogProps,
+} from "./entity-item-collection-filter-dialog";
 export { EntityItemCollectionTable } from "./entity-item-collection-table";
 export type { EntityItemCollectionTableProps } from "./entity-item-collection-table";
 export { EntityItemCollectionView } from "./entity-item-collection-view";

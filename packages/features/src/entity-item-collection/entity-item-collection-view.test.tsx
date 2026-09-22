@@ -369,7 +369,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByLabelText(/Code/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Created after/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^After$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Amount/)).toBeInTheDocument();
   });
 
