@@ -251,7 +251,12 @@ describe("useSetToOneRelation — set success", () => {
 // ===========================================================================
 
 describe("useSetToOneRelation — If-Match header", () => {
-  it("sends If-Match verbatim from source.etag", async () => {
+  // FIXME(ACC-3186): relation mutations currently send no If-Match at all —
+  // relation.source.etag was found to be the wrong etag for this request (a relation
+  // is its own conditional-request resource, distinct from the source item; see
+  // use-relation-mutation-base.ts). Skipped until a manual-redirect fetch path can
+  // capture the relation's own etag and this assertion is restored.
+  it.skip("sends If-Match verbatim from source.etag", async () => {
     setupProfileHandlers();
     let capturedIfMatch: string | null = null;
 
