@@ -24,18 +24,7 @@ export interface ResolvedHalFormsFields {
  * mapping for the create path — to also cover a search template (see `research.md`'s parity
  * decision).
  *
- * `savedLayout` is a `LayoutSchema`'s plain `string[][]` row shape (one row per array, 1-2 field
- * names each), in display order. It is reconciled against this template's own fields rather than
- * trusted as-is:
- * - A row's reference to a field absent from `fields` (stale — removed/renamed on the template)
- *   is dropped from that row; a row emptied that way is dropped entirely (FR-007).
- * - A field's first occurrence (row order) wins; every later duplicate reference is ignored (FR-006).
- * - A field present in `fields` but never named by any row is OMITTED — not rendered at all
- *   (FR-004). This is the one place this deliberately diverges from
- *   `resolveCreateFieldDescriptors`, which auto-appends an unreferenced field instead — see
- *   `research.md`'s and `data-model.md`'s notes on why that behavior does NOT carry over here.
- *
- * Omitting `savedLayout` entirely (or passing `[]`) falls back to:
+ * The layout is always the default:
  * - a create template: one field per row, in template order (FR-009);
  * - a search template: `generateSearchFormLayout`'s generated default, pairing `~before`/`~after`
  *   range variants (FR-018/FR-021).
@@ -49,7 +38,6 @@ export interface ResolvedHalFormsFields {
  */
 export function resolveHalFormsFields(
   template: CreateHalFormTemplate | SearchHalFormTemplate,
-  savedLayout?: readonly (readonly string[])[],
   autocompleteFieldNames?: readonly string[],
 ): ResolvedHalFormsFields {
   const isSearchTemplate = template instanceof SearchHalFormTemplate;
@@ -58,13 +46,9 @@ export function resolveHalFormsFields(
     : template.userDefinedProperties.map(attributeHalFormsField);
   const fields = applyAutocompleteOverride(resolvedFields, autocompleteFieldNames);
 
-  if (savedLayout && savedLayout.length > 0) {
-    return { fields, layout: { sections: [buildFieldSection(fields, savedLayout)] } };
-  }
-
   const layout = isSearchTemplate
     ? generateSearchFormLayout(template, fields)
-    : { sections: [buildFieldSection(fields, undefined)] };
+    : { sections: [buildFieldSection(fields)] };
 
   return { fields, layout };
 }
@@ -91,25 +75,8 @@ function applyAutocompleteOverride(
   });
 }
 
-function buildFieldSection(
-  fields: readonly HalFormsField[],
-  savedLayout: readonly (readonly string[])[] | undefined,
-): FieldSection {
-  if (!savedLayout || savedLayout.length === 0) {
-    return { rows: fields.map((field) => ({ fieldNames: [field.name] })) };
-  }
-
-  const knownNames = new Set(fields.map((field) => field.name));
-  const seenNames = new Set<string>();
-  const rows: { fieldNames: string[] }[] = [];
-
-  for (const row of savedLayout) {
-    const reconciledRow = row.filter((name) => knownNames.has(name) && !seenNames.has(name));
-    reconciledRow.forEach((name) => seenNames.add(name));
-    if (reconciledRow.length > 0) rows.push({ fieldNames: reconciledRow });
-  }
-
-  return { rows };
+function buildFieldSection(fields: readonly HalFormsField[]): FieldSection {
+  return { rows: fields.map((field) => ({ fieldNames: [field.name] })) };
 }
 
 /** Fields every kind mapping needs, before the `kind`-specific branch decides the rest. */
