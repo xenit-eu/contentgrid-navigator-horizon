@@ -99,74 +99,22 @@ function makeTemplate() {
 }
 
 describe("resolveHalFormsFields", () => {
-  it("defaults to one field per row, in template order, when no saved layout exists at all", () => {
+  it("defaults to one field per row, in template order", () => {
     const { fields, layout } = resolveHalFormsFields(makeTemplate());
     expect(layout.sections).toHaveLength(1);
-    expect(layout.sections[0].rows).toEqual(fields.map((field) => ({ fieldNames: [field.name] })));
-  });
-
-  it("keeps a saved two-field row's field order", () => {
-    const { layout } = resolveHalFormsFields(makeTemplate(), [["email", "name"], ["phone"]]);
-    expect(layout.sections[0].rows[0].fieldNames).toEqual(["email", "name"]);
-  });
-
-  it("marks a single-field row as its own row", () => {
-    const { layout } = resolveHalFormsFields(makeTemplate(), [["name"], ["email"], ["phone"]]);
-    expect(layout.sections[0].rows).toEqual([
-      { fieldNames: ["name"] },
-      { fieldNames: ["email"] },
-      { fieldNames: ["phone"] },
-    ]);
-  });
-
-  it("omits a field that exists on the template but is never named by the saved layout", () => {
-    const { layout } = resolveHalFormsFields(makeTemplate(), [["name"]]);
-    expect(layout.sections[0].rows).toEqual([{ fieldNames: ["name"] }]);
-    const allNamedFields = layout.sections[0].rows.flatMap((row) => row.fieldNames);
-    expect(allNamedFields).not.toContain("email");
-    expect(allNamedFields).not.toContain("phone");
-  });
-
-  it("renders a field's first-listed occurrence only, ignoring a later duplicate reference", () => {
-    const { layout } = resolveHalFormsFields(makeTemplate(), [
-      ["name", "email"],
-      ["email"],
-      ["phone"],
-    ]);
-    expect(layout.sections[0].rows).toEqual([
-      { fieldNames: ["name", "email"] },
-      { fieldNames: ["phone"] },
-    ]);
-  });
-
-  it("drops a saved row's reference to a field no longer on the template, without failing the rest", () => {
-    const { layout } = resolveHalFormsFields(makeTemplate(), [["name", "ghost_field"], ["email"]]);
-    expect(layout.sections[0].rows).toEqual([{ fieldNames: ["name"] }, { fieldNames: ["email"] }]);
-  });
-
-  it("drops a row entirely once every field it named is gone", () => {
-    const { layout } = resolveHalFormsFields(makeTemplate(), [
-      ["ghost_one", "ghost_two"],
-      ["name"],
-    ]);
-    expect(layout.sections[0].rows).toEqual([{ fieldNames: ["name"] }]);
-  });
-
-  it("treats an empty saved layout the same as no saved layout", () => {
-    const { fields, layout } = resolveHalFormsFields(makeTemplate(), []);
     expect(layout.sections[0].rows).toEqual(fields.map((field) => ({ fieldNames: [field.name] })));
   });
 });
 
 describe("resolveHalFormsFields autocomplete opt-in", () => {
   it("promotes an opted-in text field to the autocomplete kind", () => {
-    const { fields } = resolveHalFormsFields(makeTemplate(), undefined, ["email"]);
+    const { fields } = resolveHalFormsFields(makeTemplate(), ["email"]);
     const email = fields.find((field) => field.name === "email");
     expect(email?.kind).toBe("autocomplete");
   });
 
   it("leaves every other field's kind unchanged", () => {
-    const { fields } = resolveHalFormsFields(makeTemplate(), undefined, ["email"]);
+    const { fields } = resolveHalFormsFields(makeTemplate(), ["email"]);
     const name = fields.find((field) => field.name === "name");
     expect(name?.kind).toBe("text");
   });
