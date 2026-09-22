@@ -66,12 +66,14 @@ export function BooleanRenderer({
           size="sm"
           selected={value === true}
           onClick={() => select(true)}
+          disabled={readOnly}
         />
         <SelectionChip
           label="False"
           size="sm"
           selected={value === false}
           onClick={() => select(false)}
+          disabled={readOnly}
         />
         {!readOnly && value !== undefined && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>
