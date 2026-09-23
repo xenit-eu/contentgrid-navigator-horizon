@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppAuthResult } from "@contentgrid/navigator-data";
-import { useAppAuth } from "@contentgrid/navigator-data";
+import { NavigatorDataProvider, useAppAuth } from "@contentgrid/navigator-data";
 import { AuthShell } from ".";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
@@ -10,7 +10,7 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   return {
     ...actual,
     useAppAuth: vi.fn(),
-    NavigatorDataProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+    NavigatorDataProvider: vi.fn(({ children }: { children: ReactNode }) => <>{children}</>),
   };
 });
 
@@ -78,5 +78,35 @@ describe("AuthShell", () => {
   it("renders children when authenticated", () => {
     renderAuthShell();
     expect(screen.getByText("content")).toBeInTheDocument();
+  });
+
+  it("forwards renditionUri and renditionPolling from useAppAuth into NavigatorDataProvider", () => {
+    const renditionPolling = { intervalMs: 2000, timeoutMs: 60000 };
+    vi.mocked(useAppAuth).mockReturnValue({
+      auth: {
+        isLoading: false,
+        isAuthenticated: true,
+        user: null,
+        error: undefined,
+        signinRedirect: vi.fn(),
+      },
+      apiFetch: vi.fn(),
+      contentFetch: vi.fn(),
+      profileUrl: "https://api.example.com/profile",
+      renditionUri: "https://api.example.com/renditions/get/pdf{?url}",
+      renditionPolling,
+    } as unknown as AppAuthResult);
+
+    render(
+      <AuthShell>
+        <div>content</div>
+      </AuthShell>,
+    );
+
+    const lastCallProps = vi.mocked(NavigatorDataProvider).mock.calls.at(-1)?.[0];
+    expect(lastCallProps).toMatchObject({
+      renditionUri: "https://api.example.com/renditions/get/pdf{?url}",
+      renditionPolling,
+    });
   });
 });

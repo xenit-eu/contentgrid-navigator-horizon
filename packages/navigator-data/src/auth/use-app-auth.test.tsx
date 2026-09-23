@@ -5,10 +5,13 @@ import { AuthContext } from "react-oidc-context";
 import type { AuthContextProps } from "react-oidc-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestAppConfig } from "../../test-fixtures/auth/app-config";
+import { getAppConfig } from "./auth-config";
 import { isAuthReady, useAppAuth } from "./use-app-auth";
 
+// A vi.fn() (not a fixed factory) so individual tests can configure a different
+// RuntimeAppConfig (e.g. with renditionUri set) via `vi.mocked(getAppConfig).mockReturnValue`.
 vi.mock("./auth-config", () => ({
-  getAppConfig: () => makeTestAppConfig(),
+  getAppConfig: vi.fn(),
 }));
 
 function makeAuthCtx(overrides: Partial<AuthContextProps> = {}): AuthContextProps {
@@ -46,6 +49,7 @@ function makeWrapper(ctx: AuthContextProps) {
 describe("useAppAuth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAppConfig).mockReturnValue(makeTestAppConfig());
   });
 
   it("returns auth, apiFetch, and profileUrl derived from app config", () => {
@@ -63,6 +67,52 @@ describe("useAppAuth", () => {
     const firstFetch = result.current.apiFetch;
     rerender();
     expect(result.current.apiFetch).toBe(firstFetch);
+  });
+
+  it("applies the 2000ms/60000ms rendition defaults when renditionUri is set but the poll settings are not", () => {
+    vi.mocked(getAppConfig).mockReturnValue(
+      makeTestAppConfig({ renditionUri: "https://renditions.example.com/get/pdf{?url}" }),
+    );
+    const ctx = makeAuthCtx();
+    const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
+
+    expect(result.current.renditionUri).toBe("https://renditions.example.com/get/pdf{?url}");
+    expect(result.current.renditionPolling).toEqual({ intervalMs: 2000, timeoutMs: 60000 });
+  });
+
+  it("uses the configured poll interval/timeout instead of the defaults when both are set", () => {
+    vi.mocked(getAppConfig).mockReturnValue(
+      makeTestAppConfig({
+        renditionUri: "https://renditions.example.com/get/pdf{?url}",
+        renditionPollIntervalMs: 500,
+        renditionTimeoutMs: 5000,
+      }),
+    );
+    const ctx = makeAuthCtx();
+    const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
+
+    expect(result.current.renditionPolling).toEqual({ intervalMs: 500, timeoutMs: 5000 });
+  });
+
+  it("leaves renditionUri and renditionPolling undefined when renditionUri is not set", () => {
+    const ctx = makeAuthCtx();
+    const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
+
+    expect(result.current.renditionUri).toBeUndefined();
+    expect(result.current.renditionPolling).toBeUndefined();
+  });
+
+  it("renditionPolling reference is stable across re-renders (NavigatorDataProvider memoises on it)", () => {
+    vi.mocked(getAppConfig).mockReturnValue(
+      makeTestAppConfig({ renditionUri: "https://renditions.example.com/get/pdf{?url}" }),
+    );
+    const ctx = makeAuthCtx();
+    const { result, rerender } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
+    const firstRenditionPolling = result.current.renditionPolling;
+
+    rerender();
+
+    expect(result.current.renditionPolling).toBe(firstRenditionPolling);
   });
 
   it("calls signinSilent when user is expired and not loading", async () => {
