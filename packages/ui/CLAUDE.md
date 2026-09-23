@@ -160,8 +160,8 @@ its public types so existing imports don't need updating), `pdf-viewer-toolbar.t
 and the search popover), `pdf-viewer-search-popover.tsx`
 (`PdfViewerSearchPopover`), `pdf-viewer-labels.ts`, `pdf-viewer-story-helpers.tsx`
 (shared story harness — not a `*.stories.tsx` file itself, so Storybook's
-story glob skips it), `fixtures/` (hand-built `minimal.pdf` / `js-in-pdf.pdf`,
-`generate-fixtures.py`). Stories live in two files sharing one `title`
+story glob skips it), `fixtures/` (hand-built `minimal.pdf` / `js-in-pdf.pdf`).
+Stories live in two files sharing one `title`
 (`Patterns/PdfViewer`, same sidebar group): `pdf-viewer.stories.tsx` (visual/
 a11y snapshots) and `pdf-viewer.interaction.stories.tsx` (`WithInteraction`
 only — see below).

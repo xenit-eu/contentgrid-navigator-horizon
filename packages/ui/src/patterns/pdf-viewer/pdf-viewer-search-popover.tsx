@@ -3,6 +3,7 @@ import { Button } from "../../primitives/button";
 import { Input } from "../../primitives/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../primitives/popover";
 import { Switch } from "../../primitives/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
 import { IconButton } from "./pdf-viewer-icon-button";
 import { type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
 import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
@@ -25,8 +26,12 @@ export interface PdfViewerSearchPopoverProps {
  * The popover's content renders through a Radix `Portal` into
  * `document.body`, not into a story's `canvasElement` — a `play()` querying
  * it must use `within(document.body)` (see `pdf-viewer.interaction.stories.tsx`).
- * Must be rendered inside a `TooltipProvider` (for its `IconButton`s) — the
- * toolbar wraps its whole render tree in one.
+ * Must be rendered inside a `TooltipProvider` (for its `IconButton`s and its
+ * own trigger's tooltip) — the toolbar wraps its whole render tree in one.
+ * The trigger nests a Radix `TooltipTrigger`/`PopoverTrigger` pair, both
+ * `asChild`, around the same `Button` — Radix's `Slot` forwards props
+ * through nested `asChild` layers down to that one DOM node, the same
+ * composition pattern used to pair a tooltip with a dropdown-menu trigger.
  */
 /** "n of m" once there are results, the no-results label once a query found none, else nothing. */
 function searchPositionLabel(search: PdfViewerSearchState, labels: PdfViewerLabels): string | null {
@@ -52,17 +57,22 @@ export function PdfViewerSearchPopover({
 
   return (
     <Popover open={search.open} onOpenChange={searchActions.setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={labels.search}
-          disabled={!ready}
-        >
-          <MagnifyingGlassIcon />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={labels.search}
+              disabled={!ready}
+            >
+              <MagnifyingGlassIcon />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{labels.search}</TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-72">
         <div className="flex flex-col gap-3">
           <Input
