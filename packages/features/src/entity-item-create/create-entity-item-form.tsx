@@ -79,15 +79,17 @@ export function CreateEntityItemForm({
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       {nonFieldErrorAlert}
 
-      <HalFormsContainer
-        fields={fields}
-        layout={layout}
-        values={values}
-        onChange={onFieldChange}
-        onFieldFocus={onFieldFocus}
-        onFieldBlur={onFieldBlur}
-        fieldState={fieldState}
-      />
+      <div ref={fieldsContainerRef}>
+        <HalFormsContainer
+          fields={fields}
+          layout={layout}
+          values={values}
+          onChange={onFieldChange}
+          onFieldFocus={onFieldFocus}
+          onFieldBlur={onFieldBlur}
+          fieldState={fieldState}
+        />
+      </div>
 
       <div className="flex items-center gap-6">
         <div className="flex gap-2">
