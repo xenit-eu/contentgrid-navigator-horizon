@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
 
@@ -7,5 +8,12 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 export const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  // Unmount renderHook trees between tests. Without this, a hook left mounted after
+  // its test ends can still have pending async work (e.g. a delayed MSW response)
+  // that resolves after the test file's jsdom environment is torn down, throwing
+  // "window is not defined" from inside React's scheduler.
+  cleanup();
+});
 afterAll(() => server.close());
