@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { SearchHalFormTemplate, createValues, resolveTemplate } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import { resolveHalFormsFields } from "../hal-forms";
 import {
   applyFilterValues,
-  buildFilterProperties,
   coerceFilterValue,
   extractFilterValuesFromCollectionUrl,
   findActivelyFilteredAttributeNames,
@@ -27,6 +27,11 @@ function makeSearchTemplate(json: Record<string, unknown>): SearchHalFormTemplat
 // inclusive range-pair bounds ("~from"/"~until") aren't in that dump, but are real and
 // plain-tilde per the legacy Navigator's NestedRange pairing
 // (contentgrid-navigator/src/components/form/jsonforms.ts:325).
+//
+// Redundant-sibling suppression and hidden-property exclusion are `resolveHalFormsFields`'s
+// responsibility now (see `../hal-forms/model/resolve-hal-forms-fields.test.ts`) — this fixture
+// only needs to exercise the encode/decode helpers below, so it keeps one representative
+// property per wire type rather than every redundancy edge case.
 // ---------------------------------------------------------------------------
 
 const profileJson = {
@@ -63,37 +68,6 @@ const profileJson = {
         _links: {},
       },
       {
-        name: "code",
-        title: "Code",
-        type: "string",
-        description: "",
-        readOnly: false,
-        required: false,
-        _embedded: {
-          "blueprint:constraint": [],
-          "blueprint:search-param": [
-            { name: "code", title: "Code", type: "exact-match" },
-            { name: "code~prefix", title: "Code prefix", type: "prefix-match" },
-          ],
-          "blueprint:attribute": [],
-        },
-        _links: {},
-      },
-      {
-        name: "status",
-        title: "Status",
-        type: "string",
-        description: "",
-        readOnly: false,
-        required: false,
-        _embedded: {
-          "blueprint:constraint": [],
-          "blueprint:search-param": [{ name: "status", title: "Status", type: "exact-match" }],
-          "blueprint:attribute": [],
-        },
-        _links: {},
-      },
-      {
         name: "amount",
         title: "Amount",
         type: "long",
@@ -103,10 +77,7 @@ const profileJson = {
         _embedded: {
           "blueprint:constraint": [],
           "blueprint:search-param": [
-            { name: "amount", title: "Amount", type: "exact-match" },
-            { name: "amount~gt", title: "Amount gt", type: "greater-than" },
             { name: "amount~gte", title: "Amount gte", type: "greater-than-or-equal" },
-            { name: "amount~lt", title: "Amount lt", type: "less-than" },
             { name: "amount~lte", title: "Amount lte", type: "less-than-or-equal" },
           ],
           "blueprint:attribute": [],
@@ -124,42 +95,7 @@ const profileJson = {
           "blueprint:constraint": [],
           "blueprint:search-param": [
             { name: "due_date~after", title: "Due date after", type: "greater-than" },
-            { name: "due_date~before", title: "Due date before", type: "less-than" },
           ],
-          "blueprint:attribute": [],
-        },
-        _links: {},
-      },
-      {
-        name: "created_at",
-        title: "Created At",
-        type: "date",
-        description: "",
-        readOnly: false,
-        required: false,
-        _embedded: {
-          "blueprint:constraint": [],
-          "blueprint:search-param": [
-            { name: "created_at", title: "Created at", type: "exact-match" },
-            { name: "created_at~after", title: "Created at after", type: "greater-than" },
-            { name: "created_at~before", title: "Created at before", type: "less-than" },
-            { name: "created_at~from", title: "Created at from", type: "greater-than-or-equal" },
-            { name: "created_at~until", title: "Created at until", type: "less-than-or-equal" },
-          ],
-          "blueprint:attribute": [],
-        },
-        _links: {},
-      },
-      {
-        name: "note",
-        title: "Note",
-        type: "string",
-        description: "",
-        readOnly: false,
-        required: false,
-        _embedded: {
-          "blueprint:constraint": [],
-          "blueprint:search-param": [{ name: "note~fts", title: "Note fts", type: "full-text" }],
           "blueprint:attribute": [],
         },
         _links: {},
@@ -179,23 +115,9 @@ const profileJson = {
         _links: {},
       },
       {
-        name: "rating",
-        title: "Rating",
-        type: "double",
-        description: "",
-        readOnly: false,
-        required: false,
-        _embedded: {
-          "blueprint:constraint": [],
-          "blueprint:search-param": [{ name: "rating", title: "Rating", type: "exact-match" }],
-          "blueprint:attribute": [],
-        },
-        _links: {},
-      },
-      {
         // Simulates an `allowed-values` constraint on a NUMBER-typed attribute: the search
         // template exposes inline options (like an enum), but the underlying wire type is
-        // still "number" — inputKind collapses to "select" for rendering, but coerceFilterValue
+        // still "number" — `kind` collapses to "enum" for rendering, but coerceFilterValue
         // must still coerce by the real wire type or the codec throws HalFormValueTypeError.
         name: "priority",
         title: "Priority",
@@ -230,39 +152,15 @@ const profileJson = {
       target: "https://example.com/items",
       properties: [
         { name: "title", type: "text" },
-        { name: "code", type: "text" },
-        { name: "code~prefix", type: "text" },
-        {
-          name: "status",
-          type: "text",
-          options: {
-            minItems: 0,
-            inline: ["draft", "published", "archived"],
-          },
-        },
-        { name: "amount", type: "number" },
-        { name: "amount~gt", type: "number" },
         { name: "amount~gte", type: "number" },
-        { name: "amount~lt", type: "number" },
         { name: "amount~lte", type: "number" },
         { name: "due_date~after", type: "datetime" },
-        { name: "due_date~before", type: "datetime" },
-        { name: "created_at", type: "date" },
-        { name: "created_at~after", type: "date" },
-        { name: "created_at~before", type: "date" },
-        { name: "created_at~from", type: "date" },
-        { name: "created_at~until", type: "date" },
-        { name: "note~fts", type: "text" },
         { name: "active", type: "checkbox" },
-        { name: "rating", type: "number" },
         {
           name: "priority",
           type: "number",
           options: { minItems: 0, maxItems: 1, inline: ["1", "2", "3"] },
         },
-        { name: "score", type: "range" },
-        { name: "expires_at", type: "datetime-local" },
-        { name: "products.product_name", type: "text" },
         { name: "products.product_name~prefix", type: "text" },
         {
           name: "_sort",
@@ -282,308 +180,18 @@ const profileJson = {
 // ---------------------------------------------------------------------------
 
 const sharedTmpl = makeSearchTemplate(profileJson);
-const sharedProps = buildFilterProperties(sharedTmpl);
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe("buildFilterProperties — text fields", () => {
-  it("produces prefix-match property with correct operator", () => {
-    const prefix = sharedProps.find((p) => p.name === "code~prefix")!;
-
-    expect(prefix.searchOperator).toBe("prefix-match");
-    expect(prefix.groupKey).toBe("code");
-    expect(prefix.inputKind).toBe("text");
-  });
-
-  it("produces full-text property", () => {
-    const fts = sharedProps.find((p) => p.name === "note~fts")!;
-
-    expect(fts.searchOperator).toBe("full-text");
-    expect(fts.groupKey).toBe("note");
-  });
-
-  it("produces exact-match text property with correct fields", () => {
-    const title = sharedProps.find((p) => p.name === "title")!;
-
-    expect(title.label).toBe("Title");
-    expect(title.inputKind).toBe("text");
-    expect(title.searchOperator).toBe("exact-match");
-    expect(title.groupKey).toBe("title");
-    expect(title.directionLabel).toBeUndefined();
-    expect(title.dateEncoding).toBeUndefined();
-  });
-});
-
-describe("buildFilterProperties — select fields", () => {
-  it("produces select inputKind for inline-options property", () => {
-    const status = sharedProps.find((p) => p.name === "status")!;
-
-    expect(status.inputKind).toBe("select");
-    expect(status.searchOperator).toBe("exact-match");
-    expect(status.options).toEqual(["draft", "published", "archived"]);
-  });
-
-  it("carries the real wire type through separately from inputKind for a number-typed enum", () => {
-    // "priority" has inline options (allowed-values), so inputKind is "select" — but the
-    // server-declared wire type is "number". propertyType must stay "number" so
-    // coerceFilterValue coerces correctly instead of returning a raw string (see the
-    // "coerceFilterValue — wire type vs inputKind" describe block below).
-    const priority = sharedProps.find((p) => p.name === "priority")!;
-
-    expect(priority.inputKind).toBe("select");
-    expect(priority.propertyType).toBe("number");
-  });
-});
-
-describe("buildFilterProperties — date fields with iso encoding", () => {
-  it("produces datetime inputKind for datetime attribute", () => {
-    const after = sharedProps.find((p) => p.name === "due_date~after")!;
-
-    expect(after.inputKind).toBe("datetime");
-    expect(after.searchOperator).toBe("greater-than");
-    expect(after.directionLabel).toBe("After");
-    expect(after.dateEncoding).toBe("iso");
-    expect(after.groupKey).toBe("due_date");
-  });
-
-  it("maps less-than to Before direction", () => {
-    const before = sharedProps.find((p) => p.name === "due_date~before")!;
-
-    expect(before.searchOperator).toBe("less-than");
-    expect(before.directionLabel).toBe("Before");
-    expect(before.dateEncoding).toBe("iso");
-  });
-});
-
-describe("buildFilterProperties — range-pair operators (~from / ~until)", () => {
-  it("maps ~from to greater-than-or-equal with From direction and plain encoding", () => {
-    const from = sharedProps.find((p) => p.name === "created_at~from")!;
-
-    expect(from.searchOperator).toBe("greater-than-or-equal");
-    expect(from.directionLabel).toBe("From");
-    expect(from.dateEncoding).toBe("plain");
-    expect(from.groupKey).toBe("created_at");
-    expect(from.inputKind).toBe("date");
-  });
-
-  it("maps ~until to less-than-or-equal with Until direction and plain encoding", () => {
-    const until = sharedProps.find((p) => p.name === "created_at~until")!;
-
-    expect(until.searchOperator).toBe("less-than-or-equal");
-    expect(until.directionLabel).toBe("Until");
-    expect(until.dateEncoding).toBe("plain");
-    expect(until.groupKey).toBe("created_at");
-  });
-
-  it("maps long ~gte to number inputKind with From direction and no dateEncoding", () => {
-    const gte = sharedProps.find((p) => p.name === "amount~gte")!;
-
-    expect(gte.inputKind).toBe("number");
-    expect(gte.searchOperator).toBe("greater-than-or-equal");
-    expect(gte.directionLabel).toBe("From");
-    expect(gte.dateEncoding).toBeUndefined();
-    expect(gte.groupKey).toBe("amount");
-  });
-
-  it("maps long ~lte to number inputKind with Until direction", () => {
-    const lte = sharedProps.find((p) => p.name === "amount~lte")!;
-
-    expect(lte.inputKind).toBe("number");
-    expect(lte.searchOperator).toBe("less-than-or-equal");
-    expect(lte.directionLabel).toBe("Until");
-  });
-});
-
-describe("buildFilterProperties — wire-type mapping (boolean, number, datetime aliases)", () => {
-  it("maps the 'checkbox' wire type to boolean inputKind", () => {
-    expect(sharedProps.find((p) => p.name === "active")!.inputKind).toBe("boolean");
-  });
-
-  it("maps the 'number' wire type to number inputKind", () => {
-    expect(sharedProps.find((p) => p.name === "rating")!.inputKind).toBe("number");
-  });
-
-  it("maps the 'range' wire type to number inputKind", () => {
-    expect(sharedProps.find((p) => p.name === "score")!.inputKind).toBe("number");
-  });
-
-  it("maps the 'datetime-local' wire type to datetime inputKind", () => {
-    expect(sharedProps.find((p) => p.name === "expires_at")!.inputKind).toBe("datetime");
-  });
-});
-
-describe("buildFilterProperties — label resolution", () => {
-  it("uses profile attribute title as label", () => {
-    expect(sharedProps.find((p) => p.name === "title")!.label).toBe("Title");
-  });
-
-  it("uses property prompt when provided, over attribute title", () => {
-    const customJson = {
-      ...profileJson,
-      _templates: {
-        ...profileJson._templates,
-        search: {
-          ...profileJson._templates.search,
-          properties: [{ name: "title", type: "text", prompt: "Document Name" }],
-        },
-      },
-    };
-    const tmpl = makeSearchTemplate(customJson);
-    const props = buildFilterProperties(tmpl);
-    expect(props.find((p) => p.name === "title")!.label).toBe("Document Name");
-  });
-
-  it("falls back to formatFieldName when no attribute title or prompt is available", () => {
-    const noTitleJson = {
-      ...profileJson,
-      _embedded: { ...profileJson._embedded, "blueprint:attribute": [], "blueprint:relation": [] },
-      _templates: {
-        ...profileJson._templates,
-        search: {
-          method: "GET",
-          target: "https://example.com/items",
-          properties: [{ name: "some_field", type: "text" }],
-        },
-      },
-    };
-    const props = buildFilterProperties(makeSearchTemplate(noTitleJson));
-    expect(props.find((p) => p.name === "some_field")!.label).toBe("Some Field");
-  });
-});
-
-describe("buildFilterProperties — groupLabel", () => {
-  it("is shared by every property in the same group, independent of array order", () => {
-    const group = sharedProps.filter((p) => p.groupKey === "created_at");
-    expect(group.length).toBeGreaterThan(1);
-    expect(new Set(group.map((p) => p.groupLabel))).toEqual(new Set(["Created At"]));
-  });
-
-  it("survives redundant-sibling removal — the exact-match property carrying the attribute's own title can be suppressed, but the group label is computed independently", () => {
-    // "created_at" (bare exact-match) is suppressed below since ~after/~before/~from/~until
-    // siblings exist — but the surviving siblings still report "Created At" as their groupLabel.
-    expect(sharedProps.find((p) => p.name === "created_at")).toBeUndefined();
-    const survivor = sharedProps.find((p) => p.name === "created_at~from")!;
-    expect(survivor.groupLabel).toBe("Created At");
-  });
-
-  it("falls back to a formatted groupKey for a relation-traversal group (no profileAttribute to resolve)", () => {
-    const relationProp = sharedProps.find((p) => p.name === "products.product_name~prefix")!;
-    expect(relationProp.groupLabel).toBe("Products Product Name");
-  });
-});
-
-describe("buildFilterProperties — redundant exact-match suppression", () => {
-  it("suppresses a bare exact-match property when a prefix-match sibling exists", () => {
-    expect(sharedProps.find((p) => p.name === "code")).toBeUndefined();
-    expect(sharedProps.find((p) => p.name === "code~prefix")).toBeDefined();
-  });
-
-  it("suppresses a bare exact-match date property when after/before/from/until siblings exist", () => {
-    // created_at exposes exact-match, ~after/~before (strict), AND ~from/~until (inclusive):
-    // the exact-match is dropped as redundant, and so is the strict pair once its inclusive
-    // equivalent exists — only ~from/~until (inclusive) survive.
-    expect(sharedProps.find((p) => p.name === "created_at")).toBeUndefined();
-    expect(sharedProps.find((p) => p.name === "created_at~after")).toBeUndefined();
-    expect(sharedProps.find((p) => p.name === "created_at~from")).toBeDefined();
-    expect(sharedProps.find((p) => p.name === "created_at~until")).toBeDefined();
-  });
-
-  it("suppresses a bare exact-match relation-traversal property when a prefix-match sibling exists", () => {
-    expect(sharedProps.find((p) => p.name === "products.product_name")).toBeUndefined();
-    expect(sharedProps.find((p) => p.name === "products.product_name~prefix")).toBeDefined();
-  });
-
-  it("keeps a bare exact-match property that has no more-specific sibling", () => {
-    expect(sharedProps.find((p) => p.name === "status")).toBeDefined();
-    expect(sharedProps.find((p) => p.name === "active")).toBeDefined();
-  });
-
-  it("keeps a bare exact-match NUMBER property even when range siblings exist", () => {
-    // Mirrors the legacy Navigator (RangedJsfFormConvertor.createJsonProperty in
-    // contentgrid-navigator's src/components/form/jsonforms.ts), which only drops the lone
-    // base property for a datetime/datetime-local attribute — a numeric attribute like
-    // "amount" keeps its bare exact-match filter alongside its range siblings.
-    expect(sharedProps.find((p) => p.name === "amount")).toBeDefined();
-  });
-});
-
-describe("buildFilterProperties — redundant strict range bound suppression", () => {
-  it("suppresses the strict greater-than bound once the inclusive greater-than-or-equal bound exists", () => {
-    // "amount" has both ~gt and ~gte — only ~gte (inclusive) should survive.
-    expect(sharedProps.find((p) => p.name === "amount~gt")).toBeUndefined();
-    expect(sharedProps.find((p) => p.name === "amount~gte")).toBeDefined();
-  });
-
-  it("suppresses the strict less-than bound once the inclusive less-than-or-equal bound exists", () => {
-    expect(sharedProps.find((p) => p.name === "amount~lt")).toBeUndefined();
-    expect(sharedProps.find((p) => p.name === "amount~lte")).toBeDefined();
-  });
-
-  it("keeps the strict bound when no inclusive equivalent exists for that attribute", () => {
-    // "due_date" only has ~after/~before (no ~from/~until) — nothing to suppress them with.
-    expect(sharedProps.find((p) => p.name === "due_date~after")).toBeDefined();
-    expect(sharedProps.find((p) => p.name === "due_date~before")).toBeDefined();
-  });
-});
-
-describe("buildFilterProperties — _sort excluded", () => {
-  it("does not include the _sort control property", () => {
-    expect(sharedProps.find((p) => p.name === "_sort")).toBeUndefined();
-  });
-});
-
-describe("buildFilterProperties — hidden properties excluded", () => {
-  it("excludes a 'hidden' wire-type property from the result", () => {
-    // Hidden properties carry a fixed/internal value (e.g. relation-scoping params
-    // injected via withHiddenParams) and were never meant to be a user-facing filter.
-    const hiddenJson = {
-      ...profileJson,
-      _templates: {
-        ...profileJson._templates,
-        search: {
-          ...profileJson._templates.search,
-          properties: [
-            ...profileJson._templates.search.properties,
-            { name: "_internal_scope", type: "hidden", value: "abc" },
-          ],
-        },
-      },
-    };
-    const props = buildFilterProperties(makeSearchTemplate(hiddenJson));
-    expect(props.find((p) => p.name === "_internal_scope")).toBeUndefined();
-  });
-});
-
-describe("buildFilterProperties — _sort-only template", () => {
-  it("returns empty array when the search template contains only the _sort control property", () => {
-    const sortOnlyJson = {
-      ...profileJson,
-      _embedded: { ...profileJson._embedded, "blueprint:attribute": [], "blueprint:relation": [] },
-      _templates: {
-        default: { method: "HEAD", target: "https://example.com/items", properties: [] },
-        search: {
-          method: "GET",
-          target: "https://example.com/items",
-          properties: [{ name: "_sort", type: "text", options: { minItems: 0, inline: [] } }],
-        },
-      },
-    };
-    expect(buildFilterProperties(makeSearchTemplate(sortOnlyJson))).toHaveLength(0);
-  });
-});
+const sharedFields = resolveHalFormsFields(sharedTmpl).fields;
 
 // ---------------------------------------------------------------------------
 // coerceFilterValue / applyFilterValues — the HAL-FORMS codec requires a real
 // number/boolean/Date for these kinds and throws on a raw string (see
 // packages/features/src/entity-list/index.tsx for where this is applied).
 //
-// Switches on the wire type (HalFormsPropertyType), not FilterInputKind — inputKind collapses
-// to "select" whenever inline options are present, which would otherwise lose the real type.
+// Switches on the wire type (HalFormsPropertyType), not `HalFormsField.kind` — `kind` collapses
+// to "enum" whenever inline options are present, which would otherwise lose the real type.
 // ---------------------------------------------------------------------------
 
-describe("coerceFilterValue — wire type vs inputKind", () => {
+describe("coerceFilterValue — wire type vs kind", () => {
   it("'number'/'range' wire type: coerces a numeric string, returns undefined for a non-numeric one", () => {
     expect(coerceFilterValue("number", "42")).toBe(42);
     expect(coerceFilterValue("range", "42")).toBe(42);
@@ -606,18 +214,18 @@ describe("coerceFilterValue — wire type vs inputKind", () => {
     expect(coerceFilterValue("text", "hello")).toBe("hello");
   });
 
-  it("coerces by the real wire type for a number-typed property with inline options (inputKind='select')", () => {
-    // Regression: switching on inputKind here would hit "select" and return a raw string,
-    // which the codec rejects for a "number"-typed property — see the "priority" fixture above.
-    const priority = sharedProps.find((p) => p.name === "priority")!;
-    expect(priority.inputKind).toBe("select");
-    expect(coerceFilterValue(priority.propertyType, "2")).toBe(2);
+  it("coerces by the real wire type for a number-typed property with inline options (kind='enum')", () => {
+    // Regression: switching on `kind` here would hit "enum" and return a raw string, which the
+    // codec rejects for a "number"-typed property — see the "priority" fixture above.
+    const priority = sharedFields.find((f) => f.name === "priority")!;
+    expect(priority.kind).toBe("enum");
+    expect(coerceFilterValue(priority.property.type, "2")).toBe(2);
   });
 });
 
 describe("applyFilterValues", () => {
   it("coerces each filter by its wire type and omits values that fail to coerce", () => {
-    const result = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+    const result = applyFilterValues(createValues(sharedTmpl.template), sharedFields, {
       title: "hello",
       "amount~gte": "100",
       "due_date~after": "2024-01-15T10:30:00Z",
@@ -629,14 +237,14 @@ describe("applyFilterValues", () => {
   });
 
   it("omits a filter value that fails to coerce for its wire type", () => {
-    const result = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+    const result = applyFilterValues(createValues(sharedTmpl.template), sharedFields, {
       "amount~gte": "not-a-number",
     });
     expect(result.value("amount~gte").value).toBeUndefined();
   });
 
   it("skips empty-string filter values entirely", () => {
-    const result = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+    const result = applyFilterValues(createValues(sharedTmpl.template), sharedFields, {
       title: "",
     });
     expect(result.value("title").value).toBeUndefined();
@@ -644,9 +252,9 @@ describe("applyFilterValues", () => {
 });
 
 describe("extractFilterValuesFromCollectionUrl", () => {
-  it("extracts values for known filter properties from the query string", () => {
+  it("extracts values for known filter fields from the query string", () => {
     const result = extractFilterValuesFromCollectionUrl(
-      sharedProps,
+      sharedFields,
       "https://api.example.com/items?title=hello&amount~gte=100",
     );
     expect(result).toEqual({ title: "hello", "amount~gte": "100" });
@@ -654,15 +262,15 @@ describe("extractFilterValuesFromCollectionUrl", () => {
 
   it("ignores _cursor, _sort, _size, and _internal_* params", () => {
     const result = extractFilterValuesFromCollectionUrl(
-      sharedProps,
+      sharedFields,
       "https://api.example.com/items?title=hello&_cursor=abc&_sort=title,asc&_size=20&_internal_invoice__products=xyz",
     );
     expect(result).toEqual({ title: "hello" });
   });
 
-  it("ignores query params that don't match any known filter property", () => {
+  it("ignores query params that don't match any known filter field", () => {
     const result = extractFilterValuesFromCollectionUrl(
-      sharedProps,
+      sharedFields,
       "https://api.example.com/items?unknown_param=hello",
     );
     expect(result).toEqual({});
@@ -670,21 +278,21 @@ describe("extractFilterValuesFromCollectionUrl", () => {
 
   it("returns an empty object for a URL with no query string", () => {
     expect(
-      extractFilterValuesFromCollectionUrl(sharedProps, "https://api.example.com/items"),
+      extractFilterValuesFromCollectionUrl(sharedFields, "https://api.example.com/items"),
     ).toEqual({});
   });
 
   it("resolves a relative URL against a placeholder base rather than throwing", () => {
-    const result = extractFilterValuesFromCollectionUrl(sharedProps, "/items?title=hello");
+    const result = extractFilterValuesFromCollectionUrl(sharedFields, "/items?title=hello");
     expect(result).toEqual({ title: "hello" });
   });
 
   it("returns an empty object for an unparseable URL", () => {
-    expect(extractFilterValuesFromCollectionUrl(sharedProps, "http://[::1")).toEqual({});
+    expect(extractFilterValuesFromCollectionUrl(sharedFields, "http://[::1")).toEqual({});
   });
 
   it("round-trips with applyFilterValues via searchEntityRequest-shaped URLs", () => {
-    const values = applyFilterValues(createValues(sharedTmpl.template), sharedProps, {
+    const values = applyFilterValues(createValues(sharedTmpl.template), sharedFields, {
       title: "hello",
       "amount~gte": "100",
     });
@@ -693,7 +301,7 @@ describe("extractFilterValuesFromCollectionUrl", () => {
       encodedParams.map(([k, v]) => [k, String(v)]),
     ).toString()}`;
 
-    expect(extractFilterValuesFromCollectionUrl(sharedProps, url)).toEqual({
+    expect(extractFilterValuesFromCollectionUrl(sharedFields, url)).toEqual({
       title: "hello",
       "amount~gte": "100",
     });
@@ -702,22 +310,22 @@ describe("extractFilterValuesFromCollectionUrl", () => {
 
 describe("findInvalidFilterKeys", () => {
   it("flags a key whose raw value fails to coerce for its wire type", () => {
-    const invalid = findInvalidFilterKeys(sharedProps, { "amount~gte": "not-a-number" });
+    const invalid = findInvalidFilterKeys(sharedFields, { "amount~gte": "not-a-number" });
     expect(invalid).toEqual(["amount~gte"]);
   });
 
   it("does not flag a key whose value coerces successfully", () => {
-    const invalid = findInvalidFilterKeys(sharedProps, { "amount~gte": "100" });
+    const invalid = findInvalidFilterKeys(sharedFields, { "amount~gte": "100" });
     expect(invalid).toEqual([]);
   });
 
   it("does not flag an empty-string value — that's 'no filter', not an invalid one", () => {
-    const invalid = findInvalidFilterKeys(sharedProps, { "amount~gte": "" });
+    const invalid = findInvalidFilterKeys(sharedFields, { "amount~gte": "" });
     expect(invalid).toEqual([]);
   });
 
   it("flags every failing key, not just the first", () => {
-    const invalid = findInvalidFilterKeys(sharedProps, {
+    const invalid = findInvalidFilterKeys(sharedFields, {
       "amount~gte": "not-a-number",
       "due_date~after": "not-a-date",
     });
@@ -728,8 +336,8 @@ describe("findInvalidFilterKeys", () => {
 
   it("matches exactly the keys applyFilterValues silently omits", () => {
     const filters = { title: "hello", "amount~gte": "not-a-number" };
-    const values = applyFilterValues(createValues(sharedTmpl.template), sharedProps, filters);
-    const invalid = findInvalidFilterKeys(sharedProps, filters);
+    const values = applyFilterValues(createValues(sharedTmpl.template), sharedFields, filters);
+    const invalid = findInvalidFilterKeys(sharedFields, filters);
 
     expect(values.value("amount~gte").value).toBeUndefined();
     expect(invalid).toEqual(["amount~gte"]);
@@ -738,23 +346,23 @@ describe("findInvalidFilterKeys", () => {
 
 describe("findActivelyFilteredAttributeNames", () => {
   it("returns the groupKey for a directly-filtered, non-relation property", () => {
-    const names = findActivelyFilteredAttributeNames(sharedProps, { title: "hello" });
+    const names = findActivelyFilteredAttributeNames(sharedTmpl, { title: "hello" });
     expect(names).toEqual(["title"]);
   });
 
   it("excludes a relation-traversal property even when its filter value is present", () => {
-    const relationProp = sharedProps.find((p) => p.name === "products.product_name~prefix")!;
-    expect(relationProp.relationKey).toBeDefined();
+    const relationProp = sharedTmpl.getSearchPropertyByName("products.product_name~prefix")!;
+    expect(relationProp.isOverRelation).toBe(true);
 
-    const names = findActivelyFilteredAttributeNames(sharedProps, {
-      [relationProp.name]: "widget",
+    const names = findActivelyFilteredAttributeNames(sharedTmpl, {
+      [relationProp.property.name]: "widget",
     });
 
     expect(names).toEqual([]);
   });
 
   it("de-dupes two sibling properties sharing one groupKey into a single entry", () => {
-    const names = findActivelyFilteredAttributeNames(sharedProps, {
+    const names = findActivelyFilteredAttributeNames(sharedTmpl, {
       "amount~gte": "10",
       "amount~lte": "100",
     });
@@ -763,7 +371,12 @@ describe("findActivelyFilteredAttributeNames", () => {
   });
 
   it("returns an empty array when no filters have a non-empty value", () => {
-    const names = findActivelyFilteredAttributeNames(sharedProps, { title: "", "amount~gte": "" });
+    const names = findActivelyFilteredAttributeNames(sharedTmpl, { title: "", "amount~gte": "" });
+    expect(names).toEqual([]);
+  });
+
+  it("ignores a filter key with no matching search property", () => {
+    const names = findActivelyFilteredAttributeNames(sharedTmpl, { unknown_key: "x" });
     expect(names).toEqual([]);
   });
 });
