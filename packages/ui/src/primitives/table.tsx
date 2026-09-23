@@ -20,6 +20,9 @@ function Table({
   return (
     <div
       data-slot="table-container"
+      // Keyboard-focusable so a genuinely overflowing table (e.g. `containerClassName` adding a
+      // vertical cap) can be scrolled without a mouse — axe's scrollable-region-focusable rule.
+      tabIndex={0}
       className={cn("relative w-full overflow-x-auto", containerClassName)}
     >
       <table

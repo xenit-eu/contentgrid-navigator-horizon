@@ -129,6 +129,7 @@ export function typeaheadField(
 ): BaseProps<TypeaheadRendererProps> {
   return {
     name: "search",
+    "aria-label": "Search",
     suggestions: [],
     ...overrides,
   };
