@@ -1,5 +1,11 @@
-import { type EntityItem, type ProfileAttribute, ProfileEntity } from "@contentgrid/navigator-data";
+import {
+  AttributeKind,
+  type EntityItem,
+  type ProfileAttribute,
+  ProfileEntity,
+} from "@contentgrid/navigator-data";
 import { type DataTableColumn, type DataTableRow } from "@contentgrid/ui";
+import { formatFileSize } from "../format-file-size";
 import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface ColumnVisibilityConfig {
@@ -111,6 +117,37 @@ export function buildColumns(
 }
 
 /**
+ * Formats a single column's cell value for a row. `DataTable` renders every cell as a plain
+ * string (`String(value)`), so a raw object value — content metadata, a nested/object
+ * attribute — would otherwise stringify to the useless "[object Object]". `id` is read straight
+ * off `item.id` (mirrors `EntityItemCollectionTable`'s own special-case, since "id" isn't a
+ * regular attribute); every other column goes through `item.findAttribute` so content/nested
+ * attributes get a sensible plain-text representation instead of their raw JSON shape.
+ */
+function formatCellValue(item: EntityItem, columnKey: string): unknown {
+  if (columnKey === "id") return item.id;
+
+  const attr = item.findAttribute(columnKey);
+  if (!attr) return "";
+
+  switch (attr.value.kind) {
+    case AttributeKind.CONTENT: {
+      const { metadata } = attr.value;
+      return metadata
+        ? `${metadata.filename ?? "Untitled"} · ${formatFileSize(metadata.length)}`
+        : null;
+    }
+    case AttributeKind.NESTED:
+    case AttributeKind.UNKNOWN:
+      // No sensible flat-text representation for these kinds — `null` renders as "—" in
+      // `DataTable`, the same fallback `AttributeValueRenderer` uses elsewhere.
+      return null;
+    case AttributeKind.PLAIN:
+      return attr.value.value ?? "";
+  }
+}
+
+/**
  * Build table rows from entity items and visible columns.
  *
  * @param items - Entity items to display
@@ -123,6 +160,6 @@ export function buildRows(
 ): DataTableRow[] {
   return items.map((item) => ({
     id: item.id,
-    data: Object.fromEntries(columns.map((col) => [col.key, item.halItem.data[col.key] ?? ""])),
+    data: Object.fromEntries(columns.map((col) => [col.key, formatCellValue(item, col.key)])),
   }));
 }

@@ -1,6 +1,7 @@
 import { type ReactNode, type SubmitEvent, useEffect, useRef } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Button, Label, Switch } from "@contentgrid/ui";
+import type { RelationItemCreateHandler } from "../entity-item";
 import type { FieldDescriptor } from "./model/field-descriptor";
 import type { LayoutInformation } from "./model/layout-information";
 import { FormContainer } from "./render/form-container";
@@ -24,6 +25,8 @@ export interface CreateEntityItemFormProps {
   /** Marks a field touched on blur — see `useEntityItemCreateFormState`'s `touchField` doc comment. Shows a
    * required-and-empty field's error as soon as the user leaves it, without waiting for submit. */
   readonly onFieldBlur?: (name: string) => void;
+  /** See `render/form-container.tsx`'s `FormContainerProps.onCreateNew` doc comment. */
+  readonly onCreateNew?: RelationItemCreateHandler;
   readonly onSubmit: (event: SubmitEvent) => void;
   readonly isSubmitting: boolean;
   /** Renders a cancel button next to submit when provided. */
@@ -54,6 +57,7 @@ export function CreateEntityItemForm({
   onFieldChange,
   onFieldFocus,
   onFieldBlur,
+  onCreateNew,
   onSubmit,
   isSubmitting,
   onCancel,
@@ -88,6 +92,7 @@ export function CreateEntityItemForm({
           onChange={onFieldChange}
           onFieldFocus={onFieldFocus}
           onFieldBlur={onFieldBlur}
+          onCreateNew={onCreateNew}
           fieldState={fieldState}
         />
       </div>

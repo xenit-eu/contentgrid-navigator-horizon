@@ -1,4 +1,4 @@
-import type { HalFormsProperty } from "@contentgrid/navigator-data";
+import type { HalFormsProperty, ProfileRelation } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 
 /**
@@ -54,5 +54,13 @@ export type FieldDescriptor =
   | ({ readonly kind: "file" } & FieldDescriptorBase & { readonly multiple: boolean })
   | ({ readonly kind: "enum" } & FieldDescriptorBase & {
         readonly options: readonly EnumOption[];
+        readonly multiValue: boolean;
+      })
+  | ({ readonly kind: "relation" } & FieldDescriptorBase & {
+        /** Absent when the create-form template's property name doesn't match any relation on
+         * the profile — the renderer falls back to treating the target profile as unresolvable. */
+        readonly profileRelation?: ProfileRelation;
+        /** `false` for a to-one relation (`options.maxItems === 1`), `true` for to-many —
+         * mirrors `enum`'s own `multiValue` flag rather than being two separate `kind`s. */
         readonly multiValue: boolean;
       });

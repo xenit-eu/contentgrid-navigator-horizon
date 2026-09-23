@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LinkBreakIcon as LinkBreak, PlusIcon } from "@phosphor-icons/react";
 import {
   type EntityItemToManyRelation,
@@ -32,13 +32,16 @@ import {
   MutationErrorDisplay,
   type MutationErrorDisplayProps,
   type RelationItemClickHandler,
+  type RelationItemCreateHandler,
   RelationItemSearchDialog,
+  resolveNewlyLinkedHrefs,
 } from "./relation-shared";
 
 export function RelationToManySection({
   relation,
   profiles,
   onItemClick,
+  onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
@@ -46,6 +49,7 @@ export function RelationToManySection({
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
+  onCreateNew?: RelationItemCreateHandler;
 }> &
   Pick<
     MutationErrorDisplayProps,
@@ -81,6 +85,19 @@ export function RelationToManySection({
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
+  // Starts expanded (loading/error states stay visible, same as before) and auto-collapses once,
+  // the first time the relation's collection resolves as genuinely empty — so an empty relation
+  // renders as a collapsed row instead of an expanded card with nothing in it but "No items
+  // linked". The ref guards this to a one-time nudge: it must not re-collapse a section the user
+  // has since expanded on purpose, or fight a `setAccordionOpen(true)` from linking (below).
+  const hasAutoCollapsed = useRef(false);
+  useEffect(() => {
+    if (!hasAutoCollapsed.current && collection.isSuccess && collection.data.isEmpty) {
+      hasAutoCollapsed.current = true;
+      setAccordionOpen(false);
+    }
+  }, [collection.isSuccess, collection.data]);
+
   const visibility = useColumnVisibility(targetProfile);
   const columns = useMemo(
     () => (targetProfile ? buildColumns(targetProfile, visibility) : [{ key: "id", header: "ID" }]),
@@ -94,6 +111,10 @@ export function RelationToManySection({
   const canUnlinkAll =
     relation.canClear && collection.isSuccess && collection.data.items.length > 0;
   const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
+  const linkedHrefs = useMemo(
+    () => new Set((collection.isSuccess ? collection.data.items : []).map((i) => i.selfLink.href)),
+    [collection.isSuccess, collection.data],
+  );
 
   function onRowClick(id: string) {
     if (!targetProfile) return;
@@ -134,10 +155,14 @@ export function RelationToManySection({
                   targetProfile={targetProfile}
                   open={addOpen}
                   onOpenChange={setAddOpen}
-                  onSelect={(item) => {
-                    addRelation([item.selfLink.href]);
-                    setAccordionOpen(true);
+                  onLinkSelected={(items) => {
+                    const newHrefs = resolveNewlyLinkedHrefs(items, linkedHrefs);
+                    if (newHrefs.length > 0) {
+                      addRelation(newHrefs);
+                      setAccordionOpen(true);
+                    }
                   }}
+                  onCreateNew={onCreateNew}
                 />
               </>
             )}

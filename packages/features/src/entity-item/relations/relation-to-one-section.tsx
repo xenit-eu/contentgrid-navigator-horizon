@@ -27,6 +27,7 @@ import {
   MutationErrorDisplay,
   type MutationErrorDisplayProps,
   type RelationItemClickHandler,
+  type RelationItemCreateHandler,
   RelationItemSearchDialog,
 } from "./relation-shared";
 
@@ -34,12 +35,14 @@ export function RelationToOneSection({
   relation,
   profiles,
   onItemClick,
+  onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
+  onCreateNew?: RelationItemCreateHandler;
 }> &
   Pick<
     MutationErrorDisplayProps,
@@ -81,6 +84,7 @@ export function RelationToOneSection({
                 open={linkOpen}
                 onOpenChange={setLinkOpen}
                 onSelect={(item) => setRelation(item.selfLink.href)}
+                onCreateNew={onCreateNew}
               />
             </>
           )}

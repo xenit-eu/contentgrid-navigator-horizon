@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
+import { Checkbox } from "../../primitives/checkbox";
 import { getRecordTableGridTemplate } from "./grid-template";
 
 export interface RecordTableCell {
@@ -13,6 +14,12 @@ export interface RecordTableRowProps {
   readonly actions?: ReactNode;
   readonly selected?: boolean;
   readonly onClick?: () => void;
+  /**
+   * Renders a leading selection checkbox cell, checked according to `selected`. Presence of
+   * this callback (rather than a separate boolean) is what decides whether the checkbox column
+   * renders — mirroring how `actions` alone decides the trailing actions cell.
+   */
+  readonly onSelectChange?: (checked: boolean) => void;
   readonly className?: string;
 }
 
@@ -21,6 +28,7 @@ function RecordTableRow({
   actions,
   selected = false,
   onClick,
+  onSelectChange,
   className,
 }: RecordTableRowProps) {
   // `--accent` is already the shadcn convention for a "selected"/highlighted row (see
@@ -50,6 +58,7 @@ function RecordTableRow({
       style={{
         gridTemplateColumns: getRecordTableGridTemplate(cells.length, {
           hasActions: Boolean(actions),
+          hasSelection: Boolean(onSelectChange),
         }),
       }}
       className={cn(
@@ -66,6 +75,21 @@ function RecordTableRow({
     >
       {selected && (
         <span className="absolute left-0 top-0 h-full w-[3px] bg-ring rounded-r-sm" aria-hidden />
+      )}
+
+      {onSelectChange && (
+        <div
+          role="cell"
+          className="flex items-center justify-center"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectChange(checked === true)}
+            aria-label="Select row"
+          />
+        </div>
       )}
 
       {cells.map((cell) => (

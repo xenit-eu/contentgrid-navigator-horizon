@@ -149,6 +149,46 @@ export const DeleteConfirmation: Story = {
   },
 };
 
+export const WithSelection: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    rows: ROWS,
+    selectedIds: new Set(["2"]),
+    onSelectionChange: fn(),
+  },
+};
+
+export const ScrollableWithManyColumns: Story = {
+  // Demonstrates `containerClassName`: height-capping and scrolling the table's own wrapper (not
+  // an ancestor) keeps the horizontal scrollbar reachable at the bottom of the visible rows even
+  // when there are many more rows than fit — see that prop's doc comment for why an ancestor
+  // wrapper alone can't do this.
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: [
+      ...COLUMNS,
+      { key: "date", header: "Date" },
+      { key: "notes", header: "Notes" },
+      { key: "reference", header: "Reference" },
+    ],
+    rows: Array.from({ length: 20 }, (_, i) => ({
+      id: String(i + 1),
+      data: {
+        number: `INV-${String(i + 1).padStart(3, "0")}`,
+        supplier: `Supplier ${i + 1}`,
+        amount: `${(i + 1) * 100}.00`,
+        date: "2026-01-01",
+        notes: "A fairly long free-text note that helps push this table wider than its container.",
+        reference: `REF-${i + 1}`,
+      },
+    })),
+    containerClassName: "max-h-64 overflow-auto",
+  },
+};
+
 export const UnlinkConfirmation: Story = {
   // axe-no-contrast: confirmation dialog opens a portal.
   tags: ["no-visual-test", "axe-no-contrast"],

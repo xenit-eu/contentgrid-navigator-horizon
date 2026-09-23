@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemView,
@@ -125,6 +125,7 @@ function EntityItemDetailRoute({
   itemId,
 }: Readonly<{ profile: ProfileEntity; itemId: string }>) {
   const go = useNavigate();
+  const router = useRouter();
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
   const breadcrumbs = (
@@ -176,6 +177,14 @@ function EntityItemDetailRoute({
             search: (prev) => prev,
           })
         }
+        onRelationItemCreateNew={(profileEntityName) => {
+          const { href } = router.buildLocation({
+            to: "/$entity/~create",
+            params: { entity: profileEntityName },
+            search: {},
+          });
+          window.open(href, "_blank", "noopener,noreferrer");
+        }}
         onMissingRelationTargetClick={(url, field) =>
           setProblemDialog({ kind: "missingRelationTarget", url, field })
         }
