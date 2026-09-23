@@ -39,6 +39,13 @@ export interface RecordDataTableProps {
   /** Reserves a trailing column for row-level actions */
   showActionsColumn?: boolean;
 
+  /** Reserves a leading column with a "select all" checkbox, to match row-level selection checkboxes */
+  showSelectionColumn?: boolean;
+  /** Checked state of the "select all" checkbox — `"indeterminate"` when some but not all rows are selected */
+  selectionState?: boolean | "indeterminate";
+  /** Called when the "select all" checkbox is toggled */
+  onSelectAll?: (checked: boolean) => void;
+
   /** Called when the user clicks the create-new button in the empty state. Button is hidden if omitted. */
   onCreateClick?: () => void;
 
@@ -68,6 +75,9 @@ function RecordDataTable({
   footerContent,
   tableActions,
   showActionsColumn,
+  showSelectionColumn,
+  selectionState,
+  onSelectAll,
   onCreateClick,
   children,
   className,
@@ -128,6 +138,9 @@ function RecordDataTable({
               currentSort={currentSort}
               onSort={onSort}
               showActionsColumn={showActionsColumn}
+              showSelectionColumn={showSelectionColumn}
+              selectionState={selectionState}
+              onSelectAll={onSelectAll}
             />
           </div>
 

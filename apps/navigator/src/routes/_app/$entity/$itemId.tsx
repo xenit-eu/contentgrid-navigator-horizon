@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemContentFocusView,
@@ -118,6 +118,7 @@ function EntityItemDetailRoute({
   itemId,
 }: Readonly<{ entityName: string; itemId: string }>) {
   const go = useNavigate();
+  const router = useRouter();
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
   return (
@@ -149,6 +150,14 @@ function EntityItemDetailRoute({
             search: (prev) => prev,
           })
         }
+        onRelationItemCreateNew={(profileEntityName) => {
+          const { href } = router.buildLocation({
+            to: "/$entity/~create",
+            params: { entity: profileEntityName },
+            search: {},
+          });
+          window.open(href, "_blank", "noopener,noreferrer");
+        }}
         onMissingRelationTargetClick={(url, field) =>
           setProblemDialog({ kind: "missingRelationTarget", url, field })
         }

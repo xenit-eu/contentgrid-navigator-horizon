@@ -63,7 +63,17 @@ export interface EntityItemCollectionTableProps {
    * its own `max-h-*` capped wrapper) to keep the table's default grow-to-content sizing.
    */
   readonly className?: string;
+  /**
+   * Ids of the currently selected items. Controlled — presence of `onSelectionChange` (not this
+   * prop) is what decides whether the selection checkbox column renders at all; omit both to
+   * keep the table selection-free. Defaults to no items selected.
+   */
+  readonly selectedIds?: ReadonlySet<string>;
+  /** Fired with the full next selected-id set when a row or the header "select all" checkbox is toggled. */
+  readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
 }
+
+const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 
 const REFERENCE_COLUMN_KEY = "__reference";
 
@@ -104,6 +114,8 @@ export function EntityItemCollectionTable({
   visibleColumnNames,
   forcedVisibleColumnNames,
   className,
+  selectedIds = EMPTY_SELECTION,
+  onSelectionChange,
 }: Readonly<EntityItemCollectionTableProps>) {
   const persistedVisibility = useColumnVisibility(profile);
   // Union a session-local override and any actively-filtered attribute on top of the persisted
@@ -134,6 +146,36 @@ export function EntityItemCollectionTable({
   const [deleteTarget, setDeleteTarget] = useState<EntityItem | null>(null);
   const deleteMutation = useDeleteEntityItem();
 
+  const selectedCount = collection.items.filter((item) => selectedIds.has(item.id)).length;
+  const selectionState: boolean | "indeterminate" =
+    collection.items.length === 0 || selectedCount === 0
+      ? false
+      : selectedCount === collection.items.length
+        ? true
+        : "indeterminate";
+
+  function handleSelectAll(checked: boolean) {
+    const next = new Set(selectedIds);
+    for (const item of collection.items) {
+      if (checked) {
+        next.add(item.id);
+      } else {
+        next.delete(item.id);
+      }
+    }
+    onSelectionChange?.(next);
+  }
+
+  function handleRowSelectChange(item: EntityItem, checked: boolean) {
+    const next = new Set(selectedIds);
+    if (checked) {
+      next.add(item.id);
+    } else {
+      next.delete(item.id);
+    }
+    onSelectionChange?.(next);
+  }
+
   return (
     <>
       <RecordDataTable
@@ -146,6 +188,9 @@ export function EntityItemCollectionTable({
         currentSort={currentSort ? [currentSort] : []}
         onSort={onSort}
         showActionsColumn
+        showSelectionColumn={Boolean(onSelectionChange)}
+        selectionState={selectionState}
+        onSelectAll={handleSelectAll}
         footerContent={itemCountLabel(collection)}
         onNextPageClick={collection.hasNext ? () => onPageChange?.(collection.nextHref) : undefined}
         onPreviousPageClick={
@@ -179,6 +224,10 @@ export function EntityItemCollectionTable({
             <RecordTableRow
               key={item.id}
               cells={cells}
+              selected={selectedIds.has(item.id)}
+              onSelectChange={
+                onSelectionChange ? (checked) => handleRowSelectChange(item, checked) : undefined
+              }
               onClick={onEntityItemClick ? () => onEntityItemClick(item) : undefined}
               actions={
                 <>

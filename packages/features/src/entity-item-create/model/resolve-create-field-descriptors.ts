@@ -1,5 +1,7 @@
 import type {
   CreateFormProperty,
+  CreateFormRelationToManyProperty,
+  CreateFormRelationToOneProperty,
   CreateHalFormTemplate,
   HalFormsProperty,
 } from "@contentgrid/navigator-data";
@@ -21,18 +23,40 @@ export interface ResolvedCreateFieldDescriptors {
  * No React, no fetching. Produces the `kind`-discriminated `FieldDescriptor` union, carrying the
  * raw `HalFormsProperty` through on every field (see `model/field-descriptor.ts`).
  *
- * Scope note: this only covers the create-form path's user-defined attributes (relations are out
- * of scope for this pass). It does not produce a `filter`/`sort` descriptor either — those are
- * reserved union members for a future search-form-aware bridge.
+ * Scope note: this covers the create-form path's user-defined attributes AND relations. It does
+ * not produce a `filter`/`sort` descriptor — those are reserved union members for a future
+ * search-form-aware bridge (see `model/field-descriptor.ts`'s doc comment for why).
  */
 export function resolveCreateFieldDescriptors(
   template: CreateHalFormTemplate,
 ): ResolvedCreateFieldDescriptors {
-  const fields: FieldDescriptor[] = template.userDefinedProperties.map(attributeFieldDescriptor);
+  const fields: FieldDescriptor[] = [
+    ...template.userDefinedProperties.map(attributeFieldDescriptor),
+    ...template.toOneRelationProperties.map((prop) => relationFieldDescriptor(prop, false)),
+    ...template.toManyRelationProperties.map((prop) => relationFieldDescriptor(prop, true)),
+  ];
 
   return {
     fields,
     layout: { groups: [{ fieldNames: fields.map((field) => field.name) }] },
+  };
+}
+
+function relationFieldDescriptor(
+  prop: CreateFormRelationToOneProperty | CreateFormRelationToManyProperty,
+  multiValue: boolean,
+): FieldDescriptor {
+  const { property, profileRelation, isRequired } = prop;
+  return {
+    kind: "relation",
+    name: property.name,
+    label: property.prompt ?? profileRelation?.title ?? formatFieldName(property.name),
+    required: isRequired,
+    readOnly: property.readOnly,
+    description: profileRelation?.description || undefined,
+    property,
+    profileRelation,
+    multiValue,
   };
 }
 

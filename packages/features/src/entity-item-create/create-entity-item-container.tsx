@@ -8,6 +8,7 @@ import {
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
+import type { RelationItemCreateHandler } from "../entity-item";
 import {
   ProblemAlert,
   type RelationConflictAlertProps,
@@ -34,6 +35,8 @@ export interface CreateEntityItemContainerProps {
    * tracks this signal and owns the guard itself.
    */
   readonly onDirtyChange?: (isDirty: boolean) => void;
+  /** See `render/form-container.tsx`'s `FormContainerProps.onCreateNew` doc comment. */
+  readonly onCreateNew?: RelationItemCreateHandler;
   /**
    * Fires for a `duplicate` entity-level validation error (HTTP 400) — e.g. a unique
    * constraint spanning fields the create-form doesn't render inline. Receives the
@@ -104,6 +107,7 @@ function CreateEntityItemContainerReady({
   onCreated,
   onCancel,
   onDirtyChange,
+  onCreateNew,
   onConflictingItemClick,
   onMissingRelationTargetClick,
   onAllowedValuesClick,
@@ -207,6 +211,7 @@ function CreateEntityItemContainerReady({
       fieldState={formState.fieldState}
       onFieldChange={formState.setValue}
       onFieldBlur={formState.touchField}
+      onCreateNew={onCreateNew}
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}

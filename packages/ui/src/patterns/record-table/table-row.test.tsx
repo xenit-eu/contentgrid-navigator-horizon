@@ -147,4 +147,43 @@ describe("RecordTableRow", () => {
     const cells = screen.getAllByRole("cell");
     expect(cells.at(-1)).toHaveClass("sticky", "right-0", "bg-accent", "dark:bg-accent/15");
   });
+
+  it("does not render a selection checkbox when onSelectChange is absent", () => {
+    render(<RecordTableRow cells={CELLS} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("renders an unchecked selection checkbox when onSelectChange is provided and selected is false", () => {
+    render(<RecordTableRow cells={CELLS} onSelectChange={vi.fn()} />);
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+  });
+
+  it("renders a checked selection checkbox when selected is true", () => {
+    render(<RecordTableRow cells={CELLS} selected onSelectChange={vi.fn()} />);
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
+  it("calls onSelectChange with the next checked state when the checkbox is toggled", async () => {
+    const user = userEvent.setup();
+    const onSelectChange = vi.fn();
+    render(<RecordTableRow cells={CELLS} onSelectChange={onSelectChange} />);
+    await user.click(screen.getByRole("checkbox"));
+    expect(onSelectChange).toHaveBeenCalledWith(true);
+  });
+
+  it("does not call the row's onClick when the selection checkbox is clicked", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(<RecordTableRow cells={CELLS} onClick={onClick} onSelectChange={vi.fn()} />);
+    await user.click(screen.getByRole("checkbox"));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("sizes the grid template for cells.length + 1 tracks when onSelectChange is present", () => {
+    const { container } = render(<RecordTableRow cells={CELLS} onSelectChange={vi.fn()} />);
+    const row = container.querySelector('[role="row"]') as HTMLElement;
+    expect(row.style.gridTemplateColumns).toBe(
+      getRecordTableGridTemplate(CELLS.length, { hasSelection: true }),
+    );
+  });
 });

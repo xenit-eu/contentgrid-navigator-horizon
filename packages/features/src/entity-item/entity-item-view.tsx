@@ -12,6 +12,7 @@ import { EntityItemAttributes } from "./attributes/entity-item-attributes";
 import type {
   MutationErrorDisplayProps,
   RelationItemClickHandler,
+  RelationItemCreateHandler,
 } from "./relations/relation-shared";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
@@ -60,6 +61,9 @@ export type EntityItemViewProps = EntityItemIdentity &
      * entity's profile name and the item's id.
      */
     readonly onRelationItemClick?: RelationItemClickHandler;
+    /** Fired from a relation section's "Create new" affordance; receives the target entity's
+     * profile name. See `RelationItemSearchDialog`'s `onCreateNew` doc comment. */
+    readonly onRelationItemCreateNew?: RelationItemCreateHandler;
   };
 
 /**
@@ -76,6 +80,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
     breadcrumbs,
     actions,
     onRelationItemClick,
+    onRelationItemCreateNew,
     onMissingRelationTargetClick,
     onBlindRelationOverwriteClick,
     onRequiredRelationClick,
@@ -115,6 +120,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
                     relation={rel}
                     profiles={loadedProfiles}
                     onItemClick={onRelationItemClick}
+                    onCreateNew={onRelationItemCreateNew}
                     onMissingRelationTargetClick={onMissingRelationTargetClick}
                     onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
                   />
@@ -125,6 +131,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
                     relation={rel}
                     profiles={loadedProfiles}
                     onItemClick={onRelationItemClick}
+                    onCreateNew={onRelationItemCreateNew}
                     onMissingRelationTargetClick={onMissingRelationTargetClick}
                     onRequiredRelationClick={onRequiredRelationClick}
                     onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { PageTitle, UnsavedChangesDialog } from "@contentgrid/ui";
+import type { RelationItemCreateHandler } from "../entity-item";
 import type { RelationConflictAlertProps, ValidationAlertProps } from "../problem-details";
 import { useUnsavedChangesGuard } from "../unsaved-changes-guard";
 import { CreateEntityItemContainer } from "./create-entity-item-container";
@@ -11,6 +12,9 @@ export interface CreateEntityItemViewProps {
   readonly onCreated?: (item: EntityItem) => void;
   /** Renders a cancel button next to submit when provided. */
   readonly onCancel?: () => void;
+  /** Fired from a relation field's "Create new" affordance; receives the target entity's profile
+   * name. See `RelationItemSearchDialog`'s `onCreateNew` doc comment. */
+  readonly onCreateNew?: RelationItemCreateHandler;
   /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
   readonly onConflictingItemClick?: ValidationAlertProps["onConflictingItemClick"];
   /** See `CreateEntityItemContainerProps`' doc comment of the same name. */
@@ -37,6 +41,7 @@ export function CreateEntityItemView({
   profile,
   onCreated,
   onCancel,
+  onCreateNew,
   onConflictingItemClick,
   onMissingRelationTargetClick,
   onAllowedValuesClick,
@@ -62,6 +67,7 @@ export function CreateEntityItemView({
           onCreated && ((item) => unsavedChangesGuard.withoutBlocking(() => onCreated(item)))
         }
         onCancel={onCancel && (() => unsavedChangesGuard.withoutBlocking(onCancel))}
+        onCreateNew={onCreateNew}
         onConflictingItemClick={onConflictingItemClick}
         onMissingRelationTargetClick={onMissingRelationTargetClick}
         onAllowedValuesClick={onAllowedValuesClick}

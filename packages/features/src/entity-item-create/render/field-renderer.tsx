@@ -8,8 +8,10 @@ import {
   NumberRenderer,
   TextRenderer,
 } from "@contentgrid/ui";
+import type { RelationItemCreateHandler } from "../../entity-item";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { FieldState } from "../state/field-state";
+import { RelationField } from "./relation-field";
 
 export interface FieldRendererProps {
   readonly field: FieldDescriptor;
@@ -25,6 +27,10 @@ export interface FieldRendererProps {
    */
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
+  /** Only consumed by the `"relation"` kind — see `RelationItemSearchDialog`'s `onCreateNew` doc
+   * comment. Forwarded through unchanged (not curried per field, unlike `onFocus`/`onBlur`): it
+   * carries no field-specific data, `RelationField` itself supplies the target profile name. */
+  readonly onCreateNew?: RelationItemCreateHandler;
 }
 
 /**
@@ -47,6 +53,7 @@ export const FieldRenderer = memo(function FieldRenderer({
   fieldState,
   onFocus,
   onBlur,
+  onCreateNew,
 }: Readonly<FieldRendererProps>) {
   return renderFieldWidget({
     field,
@@ -55,6 +62,7 @@ export const FieldRenderer = memo(function FieldRenderer({
     fieldState,
     onFocus,
     onBlur,
+    onCreateNew,
   });
 });
 
@@ -65,6 +73,7 @@ function renderFieldWidget({
   fieldState,
   onFocus,
   onBlur,
+  onCreateNew,
 }: Readonly<FieldRendererProps>) {
   // Every `packages/ui` widget's `error` prop is a single string (see packages/ui/CLAUDE.md's
   // plain-scalar-prop rule), but a field can carry more than one error at once — e.g. a client
@@ -175,6 +184,16 @@ function renderFieldWidget({
     }
     case "file":
       return <UnsupportedFieldPlaceholder field={field} />;
+    case "relation":
+      return (
+        <RelationField
+          field={field}
+          value={value}
+          onChange={onChange}
+          error={error}
+          onCreateNew={onCreateNew}
+        />
+      );
     default: {
       const exhaustive: never = field;
       return exhaustive;

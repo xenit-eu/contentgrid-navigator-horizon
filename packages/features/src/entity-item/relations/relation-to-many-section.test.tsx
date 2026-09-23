@@ -2,10 +2,12 @@ import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   type EntityItem,
+  EntityItemAttributePlain,
   type EntityItemToManyRelation,
   NavigatorDataProvider,
   type ProfileEntity,
@@ -20,6 +22,8 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { RelationToManySection } from "./relation-to-many-section";
+
+vi.mock("sonner", () => ({ toast: { info: vi.fn(), success: vi.fn() } }));
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
@@ -77,7 +81,14 @@ const TARGET_PROFILE = makeProfileEntity(
       ],
       "blueprint:relation": [],
     },
-    _templates: {},
+    _templates: {
+      "create-form": {
+        method: "POST",
+        target: `${API_URL}/invoices`,
+        contentType: "application/json",
+        properties: [],
+      },
+    },
   },
   `${PROFILE_URL}/invoices`,
   "invoice",
@@ -107,10 +118,17 @@ function makeRelation(
 }
 
 function makeItem(id: string, amount: number, canDelete = false): EntityItem {
+  const attributes: Record<string, { value: EntityItemAttributePlain }> = {
+    id: { value: new EntityItemAttributePlain("id", id) },
+    amount: { value: new EntityItemAttributePlain("amount", amount) },
+  };
   return {
     id,
     canDelete,
     halItem: { data: { id, amount } },
+    findAttribute: (name: string) => attributes[name],
+    userDefinedAttributes: [],
+    selfLink: { href: `${API_URL}/invoices/${id}` },
   } as unknown as EntityItem;
 }
 
@@ -154,6 +172,18 @@ function mockCollectionState(
     data: undefined,
     ...state,
   } as unknown as ReturnType<typeof useEntityItemToManyRelation>);
+}
+
+/** Mocks `useEntityItemCollection` — the query the nested `RelationItemSearchDialog` (the
+ * "Link" picker) uses for its own search results, distinct from the relation's own
+ * `useEntityItemToManyRelation` mocked above. */
+function mockSearchCollectionState(data: ReturnType<typeof makeCollectionData>) {
+  vi.mocked(useEntityItemCollection).mockReturnValue({
+    isPending: false,
+    isSuccess: true,
+    isError: false,
+    data,
+  } as unknown as ReturnType<typeof useEntityItemCollection>);
 }
 
 const clearRelation = vi.fn();
@@ -238,10 +268,14 @@ describe("RelationToManySection", () => {
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });
 
-  it("shows an empty state and no Unlink all button when there are no items", () => {
+  it("starts collapsed and shows an empty state once expanded, with no Unlink all button, when there are no items", async () => {
+    const user = userEvent.setup();
     mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
     renderSection({ relation: makeRelation({ canClear: true }) });
-    expect(screen.getByText("No items linked")).toBeInTheDocument();
+    expect(screen.queryByText("No items linked")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /invoices/i }));
+    expect(await screen.findByText("No items linked")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /unlink all/i })).not.toBeInTheDocument();
   });
 
@@ -403,5 +437,141 @@ describe("RelationToManySection", () => {
     renderSection({ relation: makeRelation() });
     expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+  });
+
+  describe("link dialog (RelationItemSearchDialog)", () => {
+    it("shows a Create new affordance and calls onCreateNew with the target profile name", async () => {
+      const user = userEvent.setup();
+      const onCreateNew = vi.fn();
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      mockSearchCollectionState(makeCollectionData([]));
+      renderSection({ relation: makeRelation({ canAdd: true }), onCreateNew });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      await user.click(await screen.findByRole("button", { name: "Create" }));
+
+      expect(onCreateNew).toHaveBeenCalledWith("invoice");
+    });
+
+    it("does not show a Create new affordance when onCreateNew is not provided", async () => {
+      const user = userEvent.setup();
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      mockSearchCollectionState(makeCollectionData([]));
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      await screen.findByText("No items found");
+      expect(screen.queryByRole("button", { name: "Create" })).not.toBeInTheDocument();
+    });
+
+    it("requests the next page's href when the picker's Next is clicked", async () => {
+      const user = userEvent.setup();
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      mockSearchCollectionState(
+        makeCollectionData([makeItem("1", 10)], {
+          hasNext: true,
+          nextHref: `${API_URL}/invoices?page=2`,
+        }),
+      );
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      await user.click(await screen.findByRole("button", { name: "Next" }));
+
+      await waitFor(() => {
+        const lastCall = vi.mocked(useEntityItemCollection).mock.calls.at(-1);
+        expect(lastCall?.[0]).toEqual({
+          url: `${API_URL}/invoices?page=2`,
+          profileEntity: TARGET_PROFILE,
+        });
+      });
+    });
+
+    it("shows a checkbox per candidate row and a 'Link entity items' bulk action once multiple are checked", async () => {
+      const user = userEvent.setup();
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      mockSearchCollectionState(makeCollectionData([makeItem("1", 10), makeItem("2", 20)]));
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      // First is the header "select all" checkbox; the two candidate rows follow.
+      const checkboxes = await screen.findAllByRole("checkbox");
+      expect(checkboxes).toHaveLength(3);
+      expect(screen.queryByRole("button", { name: "Link entity items" })).not.toBeInTheDocument();
+
+      await user.click(checkboxes[1]);
+      await user.click(checkboxes[2]);
+
+      expect(screen.getByText("2 items selected")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Link entity items" })).toBeInTheDocument();
+    });
+
+    it("calls addRelation with every checked item's href at once when Link entity items is confirmed", async () => {
+      const user = userEvent.setup();
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      mockSearchCollectionState(makeCollectionData([makeItem("1", 10), makeItem("2", 20)]));
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      const checkboxes = await screen.findAllByRole("checkbox");
+      await user.click(checkboxes[1]);
+      await user.click(checkboxes[2]);
+      await user.click(screen.getByRole("button", { name: "Link entity items" }));
+
+      expect(addRelation).toHaveBeenCalledWith([`${API_URL}/invoices/1`, `${API_URL}/invoices/2`]);
+    });
+
+    it("notifies and skips an already-linked item instead of duplicating it, while still linking the new one", async () => {
+      const user = userEvent.setup();
+      // Item "1" is already linked (present in the relation's own currently-loaded page);
+      // item "2" is new.
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("1", 10)]) });
+      mockSearchCollectionState(makeCollectionData([makeItem("1", 10), makeItem("2", 20)]));
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      const checkboxes = await screen.findAllByRole("checkbox");
+      await user.click(checkboxes[1]);
+      await user.click(checkboxes[2]);
+      await user.click(screen.getByRole("button", { name: "Link entity items" }));
+
+      expect(toast.info).toHaveBeenCalledWith("1 item was already linked and was skipped.");
+      expect(addRelation).toHaveBeenCalledWith([`${API_URL}/invoices/2`]);
+    });
+
+    it("does not call addRelation when every checked item is already linked", async () => {
+      const user = userEvent.setup();
+      mockCollectionState({
+        isSuccess: true,
+        data: makeCollectionData([makeItem("1", 10), makeItem("2", 20)]),
+      });
+      mockSearchCollectionState(makeCollectionData([makeItem("1", 10), makeItem("2", 20)]));
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      const checkboxes = await screen.findAllByRole("checkbox");
+      await user.click(checkboxes[1]);
+      await user.click(checkboxes[2]);
+      await user.click(screen.getByRole("button", { name: "Link entity items" }));
+
+      expect(toast.info).toHaveBeenCalledWith("2 items were already linked and were skipped.");
+      expect(addRelation).not.toHaveBeenCalled();
+    });
+
+    it("unchecking a selected row's checkbox removes it from the count", async () => {
+      const user = userEvent.setup();
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      mockSearchCollectionState(makeCollectionData([makeItem("1", 10), makeItem("2", 20)]));
+      renderSection({ relation: makeRelation({ canAdd: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      const checkboxes = await screen.findAllByRole("checkbox");
+      await user.click(checkboxes[1]);
+      await user.click(checkboxes[2]);
+      expect(screen.getByText("2 items selected")).toBeInTheDocument();
+
+      await user.click(checkboxes[1]);
+      expect(screen.getByText("1 item selected")).toBeInTheDocument();
+    });
   });
 });
