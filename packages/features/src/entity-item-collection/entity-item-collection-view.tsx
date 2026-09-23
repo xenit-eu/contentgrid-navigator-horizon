@@ -25,7 +25,6 @@ import { EntityIconBadge } from "../layout";
 import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
   applyFilterValues,
-  buildFilterProperties,
   coerceFilterValue,
   extractFilterValuesFromCollectionUrl,
   findActivelyFilteredAttributeNames,
@@ -68,13 +67,14 @@ export interface EntityItemCollectionViewProps {
  * Filters render through `@contentgrid/features/hal-forms`'s generic `HalFormsContainer` rather
  * than the earlier `FilterSidebar` pattern (`@contentgrid/ui`) — `resolveHalFormsFields` derives
  * the same two-column layout and field kinds (including `autocomplete` for a prefix/full-text
- * search property) directly from the search template. `filterProperties`
- * (`../search/filter-properties`'s `SearchFilterProperty[]`) is still the encoding/decoding
- * source of truth for the raw `filters: Record<string, string>` contract this view's own
- * caller-facing props keep (URL-state-backed, per `filter-url-state.ts`) — only the RENDERING
- * moved, not how a filter value round-trips to/from a HAL-FORMS request. `FilterSidebar` itself
- * is now unused by this view; it's fine to remove it or its own `TypeaheadTextFilter` next, but
- * neither is touched here.
+ * search property) directly from the search template, already deduplicated (hidden properties
+ * excluded, redundant exact-match/range siblings suppressed). `../search/filter-properties`'s
+ * remaining functions reuse that same `fields` list as their source of truth for how a filter
+ * value round-trips to/from the raw `filters: Record<string, string>` contract this view's own
+ * caller-facing props keep (URL-state-backed, per `filter-url-state.ts`) — there's no separate
+ * view-model list to keep in sync with `fields` any more. `FilterSidebar` itself is now unused
+ * by this view; it's fine to remove it or its own `TypeaheadTextFilter` next, but neither is
+ * touched here.
  */
 export function EntityItemCollectionView({
   profile,
@@ -87,10 +87,6 @@ export function EntityItemCollectionView({
   onSortChange,
 }: Readonly<EntityItemCollectionViewProps>) {
   const searchTemplate = profile.searchTemplate;
-  const filterProperties = useMemo(
-    () => (searchTemplate ? buildFilterProperties(searchTemplate) : []),
-    [searchTemplate],
-  );
   const { fields, layout } = useMemo(
     () =>
       searchTemplate
@@ -104,16 +100,12 @@ export function EntityItemCollectionView({
   // template behaves exactly as it did previously.
   const searchValues = useMemo(() => {
     if (!searchTemplate) return undefined;
-    const filtered = applyFilterValues(
-      createValues(searchTemplate.template),
-      filterProperties,
-      filters,
-    );
+    const filtered = applyFilterValues(createValues(searchTemplate.template), fields, filters);
     // `_sort` is always multi-value — pass a single-element array, never a plain string.
     return currentSort && searchTemplate.sortProperty
       ? filtered.withValue(searchTemplate.sortProperty.name, [currentSort])
       : filtered;
-  }, [searchTemplate, filterProperties, filters, currentSort]);
+  }, [searchTemplate, fields, filters, currentSort]);
 
   // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
   // that DIFFERS from the CURRENT filters (a deep link, or browser back/forward across a filter
@@ -127,23 +119,23 @@ export function EntityItemCollectionView({
   // different strings. Running `filters` through the same HAL-FORMS encoder `searchValues` uses
   // (via `profile.searchEntityRequest`) before comparing avoids that mismatch.
   const pageUrlFilters = useMemo(
-    () => (pageUrl ? extractFilterValuesFromCollectionUrl(filterProperties, pageUrl) : {}),
-    [pageUrl, filterProperties],
+    () => (pageUrl ? extractFilterValuesFromCollectionUrl(fields, pageUrl) : {}),
+    [pageUrl, fields],
   );
   const currentFilterParams = useMemo(
     () =>
       searchValues
         ? extractFilterValuesFromCollectionUrl(
-            filterProperties,
+            fields,
             profile.searchEntityRequest(searchValues).url,
           )
         : {},
-    [searchValues, filterProperties, profile],
+    [searchValues, fields, profile],
   );
   const effectivePageUrl = recordsEqual(currentFilterParams, pageUrlFilters) ? pageUrl : undefined;
   const invalidFilterKeys = useMemo(
-    () => new Set(findInvalidFilterKeys(filterProperties, filters)),
-    [filterProperties, filters],
+    () => new Set(findInvalidFilterKeys(fields, filters)),
+    [fields, filters],
   );
 
   // Filters live in a modal (triggered from the toolbar) rather than an always-visible sidebar
@@ -154,8 +146,8 @@ export function EntityItemCollectionView({
   // Attribute names the user is actively filtering on — always shown as columns regardless of
   // the local "Columns" selection below (see the union in EntityItemCollectionTable).
   const activelyFilteredAttributeNames = useMemo(
-    () => findActivelyFilteredAttributeNames(filterProperties, filters),
-    [filterProperties, filters],
+    () => (searchTemplate ? findActivelyFilteredAttributeNames(searchTemplate, filters) : []),
+    [searchTemplate, filters],
   );
 
   // A local, session-only "Columns" selector next to Filters — lets the user adjust visible
@@ -216,13 +208,16 @@ export function EntityItemCollectionView({
   // Pagination reset is the caller's responsibility here: a filter change is reported via
   // `onFiltersChange`, and the caller (the route) clears its own remembered page position — calling
   // `onPageChange` too would race with that.
-  function handleFilterChange(key: string, value: string | undefined) {
-    const next =
-      value === undefined
-        ? Object.fromEntries(Object.entries(filters).filter(([k]) => k !== key))
-        : { ...filters, [key]: value };
-    onFiltersChange?.(next);
-  }
+  const handleFilterChange = useCallback(
+    (key: string, value: string | undefined) => {
+      const next =
+        value === undefined
+          ? Object.fromEntries(Object.entries(filters).filter(([k]) => k !== key))
+          : { ...filters, [key]: value };
+      onFiltersChange?.(next);
+    },
+    [filters, onFiltersChange],
+  );
 
   function handleClearAll() {
     onFiltersChange?.({});
@@ -308,7 +303,7 @@ export function EntityItemCollectionView({
             visibleColumnNames={localVisibleColumns}
             forcedVisibleColumnNames={activelyFilteredAttributeNames}
             tableActions={
-              (attributeOptions.length > 0 || filterProperties.length > 0) && (
+              (attributeOptions.length > 0 || fields.length > 0) && (
                 <>
                   {attributeOptions.length > 0 && (
                     <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
@@ -327,7 +322,7 @@ export function EntityItemCollectionView({
                       </PopoverContent>
                     </Popover>
                   )}
-                  {filterProperties.length > 0 && (
+                  {fields.length > 0 && (
                     <Button variant="outline" onClick={() => setFiltersOpen(true)}>
                       <Funnel aria-hidden />
                       Filters
@@ -343,7 +338,7 @@ export function EntityItemCollectionView({
         )}
       </div>
 
-      {filterProperties.length > 0 && (
+      {fields.length > 0 && (
         <EntityItemCollectionFilterDialog
           open={filtersOpen}
           onOpenChange={setFiltersOpen}
