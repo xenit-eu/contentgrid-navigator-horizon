@@ -124,7 +124,6 @@ function CreateEntityItemContainerReady({
   // create-entity-item-form.tsx, which refocuses the first field only when this changes.
   const [formResetCount, setFormResetCount] = useState(0);
 
-
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
   }, [formState.isDirty, onDirtyChange]);
