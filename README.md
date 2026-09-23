@@ -9,7 +9,7 @@ Monorepo for the modernised ContentGrid Navigator front-end. The navigator is a 
 ```
 contentgrid-navigator-horizon/
 ├── apps/
-│   ├── navigator/              Generic track — production build, stable features only
+│   ├── navigator/              Generic track — production build, stable features only (gate suspended pre-GA)
 │   ├── navigator-experimental/ Experimental track — internal preview, all stability tiers
 │   └── storybook/              Storybook host + Playwright visual-regression harness (ADR-009)
 │

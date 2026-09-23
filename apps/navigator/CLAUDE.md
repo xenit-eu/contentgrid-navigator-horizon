@@ -1,7 +1,7 @@
 # apps/navigator — CLAUDE.md
 
 App: `navigator` (package name in `package.json`)
-Track: **GENERIC** — production, stable features only.
+Track: **GENERIC** — production; feature-stability gated (suspended pre-GA — see Track rules below).
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md))
 
 Platform-wide conventions: see root [`CLAUDE.md`](../../CLAUDE.md).
