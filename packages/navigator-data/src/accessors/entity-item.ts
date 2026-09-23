@@ -392,18 +392,6 @@ export class EntityItem {
   }
 
   /**
-   * Whether the current user is permitted to download (GET) binary content for this attribute.
-   *
-   * Derived from `contentLink` presence — same ABAC gate as `canUploadContent`.
-   *
-   * @param attributeName - The name of the content attribute
-   * @returns true when download is permitted
-   */
-  public canDownloadContent(attributeName: string): boolean {
-    return this.contentLink(attributeName) !== null;
-  }
-
-  /**
    * Builds a PUT Request for uploading binary content to a content attribute.
    *
    * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
