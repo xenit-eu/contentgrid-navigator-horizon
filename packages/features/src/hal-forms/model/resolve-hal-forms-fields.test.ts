@@ -268,3 +268,144 @@ const contactSearchProfileJson = {
     },
   },
 };
+
+// ---------------------------------------------------------------------------
+// Redundant-sibling suppression & hidden-property exclusion, ported from the former
+// `filter-properties.ts`'s `buildFilterProperties`/`isRedundantExactMatch`/
+// `isRedundantStrictRangeBound` (see `isRedundantSearchField` above) — this is the only place
+// that behavior is tested now that `filter-properties.ts` no longer computes it itself.
+// ---------------------------------------------------------------------------
+
+describe("resolveHalFormsFields — redundant field suppression (search)", () => {
+  const redundancyProfileJson = {
+    name: "invoice",
+    description: "",
+    _links: {
+      self: { href: "https://example.com/profile/invoices" },
+      describes: [
+        { href: "https://example.com/invoices", name: "collection" },
+        { href: "https://example.com/invoices/{id}", name: "item", templated: true },
+      ],
+      curies: [
+        {
+          href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+          name: "blueprint",
+          templated: true,
+        },
+      ],
+    },
+    _embedded: {
+      "blueprint:attribute": [
+        {
+          name: "code",
+          title: "Code",
+          type: "string",
+          description: "",
+          readOnly: false,
+          required: false,
+          _embedded: {
+            "blueprint:constraint": [],
+            "blueprint:search-param": [
+              { name: "code", title: "Code", type: "exact-match" },
+              { name: "code~prefix", title: "Code prefix", type: "prefix-match" },
+            ],
+            "blueprint:attribute": [],
+          },
+          _links: {},
+        },
+        {
+          name: "amount",
+          title: "Amount",
+          type: "long",
+          description: "",
+          readOnly: false,
+          required: false,
+          _embedded: {
+            "blueprint:constraint": [],
+            "blueprint:search-param": [
+              { name: "amount", title: "Amount", type: "exact-match" },
+              { name: "amount~gt", title: "Amount gt", type: "greater-than" },
+              { name: "amount~gte", title: "Amount gte", type: "greater-than-or-equal" },
+            ],
+            "blueprint:attribute": [],
+          },
+          _links: {},
+        },
+      ],
+      "blueprint:relation": [
+        {
+          name: "vendor",
+          title: "Vendor",
+          description: "",
+          many_source_per_target: true,
+          many_target_per_source: false,
+          required: false,
+          _links: { "blueprint:target-entity": { href: "https://example.com/profile/vendors" } },
+        },
+      ],
+    },
+    _templates: {
+      default: { method: "HEAD", target: "https://example.com/invoices", properties: [] },
+      "create-form": { method: "POST", target: "https://example.com/invoices", properties: [] },
+      search: {
+        method: "GET",
+        target: "https://example.com/invoices",
+        properties: [
+          { name: "code", type: "text" },
+          { name: "code~prefix", type: "text" },
+          { name: "amount", type: "number" },
+          { name: "amount~gt", type: "number" },
+          { name: "amount~gte", type: "number" },
+          { name: "vendor.name", type: "text" },
+          { name: "vendor.name~prefix", type: "text" },
+          { name: "_internal_scope", type: "hidden", value: "abc" },
+        ],
+      },
+    },
+  };
+
+  function makeRedundancyTemplate() {
+    const profile = makeProfileEntity(
+      redundancyProfileJson,
+      "https://example.com/profile/invoices",
+      "invoice",
+    );
+    const rawTemplate = resolveTemplate(
+      redundancyProfileJson as unknown as Parameters<typeof resolveTemplate>[0],
+      "search",
+    )!;
+    return new SearchHalFormTemplate(rawTemplate, profile);
+  }
+
+  it("excludes a 'hidden' wire-type property from the result", () => {
+    const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
+    expect(fields.find((field) => field.name === "_internal_scope")).toBeUndefined();
+  });
+
+  it("suppresses a bare exact-match property when a prefix-match sibling exists", () => {
+    const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
+    expect(fields.find((field) => field.name === "code")).toBeUndefined();
+    expect(fields.find((field) => field.name === "code~prefix")).toBeDefined();
+  });
+
+  it("suppresses a bare exact-match relation-traversal property when a prefix-match sibling exists", () => {
+    const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
+    expect(fields.find((field) => field.name === "vendor.name")).toBeUndefined();
+    expect(fields.find((field) => field.name === "vendor.name~prefix")).toBeDefined();
+  });
+
+  it("suppresses the strict greater-than bound once the inclusive greater-than-or-equal bound exists", () => {
+    const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
+    expect(fields.find((field) => field.name === "amount~gt")).toBeUndefined();
+    expect(fields.find((field) => field.name === "amount~gte")).toBeDefined();
+  });
+
+  it("keeps a bare exact-match NUMBER property even when range siblings exist", () => {
+    // Mirrors the legacy Navigator (RangedJsfFormConvertor.createJsonProperty in
+    // contentgrid-navigator's src/components/form/jsonforms.ts), which only drops the lone base
+    // property for a datetime/datetime-local attribute — a numeric attribute like "amount"
+    // keeps its bare exact-match filter alongside its range siblings.
+    const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
+    expect(fields.find((field) => field.name === "amount")).toBeDefined();
+  });
+});

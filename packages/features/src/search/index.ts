@@ -1,7 +1,6 @@
 export { useDebouncedValue } from "./use-debounced-value";
 export {
   applyFilterValues,
-  buildFilterProperties,
   coerceFilterValue,
   extractFilterValuesFromCollectionUrl,
   findInvalidFilterKeys,
