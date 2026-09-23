@@ -21,6 +21,3 @@ playwright-report/
 blob-report/
 playwright/.cache/
 .pnpm-store/
-
-# Python (fixture generation scripts, e.g. test-fixtures/pdf/generate-fixtures.py)
-__pycache__/
