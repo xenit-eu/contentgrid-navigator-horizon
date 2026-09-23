@@ -12,7 +12,8 @@ export interface TypeaheadRendererProps {
   readonly isLoading?: boolean;
   readonly placeholder?: string;
   readonly disabled?: boolean;
-  readonly "aria-label"?: string;
+  /** Required: this input renders no visible `<label>`, so an accessible name must come from here. */
+  readonly "aria-label": string;
 }
 
 /**
@@ -37,6 +38,7 @@ export function TypeaheadRenderer({
   const [open, setOpen] = useState(false);
   const showSuggestions = open && !disabled && (suggestions.length > 0 || isLoading);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const listboxId = `${name}-suggestions`;
 
   useEffect(() => () => clearTimeout(closeTimeoutRef.current), []);
 
@@ -48,6 +50,7 @@ export function TypeaheadRenderer({
         role="combobox"
         aria-expanded={showSuggestions}
         aria-autocomplete="list"
+        aria-controls={listboxId}
         aria-label={ariaLabel}
         autoComplete="off"
         value={value}
@@ -64,12 +67,20 @@ export function TypeaheadRenderer({
       />
       {showSuggestions && (
         <ul
+          id={listboxId}
           role="listbox"
-          aria-label={ariaLabel ? `${ariaLabel} suggestions` : "Suggestions"}
+          aria-label={`${ariaLabel} suggestions`}
           className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-popover p-1 shadow-md"
         >
           {isLoading && suggestions.length === 0 && (
-            <li className="px-2 py-1.5 text-sm text-muted-foreground">Loading…</li>
+            <li
+              role="option"
+              aria-disabled="true"
+              aria-selected={false}
+              className="px-2 py-1.5 text-sm text-muted-foreground"
+            >
+              Loading…
+            </li>
           )}
           {suggestions.map((suggestion) => (
             <li
