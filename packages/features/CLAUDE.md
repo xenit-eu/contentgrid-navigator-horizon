@@ -49,12 +49,19 @@ experimental → candidate → stable
 
 Rules:
 
-- A new feature starts at `"experimental"`.
-- The field must be present. Omitting it is meant to be a lint error, not yet wired.
+- The field must be present on every feature — enforced by the ESLint rule below
+  (a missing/invalid `x-stability` is a lint error).
 - Do NOT use any value other than the three listed above.
-- The generic build (`apps/navigator`) enforces that it imports only `stable`
-  features via an ESLint rule. This enforcement is not yet wired;
-  until it is, contributors must enforce it manually.
+- **Pre-GA exception:** while the product is pre-GA, the promotion ladder is
+  suspended. A new feature may start at any tier (typically `stable` directly)
+  and the generic build (`apps/navigator`) is not gated by stability tier — see
+  the [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga).
+  "A new feature starts at `experimental`" and "generic imports only `stable`"
+  apply again from production go-live.
+- The generic build (`apps/navigator`) enforces feature stability via an ESLint
+  rule (`apps/navigator/eslint.config.js`, `@contentgrid/no-unstable-features`).
+  It is wired and running; it is currently configured to allow all tiers
+  (pre-GA), so today it only catches an invalid/typo `x-stability` value.
 - The CI bundle audit fails the generic build if `experimental` or `candidate`
   feature code appears in the generic bundle — not yet wired.
 
@@ -65,12 +72,18 @@ Rules:
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md),
 [migration roadmap](../../docs/contentgrid-navigator-migration-roadmap.md))
 
+**Pre-GA: this workflow is suspended.** Since `apps/navigator` currently
+imports features at any tier, there is nothing to promote — pick the tier that
+matches the feature's actual maturity (typically `stable`) and move on. The
+workflow below applies again once the stability gate is reinstated at
+production go-live.
+
 Promotion = a PR that:
 
 1. Flips `x-stability` in the feature's `package.json`
    (e.g. `"experimental"` → `"candidate"`, or `"candidate"` → `"stable"`).
-2. For promotion to `stable`: adds the feature to `apps/navigator`'s import
-   allowlist (once the lint enforcement above is wired).
+2. For promotion to `stable`: confirms the feature is on `apps/navigator`'s
+   allowed stability tiers (the lint enforcement above is wired).
 
 No code moves between directories. No fork drift. The feature code stays in
 `packages/features/<name>/`.

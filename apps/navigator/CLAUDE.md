@@ -13,12 +13,16 @@ Per-package rules: [`packages/ui/CLAUDE.md`](../../packages/ui/CLAUDE.md),
 
 ## Track rules
 
-- **Allowed feature stability levels: `stable` only.**
-  Do NOT import features whose `x-stability` is `"experimental"` or
-  `"candidate"`. This boundary is enforced by an ESLint rule + CI bundle audit
-  (HZN-1.9 — not yet wired; enforce manually until then).
-- **Forbidden: experimental features.** No in-flight demos, no half-built
-  features, no customer-specific code.
+- **Allowed feature stability levels: `stable` only — suspended pre-GA.**
+  While the product is pre-GA, the ESLint rule (`apps/navigator/eslint.config.js`)
+  is configured to allow `experimental`, `candidate`, and `stable` — see the
+  [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga).
+  The `stable`-only boundary is reinstated at production go-live (CI bundle
+  audit, HZN-1.9, still not yet wired).
+- **Forbidden: half-built work.** No in-flight demos, no half-built features,
+  no customer-specific code — regardless of the pre-GA `x-stability` exception
+  above, a feature landing in this app should still be something you'd stand
+  behind.
 - **Forbidden: customer-specific code.** This app is the OSS-publishable generic
   navigator. No prospect names, no NDA-bound logic, no bespoke UI decisions.
   Customer apps live in private per-customer repos per
@@ -59,6 +63,8 @@ never edit it manually.
 
 - Not a demo environment — use `apps/navigator-experimental` for that.
 - Not a place to develop new features — develop them in
-  `packages/features/<name>/` at `"experimental"` stability, then promote.
+  `packages/features/<name>/`. Pre-GA, a new feature may start at any tier
+  (typically `"stable"` directly); the experimental → candidate → stable
+  promotion path resumes at go-live.
 - Not a place for customer-specific overrides — those belong in private
   per-customer repos (ADR-013).
