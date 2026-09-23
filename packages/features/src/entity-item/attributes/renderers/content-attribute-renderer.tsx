@@ -104,22 +104,20 @@ function DownloadContentButton({
  * small icon button, not its full drag-and-drop box) — this component does not hand-roll its
  * own file `<input>`; there is exactly one file-picking implementation in the package.
  *
- * The Download button (gated separately on `canDownload`, since read and write access can
- * differ) only shows in the idle view — once a replacement file is picked, `ContentUploadField`
- * takes over that space and there's no "current" server file left to distinguish from it.
+ * The Download button only shows in the idle view — once a replacement file is picked,
+ * `ContentUploadField` takes over that space and there's no "current" server file left to
+ * distinguish from it.
  */
 function ReplaceableContentValue({
   metadata,
   icon,
   entityItem,
   attributeName,
-  canDownload,
 }: Readonly<{
   metadata: ContentAttributeRendererProps["metadata"];
   icon: ContentAttributeRendererProps["icon"];
   entityItem: EntityItem;
   attributeName: string;
-  canDownload: boolean;
 }>) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
@@ -176,7 +174,7 @@ function ReplaceableContentValue({
   return (
     <span className="flex items-center gap-1.5">
       <MetadataValue metadata={metadata} icon={icon} />
-      {canDownload && metadata && (
+      {metadata && (
         <DownloadContentButton
           entityItem={entityItem}
           attributeName={attributeName}
@@ -204,8 +202,6 @@ export function ContentAttributeRenderer({
     return <MetadataValue metadata={metadata} icon={icon} />;
   }
 
-  const canDownload = metadata !== null && entityItem.canDownloadContent(attributeName);
-
   if (entityItem.canUploadContent(attributeName)) {
     return (
       <ReplaceableContentValue
@@ -218,7 +214,6 @@ export function ContentAttributeRenderer({
         icon={icon}
         entityItem={entityItem}
         attributeName={attributeName}
-        canDownload={canDownload}
       />
     );
   }
@@ -226,7 +221,7 @@ export function ContentAttributeRenderer({
   return (
     <span className="flex items-center gap-1.5">
       <MetadataValue metadata={metadata} icon={icon} />
-      {canDownload && metadata && (
+      {metadata && (
         <DownloadContentButton
           entityItem={entityItem}
           attributeName={attributeName}

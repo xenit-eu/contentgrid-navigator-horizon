@@ -37,13 +37,9 @@ vi.mocked(useDownloadContent).mockReturnValue({
   isPending: false,
 } as unknown as ReturnType<typeof useDownloadContent>);
 
-function makeEntityItem(
-  canUploadContent: boolean,
-  canDownloadContent: boolean = false,
-): EntityItem {
+function makeEntityItem(canUploadContent: boolean): EntityItem {
   return {
     canUploadContent: () => canUploadContent,
-    canDownloadContent: () => canDownloadContent,
   } as unknown as EntityItem;
 }
 
@@ -239,36 +235,24 @@ describe("ContentAttributeRenderer", () => {
       expect(screen.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
     });
 
-    it("renders no Download button when download is not ABAC-permitted", () => {
-      mockUploadState();
-      render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(false, false)}
-          attributeName="file"
-        />,
-      );
-      expect(screen.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
-    });
-
-    it("renders no Download button when metadata is null, even if download is permitted", () => {
+    it("renders no Download button when metadata is null, even when upload isn't permitted", () => {
       mockUploadState();
       render(
         <ContentAttributeRenderer
           metadata={null}
-          entityItem={makeEntityItem(false, true)}
+          entityItem={makeEntityItem(false)}
           attributeName="file"
         />,
       );
       expect(screen.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
     });
 
-    it("renders a Download button alongside the read-only metadata when upload isn't permitted but download is", async () => {
+    it("renders a Download button alongside the read-only metadata when upload isn't permitted", async () => {
       mockUploadState();
       render(
         <ContentAttributeRenderer
           metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(false, true)}
+          entityItem={makeEntityItem(false)}
           attributeName="file"
         />,
       );
@@ -276,12 +260,12 @@ describe("ContentAttributeRenderer", () => {
       expect(downloadMutate).toHaveBeenCalledOnce();
     });
 
-    it("renders a Download button alongside Replace when both are permitted", async () => {
+    it("renders a Download button alongside Replace when upload is permitted", async () => {
       mockUploadState();
       render(
         <ContentAttributeRenderer
           metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true, true)}
+          entityItem={makeEntityItem(true)}
           attributeName="file"
         />,
       );
@@ -295,7 +279,7 @@ describe("ContentAttributeRenderer", () => {
       const { container } = render(
         <ContentAttributeRenderer
           metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true, true)}
+          entityItem={makeEntityItem(true)}
           attributeName="file"
         />,
       );

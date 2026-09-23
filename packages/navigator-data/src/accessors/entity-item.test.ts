@@ -715,18 +715,6 @@ describe("EntityItem — canUploadContent", () => {
   });
 });
 
-describe("EntityItem — canDownloadContent", () => {
-  it("returns true when the cg:content link is present", () => {
-    const item = makeEntityItemWithContentLink();
-    expect(item.canDownloadContent("document")).toBe(true);
-  });
-
-  it("returns false when the cg:content link is absent", () => {
-    const item = makeEntityItemWithoutContentLink();
-    expect(item.canDownloadContent("document")).toBe(false);
-  });
-});
-
 describe("EntityItem — uploadContentRequest", () => {
   // jsdom's Request/FormData round-trip doesn't reliably preserve the per-part filename
   // through `req.formData()` (a known jsdom limitation, unlike real browsers/Node's undici —
