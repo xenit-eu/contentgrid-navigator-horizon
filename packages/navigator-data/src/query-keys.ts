@@ -9,6 +9,8 @@ const ENTITY_DISPLAY_DEFAULTS_KEY = "EntityDisplayDefaults";
 const TO_ONE_RELATION_KEY = "ToOneRelation";
 const TO_MANY_RELATION_KEY = "ToManyRelation";
 const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
+const ENTITY_SEARCH_VALUE_SUGGESTIONS_KEY = "EntitySearchValueSuggestions";
+const ENTITY_SEARCH_EFFECTIVE_MATCHES_KEY = "EntitySearchEffectiveMatches";
 const COLLECTION_PAGE_KEY = "CollectionPage";
 const COLLECTION_FILTERS_KEY = "CollectionFilters";
 const COLLECTION_SORT_KEY = "CollectionSort";
@@ -118,6 +120,39 @@ export const queryKeys = {
      */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
+  },
+
+  /**
+   * `useEntitySearchSuggestions`'s per-attribute value-suggestion fan-out — same "own root, own
+   * `byUrl`" rationale as `typeaheadSuggestions` (see its doc comment): a per-attribute probe
+   * request can encode to the same URL as an unrelated `useTypeahead`/collection query, and
+   * sharing a cache entry across differently-configured observers is what that root exists to
+   * avoid. Kept separate from `typeaheadSuggestions` itself (rather than reused) so the two
+   * hooks' queries never collide even when they happen to probe the exact same property/URL at
+   * the same time (e.g. this search bar and the existing multi-field Filters dialog open at once).
+   *
+   * `propertyName` (the CURRENT entity's own property name, e.g. `"vendor.name~prefix"` — not
+   * the relation-resolved target's local name) is part of the key, not just `url`: before a
+   * relation-traversal property's target profile has resolved, its request is disabled and its
+   * `url` is `""`, the same placeholder every other not-yet-resolved property also uses — without
+   * `propertyName` discriminating them, every disabled query across every contributing property
+   * would collide onto one identical key (TanStack Query's "Duplicate Queries" warning).
+   */
+  entitySearchValueSuggestions: {
+    byUrl: (profileEntity: ProfileEntity, propertyName: string, url: string) =>
+      [ENTITY_SEARCH_VALUE_SUGGESTIONS_KEY, profileEntity.name, propertyName, url] as const,
+  },
+
+  /**
+   * `useEntitySearchSuggestions`'s per-attribute effective-match candidate fan-out. Its own root
+   * for the same reason as `entitySearchValueSuggestions` above — these requests target the
+   * CURRENT entity's own collection (research D2) and can easily encode to a URL identical to the
+   * table's own `entityItemCollection` query or another attribute's probe. `propertyName` is part
+   * of the key for the same disabled-query-collision reason documented there.
+   */
+  entitySearchEffectiveMatches: {
+    byUrl: (profileEntity: ProfileEntity, propertyName: string, url: string) =>
+      [ENTITY_SEARCH_EFFECTIVE_MATCHES_KEY, profileEntity.name, propertyName, url] as const,
   },
 
   collectionPage: {

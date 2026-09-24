@@ -26,8 +26,17 @@ export type {
   EntityItemByProfile,
   EntityItemDiscoverProfile,
 } from "./item/use-entity-item";
-export { useTypeahead } from "./collection/use-typeahead";
-export type { UseTypeaheadOptions } from "./collection/use-typeahead";
+export {
+  useTypeahead,
+  resolveTypeaheadTarget,
+  extractSuggestions,
+} from "./collection/use-typeahead";
+export type { UseTypeaheadOptions, ResolvedTypeaheadTarget } from "./collection/use-typeahead";
+export { useEntitySearchSuggestions } from "./collection/use-entity-search-suggestions";
+export type {
+  UseEntitySearchSuggestionsOptions,
+  SearchTermSuggestionCandidate,
+} from "./collection/use-entity-search-suggestions";
 export { useEntityItemToOneRelation } from "./relation/use-entity-item-to-one-relation";
 export type { UseEntityItemToOneRelationOptions } from "./relation/use-entity-item-to-one-relation";
 export { useEntityItemToManyRelation } from "./relation/use-entity-item-to-many-relation";
