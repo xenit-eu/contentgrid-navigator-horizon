@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import jsInPdfUrl from "./fixtures/js-in-pdf.pdf?url";
 import minimalPdfUrl from "./fixtures/minimal.pdf?url";
+import multiPagePdfUrl from "./fixtures/multi-page.pdf?url";
 import { PdfViewer } from "./pdf-viewer";
 import { PdfViewerHarness, StoryFrame, wasmUrl } from "./pdf-viewer-story-helpers";
 
@@ -50,6 +51,14 @@ function InteractionHarness() {
         onClick={() => setDoc({ src: minimalPdfUrl, filename: "minimal.pdf" })}
       >
         Load minimal.pdf
+      </button>
+      <button
+        type="button"
+        data-testid="load-multi-page-doc"
+        className="sr-only"
+        onClick={() => setDoc({ src: multiPagePdfUrl, filename: "multi-page.pdf" })}
+      >
+        Load multi-page.pdf
       </button>
       <PdfViewerHarness
         key={doc.src}
@@ -195,6 +204,30 @@ export const WithInteraction: Story = {
       await step("print button is enabled once the document is ready", async () => {
         const printButton = await canvas.findByLabelText("Print");
         await expect(printButton).toBeEnabled();
+      });
+
+      await step("multi-page.pdf: previous/next follow the page bounds", async () => {
+        await userEvent.click(canvas.getByTestId("load-multi-page-doc"));
+        await waitFor(() => expect(canvas.getByText("/ 2")).toBeInTheDocument(), {
+          timeout: 10_000,
+        });
+        // Two pages ("Hello" / "World") — previous is disabled on the first
+        // page, next on the last; the jump input commits on Enter.
+        const previousPage = await canvas.findByLabelText("Previous page");
+        const nextPage = await canvas.findByLabelText("Next page");
+        const pageInput = await canvas.findByLabelText("Current page");
+        await expect(previousPage).toBeDisabled();
+        await expect(nextPage).toBeEnabled();
+
+        await userEvent.click(nextPage);
+        await waitFor(() => expect(pageInput).toHaveValue("2"));
+        await waitFor(() => expect(nextPage).toBeDisabled());
+        await expect(previousPage).toBeEnabled();
+
+        await userEvent.clear(pageInput);
+        await userEvent.type(pageInput, "1{Enter}");
+        await waitFor(() => expect(pageInput).toHaveValue("1"));
+        await waitFor(() => expect(previousPage).toBeDisabled());
       });
     } finally {
       window.alert = originalAlert;

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
 import jsInPdfUrl from "./fixtures/js-in-pdf.pdf?url";
 import minimalPdfUrl from "./fixtures/minimal.pdf?url";
+import multiPagePdfUrl from "./fixtures/multi-page.pdf?url";
 import { PdfViewer } from "./pdf-viewer";
 import { DEFAULT_PDF_VIEWER_LABELS } from "./pdf-viewer-labels";
 import { PdfViewerHarness, StoryFrame, wasmUrl } from "./pdf-viewer-story-helpers";
@@ -90,8 +91,8 @@ export const Default: Story = {
   // `aria-busy` from its first commit (see `PdfViewerHarness`'s fixture-
   // loading placeholder) until the first page paints, and the visual harness
   // (`visual.spec.ts`) waits for that before screenshotting (ADR-009). Only
-  // the stories that mount the real engine (`Default`, `ToolbarMinimal`,
-  // `Invalid`, `JsInPdf`) carry this tag — the mocked stories below never
+  // the stories that mount the real engine (`Default`, `MultiPage`,
+  // `ToolbarMinimal`, `Invalid`, `JsInPdf`) carry this tag — the mocked stories below never
   // render `aria-busy="true"`, so the wait would be a pointless no-op there.
   tags: ["async-content"],
   render: () => (
@@ -99,6 +100,24 @@ export const Default: Story = {
       <PdfViewerHarness
         src={minimalPdfUrl}
         filename="minimal.pdf"
+        wasmUrl={wasmUrl}
+        onDownload={fn()}
+        onDocumentOpened={fn()}
+        onLoadError={fn()}
+      />
+    </StoryFrame>
+  ),
+};
+
+/** Real engine on a two-page fixture ("Hello" / "World"): the toolbar shows "/ 2" with next enabled. */
+export const MultiPage: Story = {
+  // `async-content` — see `Default`.
+  tags: ["async-content"],
+  render: () => (
+    <StoryFrame>
+      <PdfViewerHarness
+        src={multiPagePdfUrl}
+        filename="multi-page.pdf"
         wasmUrl={wasmUrl}
         onDownload={fn()}
         onDocumentOpened={fn()}
