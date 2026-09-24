@@ -110,6 +110,16 @@ describe("AttributeSelect", () => {
     expect(trigger).toBeDisabled();
     expect(trigger).toHaveTextContent("No options available");
   });
+
+  it("defaults to the default (h-9) trigger size", () => {
+    render(<AttributeSelect attributes={ATTRIBUTES} onSelect={vi.fn()} />);
+    expect(screen.getByRole("combobox")).toHaveAttribute("data-size", "default");
+  });
+
+  it("renders a compact (h-8) trigger when size='sm', for inline placements like a toolbar", () => {
+    render(<AttributeSelect attributes={ATTRIBUTES} onSelect={vi.fn()} size="sm" />);
+    expect(screen.getByRole("combobox")).toHaveAttribute("data-size", "sm");
+  });
 });
 
 describe("AttributeMultiSelect", () => {

@@ -1,0 +1,87 @@
+import { forwardRef, useState } from "react";
+import type { ReactNode } from "react";
+import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { Button } from "@contentgrid/ui";
+
+export interface ContentFocusLayoutProps {
+  /** The content/PDF preview, rendered in the main (left) region. */
+  readonly preview: ReactNode;
+  /** Attributes + relations, rendered in the collapsible side panel. */
+  readonly sidePanel: ReactNode;
+  /**
+   * Accessible name for the side panel and its collapse/expand button (`"Collapse
+   * ${sidePanelTitle}"` / `"Expand ${sidePanelTitle}"`). Defaults to `"Details"`. Also the
+   * visual header shown when the panel is open, unless `sidePanelHeader` overrides it.
+   */
+  readonly sidePanelTitle?: string;
+  /**
+   * Visual content for the header bar shown when the panel is open — defaults to plain
+   * `sidePanelTitle` text. Pass a richer node (e.g. `EntityItemReference`, so the panel shows
+   * which item it belongs to instead of a generic label) here; `sidePanelTitle` still supplies
+   * the accessible name regardless.
+   */
+  readonly sidePanelHeader?: ReactNode;
+  /** Whether the side panel starts expanded. Defaults to `true`. */
+  readonly defaultSidePanelOpen?: boolean;
+}
+
+/**
+ * Two-region content-focus layout (spec `contracts/content-focus-view.md`): preview on the
+ * left, a collapsible side panel (existing entity-item attributes/relations) on the right at
+ * `1fr / 360px`. Fills the available height with no nested scrollbars (FR-015) — each region
+ * owns its own `overflow`/`min-h-0` so only that region scrolls, never the page. Stacks
+ * vertically below 800px. Forwards `ref` to the outer element so a caller can request
+ * fullscreen on the whole layout (FR-011).
+ */
+export const ContentFocusLayout = forwardRef<HTMLDivElement, ContentFocusLayoutProps>(
+  function ContentFocusLayout(
+    {
+      preview,
+      sidePanel,
+      sidePanelTitle = "Details",
+      sidePanelHeader,
+      defaultSidePanelOpen = true,
+    },
+    ref,
+  ) {
+    const [open, setOpen] = useState(defaultSidePanelOpen);
+
+    return (
+      <div
+        ref={ref}
+        className={[
+          "grid h-full min-h-0 grid-cols-1 gap-4",
+          open ? "min-[800px]:grid-cols-[1fr_360px]" : "min-[800px]:grid-cols-[1fr_auto]",
+        ].join(" ")}
+      >
+        <div className="min-h-0 min-w-0 overflow-hidden">{preview}</div>
+        <div
+          className={[
+            "flex min-h-0 flex-col overflow-hidden rounded-lg border",
+            open ? "" : "min-[800px]:w-12",
+          ].join(" ")}
+        >
+          {/* px-2 py-1.5 + icon-sm matches PdfViewerToolbar's row so both bars line up */}
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b px-2 py-1.5">
+            {open && (
+              <div className="min-w-0 flex-1 truncate">
+                {sidePanelHeader ?? <span className="text-sm font-semibold">{sidePanelTitle}</span>}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={open ? `Collapse ${sidePanelTitle}` : `Expand ${sidePanelTitle}`}
+              aria-expanded={open}
+              onClick={() => setOpen((wasOpen) => !wasOpen)}
+            >
+              {open ? <CaretRightIcon className="size-4" /> : <CaretLeftIcon className="size-4" />}
+            </Button>
+          </div>
+          {open && <div className="min-h-0 flex-1 overflow-auto p-3">{sidePanel}</div>}
+        </div>
+      </div>
+    );
+  },
+);

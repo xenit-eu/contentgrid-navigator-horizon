@@ -1,17 +1,12 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
-  EntityItemView,
+  EntityItemContentFocusView,
   ensureEntityItemDetailLoaderData,
 } from "@contentgrid/features/entity-item";
-import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  BreadcrumbLink,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,13 +22,11 @@ export const Route = createFileRoute("/_app/$entity/$itemId")({
 function EntityItemDetailPage() {
   const { entity: entityName, itemId } = useParams({ strict: false });
 
-  // EntityProfileGate (the parent /$entity route) already resolved and
-  // validated the profile before this renders — this is a cached read.
-  const { data: profile } = useProfileEntity({ name: entityName });
+  // The route params are always defined once this component actually renders (matched by the
+  // file-based route below) — `strict: false` just widens the inferred type across every route.
+  if (!entityName || !itemId) return <LoadingPage />;
 
-  if (!profile || !itemId) return <LoadingPage />;
-
-  return <EntityItemDetailRoute profile={profile} itemId={itemId} />;
+  return <EntityItemDetailRoute entityName={entityName} itemId={itemId} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,58 +114,38 @@ function RelationProblemDialog({
 }
 
 function EntityItemDetailRoute({
-  profile,
+  entityName,
   itemId,
-}: Readonly<{ profile: ProfileEntity; itemId: string }>) {
+}: Readonly<{ entityName: string; itemId: string }>) {
   const go = useNavigate();
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
-  const breadcrumbs = (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <button
-            type="button"
-            onClick={() => go({ to: "/", search: {} })}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          >
-            Home
-          </button>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <button
-            type="button"
-            onClick={() =>
-              // Empty search, not `(prev) => prev`: filters aren't carried in this page's URL
-              // (see the list route's `onEntityItemClick`) — the list restores its earlier
-              // filters and page position from the QueryClient-remembered memos instead.
-              go({ to: "/$entity", params: { entity: profile.name }, search: {} })
-            }
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          >
-            {profile.pluralName}
-          </button>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>{itemId}</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
-
   return (
     <>
-      <EntityItemView
-        profile={profile}
+      <EntityItemContentFocusView
+        entityName={entityName}
         itemId={itemId}
-        toolbar
-        breadcrumbs={breadcrumbs}
-        onRelationItemClick={(profileEntityName, relatedItemId) =>
+        renderHomeLink={(label) => (
+          <BreadcrumbLink asChild>
+            <Link to="/" search={{}}>
+              {label}
+            </Link>
+          </BreadcrumbLink>
+        )}
+        renderCollectionLink={(relatedEntityName, label) => (
+          <BreadcrumbLink asChild>
+            {/* Empty search, not `(prev) => prev`: filters aren't carried in this page's URL (see
+                the list route's `onEntityItemClick`) — the list restores its earlier filters and
+                page position from the QueryClient-remembered page href instead. */}
+            <Link to="/$entity" params={{ entity: relatedEntityName }} search={{}}>
+              {label}
+            </Link>
+          </BreadcrumbLink>
+        )}
+        onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           go({
             to: "/$entity/$itemId",
-            params: { entity: profileEntityName, itemId: relatedItemId },
+            params: { entity: relatedEntityName, itemId: relatedItemId },
             search: (prev) => prev,
           })
         }

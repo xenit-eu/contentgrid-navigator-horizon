@@ -397,6 +397,9 @@ importers:
       '@contentgrid/ui':
         specifier: workspace:*
         version: link:../ui
+      '@embedpdf/pdfium':
+        specifier: 2.15.0
+        version: 2.15.0
       '@phosphor-icons/react':
         specifier: 2.1.10
         version: 2.1.10(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -416,6 +419,9 @@ importers:
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@storybook/react':
+        specifier: ^10.0.0
+        version: 10.4.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(storybook@10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.17)(prettier@3.8.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.101.0(react@19.2.7)
@@ -440,6 +446,9 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.7(react@19.2.7)
+      storybook:
+        specifier: 10.4.2
+        version: 10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.17)(prettier@3.8.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       typescript:
         specifier: ^6.0.0
         version: 6.0.3

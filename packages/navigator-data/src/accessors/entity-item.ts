@@ -605,7 +605,7 @@ export class EntityItemAttributeContent implements EntityItemAttributeBase<Attri
  * Metadata for a content attribute as returned in the entity-item response.
  * The binary data itself is fetched via the cg:content link.
  */
-interface ContentMetadata {
+export interface ContentMetadata {
   /** File size in bytes */
   readonly length: number;
   /** MIME type (e.g., "application/pdf", "image/jpeg") */
