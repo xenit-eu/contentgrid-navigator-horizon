@@ -163,27 +163,11 @@ describe("RecordTableRow", () => {
     expect(screen.getByRole("checkbox")).toBeChecked();
   });
 
-  it("calls onSelectChange with the next checked state when the checkbox is toggled", async () => {
-    const user = userEvent.setup();
-    const onSelectChange = vi.fn();
-    render(<RecordTableRow cells={CELLS} onSelectChange={onSelectChange} />);
-    await user.click(screen.getByRole("checkbox"));
-    expect(onSelectChange).toHaveBeenCalledWith(true);
-  });
-
   it("does not call the row's onClick when the selection checkbox is clicked", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
     render(<RecordTableRow cells={CELLS} onClick={onClick} onSelectChange={vi.fn()} />);
     await user.click(screen.getByRole("checkbox"));
     expect(onClick).not.toHaveBeenCalled();
-  });
-
-  it("sizes the grid template for cells.length + 1 tracks when onSelectChange is present", () => {
-    const { container } = render(<RecordTableRow cells={CELLS} onSelectChange={vi.fn()} />);
-    const row = container.querySelector('[role="row"]') as HTMLElement;
-    expect(row.style.gridTemplateColumns).toBe(
-      getRecordTableGridTemplate(CELLS.length, { hasSelection: true }),
-    );
   });
 });

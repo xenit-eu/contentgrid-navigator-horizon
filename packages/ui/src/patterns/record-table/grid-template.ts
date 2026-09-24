@@ -21,9 +21,7 @@ const ACTIONS_COLUMN_WIDTH = "72px";
 const MIN_DATA_COLUMN_WIDTH = "140px";
 
 /**
- * Fixed width for the leading row-selection checkbox column — same fixed-track reasoning as
- * `ACTIONS_COLUMN_WIDTH`: the header and every row are independent grid containers, so a
- * content-sized track would size the (empty) header checkbox cell differently from a row's.
+ * Fixed width for the leading selection checkbox column, so header and rows line up.
  */
 const SELECTION_COLUMN_WIDTH = "40px";
 

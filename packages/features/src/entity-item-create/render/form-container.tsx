@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
-import type { RelationItemCreateHandler } from "../../entity-item";
+import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { LayoutInformation } from "../model/layout-information";
 import type { FieldState } from "../state/field-state";
@@ -15,8 +15,10 @@ export interface FormContainerProps {
   /** See `field-renderer.tsx`'s `FieldRendererProps.onFocus`/`onBlur` doc comment. */
   readonly onFieldFocus?: (fieldName: string) => void;
   readonly onFieldBlur?: (fieldName: string) => void;
-  /** See `field-renderer.tsx`'s `FieldRendererProps.onCreateNew` doc comment. */
-  readonly onCreateNew?: RelationItemCreateHandler;
+  /** Opens a linked item, as legacy's relation "details" action. */
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
 }
 
 /**
@@ -36,7 +38,8 @@ export function FormContainer({
   fieldState,
   onFieldFocus,
   onFieldBlur,
-  onCreateNew,
+  onRelationItemClick,
+  onRelationItemCreateNew,
 }: Readonly<FormContainerProps>) {
   const fieldsByName = new Map(fields.map((field) => [field.name, field] as const));
 
@@ -56,7 +59,8 @@ export function FormContainer({
                 onChange={onChange}
                 onFieldFocus={onFieldFocus}
                 onFieldBlur={onFieldBlur}
-                onCreateNew={onCreateNew}
+                onRelationItemClick={onRelationItemClick}
+                onRelationItemCreateNew={onRelationItemCreateNew}
               />
             );
           })}
@@ -84,7 +88,8 @@ function FormField({
   onChange,
   onFieldFocus,
   onFieldBlur,
-  onCreateNew,
+  onRelationItemClick,
+  onRelationItemCreateNew,
 }: Readonly<{
   field: FieldDescriptor;
   value: FieldValue;
@@ -92,7 +97,8 @@ function FormField({
   onChange: (name: string, value: FieldValue) => void;
   onFieldFocus?: (fieldName: string) => void;
   onFieldBlur?: (fieldName: string) => void;
-  onCreateNew?: RelationItemCreateHandler;
+  onRelationItemClick?: RelationItemClickHandler;
+  onRelationItemCreateNew?: RelationItemCreateHandler;
 }>) {
   const { name } = field;
   const handleChange = useCallback((v: FieldValue) => onChange(name, v), [onChange, name]);
@@ -107,7 +113,8 @@ function FormField({
       fieldState={fieldState}
       onFocus={onFieldFocus && handleFocus}
       onBlur={onFieldBlur && handleBlur}
-      onCreateNew={onCreateNew}
+      onRelationItemClick={onRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
     />
   );
 }

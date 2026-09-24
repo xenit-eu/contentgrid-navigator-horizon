@@ -22,7 +22,6 @@ import {
   AlertDialogTitle,
 } from "../../primitives/alert-dialog";
 import { Button } from "../../primitives/button";
-import { Checkbox } from "../../primitives/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,18 +92,6 @@ export interface DataTableProps {
   isUnlinking?: boolean;
   /** Called when the user clicks the row itself (outside the action menu) */
   onRowClick?: (id: string) => void;
-  /** Ids of the currently selected rows. Controlled — presence of `onSelectionChange` (not this
-   * prop) is what decides whether the leading selection-checkbox column renders at all; omit both
-   * to keep the table selection-free. Defaults to no rows selected. */
-  selectedIds?: ReadonlySet<string>;
-  /** Fired with the full next selected-id set when a row or the header "select all" checkbox is
-   * toggled. */
-  onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
-  /** See `Table`'s own `containerClassName` doc comment — a caller that also height-constrains
-   * this table from outside (e.g. capping it at `max-h-64` so it scrolls within a dialog) sets
-   * the height cap and `overflow` here so the horizontal scrollbar stays reachable at the bottom
-   * of the visible viewport instead of the table's full, unclamped height. */
-  containerClassName?: string;
 }
 
 export function DataTable({
@@ -123,39 +110,9 @@ export function DataTable({
   onUnlink,
   isUnlinking,
   onRowClick,
-  selectedIds,
-  onSelectionChange,
-  containerClassName,
 }: Readonly<DataTableProps>) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [unlinkId, setUnlinkId] = useState<string | null>(null);
-
-  const hasSelection = !!onSelectionChange;
-  const selectedCount = rows.filter((row) => selectedIds?.has(row.id)).length;
-  const selectionState: boolean | "indeterminate" =
-    rows.length === 0 || selectedCount === 0
-      ? false
-      : selectedCount === rows.length
-        ? true
-        : "indeterminate";
-
-  function handleSelectAll(checked: boolean) {
-    if (!onSelectionChange) return;
-    const next = new Set(selectedIds);
-    for (const row of rows) {
-      if (checked) next.add(row.id);
-      else next.delete(row.id);
-    }
-    onSelectionChange(next);
-  }
-
-  function handleRowSelectChange(id: string, checked: boolean) {
-    if (!onSelectionChange) return;
-    const next = new Set(selectedIds);
-    if (checked) next.add(id);
-    else next.delete(id);
-    onSelectionChange(next);
-  }
 
   function getSortIcon(key: string) {
     const isAsc = currentSort === `${key},asc`;
@@ -192,20 +149,11 @@ export function DataTable({
     <>
       <TooltipProvider>
         <div className="rounded-md border overflow-hidden">
-          <Table containerClassName={containerClassName}>
+          <Table>
             <TableHeader>
               <TableRow>
-                {hasSelection && (
-                  <TableHead className="w-10 pl-4">
-                    <Checkbox
-                      checked={selectionState}
-                      onCheckedChange={(checked) => handleSelectAll(checked === true)}
-                      aria-label="Select all rows"
-                    />
-                  </TableHead>
-                )}
                 {columns.map((col, i) => (
-                  <TableHead key={col.key} className={cn(i === 0 && !hasSelection && "pl-4")}>
+                  <TableHead key={col.key} className={cn(i === 0 && "pl-4")}>
                     {col.sortable && onSort ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -241,32 +189,11 @@ export function DataTable({
                     className={cn(onRowClick && "cursor-pointer hover:bg-muted/50")}
                     onClick={() => onRowClick?.(row.id)}
                   >
-                    {hasSelection && (
-                      <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds?.has(row.id) ?? false}
-                          onCheckedChange={(checked) =>
-                            handleRowSelectChange(row.id, checked === true)
-                          }
-                          aria-label="Select row"
-                        />
+                    {columns.map((col, i) => (
+                      <TableCell key={col.key} className={cn(i === 0 && "pl-4")}>
+                        {row.data[col.key] == null ? "—" : String(row.data[col.key])}
                       </TableCell>
-                    )}
-                    {columns.map((col, i) => {
-                      const value = row.data[col.key];
-                      const text = value == null ? "—" : String(value);
-                      return (
-                        <TableCell key={col.key} className={cn(i === 0 && !hasSelection && "pl-4")}>
-                          {/* `TableCell` sets `whitespace-nowrap` — without a capped width here,
-                           * one long value (e.g. a free-text attribute) forces its whole column,
-                           * and the table, arbitrarily wide. `title` keeps the full value
-                           * reachable on hover instead of silently losing it to the ellipsis. */}
-                          <span className="block max-w-xs truncate" title={text}>
-                            {text}
-                          </span>
-                        </TableCell>
-                      );
-                    })}
+                    ))}
                     {hasActions && (
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -351,10 +278,7 @@ export function DataTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length + (hasActions ? 1 : 0) + (hasSelection ? 1 : 0)}
-                    className="h-48"
-                  >
+                  <TableCell colSpan={columns.length + (hasActions ? 1 : 0)} className="h-48">
                     <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
                       <Tray className="h-10 w-10" />
                       <p className="text-lg font-medium">No items found</p>

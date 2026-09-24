@@ -1,30 +1,9 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
 
-function Table({
-  className,
-  containerClassName,
-  ...props
-}: React.ComponentProps<"table"> & {
-  /**
-   * Extra classes for the scrollable wrapper `Table` renders around itself (the element that
-   * actually owns `overflow-x-auto`), not the `<table>` element `className` targets. A caller
-   * that also height-constrains this table from outside (e.g. a tall list capped at `max-h-64`)
-   * needs to put the height cap and `overflow` *here*, on this same wrapper, not on an ancestor —
-   * otherwise the wrapper's horizontal scrollbar ends up positioned at the bottom of its full,
-   * unclamped content height instead of the visible viewport, unreachable without first
-   * scrolling all the way down through the ancestor's own vertical scroll.
-   */
-  containerClassName?: string;
-}) {
+function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div
-      data-slot="table-container"
-      // Keyboard-focusable so a genuinely overflowing table (e.g. `containerClassName` adding a
-      // vertical cap) can be scrolled without a mouse — axe's scrollable-region-focusable rule.
-      tabIndex={0}
-      className={cn("relative w-full overflow-x-auto", containerClassName)}
-    >
+    <div data-slot="table-container" className="relative w-full overflow-x-auto">
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}

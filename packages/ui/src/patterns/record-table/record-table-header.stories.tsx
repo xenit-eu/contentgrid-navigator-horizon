@@ -55,7 +55,6 @@ export const WithActionsColumn: Story = {
 export const WithSelectionColumn: Story = {
   args: {
     columns: COLUMNS,
-    showSelectionColumn: true,
     onSelectAll: fn(),
   },
 };
@@ -63,7 +62,6 @@ export const WithSelectionColumn: Story = {
 export const WithSelectionColumnIndeterminate: Story = {
   args: {
     columns: COLUMNS,
-    showSelectionColumn: true,
     selectionState: "indeterminate",
     onSelectAll: fn(),
   },

@@ -124,24 +124,6 @@ describe("DataTable — row rendering", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("caps a long cell value's width instead of letting it stretch the column", () => {
-    const longValue =
-      "This is a very long free-text attribute value that should not be allowed to force its column, and the whole table, arbitrarily wide.";
-    renderTable({
-      rows: [{ id: "1", data: { name: longValue, status: "active" } }],
-    });
-    const cell = screen.getByText(longValue);
-    expect(cell).toHaveClass("truncate", "max-w-xs");
-  });
-
-  it("puts the full value in a title attribute so it's still reachable on hover", () => {
-    const longValue = "A long value that gets truncated visually";
-    renderTable({
-      rows: [{ id: "1", data: { name: longValue, status: "active" } }],
-    });
-    expect(screen.getByText(longValue)).toHaveAttribute("title", longValue);
-  });
-
   it("calls onRowClick with row id when row is clicked", async () => {
     const user = userEvent.setup();
     const onRowClick = vi.fn();
@@ -330,96 +312,5 @@ describe("DataTable — unlink action", () => {
     for (const button of screen.getAllByRole("button", { name: /unlink/i })) {
       expect(button).toBeDisabled();
     }
-  });
-});
-
-describe("DataTable — containerClassName", () => {
-  it("forwards containerClassName to the table's own scrollable wrapper", () => {
-    const { container } = renderTable({ containerClassName: "max-h-64 overflow-auto" });
-    const wrapper = container.querySelector('[data-slot="table-container"]');
-    expect(wrapper).toHaveClass("max-h-64", "overflow-auto");
-  });
-
-  it("keeps the wrapper's own overflow-x-auto default when containerClassName is not provided", () => {
-    const { container } = renderTable();
-    const wrapper = container.querySelector('[data-slot="table-container"]');
-    expect(wrapper).toHaveClass("overflow-x-auto");
-  });
-});
-
-describe("DataTable — row selection", () => {
-  it("does not render selection checkboxes when onSelectionChange is absent", () => {
-    renderTable();
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-  });
-
-  it("renders one checkbox per row plus a header 'select all' checkbox", () => {
-    renderTable({ onSelectionChange: vi.fn() });
-    // 2 rows + 1 header checkbox
-    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
-  });
-
-  it("calls onSelectionChange with the row's id added when its checkbox is checked", async () => {
-    const user = userEvent.setup();
-    const onSelectionChange = vi.fn();
-    renderTable({ onSelectionChange });
-    const [, firstRowCheckbox] = screen.getAllByRole("checkbox");
-    await user.click(firstRowCheckbox);
-    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1"]));
-  });
-
-  it("calls onSelectionChange with the row's id removed when an already-selected checkbox is unchecked", async () => {
-    const user = userEvent.setup();
-    const onSelectionChange = vi.fn();
-    renderTable({ onSelectionChange, selectedIds: new Set(["1", "2"]) });
-    const [, firstRowCheckbox] = screen.getAllByRole("checkbox");
-    await user.click(firstRowCheckbox);
-    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["2"]));
-  });
-
-  it("reflects selectedIds as each row checkbox's checked state", () => {
-    renderTable({ onSelectionChange: vi.fn(), selectedIds: new Set(["2"]) });
-    const [, firstRowCheckbox, secondRowCheckbox] = screen.getAllByRole("checkbox");
-    expect(firstRowCheckbox).not.toBeChecked();
-    expect(secondRowCheckbox).toBeChecked();
-  });
-
-  it("shows the header checkbox as checked when every row is selected", () => {
-    renderTable({ onSelectionChange: vi.fn(), selectedIds: new Set(["1", "2"]) });
-    const [headerCheckbox] = screen.getAllByRole("checkbox");
-    expect(headerCheckbox).toBeChecked();
-  });
-
-  it("shows the header checkbox as indeterminate when only some rows are selected", () => {
-    renderTable({ onSelectionChange: vi.fn(), selectedIds: new Set(["1"]) });
-    const [headerCheckbox] = screen.getAllByRole("checkbox");
-    expect(headerCheckbox).toHaveAttribute("data-state", "indeterminate");
-  });
-
-  it("selects every row's id when the header checkbox is checked", async () => {
-    const user = userEvent.setup();
-    const onSelectionChange = vi.fn();
-    renderTable({ onSelectionChange });
-    const [headerCheckbox] = screen.getAllByRole("checkbox");
-    await user.click(headerCheckbox);
-    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1", "2"]));
-  });
-
-  it("clears every row's id when the header checkbox is unchecked", async () => {
-    const user = userEvent.setup();
-    const onSelectionChange = vi.fn();
-    renderTable({ onSelectionChange, selectedIds: new Set(["1", "2"]) });
-    const [headerCheckbox] = screen.getAllByRole("checkbox");
-    await user.click(headerCheckbox);
-    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
-  });
-
-  it("does not call onRowClick when a row's checkbox is clicked", async () => {
-    const user = userEvent.setup();
-    const onRowClick = vi.fn();
-    renderTable({ onSelectionChange: vi.fn(), onRowClick });
-    const [, firstRowCheckbox] = screen.getAllByRole("checkbox");
-    await user.click(firstRowCheckbox);
-    expect(onRowClick).not.toHaveBeenCalled();
   });
 });

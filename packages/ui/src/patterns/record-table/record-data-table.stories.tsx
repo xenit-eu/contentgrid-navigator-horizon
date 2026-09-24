@@ -148,7 +148,6 @@ function SelectableTableDemo() {
       entityName="invoice"
       entityTitle="Invoices"
       columns={COLUMNS}
-      showSelectionColumn
       selectionState={selectionState}
       onSelectAll={toggleAll}
     >

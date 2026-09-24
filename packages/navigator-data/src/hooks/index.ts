@@ -20,6 +20,11 @@ export type {
 } from "./collection/use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./collection/use-recent-items";
 export { useEntityItem, ensureEntityItem } from "./item/use-entity-item";
+export { useEntityItemsByUrl } from "./item/use-entity-items-by-url";
+export type {
+  UseEntityItemsByUrlParams,
+  EntityItemsByUrlResult,
+} from "./item/use-entity-items-by-url";
 export type {
   UseEntityItemOptions,
   UseEntityItemParams,

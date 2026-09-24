@@ -160,6 +160,20 @@ export class EntityItemCollection {
   }
 
   /**
+   * An unpaginated collection of individually fetched items (no `totalItems`/`nextHref`/`prevHref`)
+   * — legacy `AddRelationField`'s artificial `HalSlice` for a relation field's linked items.
+   */
+  public static fromItems(
+    items: readonly EntityItem[],
+    profileEntity: ProfileEntity,
+  ): EntityItemCollection {
+    const slice = new HalSlice<EntityItemShape>({
+      _embedded: { item: items.map((item) => item.halItem.data) },
+    });
+    return new EntityItemCollection(slice, profileEntity);
+  }
+
+  /**
    * Total number of items in the collection across all pages.
    *
    * Returns an object containing the count and whether it's estimated or exact.

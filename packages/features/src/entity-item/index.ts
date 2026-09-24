@@ -9,11 +9,11 @@ export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
 export { RelationToManySection } from "./relations/relation-to-many-section";
-export { RelationItemSearchDialog, resolveNewlyLinkedHrefs } from "./relations/relation-shared";
+export { RelationItemSearchDialog } from "./relations/relation-item-search-dialog";
 export type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
-} from "./relations/relation-shared";
+} from "./relations/relation-handlers";
 export { ensureEntityItemDetailLoaderData } from "./entity-item-loader";
 export type { EntityItemDetailLoaderContext } from "./entity-item-loader";
 export {

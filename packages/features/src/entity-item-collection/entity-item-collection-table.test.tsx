@@ -293,15 +293,6 @@ describe("EntityItemCollectionTable", () => {
     expect(onPageChange).toHaveBeenCalledWith(collection.nextHref);
   });
 
-  it("does not render selection checkboxes when onSelectionChange is absent", async () => {
-    const { profile, collection, Wrapper } = await fetchCollection();
-    render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
-      wrapper: Wrapper,
-    });
-
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-  });
-
   it("calls onSelectionChange with the row's id added when its checkbox is checked", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();
@@ -358,23 +349,22 @@ describe("EntityItemCollectionTable", () => {
     expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1", "2"]));
   });
 
-  it("does not call onEntityItemClick when a row's checkbox is clicked", async () => {
+  it("toggles a row's selection on row click when there is no onEntityItemClick", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();
-    const onEntityItemClick = vi.fn();
+    const onSelectionChange = vi.fn();
     render(
       <EntityItemCollectionTable
         profile={profile}
         collection={collection}
-        onEntityItemClick={onEntityItemClick}
-        onSelectionChange={vi.fn()}
+        selectedIds={new Set(["1"])}
+        onSelectionChange={onSelectionChange}
       />,
       { wrapper: Wrapper },
     );
 
-    const checkboxes = screen.getAllByRole("checkbox");
-    await user.click(checkboxes[1]);
-    expect(onEntityItemClick).not.toHaveBeenCalled();
+    await user.click(screen.getAllByRole("row")[1]!);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
   });
 
   it("disables Previous when the collection has no previous page", async () => {

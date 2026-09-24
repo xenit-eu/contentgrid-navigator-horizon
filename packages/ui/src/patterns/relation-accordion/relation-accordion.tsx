@@ -18,10 +18,6 @@ export interface RelationAccordionProps {
   open?: boolean;
   /** Called with the new expanded state on trigger click. Required when `open` is provided. */
   onOpenChange?: (open: boolean) => void;
-  /** Only used when `open` is omitted (uncontrolled) — whether the accordion starts expanded.
-   * Defaults to `true`. Pass `false` for a section that starts out empty, so an empty relation
-   * renders as a collapsed row instead of an expanded card with nothing but empty-state text. */
-  defaultOpen?: boolean;
 }
 
 /**
@@ -38,11 +34,10 @@ export function RelationAccordion({
   children,
   open,
   onOpenChange,
-  defaultOpen = true,
 }: Readonly<RelationAccordionProps>) {
   const controlledProps =
     open === undefined
-      ? { defaultValue: defaultOpen ? "relation" : "" }
+      ? { defaultValue: "relation" }
       : {
           value: open ? "relation" : "",
           onValueChange: (value: string) => onOpenChange?.(value === "relation"),
