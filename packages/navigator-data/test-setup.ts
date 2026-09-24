@@ -8,13 +8,19 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 export const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => {
+afterEach(async () => {
   server.resetHandlers();
   // Unmount React trees between tests, mirroring packages/features/test-setup.ts.
-  // Without this every `renderHook` stays mounted for the rest of the file, and
-  // React's scheduler can still have work queued via setImmediate when the jsdom
-  // environment is torn down — surfacing as an unhandled
-  // "ReferenceError: window is not defined" that fails the run while every test passes.
   cleanup();
+  // React's scheduler queues `performWorkUntilDeadline` on a macrotask (it prefers Node's
+  // `setImmediate` over MessageChannel when both exist, as they do under Vitest + jsdom).
+  // Anything still queued when Vitest tears the jsdom environment down runs against a deleted
+  // `window` and surfaces as an unhandled "ReferenceError: window is not defined" from
+  // react-dom — which fails the whole run (Vitest exits non-zero on unhandled errors) even
+  // though every test passed. Yielding two event-loop turns here drains that queue while
+  // `window` is still alive. `setTimeout` rather than `setImmediate` because this package's
+  // tsconfig does not pull in Node's globals.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
 });
 afterAll(() => server.close());
