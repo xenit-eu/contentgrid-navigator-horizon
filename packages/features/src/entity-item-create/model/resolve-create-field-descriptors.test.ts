@@ -54,7 +54,26 @@ const invoiceProfileJson = {
         _links: {},
       },
     ],
-    "blueprint:relation": [],
+    "blueprint:relation": [
+      {
+        name: "supplier",
+        title: "Supplier",
+        description: "The invoice's supplier",
+        many_source_per_target: true,
+        many_target_per_source: false,
+        required: true,
+        _links: { "blueprint:target-entity": { href: "https://example.com/profile/suppliers" } },
+      },
+      {
+        name: "line_items",
+        title: "Line items",
+        description: "",
+        many_source_per_target: true,
+        many_target_per_source: true,
+        required: false,
+        _links: { "blueprint:target-entity": { href: "https://example.com/profile/products" } },
+      },
+    ],
   },
   _templates: {
     default: { method: "HEAD", target: "https://example.com/invoices", properties: [] },
@@ -64,6 +83,17 @@ const invoiceProfileJson = {
       target: "https://example.com/invoices",
       contentType: "application/json",
       properties: [
+        {
+          name: "supplier",
+          type: "url",
+          required: true,
+          options: { link: { href: "https://example.com/suppliers" }, maxItems: 1 },
+        },
+        {
+          name: "line_items",
+          type: "url",
+          options: { link: { href: "https://example.com/products" }, minItems: 0 },
+        },
         {
           name: "invoice_number",
           type: "text",
@@ -211,9 +241,36 @@ describe("resolveCreateFieldDescriptors", () => {
     if (field.kind === "text") expect(field.format).toBe("email");
   });
 
-  it("produces one descriptor per create-form property, in a single layout group", () => {
+  it("maps a to-one relation property (maxItems: 1) to a non-multi relation descriptor", () => {
+    const { fields } = resolveCreateFieldDescriptors(makeTemplate());
+    const field = byName(fields, "supplier");
+    expect(field.kind).toBe("relation");
+    expect(field.required).toBe(true);
+    expect(field.label).toBe("Supplier");
+    expect(field.description).toBe("The invoice's supplier");
+    if (field.kind === "relation") {
+      expect(field.multiValue).toBe(false);
+    }
+  });
+
+  it("maps a to-many relation property (maxItems !== 1) to a multi relation descriptor", () => {
+    const { fields } = resolveCreateFieldDescriptors(makeTemplate());
+    const field = byName(fields, "line_items");
+    expect(field.kind).toBe("relation");
+    expect(field.required).toBe(false);
+    if (field.kind === "relation") {
+      expect(field.multiValue).toBe(true);
+    }
+  });
+
+  it("produces one descriptor per create-form property, in the template's property order and a single layout group", () => {
     const { fields, layout } = resolveCreateFieldDescriptors(makeTemplate());
-    expect(fields).toHaveLength(11);
+    expect(fields).toHaveLength(13);
+    expect(fields.map((field) => field.name).slice(0, 3)).toEqual([
+      "supplier",
+      "line_items",
+      "invoice_number",
+    ]);
     expect(layout.groups).toHaveLength(1);
     expect(layout.groups[0]?.fieldNames).toEqual(fields.map((field) => field.name));
   });

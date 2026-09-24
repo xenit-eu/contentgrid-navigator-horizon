@@ -23,28 +23,27 @@ import {
 } from "@contentgrid/ui";
 import { ProblemAlert } from "../../problem-details";
 import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
-import {
-  MutationErrorDisplay,
-  type MutationErrorDisplayProps,
-  type RelationItemClickHandler,
-  RelationItemSearchDialog,
-} from "./relation-shared";
+import type {
+  RelationItemClickHandler,
+  RelationItemCreateHandler,
+  RelationProblemHandlers,
+} from "./relation-handlers";
+import { RelationItemSearchDialog } from "./relation-item-search-dialog";
 
 export function RelationToOneSection({
   relation,
   profiles,
   onItemClick,
+  onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
+  onCreateNew?: RelationItemCreateHandler;
 }> &
-  Pick<
-    MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick"
-  >) {
+  Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
     mutate: clearRelation,
@@ -53,10 +52,12 @@ export function RelationToOneSection({
   } = useClearRelation(relation);
   const {
     mutate: setRelation,
+    reset: resetSetRelation,
     isPending: isSetting,
     error: setError,
   } = useSetToOneRelation(relation);
-  const mutationError = clearError ?? setError;
+  // `setError` is shown inside the link dialog, which stays open until linking succeeds.
+  const mutationError = clearError;
   const [linkOpen, setLinkOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
@@ -77,10 +78,19 @@ export function RelationToOneSection({
                 Link
               </Button>
               <RelationItemSearchDialog
+                multiple={false}
                 targetProfile={targetProfile}
                 open={linkOpen}
-                onOpenChange={setLinkOpen}
-                onSelect={(item) => setRelation(item.selfLink.href)}
+                onOpenChange={(open) => {
+                  setLinkOpen(open);
+                  if (!open) resetSetRelation();
+                }}
+                isLinking={isSetting}
+                linkError={setError}
+                onSelect={(item) =>
+                  setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
+                }
+                onCreateNew={onCreateNew}
               />
             </>
           )}
@@ -108,8 +118,8 @@ export function RelationToOneSection({
         </div>
       </div>
       {mutationError && (
-        <MutationErrorDisplay
-          error={mutationError}
+        <ProblemAlert
+          model={toProblemDisplayModel(mutationError)}
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
         />

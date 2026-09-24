@@ -51,3 +51,18 @@ export const WithActionsColumn: Story = {
     showActionsColumn: true,
   },
 };
+
+export const WithSelectionColumn: Story = {
+  args: {
+    columns: COLUMNS,
+    onSelectAll: fn(),
+  },
+};
+
+export const WithSelectionColumnIndeterminate: Story = {
+  args: {
+    columns: COLUMNS,
+    selectionState: "indeterminate",
+    onSelectAll: fn(),
+  },
+};

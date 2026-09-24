@@ -376,6 +376,22 @@ describe("EntityItemCollection — static infiniteQuery", () => {
   });
 });
 
+describe("EntityItemCollection — static fromItems", () => {
+  it("wraps already-fetched items without any pagination data", () => {
+    const profile = makeProfileEntity();
+    const source = new EntityItemCollection(
+      makeHalSlice({ items: [{ id: "1" }, { id: "2" }], nextHref: "/invoices?page=2" }),
+      profile,
+    );
+
+    const collection = EntityItemCollection.fromItems(source.items, profile);
+
+    expect(collection.items.map((item) => item.id)).toEqual(["1", "2"]);
+    expect(collection.totalItems).toBeUndefined();
+    expect(collection.nextHref).toBeUndefined();
+  });
+});
+
 describe("EntityItemCollection — findById", () => {
   it("returns the matching item when present on this page", () => {
     const collection = new EntityItemCollection(

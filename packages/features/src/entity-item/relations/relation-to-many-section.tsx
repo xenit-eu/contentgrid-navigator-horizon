@@ -1,5 +1,10 @@
-import { useMemo, useState } from "react";
-import { LinkBreakIcon as LinkBreak, PlusIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import {
+  EyeIcon as Eye,
+  LinkBreakIcon as LinkBreak,
+  PlusIcon,
+  TrashIcon as Trash,
+} from "@phosphor-icons/react";
 import {
   type EntityItemToManyRelation,
   type ProfileEntity,
@@ -21,24 +26,25 @@ import {
   AlertDialogTitle,
   Button,
   CountIndicatorChip,
-  DataTable,
+  RecordRowAction,
+  RecordRowConfirmAction,
   RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
-import { EntityItemCountLabel } from "../../entity-item-collection";
-import { buildColumns, buildRows, useColumnVisibility } from "../../preferences";
+import { EntityItemCollectionTable, EntityItemCountLabel } from "../../entity-item-collection";
 import { ProblemAlert } from "../../problem-details";
-import {
-  MutationErrorDisplay,
-  type MutationErrorDisplayProps,
-  type RelationItemClickHandler,
-  RelationItemSearchDialog,
-} from "./relation-shared";
+import type {
+  RelationItemClickHandler,
+  RelationItemCreateHandler,
+  RelationProblemHandlers,
+} from "./relation-handlers";
+import { RelationItemSearchDialog } from "./relation-item-search-dialog";
 
 export function RelationToManySection({
   relation,
   profiles,
   onItemClick,
+  onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
@@ -46,9 +52,10 @@ export function RelationToManySection({
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
+  onCreateNew?: RelationItemCreateHandler;
 }> &
   Pick<
-    MutationErrorDisplayProps,
+    RelationProblemHandlers,
     "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
   >) {
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
@@ -62,6 +69,7 @@ export function RelationToManySection({
   });
   const {
     mutate: addRelation,
+    reset: resetAddRelation,
     isPending: isAdding,
     error: addError,
   } = useAddToManyRelation(relation);
@@ -75,30 +83,17 @@ export function RelationToManySection({
     isPending: isDeleting,
     error: deleteError,
   } = useDeleteRelationItem(relation);
-  const mutationError = clearError ?? addError ?? unlinkError ?? deleteError;
+  // `addError` is shown inside the link dialog, which stays open until linking succeeds.
+  const mutationError = clearError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
-  const [accordionOpen, setAccordionOpen] = useState(true);
+  const [accordionOpen, setAccordionOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
-  const visibility = useColumnVisibility(targetProfile);
-  const columns = useMemo(
-    () => (targetProfile ? buildColumns(targetProfile, visibility) : [{ key: "id", header: "ID" }]),
-    [targetProfile, visibility],
-  );
-  const rows = useMemo(
-    () => (collection.isSuccess ? buildRows(collection.data.items, columns) : []),
-    [collection.isSuccess, collection.data, columns],
-  );
   const total = collection.isSuccess ? collection.data.totalItems : undefined;
   const canUnlinkAll =
     relation.canClear && collection.isSuccess && collection.data.items.length > 0;
   const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
-
-  function onRowClick(id: string) {
-    if (!targetProfile) return;
-    onItemClick?.(targetProfile.name, id);
-  }
 
   return (
     <>
@@ -133,11 +128,25 @@ export function RelationToManySection({
                 <RelationItemSearchDialog
                   targetProfile={targetProfile}
                   open={addOpen}
-                  onOpenChange={setAddOpen}
-                  onSelect={(item) => {
-                    addRelation([item.selfLink.href]);
-                    setAccordionOpen(true);
+                  onOpenChange={(open) => {
+                    setAddOpen(open);
+                    if (!open) resetAddRelation();
                   }}
+                  multiple
+                  isLinking={isAdding}
+                  linkError={addError}
+                  onLinkSelected={(items) =>
+                    addRelation(
+                      items.map((item) => item.selfLink.href),
+                      {
+                        onSuccess: () => {
+                          setAddOpen(false);
+                          setAccordionOpen(true);
+                        },
+                      },
+                    )
+                  }
+                  onCreateNew={onCreateNew}
                 />
               </>
             )}
@@ -158,8 +167,8 @@ export function RelationToManySection({
         }
       >
         {mutationError && (
-          <MutationErrorDisplay
-            error={mutationError}
+          <ProblemAlert
+            model={toProblemDisplayModel(mutationError)}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
             onRequiredRelationClick={onRequiredRelationClick}
@@ -172,57 +181,47 @@ export function RelationToManySection({
         {collection.isSuccess && collection.data.isEmpty && (
           <p className="text-sm text-muted-foreground">No items linked</p>
         )}
-        {collection.isSuccess && !collection.data.isEmpty && (
-          <div className="space-y-3">
-            <DataTable
-              entityName={relation.name}
-              entityTitle={title}
-              columns={columns}
-              rows={rows}
-              onRowClick={onRowClick}
-              onUnlink={
-                relation.canUnlinkItem
-                  ? (id) => {
-                      const item = collection.data.findById(id);
-                      if (item) unlinkItem(item);
-                    }
-                  : undefined
-              }
-              isUnlinking={isUnlinking}
-              onDelete={
-                collection.data.items.some((i) => i.canDelete)
-                  ? (id) => {
-                      const item = collection.data.findById(id);
-                      if (item?.canDelete) deleteItem(item);
-                    }
-                  : undefined
-              }
-              isDeleting={isDeleting}
-            />
-            {(collection.data.hasNext || collection.data.hasPrevious) && (
-              <div className="flex items-center justify-between pt-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!collection.data.hasPrevious}
-                  onClick={() => setPageUrl(collection.data.prevHref)}
-                >
-                  Previous
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {collection.data.pageSize} items on this page
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!collection.data.hasNext}
-                  onClick={() => setPageUrl(collection.data.nextHref)}
-                >
-                  Next
-                </Button>
-              </div>
+        {collection.isSuccess && !collection.data.isEmpty && !targetProfile && (
+          <p className="text-sm text-muted-foreground">
+            The linked {title.toLowerCase()} can't be shown: their entity profile is unavailable.
+          </p>
+        )}
+        {collection.isSuccess && !collection.data.isEmpty && targetProfile && (
+          <EntityItemCollectionTable
+            profile={targetProfile}
+            collection={collection.data}
+            onEntityItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+            onPageChange={setPageUrl}
+            renderRowActions={(item) => (
+              <>
+                <RecordRowAction
+                  label="Details"
+                  icon={<Eye className="size-4" aria-hidden />}
+                  onClick={() => onItemClick?.(targetProfile.name, item.id)}
+                />
+                {relation.canUnlinkItem && (
+                  <RecordRowConfirmAction
+                    label="Unlink"
+                    icon={<LinkBreak className="size-4" aria-hidden />}
+                    title={`Unlink ${targetProfile.singularName.toLowerCase()}`}
+                    description={`Remove the link to this ${targetProfile.singularName.toLowerCase()}? This will not delete the ${targetProfile.singularName.toLowerCase()} itself.`}
+                    disabled={isUnlinking}
+                    onConfirm={() => unlinkItem(item)}
+                  />
+                )}
+                {item.canDelete && (
+                  <RecordRowConfirmAction
+                    label="Delete"
+                    icon={<Trash className="size-4" aria-hidden />}
+                    title="Delete item"
+                    description={`Are you sure you want to delete this ${targetProfile.singularName.toLowerCase()}? This action cannot be undone.`}
+                    disabled={isDeleting}
+                    onConfirm={() => deleteItem(item)}
+                  />
+                )}
+              </>
             )}
-          </div>
+          />
         )}
       </RelationAccordion>
       {canUnlinkAll && (

@@ -293,6 +293,80 @@ describe("EntityItemCollectionTable", () => {
     expect(onPageChange).toHaveBeenCalledWith(collection.nextHref);
   });
 
+  it("calls onSelectionChange with the row's id added when its checkbox is checked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    // First checkbox is the header "select all" — row checkboxes follow in collection order.
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[1]);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1"]));
+  });
+
+  it("calls onSelectionChange with the row's id removed when an already-selected checkbox is unchecked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        selectedIds={new Set(["1"])}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[1]);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
+
+  it("selects every item's id when the header checkbox is checked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1", "2"]));
+  });
+
+  it("toggles a row's selection on row click when there is no onEntityItemClick", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        selectedIds={new Set(["1"])}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getAllByRole("row")[1]!);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
+
   it("disables Previous when the collection has no previous page", async () => {
     const { profile, collection, Wrapper } = await fetchCollection();
     render(

@@ -5,6 +5,7 @@ import {
   EntityItemView,
   ensureEntityItemDetailLoaderData,
 } from "@contentgrid/features/entity-item";
+import { useOpenInNewTab } from "@contentgrid/features/router-shell";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
@@ -125,6 +126,7 @@ function EntityItemDetailRoute({
   itemId,
 }: Readonly<{ profile: ProfileEntity; itemId: string }>) {
   const go = useNavigate();
+  const { openCreatePage } = useOpenInNewTab();
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
   const breadcrumbs = (
@@ -176,6 +178,7 @@ function EntityItemDetailRoute({
             search: (prev) => prev,
           })
         }
+        onRelationItemCreateNew={openCreatePage}
         onMissingRelationTargetClick={(url, field) =>
           setProblemDialog({ kind: "missingRelationTarget", url, field })
         }
