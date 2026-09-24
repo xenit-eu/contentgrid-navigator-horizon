@@ -56,7 +56,7 @@ export interface UseTypeaheadOptions {
   searchValues?: HalFormValues<SearchRequestSpec>;
 }
 
-interface ResolvedTarget {
+export interface ResolvedTypeaheadTarget {
   profile: ProfileEntity | undefined;
   property: SearchHalFormTemplateProperty | undefined;
 }
@@ -71,12 +71,16 @@ interface ResolvedTarget {
  * property name on THAT profile's own search template — relation-traversal filter params live
  * on the target entity's own template under their local name (e.g. "customer.first_name~prefix"
  * on the invoice's template corresponds to "first_name~prefix" on the customer's own template).
+ *
+ * Exported for reuse by `useEntitySearchSuggestions`, which needs this exact resolution for
+ * EVERY contributing property on an entity at once, not just the single active one `useTypeahead`
+ * itself tracks.
  */
-function resolveTarget(
+export function resolveTypeaheadTarget(
   searchProperty: SearchHalFormTemplateProperty | undefined,
   profileEntity: ProfileEntity,
   allProfiles: readonly ProfileEntity[],
-): ResolvedTarget {
+): ResolvedTypeaheadTarget {
   if (!searchProperty) return { profile: profileEntity, property: undefined };
   if (!searchProperty.isOverRelation) return { profile: profileEntity, property: searchProperty };
 
@@ -109,8 +113,11 @@ function computeBaseSearchValues(
 /**
  * Non-empty plain string values of `attributeName` across the collection's items, with
  * duplicate occurrences counted rather than collapsed.
+ *
+ * Exported for reuse by `useEntitySearchSuggestions` (same extraction rule, applied once per
+ * contributing attribute instead of once for the single active one).
  */
-function extractSuggestions(
+export function extractSuggestions(
   collection: EntityItemCollection | undefined,
   attributeName: string | undefined,
 ): { value: string; count: number }[] {
@@ -143,7 +150,7 @@ export function useTypeahead({
 
   const isRelation = !!searchProperty?.isOverRelation;
 
-  const { profile: targetProfile, property: targetSearchProperty } = resolveTarget(
+  const { profile: targetProfile, property: targetSearchProperty } = resolveTypeaheadTarget(
     searchProperty,
     profileEntity,
     profileResults.flatMap((r) => r.data ?? []),
@@ -157,7 +164,7 @@ export function useTypeahead({
   //
   // Checked on the caller-supplied `searchProperty`, not `targetSearchProperty` — for a
   // relation-traversal property, `targetSearchProperty` is re-resolved against the TARGET
-  // entity's own template (see resolveTarget), which relies on that target's own
+  // entity's own template (see resolveTypeaheadTarget), which relies on that target's own
   // `blueprint:search-param` embeds and can disagree with the parent's suffix-based
   // resolution when those embeds are absent or incomplete for the same logical property.
   // `searchProperty` is exactly what the caller (FilterSidebar, via buildFilterProperties'
