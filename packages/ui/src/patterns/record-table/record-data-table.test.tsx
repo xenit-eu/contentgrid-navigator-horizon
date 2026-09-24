@@ -105,6 +105,32 @@ describe("RecordDataTable — table actions", () => {
     renderTable();
     expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
   });
+
+  it("renders searchBar when provided, growing to fill the row next to tableActions", () => {
+    renderTable({
+      searchBar: <input aria-label="Search" />,
+      tableActions: <button type="button">Export</button>,
+    });
+
+    const searchBar = screen.getByLabelText("Search");
+    expect(searchBar).toBeInTheDocument();
+    expect(searchBar.parentElement).toHaveClass("flex-1");
+    // Same row as tableActions — siblings under one shared toolbar container.
+    expect(searchBar.parentElement?.parentElement).toBe(
+      screen.getByRole("button", { name: /export/i }).closest("div")?.parentElement,
+    );
+  });
+
+  it("renders a toolbar row for searchBar alone, even without tableActions", () => {
+    renderTable({ searchBar: <input aria-label="Search" /> });
+    expect(screen.getByLabelText("Search")).toBeInTheDocument();
+  });
+
+  it("does not render a toolbar row when neither searchBar nor tableActions is provided", () => {
+    renderTable();
+    expect(screen.queryByLabelText("Search")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
+  });
 });
 
 describe("RecordDataTable — empty state", () => {
