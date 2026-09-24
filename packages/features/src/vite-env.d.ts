@@ -21,8 +21,8 @@ declare module "*.svg" {
 /**
  * `packages/features` does not depend on `vite` directly, so
  * `/// <reference types="vite/client" />` is not resolvable here — the `?url` import suffix for
- * the self-hosted PDFium WASM binary (`entity-item-content-focus/util/pdfium-wasm-url.ts`) is
- * declared by hand instead, matching `packages/ui/src/vite-env.d.ts`'s equivalent declaration.
+ * the self-hosted PDFium WASM binary (`entity-item/variations/content-focus/util/pdfium-wasm-url.ts`)
+ * is declared by hand instead, matching `packages/ui/src/vite-env.d.ts`'s equivalent declaration.
  */
 declare module "*.wasm?url" {
   const url: string;

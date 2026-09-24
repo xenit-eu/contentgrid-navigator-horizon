@@ -1,10 +1,10 @@
 /**
- * @contentgrid/features/entity-item-content-focus
- *
- * Content-focus entity detail view (spec `002-pdf-viewer`): renders a content attribute's PDF
- * next to the item's attributes and relations. `x-stability: "experimental"` — mounted only by
- * `apps/navigator-experimental` (see this directory's `CLAUDE.md` for scope and the promotion
- * path).
+ * Internal barrel for `entity-item`'s content-focus variation (spec `002-pdf-viewer`): renders a
+ * content attribute's PDF next to the item's attributes and relations. Re-exported publicly from
+ * `@contentgrid/features/entity-item` (see `packages/features/src/entity-item/index.ts`) —
+ * `entity-item` itself is `x-stability: "stable"`, but this variation is mounted only by
+ * `apps/navigator-experimental` (see `packages/features/src/entity-item/CLAUDE.md` for scope);
+ * `apps/navigator` (the generic app) must not import it.
  *
  * `EntityItemContentFocusView` is the public entry point (contract
  * `contracts/content-focus-view.md`) — an app mounts it with `entityName`/`itemId`/`toolbar`/

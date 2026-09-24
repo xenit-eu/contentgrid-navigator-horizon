@@ -1,7 +1,0 @@
-{
-  "name": "@contentgrid/features-entity-item-content-focus",
-  "version": "0.0.1",
-  "x-stability": "experimental",
-  "private": true,
-  "description": "Content-focus entity detail view with the PDF viewer"
-}

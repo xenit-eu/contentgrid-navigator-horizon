@@ -60,10 +60,6 @@
       "import": "./src/entity-item/index.ts",
       "types": "./src/entity-item/index.ts"
     },
-    "./entity-item-content-focus": {
-      "import": "./src/entity-item-content-focus/index.ts",
-      "types": "./src/entity-item-content-focus/index.ts"
-    },
     "./search": {
       "import": "./src/search/index.ts",
       "types": "./src/search/index.ts"

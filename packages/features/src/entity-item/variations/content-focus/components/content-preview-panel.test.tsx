@@ -30,7 +30,7 @@ import {
   createContentDownloadHandler,
   createRenditionHandlers,
 } from "@contentgrid/navigator-data/test-fixtures/msw/handlers";
-import { server } from "../../../test-setup";
+import { server } from "../../../../../test-setup";
 import { ContentPreviewPanel } from "./content-preview-panel";
 
 const API_URL = "https://api.example.com";

@@ -4,9 +4,9 @@
  * Architecture note — why this lives under `apps/navigator/tests/e2e/` but does NOT use
  * `./fixtures`'s `login`/`selectSidebarEntity`/`isSmallViewport`, and targets a second app:
  *
- * `EntityItemContentFocusView` (`@contentgrid/features/entity-item-content-focus`) is `x-stability:
- * "experimental"` and is mounted only by `apps/navigator-experimental`
- * (`packages/features/src/entity-item-content-focus/CLAUDE.md`). `apps/navigator` (this app) is the
+ * `EntityItemContentFocusView` (`@contentgrid/features/entity-item`, the `content-focus`
+ * variation) is `x-stability: "experimental"` and is mounted only by `apps/navigator-experimental`
+ * (`packages/features/src/entity-item/CLAUDE.md`). `apps/navigator` (this app) is the
  * generic, stable-only track — its own `CLAUDE.md` forbids importing experimental features, so
  * there is no route in this app that renders this view at all; a spec written against
  * `apps/navigator`'s own routes cannot exercise it. `apps/navigator/playwright.config.ts` also only

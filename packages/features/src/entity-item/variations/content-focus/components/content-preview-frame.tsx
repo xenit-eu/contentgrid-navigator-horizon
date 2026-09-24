@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { ProblemDisplayModel } from "@contentgrid/navigator-data";
 import { Button, FileUploadZone, Skeleton } from "@contentgrid/ui";
-import { ProblemAlert } from "../../problem-details";
+import { ProblemAlert } from "../../../../problem-details";
 import {
   type ContentPreviewState,
   type ErrorPreviewState,

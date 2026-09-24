@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { ensureEntityItemDetailLoaderData } from "@contentgrid/features/entity-item";
-import { EntityItemContentFocusView } from "@contentgrid/features/entity-item-content-focus";
+import {
+  EntityItemContentFocusView,
+  ensureEntityItemDetailLoaderData,
+} from "@contentgrid/features/entity-item";
 import {
   Dialog,
   DialogContent,

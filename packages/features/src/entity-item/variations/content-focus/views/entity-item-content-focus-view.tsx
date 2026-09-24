@@ -15,15 +15,12 @@ import {
   BreadcrumbSeparator,
   Separator,
 } from "@contentgrid/ui";
-import { ErrorPage, LoadingPage } from "../../app-info-pages";
-import {
-  EntityItemAttributes,
-  EntityItemView,
-  type EntityItemViewProps,
-  RelationToManySection,
-  RelationToOneSection,
-} from "../../entity-item";
-import { BreadCrumbsToolBarLayout, PageLayout } from "../../layout";
+import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
+import { BreadCrumbsToolBarLayout, PageLayout } from "../../../../layout";
+import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
+import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
+import { RelationToManySection } from "../../../relations/relation-to-many-section";
+import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentFocusLayout } from "../components/content-focus-layout";
 import { ContentPreviewPanel } from "../components/content-preview-panel";

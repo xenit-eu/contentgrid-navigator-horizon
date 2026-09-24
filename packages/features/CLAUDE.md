@@ -75,14 +75,6 @@ Promotion = a PR that:
 No code moves between directories. No fork drift. The feature code stays in
 `packages/features/<name>/`.
 
-**Exception — plan-defined promotion paths.** A feature whose spec or plan defines a
-different promotion path documents that path in the feature's own `CLAUDE.md`, and that
-document wins over the default flag flip. Current example: `entity-item-content-focus`
-(spec 002) is a temporary experimental wrapper that is folded into `entity-item`'s
-`EntityItemView` on promotion — move the content-attribute branch into `EntityItemView`,
-point the `apps/navigator` item route at it, then delete the wrapper. See
-[`src/entity-item-content-focus/CLAUDE.md`](src/entity-item-content-focus/CLAUDE.md).
-
 **Dependency check before opening a promotion PR:**
 Run `pnpm --filter <feature> exec contentgrid-stability check` (or inspect the
 transitive `x-stability` graph manually) to confirm all dependencies of the
