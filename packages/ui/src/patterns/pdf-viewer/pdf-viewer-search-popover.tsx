@@ -1,0 +1,144 @@
+import { CaretDownIcon, CaretUpIcon, MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import { Button } from "../../primitives/button";
+import { Input } from "../../primitives/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../../primitives/popover";
+import { Switch } from "../../primitives/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
+import { IconButton } from "./pdf-viewer-icon-button";
+import { type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
+import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
+
+export interface PdfViewerSearchPopoverProps {
+  readonly search: PdfViewerSearchState;
+  readonly searchActions: PdfViewerSearchActions;
+  readonly ready: boolean;
+  readonly labels: PdfViewerLabels;
+}
+
+/**
+ * The toolbar's search control (T035): a popover with the query input, the
+ * "n of m" indicator, previous/next-match, clear, and the match-case/
+ * whole-word toggles. Split out of `pdf-viewer-toolbar.tsx` into its own
+ * file — a self-contained control with a clean `search`/`searchActions`
+ * props boundary and no dependency on the rest of the toolbar beyond the
+ * shared `IconButton` (`pdf-viewer-icon-button.tsx`).
+ *
+ * The popover's content renders through a Radix `Portal` into
+ * `document.body`, not into a story's `canvasElement` — a `play()` querying
+ * it must use `within(document.body)` (see `pdf-viewer.interaction.stories.tsx`).
+ * Must be rendered inside a `TooltipProvider` (for its `IconButton`s and its
+ * own trigger's tooltip) — the toolbar wraps its whole render tree in one.
+ * The trigger nests a Radix `TooltipTrigger`/`PopoverTrigger` pair, both
+ * `asChild`, around the same `Button` — Radix's `Slot` forwards props
+ * through nested `asChild` layers down to that one DOM node, the same
+ * composition pattern used to pair a tooltip with a dropdown-menu trigger.
+ */
+/** "n of m" once there are results, the no-results label once a query found none, else nothing. */
+function searchPositionLabel(search: PdfViewerSearchState, labels: PdfViewerLabels): string | null {
+  if (search.total > 0) {
+    return formatLabel(labels.searchResultTemplate, {
+      index: search.activeIndex + 1,
+      total: search.total,
+    });
+  }
+  if (search.query.length > 0) return labels.searchNoResults;
+  return null;
+}
+
+export function PdfViewerSearchPopover({
+  search,
+  searchActions,
+  ready,
+  labels,
+}: Readonly<PdfViewerSearchPopoverProps>) {
+  const hasQuery = search.query.length > 0;
+  const hasResults = search.total > 0;
+  const positionLabel = searchPositionLabel(search, labels);
+
+  return (
+    <Popover open={search.open} onOpenChange={searchActions.setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={labels.search}
+              disabled={!ready}
+            >
+              <MagnifyingGlassIcon />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{labels.search}</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-72">
+        <div className="flex flex-col gap-3">
+          <Input
+            aria-label={labels.searchInputLabel}
+            placeholder={labels.search}
+            value={search.query}
+            onChange={(event) => searchActions.setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              if (event.shiftKey) {
+                searchActions.previousMatch();
+              } else {
+                searchActions.nextMatch();
+              }
+            }}
+            className="h-8"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs" aria-hidden>
+              {positionLabel ?? ""}
+            </span>
+            <div className="flex items-center gap-1">
+              <IconButton
+                label={labels.searchPreviousMatch}
+                disabled={!hasResults}
+                onClick={searchActions.previousMatch}
+              >
+                <CaretUpIcon />
+              </IconButton>
+              <IconButton
+                label={labels.searchNextMatch}
+                disabled={!hasResults}
+                onClick={searchActions.nextMatch}
+              >
+                <CaretDownIcon />
+              </IconButton>
+              <IconButton
+                label={labels.searchClear}
+                disabled={!hasQuery}
+                onClick={searchActions.clearSearch}
+              >
+                <XIcon />
+              </IconButton>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                aria-label={labels.searchMatchCase}
+                checked={search.matchCase}
+                onCheckedChange={searchActions.toggleMatchCase}
+              />
+              {labels.searchMatchCase}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                aria-label={labels.searchWholeWord}
+                checked={search.wholeWord}
+                onCheckedChange={searchActions.toggleWholeWord}
+              />
+              {labels.searchWholeWord}
+            </label>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
