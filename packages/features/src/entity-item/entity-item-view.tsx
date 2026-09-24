@@ -10,10 +10,10 @@ import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemAttributes } from "./attributes/entity-item-attributes";
 import type {
-  MutationErrorDisplayProps,
   RelationItemClickHandler,
   RelationItemCreateHandler,
-} from "./relations/relation-shared";
+  RelationProblemHandlers,
+} from "./relations/relation-handlers";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
 import {
@@ -42,10 +42,7 @@ export interface EntityItemViewByUrl {
 export type EntityItemIdentity = EntityItemViewByProfile | EntityItemViewByUrl;
 
 export type EntityItemViewProps = EntityItemIdentity &
-  Pick<
-    MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
-  > & {
+  RelationProblemHandlers & {
     /**
      * Render the breadcrumb toolbar on top; otherwise the content is wrapped
      * in a plain {@link PageLayout}. Defaults to `false`.
@@ -61,8 +58,7 @@ export type EntityItemViewProps = EntityItemIdentity &
      * entity's profile name and the item's id.
      */
     readonly onRelationItemClick?: RelationItemClickHandler;
-    /** Fired from a relation section's "Create new" affordance; receives the target entity's
-     * profile name. See `RelationItemSearchDialog`'s `onCreateNew` doc comment. */
+    /** Fired from a relation picker's "Create" button with the target entity's profile name. */
     readonly onRelationItemCreateNew?: RelationItemCreateHandler;
   };
 

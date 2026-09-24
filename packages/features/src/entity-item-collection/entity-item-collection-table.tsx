@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo } from "react";
 import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
 import {
   type EntityItem,
@@ -7,16 +7,9 @@ import {
   useDeleteEntityItem,
 } from "@contentgrid/navigator-data";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   Button,
   RecordDataTable,
+  RecordRowConfirmAction,
   type RecordTableCell,
   RecordTableRow,
   type RecordTableSortOption,
@@ -63,14 +56,18 @@ export interface EntityItemCollectionTableProps {
    * its own `max-h-*` capped wrapper) to keep the table's default grow-to-content sizing.
    */
   readonly className?: string;
-  /**
-   * Ids of the currently selected items. Controlled — presence of `onSelectionChange` (not this
-   * prop) is what decides whether the selection checkbox column renders at all; omit both to
-   * keep the table selection-free. Defaults to no items selected.
-   */
+  /** Ids of the selected items. The selection column renders only when `onSelectionChange` is set. */
   readonly selectedIds?: ReadonlySet<string>;
-  /** Fired with the full next selected-id set when a row or the header "select all" checkbox is toggled. */
+  /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
+  /** Replaces the default per-row View/Delete actions (e.g. a relation's Unlink). */
+  readonly renderRowActions?: (item: EntityItem) => ReactNode;
+  /** `false` renders no actions column (e.g. in the relation picker). Defaults to `true`. */
+  readonly showRowActions?: boolean;
+  /** `false` hides the item-count/pagination footer (e.g. for an unpaginated set). Defaults to `true`. */
+  readonly paginated?: boolean;
+  /** `false` hides the "Showing N of M items" text, keeping the page controls. Defaults to `true`. */
+  readonly showItemCount?: boolean;
 }
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
@@ -100,8 +97,7 @@ function itemCountLabel(collection: EntityItemCollection): string {
  * Renders an entity collection as a `RecordDataTable` plus cursor-based pagination. Purely
  * presentational with respect to fetching — it reads the resolved `EntityItemCollection`
  * accessor and reports interactions back through callbacks. The one deliberate exception is
- * delete, which is self-contained: it owns its own `useDeleteEntityItem` mutation and confirm
- * dialog, gated per-row on `item.canDelete` (ABAC) rather than a caller-supplied flag.
+ * the default Delete action, which owns its `useDeleteEntityItem` mutation, gated on `item.canDelete`.
  */
 export function EntityItemCollectionTable({
   profile,
@@ -116,6 +112,10 @@ export function EntityItemCollectionTable({
   className,
   selectedIds = EMPTY_SELECTION,
   onSelectionChange,
+  renderRowActions,
+  showRowActions = true,
+  paginated = true,
+  showItemCount = true,
 }: Readonly<EntityItemCollectionTableProps>) {
   const persistedVisibility = useColumnVisibility(profile);
   // Union a session-local override and any actively-filtered attribute on top of the persisted
@@ -143,35 +143,21 @@ export function EntityItemCollectionTable({
     [profile.singularName, attributeColumns],
   );
 
-  const [deleteTarget, setDeleteTarget] = useState<EntityItem | null>(null);
   const deleteMutation = useDeleteEntityItem();
 
   const selectedCount = collection.items.filter((item) => selectedIds.has(item.id)).length;
   const selectionState: boolean | "indeterminate" =
-    collection.items.length === 0 || selectedCount === 0
+    selectedCount === 0
       ? false
       : selectedCount === collection.items.length
         ? true
         : "indeterminate";
 
-  function handleSelectAll(checked: boolean) {
+  function toggleSelected(items: readonly EntityItem[], checked: boolean) {
     const next = new Set(selectedIds);
-    for (const item of collection.items) {
-      if (checked) {
-        next.add(item.id);
-      } else {
-        next.delete(item.id);
-      }
-    }
-    onSelectionChange?.(next);
-  }
-
-  function handleRowSelectChange(item: EntityItem, checked: boolean) {
-    const next = new Set(selectedIds);
-    if (checked) {
-      next.add(item.id);
-    } else {
-      next.delete(item.id);
+    for (const item of items) {
+      if (checked) next.add(item.id);
+      else next.delete(item.id);
     }
     onSelectionChange?.(next);
   }
@@ -187,14 +173,19 @@ export function EntityItemCollectionTable({
         sortOptions={sortOptions}
         currentSort={currentSort ? [currentSort] : []}
         onSort={onSort}
-        showActionsColumn
-        showSelectionColumn={Boolean(onSelectionChange)}
+        showActionsColumn={showRowActions}
+        onSelectAll={
+          onSelectionChange ? (checked) => toggleSelected(collection.items, checked) : undefined
+        }
         selectionState={selectionState}
-        onSelectAll={handleSelectAll}
-        footerContent={itemCountLabel(collection)}
-        onNextPageClick={collection.hasNext ? () => onPageChange?.(collection.nextHref) : undefined}
+        footerContent={paginated && showItemCount ? itemCountLabel(collection) : undefined}
+        onNextPageClick={
+          paginated && collection.hasNext ? () => onPageChange?.(collection.nextHref) : undefined
+        }
         onPreviousPageClick={
-          collection.hasPrevious ? () => onPageChange?.(collection.prevHref) : undefined
+          paginated && collection.hasPrevious
+            ? () => onPageChange?.(collection.prevHref)
+            : undefined
         }
       >
         {collection.items.map((item) => {
@@ -226,72 +217,48 @@ export function EntityItemCollectionTable({
               cells={cells}
               selected={selectedIds.has(item.id)}
               onSelectChange={
-                onSelectionChange ? (checked) => handleRowSelectChange(item, checked) : undefined
+                onSelectionChange ? (checked) => toggleSelected([item], checked) : undefined
               }
-              onClick={onEntityItemClick ? () => onEntityItemClick(item) : undefined}
+              onClick={
+                onEntityItemClick
+                  ? () => onEntityItemClick(item)
+                  : onSelectionChange
+                    ? () => toggleSelected([item], !selectedIds.has(item.id))
+                    : undefined
+              }
               actions={
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onEntityItemClick?.(item);
-                    }}
-                  >
-                    <Eye className="size-4" aria-hidden />
-                    <span className="sr-only">View</span>
-                  </Button>
-                  {item.canDelete && (
+                !showRowActions ? undefined : renderRowActions ? (
+                  renderRowActions(item)
+                ) : (
+                  <>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       onClick={(event) => {
                         event.stopPropagation();
-                        setDeleteTarget(item);
+                        onEntityItemClick?.(item);
                       }}
                     >
-                      <Trash className="size-4" aria-hidden />
-                      <span className="sr-only">Delete</span>
+                      <Eye className="size-4" aria-hidden />
+                      <span className="sr-only">View</span>
                     </Button>
-                  )}
-                </>
+                    {item.canDelete && (
+                      <RecordRowConfirmAction
+                        label="Delete"
+                        icon={<Trash className="size-4" aria-hidden />}
+                        title="Delete item"
+                        description={`Are you sure you want to delete this ${profile.singularName.toLowerCase()}? This action cannot be undone.`}
+                        disabled={deleteMutation.isPending}
+                        onConfirm={() => deleteMutation.mutate(item)}
+                      />
+                    )}
+                  </>
+                )
               }
             />
           );
         })}
       </RecordDataTable>
-
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete item</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this {profile.singularName.toLowerCase()}? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => {
-                if (!deleteTarget) return;
-                deleteMutation.mutate(deleteTarget);
-                setDeleteTarget(null);
-              }}
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

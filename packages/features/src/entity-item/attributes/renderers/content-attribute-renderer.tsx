@@ -1,10 +1,20 @@
 import type { ReactNode } from "react";
 import { AttributeValue } from "@contentgrid/ui";
-import { formatFileSize } from "../../../format-file-size";
 
 export interface ContentAttributeRendererProps {
   readonly metadata: { readonly filename: string | null; readonly length: number } | null;
   readonly icon?: ReactNode;
+}
+
+const KB = 1024;
+const MB = KB * 1024;
+const GB = MB * 1024;
+
+/** kB/MB/GB only — files stay in GB past that rather than growing a TB tier. */
+function formatFileSize(bytes: number): string {
+  if (bytes >= GB) return `${(bytes / GB).toFixed(1)} GB`;
+  if (bytes >= MB) return `${(bytes / MB).toFixed(1)} MB`;
+  return `${(bytes / KB).toFixed(1)} kB`;
 }
 
 export function ContentAttributeRenderer({

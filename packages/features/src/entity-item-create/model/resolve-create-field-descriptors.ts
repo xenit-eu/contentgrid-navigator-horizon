@@ -30,11 +30,18 @@ export interface ResolvedCreateFieldDescriptors {
 export function resolveCreateFieldDescriptors(
   template: CreateHalFormTemplate,
 ): ResolvedCreateFieldDescriptors {
-  const fields: FieldDescriptor[] = [
-    ...template.userDefinedProperties.map(attributeFieldDescriptor),
-    ...template.toOneRelationProperties.map((prop) => relationFieldDescriptor(prop, false)),
-    ...template.toManyRelationProperties.map((prop) => relationFieldDescriptor(prop, true)),
-  ];
+  const descriptorsByName = new Map<string, FieldDescriptor>([
+    ...template.userDefinedProperties.map(
+      (prop) => [prop.property.name, attributeFieldDescriptor(prop)] as const,
+    ),
+    ...template.relationProperties.map(
+      (prop) => [prop.property.name, relationFieldDescriptor(prop)] as const,
+    ),
+  ]);
+  // In the create-form template's own property order, as legacy Navigator renders it.
+  const fields = template.template.properties.flatMap(
+    (property) => descriptorsByName.get(property.name) ?? [],
+  );
 
   return {
     fields,
@@ -44,7 +51,6 @@ export function resolveCreateFieldDescriptors(
 
 function relationFieldDescriptor(
   prop: CreateFormRelationToOneProperty | CreateFormRelationToManyProperty,
-  multiValue: boolean,
 ): FieldDescriptor {
   const { property, profileRelation, isRequired } = prop;
   return {
@@ -55,8 +61,7 @@ function relationFieldDescriptor(
     readOnly: property.readOnly,
     description: profileRelation?.description || undefined,
     property,
-    profileRelation,
-    multiValue,
+    multiValue: property.multiValue,
   };
 }
 

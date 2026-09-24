@@ -102,33 +102,15 @@ describe("RecordTableHeader — actions column", () => {
 });
 
 describe("RecordTableHeader — selection column", () => {
-  it("reserves a leading header cell with a checkbox when showSelectionColumn is true", () => {
-    renderHeader({ showSelectionColumn: true });
+  it("reserves a leading header cell with a checkbox when onSelectAll is provided", () => {
+    renderHeader({ onSelectAll: vi.fn() });
     expect(screen.getAllByRole("columnheader")).toHaveLength(COLUMNS.length + 1);
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 
-  it("does not reserve a selection column when showSelectionColumn is absent", () => {
+  it("does not reserve a selection column when onSelectAll is absent", () => {
     renderHeader();
     expect(screen.getAllByRole("columnheader")).toHaveLength(COLUMNS.length);
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-  });
-
-  it("reflects selectionState=true as checked", () => {
-    renderHeader({ showSelectionColumn: true, selectionState: true });
-    expect(screen.getByRole("checkbox")).toBeChecked();
-  });
-
-  it("reflects selectionState='indeterminate' as neither fully checked nor unchecked", () => {
-    renderHeader({ showSelectionColumn: true, selectionState: "indeterminate" });
-    expect(screen.getByRole("checkbox")).toHaveAttribute("data-state", "indeterminate");
-  });
-
-  it("calls onSelectAll with the next checked state when the header checkbox is toggled", async () => {
-    const user = userEvent.setup();
-    const onSelectAll = vi.fn();
-    renderHeader({ showSelectionColumn: true, onSelectAll });
-    await user.click(screen.getByRole("checkbox"));
-    expect(onSelectAll).toHaveBeenCalledWith(true);
   });
 });

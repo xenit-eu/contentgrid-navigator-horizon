@@ -14,11 +14,7 @@ export interface RecordTableRowProps {
   readonly actions?: ReactNode;
   readonly selected?: boolean;
   readonly onClick?: () => void;
-  /**
-   * Renders a leading selection checkbox cell, checked according to `selected`. Presence of
-   * this callback (rather than a separate boolean) is what decides whether the checkbox column
-   * renders — mirroring how `actions` alone decides the trailing actions cell.
-   */
+  /** Renders a leading selection checkbox (checked per `selected`) when present. */
   readonly onSelectChange?: (checked: boolean) => void;
   readonly className?: string;
 }
@@ -68,7 +64,8 @@ function RecordTableRow({
         // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
         // to its content's actual width when that's wider than the container (matching what the
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
-        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border cursor-pointer transition-colors",
+        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
+        onClick && "cursor-pointer",
         rowBackground,
         className,
       )}

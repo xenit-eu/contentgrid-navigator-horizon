@@ -1,90 +1,101 @@
-import { useMemo, useState } from "react";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { EyeIcon, LinkBreakIcon } from "@phosphor-icons/react";
 import {
-  EntityItem,
+  type EntityItem,
   type FieldValue,
   type ProfileEntity,
-  useEntityItem,
-  useNavigatorData,
-  useProfileEntities,
+  useEntityItemsByUrl,
+  useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { type DataTableRow, RelationToManyRenderer, RelationToOneRenderer } from "@contentgrid/ui";
+import {
+  Alert,
+  AlertActionSection,
+  AlertButton,
+  AlertTitle,
+  RecordRowAction,
+  RelationToManyRenderer,
+  RelationToOneRenderer,
+  Skeleton,
+} from "@contentgrid/ui";
 import {
   EntityItemReference,
+  type RelationItemClickHandler,
   type RelationItemCreateHandler,
   RelationItemSearchDialog,
-  resolveNewlyLinkedHrefs,
 } from "../../entity-item";
-import { buildColumns, buildRows, useColumnVisibility } from "../../preferences";
+import { EntityItemCollectionTable } from "../../entity-item-collection";
 import type { FieldDescriptor } from "../model/field-descriptor";
 
 type RelationFieldDescriptor = Extract<FieldDescriptor, { kind: "relation" }>;
 
 /**
- * Seeds `EntityItem.fetchByUrlQuery`'s cache entry with an item the picker already fetched, so
- * linking it doesn't immediately trigger a redundant refetch of data already in hand — the same
- * reason `RelationToManyField`'s `rows` shows a "Loading…" placeholder for a href with no cache
- * entry yet at all. Mirrors legacy Navigator's `AddRelationField.handleRelationChange`, which
- * does the same `queryClient.setQueryData` before updating form state.
+ * Linked items are fetched only to display them: once cached they're never refetched (legacy
+ * `AddRelationField`'s options), and a failed item isn't retried since a retry won't bring it back.
  */
-function seedLinkedItemCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  apiFetch: Parameters<typeof EntityItem.fetchByUrlQuery>[0],
-  targetProfile: ProfileEntity,
-  item: EntityItem,
-) {
-  queryClient.setQueryData(
-    EntityItem.fetchByUrlQuery(apiFetch, item.selfLink.href, targetProfile).queryKey,
-    item,
-  );
-}
+const LINKED_ITEM_QUERY_OPTIONS = {
+  staleTime: Infinity,
+  refetchOnWindowFocus: false,
+  retry: false,
+} as const;
 
 export interface RelationFieldProps {
   readonly field: RelationFieldDescriptor;
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
+  readonly onBlur?: () => void;
   readonly error?: string;
-  /** See `RelationItemSearchDialog`'s `onCreateNew` doc comment. */
-  readonly onCreateNew?: RelationItemCreateHandler;
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
 }
 
+type ResolvedRelationFieldProps = Omit<RelationFieldProps, "onBlur"> & {
+  readonly targetProfile: ProfileEntity;
+};
+
 /**
- * Dispatches a "relation" `FieldDescriptor` to `RelationToOneRenderer`/`RelationToManyRenderer`
- * (by `field.multiValue`) and owns everything those `packages/ui` renderers stay deliberately
- * agnostic of: resolving the target profile, fetching a display summary for each linked href,
- * and opening the shared `RelationItemSearchDialog` picker (reused as-is from the entity-item
- * feature's edit-form relation sections, so create and edit share one picker implementation).
+ * A create-form relation field (legacy `AddRelationField`): resolves the target profile from the
+ * property's `options.link` and renders the to-one or to-many variant.
  */
-export function RelationField({
-  field,
-  value,
-  onChange,
-  error,
-  onCreateNew,
-}: Readonly<RelationFieldProps>) {
-  const profiles = useProfileEntities()
-    .map((result) => result.data)
-    .filter((profile): profile is ProfileEntity => !!profile);
-  const targetProfile = field.profileRelation?.getTargetProfile(profiles);
+export function RelationField({ onBlur, ...props }: Readonly<RelationFieldProps>) {
+  const { field, onChange } = props;
+  const { profiles, isLoading } = useLoadedProfileEntities();
+  // Legacy `AddRelationField`: the profile that describes the property's remote options link.
+  const { options } = field.property;
+  const targetLink = options?.isRemote() ? options.link : undefined;
+  const targetProfile = targetLink && profiles.find((profile) => profile.describes(targetLink));
+
+  // A picker link/unlink is the relation field's equivalent of leaving an input: mark it touched.
+  const handleChange = (next: FieldValue) => {
+    onChange(next);
+    onBlur?.();
+  };
+
+  if (!targetProfile) {
+    // Profiles still loading; once loaded, a target that no profile describes can't be linked.
+    return isLoading ? <Skeleton className="h-12 w-full rounded-md" /> : null;
+  }
 
   return field.multiValue ? (
-    <RelationToManyField
-      field={field}
-      value={value}
-      onChange={onChange}
-      error={error}
-      targetProfile={targetProfile}
-      onCreateNew={onCreateNew}
-    />
+    <RelationToManyField {...props} onChange={handleChange} targetProfile={targetProfile} />
   ) : (
-    <RelationToOneField
-      field={field}
-      value={value}
-      onChange={onChange}
-      error={error}
-      targetProfile={targetProfile}
-      onCreateNew={onCreateNew}
-    />
+    <RelationToOneField {...props} onChange={handleChange} targetProfile={targetProfile} />
+  );
+}
+
+/** Legacy `AddRelationField`'s alert for a linked item that failed to load. */
+function LinkedItemErrorAlert({
+  error,
+  onRemove,
+}: Readonly<{ error: Error; onRemove?: () => void }>) {
+  return (
+    <Alert tone="error">
+      <AlertTitle>Invalid item detected. error: {error.message || "no details."}</AlertTitle>
+      {onRemove && (
+        <AlertActionSection>
+          <AlertButton onClick={onRemove}>Remove</AlertButton>
+        </AlertActionSection>
+      )}
+    </Alert>
   );
 }
 
@@ -94,16 +105,27 @@ function RelationToOneField({
   onChange,
   error,
   targetProfile,
-  onCreateNew,
-}: Readonly<RelationFieldProps & { targetProfile: ProfileEntity | undefined }>) {
+  onRelationItemClick,
+  onRelationItemCreateNew,
+}: Readonly<ResolvedRelationFieldProps>) {
   const href = typeof value === "string" ? value : "";
-  const linkedItem = useEntityItem({ url: href });
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { apiFetch } = useNavigatorData();
-  const queryClient = useQueryClient();
+  const { collection, failed } = useEntityItemsByUrl({
+    urls: href ? [href] : [],
+    profileEntity: targetProfile,
+    queryOptionsOverride: LINKED_ITEM_QUERY_OPTIONS,
+  });
+  const linkedItem = collection.items[0];
 
   return (
     <>
+      {failed.map(({ url, error: fetchError }) => (
+        <LinkedItemErrorAlert
+          key={url}
+          error={fetchError}
+          onRemove={field.readOnly ? undefined : () => onChange("")}
+        />
+      ))}
       <RelationToOneRenderer
         name={field.name}
         label={field.label}
@@ -113,34 +135,33 @@ function RelationToOneField({
         value={value}
         onChange={onChange}
         error={error}
-        linkedItem={linkedItem.data && <EntityItemReference item={linkedItem.data} />}
-        isLoading={!!href && linkedItem.isPending}
-        onLink={targetProfile ? () => setPickerOpen(true) : undefined}
+        linkedItem={linkedItem && <EntityItemReference item={linkedItem} />}
+        onViewDetails={
+          linkedItem && onRelationItemClick
+            ? () => onRelationItemClick(targetProfile.name, linkedItem.id)
+            : undefined
+        }
+        isLoading={!!href && !linkedItem && failed.length === 0}
+        onLink={() => setPickerOpen(true)}
       />
-      {targetProfile && (
-        <RelationItemSearchDialog
-          targetProfile={targetProfile}
-          open={pickerOpen}
-          onOpenChange={setPickerOpen}
-          onSelect={(item) => {
-            seedLinkedItemCache(queryClient, apiFetch, targetProfile, item);
-            onChange(item.selfLink.href);
-          }}
-          onCreateNew={onCreateNew}
-        />
-      )}
+      <RelationItemSearchDialog
+        targetProfile={targetProfile}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        multiple={false}
+        onSelect={(item) => {
+          onChange(item.selfLink.href);
+          setPickerOpen(false);
+        }}
+        onCreateNew={onRelationItemCreateNew}
+      />
     </>
   );
 }
 
 /**
- * Builds `columns`/`rows` for `RelationToManyRenderer`'s `DataTable` exactly the way
- * `relation-to-many-section.tsx` (the edit-view's equivalent relation table) does via the same
- * `buildColumns`/`buildRows` helpers — the create-form table and the edit-view table read off
- * the same target-profile columns, matching legacy Navigator's `CollectionSearchTable` being the
- * literal same component in both places. The one deliberate difference: each row's `id` is set
- * to the linked item's href (not `item.id`) — see `RelationToManyRendererProps`'s doc comment for
- * why (there's no server-side relation link to unlink yet, only local pending form state).
+ * Shows the linked items in the shared `EntityItemCollectionTable`. Items picked in the link
+ * dialog are added to them, skipping any already linked (as on the details page).
  */
 function RelationToManyField({
   field,
@@ -148,50 +169,33 @@ function RelationToManyField({
   onChange,
   error,
   targetProfile,
-  onCreateNew,
-}: Readonly<RelationFieldProps & { targetProfile: ProfileEntity | undefined }>) {
-  const hrefs = Array.isArray(value) ? (value as string[]) : [];
-  const { apiFetch } = useNavigatorData();
-  const queryClient = useQueryClient();
+  onRelationItemClick,
+  onRelationItemCreateNew,
+}: Readonly<ResolvedRelationFieldProps>) {
+  const hrefs = Array.isArray(value)
+    ? value.filter((href): href is string => typeof href === "string")
+    : [];
   const [pickerOpen, setPickerOpen] = useState(false);
-
-  const visibility = useColumnVisibility(targetProfile);
-  const columns = useMemo(
-    () => (targetProfile ? buildColumns(targetProfile, visibility) : [{ key: "id", header: "ID" }]),
-    [targetProfile, visibility],
-  );
-
-  const itemQueries = useQueries({
-    queries: targetProfile
-      ? hrefs.map((href) => EntityItem.fetchByUrlQuery(apiFetch, href, targetProfile))
-      : [],
+  const { collection, failed } = useEntityItemsByUrl({
+    urls: hrefs,
+    profileEntity: targetProfile,
+    queryOptionsOverride: LINKED_ITEM_QUERY_OPTIONS,
   });
 
-  // Every href gets a row immediately, even before its query resolves — otherwise a newly-linked
-  // item (whose fetch is still pending on this first render) would be left out of `rows`
-  // entirely, making the table fall back to its "No items linked" empty state right after a
-  // successful link. Errored hrefs (e.g. the linked item was deleted server-side) get the same
-  // placeholder-row treatment — first column only, every other cell blank — so the link stays
-  // visible and Unlink stays reachable instead of the broken reference silently vanishing.
-  const rows = useMemo(() => {
-    return hrefs.map((href, index): DataTableRow => {
-      const query = itemQueries[index];
-      if (query?.data) {
-        const [row] = buildRows([query.data], columns);
-        return { ...row!, id: href };
-      }
-      const placeholder = query?.isError ? "Unavailable" : "Loading…";
-      return {
-        id: href,
-        data: Object.fromEntries(
-          columns.map((col, colIndex) => [col.key, colIndex === 0 ? placeholder : undefined]),
-        ),
-      };
-    });
-  }, [hrefs, itemQueries, columns]);
+  const remove = (href: string) => onChange(hrefs.filter((h) => h !== href));
+  const viewItem = onRelationItemClick
+    ? (item: EntityItem) => onRelationItemClick(targetProfile.name, item.id)
+    : undefined;
 
   return (
     <>
+      {failed.map(({ url, error: fetchError }) => (
+        <LinkedItemErrorAlert
+          key={url}
+          error={fetchError}
+          onRemove={field.readOnly ? undefined : () => remove(url)}
+        />
+      ))}
       <RelationToManyRenderer
         name={field.name}
         label={field.label}
@@ -199,33 +203,53 @@ function RelationToManyField({
         readOnly={field.readOnly}
         description={field.description}
         error={error}
-        entityName={targetProfile?.name ?? field.name}
-        entityTitle={targetProfile?.pluralName ?? field.label}
-        columns={columns}
-        rows={rows}
-        onUnlink={(href) => onChange(hrefs.filter((h) => h !== href))}
-        onLinkMore={targetProfile ? () => setPickerOpen(true) : undefined}
-        onUnlinkAll={() => onChange([])}
+        count={collection.items.length}
+        onLink={() => setPickerOpen(true)}
+        onClear={() => onChange([])}
+      >
+        {collection.isEmpty ? (
+          <p className="text-sm text-muted-foreground">No related item selected</p>
+        ) : (
+          <EntityItemCollectionTable
+            profile={targetProfile}
+            collection={collection}
+            paginated={false}
+            showRowActions={!field.readOnly || !!viewItem}
+            renderRowActions={(item) => (
+              <>
+                {viewItem && (
+                  <RecordRowAction
+                    label="Details"
+                    icon={<EyeIcon className="size-4" aria-hidden />}
+                    onClick={() => viewItem(item)}
+                  />
+                )}
+                {!field.readOnly && (
+                  <RecordRowAction
+                    label="Remove from selection"
+                    icon={<LinkBreakIcon className="size-4" aria-hidden />}
+                    onClick={() => remove(item.selfLink.href)}
+                  />
+                )}
+              </>
+            )}
+          />
+        )}
+      </RelationToManyRenderer>
+      <RelationItemSearchDialog
+        targetProfile={targetProfile}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        multiple
+        onLinkSelected={(items) => {
+          const newHrefs = items
+            .map((item) => item.selfLink.href)
+            .filter((href) => !hrefs.includes(href));
+          onChange([...hrefs, ...newHrefs]);
+          setPickerOpen(false);
+        }}
+        onCreateNew={onRelationItemCreateNew}
       />
-      {targetProfile && (
-        <RelationItemSearchDialog
-          targetProfile={targetProfile}
-          open={pickerOpen}
-          onOpenChange={setPickerOpen}
-          onLinkSelected={(items) => {
-            const newHrefs = resolveNewlyLinkedHrefs(items, new Set(hrefs));
-            if (newHrefs.length === 0) return;
-            if (targetProfile) {
-              const newHrefSet = new Set(newHrefs);
-              items
-                .filter((item) => newHrefSet.has(item.selfLink.href))
-                .forEach((item) => seedLinkedItemCache(queryClient, apiFetch, targetProfile, item));
-            }
-            onChange([...hrefs, ...newHrefs]);
-          }}
-          onCreateNew={onCreateNew}
-        />
-      )}
     </>
   );
 }

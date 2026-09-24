@@ -15,6 +15,8 @@ export * from "./item-reference/item-reference";
 export * from "./record-table/record-data-table";
 export * from "./record-table/record-table-header";
 export * from "./record-table/table-row";
+export * from "./record-table/record-row-action";
+export * from "./record-table/record-row-confirm-action";
 export * from "./entity-selector";
 export * from "./form-renderers";
 export * from "./unsaved-changes-dialog";

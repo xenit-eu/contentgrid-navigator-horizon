@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
+import { RecordDataTable } from "../record-table/record-data-table";
+import { RecordTableRow } from "../record-table/table-row";
 import { RelationToManyRenderer } from "./relation-to-many-renderer";
 import { relationToManyField } from "./test-fixtures";
 
@@ -16,36 +18,48 @@ const COLUMNS = [
   { key: "name", header: "Name" },
   { key: "sku", header: "SKU" },
 ];
-const ROWS = [
-  { id: "https://api.example.com/products/1", data: { name: "Widget A", sku: "WA-001" } },
-  { id: "https://api.example.com/products/2", data: { name: "Widget B", sku: "WB-002" } },
-];
+const LINKED_TABLE = (
+  <RecordDataTable entityName="product" entityTitle="Products" columns={COLUMNS}>
+    <RecordTableRow
+      cells={[
+        { key: "name", content: "Widget A" },
+        { key: "sku", content: "WA-001" },
+      ]}
+    />
+    <RecordTableRow
+      cells={[
+        { key: "name", content: "Widget B" },
+        { key: "sku", content: "WB-002" },
+      ]}
+    />
+  </RecordDataTable>
+);
 
 export const Empty: Story = {
   args: {
     ...relationToManyField(),
-    onLinkMore: fn(),
+    onLink: fn(),
   },
 };
 
 export const WithLinkedItems: Story = {
   args: {
-    ...relationToManyField({ columns: COLUMNS, rows: ROWS }),
-    onLinkMore: fn(),
-    onUnlinkAll: fn(),
+    ...relationToManyField({ count: 2, children: LINKED_TABLE }),
+    onLink: fn(),
+    onClear: fn(),
   },
 };
 
 export const ReadOnly: Story = {
   args: {
-    ...relationToManyField({ readOnly: true, columns: COLUMNS, rows: ROWS }),
-    onLinkMore: fn(),
+    ...relationToManyField({ readOnly: true, count: 2, children: LINKED_TABLE }),
+    onLink: fn(),
   },
 };
 
 export const WithError: Story = {
   args: {
     ...relationToManyField({ error: "At least one product is required" }),
-    onLinkMore: fn(),
+    onLink: fn(),
   },
 };

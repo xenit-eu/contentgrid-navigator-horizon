@@ -250,7 +250,6 @@ describe("resolveCreateFieldDescriptors", () => {
     expect(field.description).toBe("The invoice's supplier");
     if (field.kind === "relation") {
       expect(field.multiValue).toBe(false);
-      expect(field.profileRelation?.name).toBe("supplier");
     }
   });
 
@@ -261,14 +260,17 @@ describe("resolveCreateFieldDescriptors", () => {
     expect(field.required).toBe(false);
     if (field.kind === "relation") {
       expect(field.multiValue).toBe(true);
-      expect(field.profileRelation?.name).toBe("line_items");
     }
   });
 
-  it("produces one descriptor per create-form property (attributes then relations), in a single layout group", () => {
+  it("produces one descriptor per create-form property, in the template's property order and a single layout group", () => {
     const { fields, layout } = resolveCreateFieldDescriptors(makeTemplate());
     expect(fields).toHaveLength(13);
-    expect(fields.map((field) => field.name).slice(-2)).toEqual(["supplier", "line_items"]);
+    expect(fields.map((field) => field.name).slice(0, 3)).toEqual([
+      "supplier",
+      "line_items",
+      "invoice_number",
+    ]);
     expect(layout.groups).toHaveLength(1);
     expect(layout.groups[0]?.fieldNames).toEqual(fields.map((field) => field.name));
   });

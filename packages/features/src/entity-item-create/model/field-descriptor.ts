@@ -1,4 +1,4 @@
-import type { HalFormsProperty, ProfileRelation } from "@contentgrid/navigator-data";
+import type { HalFormsProperty } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 
 /**
@@ -21,8 +21,7 @@ export interface FieldDescriptorBase {
 
 /**
  * `kind`-discriminated union driving `render/field-renderer.tsx` (ADR-004's replacement
- * FieldRenderer). One variant per rendering shape. Covers only the create-form path (ACC-3128,
- * attributes-only) — this union is not meant to grow a variant per hypothetical future form kind.
+ * FieldRenderer). One variant per rendering shape, for the create form's attributes and relations.
  *
  * Neither `filter` nor `sort` are members here, and neither should be added speculatively:
  * - Filtering already has a real, working, differently-shaped home —
@@ -57,10 +56,5 @@ export type FieldDescriptor =
         readonly multiValue: boolean;
       })
   | ({ readonly kind: "relation" } & FieldDescriptorBase & {
-        /** Absent when the create-form template's property name doesn't match any relation on
-         * the profile — the renderer falls back to treating the target profile as unresolvable. */
-        readonly profileRelation?: ProfileRelation;
-        /** `false` for a to-one relation (`options.maxItems === 1`), `true` for to-many —
-         * mirrors `enum`'s own `multiValue` flag rather than being two separate `kind`s. */
         readonly multiValue: boolean;
       });
