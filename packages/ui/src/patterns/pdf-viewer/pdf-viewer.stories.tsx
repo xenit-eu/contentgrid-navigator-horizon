@@ -3,6 +3,9 @@ import { fn } from "storybook/test";
 import jsInPdfUrl from "./fixtures/js-in-pdf.pdf?url";
 import minimalPdfUrl from "./fixtures/minimal.pdf?url";
 import multiPagePdfUrl from "./fixtures/multi-page.pdf?url";
+import sampleFormPdfUrl from "./fixtures/sample-form.pdf?url";
+import sampleLandscapePdfUrl from "./fixtures/sample-landscape.pdf?url";
+import sampleProtectedPdfUrl from "./fixtures/sample-protected.pdf?url";
 import { PdfViewer } from "./pdf-viewer";
 import { DEFAULT_PDF_VIEWER_LABELS } from "./pdf-viewer-labels";
 import { PdfViewerHarness, StoryFrame, wasmUrl } from "./pdf-viewer-story-helpers";
@@ -11,8 +14,8 @@ import { type PdfViewerSearchActions, ZERO_SEARCH } from "./use-pdf-viewer-searc
 import type { PdfViewerStateActions } from "./use-pdf-viewer-state";
 
 // ---------------------------------------------------------------------------
-// Mock toolbar state/actions — used by the "mocked" stories (`Protected`,
-// `EngineFailure`, `SearchOpen`, `SearchNoResults`, `PrintReady`) that render
+// Mock toolbar state/actions — used by the "mocked" stories (`EngineFailure`,
+// `SearchOpen`, `SearchNoResults`, `PrintReady`) that render
 // `PdfViewerToolbar` directly against a hand-picked state instead of driving
 // a real engine to it, matching the state exactly so the story is visually
 // identical to what `PdfViewer` itself would render.
@@ -92,7 +95,8 @@ export const Default: Story = {
   // loading placeholder) until the first page paints, and the visual harness
   // (`visual.spec.ts`) waits for that before screenshotting (ADR-009). Only
   // the stories that mount the real engine (`Default`, `MultiPage`,
-  // `ToolbarMinimal`, `Invalid`, `JsInPdf`) carry this tag — the mocked stories below never
+  // `SampleForm`, `Landscape`, `ToolbarMinimal`, `Protected`, `Invalid`,
+  // `JsInPdf`) carry this tag — the mocked stories below never
   // render `aria-busy="true"`, so the wait would be a pointless no-op there.
   tags: ["async-content"],
   render: () => (
@@ -127,6 +131,45 @@ export const MultiPage: Story = {
   ),
 };
 
+/**
+ * Real engine on a one-page AcroForm fixture (text fields and a checkbox, no
+ * JavaScript): shows how the viewer renders a document carrying form fields.
+ */
+export const SampleForm: Story = {
+  // `async-content` — see `Default`.
+  tags: ["async-content"],
+  render: () => (
+    <StoryFrame>
+      <PdfViewerHarness
+        src={sampleFormPdfUrl}
+        filename="sample-form.pdf"
+        wasmUrl={wasmUrl}
+        onDownload={fn()}
+        onDocumentOpened={fn()}
+        onLoadError={fn()}
+      />
+    </StoryFrame>
+  ),
+};
+
+/** Real engine on a one-page landscape (792 × 612 pt, US Letter) fixture. */
+export const Landscape: Story = {
+  // `async-content` — see `Default`.
+  tags: ["async-content"],
+  render: () => (
+    <StoryFrame>
+      <PdfViewerHarness
+        src={sampleLandscapePdfUrl}
+        filename="sample-landscape.pdf"
+        wasmUrl={wasmUrl}
+        onDownload={fn()}
+        onDocumentOpened={fn()}
+        onLoadError={fn()}
+      />
+    </StoryFrame>
+  ),
+};
+
 export const ToolbarMinimal: Story = {
   // `async-content` — see `Default`.
   tags: ["async-content"],
@@ -143,37 +186,23 @@ export const ToolbarMinimal: Story = {
 };
 
 /**
- * Mocked: producing a genuinely password-protected PDF fixture requires
- * implementing the PDF standard security handler (RC4/AES key derivation)
- * by hand, which is out of scope here. This story instead renders the exact
- * toolbar + status-message pairing `PdfViewer` renders once the engine
- * reports `documentState: "protected"`, reusing the same `PdfViewerToolbar`
- * and default labels so it is visually identical to the real state.
+ * Real engine on a password-protected fixture (standard security handler,
+ * user password set): PDFium reports a password error, so the viewer settles
+ * on its terminal `"protected"` state instead of painting a page.
  */
 export const Protected: Story = {
+  // `async-content` — see `Default` and `Invalid`: busy until the protected
+  // message replaces the loading placeholder.
+  tags: ["async-content"],
   render: () => (
     <StoryFrame>
-      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-        <PdfViewerToolbar
-          showPageNavigation
-          showZoom
-          showSearch
-          showPrint
-          showFullscreen
-          onDownload={fn()}
-          documentState="protected"
-          page={{ current: 0, total: 0 }}
-          zoom={{ mode: "fit-width", level: 100 }}
-          search={ZERO_SEARCH}
-          fullscreen={false}
-          actions={makeMockActions()}
-          searchActions={makeMockSearchActions()}
-          labels={DEFAULT_PDF_VIEWER_LABELS}
-        />
-        <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-center text-sm">
-          {DEFAULT_PDF_VIEWER_LABELS.protectedDocument}
-        </div>
-      </div>
+      <PdfViewerHarness
+        src={sampleProtectedPdfUrl}
+        filename="sample-protected.pdf"
+        wasmUrl={wasmUrl}
+        onDownload={fn()}
+        onLoadError={fn()}
+      />
     </StoryFrame>
   ),
 };
@@ -235,7 +264,7 @@ export const JsInPdf: Story = {
 };
 
 /**
- * Mocked (same rationale as `Protected`): shows the search popover open with
+ * Mocked (see the note on the mock helpers above): shows the search popover open with
  * three matches found and the second one active.
  */
 export const SearchOpen: Story = {
@@ -271,7 +300,7 @@ export const SearchOpen: Story = {
   ),
 };
 
-/** Mocked (same rationale as `Protected`): the search popover open with a query that matched nothing. */
+/** Mocked (see the note on the mock helpers above): the search popover open with a query that matched nothing. */
 export const SearchNoResults: Story = {
   render: () => (
     <StoryFrame>
@@ -305,7 +334,7 @@ export const SearchNoResults: Story = {
   ),
 };
 
-/** Mocked (same rationale as `Protected`): a ready document with the print control enabled. */
+/** Mocked (see the note on the mock helpers above): a ready document with the print control enabled. */
 export const PrintReady: Story = {
   render: () => (
     <StoryFrame>
