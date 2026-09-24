@@ -61,7 +61,8 @@ export const ContentFocusLayout = forwardRef<HTMLDivElement, ContentFocusLayoutP
             open ? "" : "min-[800px]:w-12",
           ].join(" ")}
         >
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+          {/* px-2 py-1.5 + icon-sm matches PdfViewerToolbar's row so both bars line up */}
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b px-2 py-1.5">
             {open && (
               <div className="min-w-0 flex-1 truncate">
                 {sidePanelHeader ?? <span className="text-sm font-semibold">{sidePanelTitle}</span>}
@@ -70,7 +71,7 @@ export const ContentFocusLayout = forwardRef<HTMLDivElement, ContentFocusLayoutP
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               aria-label={open ? `Collapse ${sidePanelTitle}` : `Expand ${sidePanelTitle}`}
               aria-expanded={open}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
