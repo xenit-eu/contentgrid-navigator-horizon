@@ -217,6 +217,50 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.queryByText("content-preview-panel:document")).not.toBeInTheDocument();
   });
 
+  it("resets and re-validates the selected attribute when the entity changes, not just the item id (e.g. navigating /document/1 -> /invoice/1 with the same itemId)", async () => {
+    const profileA = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document", "receipt"],
+    });
+    const itemA = makeEntityItem({
+      profileEntity: profileA,
+      contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
+    });
+    mockHooks(profileA, itemA);
+
+    const { rerender } = renderView(
+      <EntityItemContentFocusView entityName="document" itemId="1" />,
+    );
+
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+
+    // Navigate to a different entity — same itemId ("1") — whose content attributes don't
+    // include "receipt" at all. Without resetting/validating on entity change (not just itemId),
+    // this would try to preview a "receipt" attribute that doesn't exist on this entity, which
+    // `useContentPreview` throws synchronously for in real usage.
+    const profileB = makeProfile({ hasContentAttributes: true, contentAttributeNames: ["scan"] });
+    const itemB = makeEntityItem({
+      profileEntity: profileB,
+      contentAttrs: [makeContentAttribute("scan", true)],
+    });
+    mockHooks(profileB, itemB);
+
+    rerender(
+      <NavigatorDataProvider
+        apiFetch={createApiClient(noopSupplier)}
+        contentFetch={createContentClient(noopSupplier)}
+        profileUrl={PROFILE_URL}
+      >
+        <EntityItemContentFocusView entityName="invoice" itemId="1" />
+      </NavigatorDataProvider>,
+    );
+
+    expect(await screen.findByText("content-preview-panel:scan")).toBeInTheDocument();
+    expect(screen.queryByText("content-preview-panel:receipt")).not.toBeInTheDocument();
+  });
+
   it("builds default breadcrumb LABELS from the profile (Home / plural name / item id) when the host supplies none", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
@@ -233,7 +277,7 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.getByRole("link", { name: "1" })).toBeInTheDocument();
   });
 
-  it("renders Home/collection crumbs as plain, non-interactive text when no click callbacks are supplied (Principle VIII: the view has no route knowledge of its own)", () => {
+  it("renders Home/collection crumbs as plain, non-interactive text when no link renderers are supplied (Principle VIII: the view has no route knowledge of its own)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
     mockHooks(profile, item);
@@ -246,28 +290,23 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
   });
 
-  it("renders Home/collection crumbs as interactive buttons and fires onHomeClick/onCollectionClick when supplied by the host", () => {
+  it("renders Home/collection crumbs as real links via the host-supplied renderHomeLink/renderCollectionLink (e.g. wrapping the host's own router Link, never a plain onClick button)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
     mockHooks(profile, item);
-
-    const onHomeClick = vi.fn();
-    const onCollectionClick = vi.fn();
 
     renderView(
       <EntityItemContentFocusView
         entityName="order"
         itemId="1"
-        onHomeClick={onHomeClick}
-        onCollectionClick={onCollectionClick}
+        renderHomeLink={(label) => <a href="/home">{label}</a>}
+        renderCollectionLink={(entityName, label) => <a href={`/${entityName}`}>{label}</a>}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Home" }));
-    expect(onHomeClick).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/home");
+    const collectionLink = screen.getByRole("link", { name: "Orders" });
     // Called with the profile's `name` (routing identifier), not the displayed `pluralName`.
-    expect(onCollectionClick).toHaveBeenCalledWith("order");
+    expect(collectionLink).toHaveAttribute("href", "/order");
   });
 });

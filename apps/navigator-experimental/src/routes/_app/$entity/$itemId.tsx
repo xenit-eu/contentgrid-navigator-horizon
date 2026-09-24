@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemContentFocusView,
   ensureEntityItemDetailLoaderData,
 } from "@contentgrid/features/entity-item";
 import {
+  BreadcrumbLink,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -124,13 +125,23 @@ function EntityItemDetailRoute({
       <EntityItemContentFocusView
         entityName={entityName}
         itemId={itemId}
-        onHomeClick={() => go({ to: "/", search: {} })}
-        onCollectionClick={(relatedEntityName) =>
-          // Empty search, not `(prev) => prev`: filters aren't carried in this page's URL (see
-          // the list route's `onEntityItemClick`) — the list restores its earlier filters and
-          // page position from the QueryClient-remembered page href instead.
-          go({ to: "/$entity", params: { entity: relatedEntityName }, search: {} })
-        }
+        renderHomeLink={(label) => (
+          <BreadcrumbLink asChild>
+            <Link to="/" search={{}}>
+              {label}
+            </Link>
+          </BreadcrumbLink>
+        )}
+        renderCollectionLink={(relatedEntityName, label) => (
+          <BreadcrumbLink asChild>
+            {/* Empty search, not `(prev) => prev`: filters aren't carried in this page's URL (see
+                the list route's `onEntityItemClick`) — the list restores its earlier filters and
+                page position from the QueryClient-remembered page href instead. */}
+            <Link to="/$entity" params={{ entity: relatedEntityName }} search={{}}>
+              {label}
+            </Link>
+          </BreadcrumbLink>
+        )}
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           go({
             to: "/$entity/$itemId",

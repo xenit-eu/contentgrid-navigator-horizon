@@ -8,8 +8,19 @@ export interface ContentFocusLayoutProps {
   readonly preview: ReactNode;
   /** Attributes + relations, rendered in the collapsible side panel. */
   readonly sidePanel: ReactNode;
-  /** Side panel header label. Defaults to `"Details"`. */
+  /**
+   * Accessible name for the side panel and its collapse/expand button (`"Collapse
+   * ${sidePanelTitle}"` / `"Expand ${sidePanelTitle}"`). Defaults to `"Details"`. Also the
+   * visual header shown when the panel is open, unless `sidePanelHeader` overrides it.
+   */
   readonly sidePanelTitle?: string;
+  /**
+   * Visual content for the header bar shown when the panel is open — defaults to plain
+   * `sidePanelTitle` text. Pass a richer node (e.g. `EntityItemReference`, so the panel shows
+   * which item it belongs to instead of a generic label) here; `sidePanelTitle` still supplies
+   * the accessible name regardless.
+   */
+  readonly sidePanelHeader?: ReactNode;
   /** Whether the side panel starts expanded. Defaults to `true`. */
   readonly defaultSidePanelOpen?: boolean;
 }
@@ -24,7 +35,13 @@ export interface ContentFocusLayoutProps {
  */
 export const ContentFocusLayout = forwardRef<HTMLDivElement, ContentFocusLayoutProps>(
   function ContentFocusLayout(
-    { preview, sidePanel, sidePanelTitle = "Details", defaultSidePanelOpen = true },
+    {
+      preview,
+      sidePanel,
+      sidePanelTitle = "Details",
+      sidePanelHeader,
+      defaultSidePanelOpen = true,
+    },
     ref,
   ) {
     const [open, setOpen] = useState(defaultSidePanelOpen);
@@ -45,7 +62,11 @@ export const ContentFocusLayout = forwardRef<HTMLDivElement, ContentFocusLayoutP
           ].join(" ")}
         >
           <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
-            {open && <span className="truncate text-sm font-semibold">{sidePanelTitle}</span>}
+            {open && (
+              <div className="min-w-0 flex-1 truncate">
+                {sidePanelHeader ?? <span className="text-sm font-semibold">{sidePanelTitle}</span>}
+              </div>
+            )}
             <Button
               type="button"
               variant="ghost"
