@@ -34,6 +34,12 @@ export interface RecordDataTableProps {
    */
   footerContent?: ReactNode;
 
+  /**
+   * Rendered at the START of the toolbar row, growing to fill the available width so it sits
+   * next to `tableActions` (e.g. Columns/Filters buttons) instead of stacking as its own row
+   * above the table.
+   */
+  searchBar?: ReactNode;
   tableActions?: ReactNode;
 
   /** Reserves a trailing column for row-level actions */
@@ -66,6 +72,7 @@ function RecordDataTable({
   onNextPageClick,
   onPreviousPageClick,
   footerContent,
+  searchBar,
   tableActions,
   showActionsColumn,
   onCreateClick,
@@ -99,8 +106,13 @@ function RecordDataTable({
 
   return (
     <div className={cn("flex min-h-0 flex-col gap-2", className)}>
-      {tableActions && (
-        <div className="flex shrink-0 items-center justify-end gap-2">{tableActions}</div>
+      {(searchBar || tableActions) && (
+        <div className="flex shrink-0 items-center gap-2">
+          {searchBar && <div className="min-w-0 flex-1">{searchBar}</div>}
+          {tableActions && (
+            <div className="ml-auto flex shrink-0 items-center gap-2">{tableActions}</div>
+          )}
+        </div>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col rounded-md border overflow-hidden">
