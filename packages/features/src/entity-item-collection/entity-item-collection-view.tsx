@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
   EntityItem,
@@ -55,6 +55,12 @@ export interface EntityItemCollectionViewProps {
   readonly currentSort?: string;
   /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
   readonly onSortChange?: (sort: string | undefined) => void;
+  /**
+   * Rendered at the start of the table's toolbar row, growing to fill the available width next
+   * to the "Columns"/"Filters" buttons this view builds itself — e.g. a search bar. This view
+   * has no opinion on what it is; it only reserves the layout slot for it (`RecordDataTable`).
+   */
+  readonly searchBar?: ReactNode;
 }
 
 /**
@@ -85,6 +91,7 @@ export function EntityItemCollectionView({
   onFiltersChange,
   currentSort,
   onSortChange,
+  searchBar,
 }: Readonly<EntityItemCollectionViewProps>) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
@@ -302,6 +309,7 @@ export function EntityItemCollectionView({
             onSort={handleSort}
             visibleColumnNames={localVisibleColumns}
             forcedVisibleColumnNames={activelyFilteredAttributeNames}
+            searchBar={searchBar}
             tableActions={
               (attributeOptions.length > 0 || fields.length > 0) && (
                 <>

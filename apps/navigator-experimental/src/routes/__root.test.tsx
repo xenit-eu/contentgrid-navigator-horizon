@@ -70,9 +70,13 @@ vi.mock("@contentgrid/features/dashboard", () => ({
 }));
 
 vi.mock("@contentgrid/features/entity-item-collection", () => ({
-  EntityItemCollectionSearchView: ({ profile }: { profile: { name: string } }) => (
+  EntityItemCollectionView: ({ profile }: { profile: { name: string } }) => (
     <div data-testid="entity-detail" data-entity={profile.name} />
   ),
+}));
+
+vi.mock("@contentgrid/features/entity-search-bar", () => ({
+  EntitySearchBar: () => null,
 }));
 
 afterEach(cleanup);
