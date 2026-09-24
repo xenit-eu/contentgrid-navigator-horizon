@@ -268,6 +268,7 @@ describe("useUploadContent — no If-Match (matches the legacy Navigator's uncon
         makeQueryClient(),
         undefined,
         contentFetchSpy as never,
+        undefined,
         createContentUploadFetchSpy,
       ),
     });

@@ -12,6 +12,7 @@ const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
 const COLLECTION_PAGE_KEY = "CollectionPage";
 const COLLECTION_FILTERS_KEY = "CollectionFilters";
 const COLLECTION_SORT_KEY = "CollectionSort";
+const CONTENT_PREVIEW_KEY = "ContentPreview";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -133,5 +134,20 @@ export const queryKeys = {
   collectionSort: {
     /** Exact key for the remembered active sort value of one entity's collection. */
     byEntityName: (entityName: string) => [COLLECTION_SORT_KEY, entityName] as const,
+  },
+
+  /**
+   * `useContentPreview`'s query key — one entry per content link + ETag combination.
+   *
+   * The ETag is part of the key (not just the link href) so that re-uploading a file
+   * onto the same content attribute produces a new key automatically: the entity item's
+   * ETag changes on any mutation, including a content upload, so a stale preview is never
+   * served from cache after a re-upload. Deliberately its own root — never invalidated by
+   * an entity item or collection mutation; see `packages/navigator-data/CLAUDE.md`
+   * "Content preview and renditions".
+   */
+  contentPreview: {
+    /** Exact key for one content link's preview, scoped to the item's current ETag. */
+    byUrl: (href: string, etag: string | null) => [CONTENT_PREVIEW_KEY, href, etag] as const,
   },
 };

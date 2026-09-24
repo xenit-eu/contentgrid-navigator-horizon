@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "react-oidc-context";
 import { createApiClient, createContentClient, createContentUploadClient } from "../api/client";
 import type { TypedFetch } from "../api/client";
+import {
+  DEFAULT_RENDITION_POLL_INTERVAL_MS,
+  DEFAULT_RENDITION_TIMEOUT_MS,
+} from "../preview/rendition-job";
 import { getAppConfig } from "./auth-config";
 import { createOidcTokenSupplier } from "./token-supplier";
 
@@ -21,6 +25,14 @@ export interface AppAuthResult {
    */
   createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch;
   profileUrl: string;
+  /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUri`. */
+  renditionUri?: string;
+  /**
+   * Poll interval/ceiling for rendition jobs, populated with `RuntimeAppConfig`'s
+   * `renditionPollIntervalMs`/`renditionTimeoutMs` (defaulting to 2000ms/60000ms) whenever
+   * `renditionUri` is configured; `undefined` when renditions are disabled.
+   */
+  renditionPolling?: { intervalMs: number; timeoutMs: number };
 }
 
 /**
@@ -57,7 +69,7 @@ export function useAppAuth(): AppAuthResult {
     };
   }, []); // created once; token is read via ref on each request
 
-  const { apiBaseUrl } = getAppConfig();
+  const { apiBaseUrl, renditionUri, renditionPollIntervalMs, renditionTimeoutMs } = getAppConfig();
 
   useEffect(() => {
     if (!auth.isLoading && !auth.error && auth.user?.expired) {
@@ -71,11 +83,27 @@ export function useAppAuth(): AppAuthResult {
     }
   }, [auth]);
 
+  // Memoised on the three primitive inputs: NavigatorDataProvider (context.tsx) memoises its
+  // context value on this object's identity, so a fresh object every render would invalidate
+  // every useNavigatorData() consumer on every AuthShell render.
+  const renditionPolling = useMemo(
+    () =>
+      renditionUri
+        ? {
+            intervalMs: renditionPollIntervalMs ?? DEFAULT_RENDITION_POLL_INTERVAL_MS,
+            timeoutMs: renditionTimeoutMs ?? DEFAULT_RENDITION_TIMEOUT_MS,
+          }
+        : undefined,
+    [renditionUri, renditionPollIntervalMs, renditionTimeoutMs],
+  );
+
   return {
     auth,
     apiFetch,
     contentFetch,
     createContentUploadFetch,
     profileUrl: `${apiBaseUrl}/profile`,
+    renditionUri,
+    renditionPolling,
   };
 }

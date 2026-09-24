@@ -1,9 +1,13 @@
 import { WebStorageStateStore } from "oidc-client-ts";
 import type { AuthProviderProps } from "react-oidc-context";
 import { z } from "zod";
+import { DEFAULT_RENDITION_POLL_INTERVAL_MS } from "../preview/rendition-job";
 import { isDevTokenMode } from "./dev-token";
 
 const isNotTemplate = (s: string) => !s.includes("${");
+
+/** Minimum allowed `renditionPollIntervalMs` — see `validateRenditionSettings`. */
+const MIN_RENDITION_POLL_INTERVAL_MS = 250;
 
 const ContentGridConfigSchema = z.object({
   v1: z.object({
@@ -18,8 +22,78 @@ const ContentGridConfigSchema = z.object({
         .min(1)
         .refine(isNotTemplate, "Contains unreplaced template placeholder"),
     }),
+    /**
+     * URI template for the PDF rendition service, delivered per deployment via Liaison's
+     * `config.js` (see `specs/002-pdf-viewer/research.md` §8.6). Optional: renditions are
+     * simply disabled (`useContentPreview` returns `{ kind: "unavailable" }` for non-PDF
+     * files) when unset.
+     */
+    renditionUri: z.string().optional(),
+    /** Delay between rendition job polls, in milliseconds. Defaults to 2000 when unset. */
+    renditionPollIntervalMs: z.number().optional(),
+    /** Rendition polling ceiling, in milliseconds. Defaults to 60000 when unset. */
+    renditionTimeoutMs: z.number().optional(),
   }),
 });
+
+/**
+ * Candidate rendition settings gathered from any one config source (window config,
+ * `config.js`, the dev-config override, or env vars) before they are trusted.
+ */
+interface RenditionSettingsCandidate {
+  renditionUri?: string;
+  renditionPollIntervalMs?: number;
+  renditionTimeoutMs?: number;
+}
+
+/**
+ * Validates rendition configuration from any source and drops (with a `console.warn`,
+ * never a thrown error — a misconfigured rendition endpoint must not block the rest of
+ * the app from loading) any value that fails its rule:
+ * - `renditionUri` must be a URI template containing the `{?url}` expansion the rendition
+ *   client relies on (`preview/rendition-job.ts`).
+ * - `renditionPollIntervalMs` must be at least {@link MIN_RENDITION_POLL_INTERVAL_MS} —
+ *   below that, polling would hammer the rendition service.
+ * - `renditionTimeoutMs` must be at least the (possibly defaulted) poll interval — a
+ *   timeout shorter than one poll interval could never observe a single poll result.
+ */
+function validateRenditionSettings(
+  candidate: RenditionSettingsCandidate,
+): RenditionSettingsCandidate {
+  let { renditionUri, renditionPollIntervalMs, renditionTimeoutMs } = candidate;
+
+  if (renditionUri !== undefined && !renditionUri.includes("{?url}")) {
+    // Intentional: warn-and-drop, not throw — a misconfigured rendition endpoint must
+    // not block the rest of the app from loading.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Ignoring renditionUri "${renditionUri}": must be a URI template containing "{?url}".`,
+    );
+    renditionUri = undefined;
+  }
+
+  if (
+    renditionPollIntervalMs !== undefined &&
+    renditionPollIntervalMs < MIN_RENDITION_POLL_INTERVAL_MS
+  ) {
+    // eslint-disable-next-line no-console -- intentional, see the warn above.
+    console.warn(
+      `Ignoring renditionPollIntervalMs ${renditionPollIntervalMs}: must be at least ${MIN_RENDITION_POLL_INTERVAL_MS}ms.`,
+    );
+    renditionPollIntervalMs = undefined;
+  }
+
+  const effectiveIntervalMs = renditionPollIntervalMs ?? DEFAULT_RENDITION_POLL_INTERVAL_MS;
+  if (renditionTimeoutMs !== undefined && renditionTimeoutMs < effectiveIntervalMs) {
+    // eslint-disable-next-line no-console -- intentional, see the warn above.
+    console.warn(
+      `Ignoring renditionTimeoutMs ${renditionTimeoutMs}: must be >= the poll interval (${effectiveIntervalMs}ms).`,
+    );
+    renditionTimeoutMs = undefined;
+  }
+
+  return { renditionUri, renditionPollIntervalMs, renditionTimeoutMs };
+}
 
 declare global {
   interface Window {
@@ -33,6 +107,10 @@ export interface RuntimeAppConfig {
   apiBaseUrl: string;
   extractServiceUrl?: string;
   renditionUri?: string;
+  /** Delay between rendition job polls, in milliseconds. Defaults to 2000 when unset. */
+  renditionPollIntervalMs?: number;
+  /** Rendition polling ceiling, in milliseconds. Defaults to 60000 when unset. */
+  renditionTimeoutMs?: number;
 }
 
 export const DEV_CONFIG_STORAGE_KEY = "contentgrid-navigator:dev-config";
@@ -43,6 +121,8 @@ const DevConfigOverrideSchema = z.object({
   clientId: z.string().min(1),
   extractServiceUrl: z.string().optional(),
   renditionUri: z.string().optional(),
+  renditionPollIntervalMs: z.number().optional(),
+  renditionTimeoutMs: z.number().optional(),
 });
 
 let cachedConfig: RuntimeAppConfig | null = null;
@@ -75,7 +155,7 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
     if (overrideRaw) {
       const parsed = DevConfigOverrideSchema.safeParse(JSON.parse(overrideRaw));
       if (parsed.success) {
-        cachedConfig = parsed.data;
+        cachedConfig = { ...parsed.data, ...validateRenditionSettings(parsed.data) };
         return cachedConfig;
       }
     }
@@ -92,7 +172,12 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
         clientId: parsed.data.v1.oidc.client_id,
         apiBaseUrl: parsed.data.v1.apiBaseUrl,
         extractServiceUrl: import.meta.env.VITE_EXTRACT_SERVICE_URL || undefined,
-        renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
+        ...validateRenditionSettings({
+          renditionUri:
+            parsed.data.v1.renditionUri ?? (import.meta.env.VITE_RENDITION_URI || undefined),
+          renditionPollIntervalMs: parsed.data.v1.renditionPollIntervalMs,
+          renditionTimeoutMs: parsed.data.v1.renditionTimeoutMs,
+        }),
       };
       return cachedConfig;
     }
@@ -108,7 +193,17 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
     if (!apiBaseUrl) {
       throw new Error("VITE_API_BASE_URL is required for dev token mode.");
     }
-    cachedConfig = { authority: "", clientId: "", apiBaseUrl };
+    cachedConfig = {
+      authority: "",
+      clientId: "",
+      apiBaseUrl,
+      // Same env-var rendition fallback as the non-dev-token branch below — dev token mode
+      // still needs a rendition endpoint configured for the PDF viewer's rendition path to
+      // engage (see "Content preview and renditions" in this package's CLAUDE.md).
+      ...validateRenditionSettings({
+        renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
+      }),
+    };
     return cachedConfig;
   }
 
@@ -123,7 +218,7 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
     clientId,
     apiBaseUrl,
     extractServiceUrl: import.meta.env.VITE_EXTRACT_SERVICE_URL || undefined,
-    renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
+    ...validateRenditionSettings({ renditionUri: import.meta.env.VITE_RENDITION_URI || undefined }),
   };
   return cachedConfig;
 }
