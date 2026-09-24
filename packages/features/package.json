@@ -79,6 +79,10 @@
     "./hal-forms": {
       "import": "./src/hal-forms/index.ts",
       "types": "./src/hal-forms/index.ts"
+    },
+    "./entity-search-bar": {
+      "import": "./src/entity-search-bar/index.ts",
+      "types": "./src/entity-search-bar/index.ts"
     }
   },
   "scripts": {

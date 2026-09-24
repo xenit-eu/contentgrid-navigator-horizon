@@ -2,11 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { EntityItemCollectionSearchView } from "@contentgrid/features/entity-item-collection";
+import { EntityItemCollectionView } from "@contentgrid/features/entity-item-collection";
+import { EntitySearchBar } from "@contentgrid/features/entity-search-bar";
+import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import {
   applyFiltersToSearchState,
+  applySearchTermToSearchState,
   applySortToSearchState,
   decodeFiltersFromSearchState,
+  decodeSearchTermFromSearchState,
   decodeSortFromSearchState,
   entitySearchStateValidator,
 } from "@contentgrid/features/search";
@@ -171,6 +175,33 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
     });
   }
 
+  // The single search bar's typed term (FR-016) — round-trips through the URL's `q` key like
+  // filters/sort above, but with no session memo: unlike a filter or sort choice, losing the
+  // typed term on a trip through an item's detail page (which is exactly where selecting an
+  // effective match navigates to) is acceptable, so there's nothing to reconcile with a cache
+  // here. `query` itself updates on every keystroke (EntitySearchBar/useEntitySearchSuggestions
+  // need that live); syncing it to the URL is debounced so typing doesn't push a navigation
+  // on every keystroke.
+  const urlSearchTerm = useMemo(() => decodeSearchTermFromSearchState(search) ?? "", [search]);
+  const [query, setQuery] = useState<string>(urlSearchTerm);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      go({
+        to: "/$entity",
+        params: { entity: profile.name },
+        search: (prev) => applySearchTermToSearchState(prev, query || undefined),
+        replace: true,
+      });
+    }, 400);
+    return () => clearTimeout(id);
+  }, [query, go, profile.name]);
+
+  // Browser back/forward between two searches, or a shared `?q=...` link opened while already here.
+  useEffect(() => {
+    setQuery(urlSearchTerm);
+  }, [urlSearchTerm]);
+
   const breadcrumbs = (
     <Breadcrumb>
       <BreadcrumbList>
@@ -202,29 +233,51 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
     </div>
   );
 
+  function handleEntityItemClick(item: EntityItem) {
+    // Filters are deliberately NOT forwarded into the item-detail URL — they stay
+    // recoverable via `rememberCollectionFilters`/`rememberCollectionPageHref`, so the
+    // breadcrumb back to this list restores them from the QueryClient cache rather than
+    // round-tripping through the URL.
+    go({
+      to: "/$entity/$itemId",
+      params: { entity: profile.name, itemId: item.id },
+      search: {},
+    });
+  }
+
   return (
-    <EntityItemCollectionSearchView
-      profile={profile}
-      pageUrl={pageUrl}
-      onPageChange={handlePageChange}
-      filters={filters}
-      onFiltersChange={handleFiltersChange}
-      currentSort={sort}
-      onSortChange={handleSortChange}
-      actions={actions}
-      toolbar
-      breadcrumbs={breadcrumbs}
-      onEntityItemClick={(item: EntityItem) =>
-        // Filters are deliberately NOT forwarded into the item-detail URL — they stay
-        // recoverable via `rememberCollectionFilters`/`rememberCollectionPageHref`, so the
-        // breadcrumb back to this list restores them from the QueryClient cache rather than
-        // round-tripping through the URL.
-        go({
-          to: "/$entity/$itemId",
-          params: { entity: profile.name, itemId: item.id },
-          search: {},
-        })
-      }
-    />
+    <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs} actions={actions}>
+      {/*
+       * EntitySearchBar (experimental, ACC-3192) composes here rather than inside
+       * EntityItemCollectionSearchView — that component stays stable and unchanged
+       * (contracts §7); this route wires the search bar through the SAME filters/
+       * onFiltersChange state EntityItemCollectionView already uses, so the two entry
+       * points share one filter map (FR-018). Passed as `searchBar` so it renders in the
+       * table's own toolbar row, next to the "Columns"/"Filters" buttons, rather than as a
+       * separate row above the table.
+       */}
+      <EntityItemCollectionView
+        profile={profile}
+        pageUrl={pageUrl}
+        onPageChange={handlePageChange}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        currentSort={sort}
+        onSortChange={handleSortChange}
+        onEntityItemClick={handleEntityItemClick}
+        searchBar={
+          <EntitySearchBar
+            profile={profile}
+            query={query}
+            onQueryChange={setQuery}
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onEntityItemSelect={handleEntityItemClick}
+            currentSort={sort}
+            onSortChange={handleSortChange}
+          />
+        }
+      />
+    </BreadCrumbsToolBarLayout>
   );
 }

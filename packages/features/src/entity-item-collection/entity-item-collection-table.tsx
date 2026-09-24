@@ -43,6 +43,9 @@ export interface EntityItemCollectionTableProps {
   readonly currentSort?: string;
   /** Called with the clicked column's next sort option (or `undefined` to clear it). */
   readonly onSort?: (option: RecordTableSortOption | undefined) => void;
+  /** Rendered at the start of the toolbar row, growing to fill the available width next to
+   * `tableActions` (e.g. a search bar). */
+  readonly searchBar?: ReactNode;
   /** Rendered above the table, right-aligned (e.g. a "Filters" button). */
   readonly tableActions?: ReactNode;
   /**
@@ -67,7 +70,13 @@ export interface EntityItemCollectionTableProps {
 
 const REFERENCE_COLUMN_KEY = "__reference";
 
-function toRecordTableSortOptions(profile: ProfileEntity): RecordTableSortOption[] {
+/**
+ * Exported (research D3 / ACC-3192) so `entity-search-bar` (experimental) can offer the SAME
+ * sort options via its own compact control (FR-020) without duplicating this
+ * `searchTemplate.sortOptions` → `RecordTableSortOption[]` mapping — an experimental feature
+ * importing a stable one is permitted; only the reverse is not.
+ */
+export function toRecordTableSortOptions(profile: ProfileEntity): RecordTableSortOption[] {
   return (profile.searchTemplate?.sortOptions ?? [])
     .filter((option) => option.profileAttribute)
     .map((option) => ({
@@ -100,6 +109,7 @@ export function EntityItemCollectionTable({
   onPageChange,
   currentSort,
   onSort,
+  searchBar,
   tableActions,
   visibleColumnNames,
   forcedVisibleColumnNames,
@@ -141,6 +151,7 @@ export function EntityItemCollectionTable({
         entityName={profile.name}
         entityTitle={profile.pluralName}
         columns={columns}
+        searchBar={searchBar}
         tableActions={tableActions}
         sortOptions={sortOptions}
         currentSort={currentSort ? [currentSort] : []}
