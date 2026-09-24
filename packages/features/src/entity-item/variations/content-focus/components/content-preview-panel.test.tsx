@@ -42,6 +42,12 @@ const JOB_URL = `${API_URL}/renditions/jobs/job-1`;
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
+// `vi.hoisted` because `vi.mock` factories are hoisted above imports — tests toggle
+// `viewerRenderControl.shouldThrow` to simulate a "throws.pdf" render exception going away by
+// the time the user retries (PdfViewerErrorBoundary.reset test below), without changing what
+// `createContentDownloadHandler` serves.
+const viewerRenderControl = vi.hoisted(() => ({ shouldThrow: true }));
+
 // ---- PDFium can't run in jsdom — mock @contentgrid/ui's viewer/engine, keep the plain React
 // error boundary real (it has no engine dependency of its own). ----
 vi.mock("@contentgrid/ui", async (importOriginal) => {
@@ -56,7 +62,7 @@ vi.mock("@contentgrid/ui", async (importOriginal) => {
       onDownload?: () => void;
       onLoadError?: (error: { kind: "invalid" | "protected" | "engine" }) => void;
     }) => {
-      if (props.filename === "throws.pdf") {
+      if (props.filename === "throws.pdf" && viewerRenderControl.shouldThrow) {
         throw new Error("simulated viewer render failure");
       }
       return (
@@ -185,6 +191,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  viewerRenderControl.shouldThrow = true;
   // @ts-expect-error -- removing the jsdom-absent methods stubbed above, not a spy.
   delete URL.createObjectURL;
   // @ts-expect-error -- see above.
@@ -314,6 +321,144 @@ describe("ContentPreviewPanel", () => {
     expect(await screen.findByText("attribute selector")).toBeInTheDocument();
   });
 
+  // Round-2 review: the selector must stay visible/usable no matter what state the current
+  // attribute is in — not only once a PDF viewer actually mounts — so a user can always switch
+  // away from an attribute that can't be opened or still needs a file uploaded.
+  it("renders the toolbarStart slot for the noFile state (an attribute that still needs a file uploaded)", () => {
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="document"
+        toolbarStart={<span>attribute selector</span>}
+      />,
+      { wrapper: makeWrapper() },
+    );
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText("attribute selector")).toBeInTheDocument();
+  });
+
+  it("renders the toolbarStart slot for an error state (an attribute that can't be opened)", async () => {
+    server.use(
+      http.get(CONTENT_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const entityItem = makeStubEntityItem({
+      attributeName: "document",
+      metadata: { filename: "order.pdf", mimetype: "application/pdf", length: 4 },
+    });
+    render(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="document"
+        toolbarStart={<span>attribute selector</span>}
+      />,
+      { wrapper: makeWrapper() },
+    );
+
+    await screen.findByText("Internal Server Error");
+    expect(screen.getByText("attribute selector")).toBeInTheDocument();
+  });
+
+  it("keeps a working attribute selector reachable when switching away from an errored attribute", async () => {
+    server.use(
+      http.get(CONTENT_URL, () =>
+        HttpResponse.json(
+          { status: 500, title: "Internal Server Error" },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+      createContentDownloadHandler({
+        url: PHOTO_CONTENT_URL,
+        body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+        contentType: "application/pdf",
+        filename: "photo.pdf",
+      }),
+    );
+    const entityItem = makeStubEntityItemWithAttributes([
+      {
+        name: "document",
+        metadata: { filename: "order.pdf", mimetype: "application/pdf", length: 4 },
+        url: CONTENT_URL,
+      },
+      {
+        name: "photo",
+        metadata: { filename: "photo.pdf", mimetype: "application/pdf", length: 4 },
+        url: PHOTO_CONTENT_URL,
+      },
+    ]);
+
+    const { rerender } = render(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="document"
+        toolbarStart={<button type="button">switch to photo</button>}
+      />,
+      { wrapper: makeWrapper() },
+    );
+
+    // The errored attribute's own panel still offers the switch control — this is the whole
+    // point: it must be there to click, not just present once a working attribute is selected.
+    await screen.findByText("Internal Server Error");
+    expect(screen.getByRole("button", { name: "switch to photo" })).toBeInTheDocument();
+
+    rerender(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="photo"
+        toolbarStart={<button type="button">switch to photo</button>}
+      />,
+    );
+
+    expect(await screen.findByText("PDF viewer: photo.pdf")).toBeInTheDocument();
+  });
+
+  it("keeps a working attribute selector reachable when switching away from an empty (needs upload) attribute", async () => {
+    server.use(
+      createContentDownloadHandler({
+        url: PHOTO_CONTENT_URL,
+        body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+        contentType: "application/pdf",
+        filename: "photo.pdf",
+      }),
+    );
+    const entityItem = makeStubEntityItemWithAttributes([
+      { name: "document", metadata: null, url: CONTENT_URL },
+      {
+        name: "photo",
+        metadata: { filename: "photo.pdf", mimetype: "application/pdf", length: 4 },
+        url: PHOTO_CONTENT_URL,
+      },
+    ]);
+
+    const { rerender } = render(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="document"
+        toolbarStart={<button type="button">switch to photo</button>}
+      />,
+      { wrapper: makeWrapper() },
+    );
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "switch to photo" })).toBeInTheDocument();
+
+    rerender(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="photo"
+        toolbarStart={<button type="button">switch to photo</button>}
+      />,
+    );
+
+    expect(await screen.findByText("PDF viewer: photo.pdf")).toBeInTheDocument();
+  });
+
   it("maps a viewer-reported protected/invalid load error, with no Retry button", async () => {
     server.use(
       createContentDownloadHandler({
@@ -337,7 +482,7 @@ describe("ContentPreviewPanel", () => {
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
-  it("maps a caught render exception (PdfViewerErrorBoundary) to viewerFailure, with a working Retry", async () => {
+  it("maps a caught render exception (PdfViewerErrorBoundary) to viewerFailure, with a working Retry and the selector still reachable", async () => {
     server.use(
       createContentDownloadHandler({
         url: CONTENT_URL,
@@ -352,14 +497,52 @@ describe("ContentPreviewPanel", () => {
       // PdfViewer throws when it receives exactly this filename.
       metadata: { filename: "throws.pdf", mimetype: "application/pdf", length: 4 },
     });
-    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
-      wrapper: makeWrapper(),
-    });
+    render(
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName="document"
+        toolbarStart={<span>attribute selector</span>}
+      />,
+      { wrapper: makeWrapper() },
+    );
 
     // The boundary's fallback attaches the real caught error as `problem`, so the frame renders
     // the ProblemAlert (the exception's own message) rather than its generic default text.
     expect(await screen.findByText("simulated viewer render failure")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    // Round-2 review: the selector must survive a caught render exception too, not only the
+    // panel-level error states derived from `deriveContentPreviewState`.
+    expect(screen.getByText("attribute selector")).toBeInTheDocument();
+  });
+
+  it("actually recovers after Retry once the underlying problem is gone, instead of staying stuck on the fallback forever", async () => {
+    server.use(
+      createContentDownloadHandler({
+        url: CONTENT_URL,
+        body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+        contentType: "application/pdf",
+        filename: "throws.pdf",
+      }),
+    );
+    const entityItem = makeStubEntityItem({
+      attributeName: "document",
+      metadata: { filename: "throws.pdf", mimetype: "application/pdf", length: 4 },
+    });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    expect(await screen.findByText("simulated viewer render failure")).toBeInTheDocument();
+
+    // Simulate the transient problem being gone by the time the user retries.
+    viewerRenderControl.shouldThrow = false;
+    screen.getByRole("button", { name: "Retry" }).click();
+
+    // Without calling the boundary's own `reset()` (not just remounting the subtree underneath
+    // it via a bumped `PdfEngineProvider` key), `PdfViewerErrorBoundary.render()` checks its own
+    // still-set caught-error state before ever reaching fresh children — the fallback would stay
+    // showing forever no matter how many times the subtree underneath it remounts.
+    expect(await screen.findByText("PDF viewer: throws.pdf")).toBeInTheDocument();
   });
 
   it("shows previewUnavailable naming the mimetype when the rendition service reports invalid-conversion", async () => {

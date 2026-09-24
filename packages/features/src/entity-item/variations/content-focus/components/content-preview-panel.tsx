@@ -133,12 +133,22 @@ export function ContentPreviewPanel({
     return (
       <ContentPreviewFrame state="ready">
         <PdfViewerErrorBoundary
-          fallback={(error) => (
+          fallback={(error, reset) => (
             <ContentPreviewFrame
               state="viewerFailure"
               problem={toProblemDisplayModel(error)}
               onDownload={handleDownload}
-              onRetry={handleRetry}
+              toolbarStart={toolbarStart}
+              onRetry={() => {
+                // `reset()` clears the boundary's own caught-error state — without it, the
+                // boundary keeps rendering this fallback forever, no matter how many times
+                // `handleRetry()` below remounts the subtree underneath it (bumping
+                // `retryToken`/refetching): the boundary's `render()` checks its own `state.error`
+                // before ever reaching its children, so a fresh subtree never gets a chance to
+                // render until the boundary itself is told the error is cleared.
+                handleRetry();
+                reset();
+              }}
             />
           )}
         >
@@ -170,6 +180,11 @@ export function ContentPreviewPanel({
       problem={problem}
       onDownload={canDownload ? handleDownload : undefined}
       onRetry={handleRetry}
+      // Every non-"ready" state must still offer the attribute selector (round-2 review: it must
+      // not disappear when the current attribute can't be opened or still needs a file uploaded)
+      // — only the "ready" branch above skips this, since the mounted PdfViewer's own toolbar
+      // already carries it via `toolbar.start`.
+      toolbarStart={toolbarStart}
       labels={
         state === "previewUnavailable"
           ? { previewUnavailableMessage: buildPreviewUnavailableMessage(mimetype) }

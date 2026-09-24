@@ -53,6 +53,16 @@ export interface ContentPreviewFrameProps {
   /** Rendered when `state === "ready"` — the actual viewer. */
   readonly children?: ReactNode;
   /**
+   * Content-attribute selector (or any other toolbar-start node), rendered in a small header bar
+   * above the state body for every state EXCEPT `"ready"` — there, the mounted `PdfViewer`'s own
+   * toolbar already includes it via its `start` slot (`content-preview-panel.tsx`). Keeps the
+   * selector visible and usable no matter what state the current attribute is in, so a user can
+   * always switch to a different content attribute — including away from one that errors out or
+   * still needs a file uploaded (round-2 review: "cannot look or switch content attributes when
+   * one cannot be opened or needs to be uploaded").
+   */
+  readonly toolbarStart?: ReactNode;
+  /**
    * A `toProblemDisplayModel(error)` result for an error state backed by a caught error
    * (`couldNotPrepare`, `couldNotRetrieve`, `viewerFailure`) — rendered via `ProblemAlert`
    * instead of the default message. Omitted for a state that is a plain `PreviewSource` variant
@@ -92,12 +102,19 @@ export function ContentPreviewFrame({
   onDownload,
   onRetry,
   onFileChange,
+  toolbarStart,
   labels: labelOverrides,
 }: Readonly<ContentPreviewFrameProps>) {
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
 
+  if (state === "ready") {
+    return <div className="h-full min-h-0">{children}</div>;
+  }
+
+  let body: ReactNode;
+
   if (state === "noFile") {
-    return (
+    body = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6">
         <div className="w-full max-w-md">
           <FileUploadZone file={null} onFileChange={onFileChange ?? NOOP_FILE_CHANGE} />
@@ -105,11 +122,9 @@ export function ContentPreviewFrame({
         <p className="text-sm text-muted-foreground">{labels.noFileCaption}</p>
       </div>
     );
-  }
-
-  if (state === "loading" || state === "preparingPreview") {
+  } else if (state === "loading" || state === "preparingPreview") {
     const caption = state === "loading" ? labels.loadingCaption : labels.preparingPreviewCaption;
-    return (
+    body = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6">
         <Skeleton className="h-full max-h-96 w-full max-w-md rounded-md" />
         <p className="text-sm text-muted-foreground">{caption}</p>
@@ -120,36 +135,42 @@ export function ContentPreviewFrame({
         )}
       </div>
     );
+  } else {
+    const canRetry = onRetry !== undefined && RETRYABLE_PREVIEW_STATES.has(state);
+    const message = labels[ERROR_MESSAGE_LABEL_KEY[state]];
+    body = (
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 p-6">
+        <div className="w-full max-w-md">
+          {problem ? (
+            <ProblemAlert model={problem} />
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">{message}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {onDownload && (
+            <Button variant="outline" size="sm" onClick={onDownload}>
+              {labels.downloadButtonLabel}
+            </Button>
+          )}
+          {canRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {labels.retryButtonLabel}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
   }
 
-  if (state === "ready") {
-    return <div className="h-full min-h-0">{children}</div>;
+  if (!toolbarStart) {
+    return body;
   }
-
-  const canRetry = onRetry !== undefined && RETRYABLE_PREVIEW_STATES.has(state);
-  const message = labels[ERROR_MESSAGE_LABEL_KEY[state]];
 
   return (
-    <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 p-6">
-      <div className="w-full max-w-md">
-        {problem ? (
-          <ProblemAlert model={problem} />
-        ) : (
-          <p className="text-center text-sm text-muted-foreground">{message}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        {onDownload && (
-          <Button variant="outline" size="sm" onClick={onDownload}>
-            {labels.downloadButtonLabel}
-          </Button>
-        )}
-        {canRetry && (
-          <Button variant="outline" size="sm" onClick={onRetry}>
-            {labels.retryButtonLabel}
-          </Button>
-        )}
-      </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">{toolbarStart}</div>
+      <div className="min-h-0 flex-1">{body}</div>
     </div>
   );
 }

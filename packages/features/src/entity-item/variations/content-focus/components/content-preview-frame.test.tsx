@@ -86,4 +86,39 @@ describe("ContentPreviewFrame", () => {
     render(<ContentPreviewFrame state="noFile" labels={{ noFileCaption: "Geen bestand" }} />);
     expect(screen.getByText("Geen bestand")).toBeInTheDocument();
   });
+
+  it("renders toolbarStart in a header bar for every non-ready state (round-2 review: the attribute selector must stay usable no matter the state)", () => {
+    for (const state of [
+      "noFile",
+      "loading",
+      "preparingPreview",
+      "previewUnavailable",
+      "couldNotPrepare",
+      "couldNotRetrieve",
+      "cannotDisplay",
+      "protected",
+      "viewerFailure",
+    ] as const) {
+      const { unmount } = render(
+        <ContentPreviewFrame state={state} toolbarStart={<span>attribute selector</span>} />,
+      );
+      expect(screen.getByText("attribute selector")).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("never renders the toolbarStart header bar for ready — the mounted viewer's own toolbar already carries it", () => {
+    render(
+      <ContentPreviewFrame state="ready" toolbarStart={<span>attribute selector</span>}>
+        <div>the viewer</div>
+      </ContentPreviewFrame>,
+    );
+    expect(screen.getByText("the viewer")).toBeInTheDocument();
+    expect(screen.queryByText("attribute selector")).not.toBeInTheDocument();
+  });
+
+  it("omits the header bar entirely when toolbarStart is not supplied, leaving markup unchanged", () => {
+    render(<ContentPreviewFrame state="noFile" />);
+    expect(screen.queryByText("attribute selector")).not.toBeInTheDocument();
+  });
 });

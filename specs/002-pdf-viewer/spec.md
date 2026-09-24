@@ -121,7 +121,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-001**: The system MUST choose the content-focus layout for an entity item if and only if its entity profile declares at least one content attribute; otherwise it MUST use the attribute-focus layout.
 - **FR-002**: The system MUST take the presence of a file, its mimetype, filename and size from the content attribute's metadata on the entity item, and the file's location exclusively from the item's content link for that attribute. A 404 from that link means the attribute holds no file.
 - **FR-003**: The system MUST recognise a file as PDF when its mimetype, ignoring parameters and letter case, is `application/pdf`.
-- **FR-004**: When more than one content attribute of the item holds a file, the system MUST offer an attribute selector, default to the first attribute in profile order, and cancel any in-flight load when the selection changes.
+- **FR-004**: When an item has more than one content attribute — whether or not each one currently holds a file — the system MUST offer an attribute selector, default to the first attribute in profile order that holds a file (or the first attribute at all if none does), cancel any in-flight load when the selection changes, and keep the selector visible and usable regardless of the current attribute's preview state (loading, error, unsupported, empty, or ready) so a user can always switch away from one that can't be opened or still needs a file uploaded (round-2 review of #192).
 
 **Loading and display**
 
