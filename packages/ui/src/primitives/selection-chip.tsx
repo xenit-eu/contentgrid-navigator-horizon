@@ -1,3 +1,4 @@
+import type { KeyboardEvent, Ref } from "react";
 import { cn } from "../lib/utils";
 
 interface SelectionChipProps {
@@ -7,6 +8,13 @@ interface SelectionChipProps {
   readonly className?: string;
   readonly size?: "default" | "sm";
   readonly disabled?: boolean;
+  /** `"radio"` for a chip in a pick-one group (exposes `aria-checked`, for use inside a
+   *  `role="radiogroup"`); omitted, it's a toggle button (`aria-pressed`). */
+  readonly role?: "radio";
+  /** For a roving-tabindex group, where only one chip is in the tab order. */
+  readonly tabIndex?: number;
+  readonly onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
+  readonly ref?: Ref<HTMLButtonElement>;
 }
 
 function SelectionChip({
@@ -16,12 +24,21 @@ function SelectionChip({
   className,
   size = "default",
   disabled = false,
+  role,
+  tabIndex,
+  onKeyDown,
+  ref,
 }: SelectionChipProps) {
   return (
     <button
+      ref={ref}
       type="button"
       data-slot="selection-chip"
-      aria-pressed={selected}
+      role={role}
+      aria-pressed={role ? undefined : selected}
+      aria-checked={role ? selected : undefined}
+      tabIndex={tabIndex}
+      onKeyDown={onKeyDown}
       onClick={onClick}
       disabled={disabled}
       className={cn(
