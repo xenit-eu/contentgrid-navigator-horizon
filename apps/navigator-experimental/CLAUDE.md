@@ -59,6 +59,12 @@ generated automatically — never edit it manually.
 
 ## Promotion workflow
 
+**Pre-GA note:** promotion is not required right now — `apps/navigator`
+currently accepts features at any stability tier, so a feature is usable there
+without an `x-stability` flip. See the
+[ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga).
+The workflow below applies again once the gate is reinstated at go-live.
+
 To move a feature from this track to the generic track:
 
 1. Confirm the feature's `x-stability` is ready to advance
