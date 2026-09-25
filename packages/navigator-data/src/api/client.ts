@@ -7,7 +7,7 @@ import { ValueProviderResolver } from "@contentgrid/fetch-hooks/value-provider";
 import { checkResponse } from "@contentgrid/problem-details";
 import { createTypedFetch } from "@contentgrid/typed-fetch";
 import { ACCEPT_HAL } from "./content-types";
-import { type BaseFetch, createXhrFetch } from "./xhr-fetch";
+import { createXhrFetch } from "./xhr-fetch";
 
 // TypedFetch is defined in @contentgrid/typed-fetch's fetch.d.ts but not re-exported
 // from its index.d.ts — this alias bridges the gap until upstream adds the export.
@@ -55,7 +55,9 @@ export function createContentUploadClient(
   tokenSupplier: AuthenticationTokenSupplier,
   onProgress?: (percentage: number) => void,
 ): TypedFetch {
-  const xhrFetch: BaseFetch = createXhrFetch(onProgress);
-  const hookedFetch = compose(bearerHook(tokenSupplier), problemDetailsHook)(xhrFetch);
+  const hookedFetch = compose(
+    bearerHook(tokenSupplier),
+    problemDetailsHook,
+  )(createXhrFetch(onProgress));
   return createTypedFetch(hookedFetch);
 }

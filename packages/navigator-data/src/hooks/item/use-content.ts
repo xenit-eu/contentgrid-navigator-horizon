@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { checkResponse } from "@contentgrid/problem-details";
-import { EntityItem } from "../../accessors/entity-item";
+import type { EntityItem } from "../../accessors/entity-item";
 import { parseContentDisposition } from "../../api/content-types";
-import { fetchHal, fetchVoid } from "../../api/hal-client";
+import { fetchVoid } from "../../api/hal-client";
 import { queryKeys } from "../../query-keys";
-import type { EntityItemShape } from "../../shapes";
 import { useNavigatorData } from "../context";
 
 // ---------------------------------------------------------------------------
@@ -17,12 +16,8 @@ import { useNavigatorData } from "../context";
  * Variables for the `useUploadContent` mutation.
  */
 export type UploadContentVariables = {
-  /** The binary file to upload. */
-  readonly file: Blob | File;
-  /** Optional MIME type override. Defaults to `file.type`, or `application/octet-stream` if empty. */
-  readonly contentType?: string;
-  /** Optional filename override. Defaults to `file.name` (when File). */
-  readonly filename?: string;
+  /** The file to upload. Sent under its own `name`. */
+  readonly file: File;
 };
 
 /**
@@ -30,11 +25,9 @@ export type UploadContentVariables = {
  */
 export interface UseUploadContentOptions {
   readonly mutationOptions?: Omit<
-    UseMutationOptions<EntityItem, Error, UploadContentVariables>,
+    UseMutationOptions<void, Error, UploadContentVariables>,
     "mutationFn"
   >;
-  /** Called with an integer 0–100 as upload bytes are sent. */
-  readonly onProgress?: (percentage: number) => void;
 }
 
 /**
@@ -72,9 +65,6 @@ export interface UseDownloadContentOptions {
   >;
 }
 
-/** Marks a rejection as an intentional cancel/unmount abort, not a real transport failure. */
-class UploadCancelledError extends Error {}
-
 // ---------------------------------------------------------------------------
 // useUploadContent
 // ---------------------------------------------------------------------------
@@ -87,164 +77,98 @@ class UploadCancelledError extends Error {}
  * from the link href.
  *
  * Uses `createContentUploadFetch`, not `apiFetch`/`contentFetch` — same auth + problem-details
- * hook chain as `contentFetch`, but XHR-backed so upload progress can be reported (see
- * `createContentUploadClient` in `src/api/client.ts`).
+ * hook chain as `contentFetch`, but XHR-backed so upload progress can be reported.
  *
- * No `If-Match` — matches the legacy Navigator; upload is an unconditional overwrite (see
- * `entityItem.uploadContentRequest`). Errors surface as `ProblemDetailError`; no auto-retry —
- * call `mutate` again with the same variables to retry.
+ * No `If-Match` — upload is an unconditional overwrite. Errors
+ * surface as `ProblemDetailError`; no auto-retry — call `mutate(variables)` again to retry.
  *
- * `progress` (0–100) is hook-local UI state, not server state. `cancel()` aborts the in-flight
- * request and resets the mutation to idle.
+ * `progress` (0–100) is hook-local UI state. `cancel()` aborts the in-flight request and resets
+ * the mutation to idle; an aborted upload never reaches the caller's `onError`. Unmounting does
+ * not abort — the upload finishes and still invalidates the item.
  *
- * Cache behaviour: on success, re-fetches the item for fresh metadata + ETag, `setQueryData`s
- * it, and invalidates the entity collection; caller's `onSuccess` runs last. On cancel/unmount/
- * error, invalidates instead (an aborted upload can't confirm the server didn't finish the write).
+ * Cache behaviour: the PUT returns 204, so the item is invalidated
+ * rather than written. On success the item and its entity collections are invalidated (and
+ * awaited) before the caller's `onSuccess`; on failure or abort the item is invalidated, since
+ * the write may still have landed.
  *
  * @param entityItem     - The entity item whose content attribute is being uploaded.
  * @param attributeName  - The name of the content attribute (must have a cg:content link).
- * @param options        - Optional mutation options (onSuccess, onError, etc.) plus `onProgress`.
- * @returns TanStack mutation result plus `progress` (0–100) and `cancel()`;
- *          `data` is the updated `EntityItem` (re-fetched).
+ * @param options        - Optional mutation options (onSuccess, onError, etc.).
+ * @returns TanStack mutation result plus `progress` (0–100) and `cancel()`.
  */
 export function useUploadContent(
   entityItem: EntityItem,
   attributeName: string,
   options?: UseUploadContentOptions,
 ) {
-  const { apiFetch, createContentUploadFetch } = useNavigatorData();
+  const { createContentUploadFetch } = useNavigatorData();
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
 
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
-  // Controllers cancelled via `cancel()`/unmount, keyed by identity — lets a late-settling
-  // rejection be attributed to the attempt that was actually cancelled, not whichever is current.
-  const cancelledControllersRef = useRef<WeakSet<AbortController>>(new WeakSet());
 
-  // Stable dispatcher so the memoized upload client doesn't need rebuilding per render.
-  const onProgressRef = useRef(options?.onProgress);
-  onProgressRef.current = options?.onProgress;
-
-  // Read via a ref so the unmount effect below stays mount/unmount-only, not re-running (and
-  // aborting a real upload) on every entityItem identity change.
-  const invalidateEntityItemRef = useRef<() => void>(() => {});
-
-  const uploadFetch = useMemo(() => {
-    if (!createContentUploadFetch) {
-      throw new Error(
-        "useUploadContent requires NavigatorDataProvider's createContentUploadFetch prop — " +
-          "pass one built from createContentUploadClient (see src/api/client.ts).",
-      );
-    }
-    return createContentUploadFetch((pct) => {
-      setProgress(pct);
-      onProgressRef.current?.(pct);
-    });
-  }, [createContentUploadFetch]);
+  const uploadFetch = useMemo(
+    () => createContentUploadFetch(setProgress),
+    [createContentUploadFetch],
+  );
 
   const { onSuccess, onError, ...restMutationOptions } = options?.mutationOptions ?? {};
 
-  // Shared by `cancel()` and `onError` below — an aborted/failed upload can't confirm whether the
-  // server finished the write, so invalidate rather than trust the last-known metadata.
-  const invalidateEntityItem = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
-      }),
-    [queryClient, profileEntity, entityItem],
-  );
-  invalidateEntityItemRef.current = invalidateEntityItem;
+  const invalidateEntityItem = () =>
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
+    });
 
   const mutation = useMutation({
-    mutationFn: async ({ file, contentType, filename }: UploadContentVariables) => {
+    mutationFn: async ({ file }: UploadContentVariables) => {
       setProgress(0);
 
       const controller = new AbortController();
       abortRef.current = controller;
 
       try {
-        // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
-        // uploadContentRequest() throws if the link is absent (ABAC deny).
+        // uploadContentRequest() throws if the cg:content link is absent (ABAC deny).
         const req = entityItem.uploadContentRequest(attributeName, file, {
-          contentType,
-          filename,
           signal: controller.signal,
         });
-
-        // PUT binary content via the progress-reporting XHR client — 204 No Content (discard body).
         await fetchVoid(uploadFetch, req);
-
-        // Re-fetch the entity item via apiFetch to get fresh metadata + new ETag.
-        const { object, etag } = await fetchHal<EntityItemShape>(
-          apiFetch,
-          new Request(entityItem.selfLink.href),
-        );
-        return new EntityItem(object, profileEntity, etag);
-      } catch (error) {
-        throw cancelledControllersRef.current.has(controller) ? new UploadCancelledError() : error;
       } finally {
         // Only clear if still this attempt's controller — don't clear a newer attempt's.
         if (abortRef.current === controller) {
           abortRef.current = null;
         }
-        cancelledControllersRef.current.delete(controller);
       }
     },
-    onSuccess: async (item, variables, onMutateResult, context) => {
-      setProgress(100);
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      await Promise.all([
+        invalidateEntityItem(),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+        }),
+      ]);
 
-      // Populate item cache with fresh data + ETag.
-      queryClient.setQueryData(queryKeys.entityItem.byUrl(profileEntity, item.selfLink.href), item);
-
-      // Invalidate entity collections so lists reflect the change.
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
-      });
-
-      // Compose caller's onSuccess LAST — after cache is consistent.
-      await onSuccess?.(item, variables, onMutateResult, context);
+      // Compose caller's onSuccess LAST — after the cache has re-fetched.
+      await onSuccess?.(data, variables, onMutateResult, context);
     },
     onError: async (error, variables, onMutateResult, context) => {
-      // cancel() already reset progress/UI to idle — don't resurrect this as a visible failure,
-      // and don't zero out `progress` out from under a newer attempt that's since started.
-      if (error instanceof UploadCancelledError) {
+      await invalidateEntityItem();
+
+      // Only cancel() aborts, and a cancel is not a failure to report.
+      if (error.name === "AbortError") {
         return;
       }
 
-      setProgress(0);
-      await invalidateEntityItem();
-
-      // 415, network failures, etc. must still surface to the caller — never swallowed.
       await onError?.(error, variables, onMutateResult, context);
     },
     ...restMutationOptions,
   });
 
-  // Abort an in-flight upload on unmount — otherwise the XHR keeps running against a gone
-  // component. Also invalidate, same reasoning as `cancel()` below.
-  useEffect(
-    () => () => {
-      if (abortRef.current) {
-        cancelledControllersRef.current.add(abortRef.current);
-        abortRef.current.abort();
-        invalidateEntityItemRef.current();
-      }
-    },
-    [],
-  );
-
   const { reset } = mutation;
   const cancel = useCallback(() => {
-    if (abortRef.current) {
-      cancelledControllersRef.current.add(abortRef.current);
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-    setProgress(0);
+    abortRef.current?.abort();
     reset();
-    invalidateEntityItem();
-  }, [reset, invalidateEntityItem]);
+  }, [reset]);
 
   return { ...mutation, progress, cancel };
 }

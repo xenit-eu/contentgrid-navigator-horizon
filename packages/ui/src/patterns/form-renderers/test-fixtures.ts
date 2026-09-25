@@ -99,7 +99,6 @@ export function fileField(
     label: "Attachment",
     required: false,
     readOnly: false,
-    multiple: false,
     ...overrides,
   };
 }

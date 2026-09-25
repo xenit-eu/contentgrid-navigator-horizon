@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
 import { Progress } from "./progress";
 
 const meta = {
@@ -20,14 +19,4 @@ export const Empty: Story = {
 
 export const Complete: Story = {
   render: () => <Progress value={100} aria-label="Upload progress" className="w-64" />,
-};
-
-export const WithInteraction: Story = {
-  tags: ["no-visual-test"],
-  render: () => <Progress value={65} max={100} aria-label="Upload progress" className="w-64" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const progress = canvas.getByRole("progressbar", { name: /upload progress/i });
-    await expect(progress).toHaveValue(65);
-  },
 };

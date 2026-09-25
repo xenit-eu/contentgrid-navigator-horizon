@@ -1,6 +1,5 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { vi } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
 import entityProfilesDump from "../../test-fixtures/entity-profiles/entity-profiles-dump.json";
 import ProfileEntity from "../accessors/entity-profile";
@@ -17,72 +16,6 @@ import {
 } from "../preview/rendition-job";
 import type { ProfileEntityShape } from "../shapes";
 import { NavigatorDataProvider } from "./context";
-
-// ---------------------------------------------------------------------------
-// XHR stub — shared by api/xhr-fetch.test.ts and hooks/item/use-content.test.tsx
-// ---------------------------------------------------------------------------
-
-export interface MockXhr {
-  open: ReturnType<typeof vi.fn>;
-  setRequestHeader: ReturnType<typeof vi.fn>;
-  send: ReturnType<typeof vi.fn>;
-  abort: ReturnType<typeof vi.fn>;
-  responseType: string;
-  response: unknown;
-  status: number;
-  statusText: string;
-  getAllResponseHeaders: ReturnType<typeof vi.fn>;
-  upload: { onprogress: ((e: Partial<ProgressEvent>) => void) | null };
-  onload: (() => void) | null;
-  onerror: (() => void) | null;
-  ontimeout: (() => void) | null;
-  onabort: (() => void) | null;
-}
-
-export function makeFakeXhr(): {
-  FakeXMLHttpRequest: new () => MockXhr;
-  getLastXhr: () => MockXhr | undefined;
-} {
-  const instances: MockXhr[] = [];
-
-  class FakeXHR implements MockXhr {
-    open = vi.fn();
-    setRequestHeader = vi.fn();
-    send = vi.fn();
-    abort = vi.fn(() => {
-      this.onabort?.();
-    });
-    responseType = "";
-    response: unknown = undefined;
-    status = 204;
-    statusText = "";
-    getAllResponseHeaders = vi.fn(() => "");
-    upload: { onprogress: ((e: Partial<ProgressEvent>) => void) | null } = { onprogress: null };
-    onload: (() => void) | null = null;
-    onerror: (() => void) | null = null;
-    ontimeout: (() => void) | null = null;
-    onabort: (() => void) | null = null;
-
-    constructor() {
-      instances.push(this);
-    }
-  }
-
-  return { FakeXMLHttpRequest: FakeXHR, getLastXhr: () => instances.at(-1) };
-}
-
-/**
- * Narrows a `getLastXhr()` result from `MockXhr | undefined` to `MockXhr`.
- * Use only once the test has already established that an instance must exist
- * (e.g. after a `waitFor` on `.send`, or synchronously right after invoking an
- * XHR-backed fetch) — throws with a clear message rather than masking a broken
- * assumption behind a non-null assertion.
- */
-export function assertXhrExists(xhr: MockXhr | undefined): asserts xhr is MockXhr {
-  if (xhr === undefined) {
-    throw new Error("Expected makeFakeXhr() to have recorded an XHR instance by now");
-  }
-}
 
 export const BASE = "https://api.example.com";
 export const PROFILE_URL = `${BASE}/profile`;
@@ -167,18 +100,15 @@ export function makeQueryClient() {
  *                        is populated with the same defaults `useAppAuth` applies (2000ms /
  *                        60000ms) — pass a custom poll interval by registering MSW handlers
  *                        with matching timing instead of overriding this wrapper.
- * @param createContentUploadFetch - Optional factory for the progress-reporting upload client.
- *                        Defaults to `createContentUploadClient` built from noopSupplier.
  */
 export function makeWrapper(
   queryClient = makeQueryClient(),
   apiFetch: TypedFetch = createApiClient(noopSupplier),
   contentFetch: TypedFetch = createContentClient(noopSupplier),
   renditionUri?: string,
-  createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch = (
-    onProgress,
-  ) => createContentUploadClient(noopSupplier, onProgress),
 ) {
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
   const renditionPolling = renditionUri
     ? { intervalMs: DEFAULT_RENDITION_POLL_INTERVAL_MS, timeoutMs: DEFAULT_RENDITION_TIMEOUT_MS }
     : undefined;

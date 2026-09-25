@@ -73,6 +73,7 @@ function renderUseEntityDisplayPreferences(profileUrl = PROFILE_URL) {
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={() => contentFetch}
           profileUrl={profileUrl}
         >
           {children}

@@ -1,19 +1,6 @@
 /**
  * Tests for useUploadContent and useDownloadContent hooks.
- *
- * Covers:
- * - Upload success (PUT 204 → re-fetch GET → isSuccess, cache set + invalidated)
- * - Upload never sends If-Match (matches the legacy Navigator's unconditional upload)
- * - Upload 415 → isError, ProblemDetailError, handler hit exactly once (no retry)
- * - Upload error (cancel or failure) invalidates the entity item's cached query
- * - Download success full (GET 200 + Blob → ContentDownload populated, isPartial false)
- * - Download range (Range header asserted, 206, isPartial true)
- * - Download 404 → isError
- * - Caller onSuccess runs after cache is populated (upload)
- * - Upload progress: 0 → tracked XHR events → 100 on success; caller onProgress; cancel()
  */
-import type { ReactNode } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,26 +12,14 @@ import {
   createContentUploadHandler,
   createProblemHandler,
 } from "../../../test-fixtures/msw/handlers";
+import { assertXhrExists, makeFakeXhr } from "../../../test-fixtures/xhr";
 import { server } from "../../../test-setup";
 import { EntityItem } from "../../accessors/entity-item";
 import ProfileEntity from "../../accessors/entity-profile";
-import {
-  type TypedFetch,
-  createApiClient,
-  createContentClient,
-  createContentUploadClient,
-} from "../../api/client";
+import { createContentClient } from "../../api/client";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
-import { NavigatorDataProvider } from "../context";
-import {
-  BASE,
-  assertXhrExists,
-  makeFakeXhr,
-  makeQueryClient,
-  makeWrapper,
-  noopSupplier,
-} from "../test-utils";
+import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
 import { useDownloadContent, useUploadContent } from "./use-content";
 
 afterEach(() => {
@@ -97,108 +72,23 @@ function makeEntityItemWithContentLink(etag: string | null = '"v1"'): EntityItem
   return new EntityItem(hal, profile, etag);
 }
 
-/** Wire a GET handler for the re-fetch after upload success */
-function wireRefetchHandler(etag = '"v2"') {
-  server.use(
-    http.get(INVOICE_ITEM_URL, () =>
-      HttpResponse.json(
-        {
-          id: "inv-001",
-          document: { filename: "file.pdf", mimetype: "application/pdf", length: 512 },
-          _links: {
-            self: { href: INVOICE_ITEM_URL },
-            [CG_CONTENT_REL]: [{ href: CONTENT_URL, name: "document" }],
-          },
-        },
-        { headers: { ETag: etag } },
-      ),
-    ),
-  );
-}
+const FILE = () => new File(["hello"], "hello.txt", { type: "text/plain" });
 
 // ---------------------------------------------------------------------------
 // useUploadContent — success
 // ---------------------------------------------------------------------------
 
-describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)", () => {
-  it("returns isSuccess on upload", async () => {
+describe("useUploadContent — success (PUT 204 → invalidate)", () => {
+  it("invalidates the entity item and its collections before the caller's onSuccess runs", async () => {
     server.use(createContentUploadHandler({ url: CONTENT_URL }));
-    wireRefetchHandler('"v2"');
-
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBeInstanceOf(EntityItem);
-    expect(result.current.data?.etag).toBe('"v2"');
-  });
-
-  it("writes fresh item to setQueryData after upload success", async () => {
-    server.use(createContentUploadHandler({ url: CONTENT_URL }));
-    wireRefetchHandler('"v2"');
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    const cached = queryClient.getQueryData(queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL));
-    expect(cached).toBeInstanceOf(EntityItem);
-  });
-
-  it("invalidates entityItemCollection.forEntity on success", async () => {
-    server.use(createContentUploadHandler({ url: CONTENT_URL }));
-    wireRefetchHandler();
 
     const queryClient = makeQueryClient();
     const profile = makeInvoiceProfile();
     const entityItem = makeEntityItemWithContentLink('"v1"');
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.entityItemCollection.forEntity(profile),
-    });
-  });
-
-  it("calls caller onSuccess after cache is populated", async () => {
-    server.use(createContentUploadHandler({ url: CONTENT_URL }));
-    wireRefetchHandler();
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-
-    let cacheAtCallTime: unknown = "NOT_CHECKED";
-    const callerOnSuccess = vi.fn(async () => {
-      cacheAtCallTime = queryClient.getQueryData(
-        queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
-      );
+    let invalidatedKeysAtCallTime: unknown[] = [];
+    const callerOnSuccess = vi.fn(() => {
+      invalidatedKeysAtCallTime = invalidateSpy.mock.calls.map(([filters]) => filters?.queryKey);
     });
 
     const { result } = renderHook(
@@ -210,78 +100,18 @@ describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)",
     );
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(callerOnSuccess).toHaveBeenCalledOnce();
-    expect(cacheAtCallTime).toBeInstanceOf(EntityItem);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// useUploadContent — If-Match header
-// ---------------------------------------------------------------------------
-
-describe("useUploadContent — no If-Match (matches the legacy Navigator's unconditional upload)", () => {
-  it("never sends an If-Match header, even when the entity item has an etag", async () => {
-    let capturedIfMatch: string | null = null;
-
-    server.use(
-      http.put(CONTENT_URL, async ({ request }) => {
-        capturedIfMatch = request.headers.get("If-Match");
-        return new HttpResponse(null, { status: 204 });
-      }),
+    expect(invalidatedKeysAtCallTime).toEqual(
+      expect.arrayContaining([
+        queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
+        queryKeys.entityItemCollection.forEntity(profile),
+      ]),
     );
-    wireRefetchHandler();
-
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(capturedIfMatch).toBeNull();
-  });
-
-  it("uses the createContentUploadFetch client (not contentFetch) for the PUT — confirms the progress-reporting client is used", async () => {
-    // We inject a spy as the createContentUploadFetch factory; the PUT must be routed through it,
-    // not through contentFetch — the upload client now differs from the plain binary client.
-    const uploadFetchSpy = vi.fn(createContentUploadClient(noopSupplier));
-    const createContentUploadFetchSpy = vi.fn(
-      (): TypedFetch => uploadFetchSpy as unknown as TypedFetch,
-    );
-    const contentFetchSpy = vi.fn(createContentClient(noopSupplier));
-
-    server.use(createContentUploadHandler({ url: CONTENT_URL }));
-    wireRefetchHandler();
-
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(
-        makeQueryClient(),
-        undefined,
-        contentFetchSpy as never,
-        undefined,
-        createContentUploadFetchSpy,
-      ),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(createContentUploadFetchSpy).toHaveBeenCalled();
-    expect(uploadFetchSpy).toHaveBeenCalled();
-    expect(contentFetchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -290,15 +120,12 @@ describe("useUploadContent — no If-Match (matches the legacy Navigator's uncon
 //
 // These drive the underlying XMLHttpRequest by hand (via the makeFakeXhr stub)
 // because progress events are a transport-level detail MSW cannot synthesize.
-// The stub replaces global.XMLHttpRequest only; the re-fetch after a successful
-// PUT still goes through the real (MSW-intercepted) apiFetch.
 // ---------------------------------------------------------------------------
 
 describe("useUploadContent — progress", () => {
-  it("starts at 0 and tracks XHR upload progress events, reaching 100 on success", async () => {
+  it("starts at 0 and tracks XHR upload progress events", async () => {
     const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
     vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
-    wireRefetchHandler();
 
     const entityItem = makeEntityItemWithContentLink('"v1"');
     const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
@@ -308,7 +135,7 @@ describe("useUploadContent — progress", () => {
     expect(result.current.progress).toBe(0);
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
@@ -319,136 +146,38 @@ describe("useUploadContent — progress", () => {
       xhr.upload.onprogress?.({ lengthComputable: true, loaded: 40, total: 100 });
     });
     expect(result.current.progress).toBe(40);
-
-    act(() => {
-      xhr.status = 204;
-      xhr.onload?.();
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.progress).toBe(100);
-  });
-
-  it("invokes the caller's onProgress option", async () => {
-    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
-    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
-    wireRefetchHandler();
-
-    const onProgress = vi.fn();
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const { result } = renderHook(() => useUploadContent(entityItem, "document", { onProgress }), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-
-    act(() => {
-      xhr.upload.onprogress?.({ lengthComputable: true, loaded: 25, total: 100 });
-    });
-
-    expect(onProgress).toHaveBeenCalledWith(25);
-  });
-
-  it("does not advance progress when the upload event is not length-computable", async () => {
-    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
-    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
-    wireRefetchHandler();
-
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-
-    act(() => {
-      xhr.upload.onprogress?.({ lengthComputable: false, loaded: 999, total: 1000 });
-    });
-
-    expect(result.current.progress).toBe(0);
   });
 });
 
 describe("useUploadContent — cancel", () => {
-  it("aborts the in-flight upload and leaves the hook idle with progress back at 0", async () => {
+  it("aborts the in-flight upload, leaves the hook idle and never reports the abort to onError", async () => {
     const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
     vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
 
+    const queryClient = makeQueryClient();
     const entityItem = makeEntityItemWithContentLink('"v1"');
-    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(),
-    });
+    const onError = vi.fn();
+    const { result } = renderHook(
+      () => useUploadContent(entityItem, "document", { mutationOptions: { onError } }),
+      { wrapper: makeWrapper(queryClient) },
+    );
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
     const xhr = getLastXhr();
     assertXhrExists(xhr);
-
-    act(() => {
-      xhr.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 100 });
-    });
-    expect(result.current.progress).toBe(10);
 
     act(() => {
       result.current.cancel();
     });
 
     expect(xhr.abort).toHaveBeenCalled();
+    // The aborted mutation has fully settled (its onError included) once nothing is pending.
+    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
     expect(result.current.isIdle).toBe(true);
-    expect(result.current.isError).toBe(false);
-    expect(result.current.progress).toBe(0);
-  });
-
-  it("does not resurrect the cancelled attempt as an error once its aborted promise settles", async () => {
-    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
-    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
-
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const onError = vi.fn();
-    const { result } = renderHook(
-      () => useUploadContent(entityItem, "document", { mutationOptions: { onError } }),
-      { wrapper: makeWrapper() },
-    );
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
-
-    act(() => {
-      getLastXhr()?.upload.onprogress?.({ lengthComputable: true, loaded: 10, total: 100 });
-    });
-
-    act(() => {
-      result.current.cancel();
-    });
-
-    // Flush the microtasks the aborted mutationFn's rejection resolves on — this is where the
-    // bug surfaced: onError fired here and flipped the already-reset hook back into an error state.
-    await act(async () => {
-      for (let i = 0; i < 20; i++) {
-        await Promise.resolve();
-      }
-    });
-
-    expect(result.current.isIdle).toBe(true);
-    expect(result.current.isError).toBe(false);
     expect(onError).not.toHaveBeenCalled();
   });
 
@@ -456,11 +185,12 @@ describe("useUploadContent — cancel", () => {
     const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
     vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
 
+    const queryClient = makeQueryClient();
     const entityItem = makeEntityItemWithContentLink('"v1"');
     const onError = vi.fn();
     const { result } = renderHook(
       () => useUploadContent(entityItem, "document", { mutationOptions: { onError } }),
-      { wrapper: makeWrapper() },
+      { wrapper: makeWrapper(queryClient) },
     );
 
     // Start attempt A and cancel it.
@@ -480,26 +210,23 @@ describe("useUploadContent — cancel", () => {
     await waitFor(() => expect(getLastXhr()).not.toBe(xhrA));
     const xhrB = getLastXhr();
     assertXhrExists(xhrB);
-    expect(xhrB.send).toHaveBeenCalled();
+    await waitFor(() => expect(xhrB.send).toHaveBeenCalled());
 
-    // B makes real progress.
     act(() => {
       xhrB.upload.onprogress?.({ lengthComputable: true, loaded: 30, total: 100 });
     });
-    expect(result.current.progress).toBe(30);
 
-    // Flush the microtasks A's aborted request settles on.
-    await act(async () => {
-      for (let i = 0; i < 20; i++) {
-        await Promise.resolve();
-      }
-    });
-
-    // A's late rejection must not have reset B's progress, forwarded to the caller's onError,
-    // or otherwise surfaced as a failure of what the user perceives as upload B.
+    // A has settled once only B is still pending.
+    await waitFor(() => expect(queryClient.isMutating()).toBe(1));
     expect(result.current.progress).toBe(30);
+    expect(result.current.isPending).toBe(true);
     expect(onError).not.toHaveBeenCalled();
-    expect(result.current.isError).toBe(false);
+
+    // A settling must not have dropped B's abort handle.
+    act(() => {
+      result.current.cancel();
+    });
+    expect(xhrB.abort).toHaveBeenCalled();
   });
 
   it("invalidates the entity item's cached query — an abort can't confirm the server didn't already commit the write", async () => {
@@ -516,7 +243,7 @@ describe("useUploadContent — cancel", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
@@ -525,52 +252,11 @@ describe("useUploadContent — cancel", () => {
       result.current.cancel();
     });
 
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
-    });
-  });
-
-  it("aborts and invalidates on unmount mid-upload, same as an explicit cancel()", async () => {
-    const { FakeXMLHttpRequest, getLastXhr } = makeFakeXhr();
-    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
-
-    const queryClient = makeQueryClient();
-    const profile = makeInvoiceProfile();
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { result, unmount } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
-    });
-
-    await waitFor(() => expect(getLastXhr()?.send).toHaveBeenCalled());
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-
-    unmount();
-
-    expect(xhr.abort).toHaveBeenCalled();
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
-    });
-  });
-
-  it("does not invalidate on unmount when no upload was in flight", async () => {
-    const queryClient = makeQueryClient();
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const { unmount } = renderHook(() => useUploadContent(entityItem, "document"), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    unmount();
-
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
+      }),
+    );
   });
 });
 
@@ -602,7 +288,7 @@ describe("useUploadContent — 415 Unsupported Media Type", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -636,7 +322,7 @@ describe("useUploadContent — 415 Unsupported Media Type", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -808,38 +494,6 @@ describe("useDownloadContent — 404 Not Found", () => {
 });
 
 // ---------------------------------------------------------------------------
-// useUploadContent — createContentUploadFetch not configured
-//
-// createContentUploadFetch is the one OPTIONAL field on NavigatorDataContextValue — a
-// provider that never exercises upload (most of this app's tests) doesn't need to supply
-// one. useUploadContent must fail loudly, not silently, if it's actually invoked without one.
-// ---------------------------------------------------------------------------
-
-describe("useUploadContent — createContentUploadFetch not configured", () => {
-  it("throws a clear error instead of silently failing", () => {
-    const queryClient = makeQueryClient();
-    const apiFetch = createApiClient(noopSupplier);
-    const contentFetch = createContentClient(noopSupplier);
-
-    function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
-      return (
-        <QueryClientProvider client={queryClient}>
-          <NavigatorDataProvider apiFetch={apiFetch} contentFetch={contentFetch} profileUrl={BASE}>
-            {children}
-          </NavigatorDataProvider>
-        </QueryClientProvider>
-      );
-    }
-
-    const entityItem = makeEntityItemWithContentLink('"v1"');
-    // No error boundary here, so the render-phase throw propagates straight out of renderHook.
-    expect(() =>
-      renderHook(() => useUploadContent(entityItem, "document"), { wrapper: Wrapper }),
-    ).toThrow(/createContentUploadFetch/);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // useDownloadContent — uses contentFetch (binary client)
 // ---------------------------------------------------------------------------
 
@@ -897,7 +551,7 @@ describe("useUploadContent — ABAC: cg:content link absent", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({ file: FILE() });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

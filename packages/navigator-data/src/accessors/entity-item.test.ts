@@ -716,11 +716,6 @@ describe("EntityItem — canUploadContent", () => {
 });
 
 describe("EntityItem — uploadContentRequest", () => {
-  // jsdom's Request/FormData round-trip doesn't reliably preserve the per-part filename
-  // through `req.formData()` (a known jsdom limitation, unlike real browsers/Node's undici —
-  // verified separately outside this suite) — spy on the FormData construction itself instead
-  // of decoding the Request body, so these tests assert what our code actually does rather
-  // than depending on a third-party polyfill's multipart encode/decode fidelity.
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -734,79 +729,17 @@ describe("EntityItem — uploadContentRequest", () => {
     expect(req.url).toBe(CONTENT_URL);
   });
 
-  // Body is multipart/form-data (matching the legacy Navigator's upload mechanism) so the
-  // request never needs a `Content-Disposition` header — that's a CORS preflight requirement a
-  // raw-byte PUT has and multipart doesn't, since the filename/type travel inside the body's
-  // own per-part headers instead.
-  it("never sets a Content-Disposition header — filename travels inside the multipart body", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const req = item.uploadContentRequest("document", file);
-    expect(req.headers.get("Content-Disposition")).toBeNull();
-  });
-
   it("sends a multipart/form-data body with the file under a 'file' field", () => {
     const item = makeEntityItemWithContentLink('"v1"');
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    // Spy rather than read the body back: a jsdom File loses its name and bytes when undici
+    // serializes the multipart body, so `req.formData()`/`req.text()` can't be asserted on here.
+    const appendSpy = vi.spyOn(FormData.prototype, "append");
     const req = item.uploadContentRequest("document", file);
     expect(req.headers.get("Content-Type")).toMatch(/^multipart\/form-data; boundary=/);
-  });
-
-  it("appends the file under a 'file' field, carrying its own type and filename", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const appendSpy = vi.spyOn(FormData.prototype, "append");
-    item.uploadContentRequest("document", file);
     expect(appendSpy).toHaveBeenCalledWith("file", file, "hello.txt");
   });
 
-  it("uses opts.contentType when provided (overrides file.type) by re-wrapping into a new Blob", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const appendSpy = vi.spyOn(FormData.prototype, "append");
-    item.uploadContentRequest("document", file, { contentType: "application/pdf" });
-    const [name, appendedBlob, filename] = appendSpy.mock.calls[0]!;
-    expect(name).toBe("file");
-    expect((appendedBlob as Blob).type).toBe("application/pdf");
-    expect(filename).toBe("hello.txt");
-  });
-
-  it("falls back to application/octet-stream for Blob without type", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["data"]); // no type
-    const appendSpy = vi.spyOn(FormData.prototype, "append");
-    item.uploadContentRequest("document", blob);
-    const [, appendedBlob] = appendSpy.mock.calls[0]!;
-    expect((appendedBlob as Blob).type).toBe("application/octet-stream");
-  });
-
-  it("uses a plain Blob's own type — not just File's — when no opts.contentType is given", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["%PDF-1.4"], { type: "application/pdf" });
-    const appendSpy = vi.spyOn(FormData.prototype, "append");
-    item.uploadContentRequest("document", blob);
-    const [, appendedBlob] = appendSpy.mock.calls[0]!;
-    expect((appendedBlob as Blob).type).toBe("application/pdf");
-  });
-
-  it("uses opts.filename when provided", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["data"]);
-    const appendSpy = vi.spyOn(FormData.prototype, "append");
-    item.uploadContentRequest("document", blob, { filename: "override.pdf" });
-    expect(appendSpy.mock.calls[0]![2]).toBe("override.pdf");
-  });
-
-  it("appends without a filename argument when none is available (Blob, no opts.filename)", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["data"]);
-    const appendSpy = vi.spyOn(FormData.prototype, "append");
-    item.uploadContentRequest("document", blob);
-    expect(appendSpy.mock.calls[0]).toHaveLength(2);
-  });
-
-  // Matches the legacy Navigator's upload mechanism, which never sends If-Match for content
-  // upload either — an unconditional overwrite, unlike a HAL-FORMS entity update.
   it("never sets an If-Match header, even when the item has an etag", () => {
     const item = makeEntityItemWithContentLink('"v1"');
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });

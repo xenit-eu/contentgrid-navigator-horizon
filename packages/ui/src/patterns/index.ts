@@ -5,7 +5,7 @@ export * from "./filter-sidebar";
 export * from "./relation-section";
 export * from "./relation-accordion";
 export * from "./entity-item-picker";
-export * from "./content-upload-field";
+export * from "./file-upload";
 export * from "./branding-header";
 export * from "./sign-in-gate";
 export * from "./nav-item";

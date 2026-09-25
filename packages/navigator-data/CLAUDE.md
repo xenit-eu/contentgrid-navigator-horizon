@@ -566,7 +566,7 @@ Canonical flow:
 
 Rules:
 
-- Always send `If-Match` on mutating requests for entity items.
+- Always send `If-Match` on mutating requests for entity items (except binary content upload — see the Content exception below).
 - Do NOT strip or modify the ETag value — the platform compares verbatim.
 - Do NOT store ETags permanently (session state only).
 - Do NOT parse or construct ETag values — treat them as opaque strings.
@@ -702,50 +702,36 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/item/
   string-built.
 - Build the `Request` via `entityItem.uploadContentRequest(attrName, file, opts)` or
   `entityItem.downloadContentRequest(attrName, opts)` — do NOT construct the Request by hand in
-  hook or feature code. `opts.signal` on `uploadContentRequest` wires an `AbortController` through
-  to the transport for cancellation.
-- Upload body is `multipart/form-data` (a single `file` part) — matching the legacy Navigator's
-  upload mechanism (`src/app/api/upload.ts`: `formData.append('file', file, name)`), NOT a raw
-  byte body. Filename and content type travel inside the multipart body's own per-part headers,
-  not as top-level request headers — do NOT set a `Content-Type` header by hand for uploads;
-  `Request` auto-generates `multipart/form-data; boundary=...` from the `FormData` body. This
-  also means uploads never need `Content-Disposition` in the server's CORS
-  `Access-Control-Allow-Headers` — unlike a raw-byte PUT, the browser's auto-assigned
-  `multipart/form-data; boundary=...` `Content-Type` is one of the three CORS-safelisted values,
-  so it needs no preflight allowance either.
-- Upload sends NO `If-Match` — matching the legacy Navigator, which never sends one for content
-  upload (verified: zero `If-Match`/`ETag` references anywhere in that codebase). Content upload
-  is an unconditional overwrite here, unlike a HAL-FORMS entity update. Do NOT add `If-Match` back
-  onto `uploadContentRequest` — a prior attempt to do so caused every upload to intermittently
-  412 with a stale ETag (the server's version routinely moved between the entity item's last read
-  and the upload, for reasons outside this app's visibility), which is exactly the failure mode
-  omitting it avoids.
+  hook or feature code. `opts.signal` on `uploadContentRequest` cancels an in-flight upload.
+- Upload body is `multipart/form-data` with a single `file` part carrying the file under its own
+  name. Do NOT set a `Content-Type` header by hand;
+  `Request` generates `multipart/form-data; boundary=...` from the `FormData` body. Filename and
+  type travel in the part headers, so no `Content-Disposition` request header is sent.
+- Upload sends NO `If-Match`: content upload is an unconditional
+  overwrite. This is the documented exception to the root `CLAUDE.md` ETag rule. Do NOT add
+  `If-Match` to `uploadContentRequest`.
 - Download uses `contentFetch` (not `apiFetch`) — `contentFetch` omits the
   `Accept: application/hal+json` header that `apiFetch` adds.
 - Upload uses `createContentUploadFetch(onProgress)` (not `contentFetch`) — a factory on
   `NavigatorDataContextValue` that builds a client from the SAME bearer-auth + problem-details
-  hook chain as `contentFetch`, but backed by `XMLHttpRequest` instead of `fetch`
+  hook chain as `contentFetch`, backed by `XMLHttpRequest` instead of `fetch`
   (`src/api/xhr-fetch.ts`, `createContentUploadClient` in `src/api/client.ts`) so upload progress
-  can be reported — `fetch` has no equivalent to `xhr.upload.onprogress`.
-- `apiFetch`, `contentFetch`, and `createContentUploadFetch` are all wired into
-  `NavigatorDataContextValue`; access them via `useNavigatorData()`. `createContentUploadFetch` is
-  the one OPTIONAL field on that context — only `useUploadContent` reads it, so a test provider
-  that never exercises upload doesn't need to supply one. `useUploadContent` throws a clear error
-  if it's actually called without one configured. `useAppAuth` always provides a real one, so this
-  can only happen in a misconfigured test.
+  can be reported.
+- `apiFetch`, `contentFetch`, and `createContentUploadFetch` are all required fields of
+  `NavigatorDataContextValue`; access them via `useNavigatorData()`.
 - `useUploadContent` returns the usual `UseMutationResult` PLUS `progress` (0–100, hook-local
-  `useState`, resets to 0 per upload, reaches 100 on success) and `cancel()` (aborts the in-flight
-  request and resets the mutation to idle rather than leaving it in an error state). Pass
-  `{ onProgress }` in the options to observe progress from outside the hook. There is no separate
-  retry — call `mutate` again with the same variables; the caller already holds the `File`.
-- Upload (PUT) returns 204 No Content — the hook uses `fetchVoid(uploadFetch, req)` then re-fetches
-  the parent item via `apiFetch` to capture fresh metadata (filename/size) and the item's ETag
-  for cache purposes — the upload itself doesn't condition on that ETag (see above).
+  `useState`, resets to 0 per upload) and `cancel()` (aborts the in-flight request and resets the
+  mutation to idle rather than leaving it in an error state). Unmounting does not abort; the
+  upload finishes and still invalidates the item. There is no separate retry — call
+  `mutate(variables)` again; the mutation's own `variables` hold the `File`.
+- Upload (PUT) returns 204 No Content — the hook uses `fetchVoid(uploadFetch, req)`, then
+  invalidates the entity item, plus its entity collections on success, and
+  awaits that before the caller's `onSuccess`. A failed or aborted upload also invalidates the item,
+  since the write may have landed.
 - Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
   response is 206 (Range request).
-- Content helpers live in `src/api/content-types.ts`: `parseContentDisposition(header)` (parses
-  the response header on download; there is no encoder — upload carries the filename inside the
-  multipart body instead, see above).
+- Content helpers live in `src/api/content-types.ts`: `parseContentDisposition(header)` parses the
+  download response header.
 - 415/other errors surface as `ProblemDetailError` on both upload and download; neither hook
   auto-retries.
 

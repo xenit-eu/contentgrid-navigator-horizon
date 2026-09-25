@@ -37,8 +37,8 @@ export interface EntityItemContentFocusViewProps {
   `start` slot — the panel has no attribute-selection logic of its own; it only has somewhere to put
   that node once the viewer actually mounts (the `ready` state).
 - `ContentPreviewFrame` — presentational: `state` prop → skeleton / message / drop zone / viewer; every
-  state has a story. The "No file" state renders `@contentgrid/ui`'s `FileUploadZone` with a
-  feature-supplied `onFileChange` that is a no-op until the content-upload story wires it.
+  state has a story. The "No file" state renders the content-upload affordance
+  (`ContentAttributeRenderer` with the entity item, which offers Upload when no file is stored).
 
 ## Host (app) responsibilities
 

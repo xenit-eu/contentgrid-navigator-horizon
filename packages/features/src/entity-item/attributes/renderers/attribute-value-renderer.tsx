@@ -12,9 +12,8 @@ export const TABLE_ATTRIBUTE_MAX_CHAR_LENGTH = 80;
 export interface AttributeValueRendererProps {
   readonly attr: EntityItemAttribute;
   /**
-   * The entity item `attr` belongs to. Only consumed by the CONTENT renderer, to gate and
-   * back a "Replace" upload affordance — omit it in contexts with no upload capability
-   * (collection tables, relation previews) to render content attributes read-only.
+   * The entity item `attr` belongs to. Only consumed by the CONTENT renderer, to back a
+   * "Replace" upload affordance — omit it to render content attributes read-only.
    */
   readonly entityItem?: EntityItem;
   /**
@@ -54,13 +53,7 @@ export function AttributeValueRenderer({
   const components = defaultAttributeRendererComponents;
 
   if (attr.value.kind === AttributeKind.CONTENT) {
-    return (
-      <components.content
-        metadata={attr.value.metadata}
-        entityItem={entityItem}
-        attributeName={attr.value.name}
-      />
-    );
+    return <components.content attribute={attr.value} entityItem={entityItem} />;
   }
   if (attr.value.kind === AttributeKind.NESTED) {
     return null;

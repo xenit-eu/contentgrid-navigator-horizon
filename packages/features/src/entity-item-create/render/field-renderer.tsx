@@ -31,11 +31,8 @@ export interface FieldRendererProps {
 /**
  * Dispatches a `FieldDescriptor` to its renderer (ADR-004's `FieldRenderer` switch).
  *
- * `file` submits the picked `File` (or `[File]` for a `multiValue` property) as a plain form
- * value like any other field — no separate upload step. The server's create-form template
- * declares `multipart/form-data` whenever the entity has a content attribute, and the HAL-FORMS
- * codec (`profileEntity.createEntityItemRequest`) already encodes `Blob`/`File` values into that
- * multipart body — see `packages/ui/src/patterns/form-renderers/file-renderer.tsx`'s doc comment.
+ * `file` submits the picked `File` as a plain form value; the create-form codec encodes it into
+ * the `multipart/form-data` body.
  * `filter` and `sort` are intentionally NOT cases here at all — see `model/field-descriptor.ts`'s
  * doc comment for why they're kept out of the `FieldDescriptor` union entirely rather than routed
  * through this per-field switch. The `never` check in `default` is a compile-time exhaustiveness
@@ -186,7 +183,6 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          multiple={field.multiple}
           value={value}
           onChange={onChange}
           error={error}

@@ -71,6 +71,7 @@ function renderPreview(profile: ProfileEntity) {
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={() => contentFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

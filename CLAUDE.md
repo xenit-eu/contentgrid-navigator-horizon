@@ -304,7 +304,7 @@ For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/nav
 - Always start API exploration from the root (`/`) — follow `cg:entity` links.
 - Use the entity profile (`/profile/<entity>`) for generic tooling that must adapt to model changes.
 - Prefer PATCH over PUT for partial updates.
-- Always include and validate ETags for mutable operations.
+- Always include and validate ETags for mutable operations. **Exception:** binary content upload (PUT to a `cg:content` link) sends no `If-Match`; it is an unconditional overwrite. See the Content exception in [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
 - Never construct or parse pagination cursors — follow HAL `next`/`prev` links directly.
   The one place a `_cursor` value is ever read out of a link is to use it as an opaque
   lookup key (e.g. for browser URL state) into a registry that maps it back to the exact

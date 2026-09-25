@@ -17,16 +17,11 @@ export interface NavigatorDataContextValue {
    *
    * Returns a TypedFetch backed by XMLHttpRequest (fetch cannot report upload
    * progress) wrapped in the SAME bearer-auth + problem-details hook chain as
-   * `contentFetch`. A factory rather than a plain client because the progress
-   * callback is per-upload. Use only for content PUTs that need progress.
-   *
-   * Optional: only `useUploadContent` reads this. Every real app provides it (see
-   * `useAppAuth`), so this is only ever absent in a test `NavigatorDataProvider` that has
-   * nothing to do with content upload — those can omit it rather than being forced to wire
-   * up a factory they never call. `useUploadContent` throws a clear error if it's actually
-   * invoked without one configured.
+   * `contentFetch`. A factory rather than a plain client because each
+   * `useUploadContent` instance reports progress to its own state. Use only for content PUTs
+   * that need progress.
    */
-  createContentUploadFetch?: (onProgress?: (percentage: number) => void) => TypedFetch;
+  createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch;
   /**
    * Full URL of the HAL-FORMS profile root, e.g. https://api.example.com/profile.
    * Resolved once by the app (typically from the root resource's cg:entity links or

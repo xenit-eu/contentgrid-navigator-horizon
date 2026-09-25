@@ -1,0 +1,14 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "attribute-value",
+  "title": "Attribute Value",
+  "description": "ContentGrid primitive for a displayed attribute value, with an empty-value dash.",
+  "files": [
+    {
+      "path": "src/primitives/attribute-value.tsx",
+      "content": "import type * as React from \"react\";\nimport { cn } from \"../lib/utils\";\n\ninterface AttributeValueProps {\n  readonly children?: React.ReactNode;\n  readonly emptyText?: string;\n  readonly variant?: \"default\" | \"numeric\";\n  /** Wrap onto multiple lines instead of the default single-line ellipsis truncation. */\n  readonly wrap?: boolean;\n  readonly className?: string;\n}\n\nfunction AttributeValue({\n  children,\n  emptyText = \"—\",\n  variant = \"default\",\n  wrap = false,\n  className,\n}: AttributeValueProps) {\n  const isEmpty = children == null || children === \"\";\n  return (\n    <span\n      data-slot=\"attribute-value\"\n      className={cn(\n        \"block text-sm\",\n        wrap ? \"whitespace-normal break-words\" : \"truncate\",\n        variant === \"numeric\" && \"tabular-nums\",\n        isEmpty && \"text-muted-foreground\",\n        className,\n      )}\n    >\n      {isEmpty ? emptyText : children}\n    </span>\n  );\n}\n\nexport { AttributeValue };\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}

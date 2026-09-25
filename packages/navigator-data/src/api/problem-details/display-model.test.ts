@@ -40,6 +40,26 @@ describe("toProblemDisplayModel", () => {
     });
   });
 
+  it("falls back to 'Insufficient permissions' for a 403 with no title", () => {
+    const error = new ProblemDetailError({ status: 403, title: "" });
+    expect(toProblemDisplayModel(error)).toMatchObject({
+      status: 403,
+      title: "Insufficient permissions",
+    });
+  });
+
+  it("falls back to a generic status message for any other status with no title", () => {
+    const error = new ProblemDetailError({ status: 418, title: "" });
+    expect(toProblemDisplayModel(error)).toMatchObject({
+      title: "Request failed with status 418",
+    });
+  });
+
+  it("keeps the title empty rather than falling back when a detail is present", () => {
+    const error = new ProblemDetailError({ status: 403, title: "", detail: "Access denied" });
+    expect(toProblemDisplayModel(error)).toMatchObject({ title: "", detail: "Access denied" });
+  });
+
   it("maps a validation problem with every field-error kind", () => {
     const error = new ProblemDetailError<ValidationProblemDetail>({
       type: ContentGridProblemType.VALIDATION,
