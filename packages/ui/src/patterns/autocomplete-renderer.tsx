@@ -76,6 +76,8 @@ export function AutocompleteRenderer({
   const visibleSuggestions = isLoading ? [] : suggestions;
   const hasSuggestions = visibleSuggestions.length > 0;
   const showPopover = open && (hasSuggestions || isLoading);
+  const listboxId = `${name}-listbox`;
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
 
   function closePopover() {
     setOpen(false);
@@ -139,7 +141,9 @@ export function AutocompleteRenderer({
             name={name}
             role="combobox"
             aria-expanded={showPopover}
+            aria-controls={listboxId}
             aria-autocomplete="list"
+            aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
             autoComplete="off"
             value={typedValue}
             readOnly={readOnly}
@@ -170,22 +174,53 @@ export function AutocompleteRenderer({
           onOpenAutoFocus={(event) => event.preventDefault()}
           onFocusOutside={(event) => event.preventDefault()}
         >
-          {isLoading && <p className="py-2 text-center text-sm text-muted-foreground">Loading…</p>}
-          {!isLoading &&
-            visibleSuggestions.map((suggestion, index) => (
-              <button
-                key={suggestion}
-                type="button"
-                className={cn(
-                  "w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
-                  index === activeIndex && "bg-accent",
-                )}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectSuggestion(suggestion)}
-              >
-                {suggestion}
-              </button>
-            ))}
+          {isLoading && (
+            <p role="status" className="py-2 text-center text-sm text-muted-foreground">
+              Loading…
+            </p>
+          )}
+          {hasSuggestions && (
+            // WAI-ARIA combobox-with-listbox pattern: focus stays on the input, which points at
+            // this listbox (`aria-controls`) and at the highlighted option
+            // (`aria-activedescendant`), so a screen reader follows the arrow-key navigation.
+            <ul
+              id={listboxId}
+              role="listbox" // NOSONAR: no native-element alternative for an async, custom-styled combobox popup
+              aria-label={`${label} suggestions`}
+              className="max-h-48 overflow-y-auto"
+            >
+              {visibleSuggestions.map((suggestion, index) => (
+                // Not a <button>: keyboard navigation happens on the input via
+                // aria-activedescendant, so a focusable element here would only duplicate that
+                // path and trip axe's "nested-interactive" rule.
+                <li
+                  key={suggestion}
+                  id={optionId(index)}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  tabIndex={-1}
+                  className={cn(
+                    "cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+                    index === activeIndex && "bg-accent",
+                  )}
+                  // Keep the input's onBlur (which commits the draft) from firing before onClick.
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectSuggestion(suggestion)}
+                  // Never focused in normal use (focus stays on the input); mirrored so Enter/Space
+                  // still work if a screen reader's virtual cursor does land here.
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      selectSuggestion(suggestion);
+                    }
+                  }}
+                >
+                  {suggestion}
+                </li>
+              ))}
+            </ul>
+          )}
         </PopoverContent>
       </Popover>
       <FieldMessage name={name} description={description} error={error} />

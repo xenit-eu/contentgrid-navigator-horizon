@@ -160,6 +160,38 @@ describe("AutocompleteRenderer", () => {
     expect(input).toHaveValue("Paramaribo");
   });
 
+  it("links the combobox to its listbox and to the highlighted option", async () => {
+    const user = userEvent.setup();
+    renderCity({ suggestions: ["Paris", "Paramaribo"] });
+
+    const input = screen.getByRole("combobox");
+    await user.click(input);
+    fireEvent.change(input, { target: { value: "par" } });
+
+    const listbox = screen.getByRole("listbox", { name: "City suggestions" });
+    expect(input).toHaveAttribute("aria-controls", listbox.id);
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+
+    await user.keyboard("{ArrowDown}");
+
+    const [paris, paramaribo] = screen.getAllByRole("option");
+    expect(input).toHaveAttribute("aria-activedescendant", paris.id);
+    expect(paris).toHaveAttribute("aria-selected", "true");
+    expect(paramaribo).toHaveAttribute("aria-selected", "false");
+
+    await user.keyboard("{ArrowDown}");
+
+    expect(input).toHaveAttribute("aria-activedescendant", paramaribo.id);
+  });
+
+  it("announces loading through a status region", () => {
+    renderCity({ isLoading: true });
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "par" } });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+  });
+
   it("shows a loading indicator instead of stale suggestions while a new search is in flight", () => {
     renderCity({ suggestions: ["Paris", "Paramaribo"], isLoading: true });
 
