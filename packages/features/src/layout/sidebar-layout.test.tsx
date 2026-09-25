@@ -26,6 +26,7 @@ function renderLayout(user: unknown) {
     auth: { isLoading: false, isAuthenticated: true, user, signoutRedirect: vi.fn() },
     apiFetch: vi.fn(),
     contentFetch: vi.fn(),
+    createContentUploadFetch: () => vi.fn(),
     profileUrl: "https://api.example.com/profile",
   } as unknown as AppAuthResult);
 

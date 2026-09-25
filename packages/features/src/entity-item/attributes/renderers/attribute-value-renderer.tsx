@@ -1,5 +1,6 @@
 import {
   AttributeKind,
+  type EntityItem,
   type EntityItemAttribute,
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
@@ -10,6 +11,11 @@ export const TABLE_ATTRIBUTE_MAX_CHAR_LENGTH = 80;
 
 export interface AttributeValueRendererProps {
   readonly attr: EntityItemAttribute;
+  /**
+   * The entity item `attr` belongs to. Only consumed by the CONTENT renderer, to back a
+   * "Replace" upload affordance — omit it to render content attributes read-only.
+   */
+  readonly entityItem?: EntityItem;
   /**
    * Wrap onto multiple lines instead of truncating with an ellipsis. Only
    * applied to renderers whose props support it — passing it through has no
@@ -39,6 +45,7 @@ export interface AttributeValueRendererProps {
  */
 export function AttributeValueRenderer({
   attr,
+  entityItem,
   wrap,
   variant = "default",
   maxCharLength,
@@ -46,7 +53,7 @@ export function AttributeValueRenderer({
   const components = defaultAttributeRendererComponents;
 
   if (attr.value.kind === AttributeKind.CONTENT) {
-    return <components.content metadata={attr.value.metadata} />;
+    return <components.content attribute={attr.value} entityItem={entityItem} />;
   }
   if (attr.value.kind === AttributeKind.NESTED) {
     return null;

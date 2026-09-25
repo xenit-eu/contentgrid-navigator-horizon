@@ -46,7 +46,9 @@ const { spyRenderers } = vi.hoisted(() => {
     ),
     createdBy: ({ value, label }) => <span data-testid="r-createdBy">{`${label}:${value}`}</span>,
     modifiedBy: ({ value, label }) => <span data-testid="r-modifiedBy">{`${label}:${value}`}</span>,
-    content: ({ metadata }) => <span data-testid="r-content">{JSON.stringify(metadata)}</span>,
+    content: ({ attribute }) => (
+      <span data-testid="r-content">{JSON.stringify(attribute.metadata)}</span>
+    ),
     unknown: () => <span data-testid="r-unknown" />,
   };
   return { spyRenderers };

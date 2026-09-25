@@ -85,6 +85,7 @@ function renderDetail(onClose = vi.fn()) {
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={() => contentFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

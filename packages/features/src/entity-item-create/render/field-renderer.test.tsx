@@ -116,10 +116,10 @@ describe("FieldRenderer", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
-  it("renders a not-yet-supported placeholder for a file field", () => {
+  it("dispatches a file field to an upload dropzone", () => {
     render(<FieldRenderer field={fileField()} value={undefined} onChange={vi.fn()} />);
     expect(screen.getByText("Attachment")).toBeInTheDocument();
-    expect(screen.getByText(/not yet supported/)).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
   });
 
   it("shows the first error's message for a field with errors", () => {

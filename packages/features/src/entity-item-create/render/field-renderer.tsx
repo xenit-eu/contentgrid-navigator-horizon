@@ -5,6 +5,7 @@ import {
   DateTimeRenderer,
   EnumMultiRenderer,
   EnumRenderer,
+  FileRenderer,
   NumberRenderer,
   TextRenderer,
 } from "@contentgrid/ui";
@@ -30,11 +31,12 @@ export interface FieldRendererProps {
 /**
  * Dispatches a `FieldDescriptor` to its renderer (ADR-004's `FieldRenderer` switch).
  *
- * `file` is rendered as an inert placeholder — it's covered by another ticket. `filter` and `sort`
- * are intentionally NOT cases here at all — see `model/field-descriptor.ts`'s doc comment for why
- * they're kept out of the `FieldDescriptor` union entirely rather than routed through this
- * per-field switch. The `never` check in `default` is a compile-time exhaustiveness guard, not a
- * real runtime path today.
+ * `file` submits the picked `File` as a plain form value; the create-form codec encodes it into
+ * the `multipart/form-data` body.
+ * `filter` and `sort` are intentionally NOT cases here at all — see `model/field-descriptor.ts`'s
+ * doc comment for why they're kept out of the `FieldDescriptor` union entirely rather than routed
+ * through this per-field switch. The `never` check in `default` is a compile-time exhaustiveness
+ * guard, not a real runtime path today.
  *
  * Wrapped in `memo`: `render/form-container.tsx` gives every field a referentially stable
  * `onChange`/`onFocus`/`onBlur` (curried once per field name), so a keystroke in one field no
@@ -174,21 +176,21 @@ function renderFieldWidget({
       );
     }
     case "file":
-      return <UnsupportedFieldPlaceholder field={field} />;
+      return (
+        <FileRenderer
+          name={field.name}
+          label={field.label}
+          required={field.required}
+          readOnly={field.readOnly}
+          description={field.description}
+          value={value}
+          onChange={onChange}
+          error={error}
+        />
+      );
     default: {
       const exhaustive: never = field;
       return exhaustive;
     }
   }
-}
-
-function UnsupportedFieldPlaceholder({ field }: Readonly<{ field: FieldDescriptor }>) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-sm font-medium">{field.label}</p>
-      <p className="text-sm text-muted-foreground">
-        This field type (&quot;{field.kind}&quot;) is not yet supported in this form.
-      </p>
-    </div>
-  );
 }

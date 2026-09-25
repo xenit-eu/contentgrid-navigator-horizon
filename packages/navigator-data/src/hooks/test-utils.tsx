@@ -8,6 +8,7 @@ import {
   type TypedFetch,
   createApiClient,
   createContentClient,
+  createContentUploadClient,
 } from "../api/client";
 import {
   DEFAULT_RENDITION_POLL_INTERVAL_MS,
@@ -106,6 +107,8 @@ export function makeWrapper(
   contentFetch: TypedFetch = createContentClient(noopSupplier),
   renditionUri?: string,
 ) {
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
   const renditionPolling = renditionUri
     ? { intervalMs: DEFAULT_RENDITION_POLL_INTERVAL_MS, timeoutMs: DEFAULT_RENDITION_TIMEOUT_MS }
     : undefined;
@@ -116,6 +119,7 @@ export function makeWrapper(
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={createContentUploadFetch}
           profileUrl={PROFILE_URL}
           renditionUri={renditionUri}
           renditionPolling={renditionPolling}

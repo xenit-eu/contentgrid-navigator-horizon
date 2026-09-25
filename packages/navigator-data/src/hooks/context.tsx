@@ -13,6 +13,16 @@ export interface NavigatorDataContextValue {
    */
   contentFetch: TypedFetch;
   /**
+   * Factory for a progress-reporting binary upload client.
+   *
+   * Returns a TypedFetch backed by XMLHttpRequest (fetch cannot report upload
+   * progress) wrapped in the SAME bearer-auth + problem-details hook chain as
+   * `contentFetch`. A factory rather than a plain client because each
+   * `useUploadContent` instance reports progress to its own state. Use only for content PUTs
+   * that need progress.
+   */
+  createContentUploadFetch: (onProgress?: (percentage: number) => void) => TypedFetch;
+  /**
    * Full URL of the HAL-FORMS profile root, e.g. https://api.example.com/profile.
    * Resolved once by the app (typically from the root resource's cg:entity links or
    * the app's known ContentGrid deployment URL) and injected here so the hooks
@@ -40,14 +50,22 @@ const NavigatorDataContext = createContext<NavigatorDataContextValue | null>(nul
 export function NavigatorDataProvider({
   apiFetch,
   contentFetch,
+  createContentUploadFetch,
   profileUrl,
   renditionUri,
   renditionPolling,
   children,
 }: NavigatorDataContextValue & { children: ReactNode }) {
   const value = useMemo(
-    () => ({ apiFetch, contentFetch, profileUrl, renditionUri, renditionPolling }),
-    [apiFetch, contentFetch, profileUrl, renditionUri, renditionPolling],
+    () => ({
+      apiFetch,
+      contentFetch,
+      createContentUploadFetch,
+      profileUrl,
+      renditionUri,
+      renditionPolling,
+    }),
+    [apiFetch, contentFetch, createContentUploadFetch, profileUrl, renditionUri, renditionPolling],
   );
   return <NavigatorDataContext.Provider value={value}>{children}</NavigatorDataContext.Provider>;
 }

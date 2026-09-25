@@ -206,6 +206,7 @@ function renderSection(props: Partial<Parameters<typeof RelationToManySection>[0
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={() => contentFetch}
           profileUrl={PROFILE_URL}
         >
           {children}
