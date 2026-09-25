@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { cn } from "../lib/utils";
 import { Input } from "../primitives/input";
 import { Label } from "../primitives/label";
@@ -13,11 +12,13 @@ export interface AutocompleteRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  /** The committed value — only ever updated through `onChange`, never while typing. */
-  readonly value: FieldValue;
+  /** The committed value — only ever updated through `onChange`, never while typing. Plain text
+   * (not `FieldValue`), so this pattern has no `@contentgrid/navigator-data` dependency and can
+   * ship through the shadcn registry on its own. */
+  readonly value: string | undefined;
   /** Fires only on commit: selecting a suggestion, pressing Enter, or leaving the field — never
    * per keystroke, so a search form doesn't refetch its collection for every half-typed value. */
-  readonly onChange: (value: FieldValue) => void;
+  readonly onChange: (value: string) => void;
   readonly error?: string;
   /** Matching suggestions for the current query — supplied by the caller (e.g. the feature layer
    * calling `useTypeahead`), never fetched by this component. */
@@ -61,7 +62,7 @@ export function AutocompleteRenderer({
 }: Readonly<AutocompleteRendererProps>) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const committedValue = typeof value === "string" ? value : "";
+  const committedValue = value ?? "";
   const [typedValue, setTypedValue] = useState(committedValue);
 
   // Follow the committed value when it changes from outside (e.g. "Clear all", a deep link) —

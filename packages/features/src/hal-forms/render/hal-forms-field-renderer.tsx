@@ -207,7 +207,7 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          value={value}
+          value={typeof value === "string" ? value : undefined}
           onChange={onChange}
           error={error}
           suggestions={autocomplete.suggestions}
