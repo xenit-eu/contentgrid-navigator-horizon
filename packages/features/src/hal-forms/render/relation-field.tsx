@@ -131,7 +131,7 @@ function RelationToOneField({
         required={field.required}
         readOnly={field.readOnly}
         description={field.description}
-        value={value}
+        value={href}
         onChange={onChange}
         error={error}
         linkedItem={linkedItem && <EntityItemAttributeSummary item={linkedItem} />}

@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { FileUploadZone } from "../file-upload-zone";
 import { FieldShell, fieldAriaProps } from "./field-shell";
 
@@ -8,8 +7,8 @@ export interface FileRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  readonly value: File | undefined;
+  readonly onChange: (value: File | undefined) => void;
   readonly error?: string;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
@@ -28,7 +27,7 @@ export function FileRenderer({
   onFocus,
   onBlur,
 }: Readonly<FileRendererProps>) {
-  const file = value instanceof File ? value : null;
+  const file = value ?? null;
 
   return (
     <FieldShell

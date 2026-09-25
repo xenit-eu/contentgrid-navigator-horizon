@@ -10,6 +10,14 @@ import {
   TextRenderer,
 } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
+import {
+  asBoolean,
+  asDateOrString,
+  asFile,
+  asNumberOrString,
+  asString,
+  asStringArray,
+} from "../../hal-forms/render/narrow-field-value";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { FieldState } from "../state/field-state";
 import { RelationField } from "../../hal-forms/render/relation-field";
@@ -98,7 +106,7 @@ function renderFieldWidget({
           regex={field.regex}
           maxLength={field.maxLength}
           format={field.format}
-          value={value}
+          value={asString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -113,7 +121,7 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          value={value}
+          value={asNumberOrString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -128,7 +136,7 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          value={value}
+          value={asBoolean(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -144,7 +152,7 @@ function renderFieldWidget({
           readOnly={field.readOnly}
           description={field.description}
           includesTime={field.includesTime}
-          value={value}
+          value={asDateOrString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -166,7 +174,7 @@ function renderFieldWidget({
           description={field.description}
           options={field.options}
           isRemote={isRemote}
-          value={value}
+          value={asStringArray(value)}
           onChange={onChange}
           error={error}
         />
@@ -179,7 +187,7 @@ function renderFieldWidget({
           description={field.description}
           options={field.options}
           isRemote={isRemote}
-          value={value}
+          value={asString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -195,7 +203,7 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          value={value}
+          value={asFile(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
