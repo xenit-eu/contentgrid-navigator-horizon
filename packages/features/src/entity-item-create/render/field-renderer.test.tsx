@@ -96,9 +96,9 @@ describe("FieldRenderer", () => {
     expect(screen.getByRole("spinbutton")).toBeInTheDocument();
   });
 
-  it("dispatches a boolean field to a checkbox", () => {
+  it("dispatches a boolean field to a True/False/Unset chip group", () => {
     render(<FieldRenderer field={booleanField()} value={false} onChange={vi.fn()} />);
-    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "True" })).toBeInTheDocument();
   });
 
   it("dispatches a datetime field to a date input", () => {

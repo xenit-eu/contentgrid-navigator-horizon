@@ -12,7 +12,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Unchecked: Story = {
+export const False: Story = {
   args: {
     ...booleanField(),
     value: false,
@@ -20,12 +20,34 @@ export const Unchecked: Story = {
   },
 };
 
-export const Checked: Story = {
+export const True: Story = {
   args: {
     ...booleanField(),
     value: true,
     onChange: fn(),
   },
+};
+
+export const Unset: Story = {
+  args: {
+    ...booleanField(),
+    value: undefined,
+    onChange: fn(),
+  },
+};
+
+export const ClearResetsToUnset: Story = {
+  args: {
+    ...booleanField(),
+    value: true,
+    onChange: fn(),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await fireEvent.click(canvas.getByRole("button", { name: "Clear" }));
+    await expect(args.onChange).toHaveBeenCalledWith(undefined);
+  },
+  tags: ["no-visual-test"],
 };
 
 export const ReadOnly: Story = {
@@ -45,7 +67,7 @@ export const WithError: Story = {
   },
 };
 
-export const ClickingTogglesOnChange: Story = {
+export const ClickingTrueTogglesOnChange: Story = {
   args: {
     ...booleanField(),
     value: false,
@@ -53,8 +75,7 @@ export const ClickingTogglesOnChange: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    const checkbox = canvas.getByRole("checkbox");
-    await fireEvent.click(checkbox);
+    await fireEvent.click(canvas.getByRole("radio", { name: "True" }));
     await expect(args.onChange).toHaveBeenCalledWith(true);
   },
   tags: ["no-visual-test"],

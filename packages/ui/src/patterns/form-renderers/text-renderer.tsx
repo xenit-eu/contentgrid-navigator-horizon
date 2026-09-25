@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
 import { FieldShell, fieldAriaProps } from "./field-shell";
 
@@ -8,8 +7,8 @@ export interface TextRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  readonly value: string | undefined;
+  readonly onChange: (value: string) => void;
   readonly error?: string;
   /** Reserved for a future client-side pattern check — not yet enforced by this input. */
   readonly regex?: RegExp;
@@ -47,7 +46,7 @@ export function TextRenderer({
         id={name}
         name={name}
         type={format ?? "text"}
-        value={typeof value === "string" ? value : ""}
+        value={value ?? ""}
         onChange={(event) => onChange(event.target.value)}
         readOnly={readOnly}
         required={required}

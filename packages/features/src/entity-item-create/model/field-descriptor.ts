@@ -28,9 +28,13 @@ export interface FieldDescriptorBase {
  * - Filtering already has a real, working, differently-shaped home —
  *   `packages/features/src/search/filter-properties.ts`'s `SearchFilterProperty` (from
  *   `@contentgrid/ui`), built directly off `SearchHalFormTemplate` with its own operator/range/
- *   redundancy logic. There is no future migration that would route filter fields through this
- *   type instead, so a `filter` kind here would just be a second, guessed-shape, unused
- *   implementation of something already solved.
+ *   redundancy logic. There is no migration planned that would route filter fields through THIS
+ *   type — a `filter` kind here would still just be a second, guessed-shape, unused
+ *   implementation of something already solved. (A generic, template-agnostic unification of the
+ *   create and search paths DOES now exist, as of `packages/features/src/hal-forms/`
+ *   (`x-stability: "experimental"`, spec `specs/001-hal-form-layout/`) — but it's a new, separate
+ *   model, not this one. Neither `entity-item-create` nor `search` has been migrated onto it;
+ *   this file and `filter-properties.ts` are both still the real, in-use implementations today.)
  * - Sort, in legacy Navigator, is never a per-field concept — there's no "sort field" rendered
  *   one-at-a-time alongside attribute inputs. It's a single control over the whole collection
  *   view: the `_sort` HAL-FORMS property's inline options are read directly

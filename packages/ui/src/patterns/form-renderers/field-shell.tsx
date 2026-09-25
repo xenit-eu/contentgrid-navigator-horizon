@@ -7,6 +7,10 @@ export interface FieldShellProps {
   readonly required: boolean;
   readonly description?: string;
   readonly error?: string;
+  /** Keeps the label as the control's accessible name but hides it visually — for a field whose
+   *  surrounding group heading already names it (e.g. a search form's exact-match filter under
+   *  its attribute's section title). */
+  readonly hideLabel?: boolean;
   readonly children: ReactNode;
 }
 
@@ -63,11 +67,12 @@ export function FieldShell({
   required,
   description,
   error,
+  hideLabel,
   children,
 }: Readonly<FieldShellProps>) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={name}>
+      <Label htmlFor={name} className={hideLabel ? "sr-only" : undefined}>
         {label}
         {required && <RequiredMarker />}
       </Label>

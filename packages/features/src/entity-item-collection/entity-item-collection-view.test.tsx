@@ -9,7 +9,7 @@
  */
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -170,6 +170,7 @@ function renderCollectionView(props: {
   profile: ProfileEntity;
   pageUrl?: string;
   filters?: Record<string, string>;
+  onFiltersChange?: (filters: Record<string, string>) => void;
 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
@@ -355,5 +356,102 @@ describe("EntityItemCollectionView — Columns selector", () => {
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
 
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+  });
+});
+
+describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
+  it("renders a labeled input for every search property when Filters opens", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+
+    expect(screen.getByLabelText(/Code/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^After$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Amount/)).toBeInTheDocument();
+  });
+
+  it("renders the prefix-match search property as an autocomplete combobox", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+
+    expect(screen.getByRole("combobox", { name: /Code/ })).toBeInTheDocument();
+  });
+
+  it("applies a typed autocomplete filter only on commit, not per keystroke", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    const onFiltersChange = vi.fn();
+    renderCollectionView({ profile: makeItemProfile(), onFiltersChange });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+    const combobox = screen.getByRole("combobox", { name: /Code/ });
+    await user.type(combobox, "abc");
+
+    expect(onFiltersChange).not.toHaveBeenCalled();
+
+    await user.keyboard("{Enter}");
+
+    expect(onFiltersChange).toHaveBeenCalledTimes(1);
+    expect(onFiltersChange).toHaveBeenCalledWith({ "code~prefix": "abc" });
+  });
+
+  it("reports a typed number filter value back through onFiltersChange", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    const onFiltersChange = vi.fn();
+    renderCollectionView({ profile: makeItemProfile(), onFiltersChange });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+    fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: "42" } });
+
+    expect(onFiltersChange).toHaveBeenCalledWith({ amount: "42" });
+  });
+
+  it("shows an already-applied filter's value pre-filled in its input", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), filters: { amount: "42" } });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+
+    expect(screen.getByLabelText(/Amount/)).toHaveValue(42);
+  });
+
+  it("shows an invalid-value error for a non-numeric value already applied to a number filter", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), filters: { amount: "not-a-number" } });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+
+    expect(screen.getByText(/Enter a valid number/i)).toBeInTheDocument();
+  });
+
+  it("clears every filter when Clear all is clicked", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    const onFiltersChange = vi.fn();
+    renderCollectionView({
+      profile: makeItemProfile(),
+      filters: { amount: "42" },
+      onFiltersChange,
+    });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+    await user.click(screen.getByRole("button", { name: /clear all/i }));
+
+    expect(onFiltersChange).toHaveBeenCalledWith({});
   });
 });
