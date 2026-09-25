@@ -106,6 +106,8 @@ export function makeWrapper(
   contentFetch: TypedFetch = createContentClient(noopSupplier),
   renditionUri?: string,
 ) {
+  const createContentUploadFetch = (onProgress?: (percentage: number) => void) =>
+    createContentUploadClient(noopSupplier, onProgress);
   const renditionPolling = renditionUri
     ? { intervalMs: DEFAULT_RENDITION_POLL_INTERVAL_MS, timeoutMs: DEFAULT_RENDITION_TIMEOUT_MS }
     : undefined;

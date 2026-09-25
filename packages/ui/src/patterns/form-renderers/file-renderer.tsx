@@ -1,5 +1,5 @@
 import type { FieldValue } from "@contentgrid/navigator-data/field-value";
-import { ContentUploadField } from "../content-upload-field";
+import { FileUpload } from "../file-upload";
 import { FieldShell } from "./field-shell";
 
 export interface FileRendererProps {
@@ -11,21 +11,11 @@ export interface FileRendererProps {
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
-  /** HAL-FORMS `multiValue` for this property — see the doc comment below for how it's handled. */
-  readonly multiple: boolean;
 }
 
 /**
- * Lets the user pick a file to submit alongside the rest of the create form. No upload progress
- * here — the file rides along in the same `multipart/form-data` POST as every other field (the
- * server's create-form template declares that content type whenever the entity has a content
- * attribute; see `@contentgrid/hal-forms/codecs`'s `FormDataEncoder`). This is a distinct concern
- * from `ContentUploadField`'s progress/cancel/retry props, which apply only to replacing content
- * on an entity that already exists — those are simply left unset here.
- *
- * `multiple` only changes whether a selected file is emitted as a bare `File` or a one-element
- * array (matching the HAL-FORMS wire shape for a multi-value property) — the picker itself still
- * shows a single slot.
+ * Lets the user pick a file to submit with the create form. The file rides along in the same
+ * `multipart/form-data` POST as every other field, so no upload progress is shown here.
  */
 export function FileRenderer({
   name,
@@ -36,9 +26,8 @@ export function FileRenderer({
   value,
   onChange,
   error,
-  multiple,
 }: Readonly<FileRendererProps>) {
-  const file = value instanceof File ? value : Array.isArray(value) ? (value[0] ?? null) : null;
+  const file = value instanceof File ? value : null;
 
   return (
     <FieldShell
@@ -48,12 +37,12 @@ export function FileRenderer({
       description={description}
       error={error}
     >
-      {readOnly ? (
-        <p className="text-sm text-muted-foreground">{file?.name ?? "Not editable"}</p>
-      ) : (
-        <ContentUploadField
-          file={file}
-          onFileChange={(next) => onChange(next ? (multiple ? [next] : next) : undefined)}
+      {!readOnly && (
+        <FileUpload
+          currentFileMetadata={
+            file ? { filename: file.name, mimetype: file.type, length: file.size } : null
+          }
+          onUpload={(next) => onChange(next ?? undefined)}
         />
       )}
     </FieldShell>

@@ -1,292 +1,132 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EntityItem } from "@contentgrid/navigator-data";
 import {
+  EntityItemAttributeContent,
   ProblemDetailError,
-  useDownloadContent,
   useUploadContent,
 } from "@contentgrid/navigator-data";
+import { makeEntityItem } from "@contentgrid/navigator-data/test-fixtures/hal/entity-item";
+import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { ContentAttributeRenderer } from "./content-attribute-renderer";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
-  return { ...actual, useUploadContent: vi.fn(), useDownloadContent: vi.fn() };
+  return { ...actual, useUploadContent: vi.fn() };
 });
+
+const DUMMY_LINK = {} as ConstructorParameters<typeof EntityItemAttributeContent>[2];
+const METADATA = { filename: "invoice.pdf", mimetype: "application/pdf", length: 1000 };
+const REPLACEMENT = new File(["x"], "replacement.pdf", { type: "application/pdf" });
+const CG_CONTENT_REL = "https://contentgrid.cloud/rels/contentgrid/content";
+const ITEM_URL = "https://api.example.com/invoices/inv-1";
+const PROFILE = makeProfileEntity({ _links: {} });
+
+function invoiceItem(contentLinks: readonly { href: string; name: string }[]) {
+  return makeEntityItem(
+    {
+      id: "inv-1",
+      file: METADATA,
+      _links: { self: { href: ITEM_URL }, [CG_CONTENT_REL]: contentLinks },
+    },
+    PROFILE,
+  );
+}
+
+const ENTITY_ITEM = invoiceItem([{ href: `${ITEM_URL}/file`, name: "file" }]);
 
 const mutate = vi.fn();
 const cancel = vi.fn();
-const reset = vi.fn();
-const downloadMutate = vi.fn();
+
+function contentAttribute(metadata: EntityItemAttributeContent["metadata"] = METADATA) {
+  return new EntityItemAttributeContent("file", metadata, DUMMY_LINK);
+}
 
 function mockUploadState(
-  state: Partial<{ progress: number; isError: boolean; error: unknown }> = {},
+  state: Partial<{ isPending: boolean; progress: number; error: Error | null }> = {},
 ) {
+  const inFlight = state.isPending || state.error;
   vi.mocked(useUploadContent).mockReturnValue({
     mutate,
     cancel,
-    reset,
+    isPending: state.isPending ?? false,
     progress: state.progress ?? 0,
-    isError: state.isError ?? false,
     error: state.error ?? null,
+    variables: inFlight ? { file: REPLACEMENT } : undefined,
   } as unknown as ReturnType<typeof useUploadContent>);
 }
 
-vi.mocked(useDownloadContent).mockReturnValue({
-  mutate: downloadMutate,
-  isPending: false,
-} as unknown as ReturnType<typeof useDownloadContent>);
-
-function makeEntityItem(canUploadContent: boolean): EntityItem {
-  return {
-    canUploadContent: () => canUploadContent,
-  } as unknown as EntityItem;
-}
+afterEach(() => {
+  mutate.mockReset();
+  cancel.mockReset();
+});
 
 describe("ContentAttributeRenderer", () => {
   it("renders an empty attribute value when metadata is null", () => {
-    render(<ContentAttributeRenderer metadata={null} />);
+    render(<ContentAttributeRenderer attribute={contentAttribute(null)} />);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-  it("ignores the icon when metadata is null", () => {
-    render(<ContentAttributeRenderer metadata={null} icon={<span data-testid="icon" />} />);
-    expect(screen.queryByTestId("icon")).not.toBeInTheDocument();
-  });
-
-  it("falls back to 'Untitled' when filename is null", () => {
-    render(<ContentAttributeRenderer metadata={{ filename: null, length: 512 }} />);
-    expect(screen.getByText("Untitled · 512 B")).toBeInTheDocument();
-  });
-
-  it("formats sizes under 1 MB in KB", () => {
-    render(<ContentAttributeRenderer metadata={{ filename: "invoice.pdf", length: 2048 }} />);
-    expect(screen.getByText("invoice.pdf · 2.0 KB")).toBeInTheDocument();
-  });
-
-  it("renders the icon alongside the value when provided", () => {
+  it("falls back to 'Document' when filename is null", () => {
     render(
-      <ContentAttributeRenderer
-        metadata={{ filename: "invoice.pdf", length: 1024 }}
-        icon={<span data-testid="icon" />}
-      />,
+      <ContentAttributeRenderer attribute={contentAttribute({ ...METADATA, filename: null })} />,
     );
-    expect(screen.getByTestId("icon")).toBeInTheDocument();
-    expect(screen.getByText("invoice.pdf · 1.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("Document · 1 KB")).toBeInTheDocument();
   });
 
   describe("replace upload affordance", () => {
-    afterEach(() => {
-      mutate.mockReset();
-      cancel.mockReset();
-      reset.mockReset();
-      downloadMutate.mockReset();
-    });
-
-    it("renders no Replace button when entityItem/attributeName are omitted", () => {
-      mockUploadState();
-      render(<ContentAttributeRenderer metadata={{ filename: "invoice.pdf", length: 1024 }} />);
-      expect(screen.queryByRole("button", { name: "Replace file" })).not.toBeInTheDocument();
-    });
-
-    it("renders no Replace button when upload is not ABAC-permitted", () => {
+    it("renders read-only, without a Replace button, when the item has no cg:content link for the attribute", () => {
       mockUploadState();
       render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(false)}
-          attributeName="file"
-        />,
+        <ContentAttributeRenderer attribute={contentAttribute()} entityItem={invoiceItem([])} />,
       );
+      expect(screen.getByText("invoice.pdf · 1 KB")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Replace file" })).not.toBeInTheDocument();
-      expect(useUploadContent).not.toHaveBeenCalled();
     });
 
-    it("uploads the picked file when permitted", async () => {
+    it("shows the stored file with a Replace button while no upload is in flight", () => {
       mockUploadState();
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-
-      const file = new File(["x"], "replacement.pdf", { type: "application/pdf" });
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, file);
-
-      expect(mutate).toHaveBeenCalledWith({ file });
+      render(<ContentAttributeRenderer attribute={contentAttribute()} entityItem={ENTITY_ITEM} />);
+      expect(screen.getByText("invoice.pdf")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Replace file" })).toBeInTheDocument();
     });
 
-    it("shows upload progress once a file is picked", async () => {
-      mockUploadState({ progress: 42 });
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, new File(["x"], "replacement.pdf"));
-
-      expect(screen.getByRole("progressbar")).toHaveValue(42);
-      expect(screen.getByRole("button", { name: "Cancel upload" })).toBeInTheDocument();
+    it("uploads a file dropped onto the stored file", () => {
+      mockUploadState();
+      render(<ContentAttributeRenderer attribute={contentAttribute()} entityItem={ENTITY_ITEM} />);
+      fireEvent.drop(screen.getByText("invoice.pdf"), { dataTransfer: { files: [REPLACEMENT] } });
+      expect(mutate).toHaveBeenCalledWith({ file: REPLACEMENT });
     });
 
-    it("shows Retry instead of Cancel once the upload errors, and re-mutates the same file on retry", async () => {
-      mockUploadState({ isError: true });
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      const file = new File(["x"], "replacement.pdf");
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, file);
-      mutate.mockClear();
+    it("shows the picked file in place of the stored one while pending, and cancels on clear", async () => {
+      mockUploadState({ isPending: true, progress: 42 });
+      render(<ContentAttributeRenderer attribute={contentAttribute()} entityItem={ENTITY_ITEM} />);
+      expect(screen.getByText("replacement.pdf")).toBeInTheDocument();
+      expect(screen.queryByText("invoice.pdf")).not.toBeInTheDocument();
 
-      expect(screen.queryByRole("button", { name: "Cancel upload" })).not.toBeInTheDocument();
-      await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-
-      expect(mutate).toHaveBeenCalledWith({ file });
+      await userEvent.click(screen.getByRole("button", { name: "Cancel upload" }));
+      expect(cancel).toHaveBeenCalled();
+      expect(mutate).not.toHaveBeenCalled();
     });
 
-    it("renders the real problem detail (not just a generic message) once the upload errors", async () => {
+    it("renders the problem detail once the upload fails, and Retry re-uploads the same file", async () => {
       const error = new ProblemDetailError({
         status: 415,
         title: "Unsupported Media Type",
         detail: "The file type 'application/x-msdownload' is not permitted for this attribute.",
         type: "https://contentgrid.cloud/problems/unsupported-media-type",
       });
-      mockUploadState({ isError: true, error });
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, new File(["x"], "replacement.exe"));
+      mockUploadState({ error });
+      render(<ContentAttributeRenderer attribute={contentAttribute()} entityItem={ENTITY_ITEM} />);
 
       expect(
         screen.getByText(
           "The file type 'application/x-msdownload' is not permitted for this attribute.",
         ),
       ).toBeInTheDocument();
-    });
 
-    it("lets the user dismiss a failed upload back to the plain metadata view, without retrying", async () => {
-      mockUploadState({ isError: true });
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, new File(["x"], "replacement.pdf"));
-      mutate.mockClear();
-
-      await userEvent.click(screen.getByRole("button", { name: "Remove file" }));
-
-      expect(mutate).not.toHaveBeenCalled();
-      expect(reset).toHaveBeenCalledOnce();
-      expect(screen.getByText("invoice.pdf · 1.0 KB")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Replace file" })).toBeInTheDocument();
-    });
-
-    it("returns to the plain metadata view when the upload is cancelled", async () => {
-      mockUploadState();
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, new File(["x"], "replacement.pdf"));
-
-      await userEvent.click(screen.getByRole("button", { name: "Cancel upload" }));
-
-      expect(cancel).toHaveBeenCalledOnce();
-      expect(screen.getByText("invoice.pdf · 1.0 KB")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Replace file" })).toBeInTheDocument();
-    });
-  });
-
-  describe("download affordance", () => {
-    afterEach(() => {
-      mutate.mockReset();
-      cancel.mockReset();
-      reset.mockReset();
-      downloadMutate.mockReset();
-    });
-
-    it("renders no Download button when entityItem/attributeName are omitted", () => {
-      mockUploadState();
-      render(<ContentAttributeRenderer metadata={{ filename: "invoice.pdf", length: 1024 }} />);
-      expect(screen.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
-    });
-
-    it("renders no Download button when metadata is null, even when upload isn't permitted", () => {
-      mockUploadState();
-      render(
-        <ContentAttributeRenderer
-          metadata={null}
-          entityItem={makeEntityItem(false)}
-          attributeName="file"
-        />,
-      );
-      expect(screen.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
-    });
-
-    it("renders a Download button alongside the read-only metadata when upload isn't permitted", async () => {
-      mockUploadState();
-      render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(false)}
-          attributeName="file"
-        />,
-      );
-      await userEvent.click(screen.getByRole("button", { name: "Download file" }));
-      expect(downloadMutate).toHaveBeenCalledOnce();
-    });
-
-    it("renders a Download button alongside Replace when upload is permitted", async () => {
-      mockUploadState();
-      render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      expect(screen.getByRole("button", { name: "Replace file" })).toBeInTheDocument();
-      await userEvent.click(screen.getByRole("button", { name: "Download file" }));
-      expect(downloadMutate).toHaveBeenCalledOnce();
-    });
-
-    it("hides the Download button once a replacement file is picked", async () => {
-      mockUploadState();
-      const { container } = render(
-        <ContentAttributeRenderer
-          metadata={{ filename: "invoice.pdf", length: 1024 }}
-          entityItem={makeEntityItem(true)}
-          attributeName="file"
-        />,
-      );
-      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-      await userEvent.upload(input, new File(["x"], "replacement.pdf"));
-
-      expect(screen.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+      expect(mutate).toHaveBeenCalledWith({ file: REPLACEMENT });
     });
   });
 });

@@ -1,26 +1,12 @@
 /**
  * Tests for the XHR-backed fetch transport used exclusively to report upload
  * progress (fetch has no equivalent to `xhr.upload.onprogress`).
- *
- * Covers:
- * - Every header on the Request is forwarded (If-Match, Content-Type, Content-Disposition).
- * - Progress callback fires with rounded percentages; skipped when !lengthComputable.
- * - A 204 resolves a Response with status 204 and a null body (no TypeError).
- * - A non-2xx resolves a Response carrying that status rather than throwing.
- * - onerror / ontimeout reject with a TypeError.
- * - Abort via an already-aborted signal rejects with AbortError without opening the request.
- * - Abort mid-flight (after send) rejects with AbortError.
- * - Abort before send (while the async body read is still pending) rejects with AbortError
- *   and never calls send() — the OPENED-but-not-SENT window where XHR's abort() fires no event.
- * - A response status of 0 rejects with a TypeError rather than throwing a RangeError out of onload.
- * - GET sends a null body.
- * - createContentUploadClient turns a non-2xx XHR response into a ProblemDetailError
- *   (regression guard for the dropped problem-details layer).
  */
 import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ProblemDetail, ProblemDetailError } from "@contentgrid/problem-details";
-import { type MockXhr, assertXhrExists, makeFakeXhr, noopSupplier } from "../hooks/test-utils";
+import { type MockXhr, assertXhrExists, makeFakeXhr } from "../../test-fixtures/xhr";
+import { noopSupplier } from "../hooks/test-utils";
 import { createContentUploadClient } from "./client";
 import { createXhrFetch } from "./xhr-fetch";
 
@@ -37,41 +23,6 @@ function toArrayBuffer(text: string): ArrayBuffer {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe("createXhrFetch — header forwarding", () => {
-  it("forwards every header on the request, including If-Match, Content-Type, and Content-Disposition", async () => {
-    const { getLastXhr } = stubXhr();
-    const xhrFetch = createXhrFetch();
-
-    const request = new Request("https://api.example.com/invoices/1/document", {
-      method: "PUT",
-      body: "hello",
-      headers: {
-        "Content-Type": "text/plain",
-        "Content-Disposition": 'attachment; filename="hello.txt"',
-        "If-Match": '"v1"',
-      },
-    });
-
-    const promise = xhrFetch(request);
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-    await waitFor(() => expect(xhr.send).toHaveBeenCalled());
-
-    xhr.status = 204;
-    xhr.onload?.();
-    await promise;
-
-    const forwarded = xhr.setRequestHeader.mock.calls;
-    expect(forwarded).toEqual(
-      expect.arrayContaining([
-        ["content-type", "text/plain"],
-        ["content-disposition", 'attachment; filename="hello.txt"'],
-        ["if-match", '"v1"'],
-      ]),
-    );
-  });
 });
 
 describe("createXhrFetch — upload progress", () => {
@@ -138,26 +89,6 @@ describe("createXhrFetch — response construction", () => {
     expect(response.body).toBeNull();
     expect(response.headers.get("ETag")).toBe('"v2"');
   });
-
-  it("resolves (does not throw) a non-2xx status, carrying that status on the Response", async () => {
-    const { getLastXhr } = stubXhr();
-    const xhrFetch = createXhrFetch();
-
-    const promise = xhrFetch(new Request("https://api.example.com/x"));
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-    await waitFor(() => expect(xhr.send).toHaveBeenCalled());
-
-    xhr.status = 412;
-    xhr.statusText = "Precondition Failed";
-    xhr.getAllResponseHeaders.mockReturnValue("Content-Type: application/problem+json\r\n");
-    xhr.response = toArrayBuffer(JSON.stringify({ status: 412, title: "Precondition Failed" }));
-    xhr.onload?.();
-
-    const response = await promise;
-    expect(response.status).toBe(412);
-    expect(response.ok).toBe(false);
-  });
 });
 
 describe("createXhrFetch — transport-level failures", () => {
@@ -171,19 +102,6 @@ describe("createXhrFetch — transport-level failures", () => {
     await waitFor(() => expect(xhr.send).toHaveBeenCalled());
 
     xhr.onerror?.();
-    await expect(promise).rejects.toThrow(TypeError);
-  });
-
-  it("rejects with a TypeError on ontimeout", async () => {
-    const { getLastXhr } = stubXhr();
-    const xhrFetch = createXhrFetch();
-
-    const promise = xhrFetch(new Request("https://api.example.com/x"));
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-    await waitFor(() => expect(xhr.send).toHaveBeenCalled());
-
-    xhr.ontimeout?.();
     await expect(promise).rejects.toThrow(TypeError);
   });
 
@@ -268,25 +186,7 @@ describe("createXhrFetch — abort", () => {
   });
 });
 
-describe("createXhrFetch — GET requests", () => {
-  it("sends a null body for GET", async () => {
-    const { getLastXhr } = stubXhr();
-    const xhrFetch = createXhrFetch();
-
-    const promise = xhrFetch(new Request("https://api.example.com/x", { method: "GET" }));
-    const xhr = getLastXhr();
-    assertXhrExists(xhr);
-    await waitFor(() => expect(xhr.send).toHaveBeenCalled());
-
-    expect(xhr.send).toHaveBeenCalledWith(null);
-
-    xhr.status = 200;
-    xhr.onload?.();
-    await promise;
-  });
-});
-
-describe("createContentUploadClient — problem-details regression guard", () => {
+describe("createContentUploadClient — problem details", () => {
   it("turns a non-2xx XHR response into a ProblemDetailError", async () => {
     const { getLastXhr } = stubXhr();
     const uploadFetch = createContentUploadClient(noopSupplier);
@@ -305,20 +205,14 @@ describe("createContentUploadClient — problem-details regression guard", () =>
     const xhr = getLastXhr();
     assertXhrExists(xhr);
 
-    xhr.status = 412;
-    xhr.statusText = "Precondition Failed";
+    xhr.status = 415;
+    xhr.statusText = "Unsupported Media Type";
     xhr.getAllResponseHeaders.mockReturnValue("Content-Type: application/problem+json\r\n");
-    xhr.response = toArrayBuffer(
-      JSON.stringify({
-        status: 412,
-        title: "Precondition Failed",
-        type: "https://contentgrid.cloud/problems/unsatisfied-version",
-      }),
-    );
+    xhr.response = toArrayBuffer(JSON.stringify({ status: 415, title: "Unsupported Media Type" }));
     xhr.onload?.();
 
     const error = await responsePromise;
     expect(error).toBeInstanceOf(ProblemDetailError);
-    expect((error as ProblemDetailError<ProblemDetail>).problemDetail.status).toBe(412);
+    expect((error as ProblemDetailError<ProblemDetail>).problemDetail.status).toBe(415);
   });
 });

@@ -117,6 +117,7 @@ function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateFo
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
+          createContentUploadFetch={() => contentFetch}
           profileUrl={PROFILE_URL}
         >
           {children}

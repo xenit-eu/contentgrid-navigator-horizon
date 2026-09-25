@@ -18,6 +18,13 @@
       "files": [{ "path": "src/primitives/alert-dialog.tsx", "type": "registry:ui" }]
     },
     {
+      "name": "attribute-value",
+      "type": "registry:ui",
+      "title": "Attribute Value",
+      "description": "ContentGrid primitive for a displayed attribute value, with an empty-value dash.",
+      "files": [{ "path": "src/primitives/attribute-value.tsx", "type": "registry:ui" }]
+    },
+    {
       "name": "badge",
       "type": "registry:ui",
       "title": "Badge",
@@ -72,6 +79,13 @@
       "title": "Label",
       "description": "ContentGrid copy of the shadcn/ui Label primitive.",
       "files": [{ "path": "src/primitives/label.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "progress",
+      "type": "registry:ui",
+      "title": "Progress",
+      "description": "ContentGrid copy of the shadcn/ui Progress primitive.",
+      "files": [{ "path": "src/primitives/progress.tsx", "type": "registry:ui" }]
     },
     {
       "name": "select",
@@ -163,15 +177,19 @@
       ]
     },
     {
-      "name": "file-upload-zone",
+      "name": "file-upload",
       "type": "registry:ui",
-      "title": "File Upload Zone",
-      "description": "Drag-and-drop file upload zone with file list and remove actions.",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["badge", "button", "utils"],
+      "title": "File Upload",
+      "description": "Pick or drop a single file, shown as a card with upload progress, cancel, retry and replace.",
+      "dependencies": ["@phosphor-icons/react"],
+      "registryDependencies": ["attribute-value", "button", "progress", "utils"],
       "files": [
-        { "path": "src/patterns/file-upload-zone/file-upload-zone.tsx", "type": "registry:ui" },
-        { "path": "src/patterns/file-upload-zone/index.ts", "type": "registry:ui" }
+        { "path": "src/patterns/file-upload/file-upload.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/file-upload/file-card.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/file-upload/upload-progress.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/file-upload/use-file-drop.ts", "type": "registry:hook" },
+        { "path": "src/patterns/file-upload/index.ts", "type": "registry:ui" },
+        { "path": "src/lib/format-file-size.ts", "type": "registry:lib" }
       ]
     },
     {

@@ -183,6 +183,10 @@ function toValidationFieldDisplay(fe: ValidationFieldError): ValidationFieldDisp
   }
 }
 
+function statusTitle(status: number): string {
+  return status === 403 ? "Insufficient permissions" : `Request failed with status ${status}`;
+}
+
 /**
  * Turn any caught mutation/query error into a flat {@link ProblemDisplayModel}.
  * Handles plain `Error`s (pre-fetch guard failures, network errors), opaque
@@ -195,7 +199,9 @@ export function toProblemDisplayModel(error: unknown): ProblemDisplayModel {
     return { kind: "unknown", title: "Something went wrong", detail: message };
   }
 
-  const { status, title, detail, type } = error.problemDetail;
+  const { status, detail, type } = error.problemDetail;
+  // A non-problem+json response (e.g. a gateway error page) may carry neither title nor detail.
+  const title = error.problemDetail.title || (detail ? "" : statusTitle(status));
 
   if (type === undefined) {
     return { kind: "unknown", status, title, detail };

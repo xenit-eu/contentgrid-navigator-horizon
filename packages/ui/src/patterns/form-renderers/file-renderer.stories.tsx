@@ -28,14 +28,6 @@ export const FileSelected: Story = {
   },
 };
 
-export const ReadOnly: Story = {
-  args: {
-    ...fileField({ readOnly: true }),
-    value: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
-    onChange: fn(),
-  },
-};
-
 export const WithError: Story = {
   args: {
     ...fileField(),

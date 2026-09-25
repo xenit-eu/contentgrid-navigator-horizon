@@ -398,22 +398,22 @@ export class EntityItem {
    * has no `_templates` entry, so the Request is constructed directly from the
    * `cg:content` link href. The link presence is the ABAC gate.
    *
-   * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
-   * `contentFetch` omits the `Accept: application/hal+json` header.
+   * The request is NOT executed here. Send it with `createContentUploadFetch` (see
+   * `useUploadContent`).
    *
-   * If-Match is attached only when an ETag is available (omitted when null).
+   * The body is `multipart/form-data` with the file in a single `file` part.
+   * No `If-Match`: content upload is an unconditional overwrite.
    *
    * @param attributeName - The name of the content attribute
-   * @param file - The file to upload
-   * @param opts - Optional overrides for Content-Type and filename, and an
-   *               AbortSignal to allow the caller to cancel an in-flight upload
-   * @returns Request ready to be sent with contentFetch
+   * @param file - The file to upload, sent under its own name
+   * @param opts - Optional AbortSignal to cancel an in-flight upload
+   * @returns Request ready to be sent
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public uploadContentRequest(
     attributeName: string,
-    file: Blob | File,
-    opts?: { contentType?: string; filename?: string; signal?: AbortSignal },
+    file: File,
+    opts?: { signal?: AbortSignal },
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -422,20 +422,8 @@ export class EntityItem {
       );
     }
 
-    const contentType = opts?.contentType ?? (file.type || "application/octet-stream");
-
-    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
-
-    // Re-wrap only when the desired type differs from what the Blob/File already carries —
-    // FormData reads the part's Content-Type off the Blob itself, there's no separate override.
-    const filePart = file.type === contentType ? file : new Blob([file], { type: contentType });
-
     const formData = new FormData();
-    if (filename) {
-      formData.append("file", filePart, filename);
-    } else {
-      formData.append("file", filePart);
-    }
+    formData.append("file", file, file.name);
 
     return new Request(link.href, {
       method: "PUT",
