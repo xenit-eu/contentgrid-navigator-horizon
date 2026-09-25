@@ -200,6 +200,13 @@ function resolveSearchFields(template: SearchHalFormTemplate): HalFormsField[] {
 
 /** Shared `kind` switch for both a create and a search property's non-content mapping. */
 function mapToHalFormsField(base: FieldMappingInput, property: HalFormsProperty): HalFormsField {
+  // TODO: revisit when multi-value attributes arrive. Any `options` takes the enum branch, even
+  // with no inline choices: a remote `options.link` renders a select that stays disabled
+  // ("Options not yet loaded", nothing loads them), and an empty `options.inline` renders a
+  // select offering only "(none)". No search param has either today, but multi-value attributes
+  // will bring options through the template. Then only take this branch when
+  // `resolveInlineOptions` returns choices (or loads the remote ones), and let everything else
+  // fall through to the wire-type switch below, as `main`'s `buildFilterProperty` did for search.
   if (property.options) {
     return {
       ...base,
