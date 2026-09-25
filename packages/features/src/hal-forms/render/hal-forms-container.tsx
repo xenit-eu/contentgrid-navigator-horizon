@@ -45,7 +45,7 @@ export function HalFormsContainer({
   const fieldsByName = new Map(fields.map((field) => [field.name, field] as const));
 
   return (
-    <>
+    <div className="mb-2">
       {layout.sections.map((section, sectionIndex) => (
         <div
           key={section.title ?? sectionIndex}
@@ -62,7 +62,7 @@ export function HalFormsContainer({
           />
         </div>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -70,10 +70,10 @@ export function HalFormsContainer({
  * One section's optional header (title/description, FR-025/FR-026) plus its rows. A collapsible
  * section (FR-027) wraps its rows in a single `Accordion` item — the section's rows
  * collapse/expand together as one unit, never per-row — with the header doubling as the toggle
- * trigger; collapsed by default (no `defaultValue`), unlike `RelationAccordion`'s own
- * expanded-by-default convention — a search form's relation-traversal sections (the only
- * collapsible ones this feature produces, see `generate-search-form-layout.ts`) start closed so
- * the filter dialog opens compact rather than pre-expanding every relation's fields. A
+ * trigger; expanded by default (FR-027), same as `RelationAccordion` — a search form's
+ * relation-traversal sections (the only collapsible ones this feature produces, see
+ * `generate-search-form-layout.ts`) must not hide an active relation filter (e.g. one applied
+ * from a deep link) behind a closed header. A
  * non-collapsible (or untitled — the only shape this feature produced before sections existed)
  * section just renders its header, if any, followed by its rows with no collapse behavior.
  */
@@ -126,7 +126,7 @@ function FieldSectionView({
   }
 
   return (
-    <Accordion type="single" collapsible className="mt-4">
+    <Accordion type="single" collapsible defaultValue="section" className="mt-4">
       <AccordionItem value="section" className="border-none">
         <AccordionTrigger type="button" className="py-0 hover:no-underline">
           {header}
