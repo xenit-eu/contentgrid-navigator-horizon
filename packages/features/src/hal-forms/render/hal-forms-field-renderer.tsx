@@ -16,6 +16,13 @@ import {
 } from "@contentgrid/ui";
 import type { HalFormsField } from "../model/hal-forms-field";
 import type { FieldState } from "../state/field-error";
+import {
+  asBoolean,
+  asDateOrString,
+  asNumberOrString,
+  asString,
+  asStringArray,
+} from "./narrow-field-value";
 
 export interface HalFormsFieldRendererProps {
   readonly field: HalFormsField;
@@ -110,7 +117,7 @@ function renderFieldWidget({
           regex={field.regex}
           maxLength={field.maxLength}
           format={field.format}
-          value={value}
+          value={asString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -126,7 +133,7 @@ function renderFieldWidget({
           readOnly={field.readOnly}
           description={field.description}
           hideLabel={field.hideLabel}
-          value={value}
+          value={asNumberOrString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -141,7 +148,7 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          value={value}
+          value={asBoolean(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -158,7 +165,7 @@ function renderFieldWidget({
           description={field.description}
           hideLabel={field.hideLabel}
           includesTime={field.includesTime}
-          value={value}
+          value={asDateOrString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -176,7 +183,7 @@ function renderFieldWidget({
           description={field.description}
           options={field.options}
           isRemote={isRemote}
-          value={value}
+          value={asStringArray(value)}
           onChange={onChange}
           error={error}
         />
@@ -189,7 +196,7 @@ function renderFieldWidget({
           description={field.description}
           options={field.options}
           isRemote={isRemote}
-          value={value}
+          value={asString(value)}
           onChange={onChange}
           error={error}
           onFocus={onFocus}
@@ -207,7 +214,7 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          value={typeof value === "string" ? value : undefined}
+          value={asString(value)}
           onChange={onChange}
           error={error}
           suggestions={autocomplete.suggestions}
