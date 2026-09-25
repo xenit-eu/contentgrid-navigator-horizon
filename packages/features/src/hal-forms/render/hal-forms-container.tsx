@@ -1,8 +1,14 @@
-import { useCallback } from "react";
+import { useCallback, useId } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@contentgrid/ui";
 import type { HalFormsField } from "../model/hal-forms-field";
-import type { FieldRow, FieldSection, LayoutSchema } from "../model/layout-schema";
+import {
+  type FieldRow,
+  type FieldSection,
+  type FieldSectionItem,
+  type LayoutSchema,
+  isFieldRow,
+} from "../model/layout-schema";
 import type { FieldState } from "../state/field-error";
 import { HalFormsFieldRenderer } from "./hal-forms-field-renderer";
 
@@ -131,47 +137,83 @@ function FieldSectionView({
   );
 }
 
+/** The field-rendering inputs every level below `HalFormsContainer` passes straight through. */
+interface FieldListProps {
+  readonly fieldsByName: ReadonlyMap<string, HalFormsField>;
+  readonly values: FieldValueMap;
+  readonly onChange: (name: string, value: FieldValue) => void;
+  readonly fieldState: Readonly<Record<string, FieldState>>;
+  readonly onFieldFocus?: (fieldName: string) => void;
+  readonly onFieldBlur?: (fieldName: string) => void;
+}
+
 function FieldSectionRows({
   rows,
-  fieldsByName,
-  values,
-  onChange,
-  fieldState,
-  onFieldFocus,
-  onFieldBlur,
-}: Readonly<{
-  rows: readonly FieldRow[];
-  fieldsByName: ReadonlyMap<string, HalFormsField>;
-  values: FieldValueMap;
-  onChange: (name: string, value: FieldValue) => void;
-  fieldState: Readonly<Record<string, FieldState>>;
-  onFieldFocus?: (fieldName: string) => void;
-  onFieldBlur?: (fieldName: string) => void;
-}>) {
+  ...fieldListProps
+}: Readonly<{ rows: readonly FieldSectionItem[] } & FieldListProps>) {
   return (
     <div className="space-y-4">
-      {rows.map((row, rowIndex) => (
-        <div
-          key={rowIndex}
-          className={row.fieldNames.length > 1 ? "grid grid-cols-2 gap-4" : undefined}
-        >
-          {row.fieldNames.map((name) => {
-            const field = fieldsByName.get(name);
-            if (!field) return null;
-            return (
-              <HalFormsFormField
-                key={name}
-                field={field}
-                value={values[name]}
-                fieldState={fieldState[name]}
-                onChange={onChange}
-                onFieldFocus={onFieldFocus}
-                onFieldBlur={onFieldBlur}
-              />
-            );
-          })}
-        </div>
-      ))}
+      {rows.map((item, index) =>
+        isFieldRow(item) ? (
+          <FieldRowView key={index} row={item} {...fieldListProps} />
+        ) : (
+          <NestedFieldSectionView key={item.title ?? index} section={item} {...fieldListProps} />
+        ),
+      )}
+    </div>
+  );
+}
+
+/**
+ * A section nested inside another section's rows — e.g. a search form's range attribute, whose
+ * "Equals"/"From"/"Until" fields are labelled without the attribute name. A titled,
+ * non-collapsible one renders as a `fieldset` with the title as its `legend` and the description
+ * linked via `aria-describedby`, so assistive tech announces the attribute when entering the
+ * group instead of just "From". Any other nested section renders like a top-level one.
+ */
+function NestedFieldSectionView({
+  section,
+  ...fieldListProps
+}: Readonly<{ section: FieldSection } & FieldListProps>) {
+  const descriptionId = useId();
+
+  if (section.isCollapsible || !section.title) {
+    return <FieldSectionView section={section} {...fieldListProps} />;
+  }
+
+  return (
+    <fieldset aria-describedby={section.description ? descriptionId : undefined}>
+      <legend className="mb-2 text-sm font-medium">{section.title}</legend>
+      {section.description && (
+        <p id={descriptionId} className="mb-2 text-sm text-muted-foreground">
+          {section.description}
+        </p>
+      )}
+      <FieldSectionRows rows={section.rows} {...fieldListProps} />
+    </fieldset>
+  );
+}
+
+/** One row's fields — side by side in a 2-col grid for a two-field row, full width otherwise. */
+function FieldRowView({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & FieldListProps>) {
+  const { fieldsByName, values, fieldState, onChange, onFieldFocus, onFieldBlur } = fieldListProps;
+  return (
+    <div className={row.fieldNames.length > 1 ? "grid grid-cols-2 gap-4" : undefined}>
+      {row.fieldNames.map((name) => {
+        const field = fieldsByName.get(name);
+        if (!field) return null;
+        return (
+          <HalFormsFormField
+            key={name}
+            field={field}
+            value={values[name]}
+            fieldState={fieldState[name]}
+            onChange={onChange}
+            onFieldFocus={onFieldFocus}
+            onFieldBlur={onFieldBlur}
+          />
+        );
+      })}
     </div>
   );
 }

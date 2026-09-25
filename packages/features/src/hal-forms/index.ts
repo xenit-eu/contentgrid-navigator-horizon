@@ -2,7 +2,8 @@
 // See specs/001-hal-form-layout/ for the feature spec, plan, and data model.
 
 export type { HalFormsField, HalFormsFieldBase } from "./model/hal-forms-field";
-export type { FieldRow, FieldSection, LayoutSchema } from "./model/layout-schema";
+export type { FieldRow, FieldSection, FieldSectionItem, LayoutSchema } from "./model/layout-schema";
+export { isFieldRow } from "./model/layout-schema";
 export {
   resolveHalFormsFields,
   type ResolvedHalFormsFields,

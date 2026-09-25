@@ -125,12 +125,12 @@ function attributeHalFormsField(prop: CreateFormProperty): HalFormsField {
  *
  * A directional range property (`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before`/`~from`/`~until`)
  * uses its bare direction word ("After"/"Before"/"From"/"Until") as its whole label, rather than
- * `property.prompt`/`profileAttribute?.title` — the attribute's own name is already shown once,
- * either as the exact-match sibling's label directly above this row (`generate-search-form-layout.ts`
- * places it there) or, if there's no such sibling, on the section/field context surrounding it, so
- * repeating it on every direction variant is redundant. The former `filter-sidebar.tsx` reached
- * the same "After"/"Before" label via a separate `directionLabel` sub-badge; `HalFormsField` has
- * no equivalent side-channel for a sub-label, so the direction word IS the label here instead.
+ * `property.prompt`/`profileAttribute?.title`, and the exact-match variant of that same
+ * attribute (`isInRangeGroup`) keeps its attribute label only as its accessible name
+ * (`hideLabel`) — the attribute's name (and description) is shown once, on the nested section
+ * `generate-search-form-layout.ts` groups them into (`rangeAttributeSection`), rather than
+ * repeated on every variant. That section renders as a `fieldset` with the attribute as its
+ * legend, so each input's accessible context still names the attribute.
  *
  * Search-only filtering happens in `resolveSearchFields`, ported from
  * `packages/features/src/search/filter-properties.ts`'s `buildFilterProperties`: the `hidden`
@@ -145,6 +145,7 @@ function attributeHalFormsField(prop: CreateFormProperty): HalFormsField {
 function searchPropertyHalFormsField(
   sp: SearchHalFormTemplateProperty,
   profileEntity: ProfileEntity,
+  isInRangeGroup: boolean,
 ): HalFormsField {
   const { property, profileAttribute, groupKey } = sp;
   const baseLabel = property.prompt ?? profileAttribute?.title ?? formatFieldName(groupKey);
@@ -157,8 +158,9 @@ function searchPropertyHalFormsField(
     // The relation's own description belongs on that relation's section header
     // (`generate-search-form-layout.ts`'s `groupRowsIntoSections`), not repeated on every one of
     // its fields — `profileAttribute` never resolves for a relation-traversal property (see this
-    // function's own doc comment), so such a field simply has no description of its own.
-    description: profileAttribute?.description || undefined,
+    // function's own doc comment), so such a field simply has no description of its own. A range
+    // attribute's description likewise lives on its nested section instead.
+    description: isInRangeGroup ? undefined : profileAttribute?.description || undefined,
     property,
   };
 
@@ -171,7 +173,11 @@ function searchPropertyHalFormsField(
     };
   }
 
-  return mapToHalFormsField(base, property);
+  const field = mapToHalFormsField(base, property);
+  if (isInRangeGroup && !direction && (field.kind === "number" || field.kind === "datetime")) {
+    return { ...field, hideLabel: true };
+  }
+  return field;
 }
 
 function isStringSearchable(sp: SearchHalFormTemplateProperty): boolean {
@@ -181,13 +187,15 @@ function isStringSearchable(sp: SearchHalFormTemplateProperty): boolean {
 
 function resolveSearchFields(template: SearchHalFormTemplate): HalFormsField[] {
   const properties = template.searchProperties.filter((sp) => sp.property.type !== "hidden");
-  const mapped = properties.map((sp) => ({
-    sp,
-    field: searchPropertyHalFormsField(sp, template.profileEntity),
-  }));
-  return mapped
-    .filter(({ sp }) => !isRedundantSearchField(sp, properties))
-    .map(({ field }) => field);
+  const surviving = properties.filter((sp) => !isRedundantSearchField(sp, properties));
+  // Same "has a range variant" test `generateSearchFormLayout` uses to give an attribute its own
+  // nested section, so every field it places in one is labelled for it.
+  const rangeGroupKeys = new Set(
+    surviving.filter((sp) => directionLabel(sp) !== undefined).map((sp) => sp.groupKey),
+  );
+  return surviving.map((sp) =>
+    searchPropertyHalFormsField(sp, template.profileEntity, rangeGroupKeys.has(sp.groupKey)),
+  );
 }
 
 /** Shared `kind` switch for both a create and a search property's non-content mapping. */
@@ -247,10 +255,11 @@ function searchOperatorOf(sp: SearchHalFormTemplateProperty): string {
 /**
  * Ported from `filter-properties.ts`'s `isRedundantExactMatch`/`isRedundantStrictRangeBound`: an
  * exact-match property is redundant once a narrower (prefix/full-text) sibling exists for the
- * same `groupKey`. Unlike that module, a datetime/date attribute's exact-match property is kept
- * even when a range/direction (`~after`/`~before`) sibling exists for the same `groupKey` — both
- * are shown, the exact-match property in its own row and the range pair in the row below it
- * (`generate-search-form-layout.ts` handles that placement). A strict range bound
+ * same `groupKey`. A `datetime` exact-match property is also redundant once a range sibling
+ * exists: its input is minute precision, so it would practically never equal a stored
+ * timestamp, and the range pair covers the real use case. A `date` or number exact-match
+ * property is kept next to its range siblings ("everything due on 24 Sep" is a real query) —
+ * `generate-search-form-layout.ts` places them together in the attribute's section. A strict range bound
  * (`greater-than`/`less-than`) is redundant once its inclusive equivalent
  * (`greater-than-or-equal`/`less-than-or-equal`) exists for the same `groupKey`.
  */
@@ -262,9 +271,14 @@ function isRedundantSearchField(
   const siblings = allProperties.filter((other) => other.groupKey === sp.groupKey);
 
   if (operator === "exact-match") {
+    const isDatetime = sp.property.type === "datetime" || sp.property.type === "datetime-local";
     return siblings.some((other) => {
       const otherOperator = searchOperatorOf(other);
-      return otherOperator === "prefix-match" || otherOperator === "full-text";
+      return (
+        otherOperator === "prefix-match" ||
+        otherOperator === "full-text" ||
+        (isDatetime && directionLabel(other) !== undefined)
+      );
     });
   }
 

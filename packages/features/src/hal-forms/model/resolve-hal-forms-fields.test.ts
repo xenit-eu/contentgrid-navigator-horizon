@@ -151,11 +151,10 @@ describe("resolveHalFormsFields search-form autocomplete", () => {
     expect(status?.kind).toBe("text");
   });
 
-  it("keeps a datetime attribute's exact-match field alongside its ~after/~before range siblings", () => {
-    const { fields } = resolveHalFormsFields(makeSearchTemplate());
-    expect(fields.map((field) => field.name)).toEqual(
-      expect.arrayContaining(["due_date", "due_date~after", "due_date~before"]),
-    );
+  it("drops a datetime attribute's exact-match field once ~after/~before range siblings exist", () => {
+    const names = resolveHalFormsFields(makeSearchTemplate()).fields.map((field) => field.name);
+    expect(names).not.toContain("due_date");
+    expect(names).toEqual(expect.arrayContaining(["due_date~after", "due_date~before"]));
   });
 
   it("labels a directional range field with just its direction word, not the attribute name", () => {
@@ -407,5 +406,12 @@ describe("resolveHalFormsFields — redundant field suppression (search)", () =>
     // keeps its bare exact-match filter alongside its range siblings.
     const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
     expect(fields.find((field) => field.name === "amount")).toBeDefined();
+  });
+
+  it("visually hides a kept exact-match field's label, since its attribute section names it", () => {
+    const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
+    const amount = fields.find((field) => field.name === "amount");
+    expect(amount).toMatchObject({ kind: "number", hideLabel: true });
+    expect(amount?.label).not.toBe("");
   });
 });

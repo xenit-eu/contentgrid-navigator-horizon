@@ -110,9 +110,13 @@ const taskProfileJson = {
 };
 
 function makeSearchTemplate() {
-  const profile = makeProfileEntity(taskProfileJson, PROFILE_URL, "task");
+  return makeSearchTemplateFrom(taskProfileJson);
+}
+
+function makeSearchTemplateFrom(json: typeof taskProfileJson) {
+  const profile = makeProfileEntity(json, PROFILE_URL, "task");
   const rawTemplate = resolveTemplate(
-    taskProfileJson as unknown as Parameters<typeof resolveTemplate>[0],
+    json as unknown as Parameters<typeof resolveTemplate>[0],
     "search",
   )!;
   return new SearchHalFormTemplate(rawTemplate, profile);
@@ -132,63 +136,106 @@ function textField(name: string, label: string): HalFormsField {
 }
 
 describe("generateSearchFormLayout", () => {
-  it("pairs two direction-labeled siblings sharing a groupKey into one row", () => {
+  it("pairs two direction-labeled siblings sharing a groupKey onto one row of the attribute's section", () => {
     const fields = [
       textField("status", "Status"),
-      textField("due_date~after", "Due date after"),
-      textField("due_date~before", "Due date before"),
-      textField("priority~gte", "Priority from"),
+      textField("due_date~after", "After"),
+      textField("due_date~before", "Before"),
+      textField("priority~gte", "From"),
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
-    const pairedRow = layout.sections[0].rows.find((row) => row.fieldNames.length === 2);
-    expect(pairedRow?.fieldNames).toEqual(["due_date~after", "due_date~before"]);
+    expect(layout.sections[0].rows[1]).toEqual({
+      title: "Due date",
+      rows: [{ fieldNames: ["due_date~after", "due_date~before"] }],
+    });
   });
 
-  it("gives a property with only one range variant its own full-width row", () => {
-    const fields = [
-      textField("status", "Status"),
-      textField("due_date~after", "Due date after"),
-      textField("due_date~before", "Due date before"),
-      textField("priority~gte", "Priority from"),
-    ];
+  it("gives a property with only one range variant its own section with a single row", () => {
+    const fields = [textField("status", "Status"), textField("priority~gte", "From")];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
-    expect(layout.sections[0].rows).toContainEqual({ fieldNames: ["priority~gte"] });
+    expect(layout.sections[0].rows).toContainEqual({
+      title: "Priority",
+      rows: [{ fieldNames: ["priority~gte"] }],
+    });
   });
 
   it("gives a plain (non-range) property its own full-width row, in fields order", () => {
     const fields = [
       textField("status", "Status"),
-      textField("due_date~after", "Due date after"),
-      textField("due_date~before", "Due date before"),
-      textField("priority~gte", "Priority from"),
+      textField("due_date~after", "After"),
+      textField("due_date~before", "Before"),
+      textField("priority~gte", "From"),
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows[0]).toEqual({ fieldNames: ["status"] });
   });
 
-  it("gives a datetime attribute's exact-match field its own row, directly above its paired range row", () => {
+  it("puts a range attribute's exact-match field in its section, above the paired range row", () => {
     const fields = [
       textField("status", "Status"),
       textField("due_date", "Due date"),
-      textField("due_date~after", "Due date after"),
-      textField("due_date~before", "Due date before"),
-      textField("priority~gte", "Priority from"),
+      textField("due_date~after", "After"),
+      textField("due_date~before", "Before"),
+      textField("priority~gte", "From"),
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows).toEqual([
       { fieldNames: ["status"] },
-      { fieldNames: ["due_date"] },
-      { fieldNames: ["due_date~after", "due_date~before"] },
-      { fieldNames: ["priority~gte"] },
+      {
+        title: "Due date",
+        rows: [{ fieldNames: ["due_date"] }, { fieldNames: ["due_date~after", "due_date~before"] }],
+      },
+      { title: "Priority", rows: [{ fieldNames: ["priority~gte"] }] },
     ]);
   });
 
   it("only pairs fields that are actually present, ignoring a range sibling that didn't survive", () => {
-    const fields = [textField("status", "Status"), textField("due_date~after", "Due date after")];
+    const fields = [textField("status", "Status"), textField("due_date~after", "After")];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows).toEqual([
       { fieldNames: ["status"] },
-      { fieldNames: ["due_date~after"] },
+      { title: "Due date", rows: [{ fieldNames: ["due_date~after"] }] },
+    ]);
+  });
+
+  it("leaves an exact-match field with no range sibling as a plain row", () => {
+    const fields = [textField("due_date", "Due date")];
+    const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
+    expect(layout.sections[0].rows).toEqual([{ fieldNames: ["due_date"] }]);
+  });
+
+  it("carries the attribute description on the range attribute's section", () => {
+    const json = structuredClone(taskProfileJson);
+    json._embedded["blueprint:attribute"][1].description = "When the task is due";
+    const layout = generateSearchFormLayout(makeSearchTemplateFrom(json), [
+      textField("due_date~after", "After"),
+      textField("due_date~before", "Before"),
+    ]);
+    expect(layout.sections[0].rows[0]).toMatchObject({
+      title: "Due date",
+      description: "When the task is due",
+    });
+  });
+
+  it("nests a relation's range attribute inside the relation section, titled Relation : Attribute", () => {
+    const json = structuredClone(taskProfileJson);
+    json._templates.search.properties.push(
+      { name: "assignee.age~gte", type: "number" },
+      { name: "assignee.age~lte", type: "number" },
+    );
+    const layout = generateSearchFormLayout(makeSearchTemplateFrom(json), [
+      textField("assignee.name~prefix", "Assignee name"),
+      textField("assignee.age~gte", "From"),
+      textField("assignee.age~lte", "Until"),
+    ]);
+    expect(layout.sections).toHaveLength(1);
+    expect(layout.sections[0]).toMatchObject({ title: "Assignee", isCollapsible: true });
+    expect(layout.sections[0].rows).toEqual([
+      { fieldNames: ["assignee.name~prefix"] },
+      {
+        title: "Assignee : Age",
+        rows: [{ fieldNames: ["assignee.age~gte", "assignee.age~lte"] }],
+      },
     ]);
   });
 
