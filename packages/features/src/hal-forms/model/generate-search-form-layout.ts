@@ -1,22 +1,30 @@
-import type { ProfileRelation, SearchHalFormTemplate } from "@contentgrid/navigator-data";
+import type {
+  ProfileRelation,
+  SearchHalFormTemplate,
+  SearchHalFormTemplateProperty,
+} from "@contentgrid/navigator-data";
+import { formatFieldName } from "../../format-field-name";
 import type { HalFormsField } from "./hal-forms-field";
-import type { FieldRow, FieldSection, LayoutSchema } from "./layout-schema";
+import type { FieldRow, FieldSection, FieldSectionItem, LayoutSchema } from "./layout-schema";
 
 /**
  * FR-018/019/020, FR-028: a search form's default layout schema when no explicit one is
- * supplied. Pairs a property's `~before`/`~after` range variants onto one row wherever both
- * survived into `fields`; every other field — including a datetime/date attribute's own
- * exact-match property, which `resolve-hal-forms-fields.ts` deliberately keeps alongside its
- * `~before`/`~after` siblings rather than suppressing as redundant — gets its own full-width row,
- * in `fields` order. Only a field that is itself one of the two range/direction variants (i.e.
- * has a `directionLabel`) is eligible for pairing; an exact-match sibling sharing the same
- * `groupKey` never gets swept into that pair, so it renders as its own row, with the paired
- * range row immediately below it (in `fields` order). Rows are then grouped into sections
- * (FR-028): every relation-traversal property (e.g.
+ * supplied.
+ *
+ * Every attribute with at least one surviving range variant (`~gte`/`~lte`/`~after`/`~before`/…)
+ * gets its own nested, non-collapsible section, titled and described by the attribute
+ * (`rangeAttributeSection`). Inside it, the attribute's other variants (e.g. its exact-match
+ * property, labelled "Equals" by `resolve-hal-forms-fields.ts`) come first, one per row, then
+ * the range variants — paired onto one row when both bounds survived, else one per row. The
+ * range fields are labelled only by direction ("From"/"Until"), so the section title is what
+ * tells two range attributes apart. The nested section sits where the attribute's first field
+ * appears in `fields`; every other field gets its own full-width row, in `fields` order.
+ *
+ * Items are then grouped into sections (FR-028): every relation-traversal property (e.g.
  * "customer.name") is placed into a collapsible section named for its relation, one section per
- * relation, in first-appearance order; every direct (non-relation) property stays in a single
- * plain, non-collapsible leading section — the same flat shape this generator always produced,
- * before sections could carry a title.
+ * relation, in first-appearance order — a relation's range attribute becomes a nested section
+ * inside it; every direct (non-relation) property stays in a single plain, non-collapsible
+ * leading section.
  *
  * Takes the already-resolved `fields` (not the raw template) rather than re-deriving which
  * search properties are redundant (e.g. a strict `~gt` bound once an inclusive `~gte` sibling
@@ -31,58 +39,86 @@ export function generateSearchFormLayout(
   searchTemplate: SearchHalFormTemplate,
   fields: readonly HalFormsField[],
 ): LayoutSchema {
-  const groupKeyByName = new Map(
-    searchTemplate.searchProperties.map((sp) => [sp.property.name, sp.groupKey] as const),
-  );
-  const directionLabelByName = new Map(
-    searchTemplate.searchProperties.map((sp) => [sp.property.name, directionLabel(sp)] as const),
-  );
-  const relationByName = new Map(
-    searchTemplate.searchProperties.map(
-      (sp) => [sp.property.name, sp.isOverRelation ? sp.profileRelation : undefined] as const,
-    ),
+  const searchPropertyByName = new Map(
+    searchTemplate.searchProperties.map((sp) => [sp.property.name, sp] as const),
   );
 
-  const rangeSiblingsByGroupKey = new Map<string, HalFormsField[]>();
+  const fieldsByGroupKey = new Map<string, HalFormsField[]>();
   for (const field of fields) {
-    if (directionLabelByName.get(field.name) === undefined) continue;
-    const groupKey = groupKeyByName.get(field.name);
+    const groupKey = searchPropertyByName.get(field.name)?.groupKey;
     if (groupKey === undefined) continue;
-    const siblings = rangeSiblingsByGroupKey.get(groupKey) ?? [];
+    const siblings = fieldsByGroupKey.get(groupKey) ?? [];
     siblings.push(field);
-    rangeSiblingsByGroupKey.set(groupKey, siblings);
+    fieldsByGroupKey.set(groupKey, siblings);
   }
+  const isRangeField = (field: HalFormsField) => {
+    const sp = searchPropertyByName.get(field.name);
+    return sp !== undefined && directionLabel(sp) !== undefined;
+  };
 
-  const rows: { fieldNames: string[]; relation: ProfileRelation | undefined }[] = [];
+  const items: RelationScopedItem[] = [];
   const placedNames = new Set<string>();
 
   for (const field of fields) {
     if (placedNames.has(field.name)) continue;
 
-    const isRangeField = directionLabelByName.get(field.name) !== undefined;
-    const groupKey = groupKeyByName.get(field.name);
-    const rangeSiblings =
-      isRangeField && groupKey !== undefined ? rangeSiblingsByGroupKey.get(groupKey) : undefined;
+    const sp = searchPropertyByName.get(field.name);
+    const relation = sp?.isOverRelation ? sp.profileRelation : undefined;
+    const siblings = sp ? (fieldsByGroupKey.get(sp.groupKey) ?? []) : [];
+    const rangeFields = siblings.filter(isRangeField);
 
-    if (rangeSiblings?.length === 2) {
-      const names = rangeSiblings.map((sibling) => sibling.name);
-      rows.push({ fieldNames: names, relation: relationByName.get(field.name) });
-      names.forEach((name) => placedNames.add(name));
+    if (sp && rangeFields.length > 0) {
+      const otherFields = siblings.filter((sibling) => !isRangeField(sibling));
+      items.push({ item: rangeAttributeSection(sp, otherFields, rangeFields), relation });
+      siblings.forEach((sibling) => placedNames.add(sibling.name));
       continue;
     }
 
-    rows.push({ fieldNames: [field.name], relation: relationByName.get(field.name) });
+    items.push({ item: { fieldNames: [field.name] }, relation });
     placedNames.add(field.name);
   }
 
-  return { sections: groupRowsIntoSections(rows) };
+  return { sections: groupItemsIntoSections(items) };
+}
+
+interface RelationScopedItem {
+  readonly item: FieldSectionItem;
+  readonly relation: ProfileRelation | undefined;
 }
 
 /**
- * FR-028: buckets already-paired rows into a leading, plain section for every direct property
- * plus one collapsible, relation-titled section per relation — in the relation's first
- * appearance order among `rows`, not alphabetical or profile-declaration order, so a caller
- * sees sections in the same order the fields themselves would have appeared in a flat layout.
+ * One range attribute's nested section. Its title is the attribute, not `property.prompt` —
+ * that names a single variant (e.g. "Age : From"). A relation-traversal property is titled
+ * "{Relation} : {Attribute}" (e.g. "Friends : Age"); it never resolves a `profileAttribute`
+ * (see `SearchHalFormTemplateProperty`), so the attribute part falls back to the last
+ * `groupKey` segment. The attribute description lives here, once, instead of under each of the
+ * section's fields.
+ */
+function rangeAttributeSection(
+  sp: SearchHalFormTemplateProperty,
+  otherFields: readonly HalFormsField[],
+  rangeFields: readonly HalFormsField[],
+): FieldSection {
+  const { profileAttribute, groupKey } = sp;
+  const attributeTitle =
+    profileAttribute?.title ?? formatFieldName(groupKey.slice(groupKey.lastIndexOf(".") + 1));
+  const relationTitle = sp.isOverRelation ? sp.profileRelation?.title : undefined;
+  const rangeRows: FieldRow[] =
+    rangeFields.length === 2
+      ? [{ fieldNames: rangeFields.map((field) => field.name) }]
+      : rangeFields.map((field) => ({ fieldNames: [field.name] }));
+  return {
+    title: relationTitle ? `${relationTitle} : ${attributeTitle}` : attributeTitle,
+    description: profileAttribute?.description || undefined,
+    rows: [...otherFields.map((field) => ({ fieldNames: [field.name] })), ...rangeRows],
+  };
+}
+
+/**
+ * FR-028: buckets items into a leading, plain section for every direct property plus one
+ * collapsible, relation-titled section per relation — in the relation's first appearance order
+ * among `items`, not alphabetical or profile-declaration order, so a caller sees sections in the
+ * same order the fields themselves would have appeared in a flat layout.
  *
  * A relation section's `description` is the relation's own `ProfileRelation.description` — shown
  * once, on the section header, not on every field inside it. `searchPropertyHalFormsField`
@@ -90,38 +126,36 @@ export function generateSearchFormLayout(
  * for an individual field's own `description` any more, precisely so the two don't duplicate the
  * same text at both levels.
  */
-function groupRowsIntoSections(
-  rows: readonly { fieldNames: readonly string[]; relation: ProfileRelation | undefined }[],
-): FieldSection[] {
-  const directRows: FieldRow[] = [];
+function groupItemsIntoSections(items: readonly RelationScopedItem[]): FieldSection[] {
+  const directItems: FieldSectionItem[] = [];
   const relationOrder: string[] = [];
   const relationsByKey = new Map<string, ProfileRelation>();
-  const rowsByRelationKey = new Map<string, FieldRow[]>();
+  const itemsByRelationKey = new Map<string, FieldSectionItem[]>();
 
-  for (const row of rows) {
-    if (!row.relation) {
-      directRows.push({ fieldNames: row.fieldNames });
+  for (const { item, relation } of items) {
+    if (!relation) {
+      directItems.push(item);
       continue;
     }
 
-    const key = row.relation.name;
+    const key = relation.name;
     if (!relationsByKey.has(key)) {
-      relationsByKey.set(key, row.relation);
-      rowsByRelationKey.set(key, []);
+      relationsByKey.set(key, relation);
+      itemsByRelationKey.set(key, []);
       relationOrder.push(key);
     }
-    rowsByRelationKey.get(key)!.push({ fieldNames: row.fieldNames });
+    itemsByRelationKey.get(key)!.push(item);
   }
 
   const sections: FieldSection[] = [];
-  if (directRows.length > 0) sections.push({ rows: directRows });
+  if (directItems.length > 0) sections.push({ rows: directItems });
   for (const key of relationOrder) {
     const relation = relationsByKey.get(key)!;
     sections.push({
       title: relation.title,
       description: relation.description || undefined,
       isCollapsible: true,
-      rows: rowsByRelationKey.get(key)!,
+      rows: itemsByRelationKey.get(key)!,
     });
   }
   return sections;

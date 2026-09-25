@@ -8,6 +8,17 @@ export interface FieldRow {
 }
 
 /**
+ * One entry of a section's `rows`: either a plain row of fields, or a nested section occupying
+ * that row's slot — e.g. a search form's range attribute, whose "Equals"/"From"/"Until" rows are
+ * grouped under the attribute's own title. Tell them apart with `isFieldRow`.
+ */
+export type FieldSectionItem = FieldRow | FieldSection;
+
+export function isFieldRow(item: FieldSectionItem): item is FieldRow {
+  return "fieldNames" in item;
+}
+
+/**
  * One visual grouping of rows, optionally titled/described and independently collapsible
  * (FR-025–FR-027) — e.g. all the search properties of one related profile, grouped under that
  * relation's name. Originated as `entity-item-create`'s `FieldGroup` (ADR-004); renamed and
@@ -28,7 +39,9 @@ export interface FieldSection {
    * field existed.
    */
   readonly isCollapsible?: boolean;
-  readonly rows: readonly FieldRow[];
+  /** Plain rows and nested sections, in render order. A nested section renders inline, in the
+   *  position it appears here, within this section's collapse behavior. */
+  readonly rows: readonly FieldSectionItem[];
 }
 
 /**

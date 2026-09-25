@@ -11,6 +11,8 @@ export interface NumberRendererProps {
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  /** See `FieldShellProps.hideLabel`. */
+  readonly hideLabel?: boolean;
   readonly min?: number;
   readonly max?: number;
   readonly step?: number;
@@ -33,6 +35,7 @@ export function NumberRenderer({
   value,
   onChange,
   error,
+  hideLabel,
   min,
   max,
   step,
@@ -48,6 +51,7 @@ export function NumberRenderer({
       required={required}
       description={description}
       error={error}
+      hideLabel={hideLabel}
     >
       <Input
         id={name}
