@@ -98,7 +98,7 @@ describe("FieldRenderer", () => {
 
   it("dispatches a boolean field to a True/False/Unset chip group", () => {
     render(<FieldRenderer field={booleanField()} value={false} onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "True" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "True" })).toBeInTheDocument();
   });
 
   it("dispatches a datetime field to a date input", () => {

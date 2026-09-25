@@ -75,7 +75,7 @@ export const ClickingTrueTogglesOnChange: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    await fireEvent.click(canvas.getByRole("button", { name: "True" }));
+    await fireEvent.click(canvas.getByRole("radio", { name: "True" }));
     await expect(args.onChange).toHaveBeenCalledWith(true);
   },
   tags: ["no-visual-test"],
