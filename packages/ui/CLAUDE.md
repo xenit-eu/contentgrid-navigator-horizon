@@ -32,7 +32,7 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
     must not import Radix directly.
 - **Pattern** — a composed component that encodes Navigator-domain semantics.
   Lives in `src/patterns/`. Examples: `EntityCard`, `DataTable`,
-  `FilterSidebar`, HAL-Forms field renderers, `PdfHighlightOverlay`.
+  `AutocompleteRenderer`, HAL-Forms field renderers, `PdfHighlightOverlay`.
   - The HAL-Forms field renderers (`src/patterns/form-renderers/`) take plain scalar props
     (`name`, `label`, `required`, `readOnly`, `description?`, `value`, `onChange`, `error?`,
     plus type-specific constraints like `includesTime`/`options`) — NOT a descriptor object.

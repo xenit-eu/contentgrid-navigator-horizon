@@ -293,10 +293,10 @@ into the phases above.
 - [x] T041 [P] Add filter-form tests to `entity-item-collection-view.test.tsx`: every search property gets a labeled input when Filters opens; the prefix-match property renders as an autocomplete combobox; a typed number value round-trips through `onFiltersChange`; an already-applied value pre-fills its input; an invalid already-applied value shows its error; Clear all empties every filter. All 11 pre-existing tests in this file (pageUrl/filters reconciliation, Columns picker) still pass unchanged.
 - [x] T042 [P] Verify no regressions: full `@contentgrid/features` suite (445 tests, 59 files), full `@contentgrid/navigator-data` suite (811 tests), and both apps' (`navigator`, `navigator-experimental`) typecheck all pass.
 
-**Note**: `FilterSidebar`/`TypeaheadTextFilter` (`packages/ui`) are now unused by
-`entity-item-collection-view.tsx` but were not deleted — no other call site was identified or
-asked to be touched, and removing a still-exported pattern is a separate, deliberate cleanup
-decision the user hasn't asked for yet.
+**Note**: `FilterSidebar`/`TypeaheadTextFilter` (`packages/ui`) became unused by
+`entity-item-collection-view.tsx` and were subsequently removed, along with their
+`filter-sidebar` registry item and README row. `AutocompleteRenderer` (and the `popover`
+primitive it needs) took its place in the shadcn registry.
 
 ---
 
@@ -319,8 +319,8 @@ that call site. Numbered continuing from T042 for a single linear record.
 `useEntityItemCreateFormState`, `FieldDescriptor`, `LayoutInformation`, and
 `entity-item-create`'s own `FieldError`/`FieldState`/`toFieldErrors` are now unused by
 `create-entity-item-container.tsx`/`create-entity-item-form.tsx` but were not deleted — same
-"stop importing, don't delete a still-present file" precedent as Phase 9's `FilterSidebar` note
-above. Their own dedicated unit tests (`resolve-create-field-descriptors.test.ts`,
+"stop importing, don't delete a still-present file" approach Phase 9 originally took for
+`FilterSidebar` (see the note above). Their own dedicated unit tests (`resolve-create-field-descriptors.test.ts`,
 `field-renderer.test.tsx`, `form-container.test.tsx`, `use-entity-item-create-form-state.test.ts`)
 were left untouched and still pass, since they test the modules directly rather than through the
 now-migrated container.
