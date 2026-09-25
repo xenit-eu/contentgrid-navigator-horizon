@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import { Label } from "../../primitives/label";
@@ -11,8 +10,9 @@ export interface BooleanRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  /** `undefined` means unset (neither chip selected). */
+  readonly value: boolean | undefined;
+  readonly onChange: (value: boolean | undefined) => void;
   readonly error?: string;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
@@ -42,7 +42,7 @@ export function BooleanRenderer({
   onFocus,
   onBlur,
 }: Readonly<BooleanRendererProps>) {
-  function select(next: FieldValue) {
+  function select(next: boolean) {
     if (!readOnly) onChange(next);
   }
 

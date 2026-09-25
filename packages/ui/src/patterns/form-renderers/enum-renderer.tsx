@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import {
   Select,
   SelectContent,
@@ -22,8 +21,10 @@ export interface EnumRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  /** The selected option's `value`, or `""`/`undefined` for none. */
+  readonly value: string | undefined;
+  /** `""` when the "(none)" item is picked. */
+  readonly onChange: (value: string) => void;
   readonly error?: string;
   readonly options: readonly EnumOption[];
   /** True when the caller's options source is a remote link not yet resolved into `options` —
@@ -67,7 +68,7 @@ export function EnumRenderer({
   // whenever the field is unselected would flip it to uncontrolled on every clear/reset, and its
   // internal fallback state — last written on the selection that preceded the clear — would then
   // resurface as the displayed value instead of the intended empty state.
-  const selected = typeof value === "string" ? value : "";
+  const selected = value ?? "";
   // Excluded for a remote options source — its options haven't loaded yet (the trigger is
   // disabled and shows "Options not yet loaded"), so there's nothing to clear back to "none" from.
   const canUnset = !required && !isRemote;

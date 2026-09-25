@@ -7,10 +7,11 @@ import type { DefinedHalFormValue } from "@contentgrid/hal-forms/values";
  * carries.
  *
  * Lives here (rather than in a feature package) because it is fundamentally a
- * `@contentgrid/hal-forms`-derived type — `packages/ui` and `packages/features` are both
- * forbidden from importing `@contentgrid/hal-forms` directly (see their respective CLAUDE.md
- * forbidden-imports sections), so this type is re-exported from the package barrel the same way
- * `HalFormValues`/`createValues` already are.
+ * `@contentgrid/hal-forms`-derived type — `packages/features` is forbidden from importing
+ * `@contentgrid/hal-forms` directly (see its CLAUDE.md forbidden-imports section), so this type
+ * is re-exported from the package barrel the same way `HalFormValues`/`createValues` already
+ * are. `packages/ui`'s form renderers take plain value types instead; `packages/features`
+ * narrows to them in `hal-forms/render/narrow-field-value.ts`.
  */
 export type FieldValue = DefinedHalFormValue["value"] | undefined;
 
