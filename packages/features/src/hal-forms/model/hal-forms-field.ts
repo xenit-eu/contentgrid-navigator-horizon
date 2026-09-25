@@ -39,6 +39,13 @@ export interface HalFormsFieldBase {
   readonly property: HalFormsProperty;
 }
 
+/** Only on the kinds a search form's exact-match filter can have next to range filters (see
+ * `resolve-hal-forms-fields.ts`): that field sits under its attribute's section title, so its
+ * own label stays the accessible name but isn't shown. */
+interface VisuallyHiddenLabel {
+  readonly hideLabel?: boolean;
+}
+
 /**
  * `kind`-discriminated union driving `render/hal-forms-field-renderer.tsx`. Adds `autocomplete`
  * (FR-017) to the set of kinds `entity-item-create`'s `FieldDescriptor` already covers; every
@@ -50,8 +57,9 @@ export type HalFormsField =
         readonly maxLength?: number;
         readonly format?: "email";
       })
-  | ({ readonly kind: "number" } & HalFormsFieldBase)
-  | ({ readonly kind: "datetime" } & HalFormsFieldBase & { readonly includesTime: boolean })
+  | ({ readonly kind: "number" } & HalFormsFieldBase & VisuallyHiddenLabel)
+  | ({ readonly kind: "datetime" } & HalFormsFieldBase &
+      VisuallyHiddenLabel & { readonly includesTime: boolean })
   | ({ readonly kind: "boolean" } & HalFormsFieldBase)
   | ({ readonly kind: "file" } & HalFormsFieldBase & { readonly multiple: boolean })
   | ({ readonly kind: "enum" } & HalFormsFieldBase & {

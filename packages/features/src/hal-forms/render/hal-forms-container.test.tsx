@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { HalFormsProperty } from "@contentgrid/navigator-data";
@@ -76,6 +76,82 @@ describe("HalFormsContainer", () => {
       />,
     );
     expect(screen.getByLabelText(/Name/)).toBeInTheDocument();
+  });
+
+  it("renders a titled nested section as a group named by its title, with the description attached", () => {
+    render(
+      <HalFormsContainer
+        fields={[
+          { ...nameField, name: "amount", label: "Amount" },
+          { ...emailField, name: "amount~gte", label: "From" },
+          { ...phoneField, name: "amount~lte", label: "Until" },
+        ]}
+        layout={{
+          sections: [
+            {
+              rows: [
+                {
+                  title: "Amount",
+                  description: "Invoice total",
+                  rows: [{ fieldNames: ["amount"] }, { fieldNames: ["amount~gte", "amount~lte"] }],
+                },
+              ],
+            },
+          ],
+        }}
+        values={{}}
+        onChange={vi.fn()}
+        fieldState={{}}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Amount" });
+    expect(group).toHaveAccessibleDescription("Invoice total");
+    expect(within(group).getByLabelText(/Amount/)).toBeInTheDocument();
+    expect(within(group).getByLabelText(/From/)).toBeInTheDocument();
+    expect(within(group).getByLabelText(/Until/)).toBeInTheDocument();
+  });
+
+  it("renders a nested section inside a collapsible section's content, in row order", async () => {
+    const user = userEvent.setup();
+    render(
+      <HalFormsContainer
+        fields={[nameField, { ...emailField, name: "age~gte", label: "From" }]}
+        layout={{
+          sections: [
+            {
+              title: "Friends",
+              isCollapsible: true,
+              rows: [
+                { fieldNames: ["name"] },
+                { title: "Age", rows: [{ fieldNames: ["age~gte"] }] },
+              ],
+            },
+          ],
+        }}
+        values={{}}
+        onChange={vi.fn()}
+        fieldState={{}}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Friends" }));
+    const group = screen.getByRole("group", { name: "Age" });
+    expect(within(group).getByLabelText(/From/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Name/).compareDocumentPosition(group)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("renders plain rows without a group wrapper", () => {
+    render(
+      <HalFormsContainer
+        fields={[nameField]}
+        layout={{ sections: [{ rows: [{ fieldNames: ["name"] }] }] }}
+        values={{ name: "" }}
+        onChange={vi.fn()}
+        fieldState={{}}
+      />,
+    );
+    expect(screen.queryByRole("group")).not.toBeInTheDocument();
   });
 
   it("renders no header at all for a section with no title and no description", () => {

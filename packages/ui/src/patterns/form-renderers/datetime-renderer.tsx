@@ -12,6 +12,8 @@ export interface DateTimeRendererProps {
   readonly value: FieldValue;
   readonly onChange: (value: FieldValue) => void;
   readonly error?: string;
+  /** See `FieldShellProps.hideLabel`. */
+  readonly hideLabel?: boolean;
   readonly includesTime: boolean;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
@@ -40,6 +42,7 @@ export function DateTimeRenderer({
   value,
   onChange,
   error,
+  hideLabel,
   includesTime,
   onFocus,
   onBlur,
@@ -51,6 +54,7 @@ export function DateTimeRenderer({
       required={required}
       description={description}
       error={error}
+      hideLabel={hideLabel}
     >
       <Input
         id={name}
