@@ -111,8 +111,7 @@ describe("HalFormsContainer", () => {
     expect(within(group).getByLabelText(/Until/)).toBeInTheDocument();
   });
 
-  it("renders a nested section inside a collapsible section's content, in row order", async () => {
-    const user = userEvent.setup();
+  it("renders a nested section inside a collapsible section's content, in row order", () => {
     render(
       <HalFormsContainer
         fields={[nameField, { ...emailField, name: "age~gte", label: "From" }]}
@@ -133,7 +132,6 @@ describe("HalFormsContainer", () => {
         fieldState={{}}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Friends" }));
     const group = screen.getByRole("group", { name: "Age" });
     expect(within(group).getByLabelText(/From/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Name/).compareDocumentPosition(group)).toBe(
@@ -203,24 +201,32 @@ describe("HalFormsContainer", () => {
     expect(screen.queryByRole("button", { name: "Contact" })).not.toBeInTheDocument();
   });
 
-  it("collapses a collapsible section's rows by default and expands them on toggle", async () => {
+  it("starts a collapsible section expanded and collapses all its rows together on toggle", async () => {
     const user = userEvent.setup();
     render(
       <HalFormsContainer
-        fields={[nameField]}
+        fields={[nameField, emailField]}
         layout={{
-          sections: [{ title: "Contact", isCollapsible: true, rows: [{ fieldNames: ["name"] }] }],
+          sections: [
+            {
+              title: "Contact",
+              isCollapsible: true,
+              rows: [{ fieldNames: ["name"] }, { fieldNames: ["email"] }],
+            },
+          ],
         }}
-        values={{ name: "" }}
+        values={{ name: "", email: "" }}
         onChange={vi.fn()}
         fieldState={{}}
       />,
     );
 
-    expect(screen.queryByLabelText(/Name/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Name/)).toBeVisible();
+    expect(screen.getByLabelText(/Email/)).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Contact" }));
 
-    expect(screen.getByLabelText(/Name/)).toBeVisible();
+    expect(screen.queryByLabelText(/Name/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Email/)).not.toBeInTheDocument();
   });
 });
