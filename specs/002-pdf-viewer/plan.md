@@ -189,3 +189,16 @@ and deleting the wrapper.
 7. **Validation** per [quickstart.md](quickstart.md); independent review; open follow-ups: confirm
    rendition response contract + CORS with the platform team (ACC-2960), Liaison `renditionUri`
    delivery, ACC-2902 ownership.
+
+## Promotion status (2026-09-28)
+
+Step 5 above ("App wiring") and the "promotion means moving the FR-001 branch into
+`EntityItemView`" note earlier in this section describe the plan as it stood before the reviewer
+later folded `entity-item-content-focus` into the stable `entity-item` feature as a variation
+(`packages/features/src/entity-item/CLAUDE.md`) — left as written since this section records what
+was planned at the time, not a living checklist. What actually happened: `apps/navigator`'s
+`$entity/$itemId.tsx` now mounts `EntityItemContentFocusView` too (branch
+`ACC-2902-content-focus-promotion`), mirroring `apps/navigator-experimental`'s wiring; no code
+moved and no wrapper was deleted, because there was never a separate wrapper to delete once the
+fold-in happened. `specs/002-pdf-viewer/quickstart.md`'s "Performance sanity" section now also
+carries a production-build SC-001 measurement (`vite build` + `vite preview`, not the dev server).

@@ -117,6 +117,51 @@ production it is served once with a content-hashed filename and cached by the br
 SC-001 must be re-measured against a production build behind the real gateway before promotion;
 SC-002 (page/zoom latency) is unaffected by bundling/compression and holds as measured.
 
+**Results (2026-09-28, local production build)** — ACC-2902 content-focus promotion. `vite build
+--mode development` (a real `vite build` output — minified, bundled, hashed assets; `--mode
+development` only to keep `import.meta.env.DEV` true so the bundle can still boot against MSW
+fixtures, since there is no real backend available here — the app itself does not gate on this) +
+`vite preview`, `apps/navigator-experimental`, `doc-3`/`twenty-pages.pdf` (20-page, ≤ 5 MB, same
+fixture as the dev-server run above). Apple M5, Chromium 149.0.7827.55 (Playwright 1.61.1
+bundled), fresh browser process per run (genuinely cold HTTP cache) with
+`Network.setCacheDisabled`. **Not behind the gateway** — `vite preview` serves every asset
+uncompressed (`Content-Encoding: none`, verified directly), so this is the worst case for
+transfer size; nothing in this repo (neither app's `nginx.conf`) configures gzip/brotli either,
+so a real deployment's compression, if any, comes from infrastructure outside this repo.
+
+Network throttling: Chromium DevTools Protocol's `Network.emulateNetworkConditions` on the page's
+own CDP session does **not** reach this request — the PDFium engine's WASM fetch happens inside a
+dedicated `blob:` module worker (a separate CDP target from the page), and zero
+`Network.requestWillBeSent` events for it were observed on the page session even with emulation
+enabled. Throttled instead with a byte-rate-limited local reverse proxy in front of `vite preview`
+(20 Mbit/s / 2.5 MB/s, matching the dev-server run's own throttle figure), which caps every
+response at the socket level regardless of which target issued the request — confirmed against a
+direct `curl` of the wasm asset (4.63 MB in 1.95 s ≈ 2.5 MB/s). First paint was measured from
+navigation start to the `.wasm` response's `finished()` (full body received, not just headers)
+followed by a 100 ms debounce of no `[aria-busy="true"]` element anywhere in the DOM (two separate
+components set `aria-busy` in sequence — the item-loading page, then the PDF viewer's own
+idle/opening/ready-but-unpainted states — with a brief gap between them that a naive
+"appear-then-clear" wait can mistake for done).
+
+| Measurement                                    | Fixture                    | Median | Range                      | Target | Result                      |
+| ---------------------------------------------- | -------------------------- | ------ | -------------------------- | ------ | --------------------------- |
+| First page painted (cold, throttled 20 Mbit/s) | 20-page `twenty-pages.pdf` | 2.87 s | 2.855 s – 2.930 s (5 runs) | ≤ 3 s  | PASS (narrow margin, ~4–5%) |
+
+Transfer sizes: `pdfium*.wasm` 4,633,788 B raw (uncompressed, as served); gzip -9 and brotli -q11
+of the same file computed standalone (not served by `vite preview`) for reference: 2,131,616 B
+gzip, 1,644,985 B brotli — matching the dev-server run's own figures above. At 2.5 MB/s, gzip would
+cost ≈0.85 s and brotli ≈0.66 s of transfer versus ≈1.85 s uncompressed, so a deployment that does
+compress would have materially more margin than the ~130 ms measured here; this was not measured
+directly (no compression is configured anywhere in this repo to measure against).
+
+**Verdict**: SC-001 is met by this production-build measurement, but by a narrow margin (median
+2.87 s against a 3 s target, ~130 ms / ~4–5% of headroom) and only on fast local hardware (Apple
+M5) with no real network/TLS/gateway overhead layered on top and no response compression. Treat
+this as "production bundling closes most of the dev-server gap, not as settled headroom" —
+re-measure behind the real gateway (with whatever compression it applies, if any) before treating
+SC-001 as durably met; do not assume the margin holds on slower client hardware or a less
+favorable network path than the 20 Mbit/s figure used here.
+
 ## End-to-end
 
 ```bash
@@ -125,8 +170,14 @@ NAVIGATOR_EXPERIMENTAL_URL=http://localhost:5174 pnpm --filter navigator exec pl
   test content-focus.spec.ts
 ```
 
-Targets `apps/navigator-experimental` directly — this feature is experimental-only, and `apps/navigator`
-has no route that renders it. Runs against the app's MSW dev fixtures (`doc-1`/`doc-2`/`doc-3` in
+Still targets `apps/navigator-experimental` directly, even after the ACC-2902 promotion:
+`apps/navigator`'s `$entity/$itemId.tsx` route now mounts `EntityItemContentFocusView` too, but
+`apps/navigator`'s own dev demo model (`createDemoHandlers` — the shared "invoice" fixture) has no
+content-bearing entity at all, so there is still no fixture item in the generic app's dev/e2e
+environment for this spec to open. Retargeting was assessed as part of the promotion and rejected
+for now — see `packages/features/src/entity-item/CLAUDE.md`'s promotion note and the promotion
+branch's PR description for the reasoning; adding a content-bearing demo entity to the generic
+app is a separate, later change. Runs against the app's MSW dev fixtures (`doc-1`/`doc-2`/`doc-3` in
 `src/mocks/content-focus-handlers.ts` and `rendition-handlers.ts`), so there is no login step and no
 `.env.test` credentials, unlike every other spec in this directory. The whole `describe` block is
 skipped when `NAVIGATOR_EXPERIMENTAL_URL` is unset; otherwise it runs in all four of `apps/navigator`'s
