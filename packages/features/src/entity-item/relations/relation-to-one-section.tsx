@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LinkBreakIcon as LinkBreak } from "@phosphor-icons/react";
 import {
   type EntityItemToOneRelation,
   type ProfileEntity,
@@ -97,7 +98,13 @@ export function RelationToOneSection({
           {relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isClearing}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={isClearing}
+                >
+                  <LinkBreak className="size-4" />
                   {isClearing ? "Unlinking…" : "Unlink"}
                 </Button>
               </AlertDialogTrigger>
