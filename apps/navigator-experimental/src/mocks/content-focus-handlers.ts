@@ -94,8 +94,9 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
 
   // A content attribute's `blueprint:attribute` shape (root CLAUDE.md: `type: "object"` with
   // embedded filename/mimetype/length children) — shared by both content attributes below
-  // ("file" and "receipt") so `doc-3` can exercise `ContentAttributeSelector`, which only renders
-  // once an item has more than one populated content attribute (`content-attribute-selector.tsx`).
+  // ("file" and "receipt") so `doc-3` can exercise `ContentAttributeSelector`'s *enabled* state,
+  // which needs two or more populated content attributes (`content-attribute-selector.tsx`) — a
+  // single content attribute still renders the selector, just disabled.
   function contentAttributeSchema(name: string, title: string) {
     return {
       name,
@@ -185,9 +186,8 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
   };
 
   // `doc-3` also populates "receipt" (reusing doc-1's minimal.pdf bytes) alongside "file", so it
-  // has two populated content attributes — the minimum `ContentAttributeSelector` needs to
-  // render at all (`content-attribute-selector.tsx`: "renders nothing when at most one such
-  // attribute exists").
+  // has two populated content attributes — the minimum `ContentAttributeSelector` needs to render
+  // *enabled* (`content-attribute-selector.tsx`); with only one, it still renders but disabled.
   const receiptContentUrl = `${twentyPagesItemUrl}/receipt`;
   const twentyPagesItemBody = {
     id: "doc-3",

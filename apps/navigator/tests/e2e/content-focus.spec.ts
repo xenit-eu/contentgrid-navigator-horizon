@@ -118,7 +118,8 @@ test.describe("Entity item content-focus view (apps/navigator-experimental)", ()
 
     // doc-3 also has a second populated content attribute ("receipt") specifically so the
     // attribute panel (ContentAttributeSelector — content-attribute-selector.tsx) has something to
-    // switch between; it renders nothing when an item has at most one content attribute.
+    // switch between; with only one content attribute it still renders, disabled, for context —
+    // it renders nothing only when an item has no content attributes at all.
     const attributeSelector = page.getByRole("combobox", { name: "Content attribute" });
     await expect(attributeSelector).toBeVisible();
     await expect(attributeSelector).toHaveText("File");

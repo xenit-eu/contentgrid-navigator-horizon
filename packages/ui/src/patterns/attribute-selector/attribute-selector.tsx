@@ -145,6 +145,13 @@ export interface AttributeSelectProps {
    * standalone labeled form field; pass `"sm"` for a compact, inline placement such as a toolbar.
    */
   size?: "sm" | "default";
+  /**
+   * Forces the trigger disabled even though `attributes` is non-empty — e.g. a lone option shown
+   * for context (which attribute is currently in view) without letting the user change it,
+   * instead of hiding the selector entirely. The trigger is always disabled when `attributes` is
+   * empty regardless of this prop. Defaults to `false`.
+   */
+  disabled?: boolean;
 }
 
 export function AttributeSelect({
@@ -154,6 +161,7 @@ export function AttributeSelect({
   placeholder = "Select attribute",
   label,
   size = "default",
+  disabled = false,
 }: Readonly<AttributeSelectProps>) {
   const { attributes: regular, systemAttributes } = groupOptions(attributes);
   const selectedOption = attributes.find((option) => option.name === value);
@@ -168,7 +176,7 @@ export function AttributeSelect({
   return (
     <div className="flex flex-col gap-1.5">
       {label && <Label>{label}</Label>}
-      <Select value={value} onValueChange={handleValueChange} disabled={!hasOptions}>
+      <Select value={value} onValueChange={handleValueChange} disabled={disabled || !hasOptions}>
         <SelectTrigger size={size} className="w-full" aria-label={label ?? effectivePlaceholder}>
           <SelectValue placeholder={effectivePlaceholder}>
             {selectedOption && <AttributeOptionCompactLabel option={selectedOption} />}

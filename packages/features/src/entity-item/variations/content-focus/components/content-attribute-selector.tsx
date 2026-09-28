@@ -18,8 +18,11 @@ export interface ContentAttributeSelectorProps {
  * Lists every content attribute the item has, not only ones that currently hold a file — an
  * attribute that needs uploading or that errors out while loading is still a valid switch target
  * (round-2 review: "cannot look or switch content attributes when one cannot be opened or needs
- * to be uploaded"). Renders nothing when at most one content attribute exists at all — a lone
- * option needs no selector.
+ * to be uploaded"). Renders nothing when there are no content attributes at all. With exactly one,
+ * renders it as a *disabled* selector rather than nothing — same as the old Navigator's greyed-out
+ * "Order document" box — so the user still has context on what they're viewing (round-2 review of
+ * #192: "instead of returning null I would prefer a disabled selector that still displays the
+ * default content attribute"). With two or more, renders the normal enabled selector.
  */
 export function ContentAttributeSelector({
   entityItem,
@@ -33,7 +36,7 @@ export function ContentAttributeSelector({
     return [{ name: attr.value.name, title: attr.profileAttribute?.title, type: "content" }];
   });
 
-  if (options.length <= 1) {
+  if (options.length === 0) {
     return null;
   }
 
@@ -49,6 +52,7 @@ export function ContentAttributeSelector({
         value={value}
         onSelect={(attribute) => onChange(attribute.name)}
         placeholder="Content attribute"
+        disabled={options.length === 1}
       />
     </div>
   );
