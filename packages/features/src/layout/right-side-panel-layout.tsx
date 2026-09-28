@@ -1,6 +1,6 @@
 import { forwardRef, useState } from "react";
 import type { ReactNode } from "react";
-import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { CaretRightIcon, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import { Button } from "@contentgrid/ui";
 
 export interface RightSidePanelLayoutProps {
@@ -81,7 +81,14 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
               aria-expanded={open}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
-              {open ? <CaretRightIcon className="size-4" /> : <CaretLeftIcon className="size-4" />}
+              {/* Collapsed state uses a sliders/tune icon rather than a plain caret — more
+                  indicative of "open the details panel" (round-2 review of #192; matches the old
+                  Navigator's own collapsed-panel icon). */}
+              {open ? (
+                <CaretRightIcon className="size-4" />
+              ) : (
+                <SlidersHorizontalIcon className="size-4" />
+              )}
             </Button>
           </div>
           {open && <div className="min-h-0 flex-1 overflow-auto p-3">{sidePanel}</div>}
