@@ -139,6 +139,19 @@ export interface AttributeSelectProps {
   onSelect: (attribute: ProfileAttributeOption) => void;
   placeholder?: string;
   label?: string;
+  /**
+   * Trigger height, mirroring `SelectTrigger`'s own `size` convention
+   * (`primitives/select.tsx`: `"default"` → `h-9`, `"sm"` → `h-8`). Defaults to `"default"` for a
+   * standalone labeled form field; pass `"sm"` for a compact, inline placement such as a toolbar.
+   */
+  size?: "sm" | "default";
+  /**
+   * Forces the trigger disabled even though `attributes` is non-empty — e.g. a lone option shown
+   * for context (which attribute is currently in view) without letting the user change it,
+   * instead of hiding the selector entirely. The trigger is always disabled when `attributes` is
+   * empty regardless of this prop. Defaults to `false`.
+   */
+  disabled?: boolean;
 }
 
 export function AttributeSelect({
@@ -147,6 +160,8 @@ export function AttributeSelect({
   onSelect,
   placeholder = "Select attribute",
   label,
+  size = "default",
+  disabled = false,
 }: Readonly<AttributeSelectProps>) {
   const { attributes: regular, systemAttributes } = groupOptions(attributes);
   const selectedOption = attributes.find((option) => option.name === value);
@@ -161,8 +176,8 @@ export function AttributeSelect({
   return (
     <div className="flex flex-col gap-1.5">
       {label && <Label>{label}</Label>}
-      <Select value={value} onValueChange={handleValueChange} disabled={!hasOptions}>
-        <SelectTrigger className="h-9 w-full" aria-label={label ?? effectivePlaceholder}>
+      <Select value={value} onValueChange={handleValueChange} disabled={disabled || !hasOptions}>
+        <SelectTrigger size={size} className="w-full" aria-label={label ?? effectivePlaceholder}>
           <SelectValue placeholder={effectivePlaceholder}>
             {selectedOption && <AttributeOptionCompactLabel option={selectedOption} />}
           </SelectValue>

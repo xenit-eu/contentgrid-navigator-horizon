@@ -3,5 +3,7 @@ export { BreadCrumbsToolBarLayout } from "./breadcrumbs-toolbar-layout";
 export type { BreadCrumbsToolBarLayoutProps } from "./breadcrumbs-toolbar-layout";
 export { PageLayout } from "./page-layout";
 export type { PageLayoutProps } from "./page-layout";
+export { RightSidePanelLayout } from "./right-side-panel-layout";
+export type { RightSidePanelLayoutProps } from "./right-side-panel-layout";
 export { EntityIconBadge } from "./components/entity-icon-badge";
 export type { EntityIconBadgeProps } from "./components/entity-icon-badge";
