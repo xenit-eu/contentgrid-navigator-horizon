@@ -4,12 +4,26 @@ import { FileRenderer } from "./file-renderer";
 import { fileField } from "./test-fixtures";
 
 describe("FileRenderer", () => {
-  it("offers no dropzone or file picker when read-only", () => {
+  it("disables the dropzone when read-only", () => {
     render(
       <FileRenderer {...fileField({ readOnly: true })} value={undefined} onChange={vi.fn()} />,
     );
-    expect(screen.getByText("Attachment")).toBeInTheDocument();
-    expect(screen.queryByText(/drag & drop/i)).not.toBeInTheDocument();
-    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Attachment" })).toBeDisabled();
+  });
+
+  it("keeps the picked file visible but not removable when read-only", () => {
+    const file = new File(["content"], "invoice.pdf", { type: "application/pdf" });
+    render(<FileRenderer {...fileField({ readOnly: true })} value={file} onChange={vi.fn()} />);
+    expect(screen.getByText("invoice.pdf")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
+  });
+
+  it("links the error to the dropzone", () => {
+    render(
+      <FileRenderer {...fileField()} value={undefined} onChange={vi.fn()} error="No content" />,
+    );
+    const dropzone = screen.getByRole("button", { name: "Attachment" });
+    expect(dropzone).toHaveAttribute("aria-invalid", "true");
+    expect(dropzone).toHaveAccessibleDescription("No content");
   });
 });

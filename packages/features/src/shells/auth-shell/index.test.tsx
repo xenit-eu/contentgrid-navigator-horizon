@@ -40,8 +40,6 @@ function renderAuthShell(authOverrides: Record<string, unknown> = {}) {
       ...authOverrides,
     },
     apiFetch: vi.fn(),
-    contentFetch: vi.fn(),
-    createContentUploadFetch: () => vi.fn(),
     profileUrl: "https://api.example.com/profile",
   } as unknown as AppAuthResult);
 

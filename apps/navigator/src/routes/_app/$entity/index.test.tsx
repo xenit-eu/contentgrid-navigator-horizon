@@ -96,7 +96,6 @@ function makeAuthResult(overrides: Record<string, unknown> = {}): AppAuthResult 
     },
     apiFetch: vi.fn(),
     contentFetch: vi.fn(),
-    createContentUploadFetch: () => vi.fn(),
     profileUrl: "https://api.example.com/profile",
   } as unknown as AppAuthResult;
 }

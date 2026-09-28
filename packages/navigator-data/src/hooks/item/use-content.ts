@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { checkResponse } from "@contentgrid/problem-details";
-import type { EntityItem } from "../../accessors/entity-item";
+import { EntityItem } from "../../accessors/entity-item";
 import { parseContentDisposition } from "../../api/content-types";
-import { fetchVoid } from "../../api/hal-client";
+import { fetchHal, fetchVoid } from "../../api/hal-client";
 import { queryKeys } from "../../query-keys";
+import type { EntityItemShape } from "../../shapes";
 import { useNavigatorData } from "../context";
 
 // ---------------------------------------------------------------------------
@@ -16,8 +16,12 @@ import { useNavigatorData } from "../context";
  * Variables for the `useUploadContent` mutation.
  */
 export type UploadContentVariables = {
-  /** The file to upload. Sent under its own `name`. */
-  readonly file: File;
+  /** The binary file to upload. */
+  readonly file: Blob | File;
+  /** Optional MIME type override. Defaults to `file.type` (when File) or `application/octet-stream`. */
+  readonly contentType?: string;
+  /** Optional filename override. Defaults to `file.name` (when File). */
+  readonly filename?: string;
 };
 
 /**
@@ -25,7 +29,7 @@ export type UploadContentVariables = {
  */
 export interface UseUploadContentOptions {
   readonly mutationOptions?: Omit<
-    UseMutationOptions<void, Error, UploadContentVariables>,
+    UseMutationOptions<EntityItem, Error, UploadContentVariables>,
     "mutationFn"
   >;
 }
@@ -72,105 +76,69 @@ export interface UseDownloadContentOptions {
 /**
  * Mutation hook for uploading binary content to a content attribute.
  *
- * Binary content has no `_templates` entry — the ONE documented exception to the HAL-FORMS
- * template rule. The `cg:content` link presence is the ABAC gate; the Request is hand-built
- * from the link href.
+ * Binary content operations are the ONE documented exception to the HAL-FORMS
+ * template rule — they have no `_templates` entry. The `cg:content` link presence
+ * is the ABAC gate. The Request is hand-built directly from the link href.
  *
- * Uses `createContentUploadFetch`, not `apiFetch`/`contentFetch` — same auth + problem-details
- * hook chain as `contentFetch`, but XHR-backed so upload progress can be reported.
+ * Uses `contentFetch` (not `apiFetch`) — the binary client that omits the
+ * `Accept: application/hal+json` header set by `createApiClient`.
  *
- * No `If-Match` — upload is an unconditional overwrite. Errors
- * surface as `ProblemDetailError`; no auto-retry — call `mutate(variables)` again to retry.
+ * Attaches `If-Match` from the current ETag when available (included inside
+ * `entityItem.uploadContentRequest`). On HTTP 412 (ETag mismatch), the error
+ * surfaces as `ProblemDetailError` — the hook does NOT auto-retry.
  *
- * `progress` (0–100) is hook-local UI state. `cancel()` aborts the in-flight request and resets
- * the mutation to idle; an aborted upload never reaches the caller's `onError`. Unmounting does
- * not abort — the upload finishes and still invalidates the item.
- *
- * Cache behaviour: the PUT returns 204, so the item is invalidated
- * rather than written. On success the item and its entity collections are invalidated (and
- * awaited) before the caller's `onSuccess`; on failure or abort the item is invalidated, since
- * the write may still have landed.
+ * Cache behaviour on success:
+ * - Re-fetches the entity item via `apiFetch` to get fresh metadata + new ETag.
+ * - `setQueryData` on `entityItem.byUrl` with the fresh item.
+ * - `invalidateQueries` on `entityItemCollection.forEntity`.
+ * - Caller's `onSuccess` runs after cache is consistent.
  *
  * @param entityItem     - The entity item whose content attribute is being uploaded.
  * @param attributeName  - The name of the content attribute (must have a cg:content link).
- * @param options        - Optional mutation options (onSuccess, onError, etc.).
- * @returns TanStack mutation result plus `progress` (0–100) and `cancel()`.
+ * @param options        - Optional mutation options (onSuccess, onError, etc.)
+ * @returns TanStack mutation result; `data` is the updated `EntityItem` (re-fetched).
  */
 export function useUploadContent(
   entityItem: EntityItem,
   attributeName: string,
   options?: UseUploadContentOptions,
 ) {
-  const { createContentUploadFetch } = useNavigatorData();
+  const { apiFetch, contentFetch } = useNavigatorData();
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
 
-  const [progress, setProgress] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
+  const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
 
-  const uploadFetch = useMemo(
-    () => createContentUploadFetch(setProgress),
-    [createContentUploadFetch],
-  );
+  return useMutation({
+    mutationFn: async ({ file, contentType, filename }: UploadContentVariables) => {
+      // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
+      // uploadContentRequest() throws if the link is absent (ABAC deny).
+      const req = entityItem.uploadContentRequest(attributeName, file, { contentType, filename });
 
-  const { onSuccess, onError, ...restMutationOptions } = options?.mutationOptions ?? {};
+      // PUT binary content — 204 No Content (discard body).
+      await fetchVoid(contentFetch, req);
 
-  const invalidateEntityItem = () =>
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
-    });
-
-  const mutation = useMutation({
-    mutationFn: async ({ file }: UploadContentVariables) => {
-      setProgress(0);
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        // uploadContentRequest() throws if the cg:content link is absent (ABAC deny).
-        const req = entityItem.uploadContentRequest(attributeName, file, {
-          signal: controller.signal,
-        });
-        await fetchVoid(uploadFetch, req);
-      } finally {
-        // Only clear if still this attempt's controller — don't clear a newer attempt's.
-        if (abortRef.current === controller) {
-          abortRef.current = null;
-        }
-      }
+      // Re-fetch the entity item via apiFetch to get fresh metadata + new ETag.
+      const { object, etag } = await fetchHal<EntityItemShape>(
+        apiFetch,
+        new Request(entityItem.selfLink.href),
+      );
+      return new EntityItem(object, profileEntity, etag);
     },
-    onSuccess: async (data, variables, onMutateResult, context) => {
-      await Promise.all([
-        invalidateEntityItem(),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
-        }),
-      ]);
+    onSuccess: async (item, variables, onMutateResult, context) => {
+      // Populate item cache with fresh data + ETag.
+      queryClient.setQueryData(queryKeys.entityItem.byUrl(profileEntity, item.selfLink.href), item);
 
-      // Compose caller's onSuccess LAST — after the cache has re-fetched.
-      await onSuccess?.(data, variables, onMutateResult, context);
-    },
-    onError: async (error, variables, onMutateResult, context) => {
-      await invalidateEntityItem();
+      // Invalidate entity collections so lists reflect the change.
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+      });
 
-      // Only cancel() aborts, and a cancel is not a failure to report.
-      if (error.name === "AbortError") {
-        return;
-      }
-
-      await onError?.(error, variables, onMutateResult, context);
+      // Compose caller's onSuccess LAST — after cache is consistent.
+      await onSuccess?.(item, variables, onMutateResult, context);
     },
     ...restMutationOptions,
   });
-
-  const { reset } = mutation;
-  const cancel = useCallback(() => {
-    abortRef.current?.abort();
-    reset();
-  }, [reset]);
-
-  return { ...mutation, progress, cancel };
 }
 
 // ---------------------------------------------------------------------------
@@ -180,14 +148,18 @@ export function useUploadContent(
 /**
  * Mutation hook for downloading binary content from a content attribute.
  *
- * Same binary-content exception as `useUploadContent` — no `_templates`, `cg:content` link
- * presence is the ABAC gate, Request hand-built from the link href.
+ * Binary content operations are the ONE documented exception to the HAL-FORMS
+ * template rule — they have no `_templates` entry. The `cg:content` link presence
+ * is the ABAC gate. The Request is hand-built directly from the link href.
  *
- * Modeled as `useMutation` (imperative on user action, e.g. a download button). Blobs are NOT
- * cached — each `mutate` call fetches fresh bytes. Uses `contentFetch`, not `apiFetch` — omits
- * the `Accept: application/hal+json` header.
+ * Modeled as `useMutation` (imperative on user action — download button).
+ * Blobs are NOT cached — each call to `mutate` fetches fresh bytes.
  *
- * Pass `{ range: { start, end? } }` for partial content (HTTP 206); `isPartial` reflects that.
+ * Uses `contentFetch` (not `apiFetch`) — the binary client that omits the
+ * `Accept: application/hal+json` header set by `createApiClient`.
+ *
+ * Pass `{ range: { start, end? } }` to request partial content (HTTP 206).
+ * `isPartial` in the result is `true` when the response status is 206.
  *
  * @param entityItem     - The entity item whose content attribute is being downloaded.
  * @param attributeName  - The name of the content attribute (must have a cg:content link).

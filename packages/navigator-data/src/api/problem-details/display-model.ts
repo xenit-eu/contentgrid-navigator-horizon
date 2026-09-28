@@ -200,7 +200,8 @@ export function toProblemDisplayModel(error: unknown): ProblemDisplayModel {
   }
 
   const { status, detail, type } = error.problemDetail;
-  // A non-problem+json response (e.g. a gateway error page) may carry neither title nor detail.
+  // `checkResponse` falls back to `response.statusText` for a non-problem+json body, which is
+  // empty over HTTP/2 (no reason phrase) — e.g. a gateway 413 for an oversized upload.
   const title = error.problemDetail.title || (detail ? "" : statusTitle(status));
 
   if (type === undefined) {

@@ -117,7 +117,6 @@ function renderForm(props: Parameters<typeof LoadInvoiceProfileAndRenderCreateFo
         <NavigatorDataProvider
           apiFetch={apiFetch}
           contentFetch={contentFetch}
-          createContentUploadFetch={() => contentFetch}
           profileUrl={PROFILE_URL}
         >
           {children}
@@ -418,5 +417,122 @@ describe("CreateEntityItemContainer", () => {
 
     expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
     expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
+  });
+
+  describe("file field", () => {
+    const FILE_CREATE_FORM = {
+      method: "POST",
+      target: `${API_URL}/invoices`,
+      contentType: "multipart/form-data",
+      properties: [
+        { name: "invoice_number", type: "text", required: true },
+        { name: "document", type: "file" },
+      ],
+    };
+
+    async function fillAndPickFile(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(await screen.findByLabelText(/Invoice Number/), "INV-1");
+      const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+      await user.upload(input!, new File(["%PDF"], "invoice.pdf", { type: "application/pdf" }));
+    }
+
+    it("sends the picked file in the multipart create request", async () => {
+      const user = userEvent.setup();
+      let body: FormData | undefined;
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, async ({ request }) => {
+          body = await request.formData();
+          return HttpResponse.json(
+            { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+            { status: 201 },
+          );
+        }),
+      );
+      renderForm();
+
+      await fillAndPickFile(user);
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      await vi.waitFor(() => expect(body).toBeDefined());
+      // jsdom's File isn't undici's, so only the part's type survives the test transport — enough
+      // to tell a file part from a stringified value.
+      expect((body!.get("document") as Blob).type).toBe("application/pdf");
+      expect(body!.get("invoice_number")).toBe("INV-1");
+    });
+
+    it("omits a removed file from the create request", async () => {
+      const user = userEvent.setup();
+      let body: FormData | undefined;
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, async ({ request }) => {
+          body = await request.formData();
+          return HttpResponse.json(
+            { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+            { status: 201 },
+          );
+        }),
+      );
+      renderForm();
+
+      await fillAndPickFile(user);
+      await user.click(screen.getByRole("button", { name: /remove file/i }));
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      await vi.waitFor(() => expect(body).toBeDefined());
+      expect(body!.has("document")).toBe(false);
+    });
+
+    it("shows a server no-content validation error on the file field", async () => {
+      const user = userEvent.setup();
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, () =>
+          HttpResponse.json(
+            {
+              type: "https://contentgrid.cloud/problems/input/validation",
+              title: "Validation failed",
+              status: 400,
+              errors: [
+                {
+                  type: "https://contentgrid.cloud/problems/input/validation/no-content",
+                  title: "Empty file",
+                  field: "document",
+                },
+              ],
+            },
+            { status: 400, headers: { "Content-Type": "application/problem+json" } },
+          ),
+        ),
+      );
+      renderForm();
+
+      await fillAndPickFile(user);
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      expect(await screen.findByText("Empty file")).toBeInTheDocument();
+      expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
+    });
+
+    it("shows a status-based alert for an upload rejected without a problem body", async () => {
+      const user = userEvent.setup();
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        // HTTP/2 carries no reason phrase, so the response has neither a problem body nor a
+        // status text.
+        http.post(`${API_URL}/invoices`, () => new Response(null, { status: 413, statusText: "" })),
+      );
+      renderForm();
+
+      await fillAndPickFile(user);
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      expect(await screen.findByText("Request failed with status 413")).toBeInTheDocument();
+    });
   });
 });

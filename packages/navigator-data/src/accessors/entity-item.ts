@@ -6,7 +6,7 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels } from "../api";
+import { cgRels, contentDispositionAttachment } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
@@ -398,22 +398,21 @@ export class EntityItem {
    * has no `_templates` entry, so the Request is constructed directly from the
    * `cg:content` link href. The link presence is the ABAC gate.
    *
-   * The request is NOT executed here. Send it with `createContentUploadFetch` (see
-   * `useUploadContent`).
+   * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
+   * `contentFetch` omits the `Accept: application/hal+json` header.
    *
-   * The body is `multipart/form-data` with the file in a single `file` part.
-   * No `If-Match`: content upload is an unconditional overwrite.
+   * If-Match is attached only when an ETag is available (omitted when null).
    *
    * @param attributeName - The name of the content attribute
-   * @param file - The file to upload, sent under its own name
-   * @param opts - Optional AbortSignal to cancel an in-flight upload
-   * @returns Request ready to be sent
+   * @param file - The file to upload
+   * @param opts - Optional overrides for Content-Type and filename
+   * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public uploadContentRequest(
     attributeName: string,
-    file: File,
-    opts?: { signal?: AbortSignal },
+    file: Blob | File,
+    opts?: { contentType?: string; filename?: string },
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -422,13 +421,28 @@ export class EntityItem {
       );
     }
 
-    const formData = new FormData();
-    formData.append("file", file, file.name);
+    const contentType =
+      opts?.contentType ??
+      (file instanceof File && file.type ? file.type : "application/octet-stream");
+
+    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
+
+    const headers: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+
+    if (filename) {
+      headers["Content-Disposition"] = contentDispositionAttachment(filename);
+    }
+
+    if (this.etag !== null) {
+      headers["If-Match"] = this.etag;
+    }
 
     return new Request(link.href, {
       method: "PUT",
-      body: formData,
-      signal: opts?.signal,
+      body: file,
+      headers,
     });
   }
 
