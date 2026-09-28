@@ -13,8 +13,6 @@
  */
 export { pdfiumWasmUrl } from "./util/pdfium-wasm-url";
 export { selectDefaultContentAttribute } from "./util/select-default-content-attribute";
-export { ContentFocusLayout } from "./components/content-focus-layout";
-export type { ContentFocusLayoutProps } from "./components/content-focus-layout";
 export { ContentAttributeSelector } from "./components/content-attribute-selector";
 export type { ContentAttributeSelectorProps } from "./components/content-attribute-selector";
 export { ContentPreviewFrame } from "./components/content-preview-frame";

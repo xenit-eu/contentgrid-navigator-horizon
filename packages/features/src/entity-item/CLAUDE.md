@@ -39,11 +39,15 @@ entity-item-view.tsx, attributes/, relations/
 
 variations/content-focus/
   views/  (entity-item-content-focus-view.tsx)
-    -> components/  (content-focus-layout, content-attribute-selector,
-                      content-preview-frame, content-preview-panel)
+    -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
     -> entity-item's own attributes/, relations/, entity-item-view.tsx — a sibling import
        within the same feature now, not a cross-feature one
+    -> ../../../layout's `RightSidePanelLayout` (imported the same way as this feature's other
+       layouts, `BreadCrumbsToolBarLayout`/`PageLayout`) — moved there from this variation's own
+       components/ at the reviewer's request, since the layout itself carries no content-focus
+       knowledge (round-2 review of #192: "since this layout is already very generic, could we
+       move it to features/layout … so it can more easily be reused?")
 
   views, components -> @contentgrid/ui, @contentgrid/navigator-data
   util               -> @contentgrid/navigator-data only — no UI, no React components

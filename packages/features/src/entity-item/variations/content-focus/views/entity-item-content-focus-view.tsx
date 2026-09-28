@@ -16,14 +16,13 @@ import {
   Separator,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
-import { BreadCrumbsToolBarLayout, PageLayout } from "../../../../layout";
+import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
 import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
-import { ContentFocusLayout } from "../components/content-focus-layout";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
 import { selectDefaultContentAttribute } from "../util/select-default-content-attribute";
 
@@ -265,7 +264,7 @@ function ContentFocusEntityItemBody({
   }
 
   return (
-    <ContentFocusLayout
+    <RightSidePanelLayout
       sidePanelTitle="Details"
       // Round-2 review: show which item this panel belongs to (icon, name, subtitle) instead of
       // a generic "Details" label — same reference row `EntityItemView`'s own attribute-focus
@@ -273,19 +272,6 @@ function ContentFocusEntityItemBody({
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
       sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
-      preview={
-        <ContentPreviewPanel
-          entityItem={entityItem}
-          attributeName={attributeName}
-          toolbarStart={
-            <ContentAttributeSelector
-              entityItem={entityItem}
-              value={attributeName}
-              onChange={onSelectAttribute}
-            />
-          }
-        />
-      }
       sidePanel={
         <div className="space-y-6">
           <EntityItemAttributes item={entityItem} />
@@ -320,6 +306,18 @@ function ContentFocusEntityItemBody({
           )}
         </div>
       }
-    />
+    >
+      <ContentPreviewPanel
+        entityItem={entityItem}
+        attributeName={attributeName}
+        toolbarStart={
+          <ContentAttributeSelector
+            entityItem={entityItem}
+            value={attributeName}
+            onChange={onSelectAttribute}
+          />
+        }
+      />
+    </RightSidePanelLayout>
   );
 }

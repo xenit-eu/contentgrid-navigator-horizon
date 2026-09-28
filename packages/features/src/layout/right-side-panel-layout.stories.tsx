@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ContentFocusLayout } from "./content-focus-layout";
+import { RightSidePanelLayout } from "./right-side-panel-layout";
 
 const meta = {
-  title: "Features/EntityItemContentFocus/ContentFocusLayout",
-  component: ContentFocusLayout,
+  title: "Features/Layout/RightSidePanelLayout",
+  component: RightSidePanelLayout,
   tags: ["autodocs"],
-} satisfies Meta<typeof ContentFocusLayout>;
+} satisfies Meta<typeof RightSidePanelLayout>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function SamplePreview() {
+function SampleContent() {
   return (
     <div className="flex h-full items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground">
       PDF viewer goes here
@@ -30,27 +30,27 @@ function SampleSidePanel() {
 
 export const Default: Story = {
   args: {
-    preview: <SamplePreview />,
+    children: <SampleContent />,
     sidePanel: <SampleSidePanel />,
     sidePanelTitle: "Details",
   },
   render: (args) => (
     <div style={{ height: 600, width: 1000 }}>
-      <ContentFocusLayout {...args} />
+      <RightSidePanelLayout {...args} />
     </div>
   ),
 };
 
 export const CollapsedByDefault: Story = {
   args: {
-    preview: <SamplePreview />,
+    children: <SampleContent />,
     sidePanel: <SampleSidePanel />,
     sidePanelTitle: "Details",
     defaultSidePanelOpen: false,
   },
   render: (args) => (
     <div style={{ height: 600, width: 1000 }}>
-      <ContentFocusLayout {...args} />
+      <RightSidePanelLayout {...args} />
     </div>
   ),
 };
@@ -58,13 +58,13 @@ export const CollapsedByDefault: Story = {
 /** Below the 800px breakpoint the two regions stack vertically instead of side by side. */
 export const NarrowViewport: Story = {
   args: {
-    preview: <SamplePreview />,
+    children: <SampleContent />,
     sidePanel: <SampleSidePanel />,
     sidePanelTitle: "Details",
   },
   render: (args) => (
     <div style={{ height: 700, width: 480 }}>
-      <ContentFocusLayout {...args} />
+      <RightSidePanelLayout {...args} />
     </div>
   ),
 };
