@@ -61,7 +61,7 @@ function relationFieldDescriptor(
     readOnly: property.readOnly,
     description: profileRelation?.description || undefined,
     property,
-    multiValue: property.multiValue,
+    toMany: property.multiValue,
   };
 }
 

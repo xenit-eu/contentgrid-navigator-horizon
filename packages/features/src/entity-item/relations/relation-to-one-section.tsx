@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  AttributeKind,
   type EntityItemToOneRelation,
   type ProfileEntity,
   toProblemDisplayModel,
@@ -19,10 +18,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
+  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
 import { ProblemAlert } from "../../problem-details";
-import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
+import { EntityItemAttributeSummary } from "../variations/entity-item-attribute-summary";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -63,10 +63,10 @@ export function RelationToOneSection({
   const title = relation.profileRelation.title ?? relation.name;
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <div className="flex items-center gap-2">
+    <RelationAccordion
+      title={title}
+      actions={
+        <>
           {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
             <>
               <Button
@@ -115,8 +115,9 @@ export function RelationToOneSection({
               </AlertDialogContent>
             </AlertDialog>
           )}
-        </div>
-      </div>
+        </>
+      }
+    >
       {mutationError && (
         <ProblemAlert
           model={toProblemDisplayModel(mutationError)}
@@ -141,26 +142,9 @@ export function RelationToOneSection({
             onItemClick?.(linked.profileEntity.name, linked.id);
           }}
         >
-          <dl className="grid grid-cols-2 gap-2">
-            {linkedItem.data.userDefinedAttributes
-              .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
-              .slice(0, 4)
-              .map((attr) => {
-                const label =
-                  linkedItem.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
-                    ?.title ?? attr.value.name;
-                return (
-                  <div key={attr.value.name}>
-                    <dt className="text-xs text-muted-foreground">{label}</dt>
-                    <dd className="text-sm truncate">
-                      <AttributeValueRenderer attr={attr} />
-                    </dd>
-                  </div>
-                );
-              })}
-          </dl>
+          <EntityItemAttributeSummary item={linkedItem.data} />
         </button>
       )}
-    </div>
+    </RelationAccordion>
   );
 }

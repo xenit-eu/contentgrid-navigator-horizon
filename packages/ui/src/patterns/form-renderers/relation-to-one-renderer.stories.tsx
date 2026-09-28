@@ -7,6 +7,15 @@ const meta = {
   title: "Patterns/FormRenderers/RelationToOneRenderer",
   component: RelationToOneRenderer,
   tags: ["autodocs"],
+  // Form fields fill their container's width; without one, `CardHeader`'s `@container` sizing
+  // lets the header actions overflow the card.
+  decorators: [
+    (Story) => (
+      <div className="w-xl">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof RelationToOneRenderer>;
 
 export default meta;

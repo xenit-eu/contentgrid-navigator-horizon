@@ -4,6 +4,7 @@ import {
   type EntityItem,
   type FieldValue,
   type ProfileEntity,
+  useEntityItem,
   useEntityItemsByUrl,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
@@ -18,7 +19,7 @@ import {
   Skeleton,
 } from "@contentgrid/ui";
 import {
-  EntityItemReference,
+  EntityItemAttributeSummary,
   type RelationItemClickHandler,
   type RelationItemCreateHandler,
   RelationItemSearchDialog,
@@ -75,7 +76,7 @@ export function RelationField({ onBlur, ...props }: Readonly<RelationFieldProps>
     return isLoading ? <Skeleton className="h-12 w-full rounded-md" /> : null;
   }
 
-  return field.multiValue ? (
+  return field.toMany ? (
     <RelationToManyField {...props} onChange={handleChange} targetProfile={targetProfile} />
   ) : (
     <RelationToOneField {...props} onChange={handleChange} targetProfile={targetProfile} />
@@ -110,22 +111,20 @@ function RelationToOneField({
 }: Readonly<ResolvedRelationFieldProps>) {
   const href = typeof value === "string" ? value : "";
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { collection, failed } = useEntityItemsByUrl({
-    urls: href ? [href] : [],
-    profileEntity: targetProfile,
-    queryOptionsOverride: LINKED_ITEM_QUERY_OPTIONS,
-  });
-  const linkedItem = collection.items[0];
+  const linkedItemQuery = useEntityItem(
+    { url: href },
+    { queryOptionsOverride: LINKED_ITEM_QUERY_OPTIONS },
+  );
+  const linkedItem = linkedItemQuery.data;
 
   return (
     <>
-      {failed.map(({ url, error: fetchError }) => (
+      {linkedItemQuery.isError && (
         <LinkedItemErrorAlert
-          key={url}
-          error={fetchError}
+          error={linkedItemQuery.error}
           onRemove={field.readOnly ? undefined : () => onChange("")}
         />
-      ))}
+      )}
       <RelationToOneRenderer
         name={field.name}
         label={field.label}
@@ -135,13 +134,13 @@ function RelationToOneField({
         value={value}
         onChange={onChange}
         error={error}
-        linkedItem={linkedItem && <EntityItemReference item={linkedItem} />}
+        linkedItem={linkedItem && <EntityItemAttributeSummary item={linkedItem} />}
         onViewDetails={
           linkedItem && onRelationItemClick
             ? () => onRelationItemClick(targetProfile.name, linkedItem.id)
             : undefined
         }
-        isLoading={!!href && !linkedItem && failed.length === 0}
+        isLoading={!!href && linkedItemQuery.isPending}
         onLink={() => setPickerOpen(true)}
       />
       <RelationItemSearchDialog

@@ -249,7 +249,7 @@ describe("resolveCreateFieldDescriptors", () => {
     expect(field.label).toBe("Supplier");
     expect(field.description).toBe("The invoice's supplier");
     if (field.kind === "relation") {
-      expect(field.multiValue).toBe(false);
+      expect(field.toMany).toBe(false);
     }
   });
 
@@ -259,7 +259,7 @@ describe("resolveCreateFieldDescriptors", () => {
     expect(field.kind).toBe("relation");
     expect(field.required).toBe(false);
     if (field.kind === "relation") {
-      expect(field.multiValue).toBe(true);
+      expect(field.toMany).toBe(true);
     }
   });
 

@@ -52,12 +52,14 @@ export function RelationItemSearchDialog({
 }: Readonly<RelationItemSearchProps & { open: boolean; onOpenChange: (open: boolean) => void }>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>{open && <RelationItemSearch {...props} />}</DialogContent>
+      <DialogContent className="sm:max-w-4xl">
+        <RelationItemSearch {...props} />
+      </DialogContent>
     </Dialog>
   );
 }
 
-/** Mounted only while the dialog is open, so its search/selection state starts fresh each time. */
+/** Unmounted by `DialogContent` once closed, so its search/selection state starts fresh each time. */
 function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
   const { targetProfile, onCreateNew } = selection;
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
@@ -130,7 +132,7 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
           <EntityItemCollectionTable
             profile={targetProfile}
             collection={collection.data}
-            className="max-h-80"
+            className="max-h-112"
             showRowActions={false}
             showItemCount={false}
             onPageChange={setPageUrl}

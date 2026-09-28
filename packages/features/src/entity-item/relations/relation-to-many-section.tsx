@@ -190,6 +190,7 @@ export function RelationToManySection({
           <EntityItemCollectionTable
             profile={targetProfile}
             collection={collection.data}
+            className="max-h-80"
             onEntityItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
             onPageChange={setPageUrl}
             renderRowActions={(item) => (

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PlusIcon } from "@phosphor-icons/react";
+import { LinkBreakIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button } from "../../primitives/button";
 import { CountIndicatorChip } from "../../primitives/count-indicator-chip";
 import { RelationAccordion } from "../relation-accordion/relation-accordion";
@@ -18,12 +18,12 @@ export interface RelationToManyRendererProps {
   readonly children?: ReactNode;
   /** Opens the caller's item picker. The Link button is hidden when absent. */
   readonly onLink?: () => void;
-  /** Clears every linked item. The Clear button is hidden when absent. */
+  /** Clears every linked item. The Unlink all button is hidden when absent. */
   readonly onClear?: () => void;
 }
 
 /**
- * A to-many relation field: a `RelationAccordion` (count chip + label, "Link" and "Clear" actions)
+ * A to-many relation field: a `RelationAccordion` (count chip + label, "Link" and "Unlink all" actions)
  * around the caller's table of linked items — legacy `RelationCandidateTable`.
  */
 export function RelationToManyRenderer({
@@ -51,15 +51,22 @@ export function RelationToManyRenderer({
         actions={
           !readOnly && (
             <>
-              {onClear && count > 0 && (
-                <Button type="button" variant="ghost" size="sm" onClick={onClear}>
-                  Clear
-                </Button>
-              )}
               {onLink && (
                 <Button type="button" variant="outline" size="sm" onClick={onLink}>
                   <PlusIcon className="size-4" />
                   Link
+                </Button>
+              )}
+              {onClear && count > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={onClear}
+                >
+                  <LinkBreakIcon className="size-4" />
+                  Unlink all
                 </Button>
               )}
             </>

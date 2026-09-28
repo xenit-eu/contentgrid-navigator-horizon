@@ -56,5 +56,5 @@ export type FieldDescriptor =
         readonly multiValue: boolean;
       })
   | ({ readonly kind: "relation" } & FieldDescriptorBase & {
-        readonly multiValue: boolean;
+        readonly toMany: boolean;
       });
