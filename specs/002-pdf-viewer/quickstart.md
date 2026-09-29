@@ -127,7 +127,7 @@ NAVIGATOR_EXPERIMENTAL_URL=http://localhost:5174 pnpm --filter navigator exec pl
 
 Targets `apps/navigator-experimental` directly — this feature is experimental-only, and `apps/navigator`
 has no route that renders it. Runs against the app's MSW dev fixtures (`doc-1`/`doc-2`/`doc-3` in
-`src/mocks/content-focus-handlers.ts` and `rendition-handlers.ts`), so there is no login step and no
+`src/local-mock-backend/content-focus-handlers.ts` and `rendition-handlers.ts`), so there is no login step and no
 `.env.test` credentials, unlike every other spec in this directory. The whole `describe` block is
 skipped when `NAVIGATOR_EXPERIMENTAL_URL` is unset; otherwise it runs in all four of `apps/navigator`'s
 Playwright projects (chromium/firefox × large/small viewport — per-project browser/viewport settings,
