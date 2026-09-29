@@ -46,6 +46,19 @@ if (!globalThis.ResizeObserver) {
   };
 }
 
+// Blob.prototype.stream — jsdom's Blob/File lacks it, and Node 24's fetch waits on it forever when
+// serializing a multipart body that holds a jsdom `File` (a picked file in a create form).
+if (!Blob.prototype.stream) {
+  Blob.prototype.stream = function (this: Blob) {
+    return new ReadableStream<Uint8Array<ArrayBuffer>>({
+      start: async (controller) => {
+        controller.enqueue(new Uint8Array(await this.arrayBuffer()));
+        controller.close();
+      },
+    });
+  };
+}
+
 // Element methods used by Radix UI
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn();

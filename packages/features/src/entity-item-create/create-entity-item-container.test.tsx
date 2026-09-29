@@ -438,12 +438,14 @@ describe("CreateEntityItemContainer", () => {
 
     it("sends the picked file in the multipart create request", async () => {
       const user = userEvent.setup();
-      let body: FormData | undefined;
+      let body: string | undefined;
       server.use(
         profileRootHandler(),
         invoiceProfileHandler(FILE_CREATE_FORM),
         http.post(`${API_URL}/invoices`, async ({ request }) => {
-          body = await request.formData();
+          // Read as text: `request.formData()` rebuilds file parts with the global `File`, which
+          // jsdom replaces with one undici's parser rejects.
+          body = await request.text();
           return HttpResponse.json(
             { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
             { status: 201 },
@@ -458,8 +460,10 @@ describe("CreateEntityItemContainer", () => {
       await vi.waitFor(() => expect(body).toBeDefined());
       // jsdom's File isn't undici's, so only the part's type survives the test transport — enough
       // to tell a file part from a stringified value.
-      expect((body!.get("document") as Blob).type).toBe("application/pdf");
-      expect(body!.get("invoice_number")).toBe("INV-1");
+      expect(body).toMatch(
+        /name="document"; filename="[^"]*"\r\nContent-Type: application\/pdf\r\n/,
+      );
+      expect(body).toMatch(/name="invoice_number"\r\n\r\nINV-1\r\n/);
     });
 
     it("omits a removed file from the create request", async () => {
