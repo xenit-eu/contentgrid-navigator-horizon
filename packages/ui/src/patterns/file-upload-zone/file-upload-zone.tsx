@@ -67,10 +67,9 @@ export function FileUploadZone({
 
   // The remove button unmounts with the file, so hand its focus to the drop zone that replaces it.
   useEffect(() => {
-    if (!file && focusDropZoneRef.current) {
-      focusDropZoneRef.current = false;
-      dropZoneRef.current?.focus();
-    }
+    const shouldFocus = focusDropZoneRef.current;
+    focusDropZoneRef.current = false;
+    if (!file && shouldFocus) dropZoneRef.current?.focus();
   }, [file]);
 
   // Image preview URL lifecycle

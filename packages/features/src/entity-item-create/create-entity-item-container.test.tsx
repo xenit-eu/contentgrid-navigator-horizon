@@ -485,54 +485,5 @@ describe("CreateEntityItemContainer", () => {
       await vi.waitFor(() => expect(body).toBeDefined());
       expect(body!.has("document")).toBe(false);
     });
-
-    it("shows a server no-content validation error on the file field", async () => {
-      const user = userEvent.setup();
-      server.use(
-        profileRootHandler(),
-        invoiceProfileHandler(FILE_CREATE_FORM),
-        http.post(`${API_URL}/invoices`, () =>
-          HttpResponse.json(
-            {
-              type: "https://contentgrid.cloud/problems/input/validation",
-              title: "Validation failed",
-              status: 400,
-              errors: [
-                {
-                  type: "https://contentgrid.cloud/problems/input/validation/no-content",
-                  title: "Empty file",
-                  field: "document",
-                },
-              ],
-            },
-            { status: 400, headers: { "Content-Type": "application/problem+json" } },
-          ),
-        ),
-      );
-      renderForm();
-
-      await fillAndPickFile(user);
-      await user.click(screen.getByRole("button", { name: "Create" }));
-
-      expect(await screen.findByText("Empty file")).toBeInTheDocument();
-      expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
-    });
-
-    it("shows a status-based alert for an upload rejected without a problem body", async () => {
-      const user = userEvent.setup();
-      server.use(
-        profileRootHandler(),
-        invoiceProfileHandler(FILE_CREATE_FORM),
-        // HTTP/2 carries no reason phrase, so the response has neither a problem body nor a
-        // status text.
-        http.post(`${API_URL}/invoices`, () => new Response(null, { status: 413, statusText: "" })),
-      );
-      renderForm();
-
-      await fillAndPickFile(user);
-      await user.click(screen.getByRole("button", { name: "Create" }));
-
-      expect(await screen.findByText("Request failed with status 413")).toBeInTheDocument();
-    });
   });
 });

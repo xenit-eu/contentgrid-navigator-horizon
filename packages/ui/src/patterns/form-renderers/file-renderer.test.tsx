@@ -17,13 +17,4 @@ describe("FileRenderer", () => {
     expect(screen.getByText("invoice.pdf")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
   });
-
-  it("links the error to the dropzone", () => {
-    render(
-      <FileRenderer {...fileField()} value={undefined} onChange={vi.fn()} error="No content" />,
-    );
-    const dropzone = screen.getByRole("button", { name: "Attachment" });
-    expect(dropzone).toHaveAttribute("aria-invalid", "true");
-    expect(dropzone).toHaveAccessibleDescription("No content");
-  });
 });

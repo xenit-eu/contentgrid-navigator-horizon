@@ -15,10 +15,7 @@ export interface FileRendererProps {
   readonly onBlur?: () => void;
 }
 
-/**
- * Lets the user pick a file to submit with the create form. The file rides along in the same
- * `multipart/form-data` POST as every other field.
- */
+/** File picker field; the value is the picked `File`, or `undefined` when none is picked. */
 export function FileRenderer({
   name,
   label,

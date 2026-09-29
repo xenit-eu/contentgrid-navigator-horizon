@@ -22,9 +22,9 @@ export interface FieldRendererProps {
   /**
    * Forwarded straight to the underlying `packages/ui` widget's native input for the field kinds
    * that have exactly one focusable element (`text`, `number`, `boolean`, `datetime`, single-value
-   * `enum`, `file`'s drop zone). Not supported for `enum` with `multiValue` (one checkbox per option) — that's a
-   * composite widget with no single element a lone `onFocus`/`onBlur` pair could unambiguously
-   * target.
+   * `enum`, `file`'s drop zone). Not supported for `enum` with `multiValue` (one checkbox per
+   * option) — that's a composite widget with no single element a lone `onFocus`/`onBlur` pair
+   * could unambiguously target.
    */
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
