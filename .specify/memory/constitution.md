@@ -1,6 +1,13 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.4.1
+- Version change: 1.0.0 → 1.5.0
+- Amendment (1.4.1 → 1.5.0, MINOR): Principle IV — Three-Track Delivery & Stability Gating —
+  amended to add a pre-GA exception: while the product is pre-GA, a new feature may start at
+  any stability tier (typically `stable`) and `apps/navigator` is not gated by stability tier.
+  The original rules (new feature starts at `experimental`; generic imports only `stable`)
+  resume at production go-live. Reflects the ESLint enforcement in
+  `apps/navigator/eslint.config.js` being reconfigured to allow all tiers pre-GA (see the
+  [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga)).
 - Correction (1.4.0 → 1.4.1, PATCH): Principle III cited `HalFormsCodecs` as an example of an
   existing `navigator-data` re-export. It isn't one — the Layer-1 codec is only ever imported
   internally as the default export `halFormCodecs` (four accessor files), never re-exported, and
@@ -17,6 +24,9 @@ Sync Impact Report
     `navigator-data` to explicitly re-export selected Layer-1 functions/classes/types
     (`createValues`, `HalFormsCodecs`, etc.) for callers that need them (MINOR bump,
     1.1.0 → 1.2.0); added a bullet gating `packages/dev-tools` behind a dev-only import check.
+  - IV. Three-Track Delivery & Stability Gating: added a pre-GA exception — a new feature may
+    start at any tier and `apps/navigator` is not gated by stability tier until production
+    go-live, when the original rules are reinstated (MINOR bump, 1.4.1 → 1.5.0).
   - V. Deny-by-Default ABAC: added the "gated both before and after the mutation" nuance for
     Update.
   - VI. Authentication, Token Handling & Webhook Verification: NEW principle (Bearer-token
@@ -159,9 +169,19 @@ data concern.
 - Promotion (an `x-stability` flip) MUST NOT move code between directories — no fork drift —
   and MUST go through code review, gated on every dependency of the feature being at or above
   the target stability tier.
+- **Pre-GA exception:** while the product is pre-GA, the two bullets above are suspended —
+  a new feature MAY start at any tier (typically `stable` directly), and `apps/navigator`
+  MAY import features at any stability tier. The `x-stability` field itself remains required
+  and the ESLint rule stays enabled (still catching an invalid/typo value); it is reconfigured
+  to allow all tiers. This exception ends at production go-live, at which point the original
+  rules above are reinstated (see the
+  [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga)).
 
 Rationale: this is the mechanism that lets one shared codebase serve a production track and
-an experimentation track without either contaminating the other.
+an experimentation track without either contaminating the other. Pre-GA, every feature is
+still being built toward its first release, so forcing a promotion ladder before there is a
+production track to protect is process for its own sake — the gate earns its keep once
+Navigator is live.
 
 ### V. Deny-by-Default ABAC — Template/Link Presence Is the Permission Signal
 
@@ -343,4 +363,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.4.1 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-09-15
+**Version**: 1.5.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-09-23
