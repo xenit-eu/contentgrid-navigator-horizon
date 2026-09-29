@@ -50,6 +50,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # packages/ui/r/ (the shadcn registry build output) is a gitignored build artifact, not
+      # committed. Build it here so a registry item pointing at a missing/renamed source file
+      # fails CI instead of only surfacing when someone runs registry:build locally. This job is
+      # a matrix over apps, so guard the step to run once.
+      - name: Build UI registry
+        if: matrix.app == 'navigator'
+        run: pnpm --filter @contentgrid/ui registry:build
+
       - name: Format check
         run: pnpm format:check
 
