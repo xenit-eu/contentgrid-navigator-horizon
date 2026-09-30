@@ -3,8 +3,7 @@
  *
  * useSetToOneRelation (to-one PUT):
  * - set success (PUT 204 → isSuccess; data is void)
- * - If-Match header sent verbatim from source.etag
- * - null etag → no If-Match header
+ * - no If-Match header (FIXME(ACC-3186): relation's own ETag not yet captured)
  * - ABAC denial (missing template) throws before any fetch (verified via error message)
  * - 412 ETag mismatch → isError, handler hit exactly once (no retry)
  * - 409 blind-relation-overwrite → isError
@@ -251,11 +250,11 @@ describe("useSetToOneRelation — set success", () => {
 // ===========================================================================
 
 describe("useSetToOneRelation — If-Match header", () => {
-  // FIXME(ACC-3186): relation mutations currently send no If-Match at all —
-  // relation.source.etag was found to be the wrong etag for this request (a relation
-  // is its own conditional-request resource, distinct from the source item; see
+  // FIXME(ACC-3186): to-one relation mutations currently send no If-Match —
+  // relation.source.etag is the wrong etag for this request (a to-one relation is its
+  // own conditional-request resource, distinct from the source item; see
   // use-relation-mutation-base.ts). Skipped until a manual-redirect fetch path can
-  // capture the relation's own etag and this assertion is restored.
+  // capture the relation's own etag; the assertion should then use that etag.
   it.skip("sends If-Match verbatim from source.etag", async () => {
     setupProfileHandlers();
     let capturedIfMatch: string | null = null;
