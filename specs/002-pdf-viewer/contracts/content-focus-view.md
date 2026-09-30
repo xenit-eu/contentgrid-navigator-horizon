@@ -53,15 +53,20 @@ export interface EntityItemContentFocusViewProps {
 
 ## Host (app) responsibilities
 
-- `apps/navigator-experimental/src/routes/_app/$entity/$itemId.tsx` mounts the view with
-  `entityName`, `itemId`, and navigation callbacks only — it passes no `toolbar` override, so the
-  view's own default breadcrumbs (Home → `profileEntity.pluralName` → item id) render as-is; the
-  route only needs `toolbar` when it wants different chrome.
+- Both `apps/navigator-experimental/src/routes/_app/$entity/$itemId.tsx` and (since the ACC-2902
+  content-focus promotion) `apps/navigator/src/routes/_app/$entity/$itemId.tsx` mount the view
+  with `entityName`, `itemId`, and navigation callbacks only — neither passes a `toolbar`
+  override, so the view's own default breadcrumbs (Home → `profileEntity.pluralName` → item id)
+  render as-is; a route only needs `toolbar` when it wants different chrome.
 - Provide CSP: `worker-src blob:`; `connect-src` includes the rendition origin; `script-src` unchanged
   (the wasm is fetched, not inlined).
 
 ## Promotion
 
-Flip `x-stability` to `candidate`/`stable` only after: stories green (visual + a11y), e2e green,
-rendition contract confirmed (ACC-2960), and the FR-001 branch moved into `entity-item`'s
-`EntityItemView` so that `apps/navigator` needs no route change.
+Done (ACC-2902, 2026-09-28): `apps/navigator`'s item route now mounts this view too. There was no
+`x-stability` flag to flip (`entity-item` was already `stable`; the variation had no flag of its
+own — see `packages/features/src/entity-item/CLAUDE.md`'s "Stability of the content-focus
+variation"), and no FR-001 branch moved into a different file — the reviewer had already folded
+`entity-item-content-focus` into `entity-item` as `variations/content-focus/` before this,
+superseding the "moved into `EntityItemView`" plan this section originally described. Promotion
+was: wire the second route the same way as the first, and drop the experimental-only convention.
