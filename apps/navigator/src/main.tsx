@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { NotFoundPage } from "@contentgrid/features/app-info-pages";
+import { hasDevConfigOverride } from "@contentgrid/navigator-data";
 import { mountNavigatorApp } from "../../../packages/features/src/shells/router-shell";
 import type { AppRouterContext } from "../../../packages/features/src/shells/router-shell";
 import "./index.css";
@@ -24,8 +25,17 @@ declare module "@tanstack/react-router" {
 // (paired with dev-token auth — see .env.development).
 async function enableMocking() {
   if (!import.meta.env.DEV || import.meta.env.VITE_USE_MOCK_API !== "true") return;
-  const { worker } = await import("./mocks/browser");
+  if (hasDevConfigOverride()) {
+    // eslint-disable-next-line no-console -- intentional: dev-only visibility into which backend is active.
+    console.info("[navigator] Real backend selected via /config — local mock backend disabled.");
+    return;
+  }
+  const { worker } = await import("./local-mock-backend/browser");
   await worker.start({ onUnhandledRequest: "bypass", quiet: true });
+  // eslint-disable-next-line no-console -- intentional, see the console.info above.
+  console.info(
+    "[navigator] Local mock backend active (VITE_USE_MOCK_API=true) — no real ContentGrid backend. Connect one at /config.",
+  );
 }
 
 const rootEl = document.getElementById("root");

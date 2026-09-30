@@ -5,6 +5,7 @@ export {
   getOidcConfig,
   storeDevConfig,
   clearDevConfig,
+  hasDevConfigOverride,
   signinWithNewConfig,
   DEV_CONFIG_STORAGE_KEY,
 } from "./auth-config";

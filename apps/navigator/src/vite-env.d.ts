@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** "true" in dev → MSW serves the stubbed HAL endpoint (see src/mocks/). */
+  /** "true" in dev → MSW serves the stubbed HAL endpoint (see src/local-mock-backend/). */
   readonly VITE_USE_MOCK_API?: string;
   /** Static bearer token enabling dev-token auth mode (bypasses OIDC). */
   readonly VITE_DEV_TOKEN?: string;
