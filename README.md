@@ -9,7 +9,7 @@ Monorepo for the modernised ContentGrid Navigator front-end. The navigator is a 
 ```
 contentgrid-navigator-horizon/
 ├── apps/
-│   ├── navigator/              Generic track — production build, stable features only
+│   ├── navigator/              Generic track — production build, stable features only (gate suspended pre-GA)
 │   ├── navigator-experimental/ Experimental track — internal preview, all stability tiers
 │   └── storybook/              Storybook host + Playwright visual-regression harness (ADR-009)
 │
@@ -47,7 +47,7 @@ contentgrid-navigator-horizon/
 
 ### What is a "feature"?
 
-`packages/features/` is where self-contained UI features live, each carrying an `x-stability` flag in its `package.json`. The three tiers are `experimental → candidate → stable`. The generic app may only import `stable` features (enforced by ESLint + CI bundle audit). The experimental app may import all tiers. Promotion — moving a feature to a higher tier — is done by flipping the flag and adding the feature to the generic allowlist in a PR; no code moves between apps. This package is currently scaffolded with an empty barrel export (`src/index.ts`); features will be added as the migration progresses.
+`packages/features/` is where self-contained UI features live, each carrying an `x-stability` flag in its `package.json`. The three tiers are `experimental → candidate → stable`. The generic app's import boundary is enforced by an ESLint rule (CI bundle audit still pending); pre-GA that rule is configured to allow all tiers, so the generic app may import any tier until go-live, when it reverts to `stable`-only. The experimental app may always import all tiers. Promotion — moving a feature to a higher tier — is done by flipping the flag in a PR; no code moves between apps. See [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md) for the pre-GA amendment.
 
 ### What is in `packages/navigator-data`?
 
@@ -59,14 +59,14 @@ A composition layer (Layer 2) that wires together the seven Xenit `@contentgrid/
 
 Both apps have identical dependencies, tooling (Vite + TanStack Router file-based routing, React 19, TypeScript), and build scripts. The difference is intentional and structural, not accidental:
 
-|                                 | `apps/navigator`                                                            | `apps/navigator-experimental`                                        |
-| ------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Dev port                        | 5173                                                                        | 5174                                                                 |
-| Deployment target               | Public production                                                           | Internal-only, auth-gated preview environment — never a public URL   |
-| Feature stability tiers allowed | `stable` only (lint + bundle audit enforced)                                | `stable` + `candidate` + `experimental`                              |
-| Purpose                         | Robust default UI for any ContentGrid content model; drives the OSS release | Customer demos, in-flight ideas, features not yet promoted to stable |
+|                                 | `apps/navigator`                                                                                 | `apps/navigator-experimental`                                        |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Dev port                        | 5173                                                                                             | 5174                                                                 |
+| Deployment target               | Public production                                                                                | Internal-only, auth-gated preview environment — never a public URL   |
+| Feature stability tiers allowed | `stable` + `candidate` + `experimental` (pre-GA; lint-enforced `stable` only resumes at go-live) | `stable` + `candidate` + `experimental`                              |
+| Purpose                         | Robust default UI for any ContentGrid content model; drives the OSS release                      | Customer demos, in-flight ideas, features not yet promoted to stable |
 
-The lint rule and CI bundle audit that enforce the stability boundary are planned as part of phase HZN-1.9 and are not yet wired. Until they are, the split is structural (separate Vite entry points on separate ports) but not yet machine-enforced at the import level.
+The ESLint rule that enforces the stability boundary is wired (`apps/navigator/eslint.config.js`); pre-GA it's configured to allow all tiers, so it currently only catches an invalid/typo `x-stability` value. The CI bundle audit (HZN-1.9) is still not wired. The `stable`-only boundary is restored at production go-live — see [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md).
 
 Both apps use `TanStackRouterVite` for file-based route generation (`src/routes/` → `src/routeTree.gen.ts`). The root route and index route are currently placeholder stubs.
 
@@ -144,7 +144,7 @@ pnpm dev:navigator        # dev server on port 5173
 pnpm --filter navigator build  # production build (tsc -b && vite build)
 ```
 
-This is the production track. When feature stability enforcement is wired (HZN-1.9), importing a non-`stable` feature here will fail at lint time and the CI bundle audit will catch any that slip through. Until then, the separation is by convention.
+This is the production track. The stability ESLint rule is wired but suspended pre-GA (configured to allow all tiers); at go-live it reverts to `stable`-only and importing a non-`stable` feature will fail at lint time. The CI bundle audit (HZN-1.9) that will backstop this at build time is not yet wired.
 
 ### Experimental build (`apps/navigator-experimental`)
 
@@ -159,7 +159,7 @@ This is the internal preview track. It runs on a separate port and is deployed t
 
 ## Open questions
 
-- **Stability enforcement not yet active.** The ESLint rule and CI bundle audit that enforce the `stable`-only boundary in `apps/navigator` are planned (HZN-1.9) but not yet implemented. The apps are structurally separate but the import boundary is not machine-enforced today.
-- **`packages/features/` is empty.** No features have been added yet. The package exists as a scaffold; its shape (per-feature subdirectory, `x-stability` in `package.json`) is described in ADR-006 but not yet built out.
+- **Stability gate suspended pre-GA.** The ESLint rule that enforces the `stable`-only boundary in `apps/navigator` is wired but currently configured to allow all tiers while the product is pre-GA (see [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md)); the CI bundle audit (HZN-1.9) that would backstop it is still not implemented. The `stable`-only boundary is restored at production go-live.
+- **`packages/features/` is populated.** Feature modules already live under `packages/features/src/` (e.g. `entity-item`, `search`, `dashboard`), each carrying an `x-stability` flag per ADR-006.
 - **No unit/integration tests yet.** Lint, formatting, and visual-regression (`packages/ui`) checks run in CI, but no unit or integration `test` scripts are implemented — `pnpm test` and `pnpm test:e2e` are `--if-present` pass-throughs that currently match nothing. These land as the migration phases proceed.
 - **Custom track not scaffolded.** `apps/<customer>/` directories do not exist yet. Custom-track scaffolding is deferred to Phase 8 (ADR-010, ADR-013).

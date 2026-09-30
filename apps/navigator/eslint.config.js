@@ -6,7 +6,12 @@ export default [
   {
     plugins: { "@contentgrid": { rules: { "no-unstable-features": noUnstableFeatures } } },
     rules: {
-      "@contentgrid/no-unstable-features": ["error", { allowedStability: ["stable"] }],
+      // Pre-GA the stability gate is suspended — all tiers are importable here.
+      // Restore to ["stable"] at go-live (see ADR-006 amendment).
+      "@contentgrid/no-unstable-features": [
+        "error",
+        { allowedStability: ["experimental", "candidate", "stable"] },
+      ],
     },
   },
   {
