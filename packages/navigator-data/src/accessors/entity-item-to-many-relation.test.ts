@@ -197,7 +197,7 @@ describe("EntityItemToManyRelation — addRelationRequest", () => {
     });
     const rel = makeToManyRelation(item);
     const req = rel.addRelationRequest([LINE_ITEM_URL_1]);
-    // The builder must not attach If-Match; the mutation base does that from source.etag
+    // The builder must not attach If-Match (to-many relations have no ETag)
     expect(req.headers.get("If-Match")).toBeNull();
   });
 
@@ -391,7 +391,7 @@ describe("EntityItemToManyRelation — constructor properties", () => {
     expect(rel.source).toBe(item);
   });
 
-  it("source.etag is accessible (used by mutation hooks for If-Match)", () => {
+  it("source.etag is accessible", () => {
     const item = makeEntityItemWithRelationTemplates({}, '"v2"');
     const rel = makeToManyRelation(item);
     expect(rel.source.etag).toBe('"v2"');
