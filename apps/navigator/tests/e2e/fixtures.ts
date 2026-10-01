@@ -47,7 +47,7 @@ export const test = baseTest.extend<{
 
   goToClassifyCreateInstancePage: ({ page }, provide) =>
     provide(async () => {
-      await expandSidebarAndClick(page, page.getByRole("link", { name: "Create", exact: true }));
+      await expandSidebarAndClick(page, page.getByRole("button", { name: "Create Item" }));
     }),
 
   goToOverviewPage: ({ page }, provide) =>
