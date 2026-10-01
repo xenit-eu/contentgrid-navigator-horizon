@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { GearIcon, HouseIcon, PlusIcon } from "@phosphor-icons/react";
+import { FilePlusIcon, GearIcon, HouseIcon } from "@phosphor-icons/react";
 import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
@@ -65,7 +65,7 @@ export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
           <SideBarTopControls />
           <SidebarContent>
             <SidebarGroup className="pb-0 mb-0">
-              <SidebarCreateItemLink />
+              <SidebarCreateItemButton />
             </SidebarGroup>
             <SidebarEntityNav
               profiles={loadedProfiles}
@@ -136,18 +136,17 @@ function SideBarTopControls() {
   );
 }
 
-// Looks like a link while expanded; once collapsed to icon-only there's no
-// label left to read as a link, so it switches to a normal button icon.
-function SidebarCreateItemLink() {
-  const { open } = useSidebar();
+// The sidebar's primary action: a soft primary tint with a full border, lighter than the
+// header but distinct from the active entity row (sky tint, left border only).
+function SidebarCreateItemButton() {
   const navigate = useNavigate();
 
   return (
     <SidebarLinkButton
-      icon={<PlusIcon aria-hidden />}
+      icon={<FilePlusIcon aria-hidden className="size-5!" />}
       label="Create Item"
-      variant={open ? "link" : "default"}
-      onClick={() => navigate({ to: "/" as string })}
+      className="h-9 cursor-pointer rounded-md border border-primary/25 bg-primary/10 font-medium text-primary transition-colors hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary group-data-[collapsible=icon]:justify-center"
+      onClick={() => navigate({ to: "/~create" as string })}
     />
   );
 }
