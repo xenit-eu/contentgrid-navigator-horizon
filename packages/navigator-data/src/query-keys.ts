@@ -85,6 +85,8 @@ export const queryKeys = {
   },
 
   toOneRelation: {
+    /** Root key — invalidates EVERY cached to-one relation query (all relation names). */
+    all: () => [TO_ONE_RELATION_KEY] as const,
     /** Prefix key — invalidates ALL cached to-one relation queries for a given relation name. */
     forRelationName: (relationName: string) => [TO_ONE_RELATION_KEY, relationName] as const,
     /** Exact key for a specific to-one relation by relation name and relation URL. */
@@ -93,11 +95,20 @@ export const queryKeys = {
   },
 
   toManyRelation: {
+    /** Root key — invalidates EVERY cached to-many relation query (paged and infinite). */
+    all: () => [TO_MANY_RELATION_KEY] as const,
     /** Prefix key — invalidates ALL cached to-many relation queries for a given relation name. */
     forRelationName: (relationName: string) => [TO_MANY_RELATION_KEY, relationName] as const,
     /** Exact key for a specific to-many relation by relation name and relation URL. */
     byUrl: (relationName: string, relationUrl: string) =>
       [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
+    /**
+     * Exact key for an infinite (load-more) query over a to-many relation starting at its
+     * relation URL. Prefixed by `forRelationName`, so the relation mutations' existing
+     * invalidation also refreshes it.
+     */
+    infiniteByUrl: (relationName: string, relationUrl: string) =>
+      [TO_MANY_RELATION_KEY, relationName, relationUrl, "infinite"] as const,
   },
 
   typeaheadSuggestions: {

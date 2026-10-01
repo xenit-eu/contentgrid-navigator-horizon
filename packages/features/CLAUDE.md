@@ -112,6 +112,30 @@ until the lint enforcement above wires it.
 
 ---
 
+## `entity-graph` feature (spec 007 — knowledge graph)
+
+`src/entity-graph/` (`x-stability: "stable"`, pre-GA), exported as `@contentgrid/features/entity-graph`.
+`EntityGraphView({ entityName, itemId, trail, onTrailChange, onOpenItem, onOpenCollection, … })`
+— primitive props only; the app owns the URL (`graphSearchValidator` / `searchToTrail` /
+`trailToSearch` for the `trail` search param). Layering:
+
+- `util/` (pure, no JSX/hooks/ui): ids, the navigation reducer (`graph-state.ts`), the model
+  builder (`build-graph-model.ts`: last 2 focus items expanded, ≤10 targets per to-many relation +
+  overflow node, ≤50 nodes), the ui-prop mapper, URL validation.
+- `hooks/use-graph-items.ts`: trail + pinned items by identity (`profileEntity.itemUrl(id)`).
+- `components/`: details panel, trail breadcrumb, overflow list, remove-link / delete dialogs,
+  relations outline (keyboard/AT list view).
+- Rendering is the `KnowledgeGraph` pattern from `@contentgrid/ui`; this feature never imports
+  `@xyflow/react` or Radix.
+
+Shared pieces added alongside: `util/use-profile-entity-gate.tsx` (constitution VIII shared gate),
+`preferences/resolve-entity-display-preferences.ts` + `useEntityDisplayPreferencesResolver()`
+(display preferences for many entity types at once), and
+`entity-item/components/entity-item-details-body.tsx` (attributes + relations body shared by the
+item views and the graph panel).
+
+---
+
 ## peerDep policy
 
 Features consume `packages/ui` and `packages/navigator-data` via the workspace

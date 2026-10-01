@@ -393,3 +393,16 @@ describe("ProfileEntity — createTemplate", () => {
     );
   });
 });
+
+describe("ProfileEntity — getDefaultPreferences without an id attribute", () => {
+  it("falls back to the literal id field instead of throwing", () => {
+    const profile = new ProfileEntity(
+      { href: "https://api.example.com/profile/invoices", name: "invoice" } as unknown as Link,
+      new HalObject({
+        name: "invoice",
+        _links: { self: { href: "https://api.example.com/profile/invoices" } },
+      } as unknown as ProfileEntityShape),
+    );
+    expect(profile.getDefaultPreferences().nameAttribute).toBe("id");
+  });
+});

@@ -3,18 +3,14 @@ import {
   type ProfileEntity,
   toProblemDisplayModel,
   useEntityItem,
-  useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { Separator } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
-import { EntityItemAttributes } from "./attributes/entity-item-attributes";
+import { EntityItemDetailsBody } from "./components/entity-item-details-body";
 import type {
   MutationErrorDisplayProps,
   RelationItemClickHandler,
 } from "./relations/relation-shared";
-import { RelationToManySection } from "./relations/relation-to-many-section";
-import { RelationToOneSection } from "./relations/relation-to-one-section";
 import {
   EntityItemReference,
   EntityItemReferenceLoading,
@@ -84,8 +80,6 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
   const item = useEntityItem(
     "url" in props ? { url: props.url } : { profileEntity: props.profile, entityId: props.itemId },
   );
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-
   const content = (
     <>
       <div className="p-4">
@@ -101,38 +95,14 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
       {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
 
       {item.isSuccess && (
-        <div className="space-y-6 p-4 pt-0">
-          <EntityItemAttributes item={item.data} />
-
-          {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {item.data.toOneRelations.map((rel) => (
-                  <RelationToOneSection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {item.data.toManyRelations.map((rel) => (
-                  <RelationToManySection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+        <div className="p-4 pt-0">
+          <EntityItemDetailsBody
+            entityItem={item.data}
+            onRelationItemClick={onRelationItemClick}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
+          />
         </div>
       )}
     </>

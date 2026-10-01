@@ -10,6 +10,9 @@
 @import "@fontsource/open-sans/800.css";
 
 @import "tw-animate-css";
+/* React Flow structural styles (knowledge-graph pattern). base.css only — all theming
+ * is done below via --xy-* variables mapped onto the semantic tokens. */
+@import "@xyflow/react/dist/base.css" layer(base);
 @import "../../tokens/index.css";
 @source "../";
 
@@ -237,4 +240,33 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * React Flow (knowledge-graph pattern): map --xy-* variables onto the semantic
+ * tokens. Because the semantic tokens are already redefined under `.dark`, dark
+ * mode follows automatically; `.react-flow.dark` is listed so React Flow's own
+ * colorMode defaults never win over the tokens.
+ * ------------------------------------------------------------------------- */
+.react-flow,
+.react-flow.dark {
+  --xy-background-color: var(--background);
+  --xy-node-color-default: var(--foreground);
+  --xy-node-background-color-default: var(--card);
+  --xy-node-border-default: 1px solid var(--border);
+  --xy-node-boxshadow-selected-default: 0 0 0 2px var(--ring);
+  --xy-edge-stroke-default: var(--muted-foreground);
+  --xy-edge-stroke-selected-default: var(--foreground);
+  --xy-edge-label-background-color-default: var(--background);
+  --xy-edge-label-color-default: var(--foreground);
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-attribution-background-color-default: transparent;
+}
+
+/* Keep React Flow's attribution, but at an accessible contrast (axe color-contrast). */
+.react-flow__attribution a {
+  color: var(--muted-foreground);
 }

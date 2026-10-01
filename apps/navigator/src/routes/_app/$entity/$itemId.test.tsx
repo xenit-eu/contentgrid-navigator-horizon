@@ -99,6 +99,7 @@ vi.mock("@contentgrid/features/entity-item", async (importOriginal) => {
         newRelation?: string;
       }) => void;
       onRequiredRelationClick?: (affectedRelation: string) => void;
+      onOpenGraph?: () => void;
     }) => (
       <div>
         <div data-testid="entity-name">{props.entityName}</div>
@@ -133,6 +134,7 @@ vi.mock("@contentgrid/features/entity-item", async (importOriginal) => {
         <button onClick={() => props.onRequiredRelationClick?.("owner")}>
           trigger-required-relation
         </button>
+        {props.onOpenGraph ? <button onClick={props.onOpenGraph}>open-graph</button> : null}
       </div>
     ),
   };
@@ -234,5 +236,15 @@ describe("EntityItemDetailRoute — content-focus wiring", () => {
     await user.click(screen.getByText("trigger-required-relation"));
 
     expect(await screen.findByText("Required relation")).toBeInTheDocument();
+  });
+
+  it("opens the knowledge graph for this item via onOpenGraph (spec 007, FR-025)", async () => {
+    const user = userEvent.setup();
+    const { router } = renderItemRoute("/invoice/item-1");
+    await screen.findByTestId("entity-name");
+
+    await user.click(screen.getByText("open-graph"));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/invoice/item-1/~graph"));
   });
 });

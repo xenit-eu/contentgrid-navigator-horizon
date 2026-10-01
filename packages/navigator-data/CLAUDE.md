@@ -353,6 +353,14 @@ Each class carries:
 
 **Relation read hooks:**
 
+- `useEntityItemRelationTargets(entityItem, { enabled? })` → `{ relations: RelationTargets[], isPending }`
+  — every relation the item exposes, loaded in parallel (`useQueries`) with the same keys as the
+  two single-relation hooks below. to-one entries carry `target` (`null` = empty slot), to-many
+  entries the first `collection` page (server default size, never sliced). Used by the
+  knowledge graph (spec 007).
+- `useEntityItemToManyRelationInfinite(relation)` → `UseInfiniteQueryResult` — all targets of a
+  to-many relation, following `nextHref` only; keyed under `toManyRelation.infiniteByUrl`.
+
 - `useEntityItemToOneRelation(relation, options?)` → `UseQueryResult<EntityItem | null, Error>`.
   Returns `null` when the to-one slot is empty (server returns 404). Disabled until the target
   profile resolves from `useProfileEntities()`.
@@ -421,11 +429,17 @@ builders (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) 
 **Relation query-key namespaces:**
 
 ```ts
-queryKeys.toOneRelation.byUrl(targetProfile, url); // exact key for a to-one relation read
-queryKeys.toOneRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-one reads for that entity type
-queryKeys.toManyRelation.byUrl(targetProfile, url); // exact key for a to-many relation read
-queryKeys.toManyRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-many reads for that entity type
+queryKeys.toOneRelation.all(); // root — every to-one relation read
+queryKeys.toOneRelation.forRelationName(relName); // prefix — all to-one reads of that relation name
+queryKeys.toOneRelation.byUrl(relName, relationUrl); // exact key for one to-one relation read
+queryKeys.toManyRelation.all(); // root — every to-many relation read (paged + infinite)
+queryKeys.toManyRelation.forRelationName(relName); // prefix — all pages/infinite lists of that relation name
+queryKeys.toManyRelation.byUrl(relName, relationUrl); // exact key for one to-many page
+queryKeys.toManyRelation.infiniteByUrl(relName, relationUrl); // "load more" list (useEntityItemToManyRelationInfinite)
 ```
+
+Keys are by **relation name + URL**, not by target profile. `useDeleteEntityItem` invalidates both
+`*.all()` roots (not awaited) because any relation may have listed the deleted item.
 
 Root strings are `"ToOneRelation"` / `"ToManyRelation"` — distinct from `"EntityItem"`, so there is
 no prefix collision with `entityItem.forEntityName`.

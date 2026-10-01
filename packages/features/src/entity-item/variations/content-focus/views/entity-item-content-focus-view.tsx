@@ -1,10 +1,10 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { GraphIcon } from "@phosphor-icons/react";
 import {
   type EntityItem,
   type ProfileEntity,
   toProblemDisplayModel,
   useEntityItem,
-  useLoadedProfileEntities,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
 import {
@@ -13,14 +13,12 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Separator,
+  Button,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
+import { EntityItemDetailsBody } from "../../../components/entity-item-details-body";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
-import { RelationToManySection } from "../../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
@@ -65,16 +63,22 @@ export interface EntityItemContentFocusViewProps extends Pick<
    * Omit this to render that crumb as plain, non-interactive text instead of a dead `<button>`.
    */
   readonly renderCollectionLink?: (entityName: string, label: ReactNode) => ReactNode;
+  /**
+   * When set, an "Open in graph" action is added to the toolbar (spec 007, FR-025); the host
+   * navigates to its knowledge-graph route for this item. Omit to hide the action.
+   */
+  readonly onOpenGraph?: () => void;
 }
 
 function resolveToolbar(
   toolbar: ViewToolbarConfiguration,
   defaultBreadcrumbs: ReactNode,
+  defaultActions: ReactNode,
 ): ViewToolbarOptions | false {
   if (toolbar === false) return false;
   return {
     breadcrumbs: toolbar?.breadcrumbs ?? defaultBreadcrumbs,
-    actions: toolbar?.actions,
+    actions: toolbar?.actions ?? defaultActions,
   };
 }
 
@@ -111,10 +115,9 @@ function EntityItemContentFocusViewBody({
   onRequiredRelationClick,
   renderHomeLink,
   renderCollectionLink,
+  onOpenGraph,
 }: Readonly<EntityItemContentFocusViewProps & { profileEntity: ProfileEntity }>) {
   const item = useEntityItem({ profileEntity, entityId: itemId });
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
   // /document/1 -> /invoice/1 keeps the same itemId with a different profileEntity) — so an
@@ -180,7 +183,13 @@ function EntityItemContentFocusViewBody({
       </BreadcrumbList>
     </Breadcrumb>
   );
-  const resolvedToolbar = resolveToolbar(toolbar, defaultBreadcrumbs);
+  const defaultActions = onOpenGraph ? (
+    <Button type="button" variant="outline" size="sm" onClick={onOpenGraph}>
+      <GraphIcon />
+      Open in graph
+    </Button>
+  ) : undefined;
+  const resolvedToolbar = resolveToolbar(toolbar, defaultBreadcrumbs, defaultActions);
 
   const content = (
     <>
@@ -192,7 +201,6 @@ function EntityItemContentFocusViewBody({
             entityItem={item.data}
             attributeName={selectedAttribute}
             onSelectAttribute={setUserSelectedAttribute}
-            loadedProfiles={loadedProfiles}
             onRelationItemClick={handleRelationItemClick}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
@@ -238,7 +246,6 @@ function ContentFocusEntityItemBody({
   entityItem,
   attributeName,
   onSelectAttribute,
-  loadedProfiles,
   onRelationItemClick,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
@@ -249,7 +256,6 @@ function ContentFocusEntityItemBody({
    * `hasContentAttributes` being true — defensive; should not occur in practice. */
   attributeName: string | undefined;
   onSelectAttribute: (attributeName: string) => void;
-  loadedProfiles: readonly ProfileEntity[];
   /** Adapter already bound to the object-shaped `onRelationItemClick` prop on the outer view —
    * `RelationToOneSection`/`RelationToManySection` (from the stable `entity-item` feature) still
    * expect the two-positional-argument `RelationItemClickHandler` shape. */
@@ -273,38 +279,13 @@ function ContentFocusEntityItemBody({
       // for the collapse/expand button.
       sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
       sidePanel={
-        <div className="space-y-6">
-          <EntityItemAttributes item={entityItem} />
-          {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {entityItem.toOneRelations.map((relation) => (
-                  <RelationToOneSection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {entityItem.toManyRelations.map((relation) => (
-                  <RelationToManySection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <EntityItemDetailsBody
+          entityItem={entityItem}
+          onRelationItemClick={onRelationItemClick}
+          onMissingRelationTargetClick={onMissingRelationTargetClick}
+          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onRequiredRelationClick={onRequiredRelationClick}
+        />
       }
     >
       <ContentPreviewPanel
