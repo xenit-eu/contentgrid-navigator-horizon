@@ -5,8 +5,7 @@ export type FieldValidator = (value: FieldValue) => string | undefined;
 
 /**
  * A `boolean` attribute can genuinely be unset — `false` is a distinct, deliberate value, not
- * the absence of one — so emptiness is checked structurally, not by falsy-ness. Mirrors
- * `entity-item-create/state/use-entity-item-create-form-state.ts`'s `isEmpty`.
+ * the absence of one — so emptiness is checked structurally, not by falsy-ness.
  */
 function isEmpty(value: FieldValue): boolean {
   if (value === undefined || value === null) return true;

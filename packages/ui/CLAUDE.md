@@ -36,8 +36,8 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
   - The HAL-Forms field renderers (`src/patterns/form-renderers/`) take plain scalar props
     (`name`, `label`, `required`, `readOnly`, `description?`, `value`, `onChange`, `error?`,
     plus type-specific constraints like `includesTime`/`options`) — NOT a descriptor object.
-    The `kind`-dispatching switch and the `FieldDescriptor` type itself live in
-    `packages/features/src/entity-item-create/` (ADR-004), not here; these components have no
+    The `kind`-dispatching switch and the `HalFormsField` type itself live in
+    `packages/features/src/hal-forms/` (ADR-004), not here; these components have no
     dependency on that type or on any HAL-Forms shape, and do NOT import `@contentgrid/hal` or
     `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
@@ -106,8 +106,8 @@ No CLI involved.
   `@contentgrid/typed-fetch`, `@contentgrid/fetch-hooks`,
   `@contentgrid/fetch-hook-authentication`, `@contentgrid/problem-details`,
   or `@contentgrid/uri-template` — those belong in `packages/navigator-data`.
-  The form-renderer patterns take plain scalar props (see above), not a `FieldDescriptor` or any
-  other HAL-Forms-shaped type — that type lives in `packages/features/src/entity-item-create/`.
+  The form-renderer patterns take plain scalar props (see above), not a `HalFormsField` or any
+  other HAL-Forms-shaped type — that type lives in `packages/features/src/hal-forms/`.
 - Do NOT import from `packages/features/*` — features depend on `packages/ui`,
   not the other way around.
 - Do NOT import Radix UI (`@radix-ui/*`) outside `packages/ui`. Inside
@@ -118,10 +118,10 @@ No CLI involved.
 ## HAL-FORMS metadata in pattern components
 
 Per ADR-004, `packages/ui`'s form-renderer patterns
-(`src/patterns/form-renderers/`) are **descriptor-agnostic**: they never see a `FieldDescriptor`,
+(`src/patterns/form-renderers/`) are **descriptor-agnostic**: they never see a `HalFormsField`,
 a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch that reads a
-`FieldDescriptor` and unpacks it into plain props lives in
-`packages/features/src/entity-item-create/render/field-renderer.tsx`, one layer up.
+`HalFormsField` and unpacks it into plain props lives in
+`packages/features/src/hal-forms/render/hal-forms-field-renderer.tsx`, one layer up.
 
 - Each renderer takes plain scalar props only: `name`, `label`, `required`, `readOnly`,
   `description?`, `value`, `onChange`, `error?`, plus type-specific constraints

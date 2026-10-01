@@ -29,10 +29,8 @@ export interface HalFormsContainerProps {
 
 /**
  * Renders the field list, section by section — walks `layout.sections[].rows` ->
- * `HalFormsFieldRenderer` for each field name in each row. Generalizes `entity-item-create`'s
- * `FormContainer` (ADR-004) to this feature's row shape: a two-field row renders inside a 2-col
- * grid; a one-field row renders full width, same as every row did before rows existed for either
- * form type.
+ * `HalFormsFieldRenderer` for each field name in each row (ADR-004): a two-field row renders
+ * inside a 2-col grid; a one-field row renders full width.
  *
  * A missing lookup (a row naming a field absent from `fields`) is silently skipped rather than
  * thrown — `resolveHalFormsFields` reconciles its rows against `fields` before this ever runs,
@@ -247,10 +245,12 @@ function FieldRowView({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & F
 }
 
 /**
- * Per-field wrapper giving `HalFormsFieldRenderer` a referentially stable curried
- * `onChange`/`onFocus`/`onBlur` — see `entity-item-create/render/form-container.tsx`'s
- * `FormField` doc comment for why this matters (avoids re-rendering every field's widget on one
- * field's keystroke).
+ * Per-field wrapper giving the memoized `HalFormsFieldRenderer` a referentially stable curried
+ * `onChange`/`onFocus`/`onBlur`. The container's own callbacks are keyed by name, not by field,
+ * so every field needs its own curried closure — a fresh closure per render would give every
+ * field a "changed" prop regardless of `memo`, re-rendering ALL fields on one field's keystroke.
+ * `useCallback` keeps each one stable while the container's callbacks (`useHalFormsFieldState`'s
+ * `setValue`/`touchField` are `useCallback`-stable for the same reason) and `name` don't change.
  */
 function HalFormsFormField({
   field,

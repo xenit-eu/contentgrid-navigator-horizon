@@ -17,11 +17,10 @@ export interface CreateEntityItemFormProps {
   readonly values: FieldValueMap;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly onFieldChange: (name: string, value: FieldValue) => void;
-  /** See `render/form-container.tsx`'s `FormContainerProps.onFieldFocus` doc comment — kept as
-   * passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
+  /** Forwarded to `HalFormsContainer`'s `onFieldFocus` — kept as passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
    * field kicking off remote autocomplete on focus), with no current caller. */
   readonly onFieldFocus?: (name: string) => void;
-  /** Marks a field touched on blur — see `useEntityItemCreateFormState`'s `touchField` doc comment. Shows a
+  /** Marks a field touched on blur — see `useHalFormsFieldState`'s `touchField`. Shows a
    * required-and-empty field's error as soon as the user leaves it, without waiting for submit. */
   readonly onFieldBlur?: (name: string) => void;
   /** Opens a linked item, as legacy's relation "details" action. */

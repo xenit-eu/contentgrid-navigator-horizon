@@ -53,8 +53,8 @@ export interface UseHalFormsFieldState {
   /**
    * Applies several values in one commit — equivalent to calling `setValue` once per entry, but
    * as a single state update, and clearing every affected field's external error together.
-   * Mirrors `entity-item-create`'s `useEntityItemCreateFormState.setValues` (FR-023 parity); has
-   * no active caller in this codebase yet, same as that hook's own version.
+   * Kept for FR-023 parity with the create form's former state hook; has no active caller in this
+   * codebase yet.
    */
   setValues(partial: FieldValueMap): void;
   readonly fieldState: Readonly<Record<string, FieldState>>;
@@ -124,8 +124,7 @@ function valuesEqual(a: FieldValue, b: FieldValue): boolean {
 }
 
 /**
- * Generalizes `entity-item-create`'s `useEntityItemCreateFormState` (ADR-004) to
- * `HalFormsField[]`, per FR-008–FR-010: a field's error can come from a live client-side check
+ * Form state for `HalFormsField[]` (ADR-004), per FR-008–FR-010: a field's error can come from a live client-side check
  * (required + an optional custom validator) or from server-sourced `externalErrors`; an
  * internal (client) error always wins over an external (server) one for the same field, and
  * clears live as soon as the value passes the check that produced it — no explicit

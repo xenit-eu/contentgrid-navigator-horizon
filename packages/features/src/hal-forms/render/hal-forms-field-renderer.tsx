@@ -18,7 +18,6 @@ import {
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
 import type { HalFormsField } from "../model/hal-forms-field";
 import type { FieldState } from "../state/field-error";
-import { RelationField } from "./relation-field";
 import {
   asBoolean,
   asDateOrString,
@@ -27,6 +26,7 @@ import {
   asString,
   asStringArray,
 } from "./narrow-field-value";
+import { RelationField } from "./relation-field";
 
 export interface HalFormsFieldRendererProps {
   readonly field: HalFormsField;
@@ -42,10 +42,11 @@ export interface HalFormsFieldRendererProps {
 }
 
 /**
- * Dispatches a `HalFormsField` to its renderer — generalizes `entity-item-create`'s
- * `FieldRenderer` (ADR-004) to this feature's field union. `file` submits the picked `File` as a
- * plain form value (the create-form codec encodes it into the `multipart/form-data` body);
- * `autocomplete` renders as an inert placeholder until `fieldState.autocomplete` is supplied.
+ * Dispatches a `HalFormsField` to its renderer (ADR-004's `FieldRenderer` switch). `file`
+ * submits the picked `File` as a plain form value (the create-form codec encodes it into the
+ * `multipart/form-data` body); `relation` delegates to `RelationField`, which resolves its target
+ * profile and linked items; `autocomplete` renders as an inert placeholder until
+ * `fieldState.autocomplete` is supplied.
  *
  * Deliberately fetches nothing itself — `autocomplete`'s suggestions come from
  * `fieldState.autocomplete`, supplied by whichever caller has the profile/template context to
@@ -56,9 +57,9 @@ export interface HalFormsFieldRendererProps {
  * does today) and passes the live results in, rather than this generic renderer reaching out to
  * fetch them itself.
  *
- * Wrapped in `memo` for the same reason as the original: `HalFormsContainer` gives every field a
- * referentially stable `onChange`/`onFocus`/`onBlur`, so one field's keystroke doesn't re-render
- * every sibling's widget.
+ * Wrapped in `memo`: `HalFormsContainer` gives every field a referentially stable
+ * `onChange`/`onFocus`/`onBlur`, so one field's keystroke doesn't re-render every sibling's
+ * widget.
  */
 export const HalFormsFieldRenderer = memo(function HalFormsFieldRenderer({
   field,

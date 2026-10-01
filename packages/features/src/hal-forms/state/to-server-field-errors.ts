@@ -6,9 +6,8 @@ import type { FieldValidationError } from "./field-error";
  * `getValidationFieldErrors(error)`) by `field`, converting each into a `"server"`
  * `FieldValidationError` for `useHalFormsFieldState`'s `externalErrors` option. Entity-level
  * errors (no `field`) are dropped — those never render inline; the caller surfaces them via its
- * own non-field alert path instead (mirrors `entity-item-create/state/to-field-errors.ts`'s
- * `toFieldErrors`, generalized so any `hal-forms` consumer — not just the create-form path — can
- * reuse it).
+ * own non-field alert path instead. Lives in `hal-forms` rather than a single form so any
+ * consumer — not just the create-form path — can reuse it.
  */
 export function toServerFieldErrors(
   errors: readonly ValidationFieldError[],
