@@ -220,8 +220,8 @@ describe("generateSearchFormLayout", () => {
     );
     const layout = generateSearchFormLayout(makeSearchTemplateFrom(json), [
       textField("assignee.name~prefix", "Assignee name"),
-      textField("assignee.age~gte", "Assignee : Age from"),
-      textField("assignee.age~lte", "Assignee : Age until"),
+      textField("assignee.age~gte", "Assignee: Age: Min"),
+      textField("assignee.age~lte", "Assignee: Age: Max"),
     ]);
     expect(layout.sections).toHaveLength(1);
     expect(layout.sections[0]).toMatchObject({ title: "Assignee", isCollapsible: true });

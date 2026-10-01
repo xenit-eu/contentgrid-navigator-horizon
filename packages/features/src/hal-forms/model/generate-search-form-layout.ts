@@ -3,7 +3,6 @@ import type {
   SearchHalFormTemplate,
   SearchHalFormTemplateProperty,
 } from "@contentgrid/navigator-data";
-import { formatFieldName } from "../../format-field-name";
 import type { HalFormsField } from "./hal-forms-field";
 import type { FieldRow, FieldSection, LayoutSchema } from "./layout-schema";
 
@@ -15,7 +14,7 @@ import type { FieldRow, FieldSection, LayoutSchema } from "./layout-schema";
  * gets its rows kept together (`rangeAttributeRows`): the attribute's other variants (e.g. its
  * exact-match property) first, one per row, then the range variants — paired onto one row when
  * both bounds survived, else one per row. The range fields carry the attribute in their own
- * label ("Age from"/"Age until", see `resolve-hal-forms-fields.ts`), and the attribute's
+ * label (their `prompt`, e.g. "Age: Min"/"Age: Max", see `resolve-hal-forms-fields.ts`), and the attribute's
  * description sits once on the last range row rather than under each field. These rows sit where
  * the attribute's first field appears in `fields`; every other field gets its own full-width
  * row, in `fields` order.
@@ -105,21 +104,6 @@ function rangeAttributeRows(
     rangeRows[rangeRows.length - 1] = { ...rangeRows[rangeRows.length - 1], description };
   }
   return [...otherFields.map((field) => ({ fieldNames: [field.name] })), ...rangeRows];
-}
-
-/**
- * A range attribute's name, as its range fields' label prefix (`resolve-hal-forms-fields.ts`).
- * Not `property.prompt` — that names a single variant (e.g. "Age : From"). A relation-traversal
- * property is "{Relation} : {Attribute}" (e.g. "Friends : Age"); it never resolves a
- * `profileAttribute` (see `SearchHalFormTemplateProperty`), so the attribute part falls back to
- * the last `groupKey` segment.
- */
-export function rangeAttributeTitle(sp: SearchHalFormTemplateProperty): string {
-  const { profileAttribute, groupKey } = sp;
-  const attributeTitle =
-    profileAttribute?.title ?? formatFieldName(groupKey.slice(groupKey.lastIndexOf(".") + 1));
-  const relationTitle = sp.isOverRelation ? sp.profileRelation?.title : undefined;
-  return relationTitle ? `${relationTitle} : ${attributeTitle}` : attributeTitle;
 }
 
 /**

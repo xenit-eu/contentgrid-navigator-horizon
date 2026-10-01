@@ -10,11 +10,7 @@ import type {
 import { SearchHalFormTemplate } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 import { formatFieldName } from "../../format-field-name";
-import {
-  directionLabel,
-  generateSearchFormLayout,
-  rangeAttributeTitle,
-} from "./generate-search-form-layout";
+import { directionLabel, generateSearchFormLayout } from "./generate-search-form-layout";
 import type { HalFormsField } from "./hal-forms-field";
 import type { FieldSection, LayoutSchema } from "./layout-schema";
 
@@ -158,9 +154,10 @@ function attributeHalFormsField(prop: CreateFormProperty): HalFormsField {
  * actual `useTypeahead` call (see `HalFormsFieldRenderer`'s doc comment for why this render layer
  * never fetches anything itself).
  *
- * A directional range property (`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before`/`~from`/`~until`)
- * is labelled "{Attribute} {direction}" (e.g. "Age from", "Friends : Age until") from
- * `rangeAttributeTitle`, rather than `property.prompt`, which names a single variant. No field of
+ * Every search field is labelled by its `property.prompt`, which the server already words per
+ * variant — a range bound's prompt names its attribute and direction (e.g. "Datetime: After",
+ * "Friends: Age: Min"). Only a property without a prompt falls back to the attribute name, with
+ * the direction word appended for a range bound so its two bounds stay distinguishable. No field of
  * a range attribute (`isInRangeGroup`) carries the attribute's description itself — it is shown
  * once, on the range row `generate-search-form-layout.ts` builds (`rangeAttributeRows`).
  *
@@ -180,11 +177,13 @@ function searchPropertyHalFormsField(
   isInRangeGroup: boolean,
 ): HalFormsField {
   const { property, profileAttribute, groupKey } = sp;
-  const baseLabel = property.prompt ?? profileAttribute?.title ?? formatFieldName(groupKey);
+  const attributeLabel = profileAttribute?.title ?? formatFieldName(groupKey);
   const direction = directionLabel(sp);
   const base: FieldMappingInput = {
     name: property.name,
-    label: direction ? `${rangeAttributeTitle(sp)} ${direction.toLowerCase()}` : baseLabel,
+    label:
+      property.prompt ??
+      (direction ? `${attributeLabel} ${direction.toLowerCase()}` : attributeLabel),
     required: false,
     readOnly: false,
     // The relation's own description belongs on that relation's section header

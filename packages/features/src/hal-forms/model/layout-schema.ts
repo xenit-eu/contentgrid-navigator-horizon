@@ -7,7 +7,7 @@ export interface FieldRow {
   readonly fieldNames: readonly string[];
   /**
    * Optional supporting text shown once below the row, for every field in it — e.g. a search
-   * form's range attribute, whose "Age from"/"Age until" pair shares the attribute's description
+   * form's range attribute, whose "Age: Min"/"Age: Max" pair shares the attribute's description
    * instead of repeating it under each input.
    */
   readonly description?: string;
