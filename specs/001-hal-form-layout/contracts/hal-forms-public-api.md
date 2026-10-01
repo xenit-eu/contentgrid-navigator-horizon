@@ -35,16 +35,16 @@ IV, `apps/navigator-experimental` — `apps/navigator` cannot import an `experim
 
 ### `<HalFormsContainer fields layout values onChange fieldState onFieldFocus? onFieldBlur? onExternalFill? />`
 
-- Renders `layout.sections[].rows` exactly as `entity-item-create`'s `FormContainer` does today
-  (one-field row full width, two-field row as a 2-col grid) — same rendering contract, generalized
-  input.
+- Renders `layout.sections[].rows`: a one-field row full width, a two-field row as a 2-col grid
+  (the rendering contract of the retired `FormContainer`, generalized input).
 - A section's optional `title`/`description` render as a header above its rows (FR-025/FR-026); a
   section with neither renders no header. A section with `isCollapsible: true` wraps its rows in
   a single toggle, defaulting to expanded, with the header (if any) doubling as the trigger
   (FR-027).
-- Does not own a `<form>` tag or submit chrome (same split as `entity-item-create`'s
-  `CreateEntityItemForm` vs. `FormContainer`) — a form-type-specific wrapper supplies it. Both the
-  create-form and search-form paths now use this component directly (2026-09-18 amendments).
+- Does not own a `<form>` tag or submit chrome — a form-type-specific wrapper (e.g.
+  `entity-item-create`'s `CreateEntityItemForm`) supplies it. Both the create-form and
+  search-form paths use this component directly (2026-09-18 amendments), and every form must
+  (ADR-004, amended 2026-10-01).
 
 ### `<HalFormsFieldRenderer field value onChange fieldState onFocus? onBlur? />`
 

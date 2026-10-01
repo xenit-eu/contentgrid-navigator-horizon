@@ -81,7 +81,7 @@ Method DELETE, no properties.
 
 ### Consumers
 
-| Ticket   | Usage                                                                |
-| -------- | -------------------------------------------------------------------- |
-| HZN-2.4  | MSW handler stubs for entity-item HAL responses (update path)        |
-| HZN-5A.6 | Round-trip parity tests for update-form `FieldDescriptor` resolution |
+| Ticket   | Usage                                                              |
+| -------- | ------------------------------------------------------------------ |
+| HZN-2.4  | MSW handler stubs for entity-item HAL responses (update path)      |
+| HZN-5A.6 | Round-trip parity tests for update-form `HalFormsField` resolution |

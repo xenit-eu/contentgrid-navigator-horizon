@@ -3,10 +3,9 @@ import type { ValidationFieldError } from "@contentgrid/navigator-data";
 
 /**
  * A field-scoped validation message, sourced from either a live client-side check or a problem
- * response returned by the server after submission (FR-008/FR-009). Mirrors
- * `entity-item-create/state/field-error.ts`'s `FieldError` shape — same two-source model
- * (renamed `"internal"/"external"` → `"client"/"server"` to match the spec's own wording:
- * FR-008's "client-side check", FR-009's "server's response") — reused rather than redesigned.
+ * response returned by the server after submission (FR-008/FR-009) — ADR-004's two-source error
+ * model, with sources named `"client"/"server"` to match the spec's own wording (FR-008's
+ * "client-side check", FR-009's "server's response").
  */
 export interface FieldValidationError {
   readonly source: "client" | "server";
@@ -14,10 +13,8 @@ export interface FieldValidationError {
   /**
    * The complete typed validation entries this error was built from, for a caller that needs
    * more than `message` — e.g. the `type` discriminant, or a variant-specific field like
-   * `conflicting_item`/`allowed_values`. Only set for a `"server"` error. Mirrors
-   * `entity-item-create/state/field-error.ts`'s `FieldError.validationFieldErrors` (FR-023
-   * parity) — carried through unread by this feature itself, same as that original field is
-   * today, for whichever caller needs it.
+   * `conflicting_item`/`allowed_values`. Only set for a `"server"` error. Carried through
+   * unread by this feature itself, for whichever caller needs it.
    */
   readonly validationFieldErrors?: readonly ValidationFieldError[];
 }

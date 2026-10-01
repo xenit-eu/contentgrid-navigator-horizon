@@ -146,7 +146,11 @@ model doesn't happen to share it.
 - The primitive/pattern boundary in `packages/ui` MUST hold: primitives (`src/primitives/`)
   carry no Navigator-domain or HAL knowledge; the HAL-Forms field-renderer patterns take only
   plain scalar props (`name`, `label`, `required`, `value`, `onChange`, `error?`, …), never a
-  `FieldDescriptor` or other HAL-Forms-shaped type.
+  `HalFormsField` or other HAL-Forms-shaped type.
+- Every HAL-Forms-driven form MUST render through the `hal-forms` feature
+  (`packages/features/src/hal-forms/`): its `HalFormsField` union, `resolveHalFormsFields`,
+  `HalFormsContainer`/`HalFormsFieldRenderer` and `useHalFormsFieldState`. A feature MUST NOT
+  add its own field type, `kind` switch or field-state hook (ADR-004, amended 2026-10-01).
 - `packages/dev-tools` (dev-only tooling such as the Application Selector) MUST only be
   imported behind an explicit dev-only guard (e.g. `import.meta.env.DEV`) so bundlers
   tree-shake it out of production builds. It carries no `x-stability` flag and has no
@@ -311,7 +315,7 @@ the accurate common supertype, and callers narrow at the point of use.
 - **A validation problem's entity-level errors (no `field`) and any field-scoped error whose
   `field` doesn't match a rendered form field MUST still reach the user** — typically via the
   non-field-error fallback path a form's container computes (see `entity-item-create`'s
-  `nonFieldError` handling), never silently dropped because no `FieldRenderer` exists for that
+  `nonFieldError` handling), never silently dropped because no `HalFormsFieldRenderer` exists for that
   field name.
 - **Dismissal is scoped to the specific error's identity** (`status|title|detail`), not a bare
   boolean — `ProblemAlertFrame` re-surfaces automatically when a _different_ error of the same

@@ -2,6 +2,12 @@
 
 **Branch**: `001-hal-form-layout` | **Date**: 2026-09-18 | **Spec**: [spec.md](./spec.md)
 
+> **Amendment (2026-10-01)**: the create-form engine this document compares against
+> (`FieldDescriptor`, `resolveCreateFieldDescriptors`, `FieldRenderer`, `FormContainer`,
+> `LayoutInformation`, `useEntityItemCreateFormState`) has been deleted. Every form now flows
+> through `hal-forms` — see ADR-004's 2026-10-01 amendment. References to those names below
+> are kept as the record of the original plan.
+
 > **Amendment (2026-09-18, during implementation)**: the "standalone, no migration" scope below
 > (and FR-022) was the plan as clarified — it changed mid-implementation. The user explicitly
 > directed migrating the real search-form UI (`entity-item-collection-view.tsx`) onto this

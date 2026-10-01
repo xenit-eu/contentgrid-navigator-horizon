@@ -42,7 +42,8 @@ export interface HalFormsFieldRendererProps {
 }
 
 /**
- * Dispatches a `HalFormsField` to its renderer (ADR-004's `FieldRenderer` switch). `file`
+ * Dispatches a `HalFormsField` to its renderer — the `kind` switch every form goes through
+ * (ADR-004). `file`
  * submits the picked `File` as a plain form value (the create-form codec encodes it into the
  * `multipart/form-data` body); `relation` delegates to `RelationField`, which resolves its target
  * profile and linked items; `autocomplete` renders as an inert placeholder until

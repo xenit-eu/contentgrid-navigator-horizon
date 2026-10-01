@@ -7,6 +7,12 @@ description: "Task list for Generic HAL-Forms Field Renderer"
 **Input**: Design documents from `/specs/001-hal-form-layout/`
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/hal-forms-public-api.md](./contracts/hal-forms-public-api.md), [quickstart.md](./quickstart.md)
 
+> **Amendment (2026-10-01)**: the create-form engine this document compares against
+> (`FieldDescriptor`, `resolveCreateFieldDescriptors`, `FieldRenderer`, `FormContainer`,
+> `LayoutInformation`, `useEntityItemCreateFormState`) has been deleted. Every form now flows
+> through `hal-forms` — see ADR-004's 2026-10-01 amendment. References to those names below
+> are kept as the record of the original plan.
+
 **Tests**: Included — this project's existing features are all built test-first (Vitest + RTL,
 per `packages/features/CLAUDE.md`/`packages/ui/CLAUDE.md` conventions), and `quickstart.md`
 already commits to the specific test file paths used below.
