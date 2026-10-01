@@ -246,11 +246,15 @@ describe("resolveHalFormsFields search-form autocomplete", () => {
     expect(names).toEqual(expect.arrayContaining(["due_date~after", "due_date~before"]));
   });
 
-  it("labels a directional range field with its attribute and direction", () => {
+  it("labels a directional range field with its prompt", () => {
     const { fields } = resolveHalFormsFields(makeSearchTemplate());
     const after = fields.find((field) => field.name === "due_date~after");
+    expect(after?.label).toBe("Due date: After");
+  });
+
+  it("falls back to the attribute and direction for a range field without a prompt", () => {
+    const { fields } = resolveHalFormsFields(makeSearchTemplate());
     const before = fields.find((field) => field.name === "due_date~before");
-    expect(after?.label).toBe("Due date after");
     expect(before?.label).toBe("Due date before");
   });
 
@@ -349,7 +353,7 @@ const contactSearchProfileJson = {
         { name: "name~prefix", type: "text" },
         { name: "status", type: "text" },
         { name: "due_date", type: "datetime" },
-        { name: "due_date~after", type: "datetime" },
+        { name: "due_date~after", type: "datetime", prompt: "Due date: After" },
         { name: "due_date~before", type: "datetime" },
         { name: "company.name~prefix", type: "text" },
       ],

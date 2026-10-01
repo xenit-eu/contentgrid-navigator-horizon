@@ -176,7 +176,7 @@ engine was deleted.
   [What is lost](#what-is-lost-by-dropping-jsonforms--honest-inventory-unchanged) no longer
   applies. A create form still gets one section, one field per row; a search form gets
   a leading section plus one collapsible section per relation, with a range attribute's
-  bounds paired on one row ("Age from" | "Age until") that carries its description once.
+  bounds paired on one row (labelled by their `prompt`, e.g. "Age: Min" | "Age: Max") that carries its description once.
 - **`packages/ui` value types:** the form renderers take plain value types (`string`, `number`,
   `boolean`, `Date`, `string[]`, `File`) instead of `FieldValue`, so `packages/ui` no longer
   depends on `@contentgrid/navigator-data`. `hal-forms/render/narrow-field-value.ts` narrows
