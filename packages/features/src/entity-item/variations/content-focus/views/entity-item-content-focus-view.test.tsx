@@ -277,20 +277,20 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.getByRole("link", { name: "1" })).toBeInTheDocument();
   });
 
-  it("offers an 'Open in graph' toolbar action only when the host supplies onOpenGraph (spec 007, FR-025)", async () => {
+  it("offers an 'View in the grid' toolbar action only when the host supplies onOpenGraph (spec 007, FR-025)", async () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
     mockHooks(profile, item);
     const onOpenGraph = vi.fn();
 
     const { unmount } = renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
-    expect(screen.queryByRole("button", { name: "Open in graph" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View in the grid" })).not.toBeInTheDocument();
     unmount();
 
     renderView(
       <EntityItemContentFocusView entityName="order" itemId="1" onOpenGraph={onOpenGraph} />,
     );
-    screen.getByRole("button", { name: "Open in graph" }).click();
+    screen.getByRole("button", { name: "View in the grid" }).click();
     expect(onOpenGraph).toHaveBeenCalledTimes(1);
   });
 

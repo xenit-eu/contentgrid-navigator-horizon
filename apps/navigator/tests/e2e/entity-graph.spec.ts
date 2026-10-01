@@ -45,7 +45,7 @@ test.describe("Knowledge graph (mock mode)", () => {
     page,
   }) => {
     await page.goto(`/customer/${BIG_CORP}`);
-    await page.getByRole("button", { name: "Open in graph" }).click();
+    await page.getByRole("button", { name: "View in the grid" }).click();
     await expect(page).toHaveURL(new RegExp(`/customer/${BIG_CORP}/~graph`));
 
     await expect(node(page, "Big Corp")).toBeVisible();

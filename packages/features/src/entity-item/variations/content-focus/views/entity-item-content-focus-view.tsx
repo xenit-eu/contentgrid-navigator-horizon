@@ -67,7 +67,7 @@ export interface EntityItemContentFocusViewProps extends Pick<
    */
   readonly renderCollectionLink?: (entityName: string, label: ReactNode) => ReactNode;
   /**
-   * When set, an "Open in graph" action is added to the toolbar (spec 007, FR-025); the host
+   * When set, an "View in the grid" action is added to the toolbar (spec 007, FR-025); the host
    * navigates to its knowledge-graph route for this item. Omit to hide the action.
    */
   readonly onOpenGraph?: () => void;
