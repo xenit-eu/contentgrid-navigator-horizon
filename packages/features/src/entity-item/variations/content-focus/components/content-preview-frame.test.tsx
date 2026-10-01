@@ -12,12 +12,26 @@ const genericProblem: ProblemDisplayModel = {
 
 describe("ContentPreviewFrame", () => {
   it("renders the drop zone and caption for noFile, with no Download or Retry button", () => {
-    render(<ContentPreviewFrame state="noFile" onDownload={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <ContentPreviewFrame
+        state="noFile"
+        onFileChange={vi.fn()}
+        onDownload={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText("No file")).toBeInTheDocument();
     expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("renders only the caption for noFile when no upload handler is given", () => {
+    render(<ContentPreviewFrame state="noFile" />);
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.queryByText(/Drop a file here/)).not.toBeInTheDocument();
   });
 
   it("renders a skeleton and caption for loading, with Download but no Retry", () => {

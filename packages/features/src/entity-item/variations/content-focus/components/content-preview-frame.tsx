@@ -13,6 +13,7 @@ export type { ContentPreviewState } from "../util/content-preview-state";
 /** All strings the frame renders, overridable per FR-031; every field has an English default. */
 export interface ContentPreviewFrameLabels {
   readonly noFileCaption?: string;
+  readonly uploadingCaption?: string;
   readonly loadingCaption?: string;
   readonly preparingPreviewCaption?: string;
   readonly previewUnavailableMessage?: string;
@@ -27,6 +28,7 @@ export interface ContentPreviewFrameLabels {
 
 const DEFAULT_LABELS: Required<ContentPreviewFrameLabels> = {
   noFileCaption: "No file",
+  uploadingCaption: "Uploading…",
   loadingCaption: "Loading preview…",
   preparingPreviewCaption: "Preparing preview…",
   previewUnavailableMessage: "Preview isn't available for this file type.",
@@ -66,7 +68,8 @@ export interface ContentPreviewFrameProps {
    * A `toProblemDisplayModel(error)` result for an error state backed by a caught error
    * (`couldNotPrepare`, `couldNotRetrieve`, `viewerFailure`) — rendered via `ProblemAlert`
    * instead of the default message. Omitted for a state that is a plain `PreviewSource` variant
-   * rather than a thrown error (`previewUnavailable`, `cannotDisplay`, `protected`).
+   * rather than a thrown error (`previewUnavailable`, `cannotDisplay`, `protected`). In the
+   * `noFile` state it is a failed upload, shown above the drop zone.
    */
   readonly problem?: ProblemDisplayModel;
   /** Fires when the user clicks Download. Omitted hides the Download button. */
@@ -78,22 +81,17 @@ export interface ContentPreviewFrameProps {
    */
   readonly onRetry?: () => void;
   /**
-   * Fires when the user selects or drops a file on the "No file" drop zone. Per spec
-   * `contracts/content-focus-view.md`, this is a no-op until the content-upload story wires it —
-   * omitting it renders the drop zone as inert rather than throwing.
+   * Fires when the user selects or drops a file on the "No file" drop zone. The drop zone is only
+   * rendered when this is provided — omit it when the user may not upload to the attribute.
    */
   readonly onFileChange?: (file: File | null) => void;
   readonly labels?: ContentPreviewFrameLabels;
 }
 
-const NOOP_FILE_CHANGE = () => {
-  /* no-op until the content-upload story wires this — see contracts/content-focus-view.md */
-};
-
 /**
  * Presentational: maps `state` to a skeleton, drop zone, message, or the viewer itself. Fetches
- * nothing — `ContentPreviewPanel` (T027) owns `useContentPreview`/`useDownloadContent` and
- * derives `state`/`problem` from their results.
+ * nothing — `ContentPreviewPanel` (T027) owns `useContentPreview`/`useDownloadContent`/
+ * `useUploadContent` and derives `state`/`problem` from their results.
  */
 export function ContentPreviewFrame({
   state,
@@ -116,14 +114,25 @@ export function ContentPreviewFrame({
   if (state === "noFile") {
     body = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6">
-        <div className="w-full max-w-md">
-          <FileUploadZone file={null} onFileChange={onFileChange ?? NOOP_FILE_CHANGE} />
-        </div>
+        {problem && (
+          <div className="w-full max-w-md">
+            <ProblemAlert model={problem} />
+          </div>
+        )}
+        {onFileChange && (
+          <div className="w-full max-w-md">
+            <FileUploadZone file={null} onFileChange={onFileChange} />
+          </div>
+        )}
         <p className="text-sm text-muted-foreground">{labels.noFileCaption}</p>
       </div>
     );
-  } else if (state === "loading" || state === "preparingPreview") {
-    const caption = state === "loading" ? labels.loadingCaption : labels.preparingPreviewCaption;
+  } else if (state === "uploading" || state === "loading" || state === "preparingPreview") {
+    const caption = {
+      uploading: labels.uploadingCaption,
+      loading: labels.loadingCaption,
+      preparingPreview: labels.preparingPreviewCaption,
+    }[state];
     body = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6">
         <Skeleton className="h-full max-h-96 w-full max-w-md rounded-md" />
