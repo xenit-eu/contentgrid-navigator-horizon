@@ -2,6 +2,12 @@
 
 **Feature**: [spec.md](./spec.md) | **Research**: [research.md](./research.md)
 
+> **Amendment (2026-10-01)**: the create-form engine this document compares against
+> (`FieldDescriptor`, `resolveCreateFieldDescriptors`, `FieldRenderer`, `FormContainer`,
+> `LayoutInformation`, `useEntityItemCreateFormState`) has been deleted. Every form now flows
+> through `hal-forms` — see ADR-004's 2026-10-01 amendment. References to those names below
+> are kept as the record of the original plan.
+
 All shapes below live in the new `packages/features/src/hal-forms/` feature (`x-stability:
 "experimental"`). None of them replace or modify `entity-item-create`'s or `search`'s existing
 types (see research.md's parity decision) — this is a parallel, standalone model.

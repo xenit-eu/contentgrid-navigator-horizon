@@ -2,6 +2,12 @@
 
 **Feature**: [spec.md](./spec.md) | **Date**: 2026-09-18
 
+> **Amendment (2026-10-01)**: the create-form engine this document compares against
+> (`FieldDescriptor`, `resolveCreateFieldDescriptors`, `FieldRenderer`, `FormContainer`,
+> `LayoutInformation`, `useEntityItemCreateFormState`) has been deleted. Every form now flows
+> through `hal-forms` — see ADR-004's 2026-10-01 amendment. References to those names below
+> are kept as the record of the original plan.
+
 No `NEEDS CLARIFICATION` markers remain in Technical Context (see `plan.md`) — the spec's own
 clarification session already resolved the three open questions that would otherwise have
 generated research tasks here. This document instead grounds the plan's technical decisions in

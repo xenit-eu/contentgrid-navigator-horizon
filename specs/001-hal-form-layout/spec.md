@@ -25,6 +25,10 @@
 - Q: Now that a section can be titled and collapsible, should the search form's generated default layout actually use one for "all the search properties of a related profile"? → A: Yes — every relation-traversal search property (e.g. `customer.name~prefix`) is placed into its own collapsible section, titled for that relation, one section per relation; every direct (non-relation) property stays in a single, always-visible leading section, unchanged from before. See the new FR-028 below.
 - Q: The relation itself has its own description, and so (via a fallback already in place for relation-traversal fields) did every field under it — now that the relation's section can show a description of its own, should both still show it? → A: No — the relation's description belongs on the section only. Removed the field-level fallback to the relation's description; a relation-traversal field's own `description` is simply absent when its own attribute has none (which is always, for a relation traversal — the attribute lives on the other entity's profile). See the new FR-029 below.
 
+### Session 2026-10-01 (after merging main)
+
+- Q: `main` added relation fields (ACC-2881) and file uploads (ACC-2895) to the create form on the old `FieldDescriptor`/`FieldRenderer` engine, which the create form no longer uses. Where do they go, and does the old engine stay deprecated in place? → A: Port them into `hal-forms` — `HalFormsField` gains a `relation` kind, `file` renders `FileRenderer` — then delete the old engine (`entity-item-create`'s `model/`, `render/`, `state/`) outright, reversing the "not deleting them" note above. Every form now flows through `hal-forms`; see ADR-004's 2026-10-01 amendment.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Fields arrange into a two-column layout (Priority: P1)

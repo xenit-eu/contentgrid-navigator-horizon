@@ -51,7 +51,7 @@ contentgrid-navigator-horizon/
 
 ### What is in `packages/navigator-data`?
 
-A composition layer (Layer 2) that wires together the seven Xenit `@contentgrid/*` core packages (Layer 1: `@contentgrid/hal`, `hal-forms`, `typed-fetch`, `fetch-hooks`, `fetch-hook-authentication`, `problem-details`, `uri-template`). It provides TanStack Query hooks, ETag/`If-Match` optimistic-concurrency policy, the HAL-Forms→`FieldDescriptor[]` bridge, Zod-validated app config, and MSW handler fixtures. It does not re-implement anything from Layer 1. Currently consumed via `pnpm workspace:*`; publish ceremony is deferred until the first out-of-tree consumer (ADR-007).
+A composition layer (Layer 2) that wires together the seven Xenit `@contentgrid/*` core packages (Layer 1: `@contentgrid/hal`, `hal-forms`, `typed-fetch`, `fetch-hooks`, `fetch-hook-authentication`, `problem-details`, `uri-template`). It provides TanStack Query hooks, ETag/`If-Match` optimistic-concurrency policy, model enrichment for HAL-Forms templates (`CreateHalFormTemplate`, consumed by the `hal-forms` feature in `packages/features`), Zod-validated app config, and MSW handler fixtures. It does not re-implement anything from Layer 1. Currently consumed via `pnpm workspace:*`; publish ceremony is deferred until the first out-of-tree consumer (ADR-007).
 
 ---
 
