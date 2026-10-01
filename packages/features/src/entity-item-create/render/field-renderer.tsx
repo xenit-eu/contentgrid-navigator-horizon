@@ -5,11 +5,14 @@ import {
   DateTimeRenderer,
   EnumMultiRenderer,
   EnumRenderer,
+  FileRenderer,
   NumberRenderer,
   TextRenderer,
 } from "@contentgrid/ui";
+import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { FieldState } from "../state/field-state";
+import { RelationField } from "./relation-field";
 
 export interface FieldRendererProps {
   readonly field: FieldDescriptor;
@@ -19,22 +22,27 @@ export interface FieldRendererProps {
   /**
    * Forwarded straight to the underlying `packages/ui` widget's native input for the field kinds
    * that have exactly one focusable element (`text`, `number`, `boolean`, `datetime`, single-value
-   * `enum`). Not supported for `enum` with `multiValue` (one checkbox per option) — that's a
-   * composite widget with no single element a lone `onFocus`/`onBlur` pair could unambiguously
-   * target.
+   * `enum`, `file`'s drop zone). Not supported for `enum` with `multiValue` (one checkbox per
+   * option) — that's a composite widget with no single element a lone `onFocus`/`onBlur` pair
+   * could unambiguously target.
    */
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
+  /** Opens a linked item, as legacy's relation "details" action. */
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
 }
 
 /**
  * Dispatches a `FieldDescriptor` to its renderer (ADR-004's `FieldRenderer` switch).
  *
- * `file` is rendered as an inert placeholder — it's covered by another ticket. `filter` and `sort`
- * are intentionally NOT cases here at all — see `model/field-descriptor.ts`'s doc comment for why
- * they're kept out of the `FieldDescriptor` union entirely rather than routed through this
- * per-field switch. The `never` check in `default` is a compile-time exhaustiveness guard, not a
- * real runtime path today.
+ * `file` submits the picked `File` as a plain form value; the create-form codec encodes it into
+ * the `multipart/form-data` body.
+ * `filter` and `sort` are intentionally NOT cases here at all — see `model/field-descriptor.ts`'s
+ * doc comment for why they're kept out of the `FieldDescriptor` union entirely rather than routed
+ * through this per-field switch. The `never` check in `default` is a compile-time exhaustiveness
+ * guard, not a real runtime path today.
  *
  * Wrapped in `memo`: `render/form-container.tsx` gives every field a referentially stable
  * `onChange`/`onFocus`/`onBlur` (curried once per field name), so a keystroke in one field no
@@ -47,6 +55,8 @@ export const FieldRenderer = memo(function FieldRenderer({
   fieldState,
   onFocus,
   onBlur,
+  onRelationItemClick,
+  onRelationItemCreateNew,
 }: Readonly<FieldRendererProps>) {
   return renderFieldWidget({
     field,
@@ -55,6 +65,8 @@ export const FieldRenderer = memo(function FieldRenderer({
     fieldState,
     onFocus,
     onBlur,
+    onRelationItemClick,
+    onRelationItemCreateNew,
   });
 });
 
@@ -65,6 +77,8 @@ function renderFieldWidget({
   fieldState,
   onFocus,
   onBlur,
+  onRelationItemClick,
+  onRelationItemCreateNew,
 }: Readonly<FieldRendererProps>) {
   // Every `packages/ui` widget's `error` prop is a single string (see packages/ui/CLAUDE.md's
   // plain-scalar-prop rule), but a field can carry more than one error at once — e.g. a client
@@ -174,21 +188,35 @@ function renderFieldWidget({
       );
     }
     case "file":
-      return <UnsupportedFieldPlaceholder field={field} />;
+      return (
+        <FileRenderer
+          name={field.name}
+          label={field.label}
+          required={field.required}
+          readOnly={field.readOnly}
+          description={field.description}
+          value={value}
+          onChange={onChange}
+          error={error}
+          onFocus={onFocus}
+          onBlur={onBlur}
+        />
+      );
+    case "relation":
+      return (
+        <RelationField
+          field={field}
+          value={value}
+          onChange={onChange}
+          error={error}
+          onBlur={onBlur}
+          onRelationItemClick={onRelationItemClick}
+          onRelationItemCreateNew={onRelationItemCreateNew}
+        />
+      );
     default: {
       const exhaustive: never = field;
       return exhaustive;
     }
   }
-}
-
-function UnsupportedFieldPlaceholder({ field }: Readonly<{ field: FieldDescriptor }>) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-sm font-medium">{field.label}</p>
-      <p className="text-sm text-muted-foreground">
-        This field type (&quot;{field.kind}&quot;) is not yet supported in this form.
-      </p>
-    </div>
-  );
 }

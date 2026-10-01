@@ -11,9 +11,14 @@ export type { EntityItemDetailsBodyProps } from "./components/entity-item-detail
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
 export { RelationToManySection } from "./relations/relation-to-many-section";
-export type { RelationItemClickHandler } from "./relations/relation-shared";
+export { RelationItemSearchDialog } from "./relations/relation-item-search-dialog";
+export type {
+  RelationItemClickHandler,
+  RelationItemCreateHandler,
+} from "./relations/relation-handlers";
 export { ensureEntityItemDetailLoaderData } from "./entity-item-loader";
 export type { EntityItemDetailLoaderContext } from "./entity-item-loader";
+export { EntityItemAttributeSummary } from "./variations/entity-item-attribute-summary";
 export {
   EntityItemReference,
   EntityItemReferenceLoading,

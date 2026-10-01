@@ -110,6 +110,8 @@ function defaultValueFor(field: FieldDescriptor): FieldValue {
       return undefined;
     case "enum":
       return field.multiValue ? [] : "";
+    case "relation":
+      return field.toMany ? [] : "";
     case "file":
       return undefined;
     case "text":

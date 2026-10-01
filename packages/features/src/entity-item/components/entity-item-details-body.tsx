@@ -2,19 +2,19 @@ import { type EntityItem, useLoadedProfileEntities } from "@contentgrid/navigato
 import { Separator } from "@contentgrid/ui";
 import { EntityItemAttributes } from "../attributes/entity-item-attributes";
 import type {
-  MutationErrorDisplayProps,
   RelationItemClickHandler,
-} from "../relations/relation-shared";
+  RelationItemCreateHandler,
+  RelationProblemHandlers,
+} from "../relations/relation-handlers";
 import { RelationToManySection } from "../relations/relation-to-many-section";
 import { RelationToOneSection } from "../relations/relation-to-one-section";
 
-export type EntityItemDetailsBodyProps = Pick<
-  MutationErrorDisplayProps,
-  "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
-> & {
+export type EntityItemDetailsBodyProps = RelationProblemHandlers & {
   readonly entityItem: EntityItem;
   /** Fired when the user clicks through to a related item (target entity name + item id). */
   readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
 };
 
 /**
@@ -24,6 +24,7 @@ export type EntityItemDetailsBodyProps = Pick<
 export function EntityItemDetailsBody({
   entityItem,
   onRelationItemClick,
+  onRelationItemCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
@@ -46,6 +47,7 @@ export function EntityItemDetailsBody({
                 relation={relation}
                 profiles={loadedProfiles}
                 onItemClick={onRelationItemClick}
+                onCreateNew={onRelationItemCreateNew}
                 onMissingRelationTargetClick={onMissingRelationTargetClick}
                 onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
               />
@@ -56,6 +58,7 @@ export function EntityItemDetailsBody({
                 relation={relation}
                 profiles={loadedProfiles}
                 onItemClick={onRelationItemClick}
+                onCreateNew={onRelationItemCreateNew}
                 onMissingRelationTargetClick={onMissingRelationTargetClick}
                 onRequiredRelationClick={onRequiredRelationClick}
                 onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
+import { Checkbox } from "../../primitives/checkbox";
 import { getRecordTableGridTemplate } from "./grid-template";
 
 export interface RecordTableCell {
@@ -13,6 +14,8 @@ export interface RecordTableRowProps {
   readonly actions?: ReactNode;
   readonly selected?: boolean;
   readonly onClick?: () => void;
+  /** Renders a leading selection checkbox (checked per `selected`) when present. */
+  readonly onSelectChange?: (checked: boolean) => void;
   readonly className?: string;
 }
 
@@ -21,6 +24,7 @@ function RecordTableRow({
   actions,
   selected = false,
   onClick,
+  onSelectChange,
   className,
 }: RecordTableRowProps) {
   // `--accent` is already the shadcn convention for a "selected"/highlighted row (see
@@ -50,6 +54,7 @@ function RecordTableRow({
       style={{
         gridTemplateColumns: getRecordTableGridTemplate(cells.length, {
           hasActions: Boolean(actions),
+          hasSelection: Boolean(onSelectChange),
         }),
       }}
       className={cn(
@@ -59,13 +64,29 @@ function RecordTableRow({
         // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
         // to its content's actual width when that's wider than the container (matching what the
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
-        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border cursor-pointer transition-colors",
+        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
+        onClick && "cursor-pointer",
         rowBackground,
         className,
       )}
     >
       {selected && (
         <span className="absolute left-0 top-0 h-full w-[3px] bg-ring rounded-r-sm" aria-hidden />
+      )}
+
+      {onSelectChange && (
+        <div
+          role="cell"
+          className="flex items-center justify-center"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectChange(checked === true)}
+            aria-label="Select row"
+          />
+        </div>
       )}
 
       {cells.map((cell) => (

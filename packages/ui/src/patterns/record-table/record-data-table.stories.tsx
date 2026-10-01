@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { DotsThreeIcon as DotsThree } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
@@ -125,6 +125,57 @@ export const WithRowActions: Story = {
       ) : undefined,
     ),
   },
+};
+
+function SelectableTableDemo() {
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const selectionState =
+    selected.size === 0 ? false : selected.size === ROWS.length ? true : "indeterminate";
+
+  function toggleAll(checked: boolean) {
+    setSelected(checked ? new Set(ROWS.map((row) => row.reference)) : new Set());
+  }
+
+  function toggleRow(reference: string, checked: boolean) {
+    const next = new Set(selected);
+    if (checked) next.add(reference);
+    else next.delete(reference);
+    setSelected(next);
+  }
+
+  return (
+    <RecordDataTable
+      entityName="invoice"
+      entityTitle="Invoices"
+      columns={COLUMNS}
+      selectionState={selectionState}
+      onSelectAll={toggleAll}
+    >
+      {ROWS.map((row) => (
+        <RecordTableRow
+          key={row.reference}
+          cells={[
+            { key: "reference", content: row.reference },
+            { key: "supplier", content: row.supplier },
+            { key: "total", content: row.total, align: "end" },
+          ]}
+          selected={selected.has(row.reference)}
+          onSelectChange={(checked) => toggleRow(row.reference, checked)}
+        />
+      ))}
+    </RecordDataTable>
+  );
+}
+
+/** Selection state (header "select all" + per-row checkboxes) is owned by the caller, here a local `useState`. */
+export const WithSelectionColumn: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    children: buildRows(),
+  },
+  render: () => <SelectableTableDemo />,
 };
 
 export const WithPagination: Story = {

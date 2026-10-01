@@ -39,6 +39,11 @@ export interface RecordDataTableProps {
   /** Reserves a trailing column for row-level actions */
   showActionsColumn?: boolean;
 
+  /** Checked state of the "select all" checkbox — `"indeterminate"` when some but not all rows are selected */
+  selectionState?: boolean | "indeterminate";
+  /** Called when the "select all" checkbox is toggled */
+  onSelectAll?: (checked: boolean) => void;
+
   /** Called when the user clicks the create-new button in the empty state. Button is hidden if omitted. */
   onCreateClick?: () => void;
 
@@ -68,6 +73,8 @@ function RecordDataTable({
   footerContent,
   tableActions,
   showActionsColumn,
+  selectionState,
+  onSelectAll,
   onCreateClick,
   children,
   className,
@@ -128,6 +135,8 @@ function RecordDataTable({
               currentSort={currentSort}
               onSort={onSort}
               showActionsColumn={showActionsColumn}
+              selectionState={selectionState}
+              onSelectAll={onSelectAll}
             />
           </div>
 
@@ -140,7 +149,7 @@ function RecordDataTable({
             // flags: a sighted mouse user can drag-scroll a tall list, but a keyboard-only user
             // has no way to reach it otherwise.
             tabIndex={0}
-            className="min-h-0 flex-1 overflow-auto"
+            className="scrollbar-subtle min-h-0 flex-1 overflow-auto"
             onScroll={(event) => {
               if (headerScrollRef.current) {
                 headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
@@ -175,8 +184,13 @@ function RecordDataTable({
 
         {(onNextPageClick || onPreviousPageClick || footerContent) && (
           <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-muted/70 p-2">
-            <div className="px-2 text-xs text-muted-foreground">{footerContent}</div>
-            <div className="flex items-center gap-2">
+            {footerContent && (
+              <div className="px-2 text-xs text-muted-foreground">{footerContent}</div>
+            )}
+            {/* Without footer content, Previous and Next spread to the footer's two ends. */}
+            <div
+              className={cn("flex items-center gap-2", !footerContent && "w-full justify-between")}
+            >
               <Button
                 variant="outline"
                 size="sm"

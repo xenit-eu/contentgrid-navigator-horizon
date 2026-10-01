@@ -1,6 +1,7 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { SimpleLink } from "@contentgrid/hal";
 import { EntityItem } from "../../accessors/entity-item";
+import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { TypedFetch } from "../../api/client";
 import { fetchHal } from "../../api/hal-client";
@@ -84,6 +85,26 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
     enabled: !!url && !!profileEntity,
     ...options?.queryOptionsOverride,
   });
+}
+
+/**
+ * Finds `url`'s item in an already-cached collection page of `profileEntity` (e.g. the page a
+ * relation picker just showed), to display it before its own fetch completes.
+ */
+export function findCachedEntityItem(
+  queryClient: QueryClient,
+  profileEntity: ProfileEntity,
+  url: string,
+): EntityItem | undefined {
+  const pages = queryClient.getQueriesData<unknown>({
+    queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+  });
+  for (const [, page] of pages) {
+    if (!(page instanceof EntityItemCollection)) continue;
+    const item = page.items.find((candidate) => candidate.selfLink.href === url);
+    if (item) return item;
+  }
+  return undefined;
 }
 
 /**
