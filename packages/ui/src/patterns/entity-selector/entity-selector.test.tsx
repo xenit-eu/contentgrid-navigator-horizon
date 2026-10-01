@@ -7,28 +7,6 @@ const INVOICE = { name: "invoice", title: "Invoice" };
 const CUSTOMER = { name: "customer", title: "Customer" };
 const SUPPLIER = { name: "supplier", title: "Supplier" };
 
-describe("ProfileEntitySelector — visibility", () => {
-  it("renders nothing when entities list is empty", () => {
-    const { container } = render(<ProfileEntitySelector entities={[]} onSelect={vi.fn()} />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("renders nothing when only one entity is available", () => {
-    const { container } = render(<ProfileEntitySelector entities={[INVOICE]} onSelect={vi.fn()} />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("renders the select trigger when exactly two entities are available", () => {
-    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
-  });
-
-  it("renders the select trigger when three or more entities are available", () => {
-    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER, SUPPLIER]} onSelect={vi.fn()} />);
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
-  });
-});
-
 describe("ProfileEntitySelector — selected entity display", () => {
   it("shows the selected entity title in the trigger", () => {
     render(
@@ -53,6 +31,13 @@ describe("ProfileEntitySelector — label prop", () => {
       <ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
     );
     expect(screen.getByText("Entity")).toBeInTheDocument();
+  });
+
+  it("names the trigger after the label", () => {
+    render(
+      <ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
+    );
+    expect(screen.getByRole("combobox", { name: "Entity" })).toBeInTheDocument();
   });
 
   it("does not render label text when label is omitted", () => {
@@ -114,5 +99,21 @@ describe("ProfileEntitySelector — entity switch", () => {
     expect(screen.getByRole("option", { name: "Invoice" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Customer" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Supplier" })).toBeInTheDocument();
+  });
+});
+
+describe("ProfileEntitySelector — option content", () => {
+  it("shows each entity's description in its option row", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProfileEntitySelector
+        entities={[{ ...INVOICE, description: "A supplier invoice" }, CUSTOMER]}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox"));
+
+    expect(screen.getByText("A supplier invoice")).toBeInTheDocument();
   });
 });

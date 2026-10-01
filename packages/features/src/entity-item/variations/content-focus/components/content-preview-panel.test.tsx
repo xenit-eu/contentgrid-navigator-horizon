@@ -16,6 +16,7 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -86,8 +87,9 @@ function makeStubEntityItem(options: {
   attributeName: string;
   metadata: { filename: string | null; mimetype: string; length: number } | null;
   etag?: string | null;
+  canUpload?: boolean;
 }): EntityItem {
-  const { attributeName, metadata, etag = '"v1"' } = options;
+  const { attributeName, metadata, etag = '"v1"', canUpload = true } = options;
   const attributes = [
     {
       value: new EntityItemAttributeContent(attributeName, metadata, {
@@ -101,6 +103,9 @@ function makeStubEntityItem(options: {
     // lookup here instead of hand-rolling a `.attributes.find(...)` in the stub.
     findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
     etag,
+    canUploadContent: () => canUpload,
+    uploadContentRequest: (_attrName: string, file: File) =>
+      new Request(CONTENT_URL, { method: "PUT", body: file }),
     downloadContentRequest: (
       _attrName: string,
       opts?: { range?: { start: number; end?: number } },
@@ -139,6 +144,7 @@ function makeStubEntityItemWithAttributes(
     // See the matching comment in `makeStubEntityItem` above.
     findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
     etag,
+    canUploadContent: () => true,
     downloadContentRequest: (
       attrName: string,
       opts?: { range?: { start: number; end?: number } },
@@ -206,6 +212,65 @@ describe("ContentPreviewPanel", () => {
     });
 
     expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toBeInTheDocument();
+  });
+
+  it("shows only 'No file', without a drop zone, when the user may not upload", () => {
+    const entityItem = makeStubEntityItem({
+      attributeName: "document",
+      metadata: null,
+      canUpload: false,
+    });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
+  it("uploads a dropped file into the empty attribute, showing the uploading state", async () => {
+    const user = userEvent.setup();
+    let uploadRequests = 0;
+    server.use(
+      http.put(CONTENT_URL, () => {
+        uploadRequests++;
+        // Never settles: keeps the panel in its uploading state for the assertion.
+        return new Promise<Response>(() => {});
+      }),
+    );
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input!, new File(["%PDF-1.7"], "invoice.pdf", { type: "application/pdf" }));
+
+    expect(await screen.findByText("Uploading…")).toBeInTheDocument();
+    expect(uploadRequests).toBe(1);
+  });
+
+  it("shows the problem and offers the drop zone again when the upload fails", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.put(CONTENT_URL, () =>
+        HttpResponse.json(
+          { status: 415, title: "Unsupported Media Type" },
+          { status: 415, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input!, new File(["x"], "notes.bin", { type: "application/octet-stream" }));
+
+    expect(await screen.findByText("Unsupported Media Type")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toBeInTheDocument();
   });
 
   it("renders the stored PDF once the download resolves, and downloads it on demand", async () => {

@@ -6,6 +6,7 @@ import {
   toProblemDisplayModel,
   useContentPreview,
   useDownloadContent,
+  useUploadContent,
 } from "@contentgrid/navigator-data";
 import { Badge, PdfEngineProvider, PdfViewerErrorBoundary } from "@contentgrid/ui";
 import type { PdfLoadError, PdfViewerToolbarOptions } from "@contentgrid/ui";
@@ -59,7 +60,7 @@ function triggerDownload(blob: Blob, filename: string): void {
 }
 
 /**
- * Owns `useContentPreview` + `useDownloadContent` for one content attribute and renders the
+ * Owns `useContentPreview` + `useDownloadContent` + `useUploadContent` for one content attribute and renders the
  * matching `ContentPreviewFrame` state (data-model.md's "Content preview panel state", FR-024).
  * Lazy-loads `@contentgrid/ui`'s `PdfViewer` — wrapped in `PdfViewerErrorBoundary` (catches a
  * render-time exception → `viewerFailure`) and its own `PdfEngineProvider` (self-hosted
@@ -72,6 +73,8 @@ export function ContentPreviewPanel({
 }: Readonly<ContentPreviewPanelProps>) {
   const query = useContentPreview(entityItem, attributeName);
   const downloadMutation = useDownloadContent(entityItem, attributeName);
+  const uploadMutation = useUploadContent(entityItem, attributeName);
+  const canUpload = entityItem.canUploadContent(attributeName);
   const [viewerLoadErrorKind, setViewerLoadErrorKind] = useState<ViewerLoadErrorKind | null>(null);
   // Bumped on every Retry so the viewer/engine subtree's `key` changes, forcing a full remount —
   // an "engine" load error (`PdfEngineProvider`) needs a fresh engine attempt, not just a
@@ -81,6 +84,8 @@ export function ContentPreviewPanel({
   // A new attribute/item (or a re-upload bumping the ETag) means nothing from the previous
   // selection should keep showing as belonging to the new one (FR-006) — including a
   // viewer-reported load error from whatever was displayed before.
+  // A failed upload belongs to the attribute it was made for, not to one switched to afterwards.
+  const [uploadAttributeName, setUploadAttributeName] = useState<string | null>(null);
   useEffect(() => {
     setViewerLoadErrorKind(null);
   }, [entityItem, attributeName]);
@@ -174,10 +179,28 @@ export function ContentPreviewPanel({
     );
   }
 
+  if (uploadMutation.isPending) {
+    return <ContentPreviewFrame state="uploading" toolbarStart={toolbarStart} />;
+  }
+
+  const uploadProblem =
+    state === "noFile" && uploadMutation.error && uploadAttributeName === attributeName
+      ? toProblemDisplayModel(uploadMutation.error)
+      : undefined;
+
   return (
     <ContentPreviewFrame
       state={state}
-      problem={problem}
+      problem={uploadProblem ?? problem}
+      onFileChange={
+        state === "noFile" && canUpload
+          ? (file) => {
+              if (!file) return;
+              setUploadAttributeName(attributeName);
+              uploadMutation.mutate({ file });
+            }
+          : undefined
+      }
       onDownload={canDownload ? handleDownload : undefined}
       onRetry={handleRetry}
       // Every non-"ready" state must still offer the attribute selector (round-2 review: it must

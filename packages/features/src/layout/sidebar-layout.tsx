@@ -147,7 +147,7 @@ function SidebarCreateItemLink() {
       icon={<PlusIcon aria-hidden />}
       label="Create Item"
       variant={open ? "link" : "default"}
-      onClick={() => navigate({ to: "/" as string })}
+      onClick={() => navigate({ to: "/~create" as string })}
     />
   );
 }

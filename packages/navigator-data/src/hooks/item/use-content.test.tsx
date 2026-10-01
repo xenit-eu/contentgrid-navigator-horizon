@@ -319,6 +319,34 @@ describe("useUploadContent — 412 ETag mismatch", () => {
     // No retry — PUT handler called exactly once
     expect(putCallCount).toBe(1);
   });
+
+  it("invalidates the item query so the newer version loads", async () => {
+    server.use(
+      http.put(CONTENT_URL, () =>
+        HttpResponse.json(
+          { status: 412, type: "https://contentgrid.cloud/problems/unsatisfied-version" },
+          { status: 412, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const queryClient = makeQueryClient();
+    const profile = makeInvoiceProfile();
+    const entityItem = makeEntityItemWithContentLink('"v1"');
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await act(async () => {
+      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.entityItem.byUrl(profile, INVOICE_ITEM_URL),
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

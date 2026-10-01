@@ -1,3 +1,4 @@
+import { BuildingsIcon, FileTextIcon, SignatureIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
 import { ProfileEntitySelector } from "./entity-selector";
@@ -17,9 +18,7 @@ const ENTITIES = [
   { name: "supplier", title: "Supplier" },
 ];
 
-// ProfileEntitySelector returns null for a single entity — nothing to snapshot.
 export const SingleEntity: Story = {
-  tags: ["no-visual-test"],
   args: {
     entities: [{ name: "invoice", title: "Invoice" }],
     onSelect: fn(),
@@ -53,6 +52,33 @@ export const WithLabel: Story = {
   args: {
     entities: ENTITIES,
     selectedEntity: undefined,
+    onSelect: fn(),
+    label: "Entity",
+  },
+};
+
+export const WithIconsAndDescriptions: Story = {
+  args: {
+    entities: [
+      {
+        name: "invoice",
+        title: "Invoice",
+        description: "A supplier invoice with line items and content.",
+        icon: <FileTextIcon className="size-4" aria-hidden />,
+      },
+      {
+        name: "contract",
+        title: "Contract",
+        description: "A legal agreement with a supplier or customer.",
+        icon: <SignatureIcon className="size-4" aria-hidden />,
+      },
+      {
+        name: "supplier",
+        title: "Supplier",
+        description: "A counter-party that issues invoices.",
+        icon: <BuildingsIcon className="size-4" aria-hidden />,
+      },
+    ],
     onSelect: fn(),
     label: "Entity",
   },
