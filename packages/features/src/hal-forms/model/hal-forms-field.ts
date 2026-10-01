@@ -19,9 +19,8 @@ export interface SearchAutocompleteContext {
 }
 
 /**
- * Fields every `HalFormsField` variant carries. Generalizes `entity-item-create`'s
- * `FieldDescriptorBase` (ADR-004) to also cover a search-form property, not just a create-form
- * one — see `model/resolve-hal-forms-fields.ts`.
+ * Fields every `HalFormsField` variant carries, for both a create-form and a search-form property
+ * (ADR-004) — see `model/resolve-hal-forms-fields.ts`.
  *
  * Deliberately does NOT carry `provenance` here — provenance (FR-013) describes the field's
  * CURRENT value's origin, which changes at runtime (a user edits it, an external caller fills
@@ -47,9 +46,9 @@ interface VisuallyHiddenLabel {
 }
 
 /**
- * `kind`-discriminated union driving `render/hal-forms-field-renderer.tsx`. Adds `autocomplete`
- * (FR-017) to the set of kinds `entity-item-create`'s `FieldDescriptor` already covers; every
- * other kind's shape is unchanged from that type.
+ * `kind`-discriminated union driving `render/hal-forms-field-renderer.tsx`. One variant per
+ * rendering shape: the create form's attributes and relations, plus `autocomplete` (FR-017) for
+ * suggest-as-you-type text fields.
  */
 export type HalFormsField =
   | ({ readonly kind: "text" } & HalFormsFieldBase & {

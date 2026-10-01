@@ -21,10 +21,9 @@ export interface ResolvedHalFormsFields {
 
 /**
  * Pure bridge: `CreateHalFormTemplate | SearchHalFormTemplate` -> `HalFormsField[]` + a
- * single-section `LayoutSchema`, for `render/hal-forms-container.tsx`. Generalizes
- * `entity-item-create`'s `resolveCreateFieldDescriptors` (ADR-004) — same per-property `kind`
- * mapping for the create path — to also cover a search template (see `research.md`'s parity
- * decision).
+ * single-section `LayoutSchema`, for `render/hal-forms-container.tsx` (ADR-004). One
+ * per-property `kind` mapping shared by the create path (attributes and relations) and a search
+ * template (see `research.md`'s parity decision).
  *
  * The layout is always the default:
  * - a create template: one field per row, in template order (FR-009);

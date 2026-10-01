@@ -21,7 +21,7 @@ export type FieldValue = DefinedHalFormValue["value"] | undefined;
  * deliberately not a re-export of `HalFormValuesMap` itself, since a field genuinely can be
  * `undefined` here (a required-but-untouched field, or a field kind whose empty state is
  * `undefined` rather than `""` — see `defaultValueFor` in
- * `packages/features/src/entity-item-create/state/use-entity-item-create-form-state.ts`), which
+ * `packages/features/src/hal-forms/state/use-hal-forms-field-state.ts`), which
  * `HalFormValuesMap` deliberately excludes (a `HalFormValues` value manager only ever holds
  * defined values).
  */
