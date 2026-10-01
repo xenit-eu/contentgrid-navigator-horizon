@@ -76,8 +76,10 @@ export function HalFormsContainer({
 /**
  * One section's optional header (title/description, FR-025/FR-026) plus its rows. A collapsible
  * section (FR-027) wraps its rows in a single `Accordion` item — the section's rows
- * collapse/expand together as one unit, never per-row — with the header doubling as the toggle
- * trigger; expanded by default (FR-027), same as `RelationAccordion` — a search form's
+ * collapse/expand together as one unit, never per-row — with the title as the toggle trigger and
+ * the description rendered below it, outside the button, so it isn't part of the button's
+ * accessible name; the content region points at it via `aria-describedby`, same as the nested
+ * `fieldset` variant does. Expanded by default (FR-027), same as `RelationAccordion` — a search form's
  * relation-traversal sections (the only collapsible ones this feature produces, see
  * `generate-search-form-layout.ts`) must not hide an active relation filter (e.g. one applied
  * from a deep link) behind a closed header. A
@@ -105,6 +107,7 @@ function FieldSectionView({
   onRelationItemClick?: RelationItemClickHandler;
   onRelationItemCreateNew?: RelationItemCreateHandler;
 }>) {
+  const descriptionId = useId();
   const header =
     section.title || section.description ? (
       <div className="space-y-1">
@@ -142,9 +145,19 @@ function FieldSectionView({
     <Accordion type="single" collapsible defaultValue="section" className="mt-4">
       <AccordionItem value="section" className="border-none">
         <AccordionTrigger type="button" className="py-0 hover:no-underline">
-          {header}
+          {section.title && <span className="text-sm font-semibold">{section.title}</span>}
         </AccordionTrigger>
-        <AccordionContent className="mt-4 px-1">{rows}</AccordionContent>
+        {section.description && (
+          <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
+            {section.description}
+          </p>
+        )}
+        <AccordionContent
+          className="mt-4 px-1"
+          aria-describedby={section.description ? descriptionId : undefined}
+        >
+          {rows}
+        </AccordionContent>
       </AccordionItem>
     </Accordion>
   );
