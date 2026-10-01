@@ -418,4 +418,76 @@ describe("CreateEntityItemContainer", () => {
     expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
     expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
   });
+
+  describe("file field", () => {
+    const FILE_CREATE_FORM = {
+      method: "POST",
+      target: `${API_URL}/invoices`,
+      contentType: "multipart/form-data",
+      properties: [
+        { name: "invoice_number", type: "text", required: true },
+        { name: "document", type: "file" },
+      ],
+    };
+
+    async function fillAndPickFile(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(await screen.findByLabelText(/Invoice Number/), "INV-1");
+      const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+      await user.upload(input!, new File(["%PDF"], "invoice.pdf", { type: "application/pdf" }));
+    }
+
+    it("sends the picked file in the multipart create request", async () => {
+      const user = userEvent.setup();
+      let body: string | undefined;
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, async ({ request }) => {
+          // Read as text: `request.formData()` rebuilds file parts with the global `File`, which
+          // jsdom replaces with one undici's parser rejects.
+          body = await request.text();
+          return HttpResponse.json(
+            { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+            { status: 201 },
+          );
+        }),
+      );
+      renderForm();
+
+      await fillAndPickFile(user);
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      await vi.waitFor(() => expect(body).toBeDefined());
+      // jsdom's File isn't undici's, so only the part's type survives the test transport — enough
+      // to tell a file part from a stringified value.
+      expect(body).toMatch(
+        /name="document"; filename="[^"]*"\r\nContent-Type: application\/pdf\r\n/,
+      );
+      expect(body).toMatch(/name="invoice_number"\r\n\r\nINV-1\r\n/);
+    });
+
+    it("omits a removed file from the create request", async () => {
+      const user = userEvent.setup();
+      let body: FormData | undefined;
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, async ({ request }) => {
+          body = await request.formData();
+          return HttpResponse.json(
+            { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+            { status: 201 },
+          );
+        }),
+      );
+      renderForm();
+
+      await fillAndPickFile(user);
+      await user.click(screen.getByRole("button", { name: /remove file/i }));
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      await vi.waitFor(() => expect(body).toBeDefined());
+      expect(body!.has("document")).toBe(false);
+    });
+  });
 });

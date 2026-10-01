@@ -31,19 +31,46 @@ export interface FileUploadZoneProps {
    * Passed to the hidden `<input>` accept attribute (only keys are used).
    */
   accept?: Record<string, string[]>;
+  /** Set on the drop-zone button, so a surrounding `<label htmlFor>` targets it. */
+  id?: string;
+  /** Blocks picking, dropping and removing a file. */
+  disabled?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
-export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUploadZoneProps>) {
+export function FileUploadZone({
+  file,
+  onFileChange,
+  accept,
+  id,
+  disabled = false,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+  onFocus,
+  onBlur,
+}: Readonly<FileUploadZoneProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLButtonElement>(null);
+  const focusDropZoneRef = useRef(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Build the accept string for the hidden file input
   const acceptString = accept ? Object.keys(accept).join(",") : undefined;
+
+  // The remove button unmounts with the file, so hand its focus to the drop zone that replaces it.
+  useEffect(() => {
+    const shouldFocus = focusDropZoneRef.current;
+    focusDropZoneRef.current = false;
+    if (!file && shouldFocus) dropZoneRef.current?.focus();
+  }, [file]);
 
   // Image preview URL lifecycle
   useEffect(() => {
@@ -109,10 +136,20 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
             )}
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => onFileChange(null)} type="button">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Remove file</span>
-        </Button>
+        {!disabled && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              focusDropZoneRef.current = true;
+              onFileChange(null);
+            }}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Remove file</span>
+          </Button>
+        )}
       </div>
     );
   }
@@ -132,13 +169,21 @@ export function FileUploadZone({ file, onFileChange, accept }: Readonly<FileUplo
         aria-hidden="true"
       />
       <button
+        ref={dropZoneRef}
+        id={id}
         type="button"
-        onDragOver={handleDragOver}
+        disabled={disabled}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        // Without a preventDefault'ed dragover the browser refuses the drop.
+        onDragOver={disabled ? undefined : handleDragOver}
         onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDrop={disabled ? undefined : handleDrop}
         onClick={() => inputRef.current?.click()}
+        onFocus={onFocus}
+        onBlur={onBlur}
         className={cn(
-          "flex w-full cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-8 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "flex w-full cursor-pointer flex-col disabled:cursor-not-allowed disabled:opacity-50 items-center gap-2 rounded-md border-2 border-dashed p-8 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isDragActive
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25 hover:border-primary/50",
