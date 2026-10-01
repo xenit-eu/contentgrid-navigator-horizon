@@ -106,6 +106,95 @@ describe("resolveHalFormsFields", () => {
   });
 });
 
+describe("resolveHalFormsFields create-form relations", () => {
+  const profileJson = {
+    ...contactProfileJson,
+    _embedded: {
+      ...contactProfileJson._embedded,
+      "blueprint:relation": [
+        {
+          name: "company",
+          title: "Company",
+          description: "The contact's employer",
+          many_source_per_target: true,
+          many_target_per_source: false,
+          required: true,
+          _links: { "blueprint:target-entity": { href: "https://example.com/profile/companies" } },
+        },
+        {
+          name: "tags",
+          title: "Tags",
+          description: "",
+          many_source_per_target: true,
+          many_target_per_source: true,
+          required: false,
+          _links: { "blueprint:target-entity": { href: "https://example.com/profile/tags" } },
+        },
+      ],
+    },
+    _templates: {
+      ...contactProfileJson._templates,
+      "create-form": {
+        ...contactProfileJson._templates["create-form"],
+        properties: [
+          {
+            name: "company",
+            type: "url",
+            required: true,
+            options: { link: { href: "https://example.com/companies" }, maxItems: 1 },
+          },
+          ...contactProfileJson._templates["create-form"].properties,
+          {
+            name: "tags",
+            type: "url",
+            options: { link: { href: "https://example.com/tags" }, minItems: 0 },
+          },
+        ],
+      },
+    },
+  };
+
+  function makeRelationTemplate() {
+    const profile = makeProfileEntity(profileJson, PROFILE_URL, "contact");
+    const rawTemplate = resolveTemplate(
+      profileJson as unknown as Parameters<typeof resolveTemplate>[0],
+      "create-form",
+    )!;
+    return new CreateHalFormTemplate(rawTemplate, profile);
+  }
+
+  it("maps a to-one relation property (maxItems: 1) to a non-multi relation field", () => {
+    const field = resolveHalFormsFields(makeRelationTemplate()).fields.find(
+      (f) => f.name === "company",
+    );
+    expect(field?.kind).toBe("relation");
+    expect(field?.required).toBe(true);
+    expect(field?.label).toBe("Company");
+    expect(field?.description).toBe("The contact's employer");
+    if (field?.kind === "relation") expect(field.toMany).toBe(false);
+  });
+
+  it("maps a to-many relation property (maxItems !== 1) to a multi relation field", () => {
+    const field = resolveHalFormsFields(makeRelationTemplate()).fields.find(
+      (f) => f.name === "tags",
+    );
+    expect(field?.kind).toBe("relation");
+    expect(field?.required).toBe(false);
+    if (field?.kind === "relation") expect(field.toMany).toBe(true);
+  });
+
+  it("keeps attributes and relations in the template's own property order", () => {
+    const { fields } = resolveHalFormsFields(makeRelationTemplate());
+    expect(fields.map((field) => field.name)).toEqual([
+      "company",
+      "name",
+      "email",
+      "phone",
+      "tags",
+    ]);
+  });
+});
+
 describe("resolveHalFormsFields autocomplete opt-in", () => {
   it("promotes an opted-in text field to the autocomplete kind", () => {
     const { fields } = resolveHalFormsFields(makeTemplate(), ["email"]);
