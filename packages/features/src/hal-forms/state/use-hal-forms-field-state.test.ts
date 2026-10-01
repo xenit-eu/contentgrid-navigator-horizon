@@ -125,6 +125,17 @@ describe("useHalFormsFieldState", () => {
     expect(result.current.isDirty).toBe(false);
     expect(result.current.fieldState.name?.errors).toBeUndefined();
   });
+
+  it("replaces the baseline when given new initial values", () => {
+    const { result } = renderHook(() =>
+      useHalFormsFieldState({ fields: [nameField], initialValues: { name: "Acme" } }),
+    );
+
+    act(() => result.current.reset({}));
+
+    expect(result.current.values.name).toBe("");
+    expect(result.current.isDirty).toBe(false);
+  });
 });
 
 describe("useHalFormsFieldState.buildValues", () => {
