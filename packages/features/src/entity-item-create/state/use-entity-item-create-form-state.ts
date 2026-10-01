@@ -92,7 +92,12 @@ export interface UseEntityItemCreateFormState {
   buildValues<Spec extends TypedRequestSpec<unknown, unknown>>(
     template: HalFormsTemplate<Spec>,
   ): HalFormValues<Spec>;
-  reset(): void;
+  /**
+   * Restores the initial values and clears touched/dismissed state. Passing `initialValues`
+   * replaces the baseline first — e.g. an empty form after a continuous-create submit, so a
+   * value the form was opened with is not restored.
+   */
+  reset(initialValues?: FieldValueMap): void;
 }
 
 /**
@@ -279,7 +284,10 @@ export function useEntityItemCreateFormState({
     }, createValues(template));
   }
 
-  function reset() {
+  function reset(nextInitialValues?: FieldValueMap) {
+    if (nextInitialValues) {
+      initialValuesRef.current = initializeValues(fields, nextInitialValues);
+    }
     setValuesState(initialValuesRef.current);
     setTouchedFields(new Set());
     setDismissedExternalErrorFields(new Set());
