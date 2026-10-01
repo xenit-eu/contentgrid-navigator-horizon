@@ -4,11 +4,12 @@ import {
   ArrowsDownUpIcon as ArrowsDownUp,
 } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
+import { Checkbox } from "../../primitives/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../primitives/tooltip";
 import { getRecordTableGridTemplate } from "./grid-template";
 
 export interface RecordTableColumn {
-  /** Machine-readable key matching a key in DataTableRow.data */
+  /** Machine-readable key matching a `RecordTableCell.key` */
   key: string;
   /** Header label displayed in the column */
   header: string;
@@ -36,6 +37,10 @@ export interface RecordTableHeaderProps {
   onSort?: (option: RecordTableSortOption | undefined) => void;
   /** Reserves a trailing header cell to match a row-level actions column */
   showActionsColumn?: boolean;
+  /** Checked state of the "select all" checkbox — `"indeterminate"` when some but not all rows are selected */
+  selectionState?: boolean | "indeterminate";
+  /** Called when the "select all" checkbox is toggled */
+  onSelectAll?: (checked: boolean) => void;
   className?: string;
 }
 
@@ -62,10 +67,13 @@ function RecordTableHeader({
   currentSort,
   onSort,
   showActionsColumn,
+  selectionState = false,
+  onSelectAll,
   className,
 }: Readonly<RecordTableHeaderProps>) {
   const gridTemplateColumns = getRecordTableGridTemplate(columns.length, {
     hasActions: showActionsColumn,
+    hasSelection: !!onSelectAll,
   });
 
   return (
@@ -81,6 +89,15 @@ function RecordTableHeader({
             "grid w-fit min-w-full items-center gap-3 px-4 py-2 border-b border-border bg-muted/70",
           )}
         >
+          {onSelectAll && (
+            <div role="columnheader" className="flex items-center justify-center">
+              <Checkbox
+                checked={selectionState}
+                onCheckedChange={(checked) => onSelectAll(checked === true)}
+                aria-label="Select all rows"
+              />
+            </div>
+          )}
           {columns.map((column) => {
             const columnOptions = sortOptions?.filter((o) => o.property === column.key) ?? [];
             const activeOption = columnOptions.find((o) => currentSort?.includes(o.value));

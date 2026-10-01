@@ -238,3 +238,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Thin scrollbar: a faint sliver at rest, the primary color while the scroll area is hovered. */
+@layer utilities {
+  .scrollbar-subtle {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 25%, transparent) transparent;
+  }
+
+  /* Chromium and Safari: custom thumb (Chromium ignores it unless both properties are `auto`). */
+  @supports selector(::-webkit-scrollbar) {
+    .scrollbar-subtle {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+    .scrollbar-subtle::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    .scrollbar-subtle::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    .scrollbar-subtle::-webkit-scrollbar-thumb {
+      border: 3px solid transparent;
+      border-radius: 9999px;
+      background: color-mix(in oklab, var(--muted-foreground) 25%, transparent) padding-box;
+    }
+    .scrollbar-subtle:hover::-webkit-scrollbar-thumb {
+      background: var(--primary) padding-box;
+    }
+  }
+}

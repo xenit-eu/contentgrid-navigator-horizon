@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { LinkBreakIcon as LinkBreak } from "@phosphor-icons/react";
 import {
-  AttributeKind,
   type EntityItemToOneRelation,
   type ProfileEntity,
   toProblemDisplayModel,
@@ -19,32 +19,32 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
+  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
 import { ProblemAlert } from "../../problem-details";
-import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
-import {
-  MutationErrorDisplay,
-  type MutationErrorDisplayProps,
-  type RelationItemClickHandler,
-  RelationItemSearchDialog,
-} from "./relation-shared";
+import { EntityItemAttributeSummary } from "../variations/entity-item-attribute-summary";
+import type {
+  RelationItemClickHandler,
+  RelationItemCreateHandler,
+  RelationProblemHandlers,
+} from "./relation-handlers";
+import { RelationItemSearchDialog } from "./relation-item-search-dialog";
 
 export function RelationToOneSection({
   relation,
   profiles,
   onItemClick,
+  onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
+  onCreateNew?: RelationItemCreateHandler;
 }> &
-  Pick<
-    MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick"
-  >) {
+  Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
     mutate: clearRelation,
@@ -53,19 +53,21 @@ export function RelationToOneSection({
   } = useClearRelation(relation);
   const {
     mutate: setRelation,
+    reset: resetSetRelation,
     isPending: isSetting,
     error: setError,
   } = useSetToOneRelation(relation);
-  const mutationError = clearError ?? setError;
+  // `setError` is shown inside the link dialog, which stays open until linking succeeds.
+  const mutationError = clearError;
   const [linkOpen, setLinkOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <div className="flex items-center gap-2">
+    <RelationAccordion
+      title={title}
+      actions={
+        <>
           {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
             <>
               <Button
@@ -77,17 +79,32 @@ export function RelationToOneSection({
                 Link
               </Button>
               <RelationItemSearchDialog
+                multiple={false}
                 targetProfile={targetProfile}
                 open={linkOpen}
-                onOpenChange={setLinkOpen}
-                onSelect={(item) => setRelation(item.selfLink.href)}
+                onOpenChange={(open) => {
+                  setLinkOpen(open);
+                  if (!open) resetSetRelation();
+                }}
+                isLinking={isSetting}
+                linkError={setError}
+                onSelect={(item) =>
+                  setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
+                }
+                onCreateNew={onCreateNew}
               />
             </>
           )}
           {relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isClearing}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={isClearing}
+                >
+                  <LinkBreak className="size-4" />
                   {isClearing ? "Unlinking…" : "Unlink"}
                 </Button>
               </AlertDialogTrigger>
@@ -105,11 +122,12 @@ export function RelationToOneSection({
               </AlertDialogContent>
             </AlertDialog>
           )}
-        </div>
-      </div>
+        </>
+      }
+    >
       {mutationError && (
-        <MutationErrorDisplay
-          error={mutationError}
+        <ProblemAlert
+          model={toProblemDisplayModel(mutationError)}
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
         />
@@ -131,26 +149,9 @@ export function RelationToOneSection({
             onItemClick?.(linked.profileEntity.name, linked.id);
           }}
         >
-          <dl className="grid grid-cols-2 gap-2">
-            {linkedItem.data.userDefinedAttributes
-              .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
-              .slice(0, 4)
-              .map((attr) => {
-                const label =
-                  linkedItem.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
-                    ?.title ?? attr.value.name;
-                return (
-                  <div key={attr.value.name}>
-                    <dt className="text-xs text-muted-foreground">{label}</dt>
-                    <dd className="text-sm truncate">
-                      <AttributeValueRenderer attr={attr} />
-                    </dd>
-                  </div>
-                );
-              })}
-          </dl>
+          <EntityItemAttributeSummary item={linkedItem.data} />
         </button>
       )}
-    </div>
+    </RelationAccordion>
   );
 }

@@ -8,6 +8,7 @@ import {
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
+import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import {
   ProblemAlert,
   type RelationConflictAlertProps,
@@ -34,6 +35,10 @@ export interface CreateEntityItemContainerProps {
    * tracks this signal and owns the guard itself.
    */
   readonly onDirtyChange?: (isDirty: boolean) => void;
+  /** Opens a linked item, as legacy's relation "details" action. */
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
   /**
    * Fires for a `duplicate` entity-level validation error (HTTP 400) — e.g. a unique
    * constraint spanning fields the create-form doesn't render inline. Receives the
@@ -104,6 +109,8 @@ function CreateEntityItemContainerReady({
   onCreated,
   onCancel,
   onDirtyChange,
+  onRelationItemClick,
+  onRelationItemCreateNew,
   onConflictingItemClick,
   onMissingRelationTargetClick,
   onAllowedValuesClick,
@@ -182,7 +189,7 @@ function CreateEntityItemContainerReady({
   // but contained an entry with no `field`.
   //
   // The same reasoning extends to a field-scoped error whose `field` doesn't match any
-  // rendered field name (e.g. a system/audit field, or any property this attributes-only
+  // rendered field name (e.g. a system/audit field, or any property this
   // form doesn't produce a descriptor for) — `toFieldErrors` buckets it under that field
   // name, but no `FieldRenderer` exists to show it, and it also isn't a `field === undefined`
   // entry, so without this check it would be dropped by both paths and never reach the user.
@@ -207,6 +214,8 @@ function CreateEntityItemContainerReady({
       fieldState={formState.fieldState}
       onFieldChange={formState.setValue}
       onFieldBlur={formState.touchField}
+      onRelationItemClick={onRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}

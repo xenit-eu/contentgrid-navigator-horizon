@@ -21,8 +21,7 @@ export interface FieldDescriptorBase {
 
 /**
  * `kind`-discriminated union driving `render/field-renderer.tsx` (ADR-004's replacement
- * FieldRenderer). One variant per rendering shape. Covers only the create-form path (ACC-3128,
- * attributes-only) — this union is not meant to grow a variant per hypothetical future form kind.
+ * FieldRenderer). One variant per rendering shape, for the create form's attributes and relations.
  *
  * Neither `filter` nor `sort` are members here, and neither should be added speculatively:
  * - Filtering already has a real, working, differently-shaped home —
@@ -55,4 +54,7 @@ export type FieldDescriptor =
   | ({ readonly kind: "enum" } & FieldDescriptorBase & {
         readonly options: readonly EnumOption[];
         readonly multiValue: boolean;
+      })
+  | ({ readonly kind: "relation" } & FieldDescriptorBase & {
+        readonly toMany: boolean;
       });

@@ -8,8 +8,10 @@ import {
   NumberRenderer,
   TextRenderer,
 } from "@contentgrid/ui";
+import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
 import type { FieldDescriptor } from "../model/field-descriptor";
 import type { FieldState } from "../state/field-state";
+import { RelationField } from "./relation-field";
 
 export interface FieldRendererProps {
   readonly field: FieldDescriptor;
@@ -25,6 +27,10 @@ export interface FieldRendererProps {
    */
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
+  /** Opens a linked item, as legacy's relation "details" action. */
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
 }
 
 /**
@@ -47,6 +53,8 @@ export const FieldRenderer = memo(function FieldRenderer({
   fieldState,
   onFocus,
   onBlur,
+  onRelationItemClick,
+  onRelationItemCreateNew,
 }: Readonly<FieldRendererProps>) {
   return renderFieldWidget({
     field,
@@ -55,6 +63,8 @@ export const FieldRenderer = memo(function FieldRenderer({
     fieldState,
     onFocus,
     onBlur,
+    onRelationItemClick,
+    onRelationItemCreateNew,
   });
 });
 
@@ -65,6 +75,8 @@ function renderFieldWidget({
   fieldState,
   onFocus,
   onBlur,
+  onRelationItemClick,
+  onRelationItemCreateNew,
 }: Readonly<FieldRendererProps>) {
   // Every `packages/ui` widget's `error` prop is a single string (see packages/ui/CLAUDE.md's
   // plain-scalar-prop rule), but a field can carry more than one error at once — e.g. a client
@@ -175,6 +187,18 @@ function renderFieldWidget({
     }
     case "file":
       return <UnsupportedFieldPlaceholder field={field} />;
+    case "relation":
+      return (
+        <RelationField
+          field={field}
+          value={value}
+          onChange={onChange}
+          error={error}
+          onBlur={onBlur}
+          onRelationItemClick={onRelationItemClick}
+          onRelationItemCreateNew={onRelationItemCreateNew}
+        />
+      );
     default: {
       const exhaustive: never = field;
       return exhaustive;
