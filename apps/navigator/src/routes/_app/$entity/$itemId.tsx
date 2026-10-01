@@ -5,8 +5,8 @@ import {
   EntityItemContentFocusView,
   ensureEntityItemDetailLoaderData,
 } from "@contentgrid/features/entity-item";
-import { BreadcrumbLink } from "@contentgrid/ui";
 import { useOpenInNewTab } from "@contentgrid/features/router-shell";
+import { BreadcrumbLink } from "@contentgrid/ui";
 import {
   RelationProblemDialog,
   type RelationProblemDialogState,
