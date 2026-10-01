@@ -186,7 +186,7 @@ function EntityItemContentFocusViewBody({
   const defaultActions = onOpenGraph ? (
     <Button type="button" variant="outline" size="sm" onClick={onOpenGraph}>
       <GraphIcon />
-      Open in graph
+      View in the grid
     </Button>
   ) : undefined;
   const resolvedToolbar = resolveToolbar(toolbar, defaultBreadcrumbs, defaultActions);
