@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
   EntityItem,
+  type FieldValue,
   type ProfileEntity,
   createValues,
   toProblemDisplayModel,
@@ -12,10 +13,6 @@ import {
   AttributeMultiSelectContent,
   Badge,
   Button,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  FilterSidebar,
   PageTitle,
   Popover,
   PopoverContent,
@@ -23,15 +20,17 @@ import {
   type RecordTableSortOption,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
+import { type FieldState, type HalFormsField, resolveHalFormsFields } from "../hal-forms";
 import { EntityIconBadge } from "../layout";
 import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
   applyFilterValues,
-  buildFilterProperties,
+  coerceFilterValue,
   extractFilterValuesFromCollectionUrl,
   findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
+import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
 export interface EntityItemCollectionViewProps {
@@ -59,11 +58,23 @@ export interface EntityItemCollectionViewProps {
 }
 
 /**
- * App-agnostic collection view: fetches the entity's items and renders the filter sidebar,
- * table, and pagination controls. All routing / navigation / page chrome is supplied by the
- * caller through `onEntityItemClick`, `onPageChange`, `onFiltersChange` — this component performs
- * no navigation itself and renders no toolbar/layout (see `EntityItemCollectionSearchView` for
+ * App-agnostic collection view: fetches the entity's items and renders the filter form, table,
+ * and pagination controls. All routing / navigation / page chrome is supplied by the caller
+ * through `onEntityItemClick`, `onPageChange`, `onFiltersChange` — this component performs no
+ * navigation itself and renders no toolbar/layout (see `EntityItemCollectionSearchView` for
  * that).
+ *
+ * Filters render through `@contentgrid/features/hal-forms`'s generic `HalFormsContainer` rather
+ * than the earlier `FilterSidebar` pattern (`@contentgrid/ui`) — `resolveHalFormsFields` derives
+ * the same two-column layout and field kinds (including `autocomplete` for a prefix/full-text
+ * search property) directly from the search template, already deduplicated (hidden properties
+ * excluded, redundant exact-match/range siblings suppressed). `../search/filter-properties`'s
+ * remaining functions reuse that same `fields` list as their source of truth for how a filter
+ * value round-trips to/from the raw `filters: Record<string, string>` contract this view's own
+ * caller-facing props keep (URL-state-backed, per `filter-url-state.ts`) — there's no separate
+ * view-model list to keep in sync with `fields` any more. `FilterSidebar` itself is now unused
+ * by this view; it's fine to remove it or its own `TypeaheadTextFilter` next, but neither is
+ * touched here.
  */
 export function EntityItemCollectionView({
   profile,
@@ -76,8 +87,11 @@ export function EntityItemCollectionView({
   onSortChange,
 }: Readonly<EntityItemCollectionViewProps>) {
   const searchTemplate = profile.searchTemplate;
-  const filterProperties = useMemo(
-    () => (searchTemplate ? buildFilterProperties(searchTemplate) : []),
+  const { fields, layout } = useMemo(
+    () =>
+      searchTemplate
+        ? resolveHalFormsFields(searchTemplate)
+        : { fields: [], layout: { sections: [] } },
     [searchTemplate],
   );
 
@@ -86,46 +100,42 @@ export function EntityItemCollectionView({
   // template behaves exactly as it did previously.
   const searchValues = useMemo(() => {
     if (!searchTemplate) return undefined;
-    const filtered = applyFilterValues(
-      createValues(searchTemplate.template),
-      filterProperties,
-      filters,
-    );
+    const filtered = applyFilterValues(createValues(searchTemplate.template), fields, filters);
     // `_sort` is always multi-value — pass a single-element array, never a plain string.
     return currentSort && searchTemplate.sortProperty
       ? filtered.withValue(searchTemplate.sortProperty.name, [currentSort])
       : filtered;
-  }, [searchTemplate, filterProperties, filters, currentSort]);
+  }, [searchTemplate, fields, filters, currentSort]);
 
   // `pageUrl`'s own query string carries whichever filters were active when it was fetched. If
   // that DIFFERS from the CURRENT filters (a deep link, or browser back/forward across a filter
   // change), `pageUrl` belongs to a different search — discard it so `searchValues` drives page 1
   // of the CURRENT filters instead, rather than silently fetching the wrong page.
   //
-  // Both sides are compared post-encoding rather than as raw sidebar strings: `coerceFilterValue`
+  // Both sides are compared post-encoding rather than as raw filter-form strings: `coerceFilterValue`
   // normalizes datetime and number inputs before they're encoded (dropping milliseconds,
   // canonicalizing "10.50" to "10.5", …), so a raw `filters` string and the value extracted back
   // out of an already-encoded `pageUrl` can legitimately represent the same filter while being
   // different strings. Running `filters` through the same HAL-FORMS encoder `searchValues` uses
   // (via `profile.searchEntityRequest`) before comparing avoids that mismatch.
   const pageUrlFilters = useMemo(
-    () => (pageUrl ? extractFilterValuesFromCollectionUrl(filterProperties, pageUrl) : {}),
-    [pageUrl, filterProperties],
+    () => (pageUrl ? extractFilterValuesFromCollectionUrl(fields, pageUrl) : {}),
+    [pageUrl, fields],
   );
   const currentFilterParams = useMemo(
     () =>
       searchValues
         ? extractFilterValuesFromCollectionUrl(
-            filterProperties,
+            fields,
             profile.searchEntityRequest(searchValues).url,
           )
         : {},
-    [searchValues, filterProperties, profile],
+    [searchValues, fields, profile],
   );
   const effectivePageUrl = recordsEqual(currentFilterParams, pageUrlFilters) ? pageUrl : undefined;
   const invalidFilterKeys = useMemo(
-    () => findInvalidFilterKeys(filterProperties, filters),
-    [filterProperties, filters],
+    () => new Set(findInvalidFilterKeys(fields, filters)),
+    [fields, filters],
   );
 
   // Filters live in a modal (triggered from the toolbar) rather than an always-visible sidebar
@@ -136,8 +146,8 @@ export function EntityItemCollectionView({
   // Attribute names the user is actively filtering on — always shown as columns regardless of
   // the local "Columns" selection below (see the union in EntityItemCollectionTable).
   const activelyFilteredAttributeNames = useMemo(
-    () => findActivelyFilteredAttributeNames(filterProperties, filters),
-    [filterProperties, filters],
+    () => (searchTemplate ? findActivelyFilteredAttributeNames(searchTemplate, filters) : []),
+    [searchTemplate, filters],
   );
 
   // A local, session-only "Columns" selector next to Filters — lets the user adjust visible
@@ -163,9 +173,11 @@ export function EntityItemCollectionView({
     [profile],
   );
 
-  // Only one field can be typeahead-active at a time (mirrors FilterSidebar's own
-  // activeTypeaheadField contract) — switching fields just re-targets this single hook call
-  // rather than needing one useTypeahead per property.
+  // Only one field can be typeahead-active at a time (mirrors the search page owning a single
+  // useTypeahead call and handing its live results down to whichever autocomplete field is
+  // currently active, rather than the generic renderer fetching anything itself — see
+  // `HalFormsFieldRenderer`'s own doc comment) — switching fields just re-targets this one hook
+  // call rather than needing one useTypeahead per property.
   const [activeTypeaheadField, setActiveTypeaheadField] = useState<string | undefined>(undefined);
   const typeahead = useTypeahead({
     profileEntity: profile,
@@ -177,10 +189,15 @@ export function EntityItemCollectionView({
     minLength: 1,
   });
 
-  function handleTypeaheadSearch(fieldParam: string, query: string) {
-    setActiveTypeaheadField(fieldParam);
-    typeahead.setQuery(query);
-  }
+  // Stable (setState setters never change identity) so it can be a correct, complete dependency
+  // of the `fieldState` memo below without defeating that memo's own point.
+  const handleTypeaheadSearch = useCallback(
+    (fieldParam: string, query: string) => {
+      setActiveTypeaheadField(fieldParam);
+      typeahead.setQuery(query);
+    },
+    [typeahead.setQuery],
+  );
 
   const collection = useEntityItemCollection(
     effectivePageUrl
@@ -191,13 +208,16 @@ export function EntityItemCollectionView({
   // Pagination reset is the caller's responsibility here: a filter change is reported via
   // `onFiltersChange`, and the caller (the route) clears its own remembered page position — calling
   // `onPageChange` too would race with that.
-  function handleFilterChange(key: string, value: string | undefined) {
-    const next =
-      value === undefined
-        ? Object.fromEntries(Object.entries(filters).filter(([k]) => k !== key))
-        : { ...filters, [key]: value };
-    onFiltersChange?.(next);
-  }
+  const handleFilterChange = useCallback(
+    (key: string, value: string | undefined) => {
+      const next =
+        value === undefined
+          ? Object.fromEntries(Object.entries(filters).filter(([k]) => k !== key))
+          : { ...filters, [key]: value };
+      onFiltersChange?.(next);
+    },
+    [filters, onFiltersChange],
+  );
 
   function handleClearAll() {
     onFiltersChange?.({});
@@ -210,6 +230,48 @@ export function EntityItemCollectionView({
     onSortChange?.(option?.value);
     onPageChange?.(undefined);
   }
+
+  // `HalFormsContainer`'s widgets work with typed `FieldValue`s; `filters` (this view's own
+  // caller-facing contract) is plain strings. `values`/`handleHalFormChange` are the two
+  // directions of that bridge — `filterFieldValues`/`encodeFilterValue` below do the actual
+  // per-kind conversion, reusing `coerceFilterValue` (keyed off `field.property.type`, the raw
+  // wire type every `HalFormsField` still carries) for the string -> typed direction so the
+  // coercion rules stay identical to what `applyFilterValues`/`searchValues` above already use.
+  const values = useMemo(() => filterFieldValues(fields, filters), [fields, filters]);
+
+  function handleHalFormChange(name: string, value: FieldValue) {
+    handleFilterChange(name, encodeFilterValue(value));
+  }
+
+  const fieldState = useMemo(() => {
+    const state: Record<string, FieldState> = {};
+    for (const field of fields) {
+      const errors: FieldState["errors"] = invalidFilterKeys.has(field.name)
+        ? [{ source: "client", message: invalidFilterValueMessage(field.property.type) }]
+        : [];
+      if (field.kind === "autocomplete") {
+        const isActive = activeTypeaheadField === field.name;
+        state[field.name] = {
+          errors,
+          autocomplete: {
+            suggestions: isActive ? typeahead.results.map((r) => r.value) : [],
+            isLoading: isActive && typeahead.isLoading,
+            onQueryChange: (query) => handleTypeaheadSearch(field.name, query),
+          },
+        };
+      } else if (errors.length > 0) {
+        state[field.name] = { errors };
+      }
+    }
+    return state;
+  }, [
+    fields,
+    invalidFilterKeys,
+    activeTypeaheadField,
+    typeahead.results,
+    typeahead.isLoading,
+    handleTypeaheadSearch,
+  ]);
 
   const itemCountTitle = `${collection.data?.totalItems?.count ?? "-"} items ${collection.data?.totalItems?.isEstimated ? "(estimated)" : ""}`;
 
@@ -241,7 +303,7 @@ export function EntityItemCollectionView({
             visibleColumnNames={localVisibleColumns}
             forcedVisibleColumnNames={activelyFilteredAttributeNames}
             tableActions={
-              (attributeOptions.length > 0 || filterProperties.length > 0) && (
+              (attributeOptions.length > 0 || fields.length > 0) && (
                 <>
                   {attributeOptions.length > 0 && (
                     <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
@@ -260,7 +322,7 @@ export function EntityItemCollectionView({
                       </PopoverContent>
                     </Popover>
                   )}
-                  {filterProperties.length > 0 && (
+                  {fields.length > 0 && (
                     <Button variant="outline" onClick={() => setFiltersOpen(true)}>
                       <Funnel aria-hidden />
                       Filters
@@ -276,30 +338,74 @@ export function EntityItemCollectionView({
         )}
       </div>
 
-      {filterProperties.length > 0 && (
-        <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
-            {/* FilterSidebar renders its own "Filters" heading + Clear-all control below —
-                this stays visually hidden purely to satisfy Radix's accessible-name requirement
-                for DialogContent without showing a redundant second heading. */}
-            <DialogTitle className="sr-only">Filters</DialogTitle>
-            <FilterSidebar
-              className="w-full shrink rounded-none bg-transparent p-0"
-              filterProperties={filterProperties}
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onClearAll={handleClearAll}
-              invalidFilterKeys={invalidFilterKeys}
-              onTypeaheadSearch={handleTypeaheadSearch}
-              activeTypeaheadField={activeTypeaheadField}
-              typeaheadSuggestions={typeahead.results.map((r) => r.value)}
-              typeaheadIsLoading={typeahead.isLoading}
-            />
-          </DialogContent>
-        </Dialog>
+      {fields.length > 0 && (
+        <EntityItemCollectionFilterDialog
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          activeFilterCount={activeFilterCount}
+          onClearAll={handleClearAll}
+          fields={fields}
+          layout={layout}
+          values={values}
+          onChange={handleHalFormChange}
+          fieldState={fieldState}
+          totalItems={collection.data?.totalItems}
+          isLoading={collection.isFetching}
+        />
       )}
     </div>
   );
+}
+
+/** Empty-state default per `HalFormsField.kind`, mirroring `entity-item-create`'s
+ * `defaultValueFor` — used only when a filter is entirely absent, never for a present-but-empty
+ * one (there is no such state: an empty raw value is normalized away by `handleFilterChange`). */
+function emptyValueFor(field: HalFormsField): FieldValue {
+  if (field.kind === "boolean" || field.kind === "file") return undefined;
+  if ((field.kind === "enum" || field.kind === "autocomplete") && field.multiValue) return [];
+  return "";
+}
+
+/** String `filters` -> typed `FieldValue`s for `HalFormsContainer`'s `values` prop, reusing
+ * `coerceFilterValue` (keyed off the raw wire type every `HalFormsField.property` still carries)
+ * for a present, non-empty raw value. */
+function filterFieldValues(
+  fields: readonly HalFormsField[],
+  filters: Record<string, string>,
+): Record<string, FieldValue> {
+  const values: Record<string, FieldValue> = {};
+  for (const field of fields) {
+    const raw = filters[field.name];
+    values[field.name] = raw ? coerceFilterValue(field.property.type, raw) : emptyValueFor(field);
+  }
+  return values;
+}
+
+/** Inverse of `filterFieldValues`, for `HalFormsContainer`'s `onChange`. */
+function encodeFilterValue(value: FieldValue): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.length > 0 ? String(value[0]) : undefined;
+  if (typeof value === "string") return value === "" ? undefined : value;
+  return String(value);
+}
+
+/** Mirrors the former `filter-sidebar.tsx`'s module-private `invalidValueMessage` — same
+ * wire-type-keyed messages, now surfaced through `HalFormsFieldRenderer`'s own error prop
+ * instead of `FilterSidebar`'s bespoke `invalidFilterKeys` handling. */
+function invalidFilterValueMessage(propertyType: string): string {
+  switch (propertyType) {
+    case "number":
+    case "range":
+      return "Enter a valid number";
+    case "date":
+      return "Enter a valid date";
+    case "datetime":
+    case "datetime-local":
+      return "Enter a valid date and time";
+    default:
+      return "Enter a valid value";
+  }
 }
 
 function recordsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
