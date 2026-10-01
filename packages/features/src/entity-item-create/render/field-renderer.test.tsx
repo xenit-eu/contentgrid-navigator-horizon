@@ -119,7 +119,7 @@ describe("FieldRenderer", () => {
   it("dispatches a file field to an upload dropzone", () => {
     render(<FieldRenderer field={fileField()} value={undefined} onChange={vi.fn()} />);
     expect(screen.getByText("Attachment")).toBeInTheDocument();
-    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop a file here/i)).toBeInTheDocument();
   });
 
   it("shows the first error's message for a field with errors", () => {

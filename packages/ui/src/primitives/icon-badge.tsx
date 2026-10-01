@@ -70,7 +70,7 @@ function IconBadge({
       outlined && "border",
       !outlined && !muted && "text-white",
       onClick &&
-        "cursor-pointer transition-[filter,background-color] hover:bg-accent hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "transition-[filter,background-color] hover:bg-accent hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
       className,
     ),
     style,

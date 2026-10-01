@@ -28,10 +28,8 @@ function RecordTableRow({
   className,
 }: RecordTableRowProps) {
   // `--accent` is already the shadcn convention for a "selected"/highlighted row (see
-  // ItemReference's `selected && "bg-accent"`) — light mode's accent is a pre-softened pastel so
-  // it's used at full opacity, but dark mode's accent is a saturated highlight color, so it's
-  // dialed down to a wash via opacity rather than painting the whole row solid blue.
-  const rowBackground = selected ? "bg-accent dark:bg-accent/15" : "bg-card/50";
+  // ItemReference's `selected && "bg-accent"`); both themes define it as a mild surface.
+  const rowBackground = selected ? "bg-accent" : "bg-card/50";
 
   return (
     <div
@@ -66,6 +64,7 @@ function RecordTableRow({
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
         "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
         onClick && "cursor-pointer",
+        onClick && !selected && "hover:bg-primary/5",
         rowBackground,
         className,
       )}
