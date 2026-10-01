@@ -3,13 +3,7 @@ import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
 import type { HalFormsField } from "../model/hal-forms-field";
-import {
-  type FieldRow,
-  type FieldSection,
-  type FieldSectionItem,
-  type LayoutSchema,
-  isFieldRow,
-} from "../model/layout-schema";
+import type { FieldRow, FieldSection, LayoutSchema } from "../model/layout-schema";
 import type { FieldState } from "../state/field-error";
 import { HalFormsFieldRenderer } from "./hal-forms-field-renderer";
 
@@ -78,8 +72,8 @@ export function HalFormsContainer({
  * section (FR-027) wraps its rows in a single `Accordion` item — the section's rows
  * collapse/expand together as one unit, never per-row — with the title as the toggle trigger and
  * the description rendered below it, outside the button, so it isn't part of the button's
- * accessible name; the content region points at it via `aria-describedby`, same as the nested
- * `fieldset` variant does. Expanded by default (FR-027), same as `RelationAccordion` — a search form's
+ * accessible name; the content region points at it via `aria-describedby`, same as a described
+ * row does. Expanded by default (FR-027), same as `RelationAccordion` — a search form's
  * relation-traversal sections (the only collapsible ones this feature produces, see
  * `generate-search-form-layout.ts`) must not hide an active relation filter (e.g. one applied
  * from a deep link) behind a closed header. A
@@ -178,52 +172,23 @@ interface FieldListProps {
 function FieldSectionRows({
   rows,
   ...fieldListProps
-}: Readonly<{ rows: readonly FieldSectionItem[] } & FieldListProps>) {
+}: Readonly<{ rows: readonly FieldRow[] } & FieldListProps>) {
   return (
     <div className="space-y-4">
-      {rows.map((item, index) =>
-        isFieldRow(item) ? (
-          <FieldRowView key={index} row={item} {...fieldListProps} />
-        ) : (
-          <NestedFieldSectionView key={item.title ?? index} section={item} {...fieldListProps} />
-        ),
-      )}
+      {rows.map((row, index) => (
+        <FieldRowView key={index} row={row} {...fieldListProps} />
+      ))}
     </div>
   );
 }
 
 /**
- * A section nested inside another section's rows — e.g. a search form's range attribute, whose
- * "Equals"/"From"/"Until" fields are labelled without the attribute name. A titled,
- * non-collapsible one renders as a `fieldset` with the title as its `legend` and the description
- * linked via `aria-describedby`, so assistive tech announces the attribute when entering the
- * group instead of just "From". Any other nested section renders like a top-level one.
+ * One row's fields — side by side in a 2-col grid for a two-field row, full width otherwise. A
+ * row's `description` renders once below its fields; the row then becomes a `group` described by
+ * it, so assistive tech reads it for every field in the row without it repeating visually.
  */
-function NestedFieldSectionView({
-  section,
-  ...fieldListProps
-}: Readonly<{ section: FieldSection } & FieldListProps>) {
-  const descriptionId = useId();
-
-  if (section.isCollapsible || !section.title) {
-    return <FieldSectionView section={section} {...fieldListProps} />;
-  }
-
-  return (
-    <fieldset aria-describedby={section.description ? descriptionId : undefined}>
-      <legend className="mb-2 text-sm font-medium">{section.title}</legend>
-      {section.description && (
-        <p id={descriptionId} className="mb-2 text-sm text-muted-foreground">
-          {section.description}
-        </p>
-      )}
-      <FieldSectionRows rows={section.rows} {...fieldListProps} />
-    </fieldset>
-  );
-}
-
-/** One row's fields — side by side in a 2-col grid for a two-field row, full width otherwise. */
 function FieldRowView({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & FieldListProps>) {
+  const descriptionId = useId();
   const {
     fieldsByName,
     values,
@@ -234,7 +199,7 @@ function FieldRowView({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & F
     onRelationItemClick,
     onRelationItemCreateNew,
   } = fieldListProps;
-  return (
+  const fields = (
     <div className={row.fieldNames.length > 1 ? "grid grid-cols-2 gap-4" : undefined}>
       {row.fieldNames.map((name) => {
         const field = fieldsByName.get(name);
@@ -253,6 +218,17 @@ function FieldRowView({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & F
           />
         );
       })}
+    </div>
+  );
+
+  if (!row.description) return fields;
+
+  return (
+    <div role="group" aria-describedby={descriptionId} className="space-y-1.5">
+      {fields}
+      <p id={descriptionId} className="text-sm text-muted-foreground">
+        {row.description}
+      </p>
     </div>
   );
 }

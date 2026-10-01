@@ -156,7 +156,6 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          hideLabel={field.hideLabel}
           value={asNumberOrString(value)}
           onChange={onChange}
           error={error}
@@ -187,7 +186,6 @@ function renderFieldWidget({
           required={field.required}
           readOnly={field.readOnly}
           description={field.description}
-          hideLabel={field.hideLabel}
           includesTime={field.includesTime}
           value={asDateOrString(value)}
           onChange={onChange}
