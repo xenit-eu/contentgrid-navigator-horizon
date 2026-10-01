@@ -14,6 +14,7 @@ import { createApiClient } from "../../api/client";
 import { BASE, PROFILE_URL, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
 import {
   ensureProfileEntity,
+  useCreatableProfileEntities,
   useLoadedProfileEntities,
   useProfileEntities,
   useProfileEntity,
@@ -399,5 +400,37 @@ describe("ensureProfileEntity", () => {
     });
 
     expect(profile).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useCreatableProfileEntities
+// ---------------------------------------------------------------------------
+
+describe("useCreatableProfileEntities", () => {
+  it("keeps only the profiles that have a create-form template", async () => {
+    server.use(
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+      http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+      http.get(INVOICE_PROFILE_URL, () =>
+        HttpResponse.json({
+          ...invoiceProfileBody,
+          _templates: {
+            ...invoiceProfileBody._templates,
+            "create-form": {
+              method: "POST",
+              target: `${BASE}/invoices`,
+              contentType: "application/json",
+              properties: [],
+            },
+          },
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useCreatableProfileEntities(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.profiles.map((p) => p.name)).toEqual(["invoice"]);
   });
 });
