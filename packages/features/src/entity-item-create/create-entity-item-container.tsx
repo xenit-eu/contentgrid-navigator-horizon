@@ -1,8 +1,9 @@
-import { type SubmitEvent, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
+  type FieldValue,
   type ProfileEntity,
   getValidationFieldErrors,
   toProblemDisplayModel,
@@ -22,6 +23,7 @@ import {
 } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
 import { CreateEntityItemForm } from "./create-entity-item-form";
+import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
 export interface CreateEntityItemContainerProps {
   readonly profile: ProfileEntity;
@@ -123,7 +125,23 @@ function CreateEntityItemContainerReady({
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
   const { fields, layout } = useMemo(() => resolveHalFormsFields(createTemplate), [createTemplate]);
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldValidationError[]>>({});
-  const formState = useHalFormsFieldState({ fields, externalErrors });
+  // The file attached on the Create Item page goes into the first file field, read once on
+  // mount. Without a file field it is kept for a later create form.
+  const fileFieldName = fields.find((field) => field.kind === "file")?.name;
+  const [initialValues] = useState(() => {
+    const { initialFile } = useCreateEntityItemState.getState();
+    return initialFile && fileFieldName ? { [fileFieldName]: initialFile } : undefined;
+  });
+  const formState = useHalFormsFieldState({ fields, initialValues, externalErrors });
+  const { setValue } = formState;
+  const handleFieldChange = useCallback(
+    (name: string, value: FieldValue) => {
+      if (name === fileFieldName && !value)
+        useCreateEntityItemState.getState().setInitialFile(null);
+      setValue(name, value);
+    },
+    [fileFieldName, setValue],
+  );
   const [continuousCreateMode, setContinuousCreateModeState] = useState<boolean>(
     readInitialContinuousCreate,
   );
@@ -169,7 +187,10 @@ function CreateEntityItemContainerReady({
         // "unsaved" anymore, so isDirty (and onDirtyChange) must reflect that even if
         // the caller doesn't navigate away immediately (e.g. an embedding that stays
         // mounted after create instead of redirecting).
-        formState.reset();
+        useCreateEntityItemState.getState().setInitialFile(null);
+        // Reset to an empty baseline, not the values this form was opened with — the initial
+        // file it may have been prefilled with was just used.
+        formState.reset({});
         if (continuousCreateMode) {
           setFormResetCount((count) => count + 1);
         } else {
@@ -212,7 +233,7 @@ function CreateEntityItemContainerReady({
       layout={layout}
       values={formState.values}
       fieldState={formState.fieldState}
-      onFieldChange={formState.setValue}
+      onFieldChange={handleFieldChange}
       onFieldBlur={formState.touchField}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}

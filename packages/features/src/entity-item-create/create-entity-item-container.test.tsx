@@ -14,6 +14,7 @@ import {
 import { Toaster } from "@contentgrid/ui";
 import { server } from "../../test-setup";
 import { CreateEntityItemContainer } from "./create-entity-item-container";
+import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
@@ -135,6 +136,7 @@ describe("CreateEntityItemContainer", () => {
   // test's toggle state can't leak into the next.
   afterEach(() => {
     window.sessionStorage.clear();
+    useCreateEntityItemState.getState().setInitialFile(null);
   });
 
   it("renders one field per create-form property", async () => {
@@ -506,6 +508,59 @@ describe("CreateEntityItemContainer", () => {
 
       await vi.waitFor(() => expect(body).toBeDefined());
       expect(body!.has("document")).toBe(false);
+    });
+  });
+
+  describe("initial file from the Create Item page", () => {
+    const FILE_CREATE_FORM = {
+      method: "POST",
+      target: `${API_URL}/invoices`,
+      contentType: "multipart/form-data",
+      properties: [
+        { name: "invoice_number", type: "text", required: true },
+        { name: "document", type: "file" },
+      ],
+    };
+
+    it("prefills the first file field, sends it, and clears it once the item is created", async () => {
+      const user = userEvent.setup();
+      let body: string | undefined;
+      useCreateEntityItemState
+        .getState()
+        .setInitialFile(new File(["%PDF"], "invoice.pdf", { type: "application/pdf" }));
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, async ({ request }) => {
+          // Read as text: `request.formData()` rebuilds file parts with the global `File`, which
+          // jsdom replaces with one undici's parser rejects.
+          body = await request.text();
+          return HttpResponse.json(
+            { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+            { status: 201 },
+          );
+        }),
+      );
+      renderForm();
+
+      await user.type(await screen.findByLabelText(/Invoice Number/), "INV-1");
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      await vi.waitFor(() => expect(body).toBeDefined());
+      expect(body).toMatch(
+        /name="document"; filename="[^"]*"\r\nContent-Type: application\/pdf\r\n/,
+      );
+      await vi.waitFor(() => expect(useCreateEntityItemState.getState().initialFile).toBeNull());
+    });
+
+    it("keeps the initial file for a later form when this form has no file field", async () => {
+      const initialFile = new File(["%PDF"], "invoice.pdf", { type: "application/pdf" });
+      useCreateEntityItemState.getState().setInitialFile(initialFile);
+      server.use(profileRootHandler(), invoiceProfileHandler());
+      renderForm();
+
+      await screen.findByLabelText(/Invoice Number/);
+      expect(useCreateEntityItemState.getState().initialFile).toBe(initialFile);
     });
   });
 });
