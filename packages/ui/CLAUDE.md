@@ -315,6 +315,36 @@ BufferSource argument is empty` reaches the console), but
 
 ---
 
+## `KnowledgeGraph` pattern (`src/patterns/knowledge-graph/`)
+
+Spec `007-entity-knowledge-graph`. The repo's only consumer of **`@xyflow/react`** (React Flow,
+pinned `12.11.6`, MIT, no lifecycle scripts) — nothing outside this folder may import it.
+
+- **Plain props only**: `KnowledgeGraphNode` / `KnowledgeGraphEdge` / menu items are strings,
+  numbers, booleans and callbacks. No navigator-data or HAL types (the feature maps its model to
+  these in `entity-graph/util/to-knowledge-graph-props.ts`).
+- **Layout** is our own deterministic radial layout (`layout/radial-layout.ts`, pure, tested):
+  focus centred, its neighbours on ring 1 (previous trail node pinned left), the previous node's
+  neighbours on a sector of ring 2, older trail nodes on a line further left. No layout library.
+- **Edges** (`edges/relation-edge.tsx`): straight for one link, curved apart for parallel links
+  between the same pair, a loop for self-relations; HTML labels via `EdgeLabelRenderer` that also
+  anchor the edge menu.
+- **Menus**: node/edge menus are Radix popovers rendered inside the node / edge label, positioned
+  with `updatePositionStrategy="always"` (the anchor moves with React Flow's CSS-transformed
+  viewport without scroll/resize events). Focus returns to the node/label on close.
+- **Styling**: `@xyflow/react/dist/base.css` is imported in `src/styles/preset.css` (`layer(base)`)
+  and the `--xy-*` variables are mapped to our semantic tokens, so dark mode follows `.dark`
+  automatically. The React Flow attribution is kept (restyled for contrast).
+- **jsdom**: both `packages/ui` and `packages/features` test setups shim `ResizeObserver` (calling
+  back on `observe`), `DOMMatrixReadOnly`, node `offsetWidth/Height` and `getBBox`, per the React
+  Flow testing guide. Use `fireEvent`, not `userEvent`, for clicks on the canvas — d3-drag/zoom
+  crash on userEvent's synthetic mousedown in jsdom.
+- Stories: `Patterns/KnowledgeGraph` — `Default`, `ParallelAndSelfLoop`, `Overflow`,
+  `TrailCollapsed`, `LoadingAndErrorEdges`, `Dark` (visual baselines still to be generated on the
+  pinned Linux image), plus `WithInteraction` (`knowledge-graph.interaction.stories.tsx`).
+
+---
+
 ## peerDep policy
 
 `react` and `react-dom` are `peerDependencies`. Do not move them to
