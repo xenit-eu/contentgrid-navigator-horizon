@@ -246,12 +246,12 @@ describe("resolveHalFormsFields search-form autocomplete", () => {
     expect(names).toEqual(expect.arrayContaining(["due_date~after", "due_date~before"]));
   });
 
-  it("labels a directional range field with just its direction word, not the attribute name", () => {
+  it("labels a directional range field with its attribute and direction", () => {
     const { fields } = resolveHalFormsFields(makeSearchTemplate());
     const after = fields.find((field) => field.name === "due_date~after");
     const before = fields.find((field) => field.name === "due_date~before");
-    expect(after?.label).toBe("After");
-    expect(before?.label).toBe("Before");
+    expect(after?.label).toBe("Due date after");
+    expect(before?.label).toBe("Due date before");
   });
 
   it("does not inherit the relation's description onto its own relation-scoped fields", () => {
@@ -497,10 +497,10 @@ describe("resolveHalFormsFields — redundant field suppression (search)", () =>
     expect(fields.find((field) => field.name === "amount")).toBeDefined();
   });
 
-  it("visually hides a kept exact-match field's label, since its attribute section names it", () => {
+  it("labels a kept exact-match field with its attribute, without the attribute description", () => {
     const { fields } = resolveHalFormsFields(makeRedundancyTemplate());
     const amount = fields.find((field) => field.name === "amount");
-    expect(amount).toMatchObject({ kind: "number", hideLabel: true });
-    expect(amount?.label).not.toBe("");
+    expect(amount).toMatchObject({ kind: "number", label: "Amount" });
+    expect(amount).not.toHaveProperty("hideLabel");
   });
 });

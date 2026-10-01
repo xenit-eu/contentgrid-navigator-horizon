@@ -140,7 +140,7 @@ fields to `hal-forms`.
 **Why:** the original engine lived inside `entity-item-create` because the create form was its
 only consumer. The search/filter form (spec `001-hal-form-layout`) needed the same pipeline —
 template → typed fields → layout → per-`kind` widget → field state — with search-specific
-additions (range sections, autocomplete). Building that as a second engine next to the first
+additions (range filters, relation sections, autocomplete). Building that as a second engine next to the first
 would have meant two field unions drifting apart, so the engine was generalised into
 `hal-forms` and the create form moved onto it. Relation fields (ACC-2881) and file uploads
 (ACC-2895), first built on the old create-form engine, were ported along with it, and the old
@@ -148,16 +148,16 @@ engine was deleted.
 
 **What replaced what:**
 
-| Original (this ADR)                                             | Now (`packages/features/src/hal-forms/`)                                               |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `FieldDescriptor` union (`model/field-descriptor.ts`)           | `HalFormsField` union (`model/hal-forms-field.ts`)                                     |
-| `resolveCreateFieldDescriptors()`                               | `resolveHalFormsFields()` — takes a `CreateHalFormTemplate` or `SearchHalFormTemplate` |
-| `LayoutInformation` (single flat group)                         | `LayoutSchema` — sections of rows, optionally titled, nested or collapsible            |
-| `FieldRenderer` (`kind` switch)                                 | `HalFormsFieldRenderer`                                                                |
-| `FormContainer`                                                 | `HalFormsContainer`                                                                    |
-| `FieldError` / `useEntityItemCreateFormState()`                 | `FieldValidationError` / `FieldState` / `useHalFormsFieldState()`                      |
-| `toFieldErrors()`                                               | `toServerFieldErrors()`                                                                |
-| relation field (`entity-item-create/render/relation-field.tsx`) | `render/relation-field.tsx`, dispatched for the `relation` kind                        |
+| Original (this ADR)                                             | Now (`packages/features/src/hal-forms/`)                                                           |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `FieldDescriptor` union (`model/field-descriptor.ts`)           | `HalFormsField` union (`model/hal-forms-field.ts`)                                                 |
+| `resolveCreateFieldDescriptors()`                               | `resolveHalFormsFields()` — takes a `CreateHalFormTemplate` or `SearchHalFormTemplate`             |
+| `LayoutInformation` (single flat group)                         | `LayoutSchema` — sections of rows, optionally titled or collapsible; a row may carry a description |
+| `FieldRenderer` (`kind` switch)                                 | `HalFormsFieldRenderer`                                                                            |
+| `FormContainer`                                                 | `HalFormsContainer`                                                                                |
+| `FieldError` / `useEntityItemCreateFormState()`                 | `FieldValidationError` / `FieldState` / `useHalFormsFieldState()`                                  |
+| `toFieldErrors()`                                               | `toServerFieldErrors()`                                                                            |
+| relation field (`entity-item-create/render/relation-field.tsx`) | `render/relation-field.tsx`, dispatched for the `relation` kind                                    |
 
 **What changes from the original decision:**
 
@@ -175,7 +175,8 @@ engine was deleted.
 - **Layout:** the "single flat group" limitation in
   [What is lost](#what-is-lost-by-dropping-jsonforms--honest-inventory-unchanged) no longer
   applies. A create form still gets one section, one field per row; a search form gets
-  generated sections (per relation, per range attribute).
+  a leading section plus one collapsible section per relation, with a range attribute's
+  bounds paired on one row ("Age from" | "Age until") that carries its description once.
 - **`packages/ui` value types:** the form renderers take plain value types (`string`, `number`,
   `boolean`, `Date`, `string[]`, `File`) instead of `FieldValue`, so `packages/ui` no longer
   depends on `@contentgrid/navigator-data`. `hal-forms/render/narrow-field-value.ts` narrows

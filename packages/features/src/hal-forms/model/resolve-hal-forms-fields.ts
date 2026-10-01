@@ -10,7 +10,11 @@ import type {
 import { SearchHalFormTemplate } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 import { formatFieldName } from "../../format-field-name";
-import { directionLabel, generateSearchFormLayout } from "./generate-search-form-layout";
+import {
+  directionLabel,
+  generateSearchFormLayout,
+  rangeAttributeTitle,
+} from "./generate-search-form-layout";
 import type { HalFormsField } from "./hal-forms-field";
 import type { FieldSection, LayoutSchema } from "./layout-schema";
 
@@ -155,13 +159,10 @@ function attributeHalFormsField(prop: CreateFormProperty): HalFormsField {
  * never fetches anything itself).
  *
  * A directional range property (`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before`/`~from`/`~until`)
- * uses its bare direction word ("After"/"Before"/"From"/"Until") as its whole label, rather than
- * `property.prompt`/`profileAttribute?.title`, and the exact-match variant of that same
- * attribute (`isInRangeGroup`) keeps its attribute label only as its accessible name
- * (`hideLabel`) — the attribute's name (and description) is shown once, on the nested section
- * `generate-search-form-layout.ts` groups them into (`rangeAttributeSection`), rather than
- * repeated on every variant. That section renders as a `fieldset` with the attribute as its
- * legend, so each input's accessible context still names the attribute.
+ * is labelled "{Attribute} {direction}" (e.g. "Age from", "Friends : Age until") from
+ * `rangeAttributeTitle`, rather than `property.prompt`, which names a single variant. No field of
+ * a range attribute (`isInRangeGroup`) carries the attribute's description itself — it is shown
+ * once, on the range row `generate-search-form-layout.ts` builds (`rangeAttributeRows`).
  *
  * Search-only filtering happens in `resolveSearchFields`, ported from
  * `packages/features/src/search/filter-properties.ts`'s `buildFilterProperties`: the `hidden`
@@ -183,14 +184,14 @@ function searchPropertyHalFormsField(
   const direction = directionLabel(sp);
   const base: FieldMappingInput = {
     name: property.name,
-    label: direction ?? baseLabel,
+    label: direction ? `${rangeAttributeTitle(sp)} ${direction.toLowerCase()}` : baseLabel,
     required: false,
     readOnly: false,
     // The relation's own description belongs on that relation's section header
     // (`generate-search-form-layout.ts`'s `groupRowsIntoSections`), not repeated on every one of
     // its fields — `profileAttribute` never resolves for a relation-traversal property (see this
     // function's own doc comment), so such a field simply has no description of its own. A range
-    // attribute's description likewise lives on its nested section instead.
+    // attribute's description likewise lives on its range row instead.
     description: isInRangeGroup ? undefined : profileAttribute?.description || undefined,
     property,
   };
@@ -204,11 +205,7 @@ function searchPropertyHalFormsField(
     };
   }
 
-  const field = mapToHalFormsField(base, property);
-  if (isInRangeGroup && !direction && (field.kind === "number" || field.kind === "datetime")) {
-    return { ...field, hideLabel: true };
-  }
-  return field;
+  return mapToHalFormsField(base, property);
 }
 
 function isStringSearchable(sp: SearchHalFormTemplateProperty): boolean {
@@ -219,8 +216,8 @@ function isStringSearchable(sp: SearchHalFormTemplateProperty): boolean {
 function resolveSearchFields(template: SearchHalFormTemplate): HalFormsField[] {
   const properties = template.searchProperties.filter((sp) => sp.property.type !== "hidden");
   const surviving = properties.filter((sp) => !isRedundantSearchField(sp, properties));
-  // Same "has a range variant" test `generateSearchFormLayout` uses to give an attribute its own
-  // nested section, so every field it places in one is labelled for it.
+  // Same "has a range variant" test `generateSearchFormLayout` uses to keep an attribute's rows
+  // together and put its description on the range row, so no field of it repeats that text.
   const rangeGroupKeys = new Set(
     surviving.filter((sp) => directionLabel(sp) !== undefined).map((sp) => sp.groupKey),
   );
@@ -291,7 +288,7 @@ function searchOperatorOf(sp: SearchHalFormTemplateProperty): string {
  * exists: its input is minute precision, so it would practically never equal a stored
  * timestamp, and the range pair covers the real use case. A `date` or number exact-match
  * property is kept next to its range siblings ("everything due on 24 Sep" is a real query) —
- * `generate-search-form-layout.ts` places them together in the attribute's section. A strict range bound
+ * `generate-search-form-layout.ts` keeps their rows together. A strict range bound
  * (`greater-than`/`less-than`) is redundant once its inclusive equivalent
  * (`greater-than-or-equal`/`less-than-or-equal`) exists for the same `groupKey`.
  */

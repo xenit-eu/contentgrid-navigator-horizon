@@ -136,65 +136,59 @@ function textField(name: string, label: string): HalFormsField {
 }
 
 describe("generateSearchFormLayout", () => {
-  it("pairs two direction-labeled siblings sharing a groupKey onto one row of the attribute's section", () => {
+  it("pairs two direction-labeled siblings sharing a groupKey onto one row", () => {
     const fields = [
       textField("status", "Status"),
-      textField("due_date~after", "After"),
-      textField("due_date~before", "Before"),
-      textField("priority~gte", "From"),
+      textField("due_date~after", "Due date after"),
+      textField("due_date~before", "Due date before"),
+      textField("priority~gte", "Priority from"),
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows[1]).toEqual({
-      title: "Due date",
-      rows: [{ fieldNames: ["due_date~after", "due_date~before"] }],
+      fieldNames: ["due_date~after", "due_date~before"],
     });
   });
 
-  it("gives a property with only one range variant its own section with a single row", () => {
-    const fields = [textField("status", "Status"), textField("priority~gte", "From")];
+  it("gives a property with only one range variant a single-field row", () => {
+    const fields = [textField("status", "Status"), textField("priority~gte", "Priority from")];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
-    expect(layout.sections[0].rows).toContainEqual({
-      title: "Priority",
-      rows: [{ fieldNames: ["priority~gte"] }],
-    });
+    expect(layout.sections[0].rows).toContainEqual({ fieldNames: ["priority~gte"] });
   });
 
   it("gives a plain (non-range) property its own full-width row, in fields order", () => {
     const fields = [
       textField("status", "Status"),
-      textField("due_date~after", "After"),
-      textField("due_date~before", "Before"),
-      textField("priority~gte", "From"),
+      textField("due_date~after", "Due date after"),
+      textField("due_date~before", "Due date before"),
+      textField("priority~gte", "Priority from"),
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows[0]).toEqual({ fieldNames: ["status"] });
   });
 
-  it("puts a range attribute's exact-match field in its section, above the paired range row", () => {
+  it("puts a range attribute's exact-match field on its own row, right above the paired range row", () => {
     const fields = [
       textField("status", "Status"),
       textField("due_date", "Due date"),
-      textField("due_date~after", "After"),
-      textField("due_date~before", "Before"),
-      textField("priority~gte", "From"),
+      textField("due_date~after", "Due date after"),
+      textField("due_date~before", "Due date before"),
+      textField("priority~gte", "Priority from"),
     ];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows).toEqual([
       { fieldNames: ["status"] },
-      {
-        title: "Due date",
-        rows: [{ fieldNames: ["due_date"] }, { fieldNames: ["due_date~after", "due_date~before"] }],
-      },
-      { title: "Priority", rows: [{ fieldNames: ["priority~gte"] }] },
+      { fieldNames: ["due_date"] },
+      { fieldNames: ["due_date~after", "due_date~before"] },
+      { fieldNames: ["priority~gte"] },
     ]);
   });
 
   it("only pairs fields that are actually present, ignoring a range sibling that didn't survive", () => {
-    const fields = [textField("status", "Status"), textField("due_date~after", "After")];
+    const fields = [textField("status", "Status"), textField("due_date~after", "Due date after")];
     const layout = generateSearchFormLayout(makeSearchTemplate(), fields);
     expect(layout.sections[0].rows).toEqual([
       { fieldNames: ["status"] },
-      { title: "Due date", rows: [{ fieldNames: ["due_date~after"] }] },
+      { fieldNames: ["due_date~after"] },
     ]);
   });
 
@@ -204,20 +198,21 @@ describe("generateSearchFormLayout", () => {
     expect(layout.sections[0].rows).toEqual([{ fieldNames: ["due_date"] }]);
   });
 
-  it("carries the attribute description on the range attribute's section", () => {
+  it("carries the attribute description once, on the range row, not on the exact-match row", () => {
     const json = structuredClone(taskProfileJson);
     json._embedded["blueprint:attribute"][1].description = "When the task is due";
     const layout = generateSearchFormLayout(makeSearchTemplateFrom(json), [
-      textField("due_date~after", "After"),
-      textField("due_date~before", "Before"),
+      textField("due_date", "Due date"),
+      textField("due_date~after", "Due date after"),
+      textField("due_date~before", "Due date before"),
     ]);
-    expect(layout.sections[0].rows[0]).toMatchObject({
-      title: "Due date",
-      description: "When the task is due",
-    });
+    expect(layout.sections[0].rows).toEqual([
+      { fieldNames: ["due_date"] },
+      { fieldNames: ["due_date~after", "due_date~before"], description: "When the task is due" },
+    ]);
   });
 
-  it("nests a relation's range attribute inside the relation section, titled Relation : Attribute", () => {
+  it("keeps a relation's range attribute rows inside the relation section", () => {
     const json = structuredClone(taskProfileJson);
     json._templates.search.properties.push(
       { name: "assignee.age~gte", type: "number" },
@@ -225,17 +220,14 @@ describe("generateSearchFormLayout", () => {
     );
     const layout = generateSearchFormLayout(makeSearchTemplateFrom(json), [
       textField("assignee.name~prefix", "Assignee name"),
-      textField("assignee.age~gte", "From"),
-      textField("assignee.age~lte", "Until"),
+      textField("assignee.age~gte", "Assignee : Age from"),
+      textField("assignee.age~lte", "Assignee : Age until"),
     ]);
     expect(layout.sections).toHaveLength(1);
     expect(layout.sections[0]).toMatchObject({ title: "Assignee", isCollapsible: true });
     expect(layout.sections[0].rows).toEqual([
       { fieldNames: ["assignee.name~prefix"] },
-      {
-        title: "Assignee : Age",
-        rows: [{ fieldNames: ["assignee.age~gte", "assignee.age~lte"] }],
-      },
+      { fieldNames: ["assignee.age~gte", "assignee.age~lte"] },
     ]);
   });
 

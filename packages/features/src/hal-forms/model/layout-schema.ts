@@ -5,17 +5,12 @@
  */
 export interface FieldRow {
   readonly fieldNames: readonly string[];
-}
-
-/**
- * One entry of a section's `rows`: either a plain row of fields, or a nested section occupying
- * that row's slot — e.g. a search form's range attribute, whose "Equals"/"From"/"Until" rows are
- * grouped under the attribute's own title. Tell them apart with `isFieldRow`.
- */
-export type FieldSectionItem = FieldRow | FieldSection;
-
-export function isFieldRow(item: FieldSectionItem): item is FieldRow {
-  return "fieldNames" in item;
+  /**
+   * Optional supporting text shown once below the row, for every field in it — e.g. a search
+   * form's range attribute, whose "Age from"/"Age until" pair shares the attribute's description
+   * instead of repeating it under each input.
+   */
+  readonly description?: string;
 }
 
 /**
@@ -39,9 +34,7 @@ export interface FieldSection {
    * field existed.
    */
   readonly isCollapsible?: boolean;
-  /** Plain rows and nested sections, in render order. A nested section renders inline, in the
-   *  position it appears here, within this section's collapse behavior. */
-  readonly rows: readonly FieldSectionItem[];
+  readonly rows: readonly FieldRow[];
 }
 
 /**
