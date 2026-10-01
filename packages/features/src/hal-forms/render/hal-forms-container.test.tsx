@@ -201,6 +201,33 @@ describe("HalFormsContainer", () => {
     expect(screen.queryByRole("button", { name: "Contact" })).not.toBeInTheDocument();
   });
 
+  it("keeps a collapsible section's description out of the toggle button and describes its content with it", () => {
+    render(
+      <HalFormsContainer
+        fields={[nameField]}
+        layout={{
+          sections: [
+            {
+              title: "Customer",
+              description: "The company that placed this order",
+              isCollapsible: true,
+              rows: [{ fieldNames: ["name"] }],
+            },
+          ],
+        }}
+        values={{ name: "" }}
+        onChange={vi.fn()}
+        fieldState={{}}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Customer" });
+    expect(trigger).not.toHaveTextContent("The company that placed this order");
+    expect(screen.getByRole("region", { name: "Customer" })).toHaveAccessibleDescription(
+      "The company that placed this order",
+    );
+  });
+
   it("starts a collapsible section expanded and collapses all its rows together on toggle", async () => {
     const user = userEvent.setup();
     render(
