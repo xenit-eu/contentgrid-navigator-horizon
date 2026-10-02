@@ -64,7 +64,7 @@ function ItemReference({
       className={cn(
         "flex min-w-0 items-center gap-[11px] rounded-md",
         onClick &&
-          "cursor-pointer transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+          "transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         selected && "bg-accent",
         className,
       )}

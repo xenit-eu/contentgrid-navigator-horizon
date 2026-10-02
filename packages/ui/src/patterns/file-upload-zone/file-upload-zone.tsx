@@ -1,6 +1,10 @@
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { UploadSimpleIcon as UploadSimple, XIcon as X } from "@phosphor-icons/react";
+import {
+  CloudArrowUpIcon as CloudArrowUp,
+  UploadSimpleIcon as UploadSimple,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { Button } from "../../primitives/button";
@@ -183,15 +187,21 @@ export function FileUploadZone({
         onFocus={onFocus}
         onBlur={onBlur}
         className={cn(
-          "flex w-full cursor-pointer flex-col disabled:cursor-not-allowed disabled:opacity-50 items-center gap-2 rounded-md border-2 border-dashed p-8 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "flex w-full flex-col disabled:cursor-not-allowed disabled:opacity-50 items-center gap-1 rounded-lg border border-dashed px-6 py-7 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isDragActive
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-primary/50",
+            ? "border-primary bg-primary/10"
+            : "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5",
         )}
       >
-        <UploadSimple className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          {isDragActive ? "Drop the file here" : "Drag & drop a file, or click to select"}
+        <CloudArrowUp className="mb-1 size-7 text-primary" aria-hidden />
+        <p className="text-sm font-semibold text-foreground">
+          {isDragActive ? "Release to attach" : "Drop a file here"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          or{" "}
+          <span className="font-medium text-primary underline underline-offset-2">
+            choose one from your device
+          </span>
         </p>
       </button>
     </>

@@ -186,7 +186,7 @@ export function DataTable({
                 rows.map((row) => (
                   <TableRow
                     key={row.id}
-                    className={cn(onRowClick && "cursor-pointer hover:bg-muted/50")}
+                    className={cn(onRowClick && "cursor-pointer hover:bg-primary/5")}
                     onClick={() => onRowClick?.(row.id)}
                   >
                     {columns.map((col, i) => (

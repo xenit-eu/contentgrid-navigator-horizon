@@ -720,7 +720,7 @@ function TypeaheadTextFilter({
                   role="option"
                   aria-selected={index === activeIndex}
                   tabIndex={-1}
-                  className={`cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-accent ${index === activeIndex ? "bg-accent" : ""}`}
+                  className={`rounded px-2 py-1.5 text-sm hover:bg-accent ${index === activeIndex ? "bg-accent" : ""}`}
                   // Prevent the input's onBlur from firing before onClick fires
                   onMouseDown={(e) => e.preventDefault()}
                   onMouseEnter={() => setActiveIndex(index)}
