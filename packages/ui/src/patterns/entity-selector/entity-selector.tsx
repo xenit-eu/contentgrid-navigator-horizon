@@ -125,7 +125,9 @@ function EntityOptionRow({
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">{option.title}</span>
         {option.description && (
-          <span className="truncate text-xs text-muted-foreground">{option.description}</span>
+          <span className="truncate text-xs text-muted-foreground group-aria-checked:text-foreground/75">
+            {option.description}
+          </span>
         )}
       </span>
       {selected && <CheckIcon aria-hidden className="size-4 shrink-0 text-primary" />}
