@@ -102,7 +102,7 @@
     "@storybook/react": "^10.0.0",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-query-devtools": "5.101.0",
-    "@tanstack/react-router": "1.170.15",
+    "@tanstack/react-router": "1.170.38",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "eslint": "^10.0.0",
