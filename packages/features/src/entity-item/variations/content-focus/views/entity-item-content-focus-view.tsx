@@ -17,7 +17,7 @@ import {
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
+import { EntityItemAttributesPanel } from "../../../attributes/entity-item-attributes-panel";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
@@ -284,7 +284,10 @@ function ContentFocusEntityItemBody({
       sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
       sidePanel={
         <div className="space-y-6">
-          <EntityItemAttributes item={entityItem} />
+          <EntityItemAttributesPanel
+            key={`${entityItem.profileEntity.name}/${entityItem.id}`}
+            item={entityItem}
+          />
           {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
             <>
               <Separator />

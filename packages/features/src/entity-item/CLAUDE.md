@@ -11,7 +11,9 @@ means in practice.
 ## Scope
 
 `entity-item` renders an entity item's attributes and relations: `EntityItemView`,
-`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`.
+`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. Its attributes section
+(`attributes/entity-item-attributes-panel.tsx`) offers an Edit action when the item has an update
+form; `edit/` holds the update form (spec `003-add-edit-form`).
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
 `EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, or a non-PDF
@@ -41,6 +43,10 @@ here — both tracks may mount this view.
 
 ```
 entity-item-view.tsx, attributes/, relations/
+  -> @contentgrid/ui, @contentgrid/navigator-data
+
+edit/  (edit-entity-item-view -> edit-entity-item-container -> edit-entity-item-form)
+  -> ../../hal-forms (fields, field state), ../../problem-details, ../../unsaved-changes-guard
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 variations/content-focus/

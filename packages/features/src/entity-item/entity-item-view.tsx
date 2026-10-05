@@ -8,7 +8,7 @@ import {
 import { Separator } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
-import { EntityItemAttributes } from "./attributes/entity-item-attributes";
+import { EntityItemAttributesPanel } from "./attributes/entity-item-attributes-panel";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -103,7 +103,10 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
 
       {item.isSuccess && (
         <div className="space-y-6 p-4 pt-0">
-          <EntityItemAttributes item={item.data} />
+          <EntityItemAttributesPanel
+            key={`${item.data.profileEntity.name}/${item.data.id}`}
+            item={item.data}
+          />
 
           {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
             <>
