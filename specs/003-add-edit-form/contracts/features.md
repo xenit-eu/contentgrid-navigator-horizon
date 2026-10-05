@@ -1,5 +1,49 @@
 # Contract: `@contentgrid/features` changes
 
+## PR 1
+
+### Item views (entity-item)
+
+No new props. Both views render `EntityItemAttributesPanel` (entity-item/attributes/, internal), keyed by `<profile name>/<item id>`: an "Attributes" heading with an Edit button at its right when `item.canUpdate`. While editing, the button hides and `EntityItemAttributes` is replaced by `EditEntityItemView`.
+
+### `entity-item/edit/` (internal to `entity-item`)
+
+```ts
+function EditEntityItemView(props: {
+  readonly item: EntityItem;
+  /** Leaves edit mode: after a successful save, or on Cancel (confirmed first when dirty). */
+  readonly onClose: () => void;
+}): JSX.Element;
+```
+
+Layered like `entity-item-create`:
+
+- `EditEntityItemView` owns the unsaved-changes guard and dialog (`onDirtyChange` from the container).
+- `EditEntityItemView` also gates on `item.updateTemplate` and `item.updateFormValues` ("not permitted" alert) and passes both to the container.
+- `EditEntityItemContainer` keeps the item it was opened with in state (as legacy edit mode ignores reloads of the same item), so a background reload never changes the ETag a save sends. On 412 it reloads the item (`useReloadEntityItem`), calls `formState.updateInitialValues(latest.updateFormValues)` and edits the latest item from then on. Fields come from `resolveHalFormsFields(updateTemplate)`, prefill from `updateFormValues`, saving from `useUpdateEntityItem(editedItem)`. Success toast: `"<Entity> has been successfully updated!"`. Errors: `getFormAlertError` → `ProblemAlert`; field errors → `toServerFieldErrors`; 412 → initial values updated to the latest version; the conflict stays in `ProblemAlert` (it is the mutation's error) until the next save; 404 → Save disabled.
+- `EditEntityItemForm` renders the `<form>`, `HalFormsContainer` and Save/Cancel.
+
+### `getFormAlertError` (hal-forms/state/)
+
+```ts
+function getFormAlertError(
+  error: Error | null,
+  fields: readonly HalFormsField[],
+): Error | undefined;
+```
+
+Moved from `create-entity-item-container.tsx`; both containers use it.
+
+### `useHalFormsFieldState` (hal-forms/state/)
+
+- New method `updateInitialValues(initialValues)`: moves the form onto new initial values; fields the user has not changed take the new values, the user's changes stay on top and still count as unsaved.
+
+### `resolveHalFormsFields` (hal-forms/model/)
+
+Template parameter widened to `CreateHalFormTemplate | UpdateHalFormTemplate | SearchHalFormTemplate`; an update template uses the create path (attributes only).
+
+## PR 2 (from the 2026-09-29 plan; to be rewritten against `hal-forms` when PR 2 starts)
+
 ## Item views (entity-item)
 
 Both views gain edit mode. The only new prop an app can pass is `allowEdit`.

@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-29
 
-**Status**: Draft — clarified 2026-09-29, awaiting review
+**Status**: Draft — clarified 2026-09-29, delivery split 2026-10-05, awaiting review
 
 **Input**: User description: "Item edit form: edit all the fields of any entity item from its detail page, as in the existing Navigator. Take the logic from the legacy Navigator and modernise it to the Horizon design."
 
@@ -27,6 +27,15 @@
 - Editing several items at once, inline editing of a single value in a table or list, and edit history or undo after saving.
 - Read-only properties and client-side regex / length constraints (audit WI-19, deferred; no production update form sets them today).
 - Creating a missing relation target or a new item from within the edit form.
+
+## Delivery
+
+Delivered in two PRs (plan.md):
+
+- **PR 1 — metadata edit**: User Story 1 and the metadata failures of User Story 3 (scenarios 1–4, 6). FR-001, FR-003–FR-007, FR-013, FR-016–FR-023, FR-025. Content attributes show their `filename`/`mimetype` as the plain text fields the update form lists.
+- **PR 2 — file changes**: User Story 2 and User Story 3 scenario 5. FR-008–FR-012, FR-014 (file part), FR-015, FR-024. Depends on the ACC-3217 stack merging.
+
+Not in either PR for now: the pinned action bar, edit-mode heading and view/edit transition (FR-003a, FR-003b). The form uses the create form's Save/Cancel row. FR-002 needs no opt-out today: the item views are only rendered by the detail routes.
 
 ## Clarifications
 
