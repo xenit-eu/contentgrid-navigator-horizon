@@ -13,6 +13,7 @@ import type {
   EntityInstanceDeleteRequestSpec,
   EntityInstanceUpdateRequestSpec,
 } from "../api/requests";
+import type { FieldValueMap } from "../field-value";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
@@ -20,6 +21,7 @@ import type { ProfileAttribute } from "./attribute-profile";
 import { EntityItemToManyRelation } from "./entity-item-to-many-relation";
 import { EntityItemToOneRelation } from "./entity-item-to-one-relation";
 import type ProfileEntity from "./entity-profile";
+import { UpdateHalFormTemplate } from "./extended-forms/update-form";
 
 const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
 
@@ -42,8 +44,8 @@ const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
  * // Filter user-defined attributes
  * const userAttrs = item.userDefinedAttributes;
  *
- * // Update the entity
- * await item.editEntity({ name: "New Name" });
+ * // Build an update request from the item's `default` template
+ * const request = item.editEntityRequest(values);
  * ```
  */
 export class EntityItem {
@@ -84,6 +86,9 @@ export class EntityItem {
     public readonly profileEntity: ProfileEntity,
     public readonly etag: string | null = null,
   ) {}
+
+  private _updateTemplate?: UpdateHalFormTemplate | null;
+  private _updateFormValues?: FieldValueMap | null;
 
   public get id(): string {
     return this.halItem.data.id;
@@ -200,29 +205,32 @@ export class EntityItem {
     return this.attributes.find((attr) => attr.value.name === name);
   }
 
+  public get selfLink(): Link {
+    return this.halItem.self;
+  }
+
   /**
-   * The HAL-FORMS "default" template for updating this entity (PATCH operation).
+   * The HAL-FORMS "default" template for updating this entity; its `method` and `contentType`
+   * drive the update request.
    *
    * Returns `null` if the current user lacks update permission or the template is missing.
    * Use this template to build update forms and encode mutation payloads.
    *
    * @returns Update template or null if not available
    */
-  public get selfLink(): Link {
-    return this.halItem.self;
-  }
-
   public get defaultTemplate(): HalFormsTemplate<EntityInstanceUpdateRequestSpec> | null {
     return resolveTemplate(this.halItem.data, "default");
   }
 
   /**
-   * Encode attribute update values into a PATCH Request using the HAL-FORMS codec.
+   * Encode attribute update values into a Request using the HAL-FORMS codec, with the method and
+   * content type of the `default` template. The update replaces the item's values: a property
+   * without a value is left out of the body and cleared by the server.
    *
    * Returns the Request — callers are responsible for executing it with `apiFetch`.
    * Include an `If-Match` header on the request to prevent concurrent update conflicts (RFC 9110).
    *
-   * @param values - Attribute values to update (partial update via PATCH)
+   * @param values - Attribute values of the update form
    * @returns Request ready to be sent with apiFetch
    */
   public editEntityRequest(values: HalFormValues<EntityInstanceUpdateRequestSpec>): Request {
@@ -242,6 +250,39 @@ export class EntityItem {
    */
   public get canUpdate(): boolean {
     return this.defaultTemplate !== null;
+  }
+
+  /**
+   * The update form (`_templates.default`) with its properties classified. `null` when the user
+   * may not update this item. Prefill values come from `updateFormValues`.
+   */
+  public get updateTemplate(): UpdateHalFormTemplate | null {
+    if (this._updateTemplate === undefined) {
+      const template = this.defaultTemplate;
+      this._updateTemplate =
+        template === null ? null : new UpdateHalFormTemplate(template, this.profileEntity);
+    }
+    return this._updateTemplate;
+  }
+
+  /**
+   * The item's current values as update-form values, keyed by property name: the item body
+   * decoded through the `default` template's codec, for prefilling the update form (the template
+   * carries no values). `null` when the user may not update this item.
+   */
+  public get updateFormValues(): FieldValueMap | null {
+    if (this._updateFormValues === undefined) {
+      const template = this.defaultTemplate;
+      this._updateFormValues =
+        template === null
+          ? null
+          : halFormCodecs.requireCodecFor(template).decode({
+              // The decoded representation is the item's own body, which is always JSON.
+              contentType: "application/json",
+              body: this.halItem.data,
+            }).valueMap;
+    }
+    return this._updateFormValues;
   }
 
   /**

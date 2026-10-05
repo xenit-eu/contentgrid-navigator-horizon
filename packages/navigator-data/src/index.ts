@@ -6,6 +6,8 @@ export * from "./hooks";
 export * from "./accessors/attribute-profile";
 export * from "./accessors/extended-forms/search-form";
 export * from "./accessors/extended-forms/create-form";
+export type { FormAttributeProperty } from "./accessors/extended-forms/form-property";
+export * from "./accessors/extended-forms/update-form";
 export * from "./accessors/entity-item";
 export * from "./accessors/entity-item-collection";
 export * from "./accessors/entity-item-to-one-relation";

@@ -46,6 +46,7 @@ export { useCreateEntityItem } from "./item/use-create-entity";
 export type { UseCreateEntityItemOptions } from "./item/use-create-entity";
 export { useUpdateEntityItem } from "./item/use-update-entity";
 export type { UseUpdateEntityItemOptions } from "./item/use-update-entity";
+export { useReloadEntityItem } from "./item/use-reload-entity-item";
 export { useDeleteEntityItem } from "./item/use-delete-entity";
 export type { UseDeleteEntityItemOptions } from "./item/use-delete-entity";
 export { useDeleteRelationItem } from "./relation/use-delete-relation-item";
