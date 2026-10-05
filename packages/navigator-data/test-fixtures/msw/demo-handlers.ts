@@ -662,6 +662,12 @@ export function createDemoHandlers(baseUrl = "", options: DemoHandlerOptions = {
         // Recorded denials win; recorded OK pages are not replayed so pagination keeps working.
         const denied = dataset.deniedByPath.get(url.pathname);
         if (denied) return replay(denied, baseUrl);
+        // A recorded filtered collection (e.g. a to-many relation's redirect target) is replayed as is.
+        const filtered = [...url.searchParams.keys()].some((k) => k !== "size" && k !== "_cursor");
+        const recordedFiltered = filtered
+          ? dataset.responses[`${url.pathname}${url.search}`]
+          : undefined;
+        if (recordedFiltered) return replay(recordedFiltered, baseUrl, {}, restrictBody);
         const cursor = url.searchParams.get("_cursor");
         const body = buildCollectionBody(
           entity,

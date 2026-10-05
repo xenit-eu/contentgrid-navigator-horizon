@@ -9,15 +9,16 @@
  *   - created_by / last_modified_by (and *_by variants): "User A", "User B", ... / "Service Account"
  *     (values matching --service-account, default /service[-_ ]?account|^sa[-_]/i)
  *   - email addresses anywhere in a string: user-N@example.test
- *   - on item objects (objects with an `id` and `_links`): first/last/full/display name style keys,
- *     and `name` when the collection looks person-like (person, people, user, contact, employee,
- *     member): "Person N"; birth-date style keys: 1990-01-DD (shape preserved)
+ *   - on item objects (objects with an `id` and `_links`) in every collection, never in /profile
+ *     bodies: name, creator, author, owner, first/last/full/display name style keys (plus any
+ *     --person-keys): "Person N"; birth-date style keys: 1990-01-DD (shape preserved)
  *   - every `filename`: file-N.ext
  * Already-pseudonymised values are left alone, so running it on a sanitised dump changes nothing.
  *
  * It finishes with a leftover scan of the OUTPUT (including decoded content bytes): the tenant host,
  * emails not ending in example.test, JWT-looking strings and "Bearer ". Any hit is listed and the
- * exit code is 1 (and nothing is written). This is a safety net, not a guarantee: names inside free
+ * exit code is 1 (and nothing is written). Item strings that look like "Firstname Lastname" only
+ * produce a REVIEW warning (exit code unaffected) so a human checks them. This is a safety net, not a guarantee: names inside free
  * text, PDF/Office metadata and the like need a manual look at the diff. The token is never read.
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -54,8 +55,8 @@ const extraPersonKeys = new Set((args["person-keys"] ?? "").split(",").filter(Bo
 
 const AUDIT_KEY = /^(created|last_modified|modified|updated)_by$/;
 const PERSON_KEY =
-  /^(first_?name|last_?name|full_?name|given_?name|family_?name|surname|display_?name|person_?name|user_?name)$/i;
-const PERSON_COLLECTION = /person|people|user|contact|employee|member/i;
+  /^(name|creator|author|owner|first_?name|last_?name|full_?name|given_?name|family_?name|surname|display_?name|person_?name|user_?name)$/i;
+const NAME_LIKE = /^[A-Z][a-z]+( [A-Z][a-z]+){1,2}$/;
 const BIRTH_KEY = /birth|^dob$/i;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const ALREADY = {
@@ -143,7 +144,8 @@ function walk(node, context) {
     } else if (
       item &&
       typeof value === "string" &&
-      (PERSON_KEY.test(key) || extraPersonKeys.has(key) || (key === "name" && context.personLike))
+      !context.profile &&
+      (PERSON_KEY.test(key) || extraPersonKeys.has(key))
     ) {
       out[key] =
         ALREADY.person.test(value) || ALREADY.email.test(value) ? value : personName(value);
@@ -161,7 +163,8 @@ const responses = {};
 for (const [key, entry] of Object.entries(raw.responses ?? {})) {
   const safeKey = key.split(tenantOrigin).join(PLACEHOLDER_ORIGIN);
   const path = safeKey.replace(/^[A-Z]+ /, "").split("?")[0];
-  const context = { personLike: PERSON_COLLECTION.test(path.split("/").filter(Boolean)[0] ?? "") };
+  // Profile bodies describe the model: their `name` is the entity name, never a person.
+  const context = { profile: path === "/profile" || path.startsWith("/profile/") };
   const clean = {};
   for (const [field, value] of Object.entries(entry)) {
     clean[field] = field === "bodyBase64" ? value : walk(value, context);
@@ -200,6 +203,30 @@ for (const [key, entry] of Object.entries(responses)) {
       scan(Buffer.from(value, "base64").toString("latin1"), `${key} (content bytes)`);
     else scan(JSON.stringify(value) ?? "", `${key} ${field}`);
   }
+}
+
+// Review warnings (do not fail): item strings that look like "Firstname Lastname".
+const warnings = [];
+function findNames(node, where) {
+  if (Array.isArray(node)) return node.forEach((child) => findNames(child, where));
+  if (!node || typeof node !== "object") return;
+  if (isItem(node)) {
+    for (const [key, value] of Object.entries(node)) {
+      if (typeof value === "string" && NAME_LIKE.test(value) && !key.startsWith("_")) {
+        warnings.push(`${where} ${key}: "${value}"`);
+      }
+    }
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key !== "_links" && key !== "_templates") findNames(value, where);
+  }
+}
+for (const [key, entry] of Object.entries(responses)) {
+  if (!key.startsWith("/profile")) findNames(entry.body, key);
+}
+if (warnings.length > 0) {
+  console.error(`REVIEW (${warnings.length}): values that look like a person's name:`);
+  for (const line of warnings) console.error(`  ? ${line}`);
 }
 
 if (leftovers.length > 0) {
