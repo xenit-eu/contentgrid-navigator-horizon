@@ -11,6 +11,7 @@ import {
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import {
   type FieldValidationError,
+  getFormAlertError,
   resolveHalFormsFields,
   toServerFieldErrors,
   useHalFormsFieldState,
@@ -182,29 +183,7 @@ function CreateEntityItemContainerReady({
     });
   }
 
-  // A validation problem can contain entity-level errors with no `field` (e.g. a
-  // cross-field constraint) alongside, or instead of, field-scoped ones. Those never
-  // render inline, so they must always fall through to the alert below — checking only
-  // "no field errors at all" left them silently dropped whenever the array was non-empty
-  // but contained an entry with no `field`.
-  //
-  // The same reasoning extends to a field-scoped error whose `field` doesn't match any
-  // rendered field name (e.g. a system/audit field, or any property this form doesn't produce a
-  // field for) — `toServerFieldErrors` buckets it under that field name, but no
-  // `HalFormsFieldRenderer` exists to show it, and it also isn't a `field === undefined` entry,
-  // so without this check it would be dropped by both paths and never reach the user.
-  const knownFieldNames = new Set(fields.map((field) => field.name));
-  const submitFieldErrors = createMutation.isError
-    ? getValidationFieldErrors(createMutation.error)
-    : [];
-  const nonFieldError =
-    createMutation.isError &&
-    (submitFieldErrors.length === 0 ||
-      submitFieldErrors.some(
-        (fieldError) => fieldError.field === undefined || !knownFieldNames.has(fieldError.field),
-      ))
-      ? createMutation.error
-      : undefined;
+  const formAlertError = getFormAlertError(createMutation.error, fields);
 
   return (
     <CreateEntityItemForm
@@ -223,9 +202,9 @@ function CreateEntityItemContainerReady({
       onContinuousCreateChange={setContinuousCreateMode}
       formResetCount={formResetCount}
       nonFieldErrorAlert={
-        nonFieldError && (
+        formAlertError && (
           <ProblemAlert
-            model={toProblemDisplayModel(nonFieldError)}
+            model={toProblemDisplayModel(formAlertError)}
             onConflictingItemClick={onConflictingItemClick}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onAllowedValuesClick={onAllowedValuesClick}

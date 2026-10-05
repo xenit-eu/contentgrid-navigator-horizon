@@ -80,6 +80,12 @@ export interface UseHalFormsFieldState {
   /** Resets values/touched/focused/provenance/dismissed-error state back to the initial values
    * this hook was seeded with. */
   reset(): void;
+  /**
+   * Moves the form onto new initial values — e.g. the latest version of an item after a version
+   * conflict: fields the user has not changed take the new values, the user's changes stay on top
+   * and still count as unsaved.
+   */
+  updateInitialValues(initialValues: FieldValueMap): void;
 }
 
 function defaultValueFor(field: HalFormsField): FieldValue {
@@ -243,6 +249,21 @@ export function useHalFormsFieldState({
     setDismissedExternalErrorFields(new Set());
   }
 
+  const updateInitialValues = useCallback(
+    (nextInitialValues: FieldValueMap) => {
+      const previousInitialValues = initialValuesRef.current;
+      const nextValues = initializeValues(fields, nextInitialValues);
+      initialValuesRef.current = nextValues;
+      setValuesState((current) => {
+        const userChanges = Object.entries(current).filter(
+          ([name, value]) => !valuesEqual(value, previousInitialValues[name]),
+        );
+        return { ...nextValues, ...Object.fromEntries(userChanges) };
+      });
+    },
+    [fields],
+  );
+
   const fieldState: Record<string, FieldState> = {};
   for (const [name, errors] of Object.entries(externalErrors)) {
     if (!dismissedExternalErrorFields.has(name) && errors.length > 0) {
@@ -278,5 +299,6 @@ export function useHalFormsFieldState({
     blurField,
     buildValues,
     reset,
+    updateInitialValues,
   };
 }
