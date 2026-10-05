@@ -1,5 +1,37 @@
 # Contract: `@contentgrid/navigator-data` additions
 
+## PR 1
+
+```ts
+class EntityItem {
+  /** The item's `default` (update) template, wrapped; null when the user may not update the item. */
+  get updateTemplate(): UpdateHalFormTemplate | null;
+  /** The item body decoded through the `default` template's codec (prefill); null without it. */
+  get updateFormValues(): FieldValueMap | null;
+}
+
+class UpdateHalFormTemplate {
+  readonly template: HalFormsTemplate<EntityInstanceUpdateRequestSpec>;
+  /** Same shape and classification as CreateHalFormTemplate.userDefinedProperties. */
+  get userDefinedProperties(): readonly FormAttributeProperty[];
+}
+
+/** GETs the item's self link into the item cache (no retries); rejects when that fails. */
+function useReloadEntityItem(entityItem: EntityItem): () => Promise<EntityItem>;
+```
+
+`updateTemplate` is cached per `EntityItem`, so the form's fields keep their identity; `updateFormValues` decodes on each access (the form reads it once, at mount).
+
+`CreateFormProperty` is renamed `FormAttributeProperty` (accessors/extended-forms/form-property.ts, with `toFormAttributeProperty`), since the create and update forms share it.
+
+`useUpdateEntityItem`: same arguments; the mutation data is now `void`. The PUT answers 204, so it is sent with `fetchVoid`; on success it invalidates `entityItem.byUrl`, so the shown item is re-fetched (cancelling a fetch already in flight) before the mutation settles. A failed re-fetch does not fail the save.
+
+Unchanged and reused: `canUpdate`, `editEntityRequest`, `etag`.
+
+MSW `createUpdateHandler`: matches `PUT` (was `PATCH`).
+
+## PR 2 (from the 2026-09-29 plan)
+
 Public API added by this feature. Signatures are the contract; names may be refined in review.
 
 ## `EntityItem` (accessors/entity-item.ts)
