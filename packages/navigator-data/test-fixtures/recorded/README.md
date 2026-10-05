@@ -12,8 +12,10 @@ dev apps and the e2e suite on a realistic data model instead of hand-built stubs
   `Accept: application/prs.hal-forms+json`
 - `/<plural>?size=5` — the first page of each collection (with `page.total_items_exact`)
 - `/<plural>/<id>` — full items (up to 3 per entity, plus relation targets)
-- `/<plural>/<id>/<relation>` — relation sub-resources: to-many pages, and to-one redirects
-  (`status` 302 + `location`)
+- `/<plural>/<id>/<relation>` — relation sub-resources, all recorded as redirects (`status` 302 +
+  `location`): to-one to the target item, to-many to a filtered collection URL such as
+  `/<plural>?_internal_<...>=<id>`; an unset to-one is a recorded 404
+- `/<plural>?<filter>=<id>` — those filtered collections (path plus query is the key)
 - `/<plural>/<id>/<content>` — content downloads as `bodyBase64`, only when recorded with
   `--with-bytes` (off by default)
 
@@ -101,6 +103,13 @@ users (`User A`, ..., `Service Account`), emails (`user-N@example.test`), person
 dates and content filenames (`file-N.ext`), and finishes with a leftover scan: tenant host, emails
 not ending in `example.test`, JWT-looking strings and `Bearer `. Any hit is listed, the exit code is
 non-zero, and nothing is written. Fix the cause (a sanitiser rule, or the source data) and re-run.
+
+Person keys: on item bodies in every collection (never `/profile/*`, where `name` is the entity
+name) the keys `name`, `creator`, `author`, `owner`, `full_name`, `first_name`, `last_name` and
+similar are replaced by `Person N`. Add more with `--person-keys a,b` (comma separated), e.g. when
+the data model has its own key for a person, and `--service-account <regex>` for audit values that
+are service accounts. The scan also prints a `REVIEW` warning (not a failure) for every remaining
+item value that looks like "Firstname Lastname"; check each one by hand.
 
 ### 4. Review before committing
 
