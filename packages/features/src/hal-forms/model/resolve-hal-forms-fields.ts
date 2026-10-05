@@ -1,13 +1,13 @@
 import type {
   CreateFormRelationToManyProperty,
   CreateFormRelationToOneProperty,
-  CreateHalFormTemplate,
   FormAttributeProperty,
   HalFormsProperty,
   ProfileEntity,
   SearchHalFormTemplateProperty,
+  UpdateHalFormTemplate,
 } from "@contentgrid/navigator-data";
-import { SearchHalFormTemplate } from "@contentgrid/navigator-data";
+import { CreateHalFormTemplate, SearchHalFormTemplate } from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 import { formatFieldName } from "../../format-field-name";
 import { directionLabel, generateSearchFormLayout } from "./generate-search-form-layout";
@@ -20,13 +20,13 @@ export interface ResolvedHalFormsFields {
 }
 
 /**
- * Pure bridge: `CreateHalFormTemplate | SearchHalFormTemplate` -> `HalFormsField[]` + a
- * single-section `LayoutSchema`, for `render/hal-forms-container.tsx` (ADR-004). One
- * per-property `kind` mapping shared by the create path (attributes and relations) and a search
+ * Pure bridge: `CreateHalFormTemplate | UpdateHalFormTemplate | SearchHalFormTemplate` ->
+ * `HalFormsField[]` + a single-section `LayoutSchema`, for `render/hal-forms-container.tsx`
+ * (ADR-004). One per-property `kind` mapping shared by the create and update forms and a search
  * template (see `research.md`'s parity decision).
  *
  * The layout is always the default:
- * - a create template: one field per row, in template order (FR-009);
+ * - a create or update template: one field per row, in template order (FR-009);
  * - a search template: `generateSearchFormLayout`'s generated default, pairing `~before`/`~after`
  *   range variants (FR-018/FR-021).
  *
@@ -38,13 +38,13 @@ export interface ResolvedHalFormsFields {
  * `number` field into an autocomplete one).
  */
 export function resolveHalFormsFields(
-  template: CreateHalFormTemplate | SearchHalFormTemplate,
+  template: CreateHalFormTemplate | UpdateHalFormTemplate | SearchHalFormTemplate,
   autocompleteFieldNames?: readonly string[],
 ): ResolvedHalFormsFields {
   const isSearchTemplate = template instanceof SearchHalFormTemplate;
   const resolvedFields: HalFormsField[] = isSearchTemplate
     ? resolveSearchFields(template)
-    : resolveCreateFields(template);
+    : resolveEntityFormFields(template);
   const fields = applyAutocompleteOverride(resolvedFields, autocompleteFieldNames);
 
   const layout = isSearchTemplate
@@ -80,16 +80,18 @@ function buildFieldSection(fields: readonly HalFormsField[]): FieldSection {
   return { rows: fields.map((field) => ({ fieldNames: [field.name] })) };
 }
 
-/** A create template's attributes and relations, in the template's own property order, as legacy
- * Navigator renders it. */
-function resolveCreateFields(template: CreateHalFormTemplate): HalFormsField[] {
+/** A create template's attributes and relations — or an update template's attributes, the only
+ * properties it has — in the template's own property order. */
+function resolveEntityFormFields(
+  template: CreateHalFormTemplate | UpdateHalFormTemplate,
+): HalFormsField[] {
+  const relationProperties =
+    template instanceof CreateHalFormTemplate ? template.relationProperties : [];
   const fieldsByName = new Map<string, HalFormsField>([
     ...template.userDefinedProperties.map(
       (prop) => [prop.property.name, attributeHalFormsField(prop)] as const,
     ),
-    ...template.relationProperties.map(
-      (prop) => [prop.property.name, relationHalFormsField(prop)] as const,
-    ),
+    ...relationProperties.map((prop) => [prop.property.name, relationHalFormsField(prop)] as const),
   ]);
   return template.template.properties.flatMap((property) => fieldsByName.get(property.name) ?? []);
 }

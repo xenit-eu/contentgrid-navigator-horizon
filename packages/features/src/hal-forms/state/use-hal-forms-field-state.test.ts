@@ -127,6 +127,20 @@ describe("useHalFormsFieldState", () => {
   });
 });
 
+describe("useHalFormsFieldState.updateInitialValues", () => {
+  it("takes the new initial values for unchanged fields and keeps the user's changes on top", () => {
+    const { result } = renderHook(() =>
+      useHalFormsFieldState({ fields: [nameField, emailField], initialValues: { name: "Ann" } }),
+    );
+
+    act(() => result.current.setValue("name", "Mine"));
+    act(() => result.current.updateInitialValues({ name: "Theirs", email: "theirs@example.com" }));
+
+    expect(result.current.values).toEqual({ name: "Mine", email: "theirs@example.com" });
+    expect(result.current.isDirty).toBe(true);
+  });
+});
+
 describe("useHalFormsFieldState.buildValues", () => {
   const templateJson = {
     name: "invoice",
