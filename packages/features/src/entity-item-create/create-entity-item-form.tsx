@@ -2,27 +2,25 @@ import { type ReactNode, type SubmitEvent, useEffect, useRef } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Button, Label, Switch } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
-import type { FieldDescriptor } from "./model/field-descriptor";
-import type { LayoutInformation } from "./model/layout-information";
-import { FormContainer } from "./render/form-container";
-import type { FieldState } from "./state/field-state";
+import type { HalFormsField, LayoutSchema } from "../hal-forms";
+import { HalFormsContainer } from "../hal-forms";
+import type { FieldState } from "../hal-forms/state/field-error";
 
 export interface CreateEntityItemFormProps {
   /** Already resolved by the caller (`create-entity-item-container.tsx`) via
-   * `resolveCreateFieldDescriptors` — kept as a prop here rather than re-resolved from a
+   * `resolveHalFormsFields` — kept as a prop here rather than re-resolved from a
    * `createTemplate` prop, since the container already needs the same `fields`/`layout` for its
    * own annotation logic; resolving it twice from the same input would just be redundant work for
    * no independent-usability benefit (this component is only ever rendered by that container). */
-  readonly fields: readonly FieldDescriptor[];
-  readonly layout: LayoutInformation;
+  readonly fields: readonly HalFormsField[];
+  readonly layout: LayoutSchema;
   readonly values: FieldValueMap;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly onFieldChange: (name: string, value: FieldValue) => void;
-  /** See `render/form-container.tsx`'s `FormContainerProps.onFieldFocus` doc comment — kept as
-   * passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
+  /** Forwarded to `HalFormsContainer`'s `onFieldFocus` — kept as passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
    * field kicking off remote autocomplete on focus), with no current caller. */
   readonly onFieldFocus?: (name: string) => void;
-  /** Marks a field touched on blur — see `useEntityItemCreateFormState`'s `touchField` doc comment. Shows a
+  /** Marks a field touched on blur — see `useHalFormsFieldState`'s `touchField`. Shows a
    * required-and-empty field's error as soon as the user leaves it, without waiting for submit. */
   readonly onFieldBlur?: (name: string) => void;
   /** Opens a linked item, as legacy's relation "details" action. */
@@ -46,10 +44,10 @@ export interface CreateEntityItemFormProps {
 }
 
 /**
- * Owns the `<form>` tag, the field list (via `FormContainer`), and the submit/cancel buttons —
- * entity-specific chrome only, no HAL-Forms parsing, form state, or mutation logic of its own
- * (that's `create-entity-item-container.tsx`, which resolves `fields`/`layout` and renders this
- * component).
+ * Owns the `<form>` tag, the field list (via `HalFormsContainer`), and the submit/cancel
+ * buttons — entity-specific chrome only, no HAL-Forms parsing, form state, or mutation logic of
+ * its own (that's `create-entity-item-container.tsx`, which resolves `fields`/`layout` and
+ * renders this component).
  */
 export function CreateEntityItemForm({
   fields,
@@ -88,7 +86,7 @@ export function CreateEntityItemForm({
       {nonFieldErrorAlert}
 
       <div ref={fieldsContainerRef}>
-        <FormContainer
+        <HalFormsContainer
           fields={fields}
           layout={layout}
           values={values}

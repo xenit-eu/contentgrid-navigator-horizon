@@ -74,6 +74,13 @@
       "files": [{ "path": "src/primitives/label.tsx", "type": "registry:ui" }]
     },
     {
+      "name": "popover",
+      "type": "registry:ui",
+      "title": "Popover",
+      "description": "ContentGrid copy of the shadcn/ui Popover primitive.",
+      "files": [{ "path": "src/primitives/popover.tsx", "type": "registry:ui" }]
+    },
+    {
       "name": "select",
       "type": "registry:ui",
       "title": "Select",
@@ -107,6 +114,17 @@
       "title": "Tooltip",
       "description": "ContentGrid copy of the shadcn/ui Tooltip primitive.",
       "files": [{ "path": "src/primitives/tooltip.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "autocomplete-renderer",
+      "type": "registry:ui",
+      "title": "Autocomplete Renderer",
+      "description": "Suggest-as-you-type combobox form field; the caller supplies the suggestions.",
+      "registryDependencies": ["input", "label", "popover", "utils"],
+      "files": [
+        { "path": "src/patterns/autocomplete-renderer.tsx", "type": "registry:ui" },
+        { "path": "src/patterns/form-renderers/field-shell.tsx", "type": "registry:ui" }
+      ]
     },
     {
       "name": "branding-header",
@@ -172,18 +190,6 @@
       "files": [
         { "path": "src/patterns/file-upload-zone/file-upload-zone.tsx", "type": "registry:ui" },
         { "path": "src/patterns/file-upload-zone/index.ts", "type": "registry:ui" }
-      ]
-    },
-    {
-      "name": "filter-sidebar",
-      "type": "registry:ui",
-      "title": "Filter Sidebar",
-      "description": "Collapsible sidebar for filtering a ContentGrid entity collection.",
-      "dependencies": ["lucide-react", "date-fns"],
-      "registryDependencies": ["button", "input", "label", "select", "separator"],
-      "files": [
-        { "path": "src/patterns/filter-sidebar/filter-sidebar.tsx", "type": "registry:ui" },
-        { "path": "src/patterns/filter-sidebar/index.ts", "type": "registry:ui" }
       ]
     },
     {

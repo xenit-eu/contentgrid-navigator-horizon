@@ -224,6 +224,24 @@ describe("CreateEntityItemContainer", () => {
     expect(onCreated).not.toHaveBeenCalled();
   });
 
+  it("with continuous-create on, moves focus back to the first field after a reset", async () => {
+    // Guards create-entity-item-form.tsx's `formResetCount` effect: it looks the first field up
+    // through `fieldsContainerRef`, so if the ref ever stops being attached, focus silently stays
+    // on the Create button instead.
+    const user = userEvent.setup();
+    server.use(profileRootHandler(), invoiceProfileHandler(), createdInvoiceHandler());
+    renderForm();
+
+    await user.click(await screen.findByRole("switch", { name: "Keep creating entities" }));
+
+    const input = screen.getByLabelText(/Invoice Number/);
+    await user.type(input, "INV-1");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await screen.findByText("Invoice has been successfully created!");
+    await vi.waitFor(() => expect(input).toHaveFocus());
+  });
+
   it("navigates to the created item via the success toast's action, even mid continuous-create", async () => {
     const user = userEvent.setup();
     const onCreated = vi.fn();

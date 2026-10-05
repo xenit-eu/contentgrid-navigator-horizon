@@ -4,6 +4,11 @@ Catalogues every `_templates` shape observed in the ContentGrid test application
 maps each to a planned `FieldDescriptor` kind for HZN-5A.1, and confirms full parseability
 by `@contentgrid/hal-forms` `resolveTemplate`.
 
+> **Note (2026-10-01)**: this audit predates the `hal-forms` feature. The `FieldDescriptor`
+> union it maps onto is now `HalFormsField` in `packages/features/src/hal-forms/`, which every
+> form renders through (ADR-004, amended 2026-10-01). The names below are kept as written at the
+> time.
+
 | Metadata          | Value                                                                             |
 | ----------------- | --------------------------------------------------------------------------------- |
 | Jira ticket       | ACC-2845 / HZN-0.5.2                                                              |

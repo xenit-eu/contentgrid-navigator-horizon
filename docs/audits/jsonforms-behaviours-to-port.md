@@ -7,6 +7,11 @@
 **Superseded by**: [docs/audits/phase-5d7-workitems.md](phase-5d7-workitems.md) (HZN-5D.7 implementation work items)  
 **ADR**: [ADR-004](../adr/ADR-004-drop-jsonforms-halforms-renderer.md) — Drop JSONForms; HAL-Forms → shadcn renderer
 
+> **Note (2026-10-01)**: this audit predates the `hal-forms` feature. The `FieldDescriptor`
+> union it maps onto is now `HalFormsField` in `packages/features/src/hal-forms/`, which every
+> form renders through (ADR-004, amended 2026-10-01). The names below are kept as written at the
+> time.
+
 ---
 
 ## Acceptance Criteria
