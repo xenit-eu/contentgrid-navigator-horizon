@@ -8,8 +8,9 @@
  * Crawls a ContentGrid application's HAL API starting at `/profile` and follows links only (never
  * builds URLs from entity names):
  *
- *   /profile                      -> cg:entity links
- *   <collection>?size=5           -> first page; its `profile` link -> the entity profile
+ *   /profile                      -> cg:entity links (to entity profiles)
+ *   cg:entity link                -> the entity profile (no query); its describes[name=collection]
+ *                                    link + ?size=5 -> the first page
  *   up to 3 items per entity      -> the item's own `self` link (Accept: application/prs.hal-forms+json)
  *   per recorded item:
  *     cg:relation links           -> followed with redirect "manual". To-one relations answer with a
@@ -236,19 +237,24 @@ async function recordItem(selfHref) {
 }
 
 async function recordEntity(entityLink) {
-  const collectionPath = localPath(entityLink.href);
-  if (!collectionPath) return;
+  // `cg:entity` links point at the entity PROFILE; it is recorded without a query.
+  const profilePath = localPath(entityLink.href);
+  if (!profilePath) return;
+  const profile = await request(profilePath, { accept: HAL_FORMS });
+  if (!isOk(profile) || typeof profile.body !== "object") return;
+
+  // The collection is found through the profile's `describes` link named "collection".
+  const collectionLink = linksOf(profile.body, "describes").find((l) => l.name === "collection");
+  const collectionPath = localPath(collectionLink?.href);
+  if (!collectionPath) {
+    console.error(`  no describes[name=collection] link on ${profilePath}`);
+    return;
+  }
   const sep = collectionPath.includes("?") ? "&" : "?";
   const page = await request(`${collectionPath}${sep}size=5`);
   if (!isOk(page) || typeof page.body !== "object") return;
 
   const tasks = [];
-  const profileLink = linksOf(page.body, "profile")[0];
-  if (profileLink) {
-    const profilePath = localPath(profileLink.href);
-    if (profilePath) await request(profilePath, { accept: HAL_FORMS });
-  }
-
   for (const embedded of (page.body._embedded?.item ?? []).slice(0, ITEMS_PER_ENTITY)) {
     tasks.push(recordItem(embedded?._links?.self?.href));
   }

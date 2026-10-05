@@ -7,6 +7,7 @@ export default [
     files: ["test-fixtures/recorded/scripts/**/*.mjs"],
     languageOptions: {
       globals: {
+        setTimeout: "readonly",
         Buffer: "readonly",
         URL: "readonly",
         console: "readonly",
