@@ -84,8 +84,10 @@ describe("EntityItemDetailView", () => {
 
   it("shows the problem for an item that fails, keeping the toolbar", async () => {
     const fixture = createFixtureFetch();
-    const fetchFn = async (input: Request) =>
-      input.url === CUSTOMER_ITEM_URL
+    let itemRequests = 0;
+    const fetchFn = async (input: Request) => {
+      if (input.url === CUSTOMER_ITEM_URL) itemRequests++;
+      return input.url === CUSTOMER_ITEM_URL
         ? new Response(
             JSON.stringify({
               type: "https://contentgrid.cloud/problems/not-found/entity-item",
@@ -95,6 +97,7 @@ describe("EntityItemDetailView", () => {
             { status: 404, headers: { "Content-Type": "application/problem+json" } },
           )
         : fixture.fetch(input);
+    };
     const { Wrapper } = setup({ fetchFn });
     render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
 
@@ -102,6 +105,9 @@ describe("EntityItemDetailView", () => {
       await screen.findByText("Entity item not found", {}, { timeout: 15000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Customers" })).toBeInTheDocument();
+    // Same as before the view existed: the item query retries three times (`useEntityItem` under
+    // the apps' default query client) before the not-found problem is shown.
+    expect(itemRequests).toBe(4);
   }, 20000);
 
   it("shows not-found for an unknown entity, without a toolbar", async () => {

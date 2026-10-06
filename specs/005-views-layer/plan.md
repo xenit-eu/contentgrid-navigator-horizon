@@ -93,6 +93,7 @@ packages/views/                    # NEW (PR 2)
 ├── src/
 │   ├── navigation/                # context, provider, useNavigation, recording fake (PR 2)
 │   ├── types.ts                   # ViewProps<S>, view state types, ViewPreload (PR 2)
+│   ├── gate/                      # ViewTargetGate: the shared loading, error and not-found state (PR 4)
 │   ├── entity-item-detail/        # item detail view + preload + relation-problem dialog (PR 4)
 │   ├── entity-item-collection/    # collection view + state (PR 5 wrapper, PR 6 state)
 │   ├── layout/                    # moved from features/layout (PR 7)

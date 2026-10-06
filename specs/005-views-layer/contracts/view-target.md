@@ -24,6 +24,13 @@ The data layer exposes helpers that turn a `ViewTarget` into loaded objects, for
 - An item opened by name and by link therefore shares one cache entry and one request.
 - A helper used by `preload` and a hook used by the view read and write the same keys, so a preload fills what the view later reads.
 
+## As built (PR 3, PR 4)
+
+- `useViewTarget(target)` returns `{ data, profileEntity, error, isPending, isError, refetch }`. `profileEntity` is set as soon as the target's identity is known, even while the item loads or has failed, so a view keeps its toolbar around a loading or error state.
+- `viewTargetIdentityQuery(queryClient, apiFetch, profileUrl, target)` holds the identity query options. `useViewTarget` and `ensureViewTarget` both use it, so a preload fills exactly what the hook reads.
+- Loading, error and not-found are drawn by `ViewTargetGate` in `packages/views/src/gate/` (FR-006): not-found and unsupported targets and failed requests all end there. Views do not draw their own.
+- Failed item requests keep the retry behaviour of the item query (the same as `useEntityItem` under the apps' default query client), so an unknown item id shows its not-found problem after the retries.
+
 ## Errors
 
 - Unknown entity name, or no profile for a link: not-found outcome, shown through the shared gate (FR-006).

@@ -37,6 +37,8 @@ What the data layer returns once per view start. Contract: [view-target.md](cont
 
 `collectionUrl` is the profile's collection URL for a name target and the link as given for a link target; the view builds its request through `profileEntity.searchTemplate`. A view never sees whether the input was a name or a link. The item is read through its own query (`EntityItem.fetchByUrlQuery`), so item mutations reach the view.
 
+`useViewTarget` also returns `profileEntity` as soon as the target's identity is known (so a view can keep its toolbar around a loading or error state). The shared loading, error and not-found state of a view's main data is `ViewTargetGate` in `packages/views/src/gate/` (FR-006).
+
 **Cache key**: the item's own self link (FR-010). A name target and a link target for the same item resolve to the same key.
 
 ## ViewProps and view state
