@@ -28,7 +28,7 @@ export interface ClassifyCreateEntityItemViewProps {
 
 ```ts
 export const useCreateEntityItemState: UseBoundStore<{
-  file: File | null;
+  initialFile: File | null;
   setInitialFile: (file: File | null) => void; // null clears
 }>;
 ```
@@ -40,10 +40,18 @@ Same idiom as `useEntityDisplayPreferencesStore`: components subscribe with a se
 **File**: `packages/features/src/entity-item-create/create-entity-item-container.tsx`
 
 - In `CreateEntityItemContainerReady`: `const [initialValues] = useState(() => { const file = useCreateEntityItemState.getState().initialFile; ... })`.
-- First `fields.find(f => f.kind === "file")` receives the file; with no file field nothing is shown and the store is untouched (clarified 2026-09-30).
+- First `fields.find(f => f.kind === "file")` receives the file; with no file field nothing is shown and the store is untouched.
 - After a successful create (normal and continuous mode): `setInitialFile(null)`, then `formState.reset({})` so a continuous-create reset starts empty instead of restoring the prefilled file (`reset` takes an optional new baseline).
-- When the user clears that file field: `setInitialFile(null)`.
-- Pass `initialValues` to `useEntityItemCreateFormState`.
+- When the user clears that file field: the container wraps the form's `setValue` for the first file field; an empty value calls `setInitialFile(null)` before setting it (no effect, so `reset({})` does not trigger it).
+- Pass `initialValues` to `useHalFormsFieldState` (`hal-forms/state/use-hal-forms-field-state.ts`).
+
+## `useHalFormsFieldState.reset`
+
+**File**: `packages/features/src/hal-forms/state/use-hal-forms-field-state.ts` (shared with `HalFormsContainer` and the collection filter dialog)
+
+- `reset(initialValues?: FieldValueMap)`. With an argument it first replaces `initialValuesRef`, so `isDirty` compares against the new baseline after the reset.
+- Without an argument it behaves as before: back to the values the hook was seeded with.
+- Tests: the existing `reset()` test (no argument, restores the seeded values) stays; a new test covers `reset({})` replacing the baseline.
 
 ## Routes (apps — routing only)
 
