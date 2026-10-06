@@ -2,8 +2,9 @@ import { createContext, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 
 /**
- * The one object a host provides for opening things (contract `navigation-context.md`). Views and
- * features call it instead of the router; the host decides what happens next.
+ * The one object a host provides for opening things (contract `navigation-context.md`). Views call
+ * it instead of the router; features get callback props that their view wires to it. The host
+ * decides what happens next.
  *
  * `openClassifyCreate`, `openEditItem` and `openCreateItem` are added with the pages that use them.
  */

@@ -16,7 +16,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - Views import `@contentgrid/navigator-data`, `@contentgrid/features` and `@contentgrid/ui`. Features,
   `navigator-data` and `ui` never import views.
-- **No router in views or features.** Every click that opens something calls `useNavigation()`
+- **Only views call `useNavigation()`; no router in views or features.** Every click that opens something,
+  including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
 - Views take `ViewProps<S>`: a `ViewTarget` (`name` or `url`, never a frontend address, never filters, sort
   or page), optional `state` and `onStateChange` ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
