@@ -1,22 +1,5 @@
 import type { AppRouterContext } from "@contentgrid/features/router-shell";
-
-/**
- * What a view shows (contract `view-target.md`). By `name` from our own routes, by `url` from the
- * chat backend. A target carries no filters, sort or page.
- */
-export type ViewTarget =
-  | {
-      kind: "name";
-      /** The profile entity name, never the plural path. */
-      entityName: string;
-      /** The item's `id` field; absent addresses the collection. */
-      itemId?: string;
-    }
-  | {
-      kind: "url";
-      /** A HAL link from the API. Never parsed. */
-      href: string;
-    };
+import type { ViewTarget } from "@contentgrid/navigator-data";
 
 /**
  * Props every view takes (contract `view-props-and-state.md`). With `onStateChange` the host owns
@@ -37,3 +20,6 @@ export type ViewPreload<S> = (
   target: ViewTarget,
   state: S | undefined,
 ) => Promise<void>;
+
+// The type lives in `@contentgrid/navigator-data`, which resolves it and must not import views.
+export type { ViewTarget };

@@ -6,7 +6,7 @@ The feature persists nothing on the server. This describes the shapes that cross
 
 ## ViewTarget
 
-What a view shows. Defined in `packages/views`. Contract: [view-target.md](contracts/view-target.md).
+What a view shows. Defined in `packages/navigator-data` (it resolves the target and must not import views); `packages/views` re-exports it. Contract: [view-target.md](contracts/view-target.md).
 
 ```ts
 type ViewTarget =
@@ -29,13 +29,13 @@ type ViewTarget =
 
 What the data layer returns once per view start. Contract: [view-target.md](contracts/view-target.md).
 
-| Field           | Type                                        | Notes                                          |
-| --------------- | ------------------------------------------- | ---------------------------------------------- |
-| `profileEntity` | `ProfileEntity`                             | Always present on success                      |
-| `entityItem`    | `EntityItem` (item targets only)            | Present when the target addresses an item      |
-| `collection`    | collection source (collection targets only) | Present when the target addresses a collection |
+| Field           | Type                               | Notes                                          |
+| --------------- | ---------------------------------- | ---------------------------------------------- |
+| `profileEntity` | `ProfileEntity`                    | Always present on success                      |
+| `entityItem`    | `EntityItem` (item targets only)   | Present when the target addresses an item      |
+| `collectionUrl` | `string` (collection targets only) | Present when the target addresses a collection |
 
-The exact member names are finalised in PR 3; the rule is that a view never sees whether the input was a name or a link.
+`collectionUrl` is the profile's collection URL for a name target and the link as given for a link target; the view builds its request through `profileEntity.searchTemplate`. A view never sees whether the input was a name or a link. The item is read through its own query (`EntityItem.fetchByUrlQuery`), so item mutations reach the view.
 
 **Cache key**: the item's own self link (FR-010). A name target and a link target for the same item resolve to the same key.
 

@@ -41,12 +41,12 @@ Pre-GA the generic app's stability gate stays suspended; no task reinstates it.
 
 **Purpose**: one place that turns a `ViewTarget` into loaded objects.
 
-- [ ] T007 [P] [PR 3] Add the target resolution helpers in `packages/navigator-data/src/views/`: name target to `ProfileEntity` (and `EntityItem` with `itemId`). Traces: FR-007, FR-008; contract `view-target.md` (Resolution, name target).
-- [ ] T008 [PR 3] Add link target resolution: fetch the link, find the profile through the response's profile link, fall back to the profiles whose `describes` link covers the resource; not-found outcome when none; no URL parsing. Traces: FR-009; contract `view-target.md`. Depends on T007.
-- [ ] T009 [PR 3] Cache loaded items under the item's self link, shared by both target forms; add the query key family and a test that a name and a link for the same item cause one request. Traces: FR-010, SC-003; contract `view-target.md` (Caching). Depends on T007, T008.
-- [ ] T010 [P] [PR 3] Add a hook and an `ensure*` function over the same keys, for views and for preloads. Traces: FR-003, FR-004; contracts `view-target.md`, `view-preload.md` rule 6. Depends on T009.
-- [ ] T011 [PR 3] MSW tests: name target, link target with profile link, link target through `describes`, no profile (not-found), non-entity link (not-supported), problem responses narrowed with the provided guards. Traces: FR-008, FR-009; contract `view-target.md` (Errors). Depends on T010.
-- [ ] T012 [PR 3] Export the helpers from the package barrel and add a "View targets" section to `packages/navigator-data/CLAUDE.md`. Traces: FR-008; Principle III (explicit named exports).
+- [x] T007 [P] [PR 3] Add the target resolution helpers in `packages/navigator-data/src/views/`: name target to `ProfileEntity` (and `EntityItem` with `itemId`). Traces: FR-007, FR-008; contract `view-target.md` (Resolution, name target).
+- [x] T008 [PR 3] Add link target resolution: fetch the link, find the profile through the response's profile link, fall back to the profiles whose `describes` link covers the resource; not-found outcome when none; no URL parsing. Traces: FR-009; contract `view-target.md`. Depends on T007.
+- [x] T009 [PR 3] Cache loaded items under the item's self link, shared by both target forms; add the query key family and a test that a name and a link for the same item cause one request. Traces: FR-010, SC-003; contract `view-target.md` (Caching). Depends on T007, T008.
+- [x] T010 [P] [PR 3] Add a hook and an `ensure*` function over the same keys, for views and for preloads. Traces: FR-003, FR-004; contracts `view-target.md`, `view-preload.md` rule 6. Depends on T009.
+- [x] T011 [PR 3] MSW tests: name target, link target with profile link, link target through `describes`, no profile (not-found), non-entity link (not-supported), problem responses narrowed with the provided guards. Traces: FR-008, FR-009; contract `view-target.md` (Errors). Depends on T010.
+- [x] T012 [PR 3] Export the helpers from the package barrel and add a "View targets" section to `packages/navigator-data/CLAUDE.md`. Traces: FR-008; Principle III (explicit named exports).
 
 **Checkpoint**: both target forms resolve to the same objects and cache entries; no view uses them yet.
 

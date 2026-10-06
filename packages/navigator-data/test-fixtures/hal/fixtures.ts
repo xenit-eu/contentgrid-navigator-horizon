@@ -93,6 +93,18 @@ export const sampleInvoice: HalObjectShape<{
   },
 };
 
+/**
+ * An item whose response carries the `profile` link view-target resolution follows
+ * (contract `view-target.md`).
+ */
+export const sampleInvoiceWithProfileLink: HalObjectShape<Record<string, unknown>> = {
+  ...sampleInvoice,
+  _links: {
+    ...sampleInvoice._links,
+    profile: { href: "/profile/invoices" },
+  },
+};
+
 export const sampleInvoiceWithTemplates = {
   ...sampleInvoice,
   _templates: invoiceItemTemplates,
