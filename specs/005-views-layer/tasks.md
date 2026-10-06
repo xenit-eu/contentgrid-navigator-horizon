@@ -26,12 +26,12 @@ Pre-GA the generic app's stability gate stays suspended; no task reinstates it.
 
 **Purpose**: the package, the navigation context and the shared types, with no page moved yet.
 
-- [ ] T001 [PR 2] Create `packages/views` (`package.json` with per-view `exports` and peer dependencies mirroring `packages/features`, `tsconfig`, `eslint.config.js`, Vitest and Storybook setup, `CLAUDE.md` with the layer rules); register the workspace and update the lockfile importer entry (CODEOWNERS review). Traces: FR-001; plan.md project structure.
-- [ ] T002 [P] [PR 2] Add `ViewProps<S>`, `ViewPreload<S>` and the `ViewTarget` type in `packages/views/src/types.ts`. Traces: FR-007, FR-011, FR-012; contracts `view-target.md`, `view-props-and-state.md`, `view-preload.md`.
-- [ ] T003 [P] [PR 2] Add the navigation context, provider and `useNavigation()` in `packages/views/src/navigation/` with `openHome`, `openEntityItemCollection(entityName)`, `openItem(entityName, id)`; a missing provider throws in development. Traces: FR-016, FR-017; contract `navigation-context.md` rules 1, 3, 5.
-- [ ] T004 [PR 2] Add the recording navigation fake and a Storybook decorator in `packages/views/src/navigation/testing.tsx`; tests for call order and arguments. Traces: FR-019; contract `navigation-context.md` test obligations. Depends on T003.
-- [ ] T005 [P] [PR 2] Add the per-child provider helper a parent view uses to give each child its own navigation object, with a unit test. Traces: FR-026; contract `navigation-context.md` rule 6. Depends on T003.
-- [ ] T006 [PR 2] Document the package in its `CLAUDE.md` and add a pointer from the root and `packages/features` `CLAUDE.md` files to ADR-018. Traces: FR-001; Principle IX (docs only reference repo paths).
+- [x] T001 [PR 2] Create `packages/views` (`package.json` with per-view `exports` and peer dependencies mirroring `packages/features`, `tsconfig`, `eslint.config.js`, Vitest and Storybook setup, `CLAUDE.md` with the layer rules); register the workspace and update the lockfile importer entry (CODEOWNERS review). Traces: FR-001; plan.md project structure.
+- [x] T002 [P] [PR 2] Add `ViewProps<S>`, `ViewPreload<S>` and the `ViewTarget` type in `packages/views/src/types.ts`. Traces: FR-007, FR-011, FR-012; contracts `view-target.md`, `view-props-and-state.md`, `view-preload.md`.
+- [x] T003 [P] [PR 2] Add the navigation context, provider and `useNavigation()` in `packages/views/src/navigation/` with `openHome`, `openEntityItemCollection(entityName)`, `openItem(entityName, id)`; a missing provider throws in development. Traces: FR-016, FR-017; contract `navigation-context.md` rules 1, 3, 5.
+- [x] T004 [PR 2] Add the recording navigation fake and a Storybook decorator in `packages/views/src/navigation/testing.tsx`; tests for call order and arguments. Traces: FR-019; contract `navigation-context.md` test obligations. Depends on T003.
+- [x] T005 [P] [PR 2] Add the per-child provider helper a parent view uses to give each child its own navigation object, with a unit test. Traces: FR-026; contract `navigation-context.md` rule 6. Depends on T003.
+- [x] T006 [PR 2] Document the package in its `CLAUDE.md` and add a pointer from the root and `packages/features` `CLAUDE.md` files to ADR-018. Traces: FR-001; Principle IX (docs only reference repo paths).
 
 **Checkpoint**: `pnpm -r typecheck` and the package tests pass; no app uses the package yet.
 

@@ -7,6 +7,7 @@ unit of promotion between tracks.
 
 Platform-wide conventions: see root [`CLAUDE.md`](../../CLAUDE.md).
 Three-track model: [ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md).
+Views layer above features (navigation context, layer rules): [ADR-018](../../docs/adr/ADR-018-views-layer.md), [`packages/views/CLAUDE.md`](../views/CLAUDE.md).
 
 ---
 
