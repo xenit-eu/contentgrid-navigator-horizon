@@ -16,9 +16,11 @@ means in practice.
 Its `content-focus` variation (`variations/content-focus/`, public entry point
 `EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, or a non-PDF
 previewed through the platform's PDF rendition service — next to those same attributes and
-relations, with the production viewer toolbar. `EntityItemContentFocusView` resolves
-`entityName`/`itemId` into a `profileEntity`/`EntityItem` itself and falls back to plain
-`EntityItemView` for any item with no content attributes (FR-001).
+relations, with the production viewer toolbar. `EntityItemContentFocusView` takes an
+already-loaded `profileEntity` and `entityItem` from the view above it
+(`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemView` for any item
+with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
+in `packages/features/CLAUDE.md`).
 
 ## Stability of the content-focus variation
 
@@ -31,10 +33,8 @@ importing `EntityItemContentFocusView` the way `x-stability` prevents importing 
 
 **Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusView`
 was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
-both apps' `$entity/$itemId.tsx` item routes — `apps/navigator`'s route mirrors
-`apps/navigator-experimental`'s wiring (same `renderHomeLink`/`renderCollectionLink`/relation
-callbacks); it no longer falls back to plain `EntityItemView` at the route level (the view itself
-still does, per-item, for FR-001). There is no longer an "experimental-only" convention to enforce
+both apps' `$entity/$itemId.tsx` item routes, through the item detail view in `packages/views`;
+the view itself falls back to plain `EntityItemView` per item for FR-001. There is no longer an "experimental-only" convention to enforce
 here — both tracks may mount this view.
 
 ## Layering (spec-001 `feature-layer-imports.md`)
@@ -59,9 +59,10 @@ variations/content-focus/
   util               -> @contentgrid/navigator-data only — no UI, no React components
 ```
 
-- `variations/content-focus/views/entity-item-content-focus-view.tsx` takes only `entityName`,
-  `itemId`, `toolbar?`, and relation callbacks (spec `contracts/content-focus-view.md`) — never a
-  resolved `ProfileEntity` or `EntityItem` from its host (Principle VIII).
+- `variations/content-focus/views/entity-item-content-focus-view.tsx` takes the loaded
+  `profileEntity` and `entityItem` plus relation callbacks, and no toolbar, breadcrumb or link
+  render props: its view loads the main object once and draws the chrome (ADR-018; this
+  supersedes the earlier "primitives only" rule of spec `002-pdf-viewer`).
 - `variations/content-focus/util/` stays pure: no `useQuery`, no JSX, no `@contentgrid/ui`
   import. Transformation logic (e.g. picking the default content attribute) lives here, not
   inline in a component.

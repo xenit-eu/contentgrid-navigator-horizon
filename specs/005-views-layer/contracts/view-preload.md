@@ -27,6 +27,6 @@ Each view exports its own `preload`. `ctx` is the router context: the query clie
 ## Test obligations
 
 - After `preload`, rendering the view makes no further request for the main data, and shows no loading state.
-  - _As built (PR 4):_ the view's own queries (profile, target identity, item) resolve from cache. The item feature's `useEntityItem` still revalidates on mount (stale time 0), so one background request for the item remains. PR 5 passes the loaded item down to the feature, which restores the full guarantee.
+  - _As built (PR 4, restored in PR 5):_ the view's queries (profile, target identity, item) resolve from cache, and the view passes the loaded `ProfileEntity` and `EntityItem` down, so the item feature no longer loads the main object. The guarantee holds in full for the item detail view. The collection view still loads its pages in the feature until PR 6.
 - `preload` resolves (does not reject) when the API client is absent or a request fails.
 - A parent preload triggers each child's preload once.

@@ -39,6 +39,11 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - `@contentgrid/views/entity-item-detail`: `EntityItemDetailView` and its `preload`. Its data comes from
   `useViewTarget` through the shared `ViewTargetGate` (loading, error and not-found in one place); the
   relation-problem dialog lives in the view.
+- `@contentgrid/views/entity-item-collection`: `EntityItemCollectionView`, the collection page's toolbar
+  (Home, entity name, Create) around the collection feature. The host still passes filter, sort and page
+  props until the view owns its state.
+- `ViewPage` (`src/toolbar/`) is the page chrome every view uses: toolbar over a padded content area, or a
+  plain padded container when the toolbar is hidden. Features placed inside fill the space they get.
 
 ## Testing
 

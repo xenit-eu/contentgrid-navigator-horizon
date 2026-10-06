@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { EntityItemCollectionSearchView } from "@contentgrid/features/entity-item-collection";
 import {
   applyFiltersToSearchState,
   applySortToSearchState,
@@ -11,7 +10,6 @@ import {
   entitySearchStateValidator,
 } from "@contentgrid/features/search";
 import {
-  EntityItem,
   type ProfileEntity,
   recallCollectionFilters,
   recallCollectionPageHref,
@@ -21,14 +19,7 @@ import {
   rememberCollectionSort,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-  Button,
-} from "@contentgrid/ui";
+import { EntityItemCollectionView } from "@contentgrid/views/entity-item-collection";
 
 export const Route = createFileRoute("/_app/$entity/")({
   validateSearch: entitySearchStateValidator,
@@ -171,60 +162,15 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
     });
   }
 
-  const breadcrumbs = (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <button
-            type="button"
-            onClick={() => go({ to: "/", search: {} })}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-          >
-            Home
-          </button>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>{profile.pluralName}</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
-
-  const actions = (
-    <div>
-      <Button
-        variant="default"
-        onClick={() => go({ to: "/$entity/~create", params: { entity: profile.name }, search: {} })}
-      >
-        Create {profile.singularName}
-      </Button>
-    </div>
-  );
-
   return (
-    <EntityItemCollectionSearchView
-      profile={profile}
+    <EntityItemCollectionView
+      target={{ kind: "name", entityName: profile.name }}
       pageUrl={pageUrl}
       onPageChange={handlePageChange}
       filters={filters}
       onFiltersChange={handleFiltersChange}
       currentSort={sort}
       onSortChange={handleSortChange}
-      actions={actions}
-      toolbar
-      breadcrumbs={breadcrumbs}
-      onEntityItemClick={(item: EntityItem) =>
-        // Filters are deliberately NOT forwarded into the item-detail URL — they stay
-        // recoverable via `rememberCollectionFilters`/`rememberCollectionPageHref`, so the
-        // breadcrumb back to this list restores them from the QueryClient cache rather than
-        // round-tripping through the URL.
-        go({
-          to: "/$entity/$itemId",
-          params: { entity: profile.name, itemId: item.id },
-          search: {},
-        })
-      }
     />
   );
 }

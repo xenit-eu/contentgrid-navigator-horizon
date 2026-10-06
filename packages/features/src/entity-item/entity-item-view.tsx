@@ -1,13 +1,5 @@
-import type { ReactNode } from "react";
-import {
-  type ProfileEntity,
-  toProblemDisplayModel,
-  useEntityItem,
-  useLoadedProfileEntities,
-} from "@contentgrid/navigator-data";
+import { type EntityItem, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
-import { ErrorPage, LoadingPage } from "../app-info-pages";
-import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemAttributes } from "./attributes/entity-item-attributes";
 import type {
   RelationItemClickHandler,
@@ -16,137 +8,79 @@ import type {
 } from "./relations/relation-handlers";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
-import {
-  EntityItemReference,
-  EntityItemReferenceLoading,
-} from "./variations/entity-item-reference";
+import { EntityItemReference } from "./variations/entity-item-reference";
 
-/** Identify the item by its already-known profile and id. */
-export interface EntityItemViewByProfile {
-  readonly profile: ProfileEntity;
-  readonly itemId: string;
-}
-
-/**
- * Identify the item by its URL alone. The describing `ProfileEntity` is
- * discovered by checking every loaded profile's `describes` link template
- * against the URL (`useEntityItem`'s discover-by-url mode) — never by
- * parsing the id or entity name out of the URL string. Use this when the
- * caller only has a link (e.g. from a search result or another entity's
- * relation) and doesn't already know which entity type it points to.
- */
-export interface EntityItemViewByUrl {
-  readonly url: string;
-}
-
-export type EntityItemIdentity = EntityItemViewByProfile | EntityItemViewByUrl;
-
-export type EntityItemViewProps = EntityItemIdentity &
-  RelationProblemHandlers & {
-    /**
-     * Render the breadcrumb toolbar on top; otherwise the content is wrapped
-     * in a plain {@link PageLayout}. Defaults to `false`.
-     */
-    readonly toolbar?: boolean;
-    /** Breadcrumb trail shown in the toolbar (only used when `toolbar` is true). */
-    readonly breadcrumbs?: ReactNode;
-    /** Actions / buttons shown at the end of the toolbar (only when `toolbar` is true). */
-    readonly actions?: ReactNode;
-    /**
-     * Fired when the user clicks through to a related entity item, from
-     * either a to-one or to-many relation section; receives the target
-     * entity's profile name and the item's id.
-     */
-    readonly onRelationItemClick?: RelationItemClickHandler;
-    /** Fired from a relation picker's "Create" button with the target entity's profile name. */
-    readonly onRelationItemCreateNew?: RelationItemCreateHandler;
-  };
+export type EntityItemViewProps = RelationProblemHandlers & {
+  /** The loaded item (and, through it, its profile). The caller owns loading it. */
+  readonly item: EntityItem;
+  /**
+   * Fired when the user clicks through to a related entity item, from
+   * either a to-one or to-many relation section; receives the target
+   * entity's profile name and the item's id.
+   */
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+};
 
 /**
- * App-agnostic item detail view: fetches a single entity item — either from
- * an already-known `profile` + `itemId`, or discovered from a bare `url` —
- * and renders its attributes and relations, optionally inside a breadcrumb
- * toolbar. All routing / navigation is supplied by the caller through
- * `onRelationItemClick` and `breadcrumbs` — this component performs no
- * navigation itself.
+ * App-agnostic item detail: renders an already-loaded item's attributes and relations. It draws
+ * no toolbar or page chrome and fills whatever space its parent gives it (`h-full min-h-0`, no
+ * outer padding); the view above it owns loading, the toolbar and padding. Relations and content
+ * are loaded here by following the item's links. All navigation is supplied by the caller through
+ * `onRelationItemClick` — this component performs none itself.
  */
-export function EntityItemView(props: Readonly<EntityItemViewProps>) {
-  const {
-    toolbar = false,
-    breadcrumbs,
-    actions,
-    onRelationItemClick,
-    onRelationItemCreateNew,
-    onMissingRelationTargetClick,
-    onBlindRelationOverwriteClick,
-    onRequiredRelationClick,
-  } = props;
-
-  const item = useEntityItem(
-    "url" in props ? { url: props.url } : { profileEntity: props.profile, entityId: props.itemId },
-  );
+export function EntityItemView({
+  item,
+  onRelationItemClick,
+  onRelationItemCreateNew,
+  onMissingRelationTargetClick,
+  onBlindRelationOverwriteClick,
+  onRequiredRelationClick,
+}: Readonly<EntityItemViewProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
-  const content = (
-    <>
+  return (
+    <div className="h-full min-h-0">
       <div className="p-4">
-        {item.data ? (
-          <EntityItemReference item={item.data} size="lg" />
-        ) : (
-          <EntityItemReferenceLoading size="lg" />
-        )}
+        <EntityItemReference item={item} size="lg" />
       </div>
 
-      {item.isPending && <LoadingPage />}
+      <div className="space-y-6 p-4 pt-0">
+        <EntityItemAttributes item={item} />
 
-      {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-
-      {item.isSuccess && (
-        <div className="space-y-6 p-4 pt-0">
-          <EntityItemAttributes item={item.data} />
-
-          {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {item.data.toOneRelations.map((rel) => (
-                  <RelationToOneSection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {item.data.toManyRelations.map((rel) => (
-                  <RelationToManySection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </>
+        {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Relations</h2>
+              {item.toOneRelations.map((rel) => (
+                <RelationToOneSection
+                  key={rel.name}
+                  relation={rel}
+                  profiles={loadedProfiles}
+                  onItemClick={onRelationItemClick}
+                  onCreateNew={onRelationItemCreateNew}
+                  onMissingRelationTargetClick={onMissingRelationTargetClick}
+                  onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+                />
+              ))}
+              {item.toManyRelations.map((rel) => (
+                <RelationToManySection
+                  key={rel.name}
+                  relation={rel}
+                  profiles={loadedProfiles}
+                  onItemClick={onRelationItemClick}
+                  onCreateNew={onRelationItemCreateNew}
+                  onMissingRelationTargetClick={onMissingRelationTargetClick}
+                  onRequiredRelationClick={onRequiredRelationClick}
+                  onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
-
-  if (toolbar) {
-    return (
-      <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs} actions={actions}>
-        {content}
-      </BreadCrumbsToolBarLayout>
-    );
-  }
-  return <PageLayout>{content}</PageLayout>;
 }

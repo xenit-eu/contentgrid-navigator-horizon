@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ErrorPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemContentFocusView } from "@contentgrid/features/entity-item";
-import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import { useViewTarget } from "@contentgrid/navigator-data";
 import { ViewTargetGate } from "../gate/view-target-gate";
 import { useNavigation } from "../navigation";
+import { ViewPage } from "../toolbar/view-page";
 import type { ViewProps } from "../types";
 import { ItemDetailBreadcrumbs } from "./item-detail-breadcrumbs";
 import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
@@ -41,7 +41,7 @@ export function EntityItemDetailView({
           hideToolbar ? (
             state
           ) : (
-            <BreadCrumbsToolBarLayout
+            <ViewPage
               breadcrumbs={
                 <ItemDetailBreadcrumbs
                   entityName={profileEntity.name}
@@ -51,42 +51,43 @@ export function EntityItemDetailView({
               }
             >
               {state}
-            </BreadCrumbsToolBarLayout>
+            </ViewPage>
           )
         }
       >
         {({ profileEntity, entityItem }) =>
           entityItem ? (
-            <EntityItemContentFocusView
-              entityName={profileEntity.name}
-              itemId={entityItem.id}
-              toolbar={
-                hideToolbar
-                  ? false
-                  : {
-                      breadcrumbs: (
-                        <ItemDetailBreadcrumbs
-                          entityName={profileEntity.name}
-                          pluralName={profileEntity.pluralName}
-                          itemId={entityItem.id}
-                        />
-                      ),
-                    }
+            <ViewPage
+              breadcrumbs={
+                <ItemDetailBreadcrumbs
+                  entityName={profileEntity.name}
+                  pluralName={profileEntity.pluralName}
+                  itemId={entityItem.id}
+                />
               }
-              onRelationItemClick={({ entityName, itemId }) =>
-                navigation.openItem(entityName, itemId)
-              }
-              onRelationItemCreateNew={onRelationItemCreateNew}
-              onMissingRelationTargetClick={(url, field) =>
-                setProblemDialog({ kind: "missingRelationTarget", url, field })
-              }
-              onBlindRelationOverwriteClick={(info) =>
-                setProblemDialog({ kind: "blindRelationOverwrite", ...info })
-              }
-              onRequiredRelationClick={(affectedRelation) =>
-                setProblemDialog({ kind: "requiredRelation", affectedRelation })
-              }
-            />
+              hideToolbar={hideToolbar}
+              // A content preview runs edge to edge under the toolbar; the plain body keeps the
+              // page gutters.
+              contentPadded={profileEntity.hasContentAttributes ? "bottom" : true}
+            >
+              <EntityItemContentFocusView
+                profileEntity={profileEntity}
+                entityItem={entityItem}
+                onRelationItemClick={({ entityName, itemId }) =>
+                  navigation.openItem(entityName, itemId)
+                }
+                onRelationItemCreateNew={onRelationItemCreateNew}
+                onMissingRelationTargetClick={(url, field) =>
+                  setProblemDialog({ kind: "missingRelationTarget", url, field })
+                }
+                onBlindRelationOverwriteClick={(info) =>
+                  setProblemDialog({ kind: "blindRelationOverwrite", ...info })
+                }
+                onRequiredRelationClick={(affectedRelation) =>
+                  setProblemDialog({ kind: "requiredRelation", affectedRelation })
+                }
+              />
+            </ViewPage>
           ) : (
             // A collection target: this view shows one item.
             <ErrorPage

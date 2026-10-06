@@ -61,8 +61,7 @@ export interface EntityItemCollectionViewProps {
  * App-agnostic collection view: fetches the entity's items and renders the filter form, table,
  * and pagination controls. All routing / navigation / page chrome is supplied by the caller
  * through `onEntityItemClick`, `onPageChange`, `onFiltersChange` — this component performs no
- * navigation itself and renders no toolbar/layout (see `EntityItemCollectionSearchView` for
- * that).
+ * navigation itself and renders no toolbar/layout (the view above it draws those).
  *
  * Filters render through `@contentgrid/features/hal-forms`'s generic `HalFormsContainer` rather
  * than the earlier `FilterSidebar` pattern (`@contentgrid/ui`) — `resolveHalFormsFields` derives
