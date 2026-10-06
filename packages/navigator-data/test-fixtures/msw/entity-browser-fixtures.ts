@@ -163,14 +163,14 @@ export function invoiceProfileHandlerNoCreate() {
   );
 }
 
-export function customerProfileHandler() {
+export function customerProfileHandler(opts: { creatable?: boolean } = {}) {
   return http.get(`${PROFILE_URL}/customers`, () =>
     HttpResponse.json({
       name: "customer",
       title: "Customer",
       _links: profileLinks(`${PROFILE_URL}/customers`, `${API_URL}/customers`),
       _embedded: {
-        "blueprint:attribute": [],
+        "blueprint:attribute": [profileAttribute({ name: "id", title: "ID", readOnly: true })],
         "blueprint:relation": [],
       },
       _templates: {
@@ -179,6 +179,15 @@ export function customerProfileHandler() {
           target: `${API_URL}/customers`,
           properties: [],
         },
+        ...(opts.creatable
+          ? {
+              "create-form": {
+                method: "POST",
+                target: `${API_URL}/customers`,
+                properties: [],
+              },
+            }
+          : {}),
       },
     }),
   );
