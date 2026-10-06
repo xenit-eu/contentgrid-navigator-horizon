@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { type ProfileEntity, useCreatableProfileEntities } from "@contentgrid/navigator-data";
 import {
@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
   FileUploadZone,
-  Label,
   ProfileEntitySelectorList,
 } from "@contentgrid/ui";
 import { LoadingPage } from "../app-info-pages";
@@ -35,7 +34,6 @@ export function ClassifyCreateEntityItemView({
   const initialFile = useCreateEntityItemState((state) => state.initialFile);
   const setInitialFile = useCreateEntityItemState((state) => state.setInitialFile);
   const [selectedProfile, setSelectedProfile] = useState<ProfileEntity>();
-  const fileLabelId = useId();
 
   if (isLoading) return <LoadingPage />;
 
@@ -63,10 +61,12 @@ export function ClassifyCreateEntityItemView({
                 label="Entity"
               />
 
-              <div role="group" aria-labelledby={fileLabelId} className="flex flex-col gap-2">
-                <Label id={fileLabelId}>Upload a file (optional)</Label>
+              <fieldset>
+                <legend className="mb-2 text-sm leading-none font-medium">
+                  Upload a file (optional)
+                </legend>
                 <FileUploadZone file={initialFile} onFileChange={setInitialFile} />
-              </div>
+              </fieldset>
             </>
           )}
         </CardContent>
