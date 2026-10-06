@@ -19,7 +19,7 @@ interface Navigation {
 }
 ```
 
-The design lists these six and says the set may be extended. The first PRs only need `openHome`, `openEntityItemCollection` and `openItem`; the others arrive with the pages that use them.
+The design lists these six and says the set may be extended. The first PRs only need `openHome`, `openEntityItemCollection` and `openItem`; the others arrive with the pages that use them. _As built:_ `openCreateItem` exists from PR 5, for the collection view's Create action.
 
 ## Rules
 

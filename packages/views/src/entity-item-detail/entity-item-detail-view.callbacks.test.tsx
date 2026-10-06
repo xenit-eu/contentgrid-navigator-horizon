@@ -17,7 +17,6 @@ import { EntityItemDetailView } from "./entity-item-detail-view";
 
 vi.mock("@contentgrid/features/entity-item", () => ({
   EntityItemContentFocusView: (props: {
-    toolbar?: unknown;
     onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
     onRelationItemCreateNew?: (entityName: string) => void;
     onMissingRelationTargetClick?: (url: string, field?: string) => void;
@@ -40,7 +39,6 @@ vi.mock("@contentgrid/features/entity-item", () => ({
         blind
       </button>
       <button onClick={() => props.onRequiredRelationClick?.("owner")}>required</button>
-      <span>{props.toolbar === false ? "toolbar-off" : "toolbar-on"}</span>
     </div>
   ),
 }));
@@ -104,11 +102,5 @@ describe("EntityItemDetailView — feature callbacks", () => {
 
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByText(title)).not.toBeInTheDocument();
-  });
-
-  it("tells the feature to draw no toolbar when hidden", async () => {
-    const { Wrapper } = setup();
-    render(<EntityItemDetailView target={target} hideToolbar />, { wrapper: Wrapper });
-    expect(await screen.findByText("toolbar-off")).toBeInTheDocument();
   });
 });

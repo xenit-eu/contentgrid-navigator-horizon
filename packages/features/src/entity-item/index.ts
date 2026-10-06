@@ -1,10 +1,5 @@
 export { EntityItemView } from "./entity-item-view";
-export type {
-  EntityItemViewProps,
-  EntityItemIdentity,
-  EntityItemViewByProfile,
-  EntityItemViewByUrl,
-} from "./entity-item-view";
+export type { EntityItemViewProps } from "./entity-item-view";
 export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
@@ -45,6 +40,4 @@ export type {
   ContentPreviewFrameLabels,
   ContentPreviewPanelProps,
   EntityItemContentFocusViewProps,
-  ViewToolbarConfiguration,
-  ViewToolbarOptions,
 } from "./variations/content-focus";

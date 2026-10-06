@@ -68,6 +68,20 @@ Rules:
 
 ---
 
+## Page layout
+
+([ADR-018](../../docs/adr/ADR-018-views-layer.md), `specs/005-views-layer/contracts/view-toolbar.md`)
+
+- A feature draws no toolbar, breadcrumbs or page actions, and takes no props for them. The view
+  above it draws them (`@contentgrid/views`).
+- A feature fills the space it is given: root `h-full min-h-0`, no outer page padding, and no
+  window-sized units (`vh`, `svh`) or fixed widths. The view (or host) owns padding and scrolling.
+- A feature receives the main object it shows (`ProfileEntity`, `EntityItem`) from its view and
+  never loads it again; it loads follow-up data (relations, content) itself by following links.
+- A feature never reads navigation: user actions leave through callback props.
+
+---
+
 ## Promotion workflow
 
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md),

@@ -3,10 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { type Navigation, NavigationProvider } from "@contentgrid/views";
 
 /**
- * The app's navigation object for views: every `open*` becomes a route change. The collection is
- * opened with an empty search, not `(prev) => prev`: filters are not carried in other pages' URLs
- * — the list restores its earlier filters and page position from the QueryClient-remembered page
- * href instead (see the list route's `onEntityItemClick`).
+ * The app's navigation object for views: every `open*` becomes a route change. Pages are opened
+ * with an empty search: filters are not carried in other pages' URLs — the list restores its
+ * earlier filters and page position from the QueryClient-remembered page href instead.
  */
 export function AppNavigationProvider({ children }: Readonly<{ children: ReactNode }>) {
   const navigate = useNavigate();
@@ -19,8 +18,10 @@ export function AppNavigationProvider({ children }: Readonly<{ children: ReactNo
         void navigate({
           to: "/$entity/$itemId",
           params: { entity: entityName, itemId: id },
-          search: (prev) => prev,
+          search: {},
         }),
+      openCreateItem: (entityName) =>
+        void navigate({ to: "/$entity/~create", params: { entity: entityName }, search: {} }),
     }),
     [navigate],
   );

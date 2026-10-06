@@ -12,6 +12,7 @@ function NavButtons() {
       <button onClick={() => navigation.openHome()}>home</button>
       <button onClick={() => navigation.openEntityItemCollection("invoice")}>list</button>
       <button onClick={() => navigation.openItem("invoice", "42")}>item</button>
+      <button onClick={() => navigation.openCreateItem("invoice")}>create</button>
     </>
   );
 }
@@ -30,6 +31,7 @@ describe("useNavigation", () => {
       result.current.openHome();
       result.current.openEntityItemCollection("invoice");
       result.current.openItem("invoice", "1");
+      result.current.openCreateItem("invoice");
     }).not.toThrow();
     vi.unstubAllEnvs();
   });
@@ -39,6 +41,7 @@ describe("useNavigation", () => {
       openHome: vi.fn(),
       openEntityItemCollection: vi.fn(),
       openItem: vi.fn(),
+      openCreateItem: vi.fn(),
     };
     render(
       <NavigationProvider navigation={navigation}>
@@ -46,7 +49,9 @@ describe("useNavigation", () => {
       </NavigationProvider>,
     );
     await userEvent.click(screen.getByText("item"));
+    await userEvent.click(screen.getByText("create"));
     expect(navigation.openItem).toHaveBeenCalledWith("invoice", "42");
+    expect(navigation.openCreateItem).toHaveBeenCalledWith("invoice");
   });
 });
 
@@ -87,10 +92,12 @@ describe("ChildNavigationProvider", () => {
     await userEvent.click(screen.getByText("item"));
     await userEvent.click(screen.getByText("list"));
     await userEvent.click(screen.getByText("home"));
+    await userEvent.click(screen.getByText("create"));
     expect(openItem).toHaveBeenCalledWith("invoice", "42");
     expect(host.calls).toEqual([
       { method: "openEntityItemCollection", args: ["invoice"] },
       { method: "openHome", args: [] },
+      { method: "openCreateItem", args: ["invoice"] },
     ]);
   });
 

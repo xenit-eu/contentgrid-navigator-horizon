@@ -6,7 +6,8 @@ import type { Navigation } from "./navigation-context";
 export type NavigationCall =
   | { method: "openHome"; args: [] }
   | { method: "openEntityItemCollection"; args: [entityName: string] }
-  | { method: "openItem"; args: [entityName: string, id: string] };
+  | { method: "openItem"; args: [entityName: string, id: string] }
+  | { method: "openCreateItem"; args: [entityName: string] };
 
 export interface RecordingNavigation {
   navigation: Navigation;
@@ -26,6 +27,9 @@ export function createRecordingNavigation(): RecordingNavigation {
     },
     openItem: (entityName, id) => {
       calls.push({ method: "openItem", args: [entityName, id] });
+    },
+    openCreateItem: (entityName) => {
+      calls.push({ method: "openCreateItem", args: [entityName] });
     },
   };
   return { navigation, calls };

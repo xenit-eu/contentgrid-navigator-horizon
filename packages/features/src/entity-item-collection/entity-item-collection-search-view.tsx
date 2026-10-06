@@ -1,6 +1,4 @@
-import type { ReactNode } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
 export interface EntityItemCollectionSearchViewProps {
@@ -23,38 +21,17 @@ export interface EntityItemCollectionSearchViewProps {
   readonly currentSort?: string;
   /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
   readonly onSortChange?: (sort: string | undefined) => void;
-  /**
-   * Render the breadcrumb toolbar on top; otherwise the content is wrapped in
-   * a plain {@link PageLayout}. Defaults to `false`.
-   */
-  readonly toolbar?: boolean;
-  /** Breadcrumb trail shown in the toolbar (only used when `toolbar` is true). */
-  readonly breadcrumbs?: ReactNode;
-  /** Actions / buttons shown at the end of the toolbar (only when `toolbar` is true). */
-  readonly actions?: ReactNode;
   /** Fired when an entity item row is clicked; receives the item id. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
 }
 
 /**
- * Page-level wrapper around {@link EntityItemCollectionView}: owns the toolbar/breadcrumbs or
- * plain-page chrome around it, so `EntityItemCollectionView` itself stays a pure content
- * component usable in either layout.
+ * Search-driven wrapper around {@link EntityItemCollectionView}. It draws no toolbar or page
+ * chrome and fills whatever space its parent gives it; the view above it owns the toolbar and
+ * padding.
  */
-export function EntityItemCollectionSearchView({
-  toolbar = false,
-  breadcrumbs,
-  actions,
-  ...viewProps
-}: Readonly<EntityItemCollectionSearchViewProps>) {
-  const content = <EntityItemCollectionView {...viewProps} />;
-
-  if (toolbar) {
-    return (
-      <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs} actions={actions}>
-        {content}
-      </BreadCrumbsToolBarLayout>
-    );
-  }
-  return <PageLayout>{content}</PageLayout>;
+export function EntityItemCollectionSearchView(
+  props: Readonly<EntityItemCollectionSearchViewProps>,
+) {
+  return <EntityItemCollectionView {...props} />;
 }

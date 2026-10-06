@@ -15,6 +15,10 @@
     "./entity-item-detail": {
       "import": "./src/entity-item-detail/index.ts",
       "types": "./src/entity-item-detail/index.ts"
+    },
+    "./entity-item-collection": {
+      "import": "./src/entity-item-collection/index.ts",
+      "types": "./src/entity-item-collection/index.ts"
     }
   },
   "scripts": {
