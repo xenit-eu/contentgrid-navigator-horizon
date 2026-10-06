@@ -1,6 +1,6 @@
 # Implementation Plan: Create Item Page and Upload into Empty Content Attributes
 
-**Branch**: `ACC-3217-create-item-page` | **Date**: 2026-09-30 | **Spec**: [spec.md](spec.md)
+**Branch**: `004-create-item-page` | **Date**: 2026-09-30 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/004-create-item-page/spec.md`
 
@@ -80,12 +80,19 @@ packages/features/src/entity-item-create/
 ├── classify-create-entity-item-view.tsx           # NEW
 ├── classify-create-entity-item-view.test.tsx      # NEW
 ├── state/create-entity-item-state.ts       # NEW
-├── state/use-entity-item-create-form-state.ts  # reset(initialValues?) — new baseline
 ├── create-entity-item-profile-selector.tsx               # NEW: toolbar entity switch (US4)
 ├── to-profile-entity-option.tsx               # NEW: ProfileEntity → selector option
 ├── create-entity-item-container.tsx         # prefill from pending file; clear on create/remove
 ├── create-entity-item-container.test.tsx
 └── index.ts                       # export ClassifyCreateEntityItemView
+
+packages/features/src/hal-forms/state/
+├── use-hal-forms-field-state.ts       # reset(initialValues?) replaces the baseline; no arg = unchanged
+└── use-hal-forms-field-state.test.ts
+
+packages/navigator-data/src/hooks/item/
+├── use-content.ts                 # useUploadContent invalidates the item query on 412 (research D10)
+└── use-content.test.tsx
 
 packages/features/src/entity-item/variations/content-focus/components/
 ├── content-preview-frame.tsx      # uploading state; conditional drop zone
@@ -110,10 +117,10 @@ apps/navigator/tests/e2e/fixtures.ts, navigator.spec.ts  # e2e
 1. **ui** — extend `ProfileEntitySelector` per contract; update tests and stories; re-baseline snapshots. (US1, FR-011–013)
 2. **features** — pending-create-file store. (FR-008)
 3. **features** — `ClassifyCreateEntityItemView` + tests; export from `entity-item-create`. (US1, US2 page part)
-4. **features** — create container prefill, clear on successful create / file removed + tests. (US2; end-to-end needs ACC-2895)
+4. **features** — create container prefill, clear on successful create / file removed + tests. (US2; the container test renders the real create form, with its `FileRenderer`, and asserts the prefilled file is sent in the create request)
 5. **features + apps** — `CreateEntityItemProfileSelector` + shared option hook; add it to the `$entity/~create` toolbar in both apps and key the form on `profile.name`. (US4, FR-020–021)
 6. **apps + sidebar** — `~create` routes in both apps, regenerate route trees, sidebar link. (FR-001, FR-004, FR-005)
-7. **features** — content-focus upload: frame `uploading` state + conditional drop zone; panel mutation, error, 412; tests + story. (US3)
+7. **features** — content-focus upload: frame `uploading` state + conditional drop zone; panel mutation and error; `useUploadContent` invalidates on 412; tests + story. (US3)
 8. **e2e** — Create item page flow.
 9. **Review gate** — re-read `packages/ui/CLAUDE.md`, `packages/features/CLAUDE.md`, `packages/navigator-data/CLAUDE.md` and `apps/*/CLAUDE.md` against the diff; `pnpm lint`, `pnpm typecheck`, `pnpm test`.
 
@@ -121,7 +128,7 @@ Steps 1–6 (Create item page and entity switch) and step 7 (upload) are indepen
 
 ## Dependencies
 
-- **ACC-2895** must merge before step 4 can be verified end to end (create-form `FileRenderer`). Step 4's unit test can assert the form state's initial value without it.
+- Builds on the create form's `useHalFormsFieldState` / `resolveHalFormsFields` stack and its `FileRenderer` file field.
 
 ## Complexity Tracking
 

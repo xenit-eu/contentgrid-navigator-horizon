@@ -6,7 +6,7 @@
 
 ## Content Quality
 
-- [x] No implementation details (languages, frameworks, APIs) — package, component and hook names live only in `research.md`, `plan.md` and `contracts/`; the spec names platform concepts (create form, content attribute) and related specs/tickets
+- [x] No implementation details (languages, frameworks, APIs) — package, component and hook names live only in `research.md`, `plan.md` and `contracts/`; the spec names platform concepts (create form, content attribute) and related specs
 - [x] Focused on user value and business needs
 - [x] Written for non-technical stakeholders
 - [x] All mandatory sections completed
@@ -20,7 +20,7 @@
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
 - [x] Scope is clearly bounded (explicit In/Out scope; classification, the create form itself, replacing stored files, multi-file and progress are excluded)
-- [x] Dependencies and assumptions identified (ACC-2895, 002, 003, mockup page 05)
+- [x] Dependencies and assumptions identified (create-form file field, 002, 003, mockup page 05)
 
 ## Feature Readiness
 
@@ -32,5 +32,4 @@
 ## Notes
 
 - Deliberate template deviations, as in `002-pdf-viewer`: a `## Scope` section before User Scenarios and a `### Dependencies and references` sub-section under Assumptions. Both are additive.
-- Story 2 cannot be verified end to end until ACC-2895 (create-form file field) is merged; the prefill itself can be unit-tested against the form state before that.
 - Review path: human review of `spec.md` → `/speckit-plan` (reads `research.md`) → `/speckit-tasks`.

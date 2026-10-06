@@ -2,7 +2,7 @@
 
 **Feature**: [spec.md](spec.md) | **Date**: 2026-09-30
 
-Input to `/speckit-plan`. Records how the original Navigator (`/home/prenchitra-v/Documents/contentgrid-navigator`) implements the flow, what the new Navigator already has, and the decisions taken.
+Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/contentgrid-navigator`](https://github.com/xenit-eu/contentgrid-navigator)) implements the flow, what the new Navigator already has, and the decisions taken.
 
 ## 1. Original Navigator
 
@@ -22,22 +22,22 @@ Input to `/speckit-plan`. Records how the original Navigator (`/home/prenchitra-
 
 ## 2. New Navigator — what exists
 
-| Piece                   | Location                                                                                       | State                                                                                                                                         |
-| ----------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entity selector         | `packages/ui/src/patterns/entity-selector/entity-selector.tsx` (`ProfileEntitySelector`)       | Radix `Select`; option `{ name, title }`; returns `null` when fewer than two entities; label inline; **no consumers**. Has stories and tests. |
-| Attribute selector      | `packages/ui/src/patterns/attribute-selector/attribute-selector.tsx`                           | Reference style: compact trigger label (icon + title), rich rows (icon, title, description), `Label` above, grouped options.                  |
-| Entity icon             | `packages/features/src/layout/components/entity-icon-badge.tsx` (`EntityIconBadge`)            | Icon + colour from `useEntityDisplayPreferences(profile)`; defaults from `ProfileEntity.getDefaultPreferences()`.                             |
-| Entities                | `useLoadedProfileEntities()` (`navigator-data`)                                                | Returns loaded `ProfileEntity[]` + `isLoading`; used by the sidebar.                                                                          |
-| Create template gate    | `ProfileEntity.createTemplate`                                                                 | `null` when not permitted.                                                                                                                    |
-| Per-entity create route | `apps/navigator/src/routes/_app/$entity/~create.tsx` → `CreateEntityItemView`                  | Exists in both apps.                                                                                                                          |
-| Create form state       | `useEntityItemCreateFormState({ fields, initialValues, externalErrors })`                      | Already accepts `initialValues` (added for edit mode). `CreateEntityItemContainerReady` does not pass it yet.                                 |
-| Field descriptors       | `resolveCreateFieldDescriptors(createTemplate)` → `kind: "file"` descriptors                   | Order = create-template order.                                                                                                                |
-| Create-form file field  | `render/field-renderer.tsx` `case "file"`                                                      | **Placeholder on `main`.** `FileRenderer` + `FileUploadZone` changes live on `ACC-2895-file-upload-xhr-progress-rebase` (unmerged).           |
-| File drop zone          | `packages/ui/src/patterns/file-upload-zone` (`FileUploadZone { file, onFileChange, accept? }`) | Single file; takes the first dropped file.                                                                                                    |
-| Sidebar button          | `packages/features/src/layout/sidebar-layout.tsx` `SidebarCreateItemButton`                    | Label "Create Item"; navigates to `/`.                                                                                                        |
-| Empty content state     | `content-focus/components/content-preview-frame.tsx` `state === "noFile"`                      | Renders `FileUploadZone` with a no-op handler when `onFileChange` is absent. `ContentPreviewPanel` never passes it.                           |
-| Upload hook             | `navigator-data/src/hooks/item/use-content.ts` `useUploadContent(entityItem, attributeName)`   | PUT via `contentFetch`, `If-Match` from ETag, 412 surfaces as `ProblemDetailError`, re-fetches item and updates cache. No consumer yet.       |
-| Upload gate             | `EntityItem.canUploadContent(attributeName)`                                                   | `cg:content` link presence.                                                                                                                   |
+| Piece                   | Location                                                                                                          | State                                                                                                                                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Entity selector         | `packages/ui/src/patterns/entity-selector/entity-selector.tsx` (`ProfileEntitySelector`)                          | Radix `Select`; option `{ name, title }`; returns `null` when fewer than two entities; label inline; **no consumers**. Has stories and tests.                                                                |
+| Attribute selector      | `packages/ui/src/patterns/attribute-selector/attribute-selector.tsx`                                              | Reference style: compact trigger label (icon + title), rich rows (icon, title, description), `Label` above, grouped options.                                                                                 |
+| Entity icon             | `packages/features/src/layout/components/entity-icon-badge.tsx` (`EntityIconBadge`)                               | Icon + colour from `useEntityDisplayPreferences(profile)`; defaults from `ProfileEntity.getDefaultPreferences()`.                                                                                            |
+| Entities                | `useLoadedProfileEntities()` (`navigator-data`)                                                                   | Returns loaded `ProfileEntity[]` + `isLoading`; used by the sidebar.                                                                                                                                         |
+| Create template gate    | `ProfileEntity.createTemplate`                                                                                    | `null` when not permitted.                                                                                                                                                                                   |
+| Per-entity create route | `apps/navigator/src/routes/_app/$entity/~create.tsx` → `CreateEntityItemView`                                     | Exists in both apps.                                                                                                                                                                                         |
+| Create form state       | `hal-forms/state/use-hal-forms-field-state.ts` `useHalFormsFieldState({ fields, initialValues, externalErrors })` | Already accepts `initialValues`. Shared with `HalFormsContainer` and the collection filter dialog. `reset()` restores the seeded values. `CreateEntityItemContainerReady` does not pass `initialValues` yet. |
+| Fields                  | `resolveHalFormsFields(createTemplate)` → `kind: "file"` fields                                                   | Order = create-template order.                                                                                                                                                                               |
+| Create-form file field  | `hal-forms/render/hal-forms-field-renderer.tsx` `case "file"`                                                     | Renders `FileRenderer` (`FileUploadZone`).                                                                                                                                                                   |
+| File drop zone          | `packages/ui/src/patterns/file-upload-zone` (`FileUploadZone { file, onFileChange, accept? }`)                    | Single file; takes the first dropped file.                                                                                                                                                                   |
+| Sidebar button          | `packages/features/src/layout/sidebar-layout.tsx` `SidebarCreateItemButton`                                       | Label "Create Item"; navigates to `/`.                                                                                                                                                                       |
+| Empty content state     | `content-focus/components/content-preview-frame.tsx` `state === "noFile"`                                         | Renders `FileUploadZone` with a no-op handler when `onFileChange` is absent. `ContentPreviewPanel` never passes it.                                                                                          |
+| Upload hook             | `navigator-data/src/hooks/item/use-content.ts` `useUploadContent(entityItem, attributeName)`                      | PUT via `contentFetch`, `If-Match` from ETag, 412 surfaces as `ProblemDetailError`, re-fetches item and updates cache. Does not touch the cache on error. No consumer yet.                                   |
+| Upload gate             | `EntityItem.canUploadContent(attributeName)`                                                                      | `cg:content` link presence.                                                                                                                                                                                  |
 
 ## 3. Decisions
 
@@ -60,36 +60,48 @@ Input to `/speckit-plan`. Records how the original Navigator (`/home/prenchitra-
 
 ### D4 — Continue button
 
-- **Decision**: Choosing an entity selects it; **Continue** opens its create form, as in the mockup and the ticket. The original Navigator navigates on selection instead.
+- **Decision**: Choosing an entity selects it; **Continue** opens its create form.
 - **Consequence**: The file can be attached before or after choosing the entity.
-- **Alternative rejected**: Navigating on selection (original Navigator) — the ticket asks for Continue.
+- **Alternative rejected**: Navigating on selection — the user could no longer attach the file after choosing the entity.
 
 ### D5 — File hand-off through a Zustand store
 
-- **Decision**: Module-level Zustand store in `entity-item-create/state` holding `initialFile: File | null`, with `useCreateEntityItemState((s) => s.initialFile)` (selector hook), `setInitialFile(file | null)` and `useCreateEntityItemState.getState().initialFile` (non-reactive read). Lifetime as in the original (research §1): cleared after a successful create or when the user removes the file; kept across entity choices, cancels and switches.
-- **Rationale**: ADR-001 puts client state in Zustand. It replaces the original's app-wide React context without a provider in the app shell, and only the two components that use the file subscribe to it (the original context re-rendered every consumer under the app root). Router history state was rejected because it survives reload and back/forward, so a removed file could reappear.
+- **Decision**: Module-level Zustand store in `entity-item-create/state` holding `initialFile: File | null`, with `useCreateEntityItemState((s) => s.initialFile)` (selector hook), `setInitialFile(file | null)` and `useCreateEntityItemState.getState().initialFile` (non-reactive read). Lifetime: cleared after a successful create or when the user removes the file; kept across entity choices, cancels and switches.
+- **Rationale**: ADR-001 puts client state in Zustand. It needs no provider in the app shell, and only the two components that use the file subscribe to it, so nothing else re-renders when it changes. Router history state was rejected because it survives reload and back/forward, so a removed file could reappear.
 - **Alternatives rejected**: search param and `sessionStorage` (FR-008 forbids; `File` is not serialisable), React context (app-shell wiring for one value), router history state (see above).
 
 ### D6 — Prefill through `initialValues`
 
-- **Decision**: `CreateEntityItemContainerReady` reads `useCreateEntityItemState.getState().initialFile` once (lazy `useState` initialiser), finds the first `kind === "file"` descriptor and passes `{ [name]: file }` as `initialValues`. No file field → nothing is shown. After a successful create the container calls `setInitialFile(null)`, so a continuous-create reset starts empty. When the user clears that file field (value becomes empty), the container also clears the store.
-- **Rationale**: Reuses the existing form-state API, so the file is present on the first render; the original needed a ref flag (`initialFileSetRef`) and a reset path for the same effect. Matches the original's "first file property" rule and lifetime.
+- **Decision**: `CreateEntityItemContainerReady` reads `useCreateEntityItemState.getState().initialFile` once (lazy `useState` initialiser), finds the first `kind === "file"` field from `resolveHalFormsFields` and passes `{ [name]: file }` as `initialValues`. No file field → nothing is shown. After a successful create the container calls `setInitialFile(null)` and `formState.reset({})`. `useHalFormsFieldState.reset(newBaseline?)` takes an optional new baseline: when given, it replaces `initialValuesRef` before resetting, so a continuous-create reset starts empty (instead of restoring the prefilled file) and `isDirty` compares against the empty baseline. `reset()` without arguments behaves as before (the filter dialog and `HalFormsContainer` rely on it). When the user clears that file field, the container's wrapped `setValue` clears the store (see `contracts/classify-create-entity-item-view.md`).
+- **Rationale**: Reuses the existing form-state API, so the file is present on the first render without a ref flag or a separate reset path.
 
-### D9 — Entity switch in the create form toolbar
+### D7 — Entity switch in the create form toolbar
 
 - **Decision**: The `$entity/~create` route passes a toolbar `ProfileEntitySelector` (via `BreadCrumbsToolBarLayout`'s `actions` slot, rendered by a features component `CreateEntityItemProfileSelector`) listing the same creatable entities; selecting navigates to that entity's create route. `CreateEntityItemView` is keyed on `profile.name` so the form state resets on switch (TanStack Router keeps the component mounted when only params change). The existing `useUnsavedChangesGuard` already blocks navigation with unsaved changes (FR-021).
-- **Rationale**: Gives the reusable selector a second consumer and mirrors the original's `CreateInstancePage` toolbar.
+- **Rationale**: Lets the user change the entity without going back to the Create Item page, and gives the reusable selector a second consumer.
 
-### D7 — Empty-attribute upload wiring in `ContentPreviewPanel`
+### D8 — Empty-attribute upload wiring in `ContentPreviewPanel`
 
-- **Decision**: The panel owns `useUploadContent(entityItem, attributeName)` and passes `onFileChange` to the frame only when `entityItem.canUploadContent(attributeName)`. The frame gets a new `uploading` state. Errors map to the existing problem display (`toProblemDisplayModel`). On 412 the item query is invalidated. On success the hook updates the item cache; the viewer's key already includes the ETag, so it remounts on the new file.
+- **Decision**: The panel owns `useUploadContent(entityItem, attributeName)` and passes `onFileChange` to the frame only when `entityItem.canUploadContent(attributeName)`. The frame gets a new `uploading` state. Errors map to the existing problem display (`toProblemDisplayModel`). On 412 `useUploadContent` invalidates the item query (D10), so the next drop uses the new ETag. On success the hook updates the item cache; the viewer's key already includes the ETag, so it remounts on the new file.
 - **Rationale**: The panel already owns the preview and download hooks for that attribute (view-owned data loading, constitution VIII).
 - **Alternative rejected**: Upload in the frame (presentational component would fetch).
 
-### D8 — Frame without a handler renders no drop zone
+### D9 — Frame without a handler renders no drop zone
 
 - **Decision**: Remove `NOOP_FILE_CHANGE`; with no `onFileChange` the `noFile` state shows only its caption.
 - **Rationale**: FR-014 — showing an inert drop zone to a user without upload rights is misleading.
+
+### D10 — `useUploadContent` invalidates the item on 412
+
+- **Decision**: `useUploadContent` (`navigator-data/src/hooks/item/use-content.ts`) gets an `onError` that invalidates `queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href)` when the error is a 412 (`unsatisfied-version`), then calls the caller's `onError`. No auto-retry. Covered in `use-content.test.tsx`.
+- **Rationale**: Without it the cached item keeps its old ETag, so every retry sends the same stale `If-Match` and fails with 412 again until a manual reload (against FR-016/FR-018). In the hook, every upload caller (this panel, the `003` edit form) gets it without having to remember it.
+- **Alternative rejected**: `ContentPreviewPanel` passing `mutationOptions.onError` — local, but each caller would have to repeat it.
+
+### D11 — Shared `useCreatableProfileEntities()` hook in `navigator-data`
+
+- **Decision**: New hook `useCreatableProfileEntities()` in `navigator-data/src/hooks/profile/use-profile-entity.ts`: wraps `useLoadedProfileEntities()` and returns the `ProfileEntity`s with `createTemplate !== null`, in profile-root order, plus `isLoading`.
+- **Rationale**: The Create Item page, the create-form toolbar selector and the `~create` route all need the same list; one hook keeps the `createTemplate` gate (deny-by-default) in one place instead of three inline filters.
+- **Alternative rejected**: Filtering inline in each consumer — three copies of the gate that can drift.
 
 ## 4. Open points
 
