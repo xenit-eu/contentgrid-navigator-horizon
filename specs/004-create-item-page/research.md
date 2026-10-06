@@ -100,8 +100,8 @@ Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/content
 ### D11 — Shared `useCreatableProfileEntities()` hook in `navigator-data`
 
 - **Decision**: New hook `useCreatableProfileEntities()` in `navigator-data/src/hooks/profile/use-profile-entity.ts`: wraps `useLoadedProfileEntities()` and returns the `ProfileEntity`s with `createTemplate !== null`, in profile-root order, plus `isLoading`.
-- **Rationale**: The Create Item page, the create-form toolbar selector and the `~create` route all need the same list; one hook keeps the `createTemplate` gate (deny-by-default) in one place instead of three inline filters.
-- **Alternative rejected**: Filtering inline in each consumer — three copies of the gate that can drift.
+- **Rationale**: The Create Item page and the create-form toolbar selector need the same list; one hook keeps the `createTemplate` gate (deny-by-default) in one place instead of an inline filter in each.
+- **Alternative rejected**: Filtering inline in each consumer — copies of the gate that can drift.
 
 ## 4. Open points
 
