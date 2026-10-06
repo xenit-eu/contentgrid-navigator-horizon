@@ -224,8 +224,8 @@ export class EntityItem {
 
   /**
    * Encode attribute update values into a Request using the HAL-FORMS codec, with the method and
-   * content type of the `default` template. The update replaces the item's values: a property
-   * without a value is left out of the body and cleared by the server.
+   * content type of the `default` template. The update replaces the item's values; a property
+   * without a value is left out of the body (the codec cannot send `null`).
    *
    * Returns the Request — callers are responsible for executing it with `apiFetch`.
    * Include an `If-Match` header on the request to prevent concurrent update conflicts (RFC 9110).
