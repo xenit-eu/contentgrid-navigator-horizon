@@ -34,6 +34,12 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - `@contentgrid/views/testing` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
 
+## Views
+
+- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView` and its `preload`. Its data comes from
+  `useViewTarget` through the shared `ViewTargetGate` (loading, error and not-found in one place); the
+  relation-problem dialog lives in the view.
+
 ## Testing
 
 Vitest + Testing Library next to the code (`views` project in the root `vitest.config.ts`). Stories render in a

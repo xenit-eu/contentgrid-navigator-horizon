@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { HalSlice, SimpleLink } from "@contentgrid/hal";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { EntityItem } from "../accessors/entity-item";
@@ -145,15 +145,34 @@ export async function ensureViewTarget(
   profileUrl: string,
   target: ViewTarget,
 ): Promise<ResolvedViewTarget> {
-  const { profileEntity, itemUrl, collectionUrl } = await resolveViewTargetIdentity(
-    queryClient,
-    apiFetch,
-    profileUrl,
-    target,
+  const { profileEntity, itemUrl, collectionUrl } = await queryClient.ensureQueryData(
+    viewTargetIdentityQuery(queryClient, apiFetch, profileUrl, target),
   );
   if (itemUrl === undefined) return { profileEntity, collectionUrl };
   const entityItem = await queryClient.ensureQueryData(
     EntityItem.fetchByUrlQuery(apiFetch, itemUrl, profileEntity, { retry: false }),
   );
   return { profileEntity, entityItem };
+}
+
+// The identity is stable for the session, like the profiles it reads.
+const IDENTITY_STALE_TIME = 5 * 60 * 1000;
+
+/**
+ * Query options for a target's identity, shared by `useViewTarget` and `ensureViewTarget` so a
+ * preload fills exactly what the hook reads.
+ */
+export function viewTargetIdentityQuery(
+  queryClient: QueryClient,
+  apiFetch: TypedFetch,
+  profileUrl: string,
+  target: ViewTarget,
+) {
+  return queryOptions({
+    queryKey: queryKeys.viewTarget.byTarget(target),
+    queryFn: () => resolveViewTargetIdentity(queryClient, apiFetch, profileUrl, target),
+    staleTime: IDENTITY_STALE_TIME,
+    // A missing profile will not appear by asking again; the profile queries retry themselves.
+    retry: false,
+  });
 }
