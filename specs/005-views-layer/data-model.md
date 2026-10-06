@@ -92,7 +92,11 @@ Provided by the host through context; only views read it, features get callback 
 Contract: [view-preload.md](contracts/view-preload.md).
 
 ```ts
-type ViewPreload<S> = (ctx: AppRouterContext, target: ViewTarget, state?: S) => Promise<void>;
+type ViewPreload<S> = (
+  ctx: AppRouterContext,
+  target: ViewTarget,
+  state: S | undefined,
+) => Promise<void>;
 ```
 
 `ctx` is the router context: the query client and the API client. A preload never throws to the route (it swallows failures as `ensureEntityItemDetailLoaderData` does today) and never loads data the view would not need.

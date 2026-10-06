@@ -121,13 +121,13 @@ Pre-GA the generic app's stability gate stays suspended; no task reinstates it.
 
 ## Phase PR 8: list and detail split view
 
-**Purpose**: the first view composed of two views.
+**Purpose**: the first view composed of two views. PR 8 is limited to the view and its story; no route is added until open question 2 is settled.
 
 - [ ] T044 [PR 8] Create the split view in `packages/views/src/entity-item-split/` composed of the collection view and the item detail view, both with their toolbars off and one toolbar drawn by the parent. Traces: FR-024, FR-025; contract `view-toolbar.md` rule 3, user story 4.
 - [ ] T045 [PR 8] Give each child its own navigation object: the list's `openItem` shows the item in the detail pane and does not change the route; other calls go to the parent's navigation. Traces: FR-026; contract `navigation-context.md` rule 6. Depends on T044.
 - [ ] T046 [PR 8] Store each child's state under its own prefix in the parent's state, and report it through `onStateChange`; keep the address scheme out of the view. Traces: FR-015; contract `view-props-and-state.md` rule 6; open question 2.
 - [ ] T047 [PR 8] Export the parent's `preload` that calls both children's `preload`. Traces: FR-027; contract `view-preload.md` rule 5. Depends on T044.
-- [ ] T048 [PR 8] Add a route in the experimental app for the split view (route maps the address to the composite state; the address prefix scheme is marked provisional pending open question 2). Traces: FR-013; user story 4.
+- [ ] T048 [PR 8] _Optional follow-up, after open question 2 (two panes, one URL) is settled:_ add a route in the experimental app for the split view. New pages are out of scope for this series, so PR 8 ships the composed view and its story only. Traces: FR-013; user story 4.
 - [ ] T049 [P] [PR 8] Stories in a fixed-size box and tests: select two items in turn, no route change, one toolbar, independent state per pane. Traces: FR-022, SC-005, SC-006.
 
 **Checkpoint**: a list and detail split works with both children unaware of each other.
@@ -136,7 +136,7 @@ Pre-GA the generic app's stability gate stays suspended; no task reinstates it.
 
 ## Phase PR 9: preferences move to navigator-data
 
-**Purpose**: preferences become available to every feature, with configurable storage.
+**Purpose**: preferences become available to every feature, with configurable storage. **PR 9 is gated on open question 4d** (the Zustand peer dependency in `navigator-data`); do not start it until the team has answered.
 
 - [ ] T050 [PR 9] Move the merge logic, `useEntityDisplayPreferences`, `useColumnVisibility`, `resolve-entity-icon` and attribute options from `packages/features/src/preferences/` to `packages/navigator-data`; keep exports stable for callers through the barrel. Traces: FR-030, FR-033.
 - [ ] T051 [PR 9] Turn the store into a factory taking a storage option (local storage by default), with the persisted key unchanged so existing choices keep working; add Zustand as a peer dependency of `navigator-data` (ADR-007; open question 4d). Traces: FR-031. Depends on T050.

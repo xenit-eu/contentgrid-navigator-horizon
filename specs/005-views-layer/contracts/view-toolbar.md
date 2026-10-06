@@ -10,7 +10,7 @@
 3. **A host or parent can turn it off.** Every view that draws a toolbar accepts a way to hide it. A split view draws one toolbar for both panes; the chat panel may draw none. When hidden, the view still works; its actions are the host's responsibility.
 4. **Features never draw a toolbar or breadcrumbs.** `EntityItemView` and `EntityItemCollectionSearchView` lose their `toolbar`, `breadcrumbs`, `actions` props and their `PageLayout` wrapper (PR 5).
 5. **Everything fills the space it gets.** Views and features take the full size of their parent and can shrink so inner lists scroll (the `h-full min-h-0` pattern). They add no outer padding and never size themselves to the window (no `h-svh`, `vh` units, fixed widths). Only the outermost host sets real sizes.
-6. **The default toolbar is computed from the data the view loaded** (for example breadcrumb labels), consistent with constitution Principle VIII; it stays overridable.
+6. **The default toolbar is computed from the data the view loaded** (for example breadcrumb labels), consistent with constitution Principle VIII.
 
 ## Test obligations
 

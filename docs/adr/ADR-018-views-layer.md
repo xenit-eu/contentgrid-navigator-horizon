@@ -53,18 +53,18 @@ Views and features MUST NOT use the router. Host code may: the shells area of th
 
 ### Pre-GA
 
-The stability gate in the generic app stays suspended until go-live (ADR-006 amendment). When the tag moves, `allowedStability` in the generic app keeps all three tiers, and the go-live steps name views instead of features.
+The stability gate in the generic app stays suspended until go-live (ADR-006 amendment). When the tag moves, `allowedStability` in the generic app keeps all three tiers, and the go-live steps name views instead of features _(added by the spec author, not in the design)_.
 
 ## Why not
 
-| Alternative                                       | Rejected because                                                                                                            |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Keep composition in the apps (ADR-007 as written) | Both apps repeat it; the chat and a split view cannot reuse it.                                                             |
-| A Zustand store for navigation                    | ADR-001: Zustand is for values that change while the app runs; navigation functions are set up once.                        |
-| Callback props for navigation on every view       | Every route would pass the same functions to every view; a split view must forward them all.                                |
-| Views return breadcrumbs as data                  | Each host re-implements the toolbar, and a split view must merge two sets.                                                  |
-| A frontend address as the target                  | The view would need the app's route format; routes belong to the app.                                                       |
-| A folder inside `packages/features`               | A layer boundary needs a package boundary to lint, a stability tag per view and a consumable export for other repositories. |
+| Alternative                                                                | Rejected because                                                                                                            |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Keep composition in the apps (ADR-007 as written)                          | Both apps repeat it; the chat and a split view cannot reuse it.                                                             |
+| A Zustand store for navigation                                             | ADR-001: Zustand is for values that change while the app runs; navigation functions are set up once.                        |
+| Callback props for navigation on every view                                | Every route would pass the same functions to every view; a split view must forward them all.                                |
+| Views return breadcrumbs as data _(rationale added by the spec author)_    | Each host re-implements the toolbar, and a split view must merge two sets.                                                  |
+| A frontend address as the target                                           | The view would need the app's route format; routes belong to the app.                                                       |
+| A folder inside `packages/features` _(rationale added by the spec author)_ | A layer boundary needs a package boundary to lint, a stability tag per view and a consumable export for other repositories. |
 
 ## Consequences
 
@@ -86,10 +86,10 @@ The stability gate in the generic app stays suspended until go-live (ADR-006 ame
 
 1. How is an experimental copy of a view kept up to date with fixes to the original? Once features carry no tag, what stops an unfinished feature from entering a stable view?
 2. Two panes share one address: proposal is child state reported to the parent through `onStateChange`, written by the app with a prefix per pane.
-3. Where does the unsaved-changes guard go? Proposal: the feature reports whether it is dirty, the view asks the navigation object to guard leaving and shows the confirm dialog, each host decides how. It stays where it is for now.
+3. Where does the unsaved-changes guard go? Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. To keep the series small the guard stays where it is for now; that is a sequencing choice, not an answer.
 4. Preferences: a reset per setting; can the backend lock a preference; will preferences move to the server; is the Zustand peer dependency in `navigator-data` acceptable.
-5. A search link with filters already in it: does the filter form start empty, or does the backend send the filters separately?
-6. Does `openCreateItem` carry new-tab semantics (the item page opens "create a related item" in a new tab today), or does the host decide?
+5. _(Added during spec writing, not from the design review; from the design's "open point" under rule 2.)_ A search link with filters already in it: does the filter form start empty, or does the backend send the filters separately?
+6. _(Added during spec writing, not from the design review.)_ Does `openCreateItem` carry new-tab semantics (the item page opens "create a related item" in a new tab today), or does the host decide?
 
 ## Reconsider when
 

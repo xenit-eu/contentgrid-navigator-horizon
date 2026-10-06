@@ -171,7 +171,7 @@ model doesn't happen to share it.
   NOT import a `candidate` or `experimental` feature.
 - `packages/views` (ADR-018) sits between the apps and `packages/features`: it MAY import
   `packages/features`, `packages/ui` and `@contentgrid/navigator-data`, and MUST NOT import
-  `apps/*` or a Layer-1 `@contentgrid/*` package directly. `packages/features`, `packages/ui` and
+  `apps/*`. `packages/features`, `packages/ui` and
   `@contentgrid/navigator-data` MUST NOT import `packages/views`. These boundaries bind new work
   now and are enforced by lint once spec 005 adds the layer rules (ACC-3216); existing app imports of
   `packages/features` are migrated by that spec and are not retroactively non-compliant. The
@@ -321,8 +321,8 @@ be used as a model for new work.
   implementation) and the apps MAY. A callback prop also remains fine for an action only one
   page needs (e.g. "after create, go to the new item").
 - A view draws its default toolbar (breadcrumbs and actions), computed from the data it
-  resolved, with every click going through the navigation context. The toolbar remains
-  overridable, and a host or parent view MUST be able to turn it off. A feature MUST NOT draw a
+  resolved, with every click going through the navigation context. A host or parent view MUST
+  be able to turn it off. A feature MUST NOT draw a
   toolbar or breadcrumbs, and MUST fill the space it is given.
 - A view loads the main data its page is about and passes it to its features; a feature MAY
   fetch more only by following links on the object it received, and MUST NOT load the main

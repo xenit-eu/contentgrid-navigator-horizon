@@ -62,11 +62,11 @@ A user filters and sorts a list, opens an item, and returns through the breadcru
 
 **Acceptance Scenarios**:
 
-1. **Given** the user applies a filter, **When** the filter changes, **Then** the app's address reflects it and the page number resets.
+1. **Given** the user applies a filter, **When** the filter changes, **Then** the app's address reflects it and the page number resets _(carried over from current behaviour)_.
 2. **Given** a list address that already carries filters or a sort, **When** the page opens, **Then** the list shows with them applied.
 3. **Given** the user opened an item from a filtered list, **When** they return through the list breadcrumb, **Then** filters, sort order and page are restored without the item's address carrying them.
 4. **Given** a host that does not store state, **When** the collection view shows, **Then** it keeps its own state while mounted.
-5. **Given** the user switches to another entity, **Then** state of the previous entity does not leak into the new list.
+5. **Given** the user switches to another entity, **Then** state of the previous entity does not leak into the new list _(carried over from current behaviour)_.
 
 ---
 
@@ -160,13 +160,15 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 
 ### Edge Cases
 
+Edge cases marked _assumption_ are not in the design; those marked _current behaviour_ describe what the code does today.
+
 - A link whose response carries no profile link, and no profile describes it → the view shows the not-found state, and no name is guessed from the link.
-- A link to a resource that is not an entity item or collection → the view shows a not-supported state.
+- A link to a resource that is not an entity item or collection → the view shows a not-supported state _(assumption)_.
 - The same item is opened by name in one place and by link in another while loading → one request.
-- A host provides no navigation → views that need it fail loudly in development, not silently do nothing.
-- A host turns the toolbar off and the view has actions → the actions are not shown; the host is responsible for offering them.
-- A stored list state refers to a field the profile no longer has → the field is ignored and the list shows.
-- A split view's child navigates to something its parent cannot show in a pane → the parent decides (for example by delegating to its own host).
+- A host provides no navigation → views that need it fail loudly in development, not silently do nothing _(assumption)_.
+- A host turns the toolbar off and the view has actions → the actions are not shown; the host is responsible for offering them _(assumption)_.
+- A stored list state refers to a field the profile no longer has → the field is ignored and the list shows _(assumption)_.
+- A split view's child navigates to something its parent cannot show in a pane → the parent decides (for example by delegating to its own host) _(assumption)_.
 - An experimental view uses a feature that a stable view cannot → handled through an experimental copy of the view; see open questions.
 
 ## Requirements _(mandatory)_
@@ -211,7 +213,7 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 
 **Composition**
 
-- **FR-025**: A view MUST be able to contain other views. When each pane is also a page on its own, the parent MUST combine the existing views instead of copying them.
+- **FR-025**: A view MUST be able to contain other views. When each pane is also a page on its own, the parent MUST combine the existing views instead of copying them. If a layout only exists as the split, one view with two features is fine.
 - **FR-026**: A parent MUST give each child its own navigation object, so a child's navigation changes the parent's pane, not the route; children MUST NOT know they are side by side.
 - **FR-027**: A parent's preload MUST start the preload of its children, so the route starts everything in one go.
 
@@ -233,7 +235,7 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 - **FR-035**: The existing stability lint rule MUST check views instead of features.
 - **FR-036**: The router calls in the dashboard, sidebar, profile gate and not-found page MUST be replaced by callback props that the view or host code wires to the navigation object.
 - **FR-037**: The two apps MUST share the page logic of every migrated page; a fix to a page MUST NOT need two edits.
-- **FR-038**: Migrating a page MUST NOT change what the user sees or how the page behaves.
+- **FR-038**: Migrating a page MUST NOT change what the user sees or how the page behaves _(assumption: not stated in the design)_.
 
 ### Key Entities
 
@@ -250,13 +252,13 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 ### Measurable Outcomes
 
 - **SC-001**: A fix to the item detail page or the collection page is made in one place and is visible in both apps.
-- **SC-002**: The migrated route files contain only the mapping from the address to a target and state; none keeps filter, sort, page or dialog logic.
+- **SC-002** _(assumption: a measurable form of the design's rule 1)_: The migrated route files contain only the mapping from the address to a target and state; none keeps filter, sort, page or dialog logic.
 - **SC-003**: Opening the same item by name and by link results in one request for the item.
 - **SC-004**: A user can return from an item to its list through the breadcrumb and see the same filters, sort order and page as before, in every case that works today.
 - **SC-005**: A list and detail split view lets a user switch items in the right pane with no route change and with one toolbar.
-- **SC-006**: Every view and feature story has a visual snapshot in a fixed-size box showing no overflow outside the box.
+- **SC-006** _(from rule 4 and ADR-009)_: Every view and feature story has a visual snapshot in a fixed-size box showing no overflow outside the box.
 - **SC-007**: No feature imports the router; the lint check fails on a deliberate violation of each layer rule.
-- **SC-008**: The existing end-to-end suite passes unchanged after each migrated page.
+- **SC-008** _(assumption)_: The existing end-to-end suite passes unchanged after each migrated page.
 
 ## Open questions
 
@@ -264,14 +266,14 @@ These stay open. A team meeting settles them; none is decided here.
 
 1. **Experimental copies and unfinished features.** How do we keep an experimental copy of a view up to date with fixes to the original? And once features carry no stability tag, what stops someone from putting an unfinished feature in a stable view?
 2. **Two panes, one address.** Each pane has its own filters, sort and page. Proposal: child views report changes to their parent through the change notification (FR-012), and the app writes them to the address with a prefix per pane. Not yet agreed.
-3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports only whether it is dirty; the view asks the navigation object to guard leaving and shows the confirm dialog; each host decides how. In this series the guard stays where it is.
+3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. Not yet agreed. To keep this series small, the guard stays where it is for now; that is a sequencing choice, not an answer.
 4. **Preferences.** (a) A list setting a user changed, such as visible columns, replaces the backend's list as a whole, so a column the backend adds later never shows for that user; a reset per setting is needed, not only "reset all". (b) Can the backend lock a preference so users cannot change it? (c) Will user preferences move to the server so they follow the user across devices? (d) Moving the store makes the data layer depend on the state library as a peer dependency (ADR-007); is that acceptable?
-5. **Filters in a link.** If the chat backend sends a search link that already contains filters, does the filter form start empty, or does the backend send the filters separately? Reading them back out of the link would mean parsing it.
-6. **New tab for create.** The item page today opens "create a new related item" in a new tab. Does `openCreateItem(entityName)` carry new-tab semantics, does it take an option, or does the host decide?
+5. **Filters in a link** _(added during spec writing, not from the design review; it comes from the design's "open point" under rule 2)_. If the chat backend sends a search link that already contains filters, does the filter form start empty, or does the backend send the filters separately? Reading them back out of the link would mean parsing it.
+6. **New tab for create** _(added during spec writing, not from the design review)_. The item page today opens "create a new related item" in a new tab. Does `openCreateItem(entityName)` carry new-tab semantics, does it take an option, or does the host decide?
 
 ## Assumptions
 
-- The design approved on 2026-10-06 is the source of the requirements; the six open questions above are the only unsettled points.
+- The design approved on 2026-10-06 is the source of the requirements; questions 1 to 4 are the design's open questions; questions 5 and 6 were added during spec writing. Together they are the only unsettled points.
 - The design says "apps only import views". This spec reads it as: apps do not import the features package directly. Apps still import the data and UI packages for their own bootstrap (configuration, authentication, router context, providers). This reading is to be confirmed in review.
 - The navigation functions the design lists are home, classify-create, collection, item, edit item and create item. The first PRs only need `openHome`, `openEntityItemCollection` and `openItem`; the others arrive with the pages that use them.
 - The router-setup code in the shells (router creation, the app component, opening a page in a new tab) is router-bound host code. "Features never import the router" therefore requires it to leave the features package first. It moves to the shells area of the views package (`packages/views/src/shells/`), together with the app's navigation implementation if it lives there. That host code and the apps MAY use the router; views and features MAY NOT. This reading is to be confirmed in review.
@@ -280,4 +282,4 @@ These stay open. A team meeting settles them; none is decided here.
 - Once the stability tag leaves features, the rule "a stable feature never imports an experimental feature" has no mechanism. It stays as written until stability moves to views, and what replaces it is open question 1.
 - Existing pages keep their behaviour while they move; no visual change is intended, so existing snapshot baselines should not change except where a view starts drawing what a feature drew.
 - Custom-track repositories (ADR-013) consume the views package like the other packages.
-- Pre-GA, new views may start at any stability tier, as new features do today (ADR-006 amendment).
+- Pre-GA, new views start at `stable`, as new features typically do today (ADR-006 amendment). This is an assumption, not in the design.
