@@ -121,7 +121,8 @@ function localPath(href) {
 
 function linksOf(body, rel) {
   const value = body?._links?.[rel];
-  return value === undefined ? [] : Array.isArray(value) ? value : [value];
+  if (value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 async function toEntry(res, { binary = false } = {}) {
