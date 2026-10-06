@@ -100,4 +100,10 @@ We pay the ceremony only when the second column's pain is real. See ADR-010 for 
 
 ---
 
+## Amendment (2026-10-06): apps no longer own page layout and composition
+
+[ADR-018](ADR-018-views-layer.md) adds a views layer (`packages/views`) between the apps and `packages/features`. This changes one line of the "What stays out of `@contentgrid/navigator-data`" section, which read: "`apps/*` — app-level routing, layout, feature composition." After the amendment, apps own routing and the meaning of "navigate" (a route change), but page layout and the composition of features and child views belong to `packages/views`. Everything else here (the two layers, the peerDependencies rule, what stays out of `navigator-data`) holds. One consequence for this ADR: moving the display-preference store into `navigator-data` (ADR-018, rule 9) gives it a Zustand peer dependency, which is an open question for the team.
+
+---
+
 **Hub:** [[README|ADR Index]]
