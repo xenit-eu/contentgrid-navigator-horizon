@@ -22,7 +22,7 @@ Mapping in features: `ProfileEntity` → `{ name: profile.name, title: profile.t
 | `selectedEntityName` | `string \| undefined` | `undefined` | set on selection, then navigate                                       |
 | `initialFile`        | from the store        | store value | drop/browse → `setInitialFile(file)`; remove → `setInitialFile(null)` |
 
-Derived: `creatableProfiles = profiles.filter(p => p.createTemplate !== null)`.
+Entities: `profiles` from `useCreatableProfileEntities()` (`navigator-data`, research D11).
 
 View states: `loading` (entities loading) → `empty` (no creatable entity) | `ready`.
 
@@ -58,4 +58,4 @@ When `firstFileField` is absent nothing is shown and the store is left untouched
 | `noFile` + upload error   | problem alert + drop zone                                                            | drop / browse → upload |
 | after success             | the item's new file → normal preview states (`loading` → `ready` / rendition states) | as in 002              |
 
-Upload error on 412 (`unsatisfied-version`): the item query is invalidated before the problem is shown.
+Upload error on 412 (`unsatisfied-version`): `useUploadContent` invalidates the item query (research D10), so the newer version and its ETag load and the next drop can succeed.

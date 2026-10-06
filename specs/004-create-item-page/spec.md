@@ -1,6 +1,6 @@
 # Feature Specification: Create Item Page and Upload into Empty Content Attributes
 
-**Feature Branch**: `ACC-3217-create-item-page` (Jira ACC-3217)
+**Feature Branch**: `004-create-item-page`
 
 **Created**: 2026-09-30
 
@@ -23,7 +23,7 @@
 **Out of scope** (tracked elsewhere or deferred)
 
 - Suggesting the entity type from the uploaded file (classification / extraction). A follow-up story.
-- The create form itself: its fields, validation, required-field markers, continuous-create mode, relation pickers and submission are unchanged. The file field of the create form is delivered by ACC-2895.
+- The create form itself: its fields, validation, required-field markers, continuous-create mode, relation pickers and submission are unchanged.
 - Replacing or removing a file that is already stored: the edit form (`003-add-edit-form`).
 - Uploading several files at once, or into a multi-valued content attribute.
 - Previewing the attached file on the Create item page.
@@ -182,7 +182,7 @@ On an entity's create form, the toolbar shows the same entity selector. The user
 
 ### Dependencies and references
 
-- **ACC-2895** (create-form file field): Story 2's file prefill requires the create form's file field to accept a file; on `main` it is still a placeholder.
+- **Create-form file field**: Story 2 prefills the create form's existing file field.
 - **`002-pdf-viewer`**: the "No file" state and its drop zone (Story 1 scenario 5, `contracts/content-focus-view.md`).
 - **`003-add-edit-form`**: owns replacing and removing stored files; explicitly excludes this feature's empty-attribute upload.
 - Design mockup page 05 ("Classify · Create", `/create`, `ClassifyCreateInstancePage`).

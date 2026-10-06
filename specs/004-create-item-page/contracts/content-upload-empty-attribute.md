@@ -20,12 +20,12 @@ const canUpload = entityItem.canUploadContent(attributeName);
 const uploadMutation = useUploadContent(entityItem, attributeName);
 ```
 
-| Condition                                                    | Frame props                                                                                              |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `uploadMutation.isPending`                                   | `state="uploading"` (with `toolbarStart`)                                                                |
-| `state === "noFile"` and `canUpload`                         | `onFileChange={(file) => file && uploadMutation.mutate({ file })}`                                       |
-| `uploadMutation.error`, `state === "noFile"`, same attribute | `problem={toProblemDisplayModel(uploadMutation.error)}`                                                  |
-| error is 412 (`unsatisfied-version`)                         | `useUploadContent` itself invalidates the item query (`queryKeys.entityItem.byUrl`) — data-layer concern |
+| Condition                                                    | Frame props                                                                                                            |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `uploadMutation.isPending`                                   | `state="uploading"` (with `toolbarStart`)                                                                              |
+| `state === "noFile"` and `canUpload`                         | `onFileChange={(file) => file && uploadMutation.mutate({ file })}`                                                     |
+| `uploadMutation.error`, `state === "noFile"`, same attribute | `problem={toProblemDisplayModel(uploadMutation.error)}`                                                                |
+| error is 412 (`unsatisfied-version`)                         | no panel code: `useUploadContent`'s `onError` invalidates the item query (`queryKeys.entityItem.byUrl`) — research D10 |
 
 - The panel records the attribute an upload was made for (set in the drop handler, no effect) and shows an upload error only while that attribute is selected.
 - Success: `useUploadContent` already writes the fresh item into the cache; the viewer key `${attributeName}:${etag}` changes and the preview reloads. No extra code.
@@ -33,5 +33,6 @@ const uploadMutation = useUploadContent(entityItem, attributeName);
 ## Tests
 
 - Frame: `noFile` without handler shows no drop zone; with handler shows it; `uploading` shows caption.
-- Panel: drop calls the upload with the selected attribute; no drop zone when `canUploadContent` is false; error shows the problem and the drop zone; 412 invalidates the item query.
+- Panel: drop calls the upload with the selected attribute; no drop zone when `canUploadContent` is false; error shows the problem and the drop zone.
+- `useUploadContent` (`navigator-data/src/hooks/item/use-content.test.tsx`): a 412 marks the cached item query invalidated.
 - Story: `ContentPreviewFrame` `Uploading` (+ snapshot).
