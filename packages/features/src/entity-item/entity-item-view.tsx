@@ -9,6 +9,7 @@ import { Separator } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EntityItemAttributesPanel } from "./attributes/entity-item-attributes-panel";
+import { EntityItemRefreshAlert } from "./entity-item-refresh-alert";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -99,10 +100,18 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
 
       {item.isPending && <LoadingPage />}
 
-      {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
+      {/* A failed background refetch keeps the loaded item on screen (and an open edit form with
+          its input) under an alert; the error page is only for an item that never loaded. */}
+      {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
 
-      {item.isSuccess && (
+      {item.data && (
         <div className="space-y-6 p-4 pt-0">
+          {item.isError && (
+            <EntityItemRefreshAlert
+              onRetry={() => void item.refetch()}
+              isRetrying={item.isFetching}
+            />
+          )}
           <EntityItemAttributesPanel
             key={`${item.data.profileEntity.name}/${item.data.id}`}
             item={item.data}

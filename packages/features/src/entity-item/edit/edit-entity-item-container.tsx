@@ -65,7 +65,7 @@ export function EditEntityItemContainer({
 
   async function reloadAfterConflict() {
     setIsReloading(true);
-    // A failed reload puts the item query in its error state, which the item view shows.
+    // A failed reload keeps the form, its input and the conflict alert; saving again retries.
     const latest = await reloadEntityItem().catch(() => undefined);
     setIsReloading(false);
     const latestTemplate = latest?.updateTemplate;

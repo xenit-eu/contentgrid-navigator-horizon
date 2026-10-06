@@ -18,6 +18,7 @@ import {
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
 import { EntityItemAttributesPanel } from "../../../attributes/entity-item-attributes-panel";
+import { EntityItemRefreshAlert } from "../../../entity-item-refresh-alert";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
@@ -189,8 +190,19 @@ function EntityItemContentFocusViewBody({
   const content = (
     <>
       {item.isPending && <LoadingPage />}
-      {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-      {item.isSuccess &&
+      {/* A failed background refetch keeps the loaded item on screen (and an open edit form with
+          its input) under an alert; the error page is only for an item that never loaded. The
+          `EntityItemView` fallback shows that alert itself. */}
+      {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
+      {item.isError && item.data && profileEntity.hasContentAttributes && (
+        <div className="p-4">
+          <EntityItemRefreshAlert
+            onRetry={() => void item.refetch()}
+            isRetrying={item.isFetching}
+          />
+        </div>
+      )}
+      {item.data &&
         (profileEntity.hasContentAttributes ? (
           <ContentFocusEntityItemBody
             entityItem={item.data}

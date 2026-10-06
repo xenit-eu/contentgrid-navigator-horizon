@@ -13,7 +13,8 @@ means in practice.
 `entity-item` renders an entity item's attributes and relations: `EntityItemView`,
 `EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. Its attributes section
 (`attributes/entity-item-attributes-panel.tsx`) offers an Edit action when the item has an update
-form; `edit/` holds the update form (spec `003-add-edit-form`).
+form; `edit/` holds the update form. When a refetch of a loaded item fails, the views keep the
+item (and an open edit form) on screen under `EntityItemRefreshAlert`.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
 `EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, or a non-PDF
