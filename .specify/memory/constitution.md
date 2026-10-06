@@ -4,7 +4,7 @@ Sync Impact Report
 - Amendment (1.6.0 → 1.7.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
   ACC-3216). Principle VIII previously cited a non-existent
   `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
-  `ADR-018-views-layer.md`, which this citation resolves to) and placed views and the shared gate hook in
+  `ADR-018-views-layer.md`, which this citation resolves to; the earlier ADR-018 references in this report, such as "ADR-018's export-gaps section", pointed to a planned ADR that was never written) and placed views and the shared gate hook in
   `packages/features`; it now cites the real ADR-018, places views in `packages/views`, routes navigation
   through a host-provided navigation context read only by views (callback props stay fine for one-page-only actions),
   lets views draw their default toolbar and be told not to, and has views receive view state

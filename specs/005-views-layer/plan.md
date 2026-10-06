@@ -134,6 +134,14 @@ apps/navigator/src/routes/, apps/navigator-experimental/src/routes/
 | 9   | Preferences move to navigator-data          | FR-030–FR-033                                          | Gated on open question 4d (Zustand peer dependency). Store created by the app with configurable storage.   |
 | 10  | Stability on views; layer lint rules        | FR-028, FR-029, FR-034, FR-035                         | The generic-app gate stays suspended pre-GA.                                                               |
 
+### How this differs from the design's plan
+
+The design's plan has eight steps. This breakdown differs in three ways:
+
+- **PR 2 (scaffold) and PR 6 (collection view with state) are extra steps.** The design has no step for creating the package, and none for moving the collection route's filter, sort and page logic into a view; the item detail step is its only route. PR 2 gives every later PR a package and a navigation context to build on, and PR 6 is the second route, needed to prove the state split before shells, layout and the split view build on it.
+- **Preferences (PR 9) come before stability (PR 10).** The design moves stability first, then preferences, then adds the lint rules. Nothing technical forces either order. PR 9 is gated on open question 4d and may wait for the team, and PR 10 holds the layer rules that must come last (the design says "once the first route works" and the rules need all moved code in place), so the series ends with PR 10 whatever the answer is. The two can be swapped if the team prefers the design's order.
+- **Stability and the layer lint rules are merged into one PR (PR 10).** The design lists them as two steps; both change the same ESLint configuration and the same rule, so they land together.
+
 Each implementation PR is traceable to `tasks.md` (constitution Principle IX). If a PR finds the spec wrong, it amends the spec in the same PR.
 
 ## Complexity Tracking

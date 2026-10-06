@@ -7,6 +7,8 @@
 
 The host provides one navigation object through React context. Only views read it, with `useNavigation()`. Features never read it: they report user actions through callback props, and their view wires those to the navigation object.
 
+The full target interface, as in the design:
+
 ```ts
 interface Navigation {
   openHome(): void;
@@ -18,7 +20,12 @@ interface Navigation {
 }
 ```
 
-These are the six functions of the design; the set may be extended. They are implemented page by page: `openHome`, `openEntityItemCollection` and `openItem` are needed through PR 6, the others arrive with the pages that use them (T041).
+The set may be extended. The functions are implemented page by page, so the interface is not complete from the start:
+
+| Function                                               | Exists from                               |
+| ------------------------------------------------------ | ----------------------------------------- |
+| `openHome`, `openEntityItemCollection`, `openItem`     | PR 2 (the scaffold), needed through PR 6  |
+| `openClassifyCreate`, `openEditItem`, `openCreateItem` | The PR that adds the page using it (T041) |
 
 ## Rules
 

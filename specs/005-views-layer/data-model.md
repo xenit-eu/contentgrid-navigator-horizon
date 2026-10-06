@@ -76,7 +76,7 @@ A parent view's state holds each child's state under that child's own key, so pa
 
 ## Navigation object
 
-Provided by the host through context; only views read it, features get callback props. The set may be extended; the functions are implemented page by page (the first three through PR 6, the rest with their pages). Contract: [navigation-context.md](contracts/navigation-context.md).
+Provided by the host through context; only views read it, features get callback props. The set may be extended; the functions are implemented page by page (the first three exist from PR 2 and are needed through PR 6; the rest arrive with their pages, T041). Contract: [navigation-context.md](contracts/navigation-context.md).
 
 | Function                               | Purpose                                                      |
 | -------------------------------------- | ------------------------------------------------------------ |
