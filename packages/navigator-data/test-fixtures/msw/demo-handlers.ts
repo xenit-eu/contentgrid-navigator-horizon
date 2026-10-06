@@ -105,7 +105,7 @@ const fullDump = recordedDump as unknown as RecordedDump;
 function decodeBase64(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.codePointAt(i)!;
   return bytes;
 }
 
@@ -547,7 +547,7 @@ function createRestrictions(policy: Record<string, EntityPolicy>, entities: Reco
   const itemRef = (node: Record<string, unknown>) => {
     const href = (node._links as { self?: { href?: string } } | undefined)?.self?.href;
     if (typeof href !== "string") return undefined;
-    const match = ITEM_PATH.exec(new URL(href, "http://x").pathname);
+    const match = ITEM_PATH.exec(new URL(href, "https://x").pathname);
     if (!match || !Object.hasOwn(policy, match[1])) return undefined;
     return { plural: match[1], id: typeof node.id === "string" ? node.id : match[2] };
   };

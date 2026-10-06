@@ -79,7 +79,7 @@ function pseudonymiser(make) {
 function letters(index) {
   let label = "";
   for (let n = index; n >= 0; n = Math.floor(n / 26) - 1)
-    label = String.fromCharCode(65 + (n % 26)) + label;
+    label = String.fromCodePoint(65 + (n % 26)) + label;
   return label;
 }
 
@@ -123,6 +123,12 @@ function isItem(node) {
   );
 }
 
+function sanitiseAuditValue(value) {
+  if (ALREADY.audit.test(value)) return value;
+  if (serviceAccount.test(value)) return "Service Account";
+  return auditName(value);
+}
+
 function walk(node, context) {
   if (typeof node === "string") {
     return pseudonymiseString(node.split(tenantOrigin).join(PLACEHOLDER_ORIGIN));
@@ -134,11 +140,7 @@ function walk(node, context) {
   const out = {};
   for (const [key, value] of Object.entries(node)) {
     if (typeof value === "string" && AUDIT_KEY.test(key)) {
-      out[key] = ALREADY.audit.test(value)
-        ? value
-        : serviceAccount.test(value)
-          ? "Service Account"
-          : auditName(value);
+      out[key] = sanitiseAuditValue(value);
     } else if (typeof value === "string" && key === "filename") {
       out[key] = pseudonymiseFilename(value);
     } else if (
@@ -185,7 +187,7 @@ function scan(text, where) {
     ["email not ending in example.test", BAD_EMAIL],
   ];
   if (tenantOrigin !== PLACEHOLDER_ORIGIN) {
-    checks.push(["tenant host", new RegExp(tenantHost.replace(/\./g, "\\."), "i")]);
+    checks.push(["tenant host", new RegExp(tenantHost.replaceAll(".", String.raw`\.`), "i")]);
   }
   for (const [label, regex] of checks) {
     const match = regex.exec(text);
