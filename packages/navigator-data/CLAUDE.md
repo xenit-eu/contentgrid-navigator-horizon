@@ -874,6 +874,37 @@ contained workaround.
 
 ---
 
+## View targets
+
+A view is told what to show with a `ViewTarget` ([contract](../../specs/005-views-layer/contracts/view-target.md)):
+`{ kind: "name", entityName, itemId? }` from our own routes, or `{ kind: "url", href }` for an API link
+(for example from the chat backend). The type lives here because this package resolves it; `@contentgrid/views`
+re-exports it. A target carries no filters, sort or page.
+
+```ts
+const { data, error, isPending } = useViewTarget(target); // views
+await ensureViewTarget(queryClient, apiFetch, profileUrl, target); // route loaders and view preloads
+```
+
+Both return the same `ResolvedViewTarget` (`profileEntity`, plus `entityItem` for an item target or
+`collectionUrl` for a collection target). The caller never branches on the input kind.
+
+- **Name target**: the profile is found by `entityName`; the item URL is `profileEntity.itemUrl(itemId)`.
+- **Link target**: the link is fetched; its profile comes from the response's `profile` link (`cg:profile` is
+  also read), else from the profile whose `describes` links cover the resource
+  (`ProfileEntity.describesItem` / `describesCollection`). No part of the link is parsed and the entity name is
+  never taken from it.
+- **Cache**: the item is cached under `queryKeys.entityItem.byUrl(profile, selfLink)` — the key `useEntityItem`
+  reads — so a name and a link for the same item share one entry and one request, in either order. A fetched
+  collection response is cached under `queryKeys.entityItemCollection.byUrl`. `ensureViewTarget` and
+  `useViewTarget` read and write the same keys.
+- **Errors**: `ViewTargetNotFoundError` (unknown name, or no profile for a link) and `ViewTargetNotSupportedError`
+  (a link that is neither an item nor a collection), narrowed with `isViewTargetNotFound` /
+  `isViewTargetNotSupported`. Request failures surface as problem-detail errors; narrow them with
+  `isProblemWithStatus` and friends.
+
+---
+
 ## What belongs here vs. elsewhere
 
 Belongs here:

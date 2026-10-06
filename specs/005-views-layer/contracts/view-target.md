@@ -1,7 +1,7 @@
 # Contract: ViewTarget and target resolution
 
 **Requirements**: FR-007, FR-008, FR-009, FR-010, FR-011
-**Packages**: type in `packages/views`; resolution helpers in `packages/navigator-data` (PR 3)
+**Packages**: type and resolution helpers in `packages/navigator-data` (PR 3); `packages/views` re-exports the type
 
 ## Type
 

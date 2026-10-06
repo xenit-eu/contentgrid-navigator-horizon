@@ -26,6 +26,7 @@ export * from "./config";
 export * from "./preview";
 export { queryKeys } from "./query-keys";
 export * from "./search";
+export * from "./views";
 export type { SearchRequestSpec } from "./api/requests";
 export type { FieldValue, FieldValueMap } from "./field-value";
 // Re-exported so `packages/features`/`packages/ui` can build and type raw HAL-FORMS values and

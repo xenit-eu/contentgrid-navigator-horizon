@@ -1,5 +1,6 @@
 import type { Link } from "@contentgrid/hal";
 import type ProfileEntity from "./accessors/entity-profile";
+import type { ViewTarget } from "./views/view-target";
 
 const ENTITY_ITEM_KEY = "EntityItem";
 const ENTITY_COLLECTION_KEY = "EntitySearch";
@@ -13,6 +14,7 @@ const COLLECTION_PAGE_KEY = "CollectionPage";
 const COLLECTION_FILTERS_KEY = "CollectionFilters";
 const COLLECTION_SORT_KEY = "CollectionSort";
 const CONTENT_PREVIEW_KEY = "ContentPreview";
+const VIEW_TARGET_KEY = "ViewTarget";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -134,6 +136,17 @@ export const queryKeys = {
   collectionSort: {
     /** Exact key for the remembered active sort value of one entity's collection. */
     byEntityName: (entityName: string) => [COLLECTION_SORT_KEY, entityName] as const,
+  },
+
+  viewTarget: {
+    /**
+     * Exact key for what a `ViewTarget` resolves to (profile plus the item or collection address).
+     * The loaded item itself is cached under `entityItem.byUrl`, shared by both target forms.
+     */
+    byTarget: (target: ViewTarget) =>
+      target.kind === "name"
+        ? ([VIEW_TARGET_KEY, "name", target.entityName, target.itemId ?? null] as const)
+        : ([VIEW_TARGET_KEY, "url", target.href] as const),
   },
 
   /**

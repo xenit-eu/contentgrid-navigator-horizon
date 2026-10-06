@@ -24,6 +24,7 @@ import {
   invoiceUpdateTemplate,
   sampleInvoice,
   sampleInvoiceList,
+  sampleInvoiceWithProfileLink,
   sampleInvoiceWithRelationTemplates,
   sampleLineItemList,
   sampleSupplierItem,
@@ -201,6 +202,14 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
         result.success,
         `Parse failed: ${JSON.stringify(!result.success ? result.error.issues : [])}`,
       ).toBe(true);
+    });
+
+    it("an item response carries a profile link with an href (view-target resolution)", () => {
+      const result = HalObjectSchema.safeParse(sampleInvoiceWithProfileLink);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data._links?.["profile"]).toMatchObject({ href: expect.any(String) });
+      }
     });
 
     it("sampleInvoice._links.self has an href", () => {

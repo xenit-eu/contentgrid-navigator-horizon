@@ -284,11 +284,27 @@ export default class ProfileEntity {
   }
 
   public describes(link: SimpleLink): boolean {
-    return this.profileEntity.links
-      .findLinks(ianaRelations.describes)
-      .some(
-        (desc) => desc.template.match(link.href) || desc.template.match(link.href.split("?")[0]),
-      );
+    return this.describesItem(link) || this.describesCollection(link);
+  }
+
+  /** Whether `link` addresses one item of this entity (matches the item URI template). */
+  public describesItem(link: SimpleLink): boolean {
+    return ProfileEntity.templateCovers(this.itemLink, link);
+  }
+
+  /** Whether `link` addresses this entity's collection, with or without a query. */
+  public describesCollection(link: SimpleLink): boolean {
+    return ProfileEntity.templateCovers(this.collectionLink, link);
+  }
+
+  /**
+   * `{id}` in a URI template also matches across `/`, so `/customers/1/orders` would count as an
+   * item. A variable that spans a path segment is a sub-resource, not this entity.
+   */
+  private static templateCovers(describesLink: Link, link: SimpleLink): boolean {
+    const { template } = describesLink;
+    const values = template.match(link.href) ?? template.match(link.href.split("?")[0]);
+    return values !== null && Object.values(values).every((value) => !String(value).includes("/"));
   }
 
   // ========================================
