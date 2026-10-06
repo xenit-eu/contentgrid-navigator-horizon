@@ -17,7 +17,7 @@
 - A new layer of **views** that own page composition: which data a page needs, loading it, the toolbar (breadcrumbs and actions) and where each feature or child view sits.
 - A single way to open a view: by entity name and item id, or by a link from the API.
 - A view state (filters, sort order, page) that is separate from what the view shows, and that a host can read and write.
-- One navigation object provided by the host, so views and features never talk to the router.
+- One navigation object provided by the host, so only views navigate, and neither views nor features talk to the router.
 - Views that contain other views, with a list and detail split as the first example.
 - Stability tags that move from features to views.
 - Display preferences that move out of the features into the data layer, with configurable storage.
@@ -119,7 +119,7 @@ A developer puts a feature in a pane, a dialog or a chat panel. It fills the spa
 1. **Given** a feature in a box of fixed size, **Then** it fills the box and its inner lists scroll.
 2. **Given** a feature, **Then** it has no outer padding and no size tied to the browser window.
 3. **Given** a view, **When** its host turns the toolbar off, **Then** the view shows without one and still works.
-4. **Given** a feature, **Then** it reports user actions through callbacks and never navigates itself.
+4. **Given** a feature, **Then** it reports user actions through callback props, which its view wires to the navigation object; it never reads the navigation object and never navigates itself.
 
 ---
 
@@ -196,8 +196,8 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 
 **Navigation**
 
-- **FR-016**: The host MUST provide one navigation object. Views and features MUST open pages only through it and MUST NOT use the router.
-- **FR-017**: The navigation object MUST at least offer opening the home page, a collection by entity name, and an item by entity name and id. It MAY be extended later.
+- **FR-016**: The host MUST provide one navigation object. Only views read it; a view opens pages only through it. Features MUST NOT read it: they report user actions through callback props, which their view wires to the navigation object. Views and features MUST NOT use the router. Host code (the shells area of the views package: router setup and the app's navigation implementation) and the apps MAY use the router.
+- **FR-017**: The navigation object MUST offer six functions: `openHome()`, `openClassifyCreate()`, `openEntityItemCollection(entityName)`, `openItem(entityName, id)`, `openEditItem(entityName, id)` and `openCreateItem(entityName)`. It MAY be extended later. They are implemented page by page: the first three are needed through PR 6, the others arrive with their pages.
 - **FR-018**: Opening a collection through the navigation object MUST bring the user back to the list as they left it (filters, sort order, page); views MUST NOT need to know how.
 - **FR-019**: Hosts other than the app (the chat assistant, Storybook stories, tests) MUST be able to provide their own navigation. A recording implementation MUST exist for stories and tests.
 - **FR-020**: An action only one page needs MAY remain a normal property instead of going through the navigation object.
@@ -229,9 +229,9 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 
 **Enforcement and migration**
 
-- **FR-034**: Lint MUST check each layer's imports: apps import features only through views, features never import the router, the UI package never imports features, and stable views never import experimental views.
+- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review), features and views never import the router, the UI package never imports features, and stable views never import experimental views.
 - **FR-035**: The existing stability lint rule MUST check views instead of features.
-- **FR-036**: The router calls in the dashboard, sidebar, profile gate and not-found page MUST be replaced by the navigation object.
+- **FR-036**: The router calls in the dashboard, sidebar, profile gate and not-found page MUST be replaced by callback props that the view or host code wires to the navigation object.
 - **FR-037**: The two apps MUST share the page logic of every migrated page; a fix to a page MUST NOT need two edits.
 - **FR-038**: Migrating a page MUST NOT change what the user sees or how the page behaves.
 
@@ -241,7 +241,7 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 - **Target**: what a view shows, given as names or as a link from the API.
 - **View state**: how a view shows it (filters, sort, page, active tab); owned by the view's type, read and written by the host.
 - **Host**: whatever shows a view: the app, the chat panel, a Storybook story, or a parent view.
-- **Navigation object**: the host-provided set of "open this" actions that views and features call.
+- **Navigation object**: the host-provided set of "open this" actions that views call; features reach it only through callback props.
 - **Feature**: one piece of functionality that fills the space it is given and reports actions through callbacks.
 - **Display preferences**: icon, colour, card style, name attribute and visible columns for an entity, merged from three layers.
 
@@ -272,9 +272,9 @@ These stay open. A team meeting settles them; none is decided here.
 ## Assumptions
 
 - The design approved on 2026-10-06 is the source of the requirements; the six open questions above are the only unsettled points.
-- "Apps import only views" means apps do not import the features package directly. Apps still import the data and UI packages for their own bootstrap (configuration, authentication, router context, providers). This reading is to be confirmed in review.
+- The design says "apps only import views". This spec reads it as: apps do not import the features package directly. Apps still import the data and UI packages for their own bootstrap (configuration, authentication, router context, providers). This reading is to be confirmed in review.
 - The navigation functions the design lists are home, classify-create, collection, item, edit item and create item. The first PRs only need `openHome`, `openEntityItemCollection` and `openItem`; the others arrive with the pages that use them.
-- The router-setup code in the shells (router creation, the app component, opening a page in a new tab) is router-bound host code. "Features never import the router" therefore requires it to leave the features package first; views may contain this host-level code, so views are not router-free. This reading is to be confirmed in review.
+- The router-setup code in the shells (router creation, the app component, opening a page in a new tab) is router-bound host code. "Features never import the router" therefore requires it to leave the features package first. It moves to the shells area of the views package (`packages/views/src/shells/`), together with the app's navigation implementation if it lives there. That host code and the apps MAY use the router; views and features MAY NOT. This reading is to be confirmed in review.
 - Stripping the toolbar from the collection feature happens before the collection view gets its state, so a thin collection view that draws the toolbar is needed in between.
 - "Features never import views" is inferred from "each layer imports only from the layers below it"; the design does not state it separately.
 - Once the stability tag leaves features, the rule "a stable feature never imports an experimental feature" has no mechanism. It stays as written until stability moves to views, and what replaces it is open question 1.

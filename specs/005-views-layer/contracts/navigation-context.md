@@ -5,27 +5,26 @@
 
 ## Shape
 
-The host provides one navigation object through React context. Views and features read it with `useNavigation()`.
+The host provides one navigation object through React context. Only views read it, with `useNavigation()`. Features never read it: they report user actions through callback props, and their view wires those to the navigation object.
 
 ```ts
 interface Navigation {
   openHome(): void;
   openEntityItemCollection(entityName: string): void;
   openItem(entityName: string, id: string): void;
-  // Added when the page that uses them lands:
   openClassifyCreate(): void;
   openEditItem(entityName: string, id: string): void;
   openCreateItem(entityName: string): void;
 }
 ```
 
-The design lists these six and says the set may be extended. The first PRs only need `openHome`, `openEntityItemCollection` and `openItem`; the others arrive with the pages that use them.
+These are the six functions of the design; the set may be extended. They are implemented page by page: `openHome`, `openEntityItemCollection` and `openItem` are needed through PR 6, the others arrive with the pages that use them (T041).
 
 ## Rules
 
 1. **The caller does not care what happens next.** The app changes the route; the chat may open Navigator; a split view changes a pane.
 2. **`openEntityItemCollection` restores the list as the user left it** (filters, sort order, page). Today the list breadcrumb does this from a session memo in the query cache; the app's implementation keeps doing that, so views need not know how.
-3. **No router in views or features.** Every click that opens something, including the view's own toolbar breadcrumbs, calls the navigation object.
+3. **Only views call it; no router in views or features.** Every click that opens something, including the view's own toolbar breadcrumbs and a click that comes from a feature (reported through a callback prop), is turned by the view into a call on the navigation object. Host code in `packages/views/src/shells/` (router setup, the app's navigation implementation) and the apps MAY use the router.
 4. **One-page-only actions stay props.** For example "after create, go to the new item" remains a normal prop.
 5. **A missing provider is a development-time error**, not a silent no-op.
 6. **Children get their own navigation.** A parent view wraps each child in its own provider. When the child calls `openItem`, the parent decides: for the list in a split view it shows that item in the other pane and does not call the route. Children do not know they are side by side.

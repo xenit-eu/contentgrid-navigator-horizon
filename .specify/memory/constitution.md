@@ -6,7 +6,7 @@ Sync Impact Report
   `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
   `ADR-018-views-layer.md`, which this citation resolves to) and placed views and the shared gate hook in
   `packages/features`; it now cites the real ADR-018, places views in `packages/views`, routes navigation
-  through a host-provided navigation context (callback props stay fine for one-page-only actions),
+  through a host-provided navigation context read only by views (callback props stay fine for one-page-only actions),
   lets views draw their default toolbar and be told not to, and has views receive view state
   alongside the target. Principle III gains the `packages/views` import boundary. Principle IV
   gains a forward-looking bullet: the `x-stability` tag moves from features to views when spec 005
@@ -174,7 +174,10 @@ model doesn't happen to share it.
   `apps/*` or a Layer-1 `@contentgrid/*` package directly. `packages/features`, `packages/ui` and
   `@contentgrid/navigator-data` MUST NOT import `packages/views`. These boundaries bind new work
   now and are enforced by lint once spec 005 adds the layer rules (ACC-3216); existing app imports of
-  `packages/features` are migrated by that spec and are not retroactively non-compliant.
+  `packages/features` are migrated by that spec and are not retroactively non-compliant. The
+  design says "apps only import views"; the working reading here — apps import features only
+  through views, and still import the data and UI packages to bootstrap — is to be confirmed in
+  review.
 - The primitive/pattern boundary in `packages/ui` MUST hold: primitives (`src/primitives/`)
   carry no Navigator-domain or HAL knowledge; the HAL-Forms field-renderer patterns take only
   plain scalar props (`name`, `label`, `required`, `value`, `onChange`, `error?`, …), never a
@@ -311,9 +314,12 @@ be used as a model for new work.
 - A view MUST gate its own loading/error/not-found state through one shared, reusable primitive
   (e.g. a `useProfileEntityGate`-style hook in `packages/views`, or in `navigator-data` for the
   data-only parts) rather than each view hand-rolling the same three-way branch.
-- Navigation MUST go through the navigation context the host provides (`useNavigation()`);
-  views and features MUST NOT use the router. A callback prop remains fine for an action only
-  one page needs (e.g. "after create, go to the new item").
+- Navigation MUST go through the navigation context the host provides, and only views read it
+  (`useNavigation()`). Features MUST NOT read it: they report user actions through callback
+  props that their view wires to the navigation object. Views and features MUST NOT use the
+  router; host code (the shells area of `packages/views`: router setup, the app's navigation
+  implementation) and the apps MAY. A callback prop also remains fine for an action only one
+  page needs (e.g. "after create, go to the new item").
 - A view draws its default toolbar (breadcrumbs and actions), computed from the data it
   resolved, with every click going through the navigation context. The toolbar remains
   overridable, and a host or parent view MUST be able to turn it off. A feature MUST NOT draw a

@@ -6,7 +6,7 @@
 ## Rules
 
 1. **Views draw the toolbar.** A view draws breadcrumbs on the left and actions on the right, using the shared toolbar layout.
-2. **Every click goes through the navigation object** (`openHome`, `openEntityItemCollection`, `openItem`), never the router (see [navigation-context.md](navigation-context.md)).
+2. **Every click goes through the navigation object, called by the view** (`openHome`, `openEntityItemCollection`, `openItem`), never the router (see [navigation-context.md](navigation-context.md)).
 3. **A host or parent can turn it off.** Every view that draws a toolbar accepts a way to hide it. A split view draws one toolbar for both panes; the chat panel may draw none. When hidden, the view still works; its actions are the host's responsibility.
 4. **Features never draw a toolbar or breadcrumbs.** `EntityItemView` and `EntityItemCollectionSearchView` lose their `toolbar`, `breadcrumbs`, `actions` props and their `PageLayout` wrapper (PR 5).
 5. **Everything fills the space it gets.** Views and features take the full size of their parent and can shrink so inner lists scroll (the `h-full min-h-0` pattern). They add no outer padding and never size themselves to the window (no `h-svh`, `vh` units, fixed widths). Only the outermost host sets real sizes.
