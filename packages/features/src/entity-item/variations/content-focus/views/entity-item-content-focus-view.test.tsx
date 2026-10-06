@@ -132,6 +132,7 @@ function makeEntityItem(options: {
     modifiedDate: undefined,
     createdBy: undefined,
     modifiedBy: undefined,
+    updateTemplate: null,
     profileEntity,
   } as unknown as EntityItem;
 }

@@ -47,6 +47,15 @@ describe("EntityItemAttributesPanel", () => {
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   });
 
+  it("offers no Edit action when the update form has no properties", async () => {
+    const { defaultTemplate } = makeAllAttributeItem();
+    await renderPanel(
+      makeAllAttributeItem({ _templates: { default: { ...defaultTemplate, properties: [] } } }),
+    );
+
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
   it("leaves edit mode on Cancel without asking when nothing changed", async () => {
     const user = userEvent.setup();
     await renderPanel(makeAllAttributeItem());
