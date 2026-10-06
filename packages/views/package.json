@@ -11,6 +11,10 @@
     "./testing": {
       "import": "./src/navigation/testing.tsx",
       "types": "./src/navigation/testing.tsx"
+    },
+    "./entity-item-detail": {
+      "import": "./src/entity-item-detail/index.ts",
+      "types": "./src/entity-item-detail/index.ts"
     }
   },
   "scripts": {

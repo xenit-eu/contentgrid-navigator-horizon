@@ -1,16 +1,18 @@
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EntityItem } from "../accessors/entity-item";
+import type ProfileEntity from "../accessors/entity-profile";
 import { useNavigatorData } from "../hooks/context";
-import { queryKeys } from "../query-keys";
-import { resolveViewTargetIdentity } from "./resolve-view-target";
+import { viewTargetIdentityQuery } from "./resolve-view-target";
 import type { ResolvedViewTarget, ViewTarget } from "./view-target";
-
-// Resolving the identity is stable for the session, like the profiles it reads.
-const IDENTITY_STALE_TIME = 5 * 60 * 1000;
 
 export interface UseViewTargetResult {
   readonly data: ResolvedViewTarget | undefined;
+  /**
+   * The profile as soon as the target's identity is known, even while the item is still loading or
+   * failed, so a view can keep drawing its toolbar around a loading or error state.
+   */
+  readonly profileEntity: ProfileEntity | undefined;
   readonly error: Error | null;
   readonly isPending: boolean;
   readonly isError: boolean;
@@ -34,13 +36,9 @@ export function useViewTarget(target: ViewTarget): UseViewTargetResult {
   const { apiFetch, profileUrl } = useNavigatorData();
   const queryClient = useQueryClient();
 
-  const identityQuery = useQuery({
-    queryKey: queryKeys.viewTarget.byTarget(target),
-    queryFn: () => resolveViewTargetIdentity(queryClient, apiFetch, profileUrl, target),
-    staleTime: IDENTITY_STALE_TIME,
-    // A missing profile will not appear by asking again; the profile queries retry themselves.
-    retry: false,
-  });
+  const identityQuery = useQuery(
+    viewTargetIdentityQuery(queryClient, apiFetch, profileUrl, target),
+  );
   const identity = identityQuery.data;
 
   const itemOptions = identity?.itemUrl
@@ -65,6 +63,7 @@ export function useViewTarget(target: ViewTarget): UseViewTargetResult {
   const error = identityQuery.error ?? itemQuery.error;
   return {
     data,
+    profileEntity: identity?.profileEntity,
     error,
     isPending: identityQuery.isPending || (!!itemOptions && itemQuery.isPending),
     isError: error !== null,

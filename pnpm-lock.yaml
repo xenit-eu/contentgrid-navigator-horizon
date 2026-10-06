@@ -92,6 +92,9 @@ importers:
       '@contentgrid/uri-template':
         specifier: ^0.4.0
         version: 0.4.2
+      '@contentgrid/views':
+        specifier: workspace:*
+        version: link:../../packages/views
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.101.0(react@19.2.7)
@@ -192,6 +195,9 @@ importers:
       '@contentgrid/uri-template':
         specifier: ^0.4.0
         version: 0.4.2
+      '@contentgrid/views':
+        specifier: workspace:*
+        version: link:../../packages/views
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.101.0(react@19.2.7)
@@ -262,6 +268,9 @@ importers:
       '@contentgrid/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@contentgrid/views':
+        specifier: workspace:*
+        version: link:../../packages/views
       react:
         specifier: ^19.1.0
         version: 19.2.7

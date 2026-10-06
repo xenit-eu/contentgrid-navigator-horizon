@@ -33,6 +33,8 @@ The design lists these six and says the set may be extended. The first PRs only 
 
 ## Hosts
 
+_As built (PR 4):_ the app's implementation is `AppNavigationProvider` in each app's `src/app-navigation.tsx`, mounted in the root route. It moves to `packages/views/src/shells/` with PR 7.
+
 | Host                | Implementation                                                                 |
 | ------------------- | ------------------------------------------------------------------------------ |
 | App                 | Route changes through the router; `openEntityItemCollection` restores the list |

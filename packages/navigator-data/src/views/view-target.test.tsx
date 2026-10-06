@@ -347,6 +347,7 @@ describe("useViewTarget", () => {
     expect(result.current.isPending).toBe(true);
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(result.current.data?.entityItem?.id).toBe("cust-001");
+    expect(result.current.profileEntity?.name).toBe("customer");
     expect(result.current.isError).toBe(false);
   });
 
@@ -405,6 +406,8 @@ describe("useViewTarget", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 15000 });
     expect(isProblemWithStatus(result.current.error, 403)).toBe(true);
+    // The profile is known even though the item failed, so a view can keep its toolbar.
+    expect(result.current.profileEntity?.name).toBe("customer");
   }, 20000);
 
   it("refetch retries a failed resolution", async () => {
