@@ -1,0 +1,40 @@
+{
+  "name": "@contentgrid/views",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./testing": {
+      "import": "./src/navigation/testing.tsx",
+      "types": "./src/navigation/testing.tsx"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "peerDependencies": {
+    "@contentgrid/features": "workspace:*",
+    "@contentgrid/navigator-data": "workspace:*",
+    "@contentgrid/ui": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@contentgrid/eslint-config": "workspace:*",
+    "@contentgrid/tsconfig": "workspace:*",
+    "@storybook/react": "^10.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "eslint": "^10.0.0",
+    "react-dom": "^19.1.0",
+    "storybook": "10.4.2",
+    "typescript": "^6.0.0"
+  }
+}
