@@ -20,7 +20,7 @@ class UpdateHalFormTemplate {
 function useReloadEntityItem(entityItem: EntityItem): () => Promise<EntityItem>;
 ```
 
-`updateTemplate` is cached per `EntityItem`, so the form's fields keep their identity; `updateFormValues` decodes on each access (the form reads it once, at mount).
+`updateTemplate` is cached per `EntityItem`, so the form's fields keep their identity; `updateFormValues` is cached per `EntityItem` too (the form reads it once, at mount, and after a 412 from the reloaded item).
 
 `CreateFormProperty` is renamed `FormAttributeProperty` (accessors/extended-forms/form-property.ts, with `toFormAttributeProperty`), since the create and update forms share it.
 
@@ -30,7 +30,7 @@ Unchanged and reused: `canUpdate`, `editEntityRequest`, `etag`.
 
 MSW `createUpdateHandler`: matches `PUT` (was `PATCH`).
 
-## PR 2 (from the 2026-09-29 plan)
+## PR 2 (outline)
 
 Public API added by this feature. Signatures are the contract; names may be refined in review.
 
@@ -118,7 +118,7 @@ Behaviour:
 
 ## `xhrFetch` (api/xhr-fetch.ts)
 
-Lifted from `ACC-3090-wire-content-upload-with-progress`. `(request: Request, onUploadProgress?: (fraction: number) => void) => Promise<Response>`, with the same auth handling as `contentFetch`.
+New in PR 2. `(request: Request, onUploadProgress?: (fraction: number) => void) => Promise<Response>`, with the same auth handling as `contentFetch`.
 
 ## MSW test fixtures (test-fixtures/msw/handlers.ts)
 

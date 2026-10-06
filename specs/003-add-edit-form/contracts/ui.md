@@ -17,11 +17,11 @@ interface EditActionBarProps {
 
 Sticky to the bottom of its scroll container; keyboard order Cancel → Save; Save is the submit button of the enclosing form.
 
-## `FileRenderer` (patterns/form-renderers/) — extended (base from ACC-2895)
+## `FileRenderer` (patterns/form-renderers/) — extended
 
 ```ts
 interface FileRendererProps {
-  // existing (ACC-2895): name, label, required, description, value, onChange, error, …
+  // existing: name, label, required, description, value, onChange, error, …
   readonly current?: { filename: string | null; mimetype: string | null } | null;
   readonly pending?: { kind: "replace"; filename: string; progress?: number } | { kind: "remove" };
   readonly failureMessage?: string;

@@ -1,6 +1,6 @@
 # Implementation Plan: Add Edit Form
 
-**Branch**: `ACC-3210-edit-form-metadata` | **Date**: 2026-10-05 (revised from 2026-09-29) | **Spec**: [spec.md](spec.md)
+**Branch**: `003-add-edit-form` | **Date**: 2026-10-05 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/003-add-edit-form/spec.md`
 
@@ -10,8 +10,8 @@ Add an edit mode to the entity item detail page. Choosing Edit swaps the item's 
 
 The feature ships in two PRs (spec § Delivery):
 
-- **PR 1 — metadata edit** (this plan, detailed below): Edit action, edit mode in both layouts, prefill, client validation, conditional PUT, success toast, every failure state of the metadata request. Branches from `main` now.
-- **PR 2 — file changes** (outline at the end): replace/remove a file, queued until Save, upload progress, local preview. Branches from `main` after the ACC-3217 stack merges, because it changes `use-content.ts`, `file-upload-zone.tsx` and the content-preview components that stack also changes.
+- **PR 1 — metadata edit** (this plan, detailed below): Edit action, edit mode in both layouts, prefill, client validation, conditional PUT, success toast, every failure state of the metadata request.
+- **PR 2 — file changes** (outline at the end): replace/remove a file, queued until Save, upload progress, local preview. Starts after `004-create-item-page` merges, because both change `use-content.ts`, `file-upload-zone.tsx` and the content-preview components.
 
 ## Technical Context
 
@@ -29,7 +29,7 @@ The feature ships in two PRs (spec § Delivery):
 
 **Performance Goals**: edit mode opens without a network request (item already loaded); SC-002
 
-**Constraints**: constitution principles I–VIII; no new dependencies; no new route (FR-003); only the changes this feature needs, no unrelated clean-ups
+**Constraints**: constitution principles I–IX; no new dependencies; no new route (FR-003); only the changes this feature needs, no unrelated clean-ups
 
 **Scale/Scope**: every entity of any application; forms up to ~50 properties
 
@@ -43,14 +43,15 @@ _GATE: Must pass before implementation. Scope: PR 1._
 | II. Model-first   | Form generated from the template; no attribute names in code; prefill decoded by the template codec, not mapped by hand                                                                                                 | ✅         |
 | III. Boundaries   | Template wrapper and decode in `navigator-data`; edit container/form in `features`; no new `ui` pattern; no Layer-1 import from `features`                                                                              | ✅         |
 | IV. Stability     | Lives inside the `stable` `entity-item` feature (`entity-item/edit/`), its only user; no new feature directory                                                                                                          | ✅         |
-| V. ABAC           | Edit gated on `entityItem.canUpdate` (`_templates.default` presence); 403 after submit shown as a policy outcome (FR-022)                                                                                               | ✅         |
+| V. ABAC           | Edit gated on `entityItem.updateTemplate` (`_templates.default` presence) with at least one property; 403 after submit shown as a policy outcome (FR-022)                                                               | ✅         |
 | VI. Auth          | No change; requests go through `apiFetch`                                                                                                                                                                               | ✅         |
 | VII. Supply chain | No new dependency                                                                                                                                                                                                       | ✅         |
 | VIII. Views       | Edit mode owned by the views; no app change                                                                                                                                                                             | ✅         |
+| IX. Traceability  | Every PR 1 change maps to an FR, SC or decision below; the spec artifacts describe what was built; no references to files outside the repository                                                                        | ✅         |
 | Error handling    | Non-field errors through `ProblemAlert` (412: initial values updated to the latest version); field errors through `getValidationFieldErrors` → `toServerFieldErrors`; same split as the create form, shared, not copied | ✅         |
 | Quality gates     | MSW tests for prefill, PUT + `If-Match`, 400 and 412; unit tests for decode and changed values; browser run against a real backend                                                                                      | ✅ planned |
 
-The content DELETE deviation recorded in the 2026-09-29 plan (D2) belongs to PR 2 and is not part of this gate.
+The content DELETE deviation (D2) belongs to PR 2 and is not part of this gate.
 
 ## Project Structure
 
@@ -59,7 +60,7 @@ The content DELETE deviation recorded in the 2026-09-29 plan (D2) belongs to PR 
 ```text
 specs/003-add-edit-form/
 ├── plan.md              # This file (PR 1 detailed, PR 2 outline)
-├── research.md          # Legacy analysis + decisions
+├── research.md          # Original Navigator analysis + decisions
 ├── data-model.md        # Edit session, save flow, state transitions
 ├── quickstart.md        # How to verify
 ├── contracts/
@@ -99,7 +100,8 @@ packages/features/src/
     │   ├── edit-entity-item-container.tsx        # edited item, updateInitialValues after 412; prefill, useUpdateEntityItem, errors
     │   └── edit-entity-item-form.tsx             # <form>, fields, Save/Cancel
     ├── attributes/entity-item-attributes-panel.tsx  # NEW "Attributes" heading + Edit, edit mode
-    ├── entity-item-view.tsx                      # renders the panel
+    ├── entity-item-refresh-alert.tsx             # NEW warning + Retry when a refetch of a loaded item fails
+    ├── entity-item-view.tsx                      # renders the panel; keeps a loaded item on a failed refetch
     └── variations/content-focus/views/entity-item-content-focus-view.tsx  # same, in the side panel
 ```
 
@@ -109,7 +111,7 @@ No change to `use-content.ts`, `file-upload-zone.tsx`, the content-preview compo
 
 ### Entry and edit mode (FR-001, FR-003)
 
-- Both views show an **Attributes** heading above the attribute panel, styled like the **Relations** heading, with an **Edit** button (outline, pencil icon) at its right, the same way the relation sections place "+ Link" (D14). Shown when `item.canUpdate`: the item has an update template (FR-001). The views are only rendered by the detail routes today, so FR-002 needs no opt-out prop yet.
+- Both views show an **Attributes** heading above the attribute panel, styled like the **Relations** heading, with an **Edit** button (outline, pencil icon) at its right, the same way the relation sections place "+ Link" (D14). Shown when the item has an update template (FR-001) with at least one property (spec edge case: an update form with no properties offers nothing to change). The views are only rendered by the detail routes today, so FR-002 needs no opt-out prop yet.
 - `editing` is state of `EntityItemAttributesPanel`, which both views render keyed by `<profile name>/<item id>`, so edit mode never carries over to another item. While editing, the Edit button hides and `EntityItemAttributes` is replaced by `EditEntityItemView`; the header, relation sections and content preview stay mounted.
 - `EditEntityItemView` owns `useUnsavedChangesGuard(isDirty)` and `UnsavedChangesDialog`, as `CreateEntityItemView` does. Cancel with unsaved changes opens the same dialog; without changes it leaves edit mode at once (US1-5, US1-6).
 - The form uses the create form's Save/Cancel button row; the pinned action bar, edit-mode heading and transition (FR-003a, FR-003b) are not part of PR 1 (spec § Delivery).
@@ -118,13 +120,13 @@ No change to `use-content.ts`, `file-upload-zone.tsx`, the content-preview compo
 
 - `resolveHalFormsFields(updateTemplate)` produces fields and the default one-field-per-row layout, in template order.
 - Content attributes appear on the `default` template as `<attr>.filename` and `<attr>.mimetype` text properties. **PR 1 renders them as the plain text fields the template describes** (D10); PR 2 folds them into the file field.
-- `initialValues` = `entityItem.updateFormValues`: the item body decoded through the template codec (`requireCodecFor(template).decode({ contentType, body }).valueMap`), as the legacy `createFormValues` does. Datetimes decode to `Date`, which the `datetime` renderer accepts.
-- `useHalFormsFieldState({ fields, initialValues, externalErrors })` gives values, dirty tracking, validation and `buildValues`. `buildValues` sends every non-empty value, so untouched values, including the stored filename/mimetype, are sent back unchanged. That matters because the PUT replaces the whole item (FR-014, ACC-1411). A cleared field is left out of the body, and the PUT clears it; the HAL-FORMS codec has no way to send `null`.
+- `initialValues` = `entityItem.updateFormValues`: the item body decoded through the template codec (`requireCodecFor(template).decode({ contentType, body }).valueMap`). Datetimes decode to `Date`, which the `datetime` renderer accepts.
+- `useHalFormsFieldState({ fields, initialValues, externalErrors })` gives values, dirty tracking, validation and `buildValues`. `buildValues` sends every non-empty value, so untouched values, including the stored filename/mimetype, are sent back unchanged. That matters because the PUT replaces the whole item (FR-014). A cleared field is left out of the body, since the HAL-FORMS codec has no way to send `null`; whether the server then clears it is an open question (below).
 
 ### Save (FR-013, FR-016–FR-019)
 
 1. `validate()`; stop on a client error.
-2. `useUpdateEntityItem(item).mutate(buildValues(updateTemplate.template))`. The hook sends the PUT with `If-Match: item.etag`. The server answers **204 No Content**, so the hook re-fetches the item through `EntityItem.fetchByUrlQuery` (which writes `entityItem.byUrl`) and invalidates the entity's collections (D13).
+2. `useUpdateEntityItem(item).mutate(buildValues(updateTemplate.template))`. The hook sends the PUT with `If-Match: item.etag`. The server answers **204 No Content**, so the hook invalidates the item's `entityItem.byUrl` query, which re-fetches the shown item with its new values and ETag before the mutation settles, and invalidates the entity's collections (D13).
 3. On success: `toast.success("<Entity> has been successfully updated!")`, leave edit mode. The page reads the re-fetched item already in the cache, so the old values never flash back (FR-016).
 
 Save is disabled and labelled "Saving…" while pending.
@@ -139,7 +141,11 @@ Save is disabled and labelled "Saving…" while pending.
 | 404 `not-found/entity-item` | `ProblemAlert`; Save disabled, only Cancel offered                                                                                                                                                                                                  |
 | Network / other             | `ProblemAlert`, input kept                                                                                                                                                                                                                          |
 
-The 412 notice uses the form's alert slot like every other non-field error, not a toast. The form is not rebuilt, so the alert (the mutation's error) stays until the next save.
+The 412 notice uses the form's alert slot like every other non-field error, not a toast. The form is not rebuilt, so the alert (the mutation's error) stays until the next save. If the reload after a 412 fails, the form keeps its input and the alert; saving again retries.
+
+### Item refresh while editing (SC-005)
+
+The item query refetches in the background (window focus, relation changes, the reload after a 412). When a refetch of an already loaded item fails, both views keep the loaded item, and an open edit form with its input, on screen under `EntityItemRefreshAlert` (warning, Retry calls `refetch`). The error page is only shown for an item that never loaded (D15).
 
 ### Data layer
 
@@ -152,25 +158,33 @@ The 412 notice uses the form's alert slot like every other non-field error, not 
 ### Tests
 
 - `update-form.test.ts`: `null` without a `default` template.
+- `update-form.test.ts` also checks that the template's properties are linked to their profile attributes, in template order.
+- `use-update-entity.test.tsx`, `use-reload-entity-item.test.tsx` (MSW): PUT with `If-Match`, then the shown item holds the new ETag; reload resolves with the latest item, rejects on failure.
+- `use-hal-forms-field-state.test.ts`: `updateInitialValues` keeps the user's changes on top of the new values.
 - `edit-entity-item-container.test.tsx` (MSW): prefill; Save sends a PUT with `If-Match` and every value; 204 then success toast; 400 shown inline; 412 reloads the item and keeps only the user's own changes on top (an empty field someone else filled in is not cleared), and the next save uses the new ETag; 404 disables Save.
+- `entity-item-attributes-panel.test.tsx`: no Edit without an update form, or with one that has no properties; Cancel without changes closes at once; Cancel with changes asks first.
+- `entity-item-view.test.tsx` (MSW): a failed background refetch keeps the open form and its input under the refresh alert; Retry clears it.
 
 No e2e test in PR 1: the demo MSW data has no `default` templates, so the Edit action cannot appear in mock mode. Verified by hand against a real backend instead.
 
 No tests that only check a click calls a callback.
 
-## Resolved during PR 1
+## Findings from the real backend
 
-- **PUT response**: the real backend answers item PUT with 204 No Content. `useUpdateEntityItem` now re-fetches the item (D13). Before the fix, a successful save failed in the client ("Unexpected end of JSON input") and left the old ETag cached, so the next save got a 412.
+- **PUT response**: item PUT answers 204 No Content, so `useUpdateEntityItem` sends it with `fetchVoid` and re-fetches the item through invalidation (D13). Parsing the empty body would fail a successful save and leave the old ETag cached.
 - **Datetime prefill**: the codec decodes datetimes to `Date`; the `datetime` renderer accepts it.
-- **Cleared values**: `buildValues` omits empty values; still to confirm that a PUT without a property clears it on the server.
 
-## PR 2 — outline (after ACC-3217 merges)
+## Open questions
 
-Unchanged from the 2026-09-29 plan, adjusted to `hal-forms`:
+- **Cleared values**: `buildValues` omits empty values. Confirm on a real backend that a PUT without a property clears it.
+
+## PR 2 — outline (after `004-create-item-page` merges)
+
+To be detailed against `hal-forms` when PR 2 starts:
 
 - One `file` field per content attribute, found with `attr.isContent`, replacing the two text fields from PR 1. Gated on `canUploadContent` / `canDeleteContent`.
-- Picking or removing a file only queues it; `<attr>.filename`/`<attr>.mimetype` follow the picked file. On Save the metadata PUT sends the stored values (legacy `resetSymbol`), then each file step runs in order with the ETag of the step before (D1). Removing a file uses DELETE on the `cg:content` link (D2, constitution amendment in that PR).
-- XHR upload progress and `cancel()` in `useUploadContent`; retry by calling `mutate` again with the same `File`; 412 and 415 handled at the call site. This closes HZN-5D.12.
+- Picking or removing a file only queues it; `<attr>.filename`/`<attr>.mimetype` follow the picked file. On Save the metadata PUT sends the stored values, then each file step runs in order with the ETag of the step before (D1). Removing a file uses DELETE on the `cg:content` link (D2, constitution amendment in that PR).
+- XHR upload progress and `cancel()` in `useUploadContent`; retry by calling `mutate` again with the same `File`; 412 and 415 handled at the call site.
 - Local preview of a picked PDF in the content-focus layout (D7).
 
 ## Complexity Tracking

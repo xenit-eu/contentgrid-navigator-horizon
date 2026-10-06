@@ -4,32 +4,69 @@
 
 Client-side state only; the server model (entity items, content) does not change.
 
-## Edit session
+## PR 1 — metadata edit
 
-Owned by `useEntityItemEditSession` in the item view. Exists only while edit mode is open.
+State of `EditEntityItemContainer` (entity-item/edit/), alive only while edit mode is open:
 
-| Field            | Type                                    | Notes                                                                                                |
-| ---------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `baseItem`       | `EntityItem`                            | The item version the form was opened on (or reloaded to after a conflict). Its ETag guards the save. |
-| `fields`         | `FieldDescriptor[]`                     | From `resolveEditFieldDescriptors(baseItem.updateTemplate)`.                                         |
-| `initialValues`  | `FieldValueMap`                         | `baseItem` body decoded through the update template codec.                                           |
-| `values`         | `FieldValueMap`                         | Current input (form state hook).                                                                     |
-| `dirtyFields`    | `Set<string>`                           | Properties whose value differs from `initialValues`.                                                 |
-| `pendingFiles`   | `Map<attributeName, PendingFileChange>` | At most one entry per content attribute.                                                             |
-| `conflictHints`  | `Map<propertyName, FieldValue>`         | After a 412: the other user's value for fields both changed (D6).                                    |
-| `status`         | `EditStatus`                            | See state transitions.                                                                               |
-| `problem`        | `ProblemDisplayModel \| null`           | Last non-field problem, rendered by `ProblemAlert`.                                                  |
-| `externalErrors` | `Record<string, FieldError[]>`          | Server field errors (`toFieldErrors(getValidationFieldErrors(error))`).                              |
+| Field                   | Source                                                                | Notes                                                                                           |
+| ----------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `edited.item`           | the `item` prop at mount; the reloaded item on 412                    | Its ETag guards the save. A background reload of the page's item does not change it.            |
+| `edited.updateTemplate` | `item.updateTemplate`                                                 | Fields come from `resolveHalFormsFields(edited.updateTemplate)`.                                |
+| form state              | `useHalFormsFieldState({ fields, initialValues, externalErrors })`    | `initialValues` = `edited.item.updateFormValues`; values, `isDirty`, validation, `buildValues`. |
+| `externalErrors`        | `toServerFieldErrors(getValidationFieldErrors(updateMutation.error))` | Server field errors shown on their fields.                                                      |
+| `isReloading`           | set while the item is reloaded after a 412                            | Save stays disabled.                                                                            |
+| alert                   | `getFormAlertError(updateMutation.error, fields)`                     | Every error not shown on a field, incl. the 412 conflict, until the next save.                  |
+
+`editTemplate` in `EntityItemAttributesPanel` is the template captured when Edit was chosen; `null` means viewing.
+
+### State transitions
+
+```text
+viewing ──Edit──▶ editing ──Save──▶ saving ──204 + item re-fetched──▶ viewing (+ toast)
+                    ▲  │               │
+                    │  └─Cancel────────┼──(dirty? confirm)──▶ viewing
+                    │                  ├─client validation fails──▶ editing (field errors, nothing sent)
+                    │                  ├─400 validation──▶ editing (field errors + alert for the rest)
+                    │                  ├─412 conflict──▶ reloading ──▶ editing (merged onto the latest version)
+                    │                  ├─403 / network / other──▶ editing (alert, input kept)
+                    │                  └─404──▶ editing (alert, Save disabled, only Cancel)
+```
+
+- `saving` and `reloading` disable Save and show "Saving…" (FR-019).
+- Leaving the page while `isDirty` asks for confirmation (FR-020).
+- A failed refetch of the page's item keeps the item and the open form on screen under a refresh alert (D15).
+
+### Conflict merge (D11)
+
+On 412: reload the item → `latest`. `updateInitialValues(latest.updateFormValues)`: every field whose value still equals the previous initial value takes the latest value; the user's changed fields keep their value and still count as unsaved. `edited` becomes `latest`, so the next save is conditional on its ETag.
+
+## PR 2 — file changes (outline; to be rewritten against `hal-forms` when PR 2 starts)
+
+### Edit session
+
+Extends the PR 1 state with pending file changes. Exists only while edit mode is open.
+
+| Field            | Type                                     | Notes                                                                                                |
+| ---------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `baseItem`       | `EntityItem`                             | The item version the form was opened on (or reloaded to after a conflict). Its ETag guards the save. |
+| `fields`         | `HalFormsField[]`                        | From `resolveHalFormsFields(baseItem.updateTemplate)`.                                               |
+| `initialValues`  | `FieldValueMap`                          | `baseItem` body decoded through the update template codec.                                           |
+| `values`         | `FieldValueMap`                          | Current input (form state hook).                                                                     |
+| `dirtyFields`    | `Set<string>`                            | Properties whose value differs from `initialValues`.                                                 |
+| `pendingFiles`   | `Map<attributeName, PendingFileChange>`  | At most one entry per content attribute.                                                             |
+| `status`         | `EditStatus`                             | See state transitions.                                                                               |
+| `problem`        | `ProblemDisplayModel \| null`            | Last non-field problem, rendered by `ProblemAlert`.                                                  |
+| `externalErrors` | `Record<string, FieldValidationError[]>` | Server field errors (`toServerFieldErrors(getValidationFieldErrors(error))`).                        |
 
 Derived: `isDirty = dirtyFields.size > 0 || pendingFiles.size > 0`.
 
-### Validation rules
+#### Validation rules
 
 - Required properties must be non-empty before a request is sent (same rules as the create form).
 - Allowed-values properties: a stored value outside the allowed list is kept as is and not rejected on the client (spec edge case).
 - A content attribute can only get a pending `replace` when `canUploadContent(attr)`, and a pending `remove` when `canDeleteContent(attr)` and it currently holds a file.
 
-## Pending file change
+### Pending file change
 
 | Field           | Type                    | Notes                                                            |
 | --------------- | ----------------------- | ---------------------------------------------------------------- |
@@ -44,7 +81,7 @@ Rules:
 - A newer pick or remove replaces the entry; withdrawing deletes it.
 - Cancel clears the map; nothing is uploaded.
 
-## Save plan
+### Save plan
 
 Built from the session when the user saves; executed by `useSaveEntityItemEdit` (D1).
 
@@ -54,14 +91,14 @@ Built from the session when the user saves; executed by `useSaveEntityItemEdit` 
 
 Result: `{ item, failedFileSteps: attributeName[] }`. A failed metadata step rejects (nothing else runs). A failed file step is recorded and the remaining file steps still run (each file is reported separately — spec edge case); the mutation resolves with the failures listed.
 
-## State transitions (`EditStatus`)
+### State transitions (`EditStatus`)
 
 ```text
 viewing ──Edit──▶ editing ──Save──▶ saving ──ok, no failures──▶ viewing (+ toast)
                     ▲  │               │
                     │  └─Cancel────────┼──(dirty? confirm)──▶ viewing
                     │                  ├─400 validation──▶ editing (field errors)
-                    │                  ├─412 conflict──▶ reloading ──▶ editing (merged, hints)
+                    │                  ├─412 conflict──▶ reloading ──▶ editing (merged)
                     │                  ├─403──▶ editing (not permitted alert)
                     │                  ├─404──▶ notFound (only Leave)
                     │                  ├─network/other──▶ editing (ProblemAlert)
@@ -73,6 +110,6 @@ viewing ──Edit──▶ editing ──Save──▶ saving ──ok, no fail
 - Retry from a partial failure runs only the failed file steps, starting from the latest item and its ETag (FR-024).
 - Leaving the page while `isDirty` asks for confirmation (FR-020).
 
-## Conflict merge (D6)
+### Conflict merge (D11)
 
-On 412: fetch the latest item → `latest`. New `initialValues` = decode(`latest`). For each property in `dirtyFields`: keep the user's value; if `decode(latest)[p] ≠ oldInitialValues[p]` (the other user changed it too), record `conflictHints[p] = decode(latest)[p]`. `baseItem` becomes `latest`. Pending file changes are kept.
+As in PR 1; pending file changes are kept.

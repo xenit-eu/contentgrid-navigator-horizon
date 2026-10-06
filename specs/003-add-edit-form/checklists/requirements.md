@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain — Q1 conflict handling (FR-023), Q2 partial file failure (FR-024) and Q3 presentation (FR-003–FR-003c) answered 2026-09-29 and recorded in the spec's Clarifications section
+- [x] No [NEEDS CLARIFICATION] markers remain — Q1 conflict handling (FR-023), Q2 partial file failure (FR-024) and Q3 presentation (FR-003–FR-003c) recorded in the spec's Clarifications section
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)

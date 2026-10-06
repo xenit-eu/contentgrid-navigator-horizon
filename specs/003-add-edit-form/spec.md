@@ -1,14 +1,14 @@
 # Feature Specification: Add Edit Form
 
-**Feature Branch**: `ACC-3210-spec-add-edit-form`
+**Feature Branch**: `003-add-edit-form`
 
 **Created**: 2026-09-29
 
-**Status**: Draft — clarified 2026-09-29, delivery split 2026-10-05, awaiting review
+**Status**: Draft
 
-**Input**: User description: "Item edit form: edit all the fields of any entity item from its detail page, as in the existing Navigator. Take the logic from the legacy Navigator and modernise it to the Horizon design."
+**Input**: Edit all the fields of any entity item from its detail page, in the Horizon design.
 
-**Research**: [`research.md`](research.md) records how the legacy Navigator implements editing today, what the update template looks like on the wire, and which Horizon building blocks already exist. It is input to `/speckit-plan`, not part of the requirements.
+**Research**: [`research.md`](research.md) records how the original Navigator implements editing, what the update template looks like on the wire, and which Horizon building blocks already exist. It is input to `/speckit-plan`, not part of the requirements.
 
 ## Scope
 
@@ -22,7 +22,7 @@
 
 **Out of scope** (tracked elsewhere or deferred)
 
-- Linking and unlinking relations. As in the legacy Navigator, relations are managed in the item's relation sections, which already exist (ACC-2883), not in the edit form.
+- Linking and unlinking relations. Relations are managed in the item's relation sections, not in the edit form.
 - Uploading a file into an empty content attribute outside edit mode (the "No file" drop area of the content-focus layout, specified in `002-pdf-viewer` and the content-upload story).
 - Editing several items at once, inline editing of a single value in a table or list, and edit history or undo after saving.
 - Read-only properties and client-side regex / length constraints (audit WI-19, deferred; no production update form sets them today).
@@ -33,17 +33,17 @@
 Delivered in two PRs (plan.md):
 
 - **PR 1 — metadata edit**: User Story 1 and the metadata failures of User Story 3 (scenarios 1–4, 6). FR-001, FR-003–FR-007, FR-013, FR-016–FR-023, FR-025. Content attributes show their `filename`/`mimetype` as the plain text fields the update form lists.
-- **PR 2 — file changes**: User Story 2 and User Story 3 scenario 5. FR-008–FR-012, FR-014 (file part), FR-015, FR-024. Depends on the ACC-3217 stack merging.
+- **PR 2 — file changes**: User Story 2 and User Story 3 scenario 5. FR-008–FR-012, FR-014 (file part), FR-015, FR-024. Depends on the empty-content upload (`004-create-item-page`), which changes the same upload hook and content-preview components.
 
-Not in either PR for now: the pinned action bar, edit-mode heading and view/edit transition (FR-003a, FR-003b). The form uses the create form's Save/Cancel row. FR-002 needs no opt-out today: the item views are only rendered by the detail routes.
+Not in either PR: the pinned action bar, edit-mode heading and view/edit transition (FR-003a, FR-003b). The form uses the create form's Save/Cancel row. FR-002 needs no opt-out today: the item views are only rendered by the detail routes.
 
 ## Clarifications
 
 ### Session 2026-09-29
 
-- Q: When someone else changed the item while the form was open, what happens on save? → A: The save is refused, the latest version is loaded, and the form stays open with the user's own changes kept on top of it (FR-023, Story 3 scenario 2). The legacy Navigator does not detect conflicts at all.
-- Q: The attribute values saved but a file upload or removal failed. Does edit mode stay open? → A: It stays open, with the failed file flagged and a retry of only the failed steps (FR-024, Story 3 scenario 5). The legacy Navigator closes edit mode instead.
-- Q: How is the edit form presented? → A: Whatever looks most modern, elegant and in line with the Horizon look and feel. Chosen: in place of the attribute panel with a pinned action bar and a subtle view/edit transition (FR-003–FR-003c). It keeps the item header, relations and preview in view, which a separate page or a dialog would not, and it matches the legacy placement.
+- Q: When someone else changed the item while the form was open, what happens on save? → A: The save is refused, the latest version is loaded, and the form stays open with the user's own changes kept on top of it (FR-023, Story 3 scenario 2).
+- Q: The attribute values saved but a file upload or removal failed. Does edit mode stay open? → A: It stays open, with the failed file flagged and a retry of only the failed steps (FR-024, Story 3 scenario 5).
+- Q: How is the edit form presented? → A: Whatever looks most modern, elegant and in line with the Horizon look and feel. Chosen: in place of the attribute panel with a pinned action bar and a subtle view/edit transition (FR-003–FR-003c). It keeps the item header, relations and preview in view, which a separate page or a dialog would not.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -73,7 +73,7 @@ A content editor opens an entity item, chooses Edit, and sees a form with every 
 
 A content editor editing an item picks a new file for one of its content attributes (or removes the existing file), checks the new file in the preview, and saves. The item now holds the new file, and its file name and media type match it.
 
-**Why this priority**: Replacing a wrong or outdated document is the second most common edit and was explicitly moved into the edit form (the inline replace control on the detail page was dropped, ACC-3090). It depends on Story 1's form and save flow.
+**Why this priority**: Replacing a wrong or outdated document is the second most common edit and belongs in the edit form rather than in a separate control on the detail page. It depends on Story 1's form and save flow.
 
 **Independent Test**: Open a fixture item with a content attribute holding a PDF. Choose Edit, pick a different PDF for that attribute, save. The preview and download now deliver the new file, the displayed file name is the new one, and all other attribute values are unchanged.
 
@@ -190,7 +190,7 @@ A content editor saves and something goes wrong: a value is rejected, someone el
 - **SC-004**: No save ever overwrites a concurrent change made by someone else (verified by an automated conflict scenario).
 - **SC-005**: In every failure scenario of Story 3, the user's typed input is still present after the failure (0 cases of lost input).
 - **SC-006**: The Edit action is shown for 0 items the user is not permitted to update, across all fixture entities.
-- **SC-007**: Every behaviour the legacy Navigator's edit flow offers for attributes and files has an equivalent here, or is listed under Out of scope with a reason (checked against `research.md`).
+- **SC-007**: Every behaviour of the original Navigator's edit flow for attributes and files (`research.md` §1) has an equivalent here, or is listed under Out of scope with a reason.
 
 ## Assumptions
 
@@ -204,9 +204,8 @@ A content editor saves and something goes wrong: a value is rejected, someone el
 
 ### Dependencies and references
 
-- ACC-2881 (HZN-5A.3) — field renderers, including relations for the create form.
-- ACC-2895 (HZN-5D.3) — file renderer and upload progress.
-- ACC-2886 (HZN-5B.2) — notification for the "unsatisfied version" conflict.
-- ACC-2883 — relation sections (link/unlink), which stay the place to edit relations.
+- The `hal-forms` feature — field renderers, field state and the file renderer with upload progress, shared with the create form.
+- `VersionConflictAlert` — the "unsatisfied version" conflict message.
+- The item page's relation sections (link/unlink), which stay the place to edit relations.
 - Audit `docs/audits/phase-5d7-workitems.md`, WI-20 — update-form shape and content-attribute dual representation.
 - `specs/002-pdf-viewer` — content-focus layout and the "No file" drop area.

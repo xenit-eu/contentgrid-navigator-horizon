@@ -4,13 +4,17 @@
 
 ### Item views (entity-item)
 
-No new props. Both views render `EntityItemAttributesPanel` (entity-item/attributes/, internal), keyed by `<profile name>/<item id>`: an "Attributes" heading with an Edit button at its right when `item.canUpdate`. While editing, the button hides and `EntityItemAttributes` is replaced by `EditEntityItemView`.
+No new props. Both views render `EntityItemAttributesPanel` (entity-item/attributes/, internal), keyed by `<profile name>/<item id>`: an "Attributes" heading with an Edit button at its right when `item.updateTemplate` is not `null` and has at least one property (spec edge case: nothing to change otherwise). Edit captures that template; while editing, the button hides and `EntityItemAttributes` is replaced by `EditEntityItemView`.
+
+Both views render the item while one is loaded (`item.data`), not only on `isSuccess`. When a refetch of a loaded item fails, `EntityItemRefreshAlert` (entity-item/, internal; warning tone, Retry calls `item.refetch()`) is shown above it and an open edit form keeps its input. `ErrorPage` is only for an item that never loaded (research D15).
 
 ### `entity-item/edit/` (internal to `entity-item`)
 
 ```ts
 function EditEntityItemView(props: {
   readonly item: EntityItem;
+  /** The item's update form (`item.updateTemplate`), captured when Edit was chosen. */
+  readonly updateTemplate: UpdateHalFormTemplate;
   /** Leaves edit mode: after a successful save, or on Cancel (confirmed first when dirty). */
   readonly onClose: () => void;
 }): JSX.Element;
@@ -19,8 +23,8 @@ function EditEntityItemView(props: {
 Layered like `entity-item-create`:
 
 - `EditEntityItemView` owns the unsaved-changes guard and dialog (`onDirtyChange` from the container).
-- `EditEntityItemView` also gates on `item.updateTemplate` and `item.updateFormValues` ("not permitted" alert) and passes both to the container.
-- `EditEntityItemContainer` keeps the item it was opened with in state (as legacy edit mode ignores reloads of the same item), so a background reload never changes the ETag a save sends. On 412 it reloads the item (`useReloadEntityItem`), calls `formState.updateInitialValues(latest.updateFormValues)` and edits the latest item from then on. Fields come from `resolveHalFormsFields(updateTemplate)`, prefill from `updateFormValues`, saving from `useUpdateEntityItem(editedItem)`. Success toast: `"<Entity> has been successfully updated!"`. Errors: `getFormAlertError` → `ProblemAlert`; field errors → `toServerFieldErrors`; 412 → initial values updated to the latest version; the conflict stays in `ProblemAlert` (it is the mutation's error) until the next save; 404 → Save disabled.
+- `EditEntityItemView` passes `item` and `updateTemplate` to the container. Prefill is `item.updateFormValues` (empty when `null`).
+- `EditEntityItemContainer` keeps the item it was opened with in state, so a background reload never changes the ETag a save sends. On 412 it reloads the item (`useReloadEntityItem`), calls `formState.updateInitialValues(latest.updateFormValues)` and edits the latest item from then on. Fields come from `resolveHalFormsFields(updateTemplate)`, prefill from `updateFormValues`, saving from `useUpdateEntityItem(editedItem)`. Success toast: `"<Entity> has been successfully updated!"`. Errors: `getFormAlertError` → `ProblemAlert`; field errors → `toServerFieldErrors`; 412 → initial values updated to the latest version; the conflict stays in `ProblemAlert` (it is the mutation's error) until the next save; 404 → Save disabled. A failed reload after a 412 keeps the form, its input and the alert; saving again retries.
 - `EditEntityItemForm` renders the `<form>`, `HalFormsContainer` and Save/Cancel.
 
 ### `getFormAlertError` (hal-forms/state/)
@@ -42,7 +46,7 @@ Moved from `create-entity-item-container.tsx`; both containers use it.
 
 Template parameter widened to `CreateHalFormTemplate | UpdateHalFormTemplate | SearchHalFormTemplate`; an update template uses the create path (attributes only).
 
-## PR 2 (from the 2026-09-29 plan; to be rewritten against `hal-forms` when PR 2 starts)
+## PR 2 (outline; to be rewritten against `hal-forms` when PR 2 starts)
 
 ## Item views (entity-item)
 
