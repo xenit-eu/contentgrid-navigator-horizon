@@ -35,5 +35,5 @@ export interface ViewProps<S = never> {
 export type ViewPreload<S> = (
   ctx: AppRouterContext,
   target: ViewTarget,
-  state?: S,
+  state: S | undefined,
 ) => Promise<void>;
