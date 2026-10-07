@@ -315,6 +315,30 @@ BufferSource argument is empty` reaches the console), but
 
 ---
 
+## Search and filter building blocks
+
+Domain-free pieces used by the entity search bar (spec
+`specs/003-single-search-bar-entity-item-collection/`, contract
+`contracts/ui-primitives-and-patterns.md`), reusable for any filtered list:
+
+- **Primitives**: `FilterButton` (filter trigger with idle / active / positive / negative
+  outlines and a sibling × to clear; works as `<PopoverTrigger asChild>`), plus `Chip` (now with
+  a visible `mode` segment and icons), `CountIndicatorChip` (`isLoading`) and `SelectionChip`
+  (`icon` / `trailing`). `--success*` tokens are mapped into `@theme` (`bg-success`,
+  `border-success-foreground`, …).
+- **Patterns**: `FilterChips` (removable chips, at most two lines then horizontal scroll),
+  `GroupedSelect`, `SearchSuggestionsPopover` (chip row + grouped suggestions, owns the combobox
+  keyboard model via `renderAnchor`), `DateRangeFilter` (range calendar + presets), and
+  `SearchableOptionList`. `filterOptionsByPrefix` (`src/lib/filter-options.ts`) is the shared
+  client-side prefix filter.
+- **ARIA lesson from the axe audit**: a `listbox` may only contain options and groups — keep
+  loading / empty / error text outside it (the popover renders one listbox per group with
+  results), and don't put buttons inside one (`nested-interactive`).
+- **Horizontal scrolling**: `ScrollArea` only mounts a vertical scrollbar; these rows use native
+  `overflow-x-auto` with the `scrollbar-subtle` utility.
+
+---
+
 ## peerDep policy
 
 `react` and `react-dom` are `peerDependencies`. Do not move them to
