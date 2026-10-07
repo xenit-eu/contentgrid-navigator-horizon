@@ -64,6 +64,16 @@ export function EntityConfigurationDetail({
   // Name/subtitle/visible-columns can all point at any attribute, including audit fields
   // (e.g. "modified date") — buildColumns() renders a column for any visible audit attribute too.
   const attributeOptions = [...regularOptions, ...systemOptions];
+  // Only attributes with at least one search parameter can take part in the search bar; relation
+  // search parameters are not configurable here (always included, spec 003 FR-036).
+  const searchableOptions = [
+    ...profile.userDefinedAttributes
+      .filter((attribute) => attribute.searchParams.length > 0)
+      .map((attribute) => toAttributeOption(attribute, false)),
+    ...profile.auditAttributes
+      .filter((attribute) => attribute.searchParams.length > 0)
+      .map((attribute) => toAttributeOption(attribute, true)),
+  ];
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
 
   const body = (
@@ -128,6 +138,18 @@ export function EntityConfigurationDetail({
             onChange={(names) => setOverride({ visibleColumns: [...names] })}
             placeholder="Choose columns"
           />
+
+          {searchableOptions.length > 0 && (
+            <AttributeMultiSelect
+              label="Searchable attributes"
+              attributes={searchableOptions}
+              values={
+                preferences.searchAttributes ?? searchableOptions.map((option) => option.name)
+              }
+              onChange={(names) => setOverride({ searchAttributes: [...names] })}
+              placeholder="Choose attributes"
+            />
+          )}
         </div>
       </div>
     </div>
