@@ -121,6 +121,21 @@ export const queryKeys = {
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
   },
 
+  searchParamSuggestions: {
+    /**
+     * Exact key for one `useSearchParamSuggestions` request (a per-parameter suggestion/count
+     * search), by URL.
+     *
+     * Nested under `entityItemCollection.forEntity(...)` — unlike `typeaheadSuggestions` — so a
+     * create/update/delete invalidation refreshes the result counts the search bar shows. The
+     * trailing `"suggestions"` segment keeps it a different cache entry from the table's own
+     * `entityItemCollection.byUrl` even when both encode the same URL (the same way
+     * `infiniteByUrl` stays apart), so the two queries' option sets never share one entry.
+     */
+    byUrl: (profileEntity: ProfileEntity, url: string) =>
+      [ENTITY_COLLECTION_KEY, profileEntity.name, url, "suggestions"] as const,
+  },
+
   collectionPage: {
     /** Exact key for the remembered current-page href of one entity's collection. */
     byEntityName: (entityName: string) => [COLLECTION_PAGE_KEY, entityName] as const,
