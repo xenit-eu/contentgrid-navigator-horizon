@@ -1,0 +1,7 @@
+{
+  "name": "@contentgrid/features-entity-search-bar",
+  "version": "0.0.1",
+  "x-stability": "stable",
+  "private": true,
+  "description": "Single search bar for an entity item collection - active-filter chips, search-parameter selector with suggestions, and quick filters"
+}
