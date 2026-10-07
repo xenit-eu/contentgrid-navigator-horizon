@@ -199,7 +199,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
 
     renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
-    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.endsWith("of 2 items"))).toBeInTheDocument();
   });
 
   it("uses pageUrl directly when it encodes the SAME filters — preserves pagination", async () => {
@@ -212,7 +212,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       filters: { "code~prefix": "abc" },
     });
 
-    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
     expect(onRequest).toHaveBeenCalled();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
@@ -231,7 +231,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       pageUrl: `${COLLECTION_URL}?created~after=2024-01-01T10:00:00.000Z&_cursor=page2token`,
     });
 
-    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -248,7 +248,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       pageUrl: `${COLLECTION_URL}?amount=10.5&_cursor=page2token`,
     });
 
-    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -266,7 +266,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     });
 
     // Falls back to searchValues (page 1 of the CURRENT filters), not the mismatched page.
-    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.endsWith("of 2 items"))).toBeInTheDocument();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBeNull();
     expect(requested.searchParams.get("code~prefix")).toBe("abc");
@@ -281,7 +281,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
       // filters omitted entirely — defaults to {}, which matches what this pageUrl encodes (none).
     });
 
-    expect(await screen.findByText((text) => text.startsWith("5 items"))).toBeInTheDocument();
+    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
   });
 });
 
@@ -295,7 +295,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
     setupCollectionHandler();
     renderCollectionView({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
 
     expect(screen.getByRole("button", { name: /columns/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /filters/i })).toBeInTheDocument();
@@ -306,7 +306,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /columns/i }));
@@ -320,7 +320,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
 
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
@@ -333,14 +333,14 @@ describe("EntityItemCollectionView — Columns selector", () => {
     const user = userEvent.setup();
     const { unmount } = renderCollectionView({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
     expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
     unmount();
 
     renderCollectionView({ profile: makeItemProfile() });
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
 
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
   });
@@ -350,7 +350,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
 
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
@@ -365,7 +365,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByLabelText(/Code/)).toBeInTheDocument();
@@ -378,7 +378,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByRole("combobox", { name: /Code/ })).toBeInTheDocument();
@@ -390,7 +390,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     const onFiltersChange = vi.fn();
     renderCollectionView({ profile: makeItemProfile(), onFiltersChange });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
     const combobox = screen.getByRole("combobox", { name: /Code/ });
     await user.type(combobox, "abc");
@@ -409,7 +409,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     const onFiltersChange = vi.fn();
     renderCollectionView({ profile: makeItemProfile(), onFiltersChange });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
     fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: "42" } });
 
@@ -421,7 +421,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile(), filters: { amount: "42" } });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByLabelText(/Amount/)).toHaveValue(42);
@@ -432,7 +432,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     const user = userEvent.setup();
     renderCollectionView({ profile: makeItemProfile(), filters: { amount: "not-a-number" } });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByText(/Enter a valid number/i)).toBeInTheDocument();
@@ -448,7 +448,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
       onFiltersChange,
     });
 
-    await screen.findByText((text) => text.startsWith("2 items"));
+    await screen.findByText((text) => text.endsWith("of 2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
     await user.click(screen.getByRole("button", { name: /clear all/i }));
 
