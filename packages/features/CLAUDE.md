@@ -121,6 +121,33 @@ until the lint enforcement above wires it.
 
 ---
 
+## `entity-search-bar` feature (`src/entity-search-bar/`)
+
+The single search bar on the entity item collection page (spec
+`specs/003-single-search-bar-entity-item-collection/`): active-filter chips, a
+search-parameter selector with a suggestions popover, and quick filters. `x-stability: stable`
+(its importer, `entity-item-collection`, is stable).
+
+- **Controlled by the collection's `filters`** (the `s.<param>` URL state) through
+  `onFiltersChange` — it shares that state with the advanced filter dialog; it keeps no filter
+  state of its own and adds no URL keys.
+- **`util/` vs `components/`**: every model (search-parameter descriptors, selector groups,
+  suggestion chips/groups, active-filter chips, quick filters, date presets) is built by a pure
+  function in `util/` with a sibling test; `use-entity-search-bar.ts` only orchestrates;
+  components render finished models and pick icons (`components/search-icons.tsx`).
+- **Fields come from `resolveHalFormsFields`**, so the bar offers exactly the dialog's
+  parameters. The number quick filter renders through `HalFormsContainer` +
+  `useHalFormsFieldState`. `util/build-quick-filters.ts` holds the one switch on a field's kind
+  (via `valueKind`) — a documented deviation from the "no feature-local `kind` switch" rule above
+  (see the spec's `plan.md`, Complexity Tracking); do not add a second one.
+- **Inclusion**: `searchAttributes` in `EntityDisplayPreferences` (edited next to "Visible
+  columns") limits the selector, suggestions and quick filters; chips always show every active
+  filter, and relation parameters are always included. Import `useSearchAttributeInclusion` by
+  file path (`../preferences/use-search-attribute-inclusion`), not through `../preferences` —
+  the preferences previews import the collection view, which imports this feature.
+
+---
+
 ## peerDep policy
 
 Features consume `packages/ui` and `packages/navigator-data` via the workspace
