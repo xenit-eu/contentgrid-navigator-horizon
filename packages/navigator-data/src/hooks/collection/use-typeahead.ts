@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { createValues } from "@contentgrid/hal-forms/values";
 import { ProfileAttributeSearchType } from "../../accessors/attribute-profile";
-import { AttributeKind } from "../../accessors/entity-item";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type {
@@ -15,6 +14,7 @@ import { queryKeys } from "../../query-keys";
 import { useNavigatorData } from "../context";
 import { useProfileEntities } from "../profile/use-profile-entity";
 import { useDebouncedValue } from "../use-debounced-value";
+import { countAttributeValues, resolveRelationSearchTarget } from "./search-suggestion-helpers";
 
 export interface UseTypeaheadOptions {
   /**
@@ -62,15 +62,9 @@ interface ResolvedTarget {
 }
 
 /**
- * Resolves the profile and search property to actually query against.
- *
- * Direct (non-relation) properties: the given profile/property, unchanged.
- *
- * Relation-traversal properties (e.g. "customer.name~prefix"): resolves the relation's target
- * profile via `profileRelation.getTargetProfile()`, then looks up the LOCAL (un-prefixed)
- * property name on THAT profile's own search template — relation-traversal filter params live
- * on the target entity's own template under their local name (e.g. "customer.first_name~prefix"
- * on the invoice's template corresponds to "first_name~prefix" on the customer's own template).
+ * Resolves the profile and search property to actually query against: a direct property as
+ * given; a relation-traversal property via `resolveRelationSearchTarget` (the target entity's
+ * own template, under the property's local name).
  */
 function resolveTarget(
   searchProperty: SearchHalFormTemplateProperty | undefined,
@@ -79,16 +73,8 @@ function resolveTarget(
 ): ResolvedTarget {
   if (!searchProperty) return { profile: profileEntity, property: undefined };
   if (!searchProperty.isOverRelation) return { profile: profileEntity, property: searchProperty };
-
-  const relation = searchProperty.profileRelation;
-  const profile = relation?.getTargetProfile(allProfiles);
-  const localName = relation
-    ? searchProperty.property.name.slice(relation.name.length + 1)
-    : undefined;
-  const property = localName
-    ? profile?.searchTemplate?.getSearchPropertyByName(localName)
-    : undefined;
-  return { profile, property };
+  const target = resolveRelationSearchTarget(searchProperty, allProfiles);
+  return { profile: target?.targetProfile, property: target?.targetSearchProperty };
 }
 
 /**
@@ -104,27 +90,6 @@ function computeBaseSearchValues(
 ): HalFormValues<SearchRequestSpec> | undefined {
   if (!enabled || !targetSearchTemplate) return undefined;
   return searchValues ?? createValues(targetSearchTemplate.template);
-}
-
-/**
- * Non-empty plain string values of `attributeName` across the collection's items, with
- * duplicate occurrences counted rather than collapsed.
- */
-function extractSuggestions(
-  collection: EntityItemCollection | undefined,
-  attributeName: string | undefined,
-): { value: string; count: number }[] {
-  if (!collection || !attributeName) return [];
-  const counts = new Map<string, number>();
-  for (const item of collection.items) {
-    const attribute = item.findAttribute(attributeName);
-    if (attribute?.value.kind !== AttributeKind.PLAIN) continue;
-    const { value } = attribute.value;
-    if (typeof value === "string" && value.length > 0) {
-      counts.set(value, (counts.get(value) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()].map(([value, count]) => ({ value, count }));
 }
 
 export function useTypeahead({
@@ -227,7 +192,7 @@ export function useTypeahead({
   });
 
   const attributeName = targetSearchProperty?.profileAttribute?.name;
-  const suggestions = extractSuggestions(entityItemCollection, attributeName);
+  const suggestions = countAttributeValues(entityItemCollection, attributeName);
 
   return {
     results: enabled ? suggestions : [],
