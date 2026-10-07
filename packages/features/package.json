@@ -56,6 +56,10 @@
       "import": "./src/entity-item-collection/index.ts",
       "types": "./src/entity-item-collection/index.ts"
     },
+    "./entity-search-bar": {
+      "import": "./src/entity-search-bar/index.ts",
+      "types": "./src/entity-search-bar/index.ts"
+    },
     "./entity-item": {
       "import": "./src/entity-item/index.ts",
       "types": "./src/entity-item/index.ts"
