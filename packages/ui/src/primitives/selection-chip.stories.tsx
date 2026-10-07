@@ -1,4 +1,6 @@
+import { TextAaIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { CountIndicatorChip } from "./count-indicator-chip";
 import { SelectionChip } from "./selection-chip";
 
 const meta = {
@@ -49,4 +51,13 @@ export const Small: Story = {
       <SelectionChip label="False" size="sm" selected={false} />
     </div>
   ),
+};
+
+export const WithIconAndCount: Story = {
+  args: {
+    label: "Title",
+    size: "sm",
+    icon: <TextAaIcon size={14} aria-hidden />,
+    trailing: <CountIndicatorChip count={12} isEstimated />,
+  },
 };

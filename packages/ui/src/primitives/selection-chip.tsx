@@ -1,4 +1,4 @@
-import type { KeyboardEvent, Ref } from "react";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
 import { cn } from "../lib/utils";
 
 interface SelectionChipProps {
@@ -15,6 +15,11 @@ interface SelectionChipProps {
   readonly tabIndex?: number;
   readonly onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
   readonly ref?: Ref<HTMLButtonElement>;
+  /** Leading icon, e.g. a type indicator. */
+  readonly icon?: ReactNode;
+  /** Trailing content after the label, e.g. a `CountIndicatorChip`. */
+  readonly trailing?: ReactNode;
+  readonly id?: string;
 }
 
 function SelectionChip({
@@ -28,10 +33,14 @@ function SelectionChip({
   tabIndex,
   onKeyDown,
   ref,
+  icon,
+  trailing,
+  id,
 }: SelectionChipProps) {
   return (
     <button
       ref={ref}
+      id={id}
       type="button"
       data-slot="selection-chip"
       role={role}
@@ -42,7 +51,7 @@ function SelectionChip({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center whitespace-nowrap border transition-colors",
+        "inline-flex items-center gap-1.5 whitespace-nowrap border transition-colors",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         size === "sm"
           ? "px-[10px] py-[5px] rounded-[6px] text-[12px]"
@@ -53,7 +62,9 @@ function SelectionChip({
         className,
       )}
     >
+      {icon}
       {label}
+      {trailing}
     </button>
   );
 }

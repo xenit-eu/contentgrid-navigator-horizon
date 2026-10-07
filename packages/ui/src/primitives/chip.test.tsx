@@ -43,3 +43,45 @@ describe("Chip", () => {
     expect(container.querySelector("[data-slot='chip']")).toBeInTheDocument();
   });
 });
+
+describe("Chip with a search mode", () => {
+  it("renders the mode as its own segment between field and value", () => {
+    const { container } = render(
+      <Chip
+        field="Title"
+        mode="starts with"
+        label="Alpha"
+        modeIcon={<span data-testid="mode-icon" />}
+      />,
+    );
+    const chip = container.querySelector("[data-slot='chip']")!;
+    expect(chip).toHaveTextContent("Title: starts withAlpha");
+    expect(container.querySelector("[data-slot='chip-mode']")).toHaveTextContent("starts with");
+    expect(screen.getByTestId("mode-icon")).toBeInTheDocument();
+  });
+
+  it("renders a value icon next to the value", () => {
+    render(<Chip field="Urgent" label="True" valueIcon={<span data-testid="value-icon" />} />);
+    expect(screen.getByTestId("value-icon")).toBeInTheDocument();
+  });
+
+  it("names the remove button after field and value by default", () => {
+    render(<Chip field="Status" label="Approved" removable onRemove={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: "Remove Status Approved filter" }),
+    ).toBeInTheDocument();
+  });
+
+  it("uses a custom remove label", () => {
+    render(<Chip label="Approved" removable onRemove={vi.fn()} removeLabel="Clear status" />);
+    expect(screen.getByRole("button", { name: "Clear status" })).toBeInTheDocument();
+  });
+
+  it("shows a long value in full as a tooltip", () => {
+    render(<Chip label="A very long value that will be truncated" />);
+    expect(screen.getByText("A very long value that will be truncated")).toHaveAttribute(
+      "title",
+      "A very long value that will be truncated",
+    );
+  });
+});

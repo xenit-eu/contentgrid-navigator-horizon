@@ -1,83 +1,52 @@
+import { CalendarIcon, CheckCircleIcon, HashIcon, TextAaIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
-import { FilterChips } from "./filter-chips";
+import { type FilterChipItem, FilterChips } from "./filter-chips";
+
+const icon = (Icon: typeof TextAaIcon) => <Icon size={12} aria-hidden />;
+
+const base: FilterChipItem[] = [
+  { id: "title", field: "Title", mode: "starts with", modeIcon: icon(TextAaIcon), value: "Alpha" },
+  {
+    id: "received",
+    field: "Received at",
+    mode: "between",
+    modeIcon: icon(CalendarIcon),
+    value: "1 Oct 2026 – 7 Oct 2026",
+  },
+  { id: "urgent", field: "Urgent", mode: "is", value: "True", valueIcon: icon(CheckCircleIcon) },
+];
+
+const many: FilterChipItem[] = [
+  ...base,
+  { id: "quantity", field: "Quantity", mode: "≥", modeIcon: icon(HashIcon), value: "3" },
+  { id: "status", field: "Status", mode: "one of", value: "approved" },
+  { id: "notes", field: "Notes", mode: "full text", value: "paid in advance" },
+  { id: "customer", field: "Customer · Name", mode: "starts with", value: "Acme" },
+  { id: "owner", field: "Owner · Email", mode: "starts with", value: "alice@" },
+  { id: "amount", field: "Amount", mode: "between", value: "10 – 99.95" },
+  { id: "due", field: "Due date", mode: "after", value: "1 Jan 2027" },
+  { id: "created", field: "Created at", mode: "between", value: "30 Sep 2026 – 7 Oct 2026" },
+  { id: "modified", field: "Modified at", mode: "before", value: "7 Oct 2026" },
+];
 
 const meta = {
   title: "Patterns/FilterChips",
   component: FilterChips,
   tags: ["autodocs"],
+  args: { chips: base, onRemove: fn() },
+  decorators: [(Story) => <div className="w-[36rem] max-w-full">{Story()}</div>],
 } satisfies Meta<typeof FilterChips>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const FILTER_PROPERTIES = [
-  { name: "status", prompt: "Status", type: "string", options: { inline: ["draft", "paid"] } },
-  { name: "number~prefix-match", prompt: "Number", type: "string" },
-  { name: "issued_date~greater-than", prompt: "Issued date", type: "date" },
-  { name: "issued_date~less-than", prompt: "Issued date", type: "date" },
-  { name: "amount.~from", prompt: "Amount", type: "string" },
-  { name: "amount.~until", prompt: "Amount", type: "string" },
-];
+export const OneLine: Story = {};
 
-export const SingleChip: Story = {
-  args: {
-    filterProperties: FILTER_PROPERTIES,
-    filters: { status: "paid" },
-    onRemoveFilter: fn(),
-  },
-};
+export const TwoLines: Story = { args: { chips: many.slice(0, 7) } };
 
-export const MultipleChips: Story = {
-  args: {
-    filterProperties: FILTER_PROPERTIES,
-    filters: { status: "draft", "number~prefix-match": "INV-001" },
-    onRemoveFilter: fn(),
-    onClearAll: fn(),
-  },
-};
+export const Overflow: Story = { args: { chips: many } };
 
-export const WithDateOperator: Story = {
-  args: {
-    filterProperties: FILTER_PROPERTIES,
-    filters: {
-      "issued_date~greater-than": "2024-01-01T00:00:00Z",
-      "issued_date~less-than": "2024-12-31T00:00:00Z",
-    },
-    onRemoveFilter: fn(),
-    onClearAll: fn(),
-  },
-};
+export const SingleLineOverflow: Story = { args: { chips: many, maxLines: 1 } };
 
-export const WithRangePair: Story = {
-  args: {
-    filterProperties: FILTER_PROPERTIES,
-    filters: { "amount.~from": "100", "amount.~until": "500" },
-    onRemoveFilter: fn(),
-    onClearAll: fn(),
-  },
-};
-
-export const ManyFilters: Story = {
-  args: {
-    filterProperties: FILTER_PROPERTIES,
-    filters: {
-      status: "paid",
-      "number~prefix-match": "INV",
-      "issued_date~greater-than": "2024-01-01T00:00:00Z",
-    },
-    onRemoveFilter: fn(),
-    onClearAll: fn(),
-  },
-};
-
-// FilterChips returns null for empty filters, so this story renders a blank canvas —
-// no pixels to diff against, making visual regression pointless here.
-export const NoActiveFilters: Story = {
-  tags: ["no-visual-test"],
-  args: {
-    filterProperties: FILTER_PROPERTIES,
-    filters: {},
-    onRemoveFilter: fn(),
-  },
-};
+export const Empty: Story = { args: { chips: [] } };
