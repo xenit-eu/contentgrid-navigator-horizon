@@ -10,6 +10,13 @@ import {
   createContentClient,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import {
+  SEARCH_BAR_PROFILE_ROOT_URL,
+  makeSearchBarProfiles,
+  searchBarHandlers,
+} from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
+import { server } from "../../../test-setup";
+import { makeSearchBarWrapper } from "../../entity-search-bar/test-utils";
 import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
 import { EntityConfigurationDetail } from "./entity-configuration-detail";
 
@@ -250,5 +257,53 @@ describe("EntityConfigurationDetail", () => {
         useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.color,
       ).toBe("oklch(0.55 0.17 155)"),
     );
+  });
+});
+
+describe("EntityConfigurationDetail — searchable attributes", () => {
+  const { searchBar } = makeSearchBarProfiles();
+
+  function renderSearchBarDetail() {
+    server.use(...searchBarHandlers());
+    return render(<EntityConfigurationDetail profile={searchBar} onClose={vi.fn()} />, {
+      wrapper: makeSearchBarWrapper(),
+    });
+  }
+
+  it("is not offered for an entity without searchable attributes", () => {
+    renderDetail();
+    expect(
+      screen.queryByRole("combobox", { name: "Searchable attributes" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lists the attributes with search parameters, audit dates as system attributes, all included by default", async () => {
+    const user = userEvent.setup();
+    renderSearchBarDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
+
+    for (const name of [/^Title/, /^Status/, /^Quantity/, /^Created at/, /^Modified at/]) {
+      expect(screen.getByRole("checkbox", { name })).toBeChecked();
+    }
+    expect(screen.queryByRole("checkbox", { name: /^ID/ })).not.toBeInTheDocument();
+  });
+
+  it("persists the user's choice as a searchAttributes override", async () => {
+    const user = userEvent.setup();
+    renderSearchBarDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
+    await user.click(screen.getByRole("checkbox", { name: /^Reference/ }));
+
+    await waitFor(() => {
+      const saved =
+        useEntityDisplayPreferencesStore.getState().overrides[SEARCH_BAR_PROFILE_ROOT_URL]?.[
+          "search-bar"
+        ]?.searchAttributes;
+      expect(saved).toBeDefined();
+      expect(saved).not.toContain("reference");
+      expect(saved).toContain("title");
+    });
   });
 });
