@@ -50,3 +50,38 @@ export const AppliedRemovable: Story = {
     onRemove: () => {},
   },
 };
+
+export const WithMode: Story = {
+  args: {
+    field: "Title",
+    mode: "starts with",
+    label: "Alpha",
+    tone: "applied",
+    removable: true,
+    onRemove: () => {},
+  },
+};
+
+export const WithValueIcon: Story = {
+  args: {
+    field: "Urgent",
+    mode: "is",
+    label: "True",
+    valueIcon: <span aria-hidden>✓</span>,
+    tone: "applied",
+    removable: true,
+    onRemove: () => {},
+  },
+};
+
+export const LongValue: Story = {
+  args: {
+    field: "Notes",
+    mode: "full text",
+    label: "Paid in advance by bank transfer after the second reminder was sent",
+    tone: "applied",
+    removable: true,
+    onRemove: () => {},
+    className: "max-w-72",
+  },
+};
