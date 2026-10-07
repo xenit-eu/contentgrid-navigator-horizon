@@ -41,3 +41,10 @@ export const Solid: Story = {
     variant: "solid",
   },
 };
+
+export const Loading: Story = {
+  args: {
+    count: null,
+    isLoading: true,
+  },
+};

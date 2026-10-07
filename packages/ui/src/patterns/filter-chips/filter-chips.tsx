@@ -1,83 +1,104 @@
-import { useMemo } from "react";
-import { XIcon as X } from "@phosphor-icons/react";
-import { Badge } from "../../primitives/badge";
-import { Button } from "../../primitives/button";
-import {
-  IMPLICIT_OPS,
-  SEARCH_TYPE_LABELS,
-  type SearchProperty,
-  formatFieldLabel,
-  formatWords,
-  isDateProperty,
-  parseName,
-} from "../search-property-utils";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { cn } from "../../lib/utils";
+import { Chip } from "../../primitives/chip";
 
-export interface FilterChipsProps {
-  /** Active filter values keyed by SearchProperty.name */
-  filters: Record<string, string>;
-  /** All filterable search properties — used for label and operator lookup */
-  filterProperties: SearchProperty[];
-  /** Called when the user removes a single chip */
-  onRemoveFilter: (key: string) => void;
-  /** Called when "Clear all" is clicked; rendered when ≥ 2 chips are active */
-  onClearAll?: () => void;
+export interface FilterChipItem {
+  readonly id: string;
+  /** What is filtered, e.g. the attribute name. */
+  readonly field: string;
+  /** How it is matched, e.g. "starts with", "between". */
+  readonly mode: string;
+  readonly modeIcon?: ReactNode;
+  /** The formatted value. */
+  readonly value: string;
+  readonly valueIcon?: ReactNode;
 }
 
-const ISO_TIMESTAMP_RE = /T\d{2}:\d{2}:\d{2}.*$/;
+export interface FilterChipsProps {
+  readonly chips: readonly FilterChipItem[];
+  /** Called with the chip's id when its remove button is clicked. */
+  readonly onRemove: (id: string) => void;
+  /** At most this many lines; beyond that the row scrolls horizontally. Defaults to 2. */
+  readonly maxLines?: 1 | 2;
+  /** Accessible name of the list. */
+  readonly label?: string;
+  readonly className?: string;
+}
 
+const GAP_PX = 8;
+
+/**
+ * A row of removable filter chips that wraps onto at most `maxLines` lines and scrolls
+ * horizontally beyond that. Renders nothing — no reserved height — when there are no chips.
+ *
+ * Wrapping is bounded by sizing the wrapping container from the chips' own widths: at a width
+ * of at least half their total plus the widest chip, greedy line filling can never need a third
+ * line, so anything wider than the viewport scrolls instead.
+ */
 export function FilterChips({
-  filters,
-  filterProperties,
-  onRemoveFilter,
-  onClearAll,
+  chips,
+  onRemove,
+  maxLines = 2,
+  label = "Active filters",
+  className,
 }: Readonly<FilterChipsProps>) {
-  const activeChips = useMemo(() => {
-    return Object.entries(filters)
-      .filter(([, value]) => value !== "")
-      .map(([key, value]) => {
-        const prop = filterProperties.find((p) => p.name === key);
-        const { base, op } = parseName(key);
-        const label = prop ? formatFieldLabel(prop) : formatWords(base);
-        const displayOp = op && !IMPLICIT_OPS.has(op) ? (SEARCH_TYPE_LABELS[op] ?? op) : null;
-        const displayValue = isDateProperty(key, prop?.type ?? "")
-          ? value.replace(ISO_TIMESTAMP_RE, "")
-          : value;
-        return { key, label, displayOp, displayValue };
-      });
-  }, [filters, filterProperties]);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [minWidth, setMinWidth] = useState<number | undefined>(undefined);
 
-  if (activeChips.length === 0) return null;
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    const list = listRef.current;
+    if (!scroller || !list) return;
+    const measure = () => {
+      const widths = Array.from(list.children).map(
+        (child) => (child as HTMLElement).getBoundingClientRect().width,
+      );
+      const total = widths.reduce((sum, w) => sum + w + GAP_PX, 0);
+      const widest = Math.max(0, ...widths) + GAP_PX;
+      const needed = maxLines === 1 ? total : total / 2 + widest;
+      setMinWidth(needed > scroller.clientWidth ? Math.ceil(needed) : undefined);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [chips, maxLines]);
+
+  if (chips.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {activeChips.map(({ key, label, displayOp, displayValue }) => (
-        <Badge key={key} variant="secondary" className="gap-1 pr-1 font-normal">
-          <span>
-            <span className="font-medium">{label}</span>
-            {displayOp && <span className="text-muted-foreground"> {displayOp}</span>}
-            <span>: {displayValue}</span>
-          </span>
-          <button
-            type="button"
-            className="ml-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            onClick={() => onRemoveFilter(key)}
-            aria-label={`Remove ${[label, displayOp].filter(Boolean).join(" ")} filter`}
-          >
-            <X className="h-2.5 w-2.5" />
-          </button>
-        </Badge>
-      ))}
-      {activeChips.length >= 2 && onClearAll && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onClearAll}
-          className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          Clear all
-        </Button>
-      )}
+    <div
+      ref={scrollerRef}
+      data-slot="filter-chips"
+      className={cn("scrollbar-subtle overflow-x-auto overflow-y-hidden pb-1", className)}
+    >
+      <ul
+        ref={listRef}
+        aria-label={label}
+        className={cn("m-0 flex list-none gap-2 p-0", maxLines === 1 ? "flex-nowrap" : "flex-wrap")}
+        style={minWidth === undefined ? undefined : { width: minWidth }}
+        // Keep a chip reached with the keyboard in view.
+        onFocus={(event) =>
+          (event.target as HTMLElement).scrollIntoView?.({ block: "nearest", inline: "nearest" })
+        }
+      >
+        {chips.map((chip) => (
+          <li key={chip.id} className="flex min-w-0">
+            <Chip
+              tone="applied"
+              field={chip.field}
+              mode={chip.mode}
+              modeIcon={chip.modeIcon}
+              label={chip.value}
+              valueIcon={chip.valueIcon}
+              removable
+              onRemove={() => onRemove(chip.id)}
+              removeLabel={`Remove filter ${chip.field} ${chip.mode} ${chip.value}`}
+            />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
