@@ -14,6 +14,12 @@ export const entityDisplayPreferencesSchema = z.object({
   nameAttribute: z.string().optional(),
   subtitleAttribute: z.string().optional(),
   visibleColumns: z.array(z.string()).optional(),
+  /**
+   * Names of the attributes that take part in the entity search bar (spec 003, FR-034–FR-036).
+   * `undefined` means every searchable attribute; search parameters over a relation are always
+   * included regardless.
+   */
+  searchAttributes: z.array(z.string()).optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
   cardStyle: z.string().optional(),
