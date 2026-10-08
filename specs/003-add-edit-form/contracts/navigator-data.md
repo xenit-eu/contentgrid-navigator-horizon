@@ -15,14 +15,11 @@ class UpdateHalFormTemplate {
   /** Same shape and classification as CreateHalFormTemplate.userDefinedProperties. */
   get userDefinedProperties(): readonly FormAttributeProperty[];
 }
-
-/** GETs the item's self link into the item cache (no retries); rejects when that fails. */
-function useReloadEntityItem(entityItem: EntityItem): () => Promise<EntityItem>;
 ```
 
 `updateTemplate` is cached per `EntityItem`, so the form's fields keep their identity; `updateFormValues` is cached per `EntityItem` too (the form reads it once, at mount, and after a 412 from the reloaded item).
 
-`CreateFormProperty` is renamed `FormAttributeProperty` (accessors/extended-forms/form-property.ts, with `toFormAttributeProperty`), since the create and update forms share it.
+`CreateFormProperty` is renamed `FormAttributeProperty` (accessors/extended-forms/form-property.ts, with `toFormAttributeProperty`), since the create and update forms share it. `CreateHalFormTemplate.contentProperties` had no caller and is removed.
 
 `useUpdateEntityItem`: same arguments; the mutation data is now `void`. The PUT answers 204, so it is sent with `fetchVoid`; on success it invalidates `entityItem.byUrl`, so the shown item is re-fetched (cancelling a fetch already in flight) before the mutation settles. A failed re-fetch does not fail the save.
 
@@ -67,7 +64,7 @@ interface UpdateFormContentAttribute {
 class UpdateHalFormTemplate {
   readonly template: HalFormsTemplate<EntityInstanceUpdateRequestSpec>;
   /** Editable non-content properties, same shape as the create form's. */
-  get userDefinedProperties(): readonly CreateFormProperty[];
+  get userDefinedProperties(): readonly FormAttributeProperty[];
   get contentAttributes(): readonly UpdateFormContentAttribute[];
   /** Item body decoded into form values through the template codec (prefill). */
   initialValues(item: EntityItem): HalFormValues<EntityInstanceUpdateRequestSpec>;

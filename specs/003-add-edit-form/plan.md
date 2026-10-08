@@ -37,19 +37,19 @@ The feature ships in two PRs (spec § Delivery):
 
 _GATE: Must pass before implementation. Scope: PR 1._
 
-| Principle         | Check                                                                                                                                                                                                                   | Status     |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| I. HAL only       | PUT built by `editEntityRequest` from the `default` template codec; values through `createValues`; `If-Match` from `entityItem.etag` (existing `useUpdateEntityItem`); 412 surfaced, never auto-retried in the hook     | ✅         |
-| II. Model-first   | Form generated from the template; no attribute names in code; prefill decoded by the template codec, not mapped by hand                                                                                                 | ✅         |
-| III. Boundaries   | Template wrapper and decode in `navigator-data`; edit container/form in `features`; no new `ui` pattern; no Layer-1 import from `features`                                                                              | ✅         |
-| IV. Stability     | Lives inside the `stable` `entity-item` feature (`entity-item/edit/`), its only user; no new feature directory                                                                                                          | ✅         |
-| V. ABAC           | Edit gated on `entityItem.updateTemplate` (`_templates.default` presence) with at least one property; 403 after submit shown as a policy outcome (FR-022)                                                               | ✅         |
-| VI. Auth          | No change; requests go through `apiFetch`                                                                                                                                                                               | ✅         |
-| VII. Supply chain | No new dependency                                                                                                                                                                                                       | ✅         |
-| VIII. Views       | Edit mode owned by the views; no app change                                                                                                                                                                             | ✅         |
-| IX. Traceability  | Every PR 1 change maps to an FR, SC or decision below; the spec artifacts describe what was built; no references to files outside the repository                                                                        | ✅         |
-| Error handling    | Non-field errors through `ProblemAlert` (412: initial values updated to the latest version); field errors through `getValidationFieldErrors` → `toServerFieldErrors`; same split as the create form, shared, not copied | ✅         |
-| Quality gates     | MSW tests for prefill, PUT + `If-Match`, 400 and 412; unit tests for decode and changed values; browser run against a real backend                                                                                      | ✅ planned |
+| Principle         | Check                                                                                                                                                                                                               | Status     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| I. HAL only       | PUT built by `editEntityRequest` from the `default` template codec; values through `createValues`; `If-Match` from `entityItem.etag` (existing `useUpdateEntityItem`); 412 surfaced, never auto-retried in the hook | ✅         |
+| II. Model-first   | Form generated from the template; no attribute names in code; prefill decoded by the template codec, not mapped by hand                                                                                             | ✅         |
+| III. Boundaries   | Template wrapper and decode in `navigator-data`; edit container/form in `features`; no new `ui` pattern; no Layer-1 import from `features`                                                                          | ✅         |
+| IV. Stability     | Lives inside the `stable` `entity-item` feature (`entity-item/edit/`), its only user; no new feature directory                                                                                                      | ✅         |
+| V. ABAC           | Edit gated on `entityItem.updateTemplate` (`_templates.default` presence) with at least one property; 403 after submit shown as a policy outcome (FR-022)                                                           | ✅         |
+| VI. Auth          | No change; requests go through `apiFetch`                                                                                                                                                                           | ✅         |
+| VII. Supply chain | No new dependency                                                                                                                                                                                                   | ✅         |
+| VIII. Views       | Edit mode owned by the views; no app change                                                                                                                                                                         | ✅         |
+| IX. Traceability  | Every PR 1 change maps to an FR, SC or decision below; the spec artifacts describe what was built; no references to files outside the repository                                                                    | ✅         |
+| Error handling    | Non-field errors through `ProblemAlert` (412: Refresh reloads the item in the view); field errors through `getValidationFieldErrors` → `toServerFieldErrors`; same split as the create form                         | ✅         |
+| Quality gates     | MSW tests for prefill, PUT + `If-Match`, 400 and 412; unit tests for decode; browser run against a real backend                                                                                                     | ✅ planned |
 
 The content DELETE deviation (D2) belongs to PR 2 and is not part of this gate.
 
@@ -76,33 +76,33 @@ specs/003-add-edit-form/
 packages/navigator-data/
 ├── src/accessors/extended-forms/update-form.ts   # NEW UpdateHalFormTemplate (D9)
 ├── src/accessors/extended-forms/form-property.ts # NEW FormAttributeProperty + toFormAttributeProperty, shared by create and update (D9)
-├── src/accessors/extended-forms/create-form.ts   # uses toFormAttributeProperty
+├── src/accessors/extended-forms/create-form.ts   # uses toFormAttributeProperty; unused contentProperties removed (+ its test)
 ├── src/accessors/entity-item.ts                  # + updateTemplate (cached), updateFormValues
-├── src/hooks/item/use-reload-entity-item.ts      # NEW reload the latest item into the cache (412 re-fetch)
 ├── src/hooks/item/use-update-entity.ts           # PUT answers 204: fetchVoid, then invalidate the item (D13)
 ├── src/hooks/item/use-update-entity.test.tsx     # hook tests (replaces a stale copy of the useEntityItem tests)
-├── src/index.ts, src/hooks/index.ts              # export UpdateHalFormTemplate, FormAttributeProperty, useReloadEntityItem
+├── src/index.ts, src/hooks/index.ts              # export UpdateHalFormTemplate, FormAttributeProperty
 ├── test-fixtures/hal/all-attribute-item.ts  # NEW makeAllAttributeItem, shared by data-layer and feature tests
 ├── test-fixtures/hal/fixtures.ts, contract.test.ts  # invoiceUpdateTemplate method PUT
-├── test-fixtures/msw/handlers.ts                 # createUpdateHandler matches PUT
-└── CLAUDE.md                                     # ETag section: item PUT is a 204 mutation; useReloadEntityItem
+├── test-fixtures/msw/handlers.ts                 # createUpdateHandler matches PUT (+ handlers.test.ts)
+└── CLAUDE.md                                     # ETag section: item PUT is a 204 mutation
 
 packages/features/src/
 ├── hal-forms/
 │   ├── model/resolve-hal-forms-fields.ts         # accepts UpdateHalFormTemplate (create-path mapping)
-│   ├── state/get-form-alert-error.ts           # NEW, extracted from create-entity-item-container (D12)
-│   └── state/use-hal-forms-field-state.ts        # + updateInitialValues(initialValues) (D11)
-├── entity-item-create/create-entity-item-container.tsx  # uses getFormAlertError
+│   └── state/use-hal-forms-field-state.ts        # dates compare by time in isDirty
+├── entity-item-create/create-entity-item-container.tsx  # validation problem on the fields, other errors in the alert (D12)
+├── problem-details/version-conflict-alert.tsx    # 412: "This item has been updated by someone else", Refresh (D11)
 └── entity-item/
     ├── CLAUDE.md                                 # scope and layering of edit/
     ├── edit/
-    │   ├── edit-entity-item-view.tsx             # guard + dialog
-    │   ├── edit-entity-item-container.tsx        # edited item, updateInitialValues after 412; prefill, useUpdateEntityItem, errors
-    │   └── edit-entity-item-form.tsx             # <form>, fields, Save/Cancel
-    ├── attributes/entity-item-attributes-panel.tsx  # NEW "Attributes" heading + Edit, edit mode
-    ├── entity-item-refresh-alert.tsx             # NEW warning + Retry when a refetch of a loaded item fails
-    ├── entity-item-view.tsx                      # renders the panel; keeps a loaded item on a failed refetch
-    └── variations/content-focus/views/entity-item-content-focus-view.tsx  # same, in the side panel
+    │   ├── use-edit-mode.ts                      # NEW edit mode of the shown item, owned by the views
+    │   ├── editable-entity-item.ts               # NEW EditableEntityItem, isEditableEntityItem
+    │   ├── edit-entity-item-button.tsx           # NEW Edit, a boxed pencil at the right of the item's title row
+    │   ├── edit-entity-item-container.tsx        # NEW prefill, useUpdateEntityItem, errors, unsaved-changes guard; 412 Refresh → onRefresh
+    │   └── edit-entity-item-form.tsx             # NEW <form>, fields, Save/Cancel
+    ├── attributes/editable-entity-item-attributes.tsx  # NEW attributes, or the form while editing (keyed by the edited version's ETag)
+    ├── entity-item-view.tsx                      # edit mode, Edit in the header; keeps a loaded item on a failed refetch
+    └── variations/content-focus/views/entity-item-content-focus-view.tsx  # same, Edit in the side panel header (test item mock gets selfLink and updateTemplate: null)
 ```
 
 No change to `use-content.ts`, `file-upload-zone.tsx`, the content-preview components, the apps or any `ui` pattern in PR 1.
@@ -111,9 +111,9 @@ No change to `use-content.ts`, `file-upload-zone.tsx`, the content-preview compo
 
 ### Entry and edit mode (FR-001, FR-003)
 
-- Both views show an **Attributes** heading above the attribute panel, styled like the **Relations** heading, with an **Edit** button (outline, pencil icon) at its right, the same way the relation sections place "+ Link" (D14). Shown when the item has an update template (FR-001) with at least one property (spec edge case: an update form with no properties offers nothing to change). The views are only rendered by the detail routes today, so FR-002 needs no opt-out prop yet.
-- `editing` is state of `EntityItemAttributesPanel`, which both views render keyed by `<profile name>/<item id>`, so edit mode never carries over to another item. While editing, the Edit button hides and `EntityItemAttributes` is replaced by `EditEntityItemView`; the header, relation sections and content preview stay mounted.
-- `EditEntityItemView` owns `useUnsavedChangesGuard(isDirty)` and `UnsavedChangesDialog`, as `CreateEntityItemView` does. Cancel with unsaved changes opens the same dialog; without changes it leaves edit mode at once (US1-5, US1-6).
+- Both views show an **Edit** icon button (a pencil on a filled primary-colored rounded box (the `ui` Button `default` variant), with an "Edit" tooltip and accessible name) at the right of the item's title row (D14), when the item has an update template (FR-001) with at least one property (spec edge case: an update form with no properties offers nothing to change). There is no "Attributes" heading. The views are only rendered by the detail routes today, so FR-002 needs no opt-out prop yet.
+- Edit mode is view state (`useEditMode(item, refetch)`): the version the form was opened on, tied to the item's self link, so it never carries over to another item and stays closed on coming back. A background refetch leaves the open form on that version. The views pass the edited version as `item`, `isEditing`/`onEditingChange` and `onRefresh` (`useEditMode`'s `refresh`) to `EditableEntityItemAttributes`. While editing, the Edit button hides and `EntityItemAttributes` is replaced by `EditEntityItemContainer`; the header, relation sections and content preview stay mounted.
+- `EditEntityItemContainer` owns `useUnsavedChangesGuard(formState.isDirty)` and `UnsavedChangesDialog`, as `CreateEntityItemView` does. Cancel with unsaved changes opens the same dialog; without changes it leaves edit mode at once (US1-5, US1-6).
 - The form uses the create form's Save/Cancel button row; the pinned action bar, edit-mode heading and transition (FR-003a, FR-003b) are not part of PR 1 (spec § Delivery).
 
 ### Form (FR-004–FR-007)
@@ -133,25 +133,26 @@ Save is disabled and labelled "Saving…" while pending.
 
 ### Failures (FR-021–FR-023, FR-025)
 
-| Response                    | Behaviour                                                                                                                                                                                                                                           |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400 `input/validation`      | Field-scoped errors inline through `toServerFieldErrors`; the rest in `ProblemAlert` above the form (shared selector, D12). Input kept                                                                                                              |
-| 412 `unsatisfied-version`   | `VersionConflictAlert` above the form. The item is refetched; the form's initial values are updated to the latest version with the user's changed fields kept on top, and keeps the alert until the next save (D11). Saving again uses the new ETag |
-| 403                         | `ProblemAlert`, form open, input kept                                                                                                                                                                                                               |
-| 404 `not-found/entity-item` | `ProblemAlert`; Save disabled, only Cancel offered                                                                                                                                                                                                  |
-| Network / other             | `ProblemAlert`, input kept                                                                                                                                                                                                                          |
+| Response                    | Behaviour                                                                                                                                                                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400 `input/validation`      | Inline on their fields through `toServerFieldErrors` (D12). Input kept                                                                                                                 |
+| 412 `unsatisfied-version`   | `ProblemAlert` (`VersionConflictAlert`); Save disabled. Refresh asks the view to refetch the item; the form opens again on the latest version, so saving again uses the new ETag (D11) |
+| 403                         | `ProblemAlert`, form open, input kept                                                                                                                                                  |
+| 404 `not-found/entity-item` | `ProblemAlert`; Save disabled, only Cancel offered                                                                                                                                     |
+| Network / other             | `ProblemAlert`, input kept                                                                                                                                                             |
 
-The 412 notice uses the form's alert slot like every other non-field error, not a toast. The form is not rebuilt, so the alert (the mutation's error) stays until the next save. If the reload after a 412 fails, the form keeps its input and the alert; saving again retries.
+The 412 notice uses the form's alert slot like every other non-field error, not a toast.
 
 ### Item refresh while editing (SC-005)
 
-The item query refetches in the background (window focus, relation changes, the reload after a 412). When a refetch of an already loaded item fails, both views keep the loaded item, and an open edit form with its input, on screen under `EntityItemRefreshAlert` (warning, Retry calls `refetch`). The error page is only shown for an item that never loaded (D15).
+The item query refetches in the background (window focus, relation changes). When a refetch of an already loaded item fails, both views keep the loaded item, and an open edit form with its input, on screen. The error page is only shown for an item that never loaded (D15).
 
 ### Data layer
 
 - `UpdateHalFormTemplate` wraps `entityItem.defaultTemplate` with the item's `ProfileEntity`, like the create and search wrappers wrap only their template. It exposes `userDefinedProperties` (`FormAttributeProperty`, the shape formerly named `CreateFormProperty`; the classification moved into `toFormAttributeProperty`, shared with `CreateHalFormTemplate`). It has no relation properties: the `default` template carries none.
 - `entityItem.updateFormValues` decodes the item body through the `default` template's codec for prefill; `null` without the template.
-- `useReloadEntityItem(item)` returns a function that GETs the item's self link into the item cache (no retries) and resolves with the latest `EntityItem`; the container uses it after a 412. `useUpdateEntityItem` invalidates the item after a successful PUT instead (D13).
+- After a 412 the view reloads the item with its own `useEntityItem(...).refetch()` (D11). `useUpdateEntityItem` invalidates the item after a successful PUT instead (D13).
+- `CreateHalFormTemplate.contentProperties` had no caller and is removed.
 - `entityItem.updateTemplate` returns it (cached per item), or `null` when the template is absent.
 - MSW `createUpdateHandler` matched `PATCH`; it now matches `PUT`, the `default` template's method.
 
@@ -159,11 +160,11 @@ The item query refetches in the background (window focus, relation changes, the 
 
 - `update-form.test.ts`: `null` without a `default` template.
 - `update-form.test.ts` also checks that the template's properties are linked to their profile attributes, in template order.
-- `use-update-entity.test.tsx`, `use-reload-entity-item.test.tsx` (MSW): PUT with `If-Match`, then the shown item holds the new ETag; reload resolves with the latest item, rejects on failure.
-- `use-hal-forms-field-state.test.ts`: `updateInitialValues` keeps the user's changes on top of the new values.
-- `edit-entity-item-container.test.tsx` (MSW): prefill; Save sends a PUT with `If-Match` and every value; 204 then success toast; 400 shown inline; 412 reloads the item and keeps only the user's own changes on top (an empty field someone else filled in is not cleared), and the next save uses the new ETag; 404 disables Save.
-- `entity-item-attributes-panel.test.tsx`: no Edit without an update form, or with one that has no properties; Cancel without changes closes at once; Cancel with changes asks first.
-- `entity-item-view.test.tsx` (MSW): a failed background refetch keeps the open form and its input under the refresh alert; Retry clears it.
+- `use-update-entity.test.tsx` (MSW): PUT with `If-Match`, then the shown item holds the new ETag.
+- `edit-entity-item-container.test.tsx` (MSW): prefill; Save sends a PUT with `If-Match` and every value; 204 then success toast; 400 shown inline; 412 offers Refresh, which calls `onRefresh`, and disables Save; 404 disables Save.
+- `use-hal-forms-field-state.test.ts`: a date set to the same moment is not a change .
+- `editable-entity-item-attributes.test.tsx`: no Edit without an update form, or with one that has no properties; Cancel without changes closes at once; Cancel with changes asks first.
+- `entity-item-view.test.tsx` (MSW): a failed background refetch keeps the open form and its input; a successful save leaves edit mode and shows the saved values; on a conflict, Refresh opens the form on the latest version and the next save sends its ETag.
 
 No e2e test in PR 1: the demo MSW data has no `default` templates, so the Edit action cannot appear in mock mode. Verified by hand against a real backend instead.
 

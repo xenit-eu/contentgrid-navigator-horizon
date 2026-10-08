@@ -4,49 +4,51 @@
 
 ### Item views (entity-item)
 
-No new props. Both views render `EntityItemAttributesPanel` (entity-item/attributes/, internal), keyed by `<profile name>/<item id>`: an "Attributes" heading with an Edit button at its right when `item.updateTemplate` is not `null` and has at least one property (spec edge case: nothing to change otherwise). Edit captures that template; while editing, the button hides and `EntityItemAttributes` is replaced by `EditEntityItemView`.
+No new props. Both views own edit mode (`useEditMode(item, refetch)`, entity-item/edit/, internal: the version of the shown item being edited, `null` when not editing; a background refetch does not change it, `refresh` moves it to the refetched version; it ends when the view moves to another item and stays closed on coming back) and the item query. Next to the item title they show `EditEntityItemButton`, which renders when the item is not being edited and `item.updateTemplate` is not `null` and has at least one property (spec edge case: nothing to change otherwise). There is no "Attributes" heading. Below, `EditableEntityItemAttributes` (entity-item/attributes/, internal) shows `EntityItemAttributes`, or `EditEntityItemContainer` while editing.
 
-Both views render the item while one is loaded (`item.data`), not only on `isSuccess`. When a refetch of a loaded item fails, `EntityItemRefreshAlert` (entity-item/, internal; warning tone, Retry calls `item.refetch()`) is shown above it and an open edit form keeps its input. `ErrorPage` is only for an item that never loaded (research D15).
+Both views render the item while one is loaded (`item.data`), not only on `isSuccess`. When a refetch of a loaded item fails, the loaded item and an open edit form with its input stay on screen. `ErrorPage` is only for an item that never loaded (research D15).
 
 ### `entity-item/edit/` (internal to `entity-item`)
 
 ```ts
-function EditEntityItemView(props: {
+/** An item whose update form has at least one property. */
+type EditableEntityItem = EntityItem & { readonly updateTemplate: UpdateHalFormTemplate };
+function isEditableEntityItem(item: EntityItem): item is EditableEntityItem;
+
+function EditableEntityItemAttributes(props: {
   readonly item: EntityItem;
-  /** The item's update form (`item.updateTemplate`), captured when Edit was chosen. */
-  readonly updateTemplate: UpdateHalFormTemplate;
+  readonly isEditing: boolean;
+  readonly onEditingChange: (isEditing: boolean) => void;
+  /** Reloads the item after a version conflict. */
+  readonly onRefresh: () => void;
+}): JSX.Element;
+
+function EditEntityItemContainer(props: {
+  readonly item: EditableEntityItem;
   /** Leaves edit mode: after a successful save, or on Cancel (confirmed first when dirty). */
   readonly onClose: () => void;
+  readonly onRefresh: () => void;
 }): JSX.Element;
 ```
 
 Layered like `entity-item-create`:
 
-- `EditEntityItemView` owns the unsaved-changes guard and dialog (`onDirtyChange` from the container).
-- `EditEntityItemView` passes `item` and `updateTemplate` to the container. Prefill is `item.updateFormValues` (empty when `null`).
-- `EditEntityItemContainer` keeps the item it was opened with in state, so a background reload never changes the ETag a save sends. On 412 it reloads the item (`useReloadEntityItem`), calls `formState.updateInitialValues(latest.updateFormValues)` and edits the latest item from then on. Fields come from `resolveHalFormsFields(updateTemplate)`, prefill from `updateFormValues`, saving from `useUpdateEntityItem(editedItem)`. Success toast: `"<Entity> has been successfully updated!"`. Errors: `getFormAlertError` → `ProblemAlert`; field errors → `toServerFieldErrors`; 412 → initial values updated to the latest version; the conflict stays in `ProblemAlert` (it is the mutation's error) until the next save; 404 → Save disabled. A failed reload after a 412 keeps the form, its input and the alert; saving again retries.
+- While editing, the views pass the edited version as `item`. `EditableEntityItemAttributes` keys `EditEntityItemContainer` by `item.etag`, so the form opens again only when Refresh passes a newer version.
+- `EditEntityItemContainer` owns the unsaved-changes guard and dialog, from its own form state's `isDirty`. It takes `item` only for the form. Fields come from `resolveHalFormsFields(item.updateTemplate)`, prefill from `item.updateFormValues` (empty when `null`), saving from `useUpdateEntityItem(item)`, so a save is conditional on `item`'s ETag. Success toast: `"<Entity> has been successfully updated!"`. Errors: a validation problem → its fields (`toServerFieldErrors`); any other error → `ProblemAlert`; 412 → `ProblemAlert` (`VersionConflictAlert`) whose Refresh calls `onRefresh`, and Save disabled; 404 → Save disabled.
+- The view's `onRefresh` is `useEditMode`'s `refresh`: `item.refetch()`, then the refetched version becomes the edited one. It has a new ETag, so the form opens again on the latest version; the user's unsaved input is not kept.
 - `EditEntityItemForm` renders the `<form>`, `HalFormsContainer` and Save/Cancel.
-
-### `getFormAlertError` (hal-forms/state/)
-
-```ts
-function getFormAlertError(
-  error: Error | null,
-  fields: readonly HalFormsField[],
-): Error | undefined;
-```
-
-Moved from `create-entity-item-container.tsx`; both containers use it.
 
 ### `useHalFormsFieldState` (hal-forms/state/)
 
-- New method `updateInitialValues(initialValues)`: moves the form onto new initial values; fields the user has not changed take the new values, the user's changes stay on top and still count as unsaved.
+- Dirty tracking compares dates by time, so a re-decoded or re-picked date is not a change.
 
 ### `resolveHalFormsFields` (hal-forms/model/)
 
 Template parameter widened to `CreateHalFormTemplate | UpdateHalFormTemplate | SearchHalFormTemplate`; an update template uses the create path (attributes only).
 
 ## PR 2 (outline; to be rewritten against `hal-forms` when PR 2 starts)
+
+Not built. Written before PR 1 moved to `hal-forms`; where it differs from PR 1 above (`EntityItemEditPanel`, `allowEdit`, Edit in the toolbar), PR 1 is current.
 
 ## Item views (entity-item)
 
@@ -84,7 +86,6 @@ interface EntityItemEditSession {
   readonly fields: readonly FieldDescriptor[];
   readonly form: UseEntityItemCreateFormState; // reused hook, with initialValues
   readonly pendingFiles: ReadonlyMap<string, PendingFileChange>;
-  readonly conflictHints: ReadonlyMap<string, FieldValue>;
   readonly problem: ProblemDisplayModel | null;
   readonly isDirty: boolean;
   pickFile(attributeName: string, file: File): void;
@@ -130,5 +131,4 @@ readonly onPickFile?: (file: File) => void;
 readonly onRemoveFile?: () => void;
 readonly onWithdrawFileChange?: () => void;
 readonly onRenameFile?: (filename: string) => void;
-readonly conflictValue?: FieldValue; // "Changed by someone else: …" hint
 ```

@@ -105,7 +105,7 @@ Format per `/speckit-plan`: decision, rationale, alternatives considered.
 
 ### D5 — Edit mode lives inside the item views
 
-**Superseded by D14** (Edit in an "Attributes" heading row, no `allowEdit` prop in PR 1).
+**Superseded by D14** (Edit next to the item title, no `allowEdit` prop in PR 1).
 
 - **Decision**: `EntityItemView` and `EntityItemContentFocusView` own an `isEditing` state and swap `EntityItemAttributes` for a new `EntityItemEditPanel`. The Edit button is added by the views themselves to their toolbar `actions`, gated on `entityItem.canUpdate`. Apps change nothing but an optional `allowEdit` flag (default `true`) for read-only embeddings.
 - **Rationale**: FR-003 (in place, no route); constitution VIII (apps pass only primitives; views own their content); constitution V (`canUpdate`).
@@ -113,7 +113,7 @@ Format per `/speckit-plan`: decision, rationale, alternatives considered.
 
 ### D6 — Form state and the conflict merge
 
-**Superseded by D11** (`useHalFormsFieldState.updateInitialValues`, no "changed by someone else" hints).
+**Superseded by D11** (Refresh reloads the latest version into the form; the user's unsaved input is not kept).
 
 - **Decision**: reuse `useEntityItemCreateFormState` (it already takes `initialValues` for edit mode). Initial values come from decoding the item body through the template codec. On 412, refetch the item, rebuild initial values from it, and re-apply only the fields the user changed (`dirtyFields`) on top. A field that both users changed keeps the user's value and shows a "changed by someone else" hint with the other value.
 - **Rationale**: FR-023; constitution I ("re-fetch, re-apply the user's change, retry", never auto-retry in the hook).
@@ -143,35 +143,35 @@ Format per `/speckit-plan`: decision, rationale, alternatives considered.
 - **Rationale**: the update is a full PUT, so these values must be sent back, or the item would lose its file metadata. Rendering what the template lists sends them without special-casing.
 - **Alternatives**: hide them and pass the stored values through — needs the content special-casing that PR 2 adds anyway.
 
-### D11 — 412 keeps the user's changes on the latest version (implements FR-023 for PR 1)
+### D11 — 412: the view reloads the item, the form opens on the latest version (implements FR-023 for PR 1)
 
-- **Decision**: on 412 the item is refetched and `useHalFormsFieldState.updateInitialValues(latest.updateFormValues)` moves the form onto it: fields the user has not changed (compared against the form's own initial values, so an empty field is never counted as a change) take the latest values, the user's changes stay on top and still count as unsaved. The container then edits the latest item, so the next save uses its ETag. Until then it keeps the item it was opened with, so a background reload never changes the ETag a save sends. The form is not rebuilt; the 412 stays in the form's alert slot (`ProblemAlert` → `VersionConflictAlert`) as the mutation's error and clears on the next save; no toast, since the form already has a place for errors. No "changed by someone else" hints.
-- **Rationale**: FR-023 (Q1 answer). Re-seeding with the latest ETag means the next Save cannot overwrite fields the user did not touch.
-- **Alternatives**: keep the old form values and only swap the ETag — rejected, it would overwrite the other user's changes to untouched fields.
+- **Decision**: on 412 the form shows the conflict (`VersionConflictAlert` through `ProblemAlert`) and disables Save. Its Refresh calls the view's `onRefresh`, which is `item.refetch()` on the view's own item query (`refetch` cancels a fetch already in flight, which could have been sent before the save and return the older version). The view's edit mode (`useEditMode`) holds the version the form was opened on and passes it down; a background refetch does not change it, so the user's input stays and a save of an item that changed meanwhile gets the 412. Refresh replaces it with the refetched version; `EditableEntityItemAttributes` keys the form by `item.etag`, so the form opens again on the latest version and the next save is conditional on it. The form holds no item of its own and never fetches.
+- **Rationale**: FR-023. The view that fetched the item owns refreshing it; a form keeping its own copy of the item, or its own reload, splits one item into two representations.
+- **Alternatives**: name the changed fields and let the user apply them under their own changes — rejected, it needs the form to keep the version it was opened with next to the view's latest one; keep the old form values and only swap the ETag — rejected, it would overwrite the other user's changes.
 
-### D12 — Share the create form's non-field error selection
+### D12 — Validation problems on the fields, other errors in the alert
 
-- **Decision**: move the create container's "which error goes in the alert" logic into `hal-forms/state/get-form-alert-error.ts` and use it from both containers.
-- **Rationale**: one rule for which errors go in the alert, in both forms; a copy would drift.
+- **Decision**: both containers show a validation problem only on its fields (`toServerFieldErrors`) and every other error in `ProblemAlert` (`isValidationProblem`, `toProblemDisplayModel`).
+- **Rationale**: every validation error carries a `field` naming one of the template's properties, and every template property is a form field, so a validation problem always has a field to show on. No extra helper is needed.
 
 ### D13 — Item PUT answers 204; the update hook re-fetches
 
-- **Decision**: `useUpdateEntityItem` sends the PUT with `fetchVoid`, then `invalidateQueries` on the item's `entityItem.byUrl` key, so the shown item is re-fetched with its new body and ETag before the mutation settles. A failed re-fetch does not fail the save: the PUT went through, and the item query shows its own error. `useReloadEntityItem` (`fetchQuery`) is only for the 412 path, which needs the latest item returned.
+- **Decision**: `useUpdateEntityItem` sends the PUT with `fetchVoid`, then `invalidateQueries` on the item's `entityItem.byUrl` key, so the shown item is re-fetched with its new body and ETag before the mutation settles. A failed re-fetch does not fail the save: the PUT went through, and the item view keeps the item it has (D15). The 412 path reloads with the item query's own `refetch` (D11), which also cancels a fetch in flight.
 - **Why not `fetchQuery` after the save**: `fetchQuery` joins a fetch of the item already in flight, which was sent before the PUT and can return the old version and ETag, so the next save would get a 412. `invalidateQueries` cancels that fetch and starts a new one, and it never throws.
 - **Rationale**: verified on a real backend: item PUT returns 204 No Content. Parsing the empty body threw after a successful save and left the old ETag cached, so the next save got a 412.
 - **Alternatives**: parse the body when there is one and re-fetch otherwise — rejected, two code paths for one server behaviour.
 
-### D14 — Edit sits in an "Attributes" heading row, not the toolbar
+### D14 — Edit sits at the right of the item's title row
 
-- **Decision**: both views show an "Attributes" heading styled like "Relations", with the Edit button (outline, pencil icon) at its right, as the relation sections place "+ Link". In the content-focus layout this is inside the side panel.
-- **Rationale**: in the toolbar the button was far from what it edits and easy to miss. A right-aligned button under the attributes looked detached. The heading row puts the action next to the values it changes and matches an existing page pattern.
-- **Alternatives**: the toolbar actions slot — rejected for visibility; under the attribute table — rejected for looks.
+- **Decision**: both views show the Edit action as a pencil on a filled primary-colored rounded box (the `ui` Button `default` variant, for contrast in both themes; an "Edit" tooltip and accessible name), at the right of the item's title row: the page header of `EntityItemView`, and the side panel header of the content-focus layout, next to the panel's toggle. There is no "Attributes" heading. The views own edit mode and pass `isEditing`/`onEditingChange` to `EditableEntityItemAttributes`.
+- **Rationale**: icon-only and quiet, it lines up with the relation sections' actions on the page and pairs with the side panel's toggle; the primary tint stands out from the page background while staying in the app's palette.
+- **Alternatives**: an "Attributes" heading row with a labelled button — replaced, the heading added nothing; a box on the page's own background — rejected, too little contrast; the outline variant's grey fill — rejected, it read as a heavy block in dark mode; a bare pencil right after the item's name — rejected on review; the toolbar actions slot — rejected, far from the item and easy to miss.
 
 ### D15 — A failed refetch keeps the loaded item and the open form
 
-- **Decision**: both item views render the item whenever one is loaded (`item.data`), not only on `isSuccess`. When a refetch of a loaded item fails, `EntityItemRefreshAlert` (warning, Retry calls `refetch`) is shown above it; the error page is only for an item that never loaded.
-- **Rationale**: SC-005 and the network and session edge cases. The item refetches in the background (window focus, relation changes, the reload after a 412); on failure TanStack Query keeps the data but reports `error`, and rendering on `isSuccess` alone unmounted the edit form and lost the input.
-- **Alternatives**: the error page unless edit mode is open — rejected, it needs edit state lifted out of the attributes panel and still hides a usable page; `ProblemAlert` with the raw problem — rejected, it does not say that the shown values may be out of date and has no Retry for this case.
+- **Decision**: both item views render the item whenever one is loaded (`item.data`), not only on `isSuccess`. When a refetch of a loaded item fails, the loaded item and an open edit form with its input stay on screen; the error page is only for an item that never loaded.
+- **Rationale**: SC-005 and the network and session edge cases. The item refetches in the background (window focus, relation changes); on failure TanStack Query keeps the data but reports `error`, and rendering on `isSuccess` alone unmounted the edit form and lost the input. A successful background refetch does not reach the open form either: it stays on the version it was opened on (D11).
+- **Alternatives**: a warning with Retry above the item — dropped, the only alert the views show is for a 412 (D11).
 
 ## 6. Remaining open questions
 

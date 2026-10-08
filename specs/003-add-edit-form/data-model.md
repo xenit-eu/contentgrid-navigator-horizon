@@ -6,18 +6,15 @@ Client-side state only; the server model (entity items, content) does not change
 
 ## PR 1 — metadata edit
 
-State of `EditEntityItemContainer` (entity-item/edit/), alive only while edit mode is open:
+Edit mode is state of the item view (`useEditMode(item, refetch)`): the version of the shown item being edited, `null` when not editing. A background refetch does not change it, so the open form keeps the user's input and a save of an item that changed meanwhile gets a 412; Refresh moves it to the refetched version. It belongs to one item (its self link), so it ends when the view moves to another item and stays closed on coming back.
 
-| Field                   | Source                                                                | Notes                                                                                           |
-| ----------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `edited.item`           | the `item` prop at mount; the reloaded item on 412                    | Its ETag guards the save. A background reload of the page's item does not change it.            |
-| `edited.updateTemplate` | `item.updateTemplate`                                                 | Fields come from `resolveHalFormsFields(edited.updateTemplate)`.                                |
-| form state              | `useHalFormsFieldState({ fields, initialValues, externalErrors })`    | `initialValues` = `edited.item.updateFormValues`; values, `isDirty`, validation, `buildValues`. |
-| `externalErrors`        | `toServerFieldErrors(getValidationFieldErrors(updateMutation.error))` | Server field errors shown on their fields.                                                      |
-| `isReloading`           | set while the item is reloaded after a 412                            | Save stays disabled.                                                                            |
-| alert                   | `getFormAlertError(updateMutation.error, fields)`                     | Every error not shown on a field, incl. the 412 conflict, until the next save.                  |
+State of `EditEntityItemContainer` (entity-item/edit/), alive only while edit mode is open. It holds no item of its own: the view passes the item down, and the form opens again (keyed by `item.etag`) on each new version.
 
-`editTemplate` in `EntityItemAttributesPanel` is the template captured when Edit was chosen; `null` means viewing.
+| Field            | Source                                                                | Notes                                                                                                  |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| form state       | `useHalFormsFieldState({ fields, initialValues, externalErrors })`    | `fields` from `resolveHalFormsFields(item.updateTemplate)`; `initialValues` = `item.updateFormValues`. |
+| `externalErrors` | `toServerFieldErrors(getValidationFieldErrors(updateMutation.error))` | Server field errors shown on their fields.                                                             |
+| alert            | `updateMutation.error` unless it is a validation problem              | Every error that is not a validation problem; those show on their fields.                              |
 
 ### State transitions
 
@@ -26,19 +23,19 @@ viewing ──Edit──▶ editing ──Save──▶ saving ──204 + item 
                     ▲  │               │
                     │  └─Cancel────────┼──(dirty? confirm)──▶ viewing
                     │                  ├─client validation fails──▶ editing (field errors, nothing sent)
-                    │                  ├─400 validation──▶ editing (field errors + alert for the rest)
-                    │                  ├─412 conflict──▶ reloading ──▶ editing (merged onto the latest version)
+                    │                  ├─400 validation──▶ editing (field errors)
+                    │                  ├─412 conflict──▶ editing (alert, Save disabled) ──Refresh──▶ editing (latest version)
                     │                  ├─403 / network / other──▶ editing (alert, input kept)
                     │                  └─404──▶ editing (alert, Save disabled, only Cancel)
 ```
 
-- `saving` and `reloading` disable Save and show "Saving…" (FR-019).
+- `saving` disables Save and shows "Saving…" (FR-019); a 412 disables Save until Refresh.
 - Leaving the page while `isDirty` asks for confirmation (FR-020).
-- A failed refetch of the page's item keeps the item and the open form on screen under a refresh alert (D15).
+- A failed refetch of the page's item keeps the item and the open form on screen (D15).
 
-### Conflict merge (D11)
+### Conflict (D11)
 
-On 412: reload the item → `latest`. `updateInitialValues(latest.updateFormValues)`: every field whose value still equals the previous initial value takes the latest value; the user's changed fields keep their value and still count as unsaved. `edited` becomes `latest`, so the next save is conditional on its ETag.
+On 412 the form shows "This item has been updated by someone else" (`VersionConflictAlert`) and disables Save. Refresh refetches the item and the view makes the refetched version the edited one; it has a new ETag, so the form opens again on it and the next save is conditional on that ETag. The user's unsaved input is not kept.
 
 ## PR 2 — file changes (outline; to be rewritten against `hal-forms` when PR 2 starts)
 
