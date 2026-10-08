@@ -14,7 +14,6 @@ export {
   type HalFormsFieldRendererProps,
 } from "./render/hal-forms-field-renderer";
 export type { FieldState, FieldValidationError } from "./state/field-error";
-export { getFormAlertError } from "./state/get-form-alert-error";
 export { toServerFieldErrors } from "./state/to-server-field-errors";
 export {
   useHalFormsFieldState,

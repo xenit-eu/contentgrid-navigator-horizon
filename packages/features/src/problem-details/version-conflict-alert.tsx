@@ -7,13 +7,14 @@ export interface VersionConflictAlertProps {
   readonly className?: string;
   /** Renders a dismiss button and fires this when clicked. */
   readonly onClose?: () => void;
-  /** Fires when the user chooses to re-fetch, re-apply, and retry the mutation. */
+  /** Fires from the Refresh button: the caller reloads the latest version. */
   readonly onRetryClick?: () => void;
 }
 
 /**
  * Renders an `unsatisfied-version` problem (HTTP 412) — an `If-Match` ETag
- * mismatch. The caller decides what "retry" means (re-fetch + re-apply).
+ * mismatch — as "this item has been updated by someone else", with a Refresh button that asks
+ * the caller to reload the latest version.
  */
 export function VersionConflictAlert({
   model,
@@ -24,15 +25,15 @@ export function VersionConflictAlert({
   return (
     <ProblemAlertFrame
       status={model.status}
-      title={model.title}
-      detail={model.detail}
+      title="This item has been updated by someone else"
+      detail="Refresh to load the latest version."
       type={model.type}
       onClose={onClose}
       className={className}
     >
       {onRetryClick && (
         <AlertButton type="button" onClick={onRetryClick}>
-          Retry
+          Refresh
         </AlertButton>
       )}
     </ProblemAlertFrame>

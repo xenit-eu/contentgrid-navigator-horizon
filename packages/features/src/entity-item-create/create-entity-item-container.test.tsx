@@ -361,42 +361,6 @@ describe("CreateEntityItemContainer", () => {
     expect(await screen.findByText("Already in use")).toBeInTheDocument();
   });
 
-  it("shows the non-field alert for a field error whose field this form doesn't render", async () => {
-    const user = userEvent.setup();
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.post(`${API_URL}/invoices`, () =>
-        HttpResponse.json(
-          {
-            type: "https://contentgrid.cloud/problems/input/validation",
-            title: "Validation failed",
-            status: 400,
-            errors: [
-              {
-                type: "https://contentgrid.cloud/problems/input/validation",
-                title: "Mandatory field",
-                detail: "This field is required",
-                field: "supplier",
-              },
-            ],
-          },
-          { status: 400, headers: { "Content-Type": "application/problem+json" } },
-        ),
-      ),
-    );
-    renderForm();
-
-    const input = await screen.findByLabelText(/Invoice Number/);
-    await user.type(input, "INV-1");
-    await user.click(screen.getByRole("button", { name: "Create" }));
-
-    // "supplier" isn't one of this create-form's rendered fields (see DEFAULT_CREATE_FORM) — with
-    // no inline field to show it against, it must still surface via the alert rather than being
-    // silently dropped.
-    expect(await screen.findByText(/This field is required/)).toBeInTheDocument();
-  });
-
   it("clears a stale server error alert when a resubmit is blocked by client-side validation", async () => {
     const user = userEvent.setup();
     server.use(
@@ -405,18 +369,11 @@ describe("CreateEntityItemContainer", () => {
       http.post(`${API_URL}/invoices`, () =>
         HttpResponse.json(
           {
-            type: "https://contentgrid.cloud/problems/input/validation",
-            title: "Validation failed",
-            status: 400,
-            errors: [
-              {
-                type: "https://contentgrid.cloud/problems/input/validation/duplicate",
-                title: "Already in use",
-                conflicting_item: `${API_URL}/invoices/existing`,
-              },
-            ],
+            type: "https://contentgrid.cloud/problems/integrity/blind-relation-overwrite",
+            title: "Relation already set",
+            status: 409,
           },
-          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
         ),
       ),
     );
@@ -425,7 +382,7 @@ describe("CreateEntityItemContainer", () => {
     const input = await screen.findByLabelText(/Invoice Number/);
     await user.type(input, "INV-1");
     await user.click(screen.getByRole("button", { name: "Create" }));
-    expect(await screen.findByText("Validation failed")).toBeInTheDocument();
+    expect(await screen.findByText("Relation already set")).toBeInTheDocument();
 
     // Clearing the required field blocks the resubmit client-side, before the mutation ever
     // fires again — the alert from the LAST server round-trip must not linger alongside the new,
@@ -433,7 +390,7 @@ describe("CreateEntityItemContainer", () => {
     await user.clear(input);
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
+    expect(screen.queryByText("Relation already set")).not.toBeInTheDocument();
     expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
   });
 

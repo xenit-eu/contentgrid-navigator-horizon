@@ -12,22 +12,22 @@ describe("VersionConflictAlert", () => {
     actualVersion: 'W/"2"',
   };
 
-  it("renders the status and title", () => {
+  it("tells the user the item has been updated by someone else", () => {
     render(<VersionConflictAlert model={model} />);
-    expect(screen.getByText("412")).toBeInTheDocument();
-    expect(screen.getByText("Version conflict")).toBeInTheDocument();
+    expect(screen.getByText("This item has been updated by someone else")).toBeInTheDocument();
+    expect(screen.getByText("Refresh to load the latest version.")).toBeInTheDocument();
   });
 
   it("fires onRetryClick when clicked", async () => {
     const user = userEvent.setup();
     const onRetryClick = vi.fn();
     render(<VersionConflictAlert model={model} onRetryClick={onRetryClick} />);
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
     expect(onRetryClick).toHaveBeenCalledOnce();
   });
 
-  it("does not render a Retry button when the callback is omitted", () => {
+  it("does not render a Refresh button when the callback is omitted", () => {
     render(<VersionConflictAlert model={model} />);
-    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Refresh" })).not.toBeInTheDocument();
   });
 });

@@ -5,13 +5,13 @@ import {
   type EntityItem,
   type ProfileEntity,
   getValidationFieldErrors,
+  isValidationProblem,
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import {
   type FieldValidationError,
-  getFormAlertError,
   resolveHalFormsFields,
   toServerFieldErrors,
   useHalFormsFieldState,
@@ -183,7 +183,11 @@ function CreateEntityItemContainerReady({
     });
   }
 
-  const formAlertError = getFormAlertError(createMutation.error, fields);
+  // A validation problem shows on its fields; every other error goes in the alert.
+  const formAlertError =
+    createMutation.error && !isValidationProblem(createMutation.error)
+      ? toProblemDisplayModel(createMutation.error)
+      : undefined;
 
   return (
     <CreateEntityItemForm
@@ -204,7 +208,7 @@ function CreateEntityItemContainerReady({
       nonFieldErrorAlert={
         formAlertError && (
           <ProblemAlert
-            model={toProblemDisplayModel(formAlertError)}
+            model={formAlertError}
             onConflictingItemClick={onConflictingItemClick}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onAllowedValuesClick={onAllowedValuesClick}

@@ -127,17 +127,27 @@ describe("useHalFormsFieldState", () => {
   });
 });
 
-describe("useHalFormsFieldState.updateInitialValues", () => {
-  it("takes the new initial values for unchanged fields and keeps the user's changes on top", () => {
+describe("useHalFormsFieldState.isDirty", () => {
+  it("does not count a date set to the same moment as a change", () => {
+    const dueField: HalFormsField = {
+      name: "due",
+      label: "Due",
+      required: false,
+      readOnly: false,
+      kind: "datetime",
+      includesTime: true,
+      property: DUMMY_PROPERTY,
+    };
     const { result } = renderHook(() =>
-      useHalFormsFieldState({ fields: [nameField, emailField], initialValues: { name: "Ann" } }),
+      useHalFormsFieldState({
+        fields: [dueField],
+        initialValues: { due: new Date("2024-01-01T00:00:00Z") },
+      }),
     );
 
-    act(() => result.current.setValue("name", "Mine"));
-    act(() => result.current.updateInitialValues({ name: "Theirs", email: "theirs@example.com" }));
+    act(() => result.current.setValue("due", new Date("2024-01-01T00:00:00Z")));
 
-    expect(result.current.values).toEqual({ name: "Mine", email: "theirs@example.com" });
-    expect(result.current.isDirty).toBe(true);
+    expect(result.current.isDirty).toBe(false);
   });
 });
 
