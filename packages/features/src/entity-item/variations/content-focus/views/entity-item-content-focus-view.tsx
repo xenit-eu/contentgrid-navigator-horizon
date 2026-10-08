@@ -17,8 +17,9 @@ import {
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EntityItemAttributesPanel } from "../../../attributes/entity-item-attributes-panel";
-import { EntityItemRefreshAlert } from "../../../entity-item-refresh-alert";
+import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
+import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
+import { useEditMode } from "../../../edit/use-edit-mode";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
@@ -119,6 +120,7 @@ function EntityItemContentFocusViewBody({
 }: Readonly<EntityItemContentFocusViewProps & { profileEntity: ProfileEntity }>) {
   const item = useEntityItem({ profileEntity, entityId: itemId });
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
+  const editMode = useEditMode(item.data, item.refetch);
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -190,24 +192,17 @@ function EntityItemContentFocusViewBody({
   const content = (
     <>
       {item.isPending && <LoadingPage />}
-      {/* A failed background refetch keeps the loaded item on screen (and an open edit form with
-          its input) under an alert; the error page is only for an item that never loaded. The
-          `EntityItemView` fallback shows that alert itself. */}
+      {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
       {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-      {item.isError && item.data && profileEntity.hasContentAttributes && (
-        <div className="p-4">
-          <EntityItemRefreshAlert
-            onRetry={() => void item.refetch()}
-            isRetrying={item.isFetching}
-          />
-        </div>
-      )}
       {item.data &&
         (profileEntity.hasContentAttributes ? (
           <ContentFocusEntityItemBody
             entityItem={item.data}
             attributeName={selectedAttribute}
             onSelectAttribute={setUserSelectedAttribute}
+            editedItem={editMode.editedItem}
+            onEditingChange={editMode.setIsEditing}
+            onRefresh={() => void editMode.refresh()}
             loadedProfiles={loadedProfiles}
             onRelationItemClick={handleRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
@@ -256,6 +251,9 @@ function ContentFocusEntityItemBody({
   entityItem,
   attributeName,
   onSelectAttribute,
+  editedItem,
+  onEditingChange,
+  onRefresh,
   loadedProfiles,
   onRelationItemClick,
   onRelationItemCreateNew,
@@ -268,6 +266,11 @@ function ContentFocusEntityItemBody({
    * `hasContentAttributes` being true — defensive; should not occur in practice. */
   attributeName: string | undefined;
   onSelectAttribute: (attributeName: string) => void;
+  /** The version the update form was opened on; `null` when not editing. */
+  editedItem: EntityItem | null;
+  onEditingChange: (isEditing: boolean) => void;
+  /** Reloads the item after a version conflict and moves the form onto it. */
+  onRefresh: () => void;
   loadedProfiles: readonly ProfileEntity[];
   /** Adapter already bound to the object-shaped `onRelationItemClick` prop on the outer view —
    * `RelationToOneSection`/`RelationToManySection` (from the stable `entity-item` feature) still
@@ -293,12 +296,23 @@ function ContentFocusEntityItemBody({
       // body already shows above its attributes/relations (`entity-item-view.tsx`). `sm` to fit
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
-      sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
+      sidePanelHeader={
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <EntityItemReference item={entityItem} size="sm" />
+          <EditEntityItemButton
+            item={entityItem}
+            isEditing={editedItem !== null}
+            onEdit={() => onEditingChange(true)}
+          />
+        </div>
+      }
       sidePanel={
         <div className="space-y-6">
-          <EntityItemAttributesPanel
-            key={`${entityItem.profileEntity.name}/${entityItem.id}`}
-            item={entityItem}
+          <EditableEntityItemAttributes
+            item={editedItem ?? entityItem}
+            isEditing={editedItem !== null}
+            onEditingChange={onEditingChange}
+            onRefresh={onRefresh}
           />
           {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
             <>

@@ -11,10 +11,13 @@ means in practice.
 ## Scope
 
 `entity-item` renders an entity item's attributes and relations: `EntityItemView`,
-`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. Its attributes section
-(`attributes/entity-item-attributes-panel.tsx`) offers an Edit action when the item has an update
-form; `edit/` holds the update form. When a refetch of a loaded item fails, the views keep the
-item (and an open edit form) on screen under `EntityItemRefreshAlert`.
+`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. The views own edit mode
+(`edit/use-edit-mode.ts`: the version being edited, which a background refetch does not change)
+and the item query: they show `EditEntityItemButton` next to the item
+title, and `EditableEntityItemAttributes` shows the attributes or, while editing, the update form
+(`edit/`). On a version conflict the form's Refresh asks the view to refetch the item; the form then
+opens again on the latest version. When a refetch of a loaded item fails, the views keep the item
+(and an open edit form) on screen.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
 `EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, or a non-PDF
@@ -46,7 +49,8 @@ here — both tracks may mount this view.
 entity-item-view.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
-edit/  (edit-entity-item-view -> edit-entity-item-container -> edit-entity-item-form)
+edit/  (edit-entity-item-container -> edit-entity-item-form;
+        edit-entity-item-button, editable-entity-item, use-edit-mode)
   -> ../../hal-forms (fields, field state), ../../problem-details, ../../unsaved-changes-guard
   -> @contentgrid/ui, @contentgrid/navigator-data
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RouterProvider,
@@ -16,14 +17,31 @@ import {
   createContentClient,
 } from "@contentgrid/navigator-data";
 import { makeAllAttributeItem } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
-import { EntityItemAttributesPanel } from "./entity-item-attributes-panel";
+import { EditEntityItemButton } from "../edit/edit-entity-item-button";
+import { EditableEntityItemAttributes } from "./editable-entity-item-attributes";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
-/** Renders the panel inside a router, which the edit view's unsaved-changes guard needs. */
-async function renderPanel(item: EntityItem) {
+/** Holds edit mode the way the item pages do: the Edit button opens it, the form closes it. */
+function EditableAttributesHost({ item }: Readonly<{ item: EntityItem }>) {
+  const [isEditing, setIsEditing] = useState(false);
+  return (
+    <>
+      <EditEntityItemButton item={item} isEditing={isEditing} onEdit={() => setIsEditing(true)} />
+      <EditableEntityItemAttributes
+        item={item}
+        isEditing={isEditing}
+        onEditingChange={setIsEditing}
+        onRefresh={() => {}}
+      />
+    </>
+  );
+}
+
+/** Renders inside a router, which the form's unsaved-changes guard needs. */
+async function renderAttributes(item: EntityItem) {
   const router = createRouter({
-    routeTree: createRootRoute({ component: () => <EntityItemAttributesPanel item={item} /> }),
+    routeTree: createRootRoute({ component: () => <EditableAttributesHost item={item} /> }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   render(
@@ -37,19 +55,19 @@ async function renderPanel(item: EntityItem) {
       </NavigatorDataProvider>
     </QueryClientProvider>,
   );
-  await screen.findByRole("heading", { name: "Attributes" });
+  await screen.findByText("Text");
 }
 
-describe("EntityItemAttributesPanel", () => {
+describe("EditableEntityItemAttributes", () => {
   it("offers no Edit action when the item has no update form", async () => {
-    await renderPanel(makeAllAttributeItem({ _templates: {} }));
+    await renderAttributes(makeAllAttributeItem({ _templates: {} }));
 
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   });
 
   it("offers no Edit action when the update form has no properties", async () => {
     const { defaultTemplate } = makeAllAttributeItem();
-    await renderPanel(
+    await renderAttributes(
       makeAllAttributeItem({ _templates: { default: { ...defaultTemplate, properties: [] } } }),
     );
 
@@ -58,7 +76,7 @@ describe("EntityItemAttributesPanel", () => {
 
   it("leaves edit mode on Cancel without asking when nothing changed", async () => {
     const user = userEvent.setup();
-    await renderPanel(makeAllAttributeItem());
+    await renderAttributes(makeAllAttributeItem());
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.getByLabelText("Text")).toHaveValue("Test string");
@@ -71,7 +89,7 @@ describe("EntityItemAttributesPanel", () => {
 
   it("asks before discarding changes on Cancel", async () => {
     const user = userEvent.setup();
-    await renderPanel(makeAllAttributeItem());
+    await renderAttributes(makeAllAttributeItem());
     await user.click(screen.getByRole("button", { name: "Edit" }));
     await user.type(screen.getByLabelText("Text"), " changed");
 
