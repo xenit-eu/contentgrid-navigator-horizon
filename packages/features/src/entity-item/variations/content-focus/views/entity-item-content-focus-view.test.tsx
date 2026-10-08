@@ -124,6 +124,7 @@ function makeEntityItem(options: {
   return {
     id: "1",
     etag: null,
+    selfLink: { href: "https://api.example.com/orders/1" },
     attributes: contentAttrs,
     userDefinedAttributes: contentAttrs,
     toOneRelations: [],

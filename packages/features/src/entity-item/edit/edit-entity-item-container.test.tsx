@@ -1,4 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
@@ -18,6 +24,7 @@ import {
 import { Toaster } from "@contentgrid/ui";
 import { server } from "../../../test-setup";
 import { EditEntityItemContainer } from "./edit-entity-item-container";
+import type { EditableEntityItem } from "./editable-entity-item";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
@@ -28,25 +35,37 @@ function problem(status: number, body: Record<string, unknown>) {
   );
 }
 
-function renderForm(item: EntityItem, onSaved: () => void = vi.fn()) {
+/** Renders inside a router, which the form's unsaved-changes guard needs. */
+async function renderForm(
+  item: EntityItem,
+  { onClose = vi.fn(), onRefresh = vi.fn() }: { onClose?: () => void; onRefresh?: () => void } = {},
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const router = createRouter({
+    routeTree: createRootRoute({
+      component: () => (
+        <EditEntityItemContainer
+          item={item as EditableEntityItem}
+          onClose={onClose}
+          onRefresh={onRefresh}
+        />
+      ),
+    }),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  render(
     <QueryClientProvider client={queryClient}>
       <NavigatorDataProvider
         apiFetch={createApiClient(noopSupplier)}
         contentFetch={createContentClient(noopSupplier)}
         profileUrl="https://api.example.contentgrid.com/profile"
       >
-        <EditEntityItemContainer
-          item={item}
-          updateTemplate={item.updateTemplate!}
-          onSaved={onSaved}
-          onCancel={vi.fn()}
-        />
+        <RouterProvider router={router} />
         <Toaster />
       </NavigatorDataProvider>
     </QueryClientProvider>,
   );
+  await screen.findByLabelText("Text");
 }
 
 /** Answers the reload that follows a successful PUT. */
@@ -57,7 +76,7 @@ const reloadHandler = http.get(ALL_ATTRIBUTE_ITEM_URL, () =>
 describe("EditEntityItemContainer", () => {
   it("prefills every field from the item and saves with a PUT carrying the item's ETag", async () => {
     const user = userEvent.setup();
-    const onSaved = vi.fn();
+    const onClose = vi.fn();
     let sent: { ifMatch: string | null; body: unknown } | undefined;
     server.use(
       reloadHandler,
@@ -66,7 +85,7 @@ describe("EditEntityItemContainer", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderForm(makeAllAttributeItem({}, '"v1"'), onSaved);
+    await renderForm(makeAllAttributeItem({}, '"v1"'), { onClose });
 
     const text = screen.getByLabelText("Text");
     expect(text).toHaveValue("Test string");
@@ -76,7 +95,7 @@ describe("EditEntityItemContainer", () => {
     await user.type(text, "Changed");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(sent?.ifMatch).toBe('"v1"');
     expect(sent?.body).toMatchObject({
       text: "Changed",
@@ -91,7 +110,7 @@ describe("EditEntityItemContainer", () => {
 
   it("shows a server validation error on its field and stays open", async () => {
     const user = userEvent.setup();
-    const onSaved = vi.fn();
+    const onClose = vi.fn();
     server.use(
       http.put(ALL_ATTRIBUTE_ITEM_URL, () =>
         problem(400, {
@@ -108,50 +127,32 @@ describe("EditEntityItemContainer", () => {
         }),
       ),
     );
-    renderForm(makeAllAttributeItem({}, '"v1"'), onSaved);
+    await renderForm(makeAllAttributeItem({}, '"v1"'), { onClose });
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText("Already in use")).toBeInTheDocument();
-    expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("on 412 reloads the item and keeps only the user's own changes on top of it", async () => {
+  it("on 412 offers Refresh, which asks the caller to reload the item, and blocks saving", async () => {
     const user = userEvent.setup();
-    const puts: { ifMatch: string | null; body: unknown }[] = [];
+    const onRefresh = vi.fn();
     server.use(
-      // Someone else filled in the text that was empty when the form opened.
-      http.get(ALL_ATTRIBUTE_ITEM_URL, () =>
-        HttpResponse.json(allAttributeItemBodyWith({ text: "Theirs" }), {
-          headers: { ETag: '"v2"' },
-        }),
-      ),
-      http.put(ALL_ATTRIBUTE_ITEM_URL, async ({ request }) => {
-        puts.push({ ifMatch: request.headers.get("If-Match"), body: await request.json() });
-        if (puts.length > 1) return new HttpResponse(null, { status: 204 });
-        return problem(412, {
+      http.put(ALL_ATTRIBUTE_ITEM_URL, () =>
+        problem(412, {
           type: "https://contentgrid.cloud/problems/unsatisfied-version",
           title: "Unsatisfied version",
-        });
-      }),
+        }),
+      ),
     );
-    renderForm(makeAllAttributeItem({ text: null }, '"v1"'));
-
-    const filename = screen.getByLabelText("Content: Filename");
-    await user.clear(filename);
-    await user.type(filename, "mine.pdf");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(screen.getByLabelText("Text")).toHaveValue("Theirs"));
-    expect(screen.getByLabelText("Content: Filename")).toHaveValue("mine.pdf");
-    expect(screen.getByText("Unsatisfied version")).toBeInTheDocument();
+    await renderForm(makeAllAttributeItem({}, '"v1"'), { onRefresh });
 
     await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(await screen.findByRole("button", { name: "Refresh" }));
 
-    await waitFor(() => expect(puts).toHaveLength(2));
-    expect(puts[1]?.ifMatch).toBe('"v2"');
-    expect(puts[1]?.body).toMatchObject({ text: "Theirs", content: { filename: "mine.pdf" } });
-    expect(screen.queryByText("Unsatisfied version")).not.toBeInTheDocument();
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   it("reports an item that no longer exists without offering to save again", async () => {
@@ -164,7 +165,7 @@ describe("EditEntityItemContainer", () => {
         }),
       ),
     );
-    renderForm(makeAllAttributeItem({}, '"v1"'));
+    await renderForm(makeAllAttributeItem({}, '"v1"'));
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 

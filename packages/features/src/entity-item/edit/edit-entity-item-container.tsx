@@ -1,78 +1,59 @@
-import { type SubmitEvent, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  type EntityItem,
-  type UpdateHalFormTemplate,
   getValidationFieldErrors,
   isProblemWithStatus,
+  isValidationProblem,
   toProblemDisplayModel,
-  useReloadEntityItem,
   useUpdateEntityItem,
 } from "@contentgrid/navigator-data";
-import {
-  getFormAlertError,
-  resolveHalFormsFields,
-  toServerFieldErrors,
-  useHalFormsFieldState,
-} from "../../hal-forms";
+import { UnsavedChangesDialog } from "@contentgrid/ui";
+import { resolveHalFormsFields, toServerFieldErrors, useHalFormsFieldState } from "../../hal-forms";
 import { ProblemAlert } from "../../problem-details";
 import { capitalizeFirstLetter } from "../../string-utils";
+import { useUnsavedChangesGuard } from "../../unsaved-changes-guard";
 import { EditEntityItemForm } from "./edit-entity-item-form";
+import type { EditableEntityItem } from "./editable-entity-item";
 
 interface EditEntityItemContainerProps {
-  /** The version of the item the form opens with. */
-  readonly item: EntityItem;
-  /** The item's update form (`item.updateTemplate`). */
-  readonly updateTemplate: UpdateHalFormTemplate;
-  /** Fired after the save, once the item has been reloaded. */
-  readonly onSaved: () => void;
-  readonly onCancel: () => void;
-  /** Fired whenever the form's dirty state changes; the caller owns the unsaved-changes guard. */
-  readonly onDirtyChange?: (isDirty: boolean) => void;
+  readonly item: EditableEntityItem;
+  /** Leaves edit mode: after the save, once the item has been reloaded, or on Cancel (confirmed
+   * first when there are unsaved changes). */
+  readonly onClose: () => void;
+  /** Fired from a version conflict's Refresh: the caller reloads the item and passes it back down. */
+  readonly onRefresh: () => void;
 }
 
 /**
- * The update form for an item, prefilled from `item.updateFormValues`. It keeps the item it was
- * opened with, so a reload of the item while editing changes neither the form nor the version a
- * save is conditional on. On a version conflict (412) the item is reloaded and the form moves onto
- * the latest version with the user's own changes on top; the next save is conditional on that
- * version. The conflict stays in the form's alert until the next save.
+ * The update form for an item, prefilled from `item.updateFormValues`; a save is conditional on
+ * `item`'s ETag. On a version conflict (412) the alert offers Refresh, which asks the caller to
+ * reload the item. Navigating away or cancelling with unsaved changes asks for confirmation first.
  */
 export function EditEntityItemContainer({
   item,
-  updateTemplate,
-  onSaved,
-  onCancel,
-  onDirtyChange,
+  onClose,
+  onRefresh,
 }: Readonly<EditEntityItemContainerProps>) {
-  const [edited, setEdited] = useState({ item, updateTemplate });
-  const updateMutation = useUpdateEntityItem(edited.item);
-  const reloadEntityItem = useReloadEntityItem(edited.item);
-  const [isReloading, setIsReloading] = useState(false);
-  const { fields, layout } = useMemo(
-    () => resolveHalFormsFields(edited.updateTemplate),
-    [edited.updateTemplate],
-  );
+  const { updateTemplate } = item;
+  const updateMutation = useUpdateEntityItem(item, {
+    mutationOptions: {
+      onSuccess: () => {
+        toast.success(
+          `${capitalizeFirstLetter(item.profileEntity.singularName)} has been successfully updated!`,
+        );
+        onClose();
+      },
+    },
+  });
+  const { fields, layout } = useMemo(() => resolveHalFormsFields(updateTemplate), [updateTemplate]);
   const formState = useHalFormsFieldState({
     fields,
-    initialValues: edited.item.updateFormValues ?? undefined,
+    initialValues: item.updateFormValues ?? undefined,
     externalErrors: toServerFieldErrors(getValidationFieldErrors(updateMutation.error)),
   });
 
-  useEffect(() => {
-    onDirtyChange?.(formState.isDirty);
-  }, [formState.isDirty, onDirtyChange]);
-
-  async function reloadAfterConflict() {
-    setIsReloading(true);
-    // A failed reload keeps the form, its input and the conflict alert; saving again retries.
-    const latest = await reloadEntityItem().catch(() => undefined);
-    setIsReloading(false);
-    const latestTemplate = latest?.updateTemplate;
-    if (!latest || !latestTemplate) return;
-    formState.updateInitialValues(latest.updateFormValues ?? {});
-    setEdited({ item: latest, updateTemplate: latestTemplate });
-  }
+  const unsavedChangesGuard = useUnsavedChangesGuard(formState.isDirty);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -80,36 +61,44 @@ export function EditEntityItemContainer({
     updateMutation.reset();
     if (!formState.validate()) return;
 
-    updateMutation.mutate(formState.buildValues(edited.updateTemplate.template), {
-      onSuccess: () => {
-        toast.success(
-          `${capitalizeFirstLetter(item.profileEntity.singularName)} has been successfully updated!`,
-        );
-        onSaved();
-      },
-      onError: (error) => {
-        if (isProblemWithStatus(error, 412)) void reloadAfterConflict();
-      },
-    });
+    updateMutation.mutate(formState.buildValues(updateTemplate.template));
   }
 
-  const formAlertError = getFormAlertError(updateMutation.error, fields);
+  // A validation problem shows on its fields; every other error goes in the alert.
+  const formAlertError =
+    updateMutation.error && !isValidationProblem(updateMutation.error)
+      ? toProblemDisplayModel(updateMutation.error)
+      : undefined;
 
   return (
-    <EditEntityItemForm
-      fields={fields}
-      layout={layout}
-      values={formState.values}
-      fieldState={formState.fieldState}
-      onFieldChange={formState.setValue}
-      onFieldBlur={formState.touchField}
-      onSubmit={handleSubmit}
-      isSaving={updateMutation.isPending || isReloading}
-      canSave={!isProblemWithStatus(updateMutation.error, 404)}
-      onCancel={onCancel}
-      nonFieldErrorAlert={
-        formAlertError && <ProblemAlert model={toProblemDisplayModel(formAlertError)} />
-      }
-    />
+    <>
+      <UnsavedChangesDialog
+        open={unsavedChangesGuard.isBlocked || isConfirmingCancel}
+        onConfirm={unsavedChangesGuard.isBlocked ? unsavedChangesGuard.confirmNavigation : onClose}
+        onCancel={
+          unsavedChangesGuard.isBlocked
+            ? unsavedChangesGuard.cancelNavigation
+            : () => setIsConfirmingCancel(false)
+        }
+      />
+      <EditEntityItemForm
+        fields={fields}
+        layout={layout}
+        values={formState.values}
+        fieldState={formState.fieldState}
+        onFieldChange={formState.setValue}
+        onFieldBlur={formState.touchField}
+        onSubmit={handleSubmit}
+        isSaving={updateMutation.isPending}
+        canSave={
+          !isProblemWithStatus(updateMutation.error, 404) &&
+          !isProblemWithStatus(updateMutation.error, 412)
+        }
+        onCancel={() => (formState.isDirty ? setIsConfirmingCancel(true) : onClose())}
+        nonFieldErrorAlert={
+          formAlertError && <ProblemAlert model={formAlertError} onRetryClick={onRefresh} />
+        }
+      />
+    </>
   );
 }
