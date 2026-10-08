@@ -107,8 +107,7 @@ rather than being specialised to a single entity type. The noun suffix reflects 
 entity name like `invoice`.
 
 - Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
-- Single-item queries: `useEntityItem`; `useReloadEntityItem` (a function that GETs the latest
-  version of an item into the cache, for re-applying changes after a 412)
+- Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
   (supports default, URL-pagination, and relation-scoped search via `RelationCollectionParams`)
@@ -271,8 +270,7 @@ const { data: collection } = useEntityItemCollection({
   via `src/api/problem-details/index.ts`). Read the RFC 9457 detail via `error.problemDetail`
   (`{ type, title, detail, status, ... }`). Do NOT manually inspect raw `response.status`.
 - Surface the parsed problem detail via TanStack Query's `error` field.
-- 412 (ETag mismatch) must be handled at the call site: re-fetch (`useReloadEntityItem`),
-  re-apply, retry. The hook must not swallow or auto-retry 412. Detect via `isProblemWithStatus(error, 412)` (see
+- 412 (ETag mismatch) must be handled at the call site: re-fetch, re-apply, retry. The hook must not swallow or auto-retry 412. Detect via `isProblemWithStatus(error, 412)` (see
   [Problem-detail handling](#problem-detail-handling) below) rather than a raw `instanceof` +
   `.problemDetail.status` check.
 

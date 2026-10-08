@@ -22,8 +22,7 @@ export interface UseUpdateEntityItemOptions {
  * The PUT answers 204 No Content, so the mutation succeeds once the PUT does.
  *
  * On HTTP 412 (ETag mismatch / unsatisfied-version), the error surfaces as `ProblemDetailError`
- * to the caller — the hook does NOT auto-retry. Callers must re-fetch (`useReloadEntityItem`),
- * re-apply, and retry.
+ * to the caller — the hook does NOT auto-retry. Callers must re-fetch, re-apply, and retry.
  *
  * Cache behaviour on success:
  * - `invalidateQueries` on `entityItem.byUrl`: a shown item is re-fetched (cancelling any fetch
