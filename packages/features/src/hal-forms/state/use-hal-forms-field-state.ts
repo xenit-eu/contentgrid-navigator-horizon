@@ -112,14 +112,15 @@ function initializeValues(
 }
 
 /**
- * Array-valued fields (`enum`/`autocomplete` with `multiValue`) are always a freshly-built
- * array, so plain `!==` would report a field as dirty forever after it's touched, even once its
- * content matches the initial value again. Mirrors `entity-item-create`'s `valuesEqual`.
+ * Whether two field values are the same. Array-valued fields (`enum`/`autocomplete` with
+ * `multiValue`) are always a freshly-built array and dates a freshly-decoded `Date`, so plain `!==`
+ * would report them as changed even when their content is equal.
  */
 function valuesEqual(a: FieldValue, b: FieldValue): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     return a.length === b.length && a.every((value, index) => value === b[index]);
   }
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
   return a === b;
 }
 

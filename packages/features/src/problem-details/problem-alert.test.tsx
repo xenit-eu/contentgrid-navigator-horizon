@@ -49,7 +49,7 @@ describe("ProblemAlert (dispatcher)", () => {
       title: "Version conflict",
     };
     render(<ProblemAlert model={model} onRetryClick={onRetryClick} />);
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
     expect(onRetryClick).toHaveBeenCalledOnce();
   });
 
