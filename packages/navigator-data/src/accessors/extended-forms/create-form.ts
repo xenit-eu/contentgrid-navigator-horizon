@@ -1,8 +1,8 @@
 import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
 import type { EntityInstanceCreateRequestSpec } from "../../api/requests";
-import type { ProfileAttribute } from "../attribute-profile";
 import type ProfileEntity from "../entity-profile";
 import type { ProfileRelation } from "../relation-profile";
+import { type FormAttributeProperty, toFormAttributeProperty } from "./form-property";
 
 /**
  * Enhanced Create-Form HAL-FORMS Template Wrapper
@@ -31,22 +31,6 @@ import type { ProfileRelation } from "../relation-profile";
  *      (`useProfileEntities()`) is only available async, after this template is already needed
  *      for the create/permission gate.
  */
-
-/**
- * Enhanced create-form property for user-defined attributes
- */
-export interface CreateFormProperty {
-  /** The original HAL-FORMS property */
-  property: HalFormsProperty;
-  /** The ProfileAttribute this property maps to (for type, constraints, validation) */
-  profileAttribute?: ProfileAttribute;
-  /** Whether this field is required */
-  isRequired: boolean;
-  /** Whether this is a content/file upload field */
-  isContent: boolean;
-  /** Allowed values for enum-like fields */
-  allowedValues?: readonly string[];
-}
 
 /**
  * Enhanced create-form property for to-one relation fields.
@@ -85,7 +69,7 @@ export interface CreateFormRelationToManyProperty {
  * and ProfileRelation objects.
  */
 export class CreateHalFormTemplate {
-  private _userDefinedProperties?: readonly CreateFormProperty[];
+  private _userDefinedProperties?: readonly FormAttributeProperty[];
   private _toOneRelationProperties?: readonly CreateFormRelationToOneProperty[];
   private _toManyRelationProperties?: readonly CreateFormRelationToManyProperty[];
 
@@ -100,18 +84,11 @@ export class CreateHalFormTemplate {
    * Get all user-defined attribute properties (excludes relations).
    * System fields (id, audit) never appear in create-form.
    */
-  get userDefinedProperties(): readonly CreateFormProperty[] {
+  get userDefinedProperties(): readonly FormAttributeProperty[] {
     this._userDefinedProperties ??= (this.template.properties ?? [])
       .filter((property) => property.type !== "url")
-      .map((property) => this.enhanceAttributeProperty(property));
+      .map((property) => toFormAttributeProperty(property, this.profileEntity));
     return this._userDefinedProperties;
-  }
-
-  /**
-   * Get all content/file upload properties.
-   */
-  get contentProperties(): readonly CreateFormProperty[] {
-    return this.userDefinedProperties.filter((prop) => prop.isContent);
   }
 
   /**
@@ -155,34 +132,11 @@ export class CreateHalFormTemplate {
    * Get all properties (user-defined + relations).
    */
   get allProperties(): readonly (
-    | CreateFormProperty
+    | FormAttributeProperty
     | CreateFormRelationToOneProperty
     | CreateFormRelationToManyProperty
   )[] {
     return [...this.userDefinedProperties, ...this.relationProperties];
-  }
-
-  /**
-   * Enhance a user-defined attribute property with profile metadata.
-   */
-  private enhanceAttributeProperty(property: HalFormsProperty): CreateFormProperty {
-    const profileAttribute = this.profileEntity.getAttribute(property.name);
-    const isContent = property.type === "file" || (profileAttribute?.isContent ?? false);
-    const isRequired = property.required ?? false;
-
-    // Extract allowed values from inline options
-    const allowedValues =
-      property.options?.isInline() && Array.isArray(property.options.inline)
-        ? property.options.inline.filter((v): v is string => typeof v === "string")
-        : undefined;
-
-    return {
-      property,
-      profileAttribute,
-      isRequired,
-      isContent,
-      allowedValues,
-    };
   }
 
   /**

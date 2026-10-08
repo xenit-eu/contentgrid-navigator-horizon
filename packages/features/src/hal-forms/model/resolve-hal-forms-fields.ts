@@ -1,8 +1,8 @@
 import type {
-  CreateFormProperty,
   CreateFormRelationToManyProperty,
   CreateFormRelationToOneProperty,
   CreateHalFormTemplate,
+  FormAttributeProperty,
   HalFormsProperty,
   ProfileEntity,
   SearchHalFormTemplateProperty,
@@ -120,7 +120,7 @@ interface FieldMappingInput {
   readonly property: HalFormsProperty;
 }
 
-function attributeHalFormsField(prop: CreateFormProperty): HalFormsField {
+function attributeHalFormsField(prop: FormAttributeProperty): HalFormsField {
   const { property, profileAttribute, isRequired, isContent } = prop;
   const base: FieldMappingInput = {
     name: property.name,

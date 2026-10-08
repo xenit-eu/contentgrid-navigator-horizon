@@ -55,7 +55,7 @@ describe("createEntityHandler", () => {
     const body = await res.json();
 
     expect(body._templates).toBeDefined();
-    expect(body._templates.default.method).toBe("PATCH");
+    expect(body._templates.default.method).toBe("PUT");
   });
 });
 
@@ -163,7 +163,7 @@ describe("createCreateHandler", () => {
 });
 
 describe("createUpdateHandler", () => {
-  it("responds to PATCH with 204 by default", async () => {
+  it("responds to PUT with 204 by default", async () => {
     server.use(
       createUpdateHandler({
         url: "https://test-application.eu-west-1.contentgrid.app/invoices/inv-1",
@@ -171,7 +171,7 @@ describe("createUpdateHandler", () => {
     );
 
     const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices/inv-1", {
-      method: "PATCH",
+      method: "PUT",
       body: "{}",
     });
 
@@ -189,7 +189,7 @@ describe("createUpdateHandler", () => {
     );
 
     const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices/inv-1", {
-      method: "PATCH",
+      method: "PUT",
       body: "{}",
     });
     const body = await res.json();

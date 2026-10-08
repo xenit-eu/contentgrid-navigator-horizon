@@ -104,7 +104,7 @@ export function createCreateHandler(config: CreateHandlerConfig): HttpHandler {
   });
 }
 
-// ---- Update handler (PATCH -> configurable status) ----
+// ---- Update handler (PUT, the item `default` template's method -> configurable status) ----
 
 export interface UpdateHandlerConfig {
   url: string;
@@ -118,7 +118,7 @@ export interface UpdateHandlerConfig {
 
 export function createUpdateHandler(config: UpdateHandlerConfig): HttpHandler {
   const { url, status = 204, body, etag } = config;
-  return http.patch(url, () => {
+  return http.put(url, () => {
     const headers: Record<string, string> = {};
     if (etag) headers["ETag"] = etag;
     if (body) {
