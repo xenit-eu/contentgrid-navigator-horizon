@@ -92,13 +92,6 @@ export class CreateHalFormTemplate {
   }
 
   /**
-   * Get all content/file upload properties.
-   */
-  get contentProperties(): readonly FormAttributeProperty[] {
-    return this.userDefinedProperties.filter((prop) => prop.isContent);
-  }
-
-  /**
    * Get to-one relation properties (maxItems === 1).
    * To-one relations can be required.
    */
