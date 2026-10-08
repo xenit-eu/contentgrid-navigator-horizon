@@ -1,5 +1,7 @@
 # Contract: `@contentgrid/ui` patterns
 
+PR 2 only. PR 1 adds no `ui` pattern: the edit form uses the create form's Save/Cancel row.
+
 Plain scalar props only — no `FieldDescriptor`, `EntityItem` or HAL types (constitution III). Each pattern ships a story with play tests and Playwright snapshots (light and dark).
 
 ## `EditActionBar` (patterns/edit-action-bar/) — new
@@ -34,10 +36,6 @@ interface FileRendererProps {
 ```
 
 States (one story each): empty, current file, replace pending, remove pending, uploading with progress, failed with retry, disabled (no permission).
-
-## Conflict hint
-
-`FieldShell` gains an optional `hint` slot (`ReactNode`) rendered under the input, used for "Changed by someone else: <value>" (D6). No new component.
 
 ## Motion
 

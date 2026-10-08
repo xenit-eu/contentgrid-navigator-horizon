@@ -41,7 +41,7 @@ Not in either PR: the pinned action bar, edit-mode heading and view/edit transit
 
 ### Session 2026-09-29
 
-- Q: When someone else changed the item while the form was open, what happens on save? → A: The save is refused, the latest version is loaded, and the form stays open with the user's own changes kept on top of it (FR-023, Story 3 scenario 2).
+- Q: When someone else changed the item while the form was open, what happens on save? → A: The save is refused and the user is told the item has been updated by someone else. Refresh reloads the latest version into the form; the user's unsaved input is not kept (FR-023, Story 3 scenario 2).
 - Q: The attribute values saved but a file upload or removal failed. Does edit mode stay open? → A: It stays open, with the failed file flagged and a retry of only the failed steps (FR-024, Story 3 scenario 5).
 - Q: How is the edit form presented? → A: Whatever looks most modern, elegant and in line with the Horizon look and feel. Chosen: in place of the attribute panel with a pinned action bar and a subtle view/edit transition (FR-003–FR-003c). It keeps the item header, relations and preview in view, which a separate page or a dialog would not.
 
@@ -101,7 +101,7 @@ A content editor saves and something goes wrong: a value is rejected, someone el
 **Acceptance Scenarios**:
 
 1. **Given** the server rejects one or more values, **When** the save returns, **Then** each rejected field shows its message inline, the form stays open with all input kept, and messages not tied to a field are shown above the form.
-2. **Given** the item was changed by someone else since the form was opened, **When** the user saves, **Then** the save is refused without overwriting the other change, the user is told the item changed, the item's latest version is loaded, and the form stays open with the user's own changes kept on top of it, so they can review them and save again.
+2. **Given** the item was changed by someone else since the form was opened, **When** the user saves, **Then** the save is refused without overwriting the other change and the user is told the item has been updated by someone else. Saving is not possible until they refresh; Refresh reloads the latest version into the form.
 3. **Given** the user is no longer allowed to update the item (or the change would move it outside what they may update), **When** they save, **Then** the form stays open with their input and a message explains the update is not permitted.
 4. **Given** the item no longer exists, **When** the user saves, **Then** they are told the item was not found and edit mode offers only to leave.
 5. **Given** attribute values saved but a file upload or removal fails, **When** the save finishes, **Then** edit mode stays open, the saved values are kept, and the failed file is flagged on its attribute with the reason and a retry; retrying applies only the file steps that failed.
@@ -169,7 +169,7 @@ A content editor saves and something goes wrong: a value is rejected, someone el
 
 - **FR-021**: Server validation messages tied to a field MUST be shown on that field; messages not tied to a field MUST be shown above the form. The user's input MUST be kept.
 - **FR-022**: A refused update (not permitted, or the result would not be permitted) MUST keep the form open with the input and explain that the update is not allowed.
-- **FR-023**: A conflicting change MUST be reported as such. The item's latest version MUST then be loaded and the form MUST stay open with the user's own changes kept on top of it; saving again is conditional on that latest version.
+- **FR-023**: A conflicting change MUST be reported as such, and saving MUST NOT be possible until the user refreshes. Refresh MUST reload the latest version into the form, after which saving again is conditional on that version.
 - **FR-024**: A failed file step MUST be shown on the affected content attribute with a retry, and MUST NOT undo the attribute values already saved. Edit mode MUST stay open until every file step has succeeded or the user cancels; a retry MUST apply only the steps that failed.
 - **FR-025**: An item that no longer exists MUST be reported as not found, without offering to save again.
 
@@ -188,7 +188,7 @@ A content editor saves and something goes wrong: a value is rejected, someone el
 - **SC-002**: A user can change one attribute of an item and see the saved value on the page in under 5 seconds on a normal connection, excluding file upload time.
 - **SC-003**: Saving an item without touching any value leaves every attribute and every attached file unchanged (verified for all fixture entities).
 - **SC-004**: No save ever overwrites a concurrent change made by someone else (verified by an automated conflict scenario).
-- **SC-005**: In every failure scenario of Story 3, the user's typed input is still present after the failure (0 cases of lost input).
+- **SC-005**: In every failure scenario of Story 3 except a conflict, the user's typed input is still present after the failure (0 cases of lost input); on a conflict, Refresh replaces it with the latest version.
 - **SC-006**: The Edit action is shown for 0 items the user is not permitted to update, across all fixture entities.
 - **SC-007**: Every behaviour of the original Navigator's edit flow for attributes and files (`research.md` §1) has an equivalent here, or is listed under Out of scope with a reason.
 
