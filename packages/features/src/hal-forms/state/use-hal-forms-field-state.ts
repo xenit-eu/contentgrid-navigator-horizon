@@ -80,12 +80,6 @@ export interface UseHalFormsFieldState {
   /** Resets values/touched/focused/provenance/dismissed-error state back to the initial values
    * this hook was seeded with. */
   reset(): void;
-  /**
-   * Moves the form onto new initial values — e.g. the latest version of an item after a version
-   * conflict: fields the user has not changed take the new values, the user's changes stay on top
-   * and still count as unsaved.
-   */
-  updateInitialValues(initialValues: FieldValueMap): void;
 }
 
 function defaultValueFor(field: HalFormsField): FieldValue {
@@ -118,14 +112,15 @@ function initializeValues(
 }
 
 /**
- * Array-valued fields (`enum`/`autocomplete` with `multiValue`) are always a freshly-built
- * array, so plain `!==` would report a field as dirty forever after it's touched, even once its
- * content matches the initial value again. Mirrors `entity-item-create`'s `valuesEqual`.
+ * Whether two field values are the same. Array-valued fields (`enum`/`autocomplete` with
+ * `multiValue`) are always a freshly-built array and dates a freshly-decoded `Date`, so plain `!==`
+ * would report them as changed even when their content is equal.
  */
 function valuesEqual(a: FieldValue, b: FieldValue): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     return a.length === b.length && a.every((value, index) => value === b[index]);
   }
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
   return a === b;
 }
 
@@ -249,21 +244,6 @@ export function useHalFormsFieldState({
     setDismissedExternalErrorFields(new Set());
   }
 
-  const updateInitialValues = useCallback(
-    (nextInitialValues: FieldValueMap) => {
-      const previousInitialValues = initialValuesRef.current;
-      const nextValues = initializeValues(fields, nextInitialValues);
-      initialValuesRef.current = nextValues;
-      setValuesState((current) => {
-        const userChanges = Object.entries(current).filter(
-          ([name, value]) => !valuesEqual(value, previousInitialValues[name]),
-        );
-        return { ...nextValues, ...Object.fromEntries(userChanges) };
-      });
-    },
-    [fields],
-  );
-
   const fieldState: Record<string, FieldState> = {};
   for (const [name, errors] of Object.entries(externalErrors)) {
     if (!dismissedExternalErrorFields.has(name) && errors.length > 0) {
@@ -299,6 +279,5 @@ export function useHalFormsFieldState({
     blurField,
     buildValues,
     reset,
-    updateInitialValues,
   };
 }
