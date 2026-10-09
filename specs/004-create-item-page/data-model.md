@@ -4,7 +4,7 @@
 
 No server-side data changes. All shapes below are client-side.
 
-## Entity option (`ProfileEntityOption`, `@contentgrid/ui`)
+## Option (`IconBadgeOption`, `@contentgrid/ui`)
 
 | Field         | Type         | Rule                                                     |
 | ------------- | ------------ | -------------------------------------------------------- |
@@ -13,7 +13,7 @@ No server-side data changes. All shapes below are client-side.
 | `description` | `string?`    | Muted second line in option rows; omitted when empty.    |
 | `icon`        | `ReactNode?` | Rendered left of the title; the caller supplies it.      |
 
-Mapping in features: `ProfileEntity` → `{ name: profile.name, title: profile.title, description: profile.description || undefined, icon: <EntityIconBadge profile={profile} variant="sm" muted /> }`.
+Mapping in features (`EntityProfileSelector` / `EntityProfileSelectorList`, internal): `ProfileEntity` → `{ name: profile.name, title: profile.title, description: profile.description || undefined, icon: <EntityIconBadge profile={profile} variant="sm" muted /> }`.
 
 ## Create item page state (`ClassifyCreateEntityItemView`)
 
@@ -22,7 +22,7 @@ Mapping in features: `ProfileEntity` → `{ name: profile.name, title: profile.t
 | `selectedProfile` | `ProfileEntity \| undefined` | `undefined` | set on selection; **Continue** is enabled once set and opens its create form (D4) |
 | `initialFile`     | from the store               | store value | drop/browse → `setInitialFile(file)`; remove → `setInitialFile(null)`             |
 
-Entities: `profiles` from `useCreatableProfileEntities()` (`navigator-data`, research D11).
+Entities: `useLoadedProfileEntities()` filtered inline to those with a `createTemplate` (research D11).
 
 View states: `loading` (entities loading) → `empty` (no creatable entity) | `ready`.
 
