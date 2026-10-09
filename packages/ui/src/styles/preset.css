@@ -46,6 +46,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  /* Hover/pressed fill for solid primary surfaces. */
+  --color-primary-hover: color-mix(in oklab, var(--primary) 80%, black);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -204,8 +206,8 @@
   --secondary-foreground: var(--dark-body);
   --muted: var(--dark-surface-2);
   --muted-foreground: var(--dark-dim);
-  --accent: var(--dark-accent);
-  --accent-foreground: var(--dark-surface);
+  --accent: var(--dark-line); /* mild hover/selected surface, as --sidebar-accent */
+  --accent-foreground: var(--dark-ink);
   --destructive: #f87171; /* red-400 — lifted for dark-bg contrast */
   --destructive-foreground: #ffffff;
   /* Same green identity as StatusPill's dark "success" variant. */
@@ -236,6 +238,27 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Every clickable element shows the hand cursor; Tailwind's preflight resets buttons to the
+     default arrow. A `cursor-*` utility still overrides this (utilities sit in a later layer). */
+  :is(
+    a[href],
+    button,
+    summary,
+    label[for],
+    select,
+    [role="button"],
+    [role="link"],
+    [role="tab"],
+    [role="radio"],
+    [role="checkbox"],
+    [role="switch"],
+    [role="option"],
+    [role="menuitem"],
+    [role="menuitemradio"],
+    [role="menuitemcheckbox"]
+  ):not(:disabled, [aria-disabled="true"], [data-disabled]) {
+    cursor: pointer;
   }
 }
 

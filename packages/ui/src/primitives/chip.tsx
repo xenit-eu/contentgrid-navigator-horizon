@@ -30,7 +30,7 @@ function Chip({ tone = "neutral", field, label, removable, onRemove, className }
           type="button"
           aria-label={`Remove ${label} filter`}
           onClick={onRemove}
-          className="text-muted-foreground hover:text-foreground cursor-pointer p-0 border-0 bg-transparent flex items-center"
+          className="text-muted-foreground hover:text-foreground p-0 border-0 bg-transparent flex items-center"
         >
           <X size={13} aria-hidden />
         </button>

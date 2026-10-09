@@ -250,7 +250,7 @@ function AttributeCheckboxRow({
   return (
     <label
       htmlFor={inputId}
-      className="hover:bg-accent flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1.5 text-sm"
+      className="hover:bg-accent flex items-start gap-2 rounded-sm px-2 py-1.5 text-sm"
     >
       <Checkbox
         id={inputId}

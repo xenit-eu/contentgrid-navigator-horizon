@@ -58,7 +58,7 @@ export function UserMenu({
         <button
           type="button"
           className={cn(
-            "flex min-w-0 cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent p-1 text-left text-white outline-none",
+            "flex min-w-0 items-center gap-2 rounded-md border-0 bg-transparent p-1 text-left text-white outline-none",
             className,
           )}
         >
