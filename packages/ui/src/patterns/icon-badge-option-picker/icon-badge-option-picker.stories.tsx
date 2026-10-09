@@ -1,13 +1,14 @@
 import { BuildingsIcon, FileTextIcon, SignatureIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
-import { ProfileEntitySelector, ProfileEntitySelectorList } from "./entity-selector";
+import { IconBadgeOptionPicker, IconBadgeOptionPickerList } from "./icon-badge-option-picker";
 
 const meta = {
-  title: "Patterns/ProfileEntitySelector",
-  component: ProfileEntitySelector,
+  title: "Patterns/IconBadgeOptionPicker",
+  component: IconBadgeOptionPicker,
   tags: ["autodocs"],
-} satisfies Meta<typeof ProfileEntitySelector>;
+  args: { placeholder: "Select entity" },
+} satisfies Meta<typeof IconBadgeOptionPicker>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -20,38 +21,38 @@ const ENTITIES = [
 
 export const SingleEntity: Story = {
   args: {
-    entities: [{ name: "invoice", title: "Invoice" }],
+    options: [{ name: "invoice", title: "Invoice" }],
     onSelect: fn(),
   },
 };
 
 export const TwoEntities: Story = {
   args: {
-    entities: ENTITIES.slice(0, 2),
-    selectedEntity: ENTITIES[0],
+    options: ENTITIES.slice(0, 2),
+    selectedOption: ENTITIES[0],
     onSelect: fn(),
   },
 };
 
 export const ManyEntities: Story = {
   args: {
-    entities: ENTITIES,
-    selectedEntity: ENTITIES[1],
+    options: ENTITIES,
+    selectedOption: ENTITIES[1],
     onSelect: fn(),
   },
 };
 
 export const NoSelection: Story = {
   args: {
-    entities: ENTITIES,
+    options: ENTITIES,
     onSelect: fn(),
   },
 };
 
 export const WithLabel: Story = {
   args: {
-    entities: ENTITIES,
-    selectedEntity: undefined,
+    options: ENTITIES,
+    selectedOption: undefined,
     onSelect: fn(),
     label: "Entity",
   },
@@ -80,7 +81,7 @@ const ENTITIES_WITH_DETAILS = [
 
 export const WithIconsAndDescriptions: Story = {
   args: {
-    entities: ENTITIES_WITH_DETAILS,
+    options: ENTITIES_WITH_DETAILS,
     onSelect: fn(),
     label: "Entity",
   },
@@ -88,15 +89,15 @@ export const WithIconsAndDescriptions: Story = {
 
 export const List: Story = {
   args: {
-    entities: ENTITIES_WITH_DETAILS,
-    selectedEntity: ENTITIES_WITH_DETAILS[1],
+    options: ENTITIES_WITH_DETAILS,
+    selectedOption: ENTITIES_WITH_DETAILS[1],
     onSelect: fn(),
   },
-  render: ({ entities, selectedEntity, onSelect }) => (
+  render: ({ options, selectedOption, onSelect }) => (
     <div className="max-w-xl">
-      <ProfileEntitySelectorList
-        entities={entities}
-        selectedEntity={selectedEntity}
+      <IconBadgeOptionPickerList
+        options={options}
+        selectedOption={selectedOption}
         onSelect={onSelect}
         label="Entity"
       />
@@ -106,5 +107,5 @@ export const List: Story = {
 
 export const ListNoSelection: Story = {
   ...List,
-  args: { ...List.args, selectedEntity: undefined },
+  args: { ...List.args, selectedOption: undefined },
 };

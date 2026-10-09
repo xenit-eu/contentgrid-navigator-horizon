@@ -10,9 +10,9 @@ import {
   SelectValue,
 } from "../../primitives/select";
 
-/** A single selectable `profileEntity`, reduced to what this pattern renders. */
-export interface ProfileEntityOption {
-  /** Entity name — used as the selection value. */
+/** A single choice: a title with an optional icon (typically an `IconBadge`) and description. */
+export interface IconBadgeOption {
+  /** Unique key — used as the selection value. */
   name: string;
   title: string;
   description?: string;
@@ -20,11 +20,13 @@ export interface ProfileEntityOption {
   icon?: ReactNode;
 }
 
-export interface ProfileEntitySelectorProps {
-  entities: readonly ProfileEntityOption[];
-  selectedEntity?: ProfileEntityOption;
-  onSelect: (entity: ProfileEntityOption) => void;
+export interface IconBadgeOptionPickerProps {
+  options: readonly IconBadgeOption[];
+  selectedOption?: IconBadgeOption;
+  onSelect: (option: IconBadgeOption) => void;
   label?: string;
+  /** Trigger text while nothing is selected; also the trigger's accessible name without `label`. */
+  placeholder?: string;
   /**
    * Trigger height, mirroring `SelectTrigger`'s `size` (`"default"` → `h-9`, `"sm"` → `h-8`).
    * Pass `"sm"` for a compact, inline placement such as a toolbar.
@@ -32,7 +34,7 @@ export interface ProfileEntitySelectorProps {
   size?: "sm" | "default";
 }
 
-function EntityOptionCompactLabel({ option }: Readonly<{ option: ProfileEntityOption }>) {
+function OptionCompactLabel({ option }: Readonly<{ option: IconBadgeOption }>) {
   return (
     <span className="flex min-w-0 items-center gap-2">
       {option.icon}
@@ -41,7 +43,7 @@ function EntityOptionCompactLabel({ option }: Readonly<{ option: ProfileEntityOp
   );
 }
 
-function EntityOptionLabel({ option }: Readonly<{ option: ProfileEntityOption }>) {
+function OptionLabel({ option }: Readonly<{ option: IconBadgeOption }>) {
   return (
     <div className="flex w-full min-w-0 items-center gap-2.5">
       {option.icon}
@@ -55,40 +57,41 @@ function EntityOptionLabel({ option }: Readonly<{ option: ProfileEntityOption }>
   );
 }
 
-export function ProfileEntitySelector({
-  entities,
-  selectedEntity,
+export function IconBadgeOptionPicker({
+  options,
+  selectedOption,
   onSelect,
   label,
+  placeholder = "Select an option",
   size = "default",
-}: Readonly<ProfileEntitySelectorProps>) {
+}: Readonly<IconBadgeOptionPickerProps>) {
   function handleValueChange(name: string) {
-    const entity = entities.find((option) => option.name === name);
-    if (entity) onSelect(entity);
+    const option = options.find((candidate) => candidate.name === name);
+    if (option) onSelect(option);
   }
 
   return (
     <div className="flex flex-col gap-1.5">
       {label && <Label>{label}</Label>}
-      <Select value={selectedEntity?.name} onValueChange={handleValueChange}>
+      <Select value={selectedOption?.name} onValueChange={handleValueChange}>
         <SelectTrigger
           size={size}
           // Grows past the fixed trigger height so an icon badge keeps vertical padding.
           className="w-full py-1.5 data-[size=default]:h-auto data-[size=default]:min-h-9 data-[size=sm]:h-auto data-[size=sm]:min-h-8"
-          aria-label={label ?? "Select entity"}
+          aria-label={label ?? placeholder}
         >
-          <SelectValue placeholder="Select entity">
-            {selectedEntity && <EntityOptionCompactLabel option={selectedEntity} />}
+          <SelectValue placeholder={placeholder}>
+            {selectedOption && <OptionCompactLabel option={selectedOption} />}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {entities.map((option) => (
+          {options.map((option) => (
             <SelectItem
               key={option.name}
               value={option.name}
               className="[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
             >
-              <EntityOptionLabel option={option} />
+              <OptionLabel option={option} />
             </SelectItem>
           ))}
         </SelectContent>
@@ -98,22 +101,22 @@ export function ProfileEntitySelector({
 }
 
 // ---------------------------------------------------------------------------
-// ProfileEntitySelectorList — inline list
+// IconBadgeOptionPickerList — inline list
 // ---------------------------------------------------------------------------
 
-export interface ProfileEntitySelectorListProps {
-  entities: readonly ProfileEntityOption[];
-  selectedEntity?: ProfileEntityOption;
-  onSelect: (entity: ProfileEntityOption) => void;
+export interface IconBadgeOptionPickerListProps {
+  options: readonly IconBadgeOption[];
+  selectedOption?: IconBadgeOption;
+  onSelect: (option: IconBadgeOption) => void;
   /** Rendered above the list; names the radio group. */
   label: string;
 }
 
-function EntityOptionRow({
+function OptionRow({
   option,
   selected,
   onSelect,
-}: Readonly<{ option: ProfileEntityOption; selected: boolean; onSelect: () => void }>) {
+}: Readonly<{ option: IconBadgeOption; selected: boolean; onSelect: () => void }>) {
   return (
     <button
       type="button"
@@ -141,15 +144,15 @@ function EntityOptionRow({
 }
 
 /**
- * The entity options laid out as an always-visible, scrollable list instead of a dropdown — for
- * a page whose main choice is the entity, such as the Create Item page.
+ * The options laid out as an always-visible, scrollable list instead of a dropdown — for a page
+ * whose main choice is this one, such as the Create Item page.
  */
-export function ProfileEntitySelectorList({
-  entities,
-  selectedEntity,
+export function IconBadgeOptionPickerList({
+  options,
+  selectedOption,
   onSelect,
   label,
-}: Readonly<ProfileEntitySelectorListProps>) {
+}: Readonly<IconBadgeOptionPickerListProps>) {
   const labelId = useId();
 
   return (
@@ -163,11 +166,11 @@ export function ProfileEntitySelectorList({
       {/* An overlay scrollbar, so the row hover and selection run the list's full width. */}
       <ScrollArea className="flex max-h-[min(296px,45vh)] flex-col overflow-hidden rounded-lg border bg-popover shadow-lg [&>[data-slot=scroll-area-viewport]]:max-h-[inherit] [&>[data-slot=scroll-area-viewport]>div]:block!">
         <div role="radiogroup" aria-labelledby={labelId}>
-          {entities.map((option) => (
-            <EntityOptionRow
+          {options.map((option) => (
+            <OptionRow
               key={option.name}
               option={option}
-              selected={option.name === selectedEntity?.name}
+              selected={option.name === selectedOption?.name}
               onSelect={() => onSelect(option)}
             />
           ))}
