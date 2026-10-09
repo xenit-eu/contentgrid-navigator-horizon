@@ -18,9 +18,9 @@ pnpm dev:navigator            # MSW fixtures in development mode
 2. The **Entity** list shows only entities with a create form, each with icon, name and description; **Continue** is disabled.
 3. Choose an entity → it gets a check mark; press **Continue** → its create form opens; go back to the Create Item page.
 4. Drop a PDF on **Upload a file (optional)** → its name and size are shown; remove it and drop it again.
-5. Choose an entity with a file field → its create form opens with the PDF in its first file field.
+5. Choose an entity with a file field and press **Continue** → its create form opens with the PDF in its first file field.
 6. Reload the create form → the file is gone (memory only).
-7. Back on the Create item page (the file is still shown), choose an entity without a file field → its create form opens without the file and without a message.
+7. Back on the Create item page (the file is still shown), choose an entity without a file field and press **Continue** → its create form opens without the file and without a message.
 8. On that create form, switch entity in the toolbar to one with a file field → the file is in its file field.
 9. Create the item → open Create again: no file attached.
 10. With unsaved changes, switch entity in the toolbar → the unsaved-changes dialog appears.
