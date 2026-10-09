@@ -553,6 +553,19 @@ describe("CreateEntityItemContainer", () => {
       await vi.waitFor(() => expect(useCreateEntityItemState.getState().initialFile).toBeNull());
     });
 
+    it("clears the initial file when the user removes it from the form", async () => {
+      const user = userEvent.setup();
+      useCreateEntityItemState
+        .getState()
+        .setInitialFile(new File(["%PDF"], "invoice.pdf", { type: "application/pdf" }));
+      server.use(profileRootHandler(), invoiceProfileHandler(FILE_CREATE_FORM));
+      renderForm();
+
+      await user.click(await screen.findByRole("button", { name: /remove file/i }));
+
+      expect(useCreateEntityItemState.getState().initialFile).toBeNull();
+    });
+
     it("keeps the initial file for a later form when this form has no file field", async () => {
       const initialFile = new File(["%PDF"], "invoice.pdf", { type: "application/pdf" });
       useCreateEntityItemState.getState().setInitialFile(initialFile);
