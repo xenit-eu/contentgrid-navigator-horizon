@@ -41,9 +41,9 @@ Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/content
 
 ## 3. Decisions
 
-### D1 — Extend `ProfileEntitySelector` rather than create a new selector
+### D1 — Extend `ProfileEntitySelector` (renamed `IconBadgeOptionPicker`) rather than create a new selector
 
-- **Decision**: Extend the existing pattern option gains `description?` and `icon?: ReactNode`; rows adopt the attribute selector's layout; label moves above the field.
+- **Decision**: Extend the existing pattern option gains `description?` and `icon?: ReactNode`; rows adopt the attribute selector's layout; label moves above the field. It holds no entity knowledge, so it is renamed `IconBadgeOptionPicker` (`IconBadgeOptionPickerList`, `IconBadgeOption`). Features wrappers `EntityProfileSelector` / `EntityProfileSelectorList` take `ProfileEntity`s and do the option mapping, so pages never handle options.
 - **Rationale**: One entity selector in the design system; no consumers today, so no migration cost.
 - **Alternatives rejected**: A new `EntityPicker` pattern (duplicate); a features-level component (not reusable outside features).
 
@@ -77,7 +77,7 @@ Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/content
 
 ### D7 — Entity switch in the create form toolbar
 
-- **Decision**: The `$entity/~create` route passes a toolbar `ProfileEntitySelector` (via `BreadCrumbsToolBarLayout`'s `actions` slot, rendered by a features component `CreateEntityItemProfileSelector`) listing the same creatable entities; selecting navigates to that entity's create route. `CreateEntityItemView` is keyed on `profile.name` so the form state resets on switch (TanStack Router keeps the component mounted when only params change). The existing `useUnsavedChangesGuard` already blocks navigation with unsaved changes (FR-021).
+- **Decision**: The `$entity/~create` route passes a toolbar `EntityProfileSelector` (via `BreadCrumbsToolBarLayout`'s `actions` slot, rendered by a features component `CreateEntityItemProfileSelector`) listing the same creatable entities; selecting navigates to that entity's create route. `CreateEntityItemView` is keyed on `profile.name` so the form state resets on switch (TanStack Router keeps the component mounted when only params change). The existing `useUnsavedChangesGuard` already blocks navigation with unsaved changes (FR-021).
 - **Rationale**: Lets the user change the entity without going back to the Create Item page, and gives the reusable selector a second consumer.
 
 ### D8 — Empty-attribute upload wiring in `ContentPreviewPanel`
@@ -97,11 +97,11 @@ Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/content
 - **Rationale**: Without it the cached item keeps its old ETag, so every retry sends the same stale `If-Match` and fails with 412 again until a manual reload (against FR-016/FR-018). In the hook, every upload caller (this panel, the `003` edit form) gets it without having to remember it.
 - **Alternative rejected**: `ContentPreviewPanel` passing `mutationOptions.onError` — local, but each caller would have to repeat it.
 
-### D11 — Shared `useCreatableProfileEntities()` hook in `navigator-data`
+### D11 — Filter creatable entities inline
 
-- **Decision**: New hook `useCreatableProfileEntities()` in `navigator-data/src/hooks/profile/use-profile-entity.ts`: wraps `useLoadedProfileEntities()` and returns the `ProfileEntity`s with `createTemplate !== null`, in profile-root order, plus `isLoading`.
-- **Rationale**: The Create Item page and the create-form toolbar selector need the same list; one hook keeps the `createTemplate` gate (deny-by-default) in one place instead of an inline filter in each.
-- **Alternative rejected**: Filtering inline in each consumer — copies of the gate that can drift.
+- **Decision**: The Create Item page and the create-form toolbar selector each call `useLoadedProfileEntities()` and keep the `ProfileEntity`s with `createTemplate !== null`, in profile-root order.
+- **Rationale**: A one-line filter in two places; a dedicated `navigator-data` hook adds API surface for no gain.
+- **Alternative rejected**: A shared `useCreatableProfileEntities()` hook in `navigator-data` — public API for a one-line filter.
 
 ## 4. Open points
 

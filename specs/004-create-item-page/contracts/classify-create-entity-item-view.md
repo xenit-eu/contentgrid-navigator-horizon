@@ -14,9 +14,9 @@ export interface ClassifyCreateEntityItemViewProps {
 }
 ```
 
-- Loads entities with `navigator-data`'s `useCreatableProfileEntities()` (wraps `useLoadedProfileEntities()`, constitution VIII), which returns the `ProfileEntity`s with `profile.createTemplate !== null`, keeping sidebar order. Options for the `ui` pattern are built with `toProfileEntityOption()` only where they are passed to it.
+- Loads entities with `useLoadedProfileEntities()` (constitution VIII) and keeps those with `profile.createTemplate !== null` inline, in sidebar order (research D11). Passes `ProfileEntity`s straight to `EntityProfileSelectorList`; it never builds options.
 - Loading → `LoadingPage`; no creatable entity → message "There is nothing you can create." with Cancel and a disabled Continue.
-- Card: title "Create Item", subtitle "Select the entity you want to create.", `ProfileEntitySelectorList` (`label="Entity"`), section label "Upload a file (optional)", `FileUploadZone`, footer Cancel (ghost) and Continue (disabled until an entity is chosen).
+- Card: title "Create Item", subtitle "Select the entity you want to create.", `EntityProfileSelectorList` (`label="Entity"`), section label "Upload a file (optional)", `FileUploadZone`, footer Cancel (ghost) and Continue (disabled until an entity is chosen).
 - The drop zone is bound to the store: `initialFile` and `setInitialFile` from `useCreateEntityItemState` — returning to the page shows the file still attached.
 - Selecting an entity marks it (check mark); Continue calls `onSelect(profile)` and the route navigates.
 - Cancel: `onCancel()` only; never writes the store.
@@ -76,14 +76,14 @@ export interface CreateEntityItemProfileSelectorProps {
 }
 ```
 
-- Same entity list and option mapping as `ClassifyCreateEntityItemView` (`useCreatableProfileEntities()` from `navigator-data`, `toProfileEntityOption()` in `entity-item-create`; option title = `profile.title`), rendered as a compact `ProfileEntitySelector` (`size="sm"`, small icon badges) with the current entity selected.
+- Same entity list as `ClassifyCreateEntityItemView` (`useLoadedProfileEntities()` filtered inline on `createTemplate`), rendered as a compact `EntityProfileSelector` (`size="sm"`, small icon badges) with the current entity selected.
 - Route: passed to `BreadCrumbsToolBarLayout`'s `actions`; `onSelect` → `navigate({ to: "/$entity/~create", params: { entity: profile.name }, search: {} })`.
 - Route renders `<CreateEntityItemView key={profile.name} … />` so the form resets on switch.
 - Unsaved changes: handled by the existing `useUnsavedChangesGuard` in `CreateEntityItemView` — no new code.
 
 ## Sidebar
 
-**File**: `packages/features/src/layout/sidebar-layout.tsx` — `SidebarCreateItemButton` navigates to `/~create`.
+**File**: `packages/features/src/layout/sidebar-layout.tsx` — `SidebarCreateItemButton` navigates to `/~create`; its look is the `primary` variant of `sidebarMenuButtonVariants` (`packages/ui/src/primitives/sidebar.tsx`).
 
 ## Tests
 
