@@ -9,7 +9,7 @@ import {
   type ProfileEntity,
   createApiClient,
   createContentClient,
-  useCreatableProfileEntities,
+  useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
   PROFILE_URL,
@@ -40,7 +40,7 @@ function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function InvoiceSelector({ onSelect }: Readonly<{ onSelect: (profile: ProfileEntity) => void }>) {
-  const { profiles } = useCreatableProfileEntities();
+  const { profiles } = useLoadedProfileEntities();
   const invoice = profiles.find(({ name }) => name === "invoice");
   return invoice ? (
     <CreateEntityItemProfileSelector selectedProfile={invoice} onSelect={onSelect} />

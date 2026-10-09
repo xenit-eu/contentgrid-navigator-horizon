@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { type QueryClient, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Link } from "@contentgrid/hal";
 import ProfileEntity, { profileRootQuery } from "../../accessors/entity-profile";
@@ -79,22 +78,6 @@ export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
     profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
     isLoading: isAnyProfileLoading(rootQuery.isPending, results),
   };
-}
-
-/**
- * The loaded `profileEntity`s the current user may create — those with a `createTemplate` —
- * in profile-root order, with `useLoadedProfileEntities`'s loading flag.
- */
-export function useCreatableProfileEntities(): {
-  readonly profiles: readonly ProfileEntity[];
-  readonly isLoading: boolean;
-} {
-  const { profiles: loadedProfiles, isLoading } = useLoadedProfileEntities();
-  const profiles = useMemo(
-    () => loadedProfiles.filter((profile) => profile.createTemplate !== null),
-    [loadedProfiles],
-  );
-  return { profiles, isLoading };
 }
 
 /**
