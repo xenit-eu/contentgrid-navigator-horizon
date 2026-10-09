@@ -1,56 +1,56 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ProfileEntitySelector, ProfileEntitySelectorList } from "./entity-selector";
+import { IconBadgeOptionPicker, IconBadgeOptionPickerList } from "./icon-badge-option-picker";
 
 const INVOICE = { name: "invoice", title: "Invoice" };
 const CUSTOMER = { name: "customer", title: "Customer" };
 
-describe("ProfileEntitySelector — selected entity display", () => {
-  it("shows the selected entity title in the trigger", () => {
+describe("IconBadgeOptionPicker — selected option display", () => {
+  it("shows the selected option title in the trigger", () => {
     render(
-      <ProfileEntitySelector
-        entities={[INVOICE, CUSTOMER]}
-        selectedEntity={INVOICE}
+      <IconBadgeOptionPicker
+        options={[INVOICE, CUSTOMER]}
+        selectedOption={INVOICE}
         onSelect={vi.fn()}
       />,
     );
     expect(screen.getByText("Invoice")).toBeInTheDocument();
   });
 
-  it("shows placeholder text when no entity is selected", () => {
-    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
-    expect(screen.getByText("Select entity")).toBeInTheDocument();
+  it("shows placeholder text when no option is selected", () => {
+    render(<IconBadgeOptionPicker options={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
+    expect(screen.getByText("Select an option")).toBeInTheDocument();
   });
 });
 
-describe("ProfileEntitySelector — label prop", () => {
+describe("IconBadgeOptionPicker — label prop", () => {
   it("renders the label text when label is provided", () => {
     render(
-      <ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
+      <IconBadgeOptionPicker options={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
     );
     expect(screen.getByText("Entity")).toBeInTheDocument();
   });
 
   it("names the trigger after the label", () => {
     render(
-      <ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
+      <IconBadgeOptionPicker options={[INVOICE, CUSTOMER]} onSelect={vi.fn()} label="Entity" />,
     );
     expect(screen.getByRole("combobox", { name: "Entity" })).toBeInTheDocument();
   });
 
   it("does not render label text when label is omitted", () => {
-    render(<ProfileEntitySelector entities={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
+    render(<IconBadgeOptionPicker options={[INVOICE, CUSTOMER]} onSelect={vi.fn()} />);
     expect(screen.queryByText("Entity")).toBeNull();
   });
 });
 
-describe("ProfileEntitySelector — option content", () => {
-  it("shows each entity's description in its option row", async () => {
+describe("IconBadgeOptionPicker — option content", () => {
+  it("shows each option's description in its option row", async () => {
     const user = userEvent.setup();
     render(
-      <ProfileEntitySelector
-        entities={[{ ...INVOICE, description: "A supplier invoice" }, CUSTOMER]}
+      <IconBadgeOptionPicker
+        options={[{ ...INVOICE, description: "A supplier invoice" }, CUSTOMER]}
         onSelect={vi.fn()}
       />,
     );
@@ -61,12 +61,12 @@ describe("ProfileEntitySelector — option content", () => {
   });
 });
 
-describe("ProfileEntitySelectorList", () => {
-  it("marks only the selected entity as checked", () => {
+describe("IconBadgeOptionPickerList", () => {
+  it("marks only the selected option as checked", () => {
     render(
-      <ProfileEntitySelectorList
-        entities={[INVOICE, CUSTOMER]}
-        selectedEntity={CUSTOMER}
+      <IconBadgeOptionPickerList
+        options={[INVOICE, CUSTOMER]}
+        selectedOption={CUSTOMER}
         onSelect={vi.fn()}
         label="Entity"
       />,
@@ -76,10 +76,10 @@ describe("ProfileEntitySelectorList", () => {
     expect(screen.getByRole("radio", { name: "Invoice" })).toHaveAttribute("aria-checked", "false");
   });
 
-  it("shows each entity's description in its row", () => {
+  it("shows each option's description in its row", () => {
     render(
-      <ProfileEntitySelectorList
-        entities={[{ ...INVOICE, description: "A supplier invoice" }, CUSTOMER]}
+      <IconBadgeOptionPickerList
+        options={[{ ...INVOICE, description: "A supplier invoice" }, CUSTOMER]}
         onSelect={vi.fn()}
         label="Entity"
       />,
