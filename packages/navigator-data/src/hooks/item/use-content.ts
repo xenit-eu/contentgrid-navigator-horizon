@@ -4,6 +4,7 @@ import { checkResponse } from "@contentgrid/problem-details";
 import { EntityItem } from "../../accessors/entity-item";
 import { parseContentDisposition } from "../../api/content-types";
 import { fetchHal, fetchVoid } from "../../api/hal-client";
+import { isProblemWithStatus } from "../../api/problem-details/guards";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape } from "../../shapes";
 import { useNavigatorData } from "../context";
@@ -85,7 +86,8 @@ export interface UseDownloadContentOptions {
  *
  * Attaches `If-Match` from the current ETag when available (included inside
  * `entityItem.uploadContentRequest`). On HTTP 412 (ETag mismatch), the error
- * surfaces as `ProblemDetailError` — the hook does NOT auto-retry.
+ * surfaces as `ProblemDetailError` and the item query is invalidated so the
+ * newer version loads — the hook does NOT auto-retry.
  *
  * Cache behaviour on success:
  * - Re-fetches the entity item via `apiFetch` to get fresh metadata + new ETag.
@@ -107,7 +109,7 @@ export function useUploadContent(
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
 
-  const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
+  const { onSuccess, onError, ...restMutationOptions } = options?.mutationOptions ?? {};
 
   return useMutation({
     mutationFn: async ({ file, contentType, filename }: UploadContentVariables) => {
@@ -136,6 +138,15 @@ export function useUploadContent(
 
       // Compose caller's onSuccess LAST — after cache is consistent.
       await onSuccess?.(item, variables, onMutateResult, context);
+    },
+    onError: async (error, variables, onMutateResult, context) => {
+      // The item changed on the server since it was loaded: load the newer version.
+      if (isProblemWithStatus(error, 412)) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
+        });
+      }
+      await onError?.(error, variables, onMutateResult, context);
     },
     ...restMutationOptions,
   });
