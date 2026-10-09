@@ -71,7 +71,12 @@ export function ProfileEntitySelector({
     <div className="flex flex-col gap-1.5">
       {label && <Label>{label}</Label>}
       <Select value={selectedEntity?.name} onValueChange={handleValueChange}>
-        <SelectTrigger size={size} className="w-full" aria-label={label ?? "Select entity"}>
+        <SelectTrigger
+          size={size}
+          // Grows past the fixed trigger height so an icon badge keeps vertical padding.
+          className="w-full py-1.5 data-[size=default]:h-auto data-[size=default]:min-h-9 data-[size=sm]:h-auto data-[size=sm]:min-h-8"
+          aria-label={label ?? "Select entity"}
+        >
           <SelectValue placeholder="Select entity">
             {selectedEntity && <EntityOptionCompactLabel option={selectedEntity} />}
           </SelectValue>
