@@ -43,7 +43,7 @@ function SelectionChip({
       disabled={disabled}
       className={cn(
         "inline-flex items-center whitespace-nowrap border transition-colors",
-        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+        disabled && "cursor-not-allowed opacity-50",
         size === "sm"
           ? "px-[10px] py-[5px] rounded-[6px] text-[12px]"
           : "px-[14px] py-[7px] rounded-[8px] text-[13px]",

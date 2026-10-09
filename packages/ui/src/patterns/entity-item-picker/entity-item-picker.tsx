@@ -226,7 +226,7 @@ export function EntityItemPicker({
                 key={item.id}
                 className={cn(
                   "cursor-pointer transition-colors",
-                  isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/50",
+                  isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-primary/5",
                 )}
                 onClick={() => {
                   if (multiSelect) {

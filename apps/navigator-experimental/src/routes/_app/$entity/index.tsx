@@ -178,7 +178,7 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
           <button
             type="button"
             onClick={() => go({ to: "/", search: {} })}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Home
           </button>
