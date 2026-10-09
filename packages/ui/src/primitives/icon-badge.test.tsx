@@ -109,13 +109,15 @@ describe("IconBadge", () => {
     expect(badge.style.color).toBe("oklch(0.55 0.17 155)");
   });
 
-  it("only applies the hover/cursor-pointer affordance when clickable", () => {
+  it("only renders as a hoverable button when clickable", () => {
     const { container: withoutClick } = render(<IconBadge icon={<span />} />);
-    expect(withoutClick.querySelector('[data-slot="icon-badge"]')).not.toHaveClass(
-      "cursor-pointer",
-    );
+    const plain = withoutClick.querySelector('[data-slot="icon-badge"]');
+    expect(plain?.tagName).toBe("SPAN");
+    expect(plain).not.toHaveClass("hover:bg-accent");
 
     const { container: withClick } = render(<IconBadge icon={<span />} onClick={vi.fn()} />);
-    expect(withClick.querySelector('[data-slot="icon-badge"]')).toHaveClass("cursor-pointer");
+    const clickable = withClick.querySelector('[data-slot="icon-badge"]');
+    expect(clickable?.tagName).toBe("BUTTON");
+    expect(clickable).toHaveClass("hover:bg-accent");
   });
 });

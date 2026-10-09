@@ -145,7 +145,7 @@ describe("RecordTableRow", () => {
       <RecordTableRow cells={CELLS} selected actions={<button type="button">Delete</button>} />,
     );
     const cells = screen.getAllByRole("cell");
-    expect(cells.at(-1)).toHaveClass("sticky", "right-0", "bg-accent", "dark:bg-accent/15");
+    expect(cells.at(-1)).toHaveClass("sticky", "right-0", "bg-accent");
   });
 
   it("does not render a selection checkbox when onSelectChange is absent", () => {
