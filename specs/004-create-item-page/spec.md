@@ -34,11 +34,11 @@
 
 ### User Story 1 - Choose what to create from the general Create page (Priority: P1)
 
-A user clicks **Create Item** in the sidebar and picks the kind of item to create; its create form opens straight away.
+A user clicks **Create Item** in the sidebar, chooses the kind of item to create and presses **Continue**; its create form opens.
 
 **Why this priority**: It is the entry point the sidebar button promises; today the button goes to the dashboard. Without it no other story on this page is reachable.
 
-**Independent Test**: With fixtures that allow creating two entities and deny a third, open the Create item page from the sidebar: exactly the two permitted entities are offered, and choosing one opens its create form.
+**Independent Test**: With fixtures that allow creating two entities and deny a third, open the Create item page from the sidebar: exactly the two permitted entities are offered, and choosing one and pressing **Continue** opens its create form.
 
 **Acceptance Scenarios**:
 
@@ -52,17 +52,17 @@ A user clicks **Create Item** in the sidebar and picks the kind of item to creat
 
 ### User Story 2 - Start the create form with a file already attached (Priority: P1)
 
-A user drops a file on the Create item page, then picks the entity. The create form opens with the file already in its file field, ready to submit.
+A user drops a file on the Create item page, then chooses the entity and presses **Continue**. The create form opens with the file already in its file field, ready to submit.
 
 **Why this priority**: Most items are created around a document; attaching it once on the first screen removes a second upload step. It is the reason the page has a drop zone.
 
-**Independent Test**: Attach a PDF on the Create item page, then choose an entity with a file field: the create form shows the PDF in its file field, and submitting creates the item with the file stored.
+**Independent Test**: Attach a PDF on the Create item page, then choose an entity with a file field and press **Continue**: the create form shows the PDF in its file field, and submitting creates the item with the file stored.
 
 **Acceptance Scenarios**:
 
 1. **Given** the Create item page, **When** the user drops a file on **Upload a file (optional)** or chooses one with **browse**, **Then** the file's name and size are shown and the file can be removed again.
-2. **Given** a file is attached, **When** the user chooses an entity whose create form has a file field, **Then** the create form opens with that file in its first file field.
-3. **Given** a file is attached, **When** the user chooses an entity whose create form has no file field, **Then** the create form opens without the file and without any message; the file stays attached for a later create form that has a file field.
+2. **Given** a file is attached, **When** the user chooses an entity whose create form has a file field and presses **Continue**, **Then** the create form opens with that file in its first file field.
+3. **Given** a file is attached, **When** the user chooses an entity whose create form has no file field and presses **Continue**, **Then** the create form opens without the file and without any message; the file stays attached for a later create form that has a file field.
 4. **Given** the create form opened with an attached file, **When** the item is created successfully, **Then** the attached file is cleared and the next create form (including continuous-create mode) starts without it.
 5. **Given** no file is attached, **Then** the create form opens exactly as when it is opened from the entity's list page.
 6. **Given** the create form opened with an attached file, **When** the user removes it in the form, **Then** it is cleared and does not come back on any later create form.
@@ -96,7 +96,7 @@ On an entity's create form, the toolbar shows the same entity selector. The user
 
 **Why this priority**: Recovers from a wrong choice without going back, and is the second place that uses the reusable entity selector. The create form works without it.
 
-**Independent Test**: Attach a file on the Create item page, choose entity A, then switch to entity B in the toolbar: B's create form opens with the file in its file field.
+**Independent Test**: Attach a file on the Create item page, choose entity A and press **Continue**, then switch to entity B in the toolbar: B's create form opens with the file in its file field.
 
 **Acceptance Scenarios**:
 
@@ -113,7 +113,7 @@ On an entity's create form, the toolbar shows the same entity selector. The user
 - The user drops several files at once on either drop zone → only the first is used.
 - The user attaches a file, chooses entity A, then switches or goes back and chooses entity B → the file goes to B's form; only the item that is actually created stores it.
 - The user attaches a file, chooses an entity, and cancels the create form → the file stays attached and is offered again on the next create form with a file field, until an item is created or the user removes it.
-- The user chooses an entity without attaching a file first → the create form opens without a file; the user attaches it in the form.
+- The user chooses an entity and presses **Continue** without attaching a file first → the create form opens without a file; the user attaches it in the form.
 - The user navigates away while a file is uploading on the item page → the upload is not shown elsewhere; on return the item shows whatever the server has.
 - The entities are still loading → the page shows a loading state, not an empty list.
 - The user opens the Create item page directly by URL without having been there before → Cancel goes to the dashboard.
@@ -168,7 +168,7 @@ On an entity's create form, the toolbar shows the same entity selector. The user
 
 ### Measurable Outcomes
 
-- **SC-001**: A user can go from the sidebar to a create form with an attached file in at most three actions (open Create, attach file, choose entity).
+- **SC-001**: A user can go from the sidebar to a create form with an attached file in at most four actions (open Create, attach file, choose entity, **Continue**).
 - **SC-002**: In every tested model, no entity without a create form is offered on the Create item page (0 occurrences).
 - **SC-003**: After a successful upload into an empty content attribute, the file is shown in the viewer without a manual reload in 100 % of test runs.
 - **SC-004**: After a successful create, the attached file is gone from every later create form (0 occurrences across the e2e and unit tests).

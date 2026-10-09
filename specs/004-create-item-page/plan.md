@@ -26,22 +26,22 @@ Add a `/~create` page where the user optionally attaches a file and chooses an e
 
 **Constraints**: no URL construction; operations gated on template/link presence; `packages/ui` free of data imports; apps stay routing-only.
 
-**Scale/Scope**: 1 new route (×2 apps), 1 new view, 1 toolbar switcher, 1 small store, 1 extended pattern, 2 edited content-focus components, 1 edited create container, 1 edited create route (×2 apps).
+**Scale/Scope**: 1 new route (×2 apps), 1 new view, 1 toolbar switcher, 1 small store, 1 extended pattern, 2 edited content-focus components, 1 edited create container, 1 edited create route (×2 apps), 1 new `navigator-data` hook (`useCreatableProfileEntities`, D11), 1 edited `navigator-data` hook (`useUploadContent` invalidates on 412, D10), 1 edited shared `hal-forms` state hook (`useHalFormsFieldState.reset(initialValues?)`).
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principle                            | Status | Notes                                                                                                            |
-| ------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------- |
-| I. HAL is the only interaction model | Pass   | Entities from `useLoadedProfileEntities`; upload via `useUploadContent` (the documented `cg:content` exception). |
-| II. Model-first                      | Pass   | No entity/attribute names; file field found by `kind === "file"`; icon/colour from display preferences.          |
-| III. Two-layer dependency model      | Pass   | `ProfileEntitySelector` takes plain options + `ReactNode` icon; the `ProfileEntity` mapping lives in features.   |
-| IV. Three-track delivery             | Pass   | Code lands in `entity-item-create` and `entity-item`, both `x-stability: stable`; route added to both apps.      |
-| V. Deny-by-default ABAC              | Pass   | Entities gated on `createTemplate`; drop zone gated on `canUploadContent`; 412 not auto-retried.                 |
-| VI. Authentication                   | Pass   | Upload uses `contentFetch` (bearer header), unchanged.                                                           |
-| VII. Supply chain                    | Pass   | No dependency, lockfile or workflow changes.                                                                     |
-| VIII. View-owned data loading        | Pass   | `ClassifyCreateEntityItemView` and `ContentPreviewPanel` own their hooks; routes only render and navigate.       |
+| Principle                            | Status | Notes                                                                                                                                                                                     |
+| ------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I. HAL is the only interaction model | Pass   | Entities from `useCreatableProfileEntities` (D11); upload via `useUploadContent` (the documented `cg:content` exception).                                                                 |
+| II. Model-first                      | Pass   | No entity/attribute names; file field found by `kind === "file"`; icon/colour from display preferences.                                                                                   |
+| III. Two-layer dependency model      | Pass   | `ProfileEntitySelector` takes plain options + `ReactNode` icon; the `ProfileEntity` mapping lives in features.                                                                            |
+| IV. Three-track delivery             | Pass   | Code lands in `entity-item-create`, `entity-item` and the shared `hal-forms` state hook, all `x-stability: stable`, plus two `navigator-data` hooks (D10, D11); route added to both apps. |
+| V. Deny-by-default ABAC              | Pass   | Entities gated on `createTemplate`; drop zone gated on `canUploadContent`; 412 not auto-retried.                                                                                          |
+| VI. Authentication                   | Pass   | Upload uses `contentFetch` (bearer header), unchanged.                                                                                                                                    |
+| VII. Supply chain                    | Pass   | No dependency, lockfile or workflow changes.                                                                                                                                              |
+| VIII. View-owned data loading        | Pass   | `ClassifyCreateEntityItemView` and `ContentPreviewPanel` own their hooks; routes only render and navigate.                                                                                |
 
 Re-check after Phase 1: still passes — contracts add no data imports to `ui` and no data loading to apps.
 
@@ -115,10 +115,10 @@ apps/navigator/tests/e2e/fixtures.ts, navigator.spec.ts  # e2e
 ## Implementation Sequence (input for `/speckit-tasks`)
 
 1. **ui** — extend `ProfileEntitySelector` per contract; update tests and stories; re-baseline snapshots. (US1, FR-011–013)
-2. **features** — pending-create-file store. (FR-008)
-3. **features** — `ClassifyCreateEntityItemView` + tests; export from `entity-item-create`. (US1, US2 page part)
+2. **navigator-data + features** — `useCreatableProfileEntities` + tests (D11); pending-create-file store. (FR-008)
+3. **features** — `ClassifyCreateEntityItemView` (entities from `useCreatableProfileEntities`) + tests; export from `entity-item-create`. (US1, US2 page part)
 4. **features** — create container prefill, clear on successful create / file removed + tests. (US2; the container test renders the real create form, with its `FileRenderer`, and asserts the prefilled file is sent in the create request)
-5. **features + apps** — `CreateEntityItemProfileSelector` + shared option hook; add it to the `$entity/~create` toolbar in both apps and key the form on `profile.name`. (US4, FR-020–021)
+5. **features + apps** — `CreateEntityItemProfileSelector` (entities from `useCreatableProfileEntities`); add it to the `$entity/~create` toolbar in both apps and key the form on `profile.name`. (US4, FR-020–021)
 6. **apps + sidebar** — `~create` routes in both apps, regenerate route trees, sidebar link. (FR-001, FR-004, FR-005)
 7. **features** — content-focus upload: frame `uploading` state + conditional drop zone; panel mutation and error; `useUploadContent` invalidates on 412; tests + story. (US3)
 8. **e2e** — Create item page flow.

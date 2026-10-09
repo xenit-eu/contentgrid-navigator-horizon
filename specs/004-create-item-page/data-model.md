@@ -17,10 +17,10 @@ Mapping in features: `ProfileEntity` → `{ name: profile.name, title: profile.t
 
 ## Create item page state (`ClassifyCreateEntityItemView`)
 
-| Field                | Type                  | Initial     | Transitions                                                           |
-| -------------------- | --------------------- | ----------- | --------------------------------------------------------------------- |
-| `selectedEntityName` | `string \| undefined` | `undefined` | set on selection, then navigate                                       |
-| `initialFile`        | from the store        | store value | drop/browse → `setInitialFile(file)`; remove → `setInitialFile(null)` |
+| Field             | Type                         | Initial     | Transitions                                                                       |
+| ----------------- | ---------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| `selectedProfile` | `ProfileEntity \| undefined` | `undefined` | set on selection; **Continue** is enabled once set and opens its create form (D4) |
+| `initialFile`     | from the store               | store value | drop/browse → `setInitialFile(file)`; remove → `setInitialFile(null)`             |
 
 Entities: `profiles` from `useCreatableProfileEntities()` (`navigator-data`, research D11).
 
