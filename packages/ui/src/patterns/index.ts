@@ -16,7 +16,7 @@ export * from "./record-table/record-table-header";
 export * from "./record-table/table-row";
 export * from "./record-table/record-row-action";
 export * from "./record-table/record-row-confirm-action";
-export * from "./entity-selector";
+export * from "./icon-badge-option-picker";
 export * from "./form-renderers";
 export * from "./unsaved-changes-dialog";
 export * from "./attribute-selector";
