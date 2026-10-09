@@ -134,6 +134,9 @@ function CreateEntityItemContainerReady({
   });
   const formState = useHalFormsFieldState({ fields, initialValues, externalErrors });
   const { setValue } = formState;
+  // Removing the file from the file field also drops the attached file from the store, so it
+  // isn't offered again on the next create form. This runs on user edits only, not on a value
+  // effect: the form's own reset after a create clears the field without going through here.
   const handleFieldChange = useCallback(
     (name: string, value: FieldValue) => {
       if (name === fileFieldName && !value)
