@@ -136,8 +136,6 @@ function SideBarTopControls() {
   );
 }
 
-// The sidebar's primary action: a soft primary tint with a full border, lighter than the
-// header but distinct from the active entity row (sky tint, left border only).
 function SidebarCreateItemButton() {
   const navigate = useNavigate();
 
@@ -145,7 +143,7 @@ function SidebarCreateItemButton() {
     <SidebarLinkButton
       icon={<FilePlusIcon aria-hidden className="size-5!" />}
       label="Create Item"
-      className="h-9 cursor-pointer rounded-md border border-primary/25 bg-primary/10 font-medium text-primary transition-colors hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary group-data-[collapsible=icon]:justify-center"
+      variant="primary"
       onClick={() => navigate({ to: "/~create" as string })}
     />
   );

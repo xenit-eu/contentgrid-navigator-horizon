@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react";
-import { type ProfileEntity, useCreatableProfileEntities } from "@contentgrid/navigator-data";
+import { type ProfileEntity, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   Button,
   Card,
@@ -10,11 +10,10 @@ import {
   CardHeader,
   CardTitle,
   FileUploadZone,
-  ProfileEntitySelectorList,
 } from "@contentgrid/ui";
 import { LoadingPage } from "../app-info-pages";
+import { EntityProfileSelectorList } from "./entity-profile-selector";
 import { useCreateEntityItemState } from "./state/create-entity-item-state";
-import { toProfileEntityOption } from "./to-profile-entity-option";
 
 export interface ClassifyCreateEntityItemViewProps {
   /** Called on "Continue" with the chosen entity; the caller opens its create form. */
@@ -30,7 +29,8 @@ export function ClassifyCreateEntityItemView({
   onSelect,
   onCancel,
 }: Readonly<ClassifyCreateEntityItemViewProps>) {
-  const { profiles, isLoading } = useCreatableProfileEntities();
+  const { profiles: loadedProfiles, isLoading } = useLoadedProfileEntities();
+  const profiles = loadedProfiles.filter((profile) => profile.createTemplate !== null);
   const initialFile = useCreateEntityItemState((state) => state.initialFile);
   const setInitialFile = useCreateEntityItemState((state) => state.setInitialFile);
   const [selectedProfile, setSelectedProfile] = useState<ProfileEntity>();
@@ -52,12 +52,10 @@ export function ClassifyCreateEntityItemView({
             <p className="text-sm text-muted-foreground">There is nothing you can create.</p>
           ) : (
             <>
-              <ProfileEntitySelectorList
-                entities={profiles.map((profile) => toProfileEntityOption(profile))}
-                selectedEntity={selectedProfile && toProfileEntityOption(selectedProfile)}
-                onSelect={(option) =>
-                  setSelectedProfile(profiles.find(({ name }) => name === option.name))
-                }
+              <EntityProfileSelectorList
+                profiles={profiles}
+                selectedProfile={selectedProfile}
+                onSelect={setSelectedProfile}
                 label="Entity"
               />
 

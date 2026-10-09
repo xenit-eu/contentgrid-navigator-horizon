@@ -3,7 +3,6 @@ export type { NavigatorDataContextValue } from "./context";
 export {
   useProfileEntities,
   useLoadedProfileEntities,
-  useCreatableProfileEntities,
   isAnyProfileLoading,
   useProfileEntity,
   ensureProfileEntity,

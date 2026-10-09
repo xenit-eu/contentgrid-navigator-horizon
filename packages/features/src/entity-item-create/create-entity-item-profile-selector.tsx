@@ -1,6 +1,5 @@
-import { type ProfileEntity, useCreatableProfileEntities } from "@contentgrid/navigator-data";
-import { ProfileEntitySelector } from "@contentgrid/ui";
-import { toProfileEntityOption } from "./to-profile-entity-option";
+import { type ProfileEntity, useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { EntityProfileSelector } from "./entity-profile-selector";
 
 export interface CreateEntityItemProfileSelectorProps {
   readonly selectedProfile: ProfileEntity;
@@ -13,18 +12,16 @@ export function CreateEntityItemProfileSelector({
   selectedProfile,
   onSelect,
 }: Readonly<CreateEntityItemProfileSelectorProps>) {
-  const { profiles } = useCreatableProfileEntities();
+  const { profiles: loadedProfiles } = useLoadedProfileEntities();
+  const profiles = loadedProfiles.filter((profile) => profile.createTemplate !== null);
 
   return (
     <div className="w-56">
-      <ProfileEntitySelector
-        entities={profiles.map((profile) => toProfileEntityOption(profile, "sm"))}
-        selectedEntity={toProfileEntityOption(selectedProfile, "sm")}
+      <EntityProfileSelector
+        profiles={profiles}
+        selectedProfile={selectedProfile}
+        onSelect={onSelect}
         size="sm"
-        onSelect={(option) => {
-          const profile = profiles.find(({ name }) => name === option.name);
-          if (profile) onSelect(profile);
-        }}
       />
     </div>
   );
