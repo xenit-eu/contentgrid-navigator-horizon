@@ -171,7 +171,7 @@ On an entity's create form, the toolbar shows the same entity selector. The user
 - **SC-001**: A user can go from the sidebar to a create form with an attached file in at most four actions (open Create, attach file, choose entity, **Continue**).
 - **SC-002**: In every tested model, no entity without a create form is offered on the Create item page (0 occurrences).
 - **SC-003**: After a successful upload into an empty content attribute, the file is shown in the viewer without a manual reload in 100 % of test runs.
-- **SC-004**: After a successful create, the attached file is gone from every later create form (0 occurrences across the e2e and unit tests).
+- **SC-004**: After a successful create, the attached file is gone from every later create form (0 occurrences across the unit tests). The e2e suite is disabled in CI until the application is feature-complete, so this is not checked end-to-end yet.
 - **SC-005**: The entity selector is used in two places — the Create Item page and the create form's toolbar — with no page-specific changes to the pattern.
 
 ## Assumptions
