@@ -66,7 +66,7 @@ entity-search-bar/                        # (the search-bar MSW wrapper is src/t
     ├── param-labels.ts                   # parameter display name and type hint
     ├── build-active-filter-chips.ts      # data-model §6
     ├── format-filter-value.ts            # value formatting for chips
-    ├── build-quick-filters.ts            # data-model §7 (the one exhaustive switch on valueKind)
+    ├── build-quick-filters.ts            # data-model §7 (quick-filter type per valueKind)
     └── date-presets.ts                   # data-model §8 (+ encode / decode of date bounds)
 ```
 
@@ -85,6 +85,8 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
 
   chips: readonly ActiveFilterChipModel[];
   removeChip: (id: string) => void;
+  chipTargets: ReadonlyMap<string, ChipTarget>; // clickable chips and where they edit
+  editChip: (id: string) => ChipTarget | undefined;
 
   selectorGroups: readonly SelectorGroupModel[];
   input: {
@@ -108,6 +110,8 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
   applyQuickFilter: (groupKey: string, values: Record<string, string | undefined>) => void;
   clearQuickFilter: (groupKey: string) => void;
   cycleBoolean: (groupKey: string) => void;
+  openQuickFilter: string | undefined; // group key of the open quick-filter popover
+  setOpenQuickFilter: (groupKey: string | undefined) => void;
   fieldsFor: (groupKey: string) => readonly HalFormsField[]; // memoised per attribute
 };
 ```
@@ -123,6 +127,15 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
   keys whose value is `undefined` or `""`) and calls `onFiltersChange` once; after a main-bar
   apply the input is cleared and the mode reset to `all`.
 - "All except relations" is only offered when the entity has relation parameters.
+- A "Search" button right of the input does what Enter does with nothing highlighted
+  (`input.submit`); it is disabled until a parameter is selected and has a value. Paper-plane
+  icon; solid sky (`bg-ring`, white semibold text).
+- Clicking an applied-filter chip edits it where it can be set: a single selectable parameter
+  (text, allowed values, exact number) is selected in the main bar with its value in the input
+  (focused; the filter stays applied until Enter replaces it); otherwise the rendered quick
+  filter covering all its parameters opens (range and date chips), scrolled into view. Boolean
+  chips (no popover) and chips with neither target are not clickable. The quick-filter popovers
+  are controlled by `openQuickFilter` for this; the date draft resets on every opening.
 
 ## 2. `search` feature (move, no behaviour change)
 

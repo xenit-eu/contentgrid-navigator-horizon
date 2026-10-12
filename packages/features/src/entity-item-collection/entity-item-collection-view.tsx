@@ -12,15 +12,14 @@ import {
   AttributeMultiSelectContent,
   Badge,
   Button,
-  PageTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
   type RecordTableSortOption,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
+import { EntitySearchBar } from "../entity-search-bar";
 import { type FieldState, resolveHalFormsFields } from "../hal-forms";
-import { EntityIconBadge } from "../layout";
 import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
   buildCollectionSearchValues,
@@ -274,20 +273,51 @@ export function EntityItemCollectionView({
     handleTypeaheadSearch,
   ]);
 
-  const itemCountTitle = `${collection.data?.totalItems?.count ?? "-"} items ${collection.data?.totalItems?.isEstimated ? "(estimated)" : ""}`;
+  // Columns and Filters: right-aligned on the search bar's quick-filter row (or in the table's
+  // toolbar when there is no search bar). Shown while the table loads or errors too.
+  const toolbarActions = (attributeOptions.length > 0 || fields.length > 0) && (
+    <>
+      {attributeOptions.length > 0 && (
+        <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              <SlidersHorizontalIcon aria-hidden />
+              Columns
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-1" align="end">
+            <AttributeMultiSelectContent
+              attributes={attributeOptions}
+              values={localVisibleColumns}
+              onChange={setLocalVisibleColumns}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
+      {fields.length > 0 && (
+        <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)}>
+          <Funnel aria-hidden />
+          Filters
+          {activeFilterCount > 0 && <Badge variant="secondary">{activeFilterCount}</Badge>}
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 p-4">
-        <PageTitle
-          header={"Entity Collection"}
-          icon={<EntityIconBadge profile={profile} />}
-          title={profile.pluralName}
-          subtitle={itemCountTitle}
+      {onFiltersChange && (
+        <EntitySearchBar
+          className="shrink-0 p-4"
+          profileEntity={profile}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          currentSort={currentSort}
+          actions={toolbarActions}
         />
-      </div>
+      )}
 
-      <div className="min-h-0 flex-1 px-4 pb-4">
+      <div className={`min-h-0 flex-1 px-4 pb-4 ${onFiltersChange ? "" : "pt-4"}`}>
         {collection.isPending && <LoadingPage />}
 
         {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
@@ -303,38 +333,8 @@ export function EntityItemCollectionView({
             onSort={handleSort}
             visibleColumnNames={localVisibleColumns}
             forcedVisibleColumnNames={activelyFilteredAttributeNames}
-            tableActions={
-              (attributeOptions.length > 0 || fields.length > 0) && (
-                <>
-                  {attributeOptions.length > 0 && (
-                    <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline">
-                          <SlidersHorizontalIcon aria-hidden />
-                          Columns
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 p-1" align="end">
-                        <AttributeMultiSelectContent
-                          attributes={attributeOptions}
-                          values={localVisibleColumns}
-                          onChange={setLocalVisibleColumns}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                  {fields.length > 0 && (
-                    <Button variant="outline" onClick={() => setFiltersOpen(true)}>
-                      <Funnel aria-hidden />
-                      Filters
-                      {activeFilterCount > 0 && (
-                        <Badge variant="secondary">{activeFilterCount}</Badge>
-                      )}
-                    </Button>
-                  )}
-                </>
-              )
-            }
+            // Without a search bar (no `onFiltersChange`), the table keeps the controls itself.
+            tableActions={onFiltersChange ? undefined : toolbarActions}
           />
         )}
       </div>
