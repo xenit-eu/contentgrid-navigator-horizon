@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, Ref } from "react";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Input, SearchSuggestionsPopover } from "@contentgrid/ui";
 import type { ParamChipModel, SuggestionGroupModel } from "../util/build-suggestion-models";
@@ -21,6 +21,8 @@ export interface SearchInputProps {
   readonly onOtherKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   readonly placeholder?: string;
   readonly error?: string;
+  /** The text input, e.g. to focus it when an applied filter is loaded for editing. */
+  readonly inputRef?: Ref<HTMLInputElement>;
 }
 
 /**
@@ -41,6 +43,7 @@ export function SearchInput({
   onOtherKeyDown,
   placeholder = "Search…",
   error,
+  inputRef,
 }: Readonly<SearchInputProps>) {
   const errorId = "entity-search-bar-input-error";
   return (
@@ -83,6 +86,7 @@ export function SearchInput({
             />
             <Input
               {...comboboxProps}
+              ref={inputRef}
               type="text"
               aria-label="Search"
               autoComplete="off"

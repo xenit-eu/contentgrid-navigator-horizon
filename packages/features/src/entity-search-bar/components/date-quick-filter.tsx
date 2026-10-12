@@ -22,6 +22,9 @@ export interface DateQuickFilterProps {
   readonly filters: Readonly<Record<string, string>>;
   readonly onApply: (groupKey: string, values: Record<string, string | undefined>) => void;
   readonly onClear: (groupKey: string) => void;
+  /** Whether the popover is open — controlled, so a filter chip can open it too. */
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -34,38 +37,41 @@ export function DateQuickFilter({
   filters,
   onApply,
   onClear,
+  open,
+  onOpenChange,
 }: Readonly<DateQuickFilterProps>) {
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRangeFilterValue>({});
   const [presetId, setPresetId] = useState<DatePresetId | undefined>(undefined);
+
+  // Each opening — from the button or from a chip — starts from the current filters.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setDraft(decodeDateRange(quickFilter, filters));
+      setPresetId(undefined);
+    }
+  }
 
   const icon = quickFilter.auditRole
     ? auditRoleIcon(quickFilter.auditRole)
     : searchTypeIcon(quickFilter.includesTime ? "datetime" : "date", "gte");
-
-  function handleOpenChange(next: boolean) {
-    if (next) {
-      setDraft(decodeDateRange(quickFilter, filters));
-      setPresetId(undefined);
-    }
-    setOpen(next);
-  }
 
   function apply() {
     const values = presetId
       ? encodeDateRange(resolveDatePreset(presetId, new Date()), quickFilter)
       : encodeDateRange(draft, quickFilter, { wholeDays: true });
     onApply(quickFilter.groupKey, values);
-    setOpen(false);
+    onOpenChange(false);
   }
 
   function clear() {
     onClear(quickFilter.groupKey);
-    setOpen(false);
+    onOpenChange(false);
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <FilterButton
           icon={icon}
