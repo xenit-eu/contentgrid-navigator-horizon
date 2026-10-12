@@ -42,7 +42,10 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
     `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
-    reused across multiple tracks or apps.
+    reused across multiple tracks or apps. Documented exception: the search and filter
+    building blocks below (spec 003) live here although the entity search bar is their only
+    consumer today — they are domain-free and meant for the advanced filter dialog and the
+    relation pickers next; move one into its feature if that reuse does not happen.
 
 ---
 
