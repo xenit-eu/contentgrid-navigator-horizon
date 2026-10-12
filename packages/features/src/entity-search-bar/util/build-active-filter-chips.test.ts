@@ -98,4 +98,20 @@ describe("buildActiveFilterChips", () => {
       "urgent",
     ]);
   });
+
+  it("shows the days a date-only range includes when its bounds are exclusive", () => {
+    const from = descriptors.find((d) => d.name === "due_date~from")!;
+    const until = descriptors.find((d) => d.name === "due_date~until")!;
+    const exclusive = [
+      ...descriptors.filter((d) => d.groupKey !== "due_date"),
+      { ...from, name: "due_date~after", mode: "gt" as const },
+      { ...until, name: "due_date~before", mode: "lt" as const },
+    ];
+    const [chip] = buildActiveFilterChips(
+      exclusive,
+      { "due_date~after": "2026-09-30", "due_date~before": "2026-10-08" },
+      { locale: "en-GB", timeZone: "UTC" },
+    );
+    expect([chip?.mode, chip?.value]).toEqual(["between", "1 Oct 2026 – 7 Oct 2026"]);
+  });
 });
