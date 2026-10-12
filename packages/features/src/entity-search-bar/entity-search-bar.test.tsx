@@ -143,6 +143,17 @@ describe("EntitySearchBar", () => {
     expect(screen.queryByRole("button", { name: /^Edit filter/ })).toBeNull();
   });
 
+  it("applies the typed value with the Search button, like Enter", async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar({ "title~prefix": "Al" });
+    const search = screen.getByRole("button", { name: "Search" });
+    expect(search).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Al" }));
+    await user.type(screen.getByRole("combobox", { name: "Search" }), "pha");
+    await user.click(search);
+    expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Alpha" });
+  });
+
   it("applies a suggestion picked from the popover", async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar();
