@@ -42,6 +42,8 @@ export function DateQuickFilter({
 }: Readonly<DateQuickFilterProps>) {
   const [draft, setDraft] = useState<DateRangeFilterValue>({});
   const [presetId, setPresetId] = useState<DatePresetId | undefined>(undefined);
+  /** Whether the user changed the range since opening. */
+  const [edited, setEdited] = useState(false);
 
   // Each opening — from the button or from a chip — starts from the current filters.
   const [wasOpen, setWasOpen] = useState(open);
@@ -50,6 +52,7 @@ export function DateQuickFilter({
     if (open) {
       setDraft(decodeDateRange(quickFilter, filters));
       setPresetId(undefined);
+      setEdited(false);
     }
   }
 
@@ -58,6 +61,12 @@ export function DateQuickFilter({
     : searchTypeIcon(quickFilter.includesTime ? "datetime" : "date", "gte");
 
   function apply() {
+    // Re-encoding an untouched range would round exact timestamps (e.g. from a preset) out to
+    // whole days, widening the filter; leave it as it is.
+    if (!presetId && !edited) {
+      onOpenChange(false);
+      return;
+    }
     const values = presetId
       ? encodeDateRange(resolveDatePreset(presetId, new Date()), quickFilter)
       : encodeDateRange(draft, quickFilter, { wholeDays: true });
@@ -85,6 +94,7 @@ export function DateQuickFilter({
           value={draft}
           onValueChange={(value) => {
             setDraft(value);
+            setEdited(true);
             setPresetId(undefined);
           }}
           presets={DATE_PRESETS}
