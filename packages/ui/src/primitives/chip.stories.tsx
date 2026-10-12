@@ -85,3 +85,15 @@ export const LongValue: Story = {
     className: "max-w-72",
   },
 };
+
+export const Clickable: Story = {
+  args: {
+    field: "Title",
+    mode: "starts with",
+    label: "Alpha",
+    tone: "applied",
+    removable: true,
+    onRemove: () => {},
+    onClick: () => {},
+  },
+};
