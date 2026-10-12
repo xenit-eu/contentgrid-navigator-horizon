@@ -16,7 +16,7 @@ import {
   searchBarHandlers,
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { server } from "../../../test-setup";
-import { makeSearchBarWrapper } from "../../entity-search-bar/test-utils";
+import { makeSearchBarWrapper } from "../../test-utils/search-bar-wrapper";
 import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
 import { EntityConfigurationDetail } from "./entity-configuration-detail";
 
