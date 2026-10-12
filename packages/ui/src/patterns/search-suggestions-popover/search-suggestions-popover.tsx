@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
 import { CountIndicatorChip } from "../../primitives/count-indicator-chip";
@@ -8,6 +8,7 @@ import {
   type SuggestionEntryId,
   chipEntryId,
   itemEntryId,
+  retryEntryId,
   useSuggestionsKeyboard,
 } from "./use-suggestions-keyboard";
 
@@ -103,13 +104,25 @@ export function SearchSuggestionsPopover({
   const containerId = `${baseId}-suggestions`;
   const chipsListboxId = `${baseId}-chips`;
   const groupListboxId = (groupIndex: number) => `${baseId}-group-${groupIndex}-options`;
+  const retryId = (groupIndex: number) => `${baseId}-group-${groupIndex}-retry`;
   const [requestedActiveId, setRequestedActiveId] = useState<string | null>(null);
   const showContent = open && (chips.length > 0 || groups.length > 0);
+
+  // Every closing — also one the caller makes through `open` — drops the highlight, so a later
+  // Enter never selects an entry from an earlier opening.
+  const [wasShown, setWasShown] = useState(showContent);
+  if (wasShown !== showContent) {
+    setWasShown(showContent);
+    if (!showContent) setRequestedActiveId(null);
+  }
+
   const controlledIds = [
     ...(chips.length > 0 ? [chipsListboxId] : []),
-    ...groups.flatMap((group, index) =>
-      group.status === "ready" && group.items.length > 0 ? [groupListboxId(index)] : [],
-    ),
+    ...groups.flatMap((group, index) => {
+      if (group.status === "ready" && group.items.length > 0) return [groupListboxId(index)];
+      if (group.status === "error" && group.onRetry) return [retryId(index)];
+      return [];
+    }),
   ];
 
   const keyboard = useSuggestionsKeyboard(chips, groups, {
@@ -125,20 +138,32 @@ export function SearchSuggestionsPopover({
   // DOM ids must be safe whatever the chip/item ids contain, so they are index-based.
   const domIds = new Map<string, string>();
   chips.forEach((chip, index) => domIds.set(chipEntryId(chip.id), `${baseId}-chip-${index}`));
-  groups.forEach((group, groupIndex) =>
+  groups.forEach((group, groupIndex) => {
     group.items.forEach((item, index) =>
       domIds.set(itemEntryId(group.id, item.id), `${baseId}-item-${groupIndex}-${index}`),
-    ),
-  );
+    );
+    domIds.set(retryEntryId(group.id), retryId(groupIndex));
+  });
+  const activeDomId = activeId === null ? undefined : domIds.get(activeId);
+
+  // Keep the highlighted entry visible inside the scrolling region.
+  useEffect(() => {
+    if (activeDomId) document.getElementById(activeDomId)?.scrollIntoView?.({ block: "nearest" });
+  }, [activeDomId]);
 
   const comboboxProps: SuggestionsComboboxProps = {
     role: "combobox",
     "aria-expanded": showContent,
     "aria-controls": controlledIds.length > 0 ? controlledIds.join(" ") : containerId,
     "aria-autocomplete": "list",
-    "aria-activedescendant": activeId === null ? undefined : domIds.get(activeId),
+    "aria-activedescendant": activeDomId,
     onKeyDown: (event) => {
-      if (!keyboard.onKeyDown(event)) onUnhandledKeyDown?.(event);
+      if (keyboard.onKeyDown(event)) return;
+      // Editing the text starts over: the highlight belonged to the previous input.
+      if (event.key.length === 1 || event.key === "Backspace" || event.key === "Delete") {
+        setRequestedActiveId(null);
+      }
+      onUnhandledKeyDown?.(event);
     },
   };
 
@@ -255,9 +280,14 @@ export function SearchSuggestionsPopover({
                     {group.onRetry && (
                       <Button
                         type="button"
+                        id={retryId(groupIndex)}
+                        tabIndex={-1}
                         variant="link"
                         size="xs"
-                        className="h-auto p-0"
+                        className={cn(
+                          "h-auto p-0",
+                          activeId === retryEntryId(group.id) && "rounded-sm ring-2 ring-ring/50",
+                        )}
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={group.onRetry}
                       >
@@ -292,6 +322,13 @@ export function SearchSuggestionsPopover({
               </div>
             );
           })}
+        </div>
+        {/* Announces groups that failed, which otherwise only change visually. */}
+        <div role="status" className="sr-only">
+          {groups
+            .filter((group) => group.status === "error")
+            .map((group) => `${group.label}: ${labels?.error ?? "Could not load suggestions"}`)
+            .join(". ")}
         </div>
       </PopoverContent>
     </Popover>
