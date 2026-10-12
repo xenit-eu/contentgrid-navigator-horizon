@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { makeSearchBarProfiles } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { resolveHalFormsFields } from "../../hal-forms";
+import { WithOpenState } from "../test-utils";
 import { type NumberQuickFilter as Model, buildQuickFilters } from "../util/build-quick-filters";
 import { buildSearchParamDescriptors } from "../util/build-search-param-descriptors";
 import { NumberQuickFilter } from "./number-quick-filter";
@@ -20,14 +21,19 @@ function renderQuantity(filters: Record<string, string> = {}) {
   const onApply = vi.fn();
   const onClear = vi.fn();
   render(
-    <NumberQuickFilter
-      quickFilter={quickFilter}
-      fields={quantityFields}
-      searchTemplate={searchTemplate}
-      filters={filters}
-      onApply={onApply}
-      onClear={onClear}
-    />,
+    <WithOpenState>
+      {(openState) => (
+        <NumberQuickFilter
+          {...openState}
+          quickFilter={quickFilter}
+          fields={quantityFields}
+          searchTemplate={searchTemplate}
+          filters={filters}
+          onApply={onApply}
+          onClear={onClear}
+        />
+      )}
+    </WithOpenState>,
   );
   return { onApply, onClear };
 }

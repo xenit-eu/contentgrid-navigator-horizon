@@ -97,6 +97,52 @@ describe("EntitySearchBar", () => {
     expect(onFiltersChange).toHaveBeenCalledWith({ urgent: "true" });
   });
 
+  it("loads a clicked chip into the bar and replaces the filter on Enter", async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar({ "title~prefix": "Al", urgent: "true" });
+    await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Al" }));
+    const input = screen.getByRole("combobox", { name: "Search" });
+    expect(input).toHaveValue("Al");
+    expect(input).toHaveFocus();
+    expect(screen.getByRole("combobox", { name: "Search in" })).toHaveTextContent("Title");
+    expect(onFiltersChange).not.toHaveBeenCalled();
+    await user.type(input, "pha{Enter}");
+    expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Alpha", urgent: "true" });
+  });
+
+  it("loads an allowed-values chip into the bar", async () => {
+    const user = userEvent.setup();
+    renderBar({ status: "approved" });
+    await user.click(screen.getByRole("button", { name: /^Edit filter Status/ }));
+    expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("approved");
+    expect(screen.getByRole("combobox", { name: "Search in" })).toHaveTextContent("Status");
+  });
+
+  it("opens the quick filter of a clicked range chip, starting from its values", async () => {
+    const user = userEvent.setup();
+    renderBar({ "quantity~gte": "3", "quantity~lte": "9" });
+    await user.click(screen.getByRole("button", { name: /^Edit filter Quantity between/ }));
+    const form = await screen.findByRole("form", { name: "Quantity filter" });
+    expect(
+      within(form)
+        .getAllByRole("spinbutton")
+        .map((i) => (i as HTMLInputElement).value),
+    ).toEqual(expect.arrayContaining(["3", "9"]));
+  });
+
+  it("opens the date quick filter of a clicked date chip", async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar({ "due_date~from": "2026-10-01" });
+    await user.click(screen.getByRole("button", { name: /^Edit filter Due date/ }));
+    await user.click(await screen.findByRole("button", { name: "Clear" }));
+    expect(onFiltersChange).toHaveBeenCalledWith({});
+  });
+
+  it("does not make a boolean chip clickable: its quick filter has no popover", () => {
+    renderBar({ urgent: "true" });
+    expect(screen.queryByRole("button", { name: /^Edit filter/ })).toBeNull();
+  });
+
   it("applies a suggestion picked from the popover", async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar();

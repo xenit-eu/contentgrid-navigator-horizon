@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { SearchHalFormTemplate } from "@contentgrid/navigator-data";
 import { Button, FilterButton, Popover, PopoverContent, PopoverTrigger } from "@contentgrid/ui";
 import {
@@ -19,6 +19,9 @@ export interface NumberQuickFilterProps {
   readonly filters: Readonly<Record<string, string>>;
   readonly onApply: (groupKey: string, values: Record<string, string | undefined>) => void;
   readonly onClear: (groupKey: string) => void;
+  /** Whether the popover is open — controlled, so a filter chip can open it too. */
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -28,10 +31,9 @@ export interface NumberQuickFilterProps {
  * applied until Apply; only the inputs the user filled in are set.
  */
 export function NumberQuickFilter(props: Readonly<NumberQuickFilterProps>) {
-  const { quickFilter, onClear } = props;
-  const [open, setOpen] = useState(false);
+  const { quickFilter, onClear, open, onOpenChange } = props;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <FilterButton
           icon={searchTypeIcon(quickFilter.valueKind, "exact")}
@@ -42,7 +44,7 @@ export function NumberQuickFilter(props: Readonly<NumberQuickFilterProps>) {
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80">
         {/* Mounted per opening, so the draft always starts from the current filters. */}
-        {open && <NumberQuickFilterForm {...props} onDone={() => setOpen(false)} />}
+        {open && <NumberQuickFilterForm {...props} onDone={() => onOpenChange(false)} />}
       </PopoverContent>
     </Popover>
   );

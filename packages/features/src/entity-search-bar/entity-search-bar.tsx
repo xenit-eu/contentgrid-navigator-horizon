@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { FilterChips } from "@contentgrid/ui";
 import { AllowedValuesQuickFilter } from "./components/allowed-values-quick-filter";
 import { BooleanQuickFilter } from "./components/boolean-quick-filter";
@@ -22,6 +22,13 @@ export type { EntitySearchBarProps } from "./use-entity-search-bar";
 export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
   const searchBar = useEntitySearchBar(props);
   const { input } = searchBar;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const quickFilterOpenProps = (groupKey: string) => ({
+    open: searchBar.openQuickFilter === groupKey,
+    onOpenChange: (open: boolean) => searchBar.setOpenQuickFilter(open ? groupKey : undefined),
+  });
 
   const rows: ReactNode[] = [];
 
@@ -30,6 +37,22 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
       <FilterChips
         key="chips"
         onRemove={searchBar.removeChip}
+        onSelect={(id) => {
+          if (searchBar.chipTargets.get(id)?.kind === "input") {
+            // Focus first: the input's focus handler may ask for the popover, which editing closes.
+            inputRef.current?.focus();
+          }
+          const target = searchBar.editChip(id);
+          if (target?.kind === "quick-filter") {
+            // The quick-filter row scrolls; bring the trigger the popover anchors to into view.
+            const slot = Array.from(
+              rootRef.current?.querySelectorAll<HTMLElement>("[data-quick-filter]") ?? [],
+            ).find((el) => el.dataset.quickFilter === target.groupKey);
+            slot
+              ?.querySelector("button")
+              ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+          }
+        }}
         chips={searchBar.chips.map((chip) => ({
           id: chip.id,
           field: chip.field,
@@ -41,6 +64,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
               : undefined,
           valueIcon:
             chip.booleanValue === undefined ? undefined : booleanValueIcon(chip.booleanValue),
+          selectable: searchBar.chipTargets.has(chip.id),
         }))}
       />,
     );
@@ -56,6 +80,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
           onModeChange={input.setMode}
         />
         <SearchInput
+          inputRef={inputRef}
           value={input.value}
           onValueChange={input.setValue}
           error={input.error}
@@ -90,6 +115,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
             case "date":
               return (
                 <DateQuickFilter
+                  {...quickFilterOpenProps(quickFilter.groupKey)}
                   quickFilter={quickFilter}
                   filters={props.filters}
                   onApply={searchBar.applyQuickFilter}
@@ -107,6 +133,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
             case "number":
               return searchBar.searchTemplate ? (
                 <NumberQuickFilter
+                  {...quickFilterOpenProps(quickFilter.groupKey)}
                   quickFilter={quickFilter}
                   fields={searchBar.fieldsFor(quickFilter.groupKey)}
                   searchTemplate={searchBar.searchTemplate}
@@ -118,6 +145,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
             case "allowed-values":
               return (
                 <AllowedValuesQuickFilter
+                  {...quickFilterOpenProps(quickFilter.groupKey)}
                   quickFilter={quickFilter}
                   onApply={searchBar.applyQuickFilter}
                   onClear={searchBar.clearQuickFilter}
@@ -132,7 +160,11 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
   if (rows.length === 0) return null;
 
   return (
-    <div data-slot="entity-search-bar" className={`flex flex-col gap-2 ${props.className ?? ""}`}>
+    <div
+      ref={rootRef}
+      data-slot="entity-search-bar"
+      className={`flex flex-col gap-2 ${props.className ?? ""}`}
+    >
       {rows}
     </div>
   );

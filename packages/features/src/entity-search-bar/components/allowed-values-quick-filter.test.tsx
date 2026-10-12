@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { WithOpenState } from "../test-utils";
 import type { AllowedValuesQuickFilter as Model } from "../util/build-quick-filters";
 import { AllowedValuesQuickFilter } from "./allowed-values-quick-filter";
 
@@ -26,7 +27,18 @@ describe("AllowedValuesQuickFilter", () => {
   it("narrows the allowed values as the user types and applies the picked one", async () => {
     const user = userEvent.setup();
     const onApply = vi.fn();
-    render(<AllowedValuesQuickFilter quickFilter={model()} onApply={onApply} onClear={vi.fn()} />);
+    render(
+      <WithOpenState>
+        {(openState) => (
+          <AllowedValuesQuickFilter
+            {...openState}
+            quickFilter={model()}
+            onApply={onApply}
+            onClear={vi.fn()}
+          />
+        )}
+      </WithOpenState>,
+    );
 
     await user.click(screen.getByRole("button", { name: "Status" }));
     await user.keyboard("app");
@@ -42,6 +54,8 @@ describe("AllowedValuesQuickFilter", () => {
     const onClear = vi.fn();
     render(
       <AllowedValuesQuickFilter
+        open={false}
+        onOpenChange={vi.fn()}
         quickFilter={model("approved")}
         onApply={vi.fn()}
         onClear={onClear}
