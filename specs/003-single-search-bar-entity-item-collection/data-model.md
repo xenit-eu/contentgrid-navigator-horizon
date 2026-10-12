@@ -200,6 +200,7 @@ type QuickFilterModel =
       upper?: string; // param names of the bounds offered
       lowerInclusive: boolean;
       upperInclusive: boolean;
+      exact?: string; // exact-date param: part of paramNames (active state, ×), replaced by a range
     }
   | {
       kind: "number";
