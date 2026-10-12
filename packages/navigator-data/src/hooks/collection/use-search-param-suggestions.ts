@@ -8,8 +8,10 @@ import {
 } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
+import { fetchHalSlice } from "../../api/hal-client";
 import type { SearchRequestSpec } from "../../api/requests";
 import { queryKeys } from "../../query-keys";
+import type { EntityItemShape } from "../../shapes";
 import { useNavigatorData } from "../context";
 import { useLoadedProfileEntities } from "../profile/use-profile-entity";
 import { useDebouncedValue } from "../use-debounced-value";
@@ -57,6 +59,9 @@ export interface SearchParamSuggestionResult {
 
 const DEBOUNCE_MS = 250;
 const NO_SUGGESTIONS: readonly string[] = [];
+const NOOP = () => {};
+/** A plain decimal number, with a point or a (locale) comma as the decimal separator. */
+const NUMBER_PATTERN = /^-?\d+([.,]\d+)?$/;
 
 /** One planned request: the count on the current entity, plus an optional relation-target fetch. */
 interface Plan {
@@ -64,6 +69,8 @@ interface Plan {
   readonly withSuggestions: boolean;
   readonly countUrl: string | undefined;
   readonly attributeName: string | undefined;
+  /** A relation parameter whose target profile is not loaded yet. */
+  readonly awaitingTarget?: boolean;
   readonly target?: {
     readonly profile: ProfileEntity;
     readonly url: string;
@@ -82,10 +89,11 @@ interface Plan {
  * - **relation parameter suggestions**: one extra search on the relation's target entity with
  *   only its local parameter set — the parent's items don't embed related fields.
  *
- * A query that cannot be coerced for a number-typed parameter leaves that result `idle` with no
- * request. While the debounce is pending every active result reports `loading`, so a result for
- * an older input is never presented as the answer to a newer one; responses are keyed by URL and
- * no placeholder data is carried across inputs.
+ * A query that cannot be coerced for a parameter (e.g. text for a number-typed one) leaves that
+ * result `idle` with no request. While the debounce is pending every result the new input will
+ * request reports `loading`, so a result for an older input is never presented as the answer to
+ * a newer one; responses are keyed by URL, no placeholder data is carried across inputs, and a
+ * superseded request is aborted.
  */
 export function useSearchParamSuggestions({
   profileEntity,
@@ -100,12 +108,15 @@ export function useSearchParamSuggestions({
 } {
   const { apiFetch } = useNavigatorData();
   // Always called (Rules of Hooks); only consulted for relation parameters. Cached.
-  const { profiles } = useLoadedProfileEntities();
+  const { profiles, isLoading: profilesLoading } = useLoadedProfileEntities();
 
   const trimmed = query.trim();
   const debouncedQuery = useDebouncedValue(trimmed, DEBOUNCE_MS);
   const active = trimmed.length >= minLength && debouncedQuery.length >= minLength;
   const debouncePending = trimmed !== debouncedQuery;
+  /** Whether the current (not yet debounced) input will request this parameter. */
+  const willRequest = (request: SearchParamSuggestionRequest) =>
+    trimmed.length >= minLength && coerceQuery(request.searchProperty, trimmed) !== undefined;
 
   const plans: readonly Plan[] = useMemo(
     () =>
@@ -121,9 +132,15 @@ export function useSearchParamSuggestions({
     [requests, profileEntity, profiles, searchValues, active, debouncedQuery],
   );
 
-  const requestQuery = (profile: ProfileEntity, url: string | undefined) => ({
+  const requestQuery = (profile: ProfileEntity, url: string | undefined, name: string) => ({
     ...EntityItemCollection.fetchByUrlQuery(apiFetch, url ?? "", profile),
-    queryKey: queryKeys.searchParamSuggestions.byUrl(profile, url ?? ""),
+    // An idle entry still needs a key of its own: one shared key would make the observers collide.
+    queryKey: queryKeys.searchParamSuggestions.byUrl(profile, url ?? `idle:${name}`),
+    // Honour TanStack's abort signal, so a request for a superseded input is cancelled.
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
+      const slice = await fetchHalSlice<EntityItemShape>(apiFetch, new Request(url!, { signal }));
+      return new EntityItemCollection(slice, profile);
+    },
     enabled: url !== undefined,
     placeholderData: undefined,
     staleTime: 30_000,
@@ -133,13 +150,13 @@ export function useSearchParamSuggestions({
 
   const queries = useQueries({
     queries: plans.flatMap((plan) => [
-      requestQuery(profileEntity, plan.countUrl),
-      ...(plan.target ? [requestQuery(plan.target.profile, plan.target.url)] : []),
+      requestQuery(profileEntity, plan.countUrl, plan.name),
+      ...(plan.target ? [requestQuery(plan.target.profile, plan.target.url, plan.name)] : []),
     ]),
   });
 
   let cursor = 0;
-  const results = plans.map((plan): SearchParamSuggestionResult => {
+  const results = plans.map((plan, index): SearchParamSuggestionResult => {
     const count = queries[cursor++]!;
     const target = plan.target ? queries[cursor++] : undefined;
     const parts = target ? [count, target] : [count];
@@ -148,23 +165,26 @@ export function useSearchParamSuggestions({
     };
 
     if (plan.countUrl === undefined) {
+      // Nothing requested yet; the first keystroke still reads as loading until the debounce ends.
+      const pending = debouncePending && willRequest(requests[index]!);
       return {
         name: plan.name,
-        status: "idle",
+        status: pending ? "loading" : "idle",
         suggestions: NO_SUGGESTIONS,
         totalItems: undefined,
         error: null,
-        refetch,
+        refetch: NOOP,
       };
     }
     const failed = parts.find((part) => part.isError);
-    const status: SearchParamSuggestionStatus = debouncePending
-      ? "loading"
-      : failed
-        ? "error"
-        : parts.some((part) => part.isPending)
-          ? "loading"
-          : "success";
+    const status: SearchParamSuggestionStatus =
+      debouncePending || (plan.awaitingTarget && profilesLoading)
+        ? "loading"
+        : failed
+          ? "error"
+          : parts.some((part) => part.isPending)
+            ? "loading"
+            : "success";
 
     const suggestions =
       !plan.withSuggestions || status !== "success"
@@ -200,7 +220,14 @@ function planRequest(
   if (value === undefined || !searchTemplate) return idle;
 
   const base = searchValues ?? createValues(searchTemplate.template);
-  const countUrl = profileEntity.searchEntityRequest(base.withValue(name, value)).url;
+  let countUrl: string;
+  try {
+    countUrl = profileEntity.searchEntityRequest(base.withValue(name, value)).url;
+  } catch {
+    // A parameter this hook does not support (e.g. a multi-valued one) is left idle rather than
+    // breaking the caller's render.
+    return idle;
+  }
 
   if (!searchProperty.isOverRelation) {
     return {
@@ -216,7 +243,7 @@ function planRequest(
   const target = resolveRelationSearchTarget(searchProperty, profiles);
   const targetTemplate = target?.targetProfile.searchTemplate;
   if (!target || !targetTemplate)
-    return { name, withSuggestions, countUrl, attributeName: undefined };
+    return { name, withSuggestions, countUrl, attributeName: undefined, awaitingTarget: !target };
   const targetUrl = target.targetProfile.searchEntityRequest(
     createValues(targetTemplate.template).withValue(
       target.targetSearchProperty.property.name,
@@ -237,9 +264,9 @@ function planRequest(
 }
 
 /**
- * The query as the parameter's wire type expects it: a finite number for a number-typed
- * parameter (else `undefined` — no request), the string otherwise. Locale decimal commas are
- * accepted.
+ * The query as the parameter's wire type expects it: a number for a number-typed parameter when
+ * the query is a plain decimal (a locale decimal comma is accepted; "1e3", "0x1A" or "1,000.5"
+ * are not) — else `undefined`, no request — and the string otherwise.
  */
 function coerceQuery(
   searchProperty: SearchHalFormTemplateProperty,
@@ -247,8 +274,7 @@ function coerceQuery(
 ): string | number | undefined {
   const type = searchProperty.property.type;
   if (type === "number" || type === "range") {
-    const parsed = Number(query.replace(",", "."));
-    return query !== "" && Number.isFinite(parsed) ? parsed : undefined;
+    return NUMBER_PATTERN.test(query) ? Number(query.replace(",", ".")) : undefined;
   }
   return query;
 }
