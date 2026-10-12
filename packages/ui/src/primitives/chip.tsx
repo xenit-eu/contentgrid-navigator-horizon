@@ -18,6 +18,13 @@ interface ChipProps {
   readonly onRemove?: () => void;
   /** Accessible name of the remove button; defaults to `Remove ${field} ${label} filter`. */
   readonly removeLabel?: string;
+  /**
+   * Makes the chip's body (field, mode and value) a button, e.g. to edit the filter. The remove
+   * button stays a separate sibling control.
+   */
+  readonly onClick?: () => void;
+  /** Accessible name of the body button; defaults to its visible text. */
+  readonly clickLabel?: string;
   readonly className?: string;
 }
 
@@ -31,19 +38,12 @@ function Chip({
   removable,
   onRemove,
   removeLabel,
+  onClick,
+  clickLabel,
   className,
 }: ChipProps) {
-  return (
-    <span
-      data-slot="chip"
-      data-tone={tone}
-      className={cn(
-        "inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-[6px] border text-[12px] font-medium text-foreground",
-        removable ? "py-1 pr-[5px] pl-[10px]" : "px-[10px] py-1",
-        tone === "applied" ? "border-ring/40 bg-accent" : "border-border bg-background",
-        className,
-      )}
-    >
+  const body = (
+    <>
       {field && <span className="shrink-0 font-normal text-muted-foreground">{field}: </span>}
       {mode && (
         <span
@@ -60,6 +60,33 @@ function Chip({
           {label}
         </span>
       </span>
+    </>
+  );
+  return (
+    <span
+      data-slot="chip"
+      data-tone={tone}
+      className={cn(
+        "inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-[6px] border text-[12px] font-medium text-foreground",
+        removable ? "py-1 pr-[5px] pl-[10px]" : "px-[10px] py-1",
+        tone === "applied" ? "border-ring/40 bg-accent" : "border-border bg-background",
+        onClick && "has-[[data-slot=chip-body]:hover]:border-ring",
+        className,
+      )}
+    >
+      {onClick ? (
+        <button
+          type="button"
+          data-slot="chip-body"
+          aria-label={clickLabel}
+          onClick={onClick}
+          className="inline-flex min-w-0 cursor-pointer items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-inherit outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {body}
+        </button>
+      ) : (
+        body
+      )}
       {removable && (
         <button
           type="button"

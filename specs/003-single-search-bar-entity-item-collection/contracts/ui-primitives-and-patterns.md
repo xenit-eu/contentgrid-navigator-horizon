@@ -25,9 +25,14 @@ interface ChipProps {
   removable?: boolean;
   onRemove?: () => void;
   removeLabel?: string; // NEW — default `Remove ${field ?? ""} ${label} filter`
+  onClick?: () => void; // NEW — makes the body (field, mode, value) a button
+  clickLabel?: string; // NEW — accessible name of that button
   className?: string;
 }
 ```
+
+- With `onClick`, the body is a `<button data-slot="chip-body">` and the × stays a sibling
+  button (valid HTML, own focus stop); hovering the body darkens the chip's border.
 
 - Existing callers (props without the new fields) render unchanged.
 - The mode segment is always visible (never truncated before the value); the value truncates
@@ -102,17 +107,20 @@ interface FilterChipItem {
   modeIcon?: ReactNode;
   value: string;
   valueIcon?: ReactNode;
+  selectable?: boolean; // NEW — clicking the chip calls onSelect
 }
 
 interface FilterChipsProps {
   chips: readonly FilterChipItem[];
   onRemove: (id: string) => void;
+  onSelect?: (id: string) => void; // NEW — e.g. to edit the chip's filter in the search bar
   maxLines?: 1 | 2; // default 2 (FR-005)
   className?: string;
 }
 ```
 
-- Renders `Chip` (`tone="applied"`, `removable`) per item.
+- Renders `Chip` (`tone="applied"`, `removable`) per item; a `selectable` item also gets
+  `onClick` (accessible name `Edit filter ${field} ${mode} ${value}`).
 - Wraps to at most `maxLines` lines; beyond that the row scrolls horizontally. The existing
   `ScrollArea` primitive only mounts a vertical scrollbar, so the row uses native
   `overflow-x-auto` with the `scrollbar-subtle` utility; the wrapping list is sized from the

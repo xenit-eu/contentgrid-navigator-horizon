@@ -56,4 +56,19 @@ describe("FilterChips", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
     scrollIntoView.mockRestore();
   });
+
+  it("calls onSelect only for selectable chips", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <FilterChips
+        chips={[{ ...chips[0]!, selectable: true }, chips[1]!]}
+        onRemove={vi.fn()}
+        onSelect={onSelect}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Alpha" }));
+    expect(onSelect).toHaveBeenCalledWith("title~prefix");
+    expect(screen.queryByRole("button", { name: /^Edit filter Received at/ })).toBeNull();
+  });
 });

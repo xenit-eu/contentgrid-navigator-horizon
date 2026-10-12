@@ -12,12 +12,16 @@ export interface FilterChipItem {
   /** The formatted value. */
   readonly value: string;
   readonly valueIcon?: ReactNode;
+  /** Whether clicking the chip calls `onSelect`; chips without it are not interactive. */
+  readonly selectable?: boolean;
 }
 
 export interface FilterChipsProps {
   readonly chips: readonly FilterChipItem[];
   /** Called with the chip's id when its remove button is clicked. */
   readonly onRemove: (id: string) => void;
+  /** Called with the chip's id when a `selectable` chip is clicked, e.g. to edit its filter. */
+  readonly onSelect?: (id: string) => void;
   /** At most this many lines; beyond that the row scrolls horizontally. Defaults to 2. */
   readonly maxLines?: 1 | 2;
   /** Accessible name of the list. */
@@ -38,6 +42,7 @@ const GAP_PX = 8;
 export function FilterChips({
   chips,
   onRemove,
+  onSelect,
   maxLines = 2,
   label = "Active filters",
   className,
@@ -95,6 +100,8 @@ export function FilterChips({
               removable
               onRemove={() => onRemove(chip.id)}
               removeLabel={`Remove filter ${chip.field} ${chip.mode} ${chip.value}`}
+              onClick={chip.selectable && onSelect ? () => onSelect(chip.id) : undefined}
+              clickLabel={`Edit filter ${chip.field} ${chip.mode} ${chip.value}`}
             />
           </li>
         ))}

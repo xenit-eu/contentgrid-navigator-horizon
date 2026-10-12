@@ -323,10 +323,11 @@ Domain-free pieces used by the entity search bar (spec
 
 - **Primitives**: `FilterButton` (filter trigger with idle / active / positive / negative
   outlines and a sibling × to clear; works as `<PopoverTrigger asChild>`), plus `Chip` (now with
-  a visible `mode` segment and icons), `CountIndicatorChip` (`isLoading`) and `SelectionChip`
+  a visible `mode` segment, icons and an optional clickable body), `CountIndicatorChip` (`isLoading`) and `SelectionChip`
   (`icon` / `trailing`). `--success*` tokens are mapped into `@theme` (`bg-success`,
   `border-success-foreground`, …).
-- **Patterns**: `FilterChips` (removable chips, at most two lines then horizontal scroll),
+- **Patterns**: `FilterChips` (removable chips, optionally `selectable` via `onSelect`, at most two
+  lines then horizontal scroll),
   `GroupedSelect`, `SearchSuggestionsPopover` (chip row + grouped suggestions, owns the combobox
   keyboard model via `renderAnchor`), `DateRangeFilter` (range calendar + presets), and
   `SearchableOptionList`. `filterOptionsByPrefix` (`src/lib/filter-options.ts`) is the shared
