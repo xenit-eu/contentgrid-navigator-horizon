@@ -59,19 +59,19 @@ duplicate the hal-forms redundancy rules and drift from the dialog); classifying
 
 **Decision**: Each descriptor gets a `valueKind` and a `mode`:
 
-| Source                             | `valueKind`         | `mode`                                  | In selector | In popover                         | Quick filter            |
-| ---------------------------------- | ------------------- | --------------------------------------- | ----------- | ---------------------------------- | ----------------------- |
-| text, `prefix-match`               | `text`              | `prefix`                                | yes         | suggestions (search)               | —                       |
-| text, `full-text`                  | `text`              | `full-text`                             | yes         | suggestions (search)               | —                       |
-| text, `exact-match`, no options    | `text`              | `exact`                                 | yes         | chip only, count "?"               | —                       |
-| any type with inline options       | `allowed-values`    | `allowed-values`                        | yes         | suggestions (client prefix filter) | allowed-values          |
-| `long`, `exact-match`              | `integer`           | `exact`                                 | yes         | chip only (number input)           | number                  |
-| `double`, `exact-match`            | `decimal`           | `exact`                                 | yes         | chip only (number input)           | number                  |
-| `long`/`double`, range             | `integer`/`decimal` | `gte`/`gt`/`lte`/`lt`                   | no          | —                                  | number                  |
-| `date`, any                        | `date`              | `exact`/`after`/`before`/`from`/`until` | no          | —                                  | date                    |
-| `datetime`, any                    | `datetime`          | same                                    | no          | —                                  | date (with time)        |
-| `checkbox`                         | `boolean`           | `exact`                                 | no          | —                                  | boolean                 |
-| audit created-date / modified-date | `date`/`datetime`   | range                                   | no          | —                                  | created / modified date |
+| Source                             | `valueKind`         | `mode`                        | In selector | In popover                         | Quick filter            |
+| ---------------------------------- | ------------------- | ----------------------------- | ----------- | ---------------------------------- | ----------------------- |
+| text, `prefix-match`               | `text`              | `prefix`                      | yes         | suggestions (search)               | —                       |
+| text, `full-text`                  | `text`              | `full-text`                   | yes         | suggestions (search)               | —                       |
+| text, `exact-match`, no options    | `text`              | `exact`                       | yes         | chip only, count "?"               | —                       |
+| any type with inline options       | `allowed-values`    | `allowed-values`              | yes         | suggestions (client prefix filter) | allowed-values          |
+| `long`, `exact-match`              | `integer`           | `exact`                       | yes         | chip only (number input)           | number                  |
+| `double`, `exact-match`            | `decimal`           | `exact`                       | yes         | chip only (number input)           | number                  |
+| `long`/`double`, range             | `integer`/`decimal` | `gte`/`gt`/`lte`/`lt`         | no          | —                                  | number                  |
+| `date`, any                        | `date`              | `exact`/`gt`/`lt`/`gte`/`lte` | no          | —                                  | date                    |
+| `datetime`, any                    | `datetime`          | same                          | no          | —                                  | date (with time)        |
+| `checkbox`                         | `boolean`           | `exact`                       | no          | —                                  | boolean                 |
+| audit created-date / modified-date | `date`/`datetime`   | range                         | no          | —                                  | created / modified date |
 
 Quick filters are built per **attribute** (`groupKey`), not per parameter: a number quick filter
 bundles that attribute's exact, lower and upper parameters; a date quick filter bundles its lower

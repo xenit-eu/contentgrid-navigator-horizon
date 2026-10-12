@@ -31,4 +31,4 @@
 
 ## Notes
 
-- All items pass. 3 clarifications resolved on 2026-10-07 (scope of effective matches and sort shortcut, quick-filter filters as chips, location of the search-inclusion preference).
+- All items pass. 5 clarifications resolved: 3 on 2026-10-07 before planning (scope of effective matches and sort shortcut, quick-filter filters as chips, location of the search-inclusion preference), 2 after implementation review (Columns / Filters placement, page title removal).
