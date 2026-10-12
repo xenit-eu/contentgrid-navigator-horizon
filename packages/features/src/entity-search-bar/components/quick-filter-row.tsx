@@ -28,7 +28,11 @@ export function QuickFilterRow({
         className="scrollbar-subtle flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1"
       >
         {quickFilters.map((quickFilter) => (
-          <span key={quickFilter.groupKey} className="contents">
+          <span
+            key={quickFilter.groupKey}
+            data-quick-filter={quickFilter.groupKey}
+            className="contents"
+          >
             {renderQuickFilter(quickFilter)}
           </span>
         ))}
