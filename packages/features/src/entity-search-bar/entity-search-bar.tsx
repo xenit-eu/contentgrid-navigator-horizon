@@ -1,5 +1,6 @@
 import { type ReactNode, useRef } from "react";
-import { FilterChips } from "@contentgrid/ui";
+import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
+import { Button, FilterChips } from "@contentgrid/ui";
 import { AllowedValuesQuickFilter } from "./components/allowed-values-quick-filter";
 import { BooleanQuickFilter } from "./components/boolean-quick-filter";
 import { DateQuickFilter } from "./components/date-quick-filter";
@@ -100,6 +101,17 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
             }
           }}
         />
+        {/* Same as Enter with nothing highlighted; only useful once a parameter has a value. */}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={input.submit}
+          disabled={!input.selected || input.value.trim() === ""}
+          className="bg-ring font-semibold text-white shadow-xs hover:bg-ring/85"
+        >
+          <PaperPlaneTiltIcon aria-hidden />
+          Search
+        </Button>
       </div>,
     );
   }
