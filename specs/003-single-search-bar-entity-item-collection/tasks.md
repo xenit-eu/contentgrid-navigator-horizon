@@ -148,8 +148,8 @@ US7 (P2); US6, US8 (P3).
   - It returns `null` when all three are empty.
   - Export `EntitySearchBar` and `EntitySearchBarProps` from `SB/index.ts`.
 - [x] T015 Mount `<EntitySearchBar profileEntity={profile} filters={filters} onFiltersChange={onFiltersChange} currentSort={currentSort} />` in `FE/entity-item-collection/entity-item-collection-view.tsx`:
-  - as its own `shrink-0 px-4` row between the `PageTitle` block and the table container, outside `tableActions`, so it stays visible while the table loads or errors
-  - leave the existing "Columns" popover and "Filters" button/dialog unchanged (FR-033)
+  - as its own `shrink-0 px-4` row above the table container (the first row of the view, FR-001a), outside `tableActions`, so it stays visible while the table loads or errors
+  - keep the existing "Columns" popover and "Filters" button/dialog working (FR-033); they move onto the quick-filter row as `actions` (T084)
 
 ### Quick-filter scaffolding (shared by US4, US5, US6, US7)
 
@@ -619,6 +619,9 @@ still shows as a chip (spec US8).
 - [ ] T080 [P] Generate visual baselines for every story listed in contracts/ui-primitives-and-patterns.md "Stories that need visual baselines", using `pnpm test:visual:update` on the pinned Linux image. Commit the snapshots.
 - [x] T081 [P] Document the `EntitySearchBar` feature (purpose, the util/component split, the logged quick-filter switch) in a short section of `packages/features/CLAUDE.md`. Document the new ui primitive and patterns in `packages/ui/CLAUDE.md`. Repo-relative paths only (Principle IX).
 - [x] T082 Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:storybook` and fix anything red.
+- [x] T084 Remove the `PageTitle` block from the collection view (FR-001a) and pass the Columns / Filters controls to `EntitySearchBar` as `actions`, right-aligned on the quick-filter row outside its scrolling area (FR-031a).
+- [x] T085 Make applied-filter chips editable (FR-004b): `Chip` `onClick` / `FilterChips` `onSelect` in ui; in the hook, `chipTargets` / `editChip` and controlled quick-filter popovers (`openQuickFilter`); tests for each target and for non-clickable boolean chips.
+- [x] T086 Add the "Search" button next to the input (FR-020a), wired to `input.submit`, with a test.
 - [x] T083 Run every step of quickstart.md §4 against `pnpm dev:navigator`. Record any step that could not be exercised in the PR description, and update spec.md, plan.md or contracts/ in the same PR wherever the built behaviour differs (Principle IX).
 
 ---

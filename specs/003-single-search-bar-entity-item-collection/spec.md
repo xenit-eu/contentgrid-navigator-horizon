@@ -94,6 +94,8 @@ Above the search bar, every active filter is shown as a chip with the parameter,
 4. **Given** no filter is active, **When** the page is shown, **Then** the chip row takes no vertical space.
 5. **Given** a filter is set in the advanced filter dialog or through the page link, **When** the page is shown, **Then** that filter appears as a chip too.
 6. **Given** a filter is set through a quick filter (date range, boolean, number range, allowed value), **When** the page is shown, **Then** it appears as a chip as well as on its quick-filter button; closing the chip clears the quick filter too.
+7. **Given** a chip for a text, allowed-values or exact-number filter, **When** the user clicks the chip (not its close button), **Then** that parameter is selected in the selector with the filter's value in the focused input, the filter stays applied, and Enter replaces it with the edited value.
+8. **Given** a chip for a date or range filter, **When** the user clicks it, **Then** the quick filter for that attribute opens, showing the current filter.
 
 ---
 
@@ -215,6 +217,7 @@ A configuration layer sets which attributes take part in the search surface for 
 - **FR-003**: Each active filter MUST be shown as a chip with the parameter name, its search mode and the value; the chip MUST be built from a shared UI primitive so all chips look and behave the same.
 - **FR-004**: Each chip MUST have a close button; clicking it MUST remove that filter and update the list immediately.
 - **FR-004a**: The chip row MUST list every active filter, whatever set it: the main search bar, a quick filter, the advanced filter dialog or the page link.
+- **FR-004b**: Clicking a chip (outside its close button) MUST let the user edit that filter where it can be set: a single text, allowed-values or exact-number parameter is selected in the main bar with its value in the input, and Enter replaces the filter; otherwise the quick filter covering the chip's parameters opens. A boolean chip, and a chip whose filter neither offers, MUST NOT be clickable.
 - **FR-005**: The chip row MUST take at most two lines and MUST scroll horizontally beyond that.
 
 **Search-parameter selector**
@@ -237,6 +240,7 @@ A configuration layer sets which attributes take part in the search surface for 
 - **FR-018**: When the selected parameter has no suggestions (exact text, integer, decimal), the popover MUST NOT open.
 - **FR-019**: Clicking a suggested value MUST add that parameter and value as an active filter, clear the input and return the selector to "All".
 - **FR-020**: When a specific parameter is selected and the user presses Enter, the typed text MUST be applied as that parameter's value, whether or not a suggestion was picked; a value that is not valid for the parameter's type MUST NOT be applied and the user MUST be told why.
+- **FR-020a**: A "Search" button next to the input MUST do what Enter does with no suggestion highlighted (FR-020); it MUST be disabled while no specific parameter is selected or the input is empty.
 - **FR-021**: In "All except relations" mode, parameters reached through a relation MUST be left out of both the chips and the suggestion groups.
 - **FR-022**: The popover MUST show a loading state while results are pending, a distinct "no matches" state, and a distinct error state with retry; a response for an older input MUST NOT replace results for a newer one.
 - **FR-023**: The popover MUST be fully usable from the keyboard (move between chips and suggestions, select with Enter, close with Escape).
