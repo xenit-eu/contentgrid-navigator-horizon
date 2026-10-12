@@ -106,7 +106,9 @@ All hooks are **generic** — they accept an accessor instance (e.g. `profileEnt
 rather than being specialised to a single entity type. The noun suffix reflects the accessor, not an
 entity name like `invoice`.
 
-- Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`
+- Collection queries: `useEntityItemCollection`, `useEntityItemCollectionInfiniteScroll`,
+  `useTypeahead`, `useSearchParamSuggestions` (suggestions + counts for several search parameters
+  at once, keyed `queryKeys.searchParamSuggestions.byUrl` under the `EntitySearch` root)
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
