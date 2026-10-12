@@ -121,7 +121,7 @@ specs/003-single-search-bar-entity-item-collection/
 │   └── features.md
 ├── checklists/
 │   └── requirements.md
-└── tasks.md             # Phase 2 (/speckit-tasks — not created here)
+└── tasks.md             # Phase 2 task list (/speckit-tasks)
 ```
 
 ### Source Code (repository root)
