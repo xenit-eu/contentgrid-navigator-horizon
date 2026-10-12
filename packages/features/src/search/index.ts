@@ -7,7 +7,6 @@ export {
 } from "./filter-properties";
 export {
   buildCollectionSearchValues,
-  emptyValueFor,
   encodeFilterValue,
   filterFieldValues,
 } from "./filter-field-values";
