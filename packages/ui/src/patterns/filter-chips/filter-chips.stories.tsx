@@ -50,3 +50,11 @@ export const Overflow: Story = { args: { chips: many } };
 export const SingleLineOverflow: Story = { args: { chips: many, maxLines: 1 } };
 
 export const Empty: Story = { args: { chips: [] } };
+
+/** Text, allowed-values and number chips can be clicked to edit them; the others cannot. */
+export const Selectable: Story = {
+  args: {
+    chips: base.map((chip) => ({ ...chip, selectable: chip.id === "title" })),
+    onSelect: fn(),
+  },
+};
