@@ -29,6 +29,7 @@ export function BooleanQuickFilter({
           : `${quickFilter.label}: ${value ? "True" : "False"}`
       }
       tone={quickFilter.tone}
+      showChevron={false}
       aria-label={`${quickFilter.label}: ${state}. Click to change.`}
       onClick={() => onCycle(quickFilter.groupKey)}
       onClear={() => onClear(quickFilter.groupKey)}
