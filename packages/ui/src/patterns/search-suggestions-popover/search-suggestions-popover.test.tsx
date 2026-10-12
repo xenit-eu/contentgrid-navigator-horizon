@@ -182,6 +182,72 @@ describe("SearchSuggestionsPopover", () => {
     expect(input()).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("forgets the highlight when the caller closes and reopens it", async () => {
+    const user = userEvent.setup();
+    const onUnhandledKeyDown = vi.fn();
+    const onSelectChip = vi.fn();
+    const props = {
+      onOpenChange: vi.fn(),
+      chips,
+      groups,
+      onSelectChip,
+      onSelectItem: vi.fn(),
+      onUnhandledKeyDown,
+      renderAnchor: (comboboxProps: object) => <Input aria-label="Search" {...comboboxProps} />,
+    };
+    const { rerender } = render(<SearchSuggestionsPopover open {...props} />);
+    await user.click(input());
+    await user.keyboard("{ArrowDown}");
+    expect(input()).toHaveAttribute("aria-activedescendant");
+
+    rerender(<SearchSuggestionsPopover open={false} {...props} />);
+    rerender(<SearchSuggestionsPopover open {...props} />);
+    expect(input()).not.toHaveAttribute("aria-activedescendant");
+    await user.keyboard("{Enter}");
+    expect(onSelectChip).not.toHaveBeenCalled();
+    expect(onUnhandledKeyDown).toHaveBeenCalledWith(expect.objectContaining({ key: "Enter" }));
+  });
+
+  it("drops the highlight when the user edits the text", async () => {
+    const user = userEvent.setup();
+    const onSelectChip = vi.fn();
+    const onUnhandledKeyDown = vi.fn();
+    render(<Harness onSelectChip={onSelectChip} onUnhandledKeyDown={onUnhandledKeyDown} />);
+    await user.click(input());
+    await user.keyboard("{ArrowDown}x{Enter}");
+    expect(onSelectChip).not.toHaveBeenCalled();
+    expect(onUnhandledKeyDown).toHaveBeenLastCalledWith(expect.objectContaining({ key: "Enter" }));
+  });
+
+  it("reaches a failed group's Retry with the arrow keys and announces the failure", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(
+      <Harness
+        chips={[]}
+        groups={[
+          {
+            id: "notes",
+            label: "Notes",
+            count: { count: null },
+            status: "error",
+            items: [],
+            onRetry,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Notes: Could not load suggestions");
+    await user.click(input());
+    await user.keyboard("{ArrowDown}");
+    expect(input()).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("button", { name: "Retry" }).id,
+    );
+    await user.keyboard("{Enter}");
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   it("never puts status text inside a listbox", () => {
     render(
       <Harness

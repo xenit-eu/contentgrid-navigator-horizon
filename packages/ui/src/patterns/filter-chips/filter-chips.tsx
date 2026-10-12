@@ -56,9 +56,16 @@ export function FilterChips({
     const list = listRef.current;
     if (!scroller || !list) return;
     const measure = () => {
+      // Measure every chip at its natural width: laid out at the current width, a chip wider than
+      // the row is already truncated, which would make the computed width too small for 2 lines.
+      // Restored before the browser paints, so the unwrapped layout is never visible.
+      const previousStyle = list.style.cssText;
+      list.style.width = "max-content";
+      list.style.flexWrap = "nowrap";
       const widths = Array.from(list.children).map(
         (child) => (child as HTMLElement).getBoundingClientRect().width,
       );
+      list.style.cssText = previousStyle;
       const total = widths.reduce((sum, w) => sum + w + GAP_PX, 0);
       const widest = Math.max(0, ...widths) + GAP_PX;
       const needed = maxLines === 1 ? total : total / 2 + widest;

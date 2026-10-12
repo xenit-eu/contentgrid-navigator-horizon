@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useId, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { CheckIcon } from "@phosphor-icons/react";
 import { filterOptionsByPrefix } from "../lib/filter-options";
 import { cn } from "../lib/utils";
@@ -37,6 +37,14 @@ export function SearchableOptionList({
   const visible = filterOptionsByPrefix(options, query);
   const optionId = (index: number) => `${baseId}-option-${index}`;
   const listboxId = `${baseId}-listbox`;
+
+  // Keep the highlighted option visible inside the scrolling list.
+  useEffect(() => {
+    if (activeIndex >= 0) {
+      document.getElementById(optionId(activeIndex))?.scrollIntoView?.({ block: "nearest" });
+    }
+    // `optionId` only depends on `baseId`, which is stable.
+  }, [activeIndex]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (visible.length === 0) return;
