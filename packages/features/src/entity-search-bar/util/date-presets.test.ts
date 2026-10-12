@@ -115,4 +115,22 @@ describe("decodeDateRange", () => {
       to: undefined,
     });
   });
+
+  it("clamps last month / last year to the last day of a shorter month", () => {
+    expect(resolveDatePreset("last-month", local(2026, 3, 31, 9)).from).toEqual(
+      local(2026, 2, 28, 9),
+    );
+    expect(resolveDatePreset("last-year", local(2028, 2, 29, 9)).from).toEqual(
+      local(2027, 2, 28, 9),
+    );
+  });
+
+  it("shows an exact date as a one-day range when no bound is set", () => {
+    expect(decodeDateRange({ ...dateOnly, exact: "due_date" }, { due_date: "2026-09-24" })).toEqual(
+      {
+        from: local(2026, 9, 24),
+        to: local(2026, 9, 24),
+      },
+    );
+  });
 });

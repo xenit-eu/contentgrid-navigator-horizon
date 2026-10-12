@@ -24,6 +24,8 @@ export interface DateQuickFilter extends QuickFilterBase {
   /** Parameter of the upper bound (`~until`/`~before`), when the template offers one. */
   readonly upper?: string;
   readonly upperInclusive: boolean;
+  /** Exact-date parameter, when the template offers one next to the bounds. */
+  readonly exact?: string;
 }
 
 /** Integer / decimal: exact and/or range parameters, rendered through `hal-forms` (FR-029). */
@@ -100,8 +102,11 @@ function toQuickFilter(
     case "datetime": {
       const lower = group.find((d) => d.mode === "gte" || d.mode === "gt");
       const upper = group.find((d) => d.mode === "lte" || d.mode === "lt");
+      // An exact-date parameter is part of the same filter: setting it (e.g. from the advanced
+      // dialog) makes the quick filter active, its × clears it, and applying a range replaces it.
+      const exact = group.find((d) => d.mode === "exact");
       if (!lower && !upper) return undefined;
-      const paramNames = [lower?.name, upper?.name].filter((n): n is string => !!n);
+      const paramNames = [lower?.name, upper?.name, exact?.name].filter((n): n is string => !!n);
       const isActive = paramNames.some(has);
       return {
         kind: "date",
@@ -116,6 +121,7 @@ function toQuickFilter(
         lowerInclusive: lower?.mode === "gte",
         upper: upper?.name,
         upperInclusive: upper?.mode === "lte",
+        exact: exact?.name,
       };
     }
     case "integer":
