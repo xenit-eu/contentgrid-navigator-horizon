@@ -138,9 +138,15 @@ search-parameter selector with a suggestions popover, and quick filters. `x-stab
   components render finished models and pick icons (`components/search-icons.tsx`).
 - **Fields come from `resolveHalFormsFields`**, so the bar offers exactly the dialog's
   parameters. The number quick filter renders through `HalFormsContainer` +
-  `useHalFormsFieldState`. `util/build-quick-filters.ts` holds the one switch on a field's kind
-  (via `valueKind`) — a documented deviation from the "no feature-local `kind` switch" rule above
-  (see the spec's `plan.md`, Complexity Tracking); do not add a second one.
+  `useHalFormsFieldState`. `valueKindOf` in `util/build-search-param-descriptors.ts` holds the one
+  switch on a field's `kind`, mapping it to the feature's own `valueKind`;
+  `util/build-quick-filters.ts` then picks a quick-filter type from that `valueKind`. This is a
+  documented deviation from the "no feature-local `kind` switch" rule above (see the spec's
+  `plan.md`, Complexity Tracking); do not add a second switch on `field.kind`.
+- **Editing an applied filter**: clicking a chip loads a single selectable parameter into the main
+  bar (selected, value in the focused input; Enter replaces the filter) or opens the quick filter
+  covering all its parameters. The quick-filter popovers are controlled by the hook
+  (`openQuickFilter`) so a chip can open them.
 - **Inclusion**: `searchAttributes` in `EntityDisplayPreferences` (edited next to "Visible
   columns") limits the selector, suggestions and quick filters; chips always show every active
   filter, and relation parameters are always included. Import `useSearchAttributeInclusion` by

@@ -66,7 +66,7 @@ entity-search-bar/                        # (the search-bar MSW wrapper is src/t
     ├── param-labels.ts                   # parameter display name and type hint
     ├── build-active-filter-chips.ts      # data-model §6
     ├── format-filter-value.ts            # value formatting for chips
-    ├── build-quick-filters.ts            # data-model §7 (the one exhaustive switch on valueKind)
+    ├── build-quick-filters.ts            # data-model §7 (quick-filter type per valueKind)
     └── date-presets.ts                   # data-model §8 (+ encode / decode of date bounds)
 ```
 
