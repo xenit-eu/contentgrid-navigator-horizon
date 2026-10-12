@@ -16,13 +16,14 @@ export interface DateRange {
 
 type DateBounds = Pick<
   DateQuickFilter,
-  "includesTime" | "lower" | "lowerInclusive" | "upper" | "upperInclusive"
+  "includesTime" | "lower" | "lowerInclusive" | "upper" | "upperInclusive" | "exact"
 >;
 
 /**
  * The range a preset stands for, ending `now` (data-model.md §8): the last 24 hours, 7 days,
- * calendar month or calendar year, in local time. Evaluated when the filter is applied, not when
- * the preset is highlighted.
+ * calendar month or calendar year, in local time. A month or year back from a day the target
+ * month does not have (31 March, 29 February) lands on that month's last day. Evaluated when the
+ * filter is applied, not when the preset is highlighted.
  */
 export function resolveDatePreset(id: DatePresetId, now: Date): Required<DateRange> {
   const from = new Date(now);
@@ -34,11 +35,9 @@ export function resolveDatePreset(id: DatePresetId, now: Date): Required<DateRan
       from.setDate(now.getDate() - 7);
       break;
     case "last-month":
-      from.setMonth(now.getMonth() - 1);
-      break;
+      return { from: addMonthsClamped(now, -1), to: new Date(now) };
     case "last-year":
-      from.setFullYear(now.getFullYear() - 1);
-      break;
+      return { from: addMonthsClamped(now, -12), to: new Date(now) };
   }
   return { from, to: new Date(now) };
 }
@@ -90,10 +89,29 @@ export function decodeDateRange(
     const date = fromLocalDate(raw);
     return date && !inclusive ? addDays(date, -outward) : date;
   };
-  return {
-    from: read(model.lower, model.lowerInclusive, -1),
-    to: read(model.upper, model.upperInclusive, 1),
-  };
+  const from = read(model.lower, model.lowerInclusive, -1);
+  const to = read(model.upper, model.upperInclusive, 1);
+  if (!from && !to) {
+    // Only an exact date is set (e.g. from the advanced dialog): show it as a one-day range.
+    const day = read(model.exact, true, 0);
+    if (day) return { from: day, to: day };
+  }
+  return { from, to };
+}
+
+/** A `YYYY-MM-DD` value moved by whole days, or the raw value when it is not a date. */
+export function shiftLocalDate(raw: string, days: number): string {
+  const date = fromLocalDate(raw);
+  return date ? toLocalDate(addDays(date, days)) : raw;
+}
+
+function addMonthsClamped(date: Date, months: number): Date {
+  const next = new Date(date);
+  next.setDate(1);
+  next.setMonth(next.getMonth() + months);
+  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(date.getDate(), lastDay));
+  return next;
 }
 
 function addDays(date: Date, days: number): Date {
