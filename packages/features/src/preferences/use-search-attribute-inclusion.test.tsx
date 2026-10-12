@@ -4,7 +4,7 @@ import {
   SEARCH_BAR_PROFILE_ROOT_URL,
   makeSearchBarProfiles,
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
-import { makeSearchBarWrapper } from "../entity-search-bar/test-utils";
+import { makeSearchBarWrapper } from "../test-utils/search-bar-wrapper";
 import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
 import { useSearchAttributeInclusion } from "./use-search-attribute-inclusion";
 
@@ -56,10 +56,17 @@ describe("useSearchAttributeInclusion", () => {
     expect(result.current.isIncluded("title")).toBe(false);
   });
 
-  it("ignores names of attributes that no longer exist", () => {
+  it("keeps a list that still names a current attribute, ignoring the stale names", () => {
+    backendDefaults.value = { "search-bar": { searchAttributes: ["renamed_away", "title"] } };
+    const { result } = render();
+    expect(result.current.isIncluded("title")).toBe(true);
+    expect(result.current.isIncluded("reference")).toBe(false);
+  });
+
+  it("falls back to every attribute when no saved name exists any more", () => {
     backendDefaults.value = { "search-bar": { searchAttributes: ["renamed_away"] } };
     const { result } = render();
-    expect(result.current.isIncluded("title")).toBe(false);
-    expect(result.current.isIncluded("renamed_away")).toBe(true);
+    expect(result.current.includedAttributes).toBe("all");
+    expect(result.current.isIncluded("title")).toBe(true);
   });
 });

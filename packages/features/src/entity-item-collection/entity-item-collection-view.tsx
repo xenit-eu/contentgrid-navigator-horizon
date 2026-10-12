@@ -234,7 +234,7 @@ export function EntityItemCollectionView({
 
   // `HalFormsContainer`'s widgets work with typed `FieldValue`s; `filters` (this view's own
   // caller-facing contract) is plain strings. `values`/`handleHalFormChange` are the two
-  // directions of that bridge — `filterFieldValues`/`encodeFilterValue` below do the actual
+  // directions of that bridge — `filterFieldValues`/`encodeFilterValue` (in `../search/filter-field-values`) do the actual
   // per-kind conversion, reusing `coerceFilterValue` (keyed off `field.property.type`, the raw
   // wire type every `HalFormsField` still carries) for the string -> typed direction so the
   // coercion rules stay identical to what `applyFilterValues`/`searchValues` above already use.
