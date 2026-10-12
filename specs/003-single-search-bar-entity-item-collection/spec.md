@@ -117,17 +117,17 @@ Below the search bar, each date and date-and-time attribute has a quick-filter b
 
 ### User Story 5 - Quick filter on booleans (Priority: P2)
 
-Each boolean attribute has a quick-filter button that does not open a popover. Clicking it changes its state. The outline shows the state: green for true, red for false, grey for unset (no filter). The button uses the same icons as boolean values elsewhere in the product.
+Each boolean attribute has a quick-filter button that does not open a popover. Clicking it changes its state. The outline shows the state: green for true, red for false, and no outline (muted text) for unset (no filter). The button uses the same icons as boolean values elsewhere in the product.
 
 **Why this priority**: A one-click filter for a common attribute type; independent of the other stories.
 
-**Independent Test**: Click a boolean quick filter three times and confirm the list filters on true, then false, then is unfiltered, with the outline green, red, then grey.
+**Independent Test**: Click a boolean quick filter three times and confirm the list filters on true, then false, then is unfiltered, with the outline green, red, then gone.
 
 **Acceptance Scenarios**:
 
-1. **Given** a boolean quick filter is unset (grey), **When** the user clicks it, **Then** the filter is set to true, the outline turns green and the list narrows.
+1. **Given** a boolean quick filter is unset (no outline), **When** the user clicks it, **Then** the filter is set to true, the outline turns green and the list narrows.
 2. **Given** it is true (green), **When** the user clicks it, **Then** the filter changes to false and the outline turns red.
-3. **Given** it is false (red), **When** the user clicks it, **Then** the filter is removed and the outline turns grey.
+3. **Given** it is false (red), **When** the user clicks it, **Then** the filter is removed and the outline disappears.
 4. **Given** the button shows a value, **When** it is rendered, **Then** it uses the same true/false icons that boolean values use elsewhere in the product.
 
 ---
@@ -242,10 +242,11 @@ A configuration layer sets which attributes take part in the search surface for 
 **Quick filters**
 
 - **FR-024**: The quick-filter row MUST show one button per included date, date-and-time, boolean, integer, decimal and allowed-values attribute, plus the "created at" and "last modified at" audit attributes; each button that opens a popover MUST have its popover visibly attached to it.
-- **FR-025**: A quick filter whose attribute has an active filter MUST show a blue outline and a cross that clears all filters on that attribute, regardless of whether the filter was set through the quick filter, the advanced filter dialog or the page link. Boolean quick filters show their state through the green/red/grey outline instead (FR-028).
+- **FR-025**: A quick filter whose attribute has an active filter MUST show a blue outline and a cross that clears all filters on that attribute, regardless of whether the filter was set through the quick filter, the advanced filter dialog or the page link. Boolean quick filters show their state through the green/red outline instead (FR-028). A quick filter with no active filter has no outline and muted text, so it reads as text rather than a button.
 - **FR-026**: The date and date-and-time quick filter MUST open a popover with a range calendar on the left and presets (last day, last week, last month, last year) on the right, plus Clear and Apply; Clear MUST remove the attribute's filter entirely; the applied range MUST match the attribute's precision (date-only or date-and-time).
 - **FR-027**: The "created at" and "last modified at" audit attributes MUST behave as date quick filters, each with a dedicated "created" or "modified" icon; they MUST be recognised from the attribute's audit role in the profile, never by name.
-- **FR-028**: The boolean quick filter MUST NOT open a popover; each click MUST cycle unset → true → false → unset, with a grey, green and red outline respectively, using the same true/false icons as boolean values elsewhere in the product.
+- **FR-025a**: A quick filter that opens a popover MUST show a trailing chevron; the boolean quick filter (FR-028) MUST NOT.
+- **FR-028**: The boolean quick filter MUST NOT open a popover; each click MUST cycle unset → true → false → unset, with no outline, a green and a red outline respectively, using the same true/false icons as boolean values elsewhere in the product.
 - **FR-029**: The integer and decimal quick filter MUST open a popover with an exact-value input, Min and Max inputs side by side below it, and Clear and Apply; only the inputs the user filled in are applied.
 - **FR-030**: The allowed-values quick filter MUST open a popover with a search field above the list of allowed values; typing MUST narrow the list by prefix on the client, the same way allowed-value suggestions are filtered in the popover.
 - **FR-031**: When the quick-filter row has more buttons than fit, it MUST scroll horizontally.
