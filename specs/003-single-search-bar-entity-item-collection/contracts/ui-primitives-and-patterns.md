@@ -48,7 +48,7 @@ interface ChipProps {
 ```ts
 interface CountIndicatorChipProps {
   count: number | null; // null → "?"
-  isEstimated?: boolean; // → "~" suffix, plus aria-label "about N results"
+  isEstimated?: boolean; // → "~" suffix, plus screen-reader text and title "about N results"
   isLoading?: boolean; // NEW — pulse placeholder, aria-busy
   variant?: "default" | "solid";
 }
@@ -115,6 +115,7 @@ interface FilterChipsProps {
   onRemove: (id: string) => void;
   onSelect?: (id: string) => void; // NEW — e.g. to edit the chip's filter in the search bar
   maxLines?: 1 | 2; // default 2 (FR-005)
+  label?: string; // accessible name of the list, default "Active filters"
   className?: string;
 }
 ```
@@ -124,7 +125,7 @@ interface FilterChipsProps {
 - Wraps to at most `maxLines` lines; beyond that the row scrolls horizontally. The existing
   `ScrollArea` primitive only mounts a vertical scrollbar, so the row uses native
   `overflow-x-auto` with the `scrollbar-subtle` utility; the wrapping list is sized from the
-  measured chip widths (at least half their total plus the widest chip), so greedy wrapping can
+  measured natural chip widths (at least half their total plus the widest chip), so greedy wrapping can
   never need a third line. Keyboard focus on a chip scrolls it into view.
 - The chips are a `list` (named by `label`, default "Active filters"); each remove button is
   named `Remove filter ${field} ${mode} ${value}`.
@@ -216,8 +217,11 @@ interface SearchSuggestionsPopoverProps {
   only selections and the keys it did not handle.
 - **Keyboard** (FR-023): the input keeps focus. ArrowDown/ArrowUp walk the entries in visual
   order, wrapping — the chip row is one stop above the first item; ArrowLeft/ArrowRight move
-  within the chip row while a chip is highlighted; Enter selects the highlighted entry (with
-  nothing highlighted it goes to `onUnhandledKeyDown`); Escape closes.
+  within the chip row while a chip is highlighted; a group that failed to load contributes its
+  Retry action as a stop; Enter selects the highlighted entry or retries (with nothing
+  highlighted it goes to `onUnhandledKeyDown`); Escape closes. Editing the text, or any closing
+  (also one the caller makes through `open`), drops the highlight, and the highlighted entry is
+  scrolled into view. A polite `role="status"` region announces groups that failed.
 - **ARIA**: the content is a `region` named `listLabel`. The chip row and every group that has
   items are each their own `listbox` (chips: `aria-orientation="horizontal"`; a group: labelled
   by its header) with `role="option"` entries; status text (loading skeleton, "No matches", an
@@ -262,7 +266,9 @@ interface SearchableOptionListProps {
   onValueChange: (value: string) => void;
   searchPlaceholder?: string;
   emptyLabel?: string;
+  label?: string; // accessible name of the list
   autoFocus?: boolean;
+  className?: string;
 }
 ```
 
