@@ -45,7 +45,7 @@ entity-search-bar/
 ├── test-utils.tsx                        # query client + provider wired to the search-bar MSW fixture
 ├── components/
 │   ├── search-param-selector.tsx         # GroupedSelect wrapper (icon-only below `sm`)
-│   ├── search-input.tsx                  # input + SearchSuggestionsPopover; Enter / Escape / Backspace
+│   ├── search-input.tsx                  # input + SearchSuggestionsPopover; Enter submits, other keys forwarded
 │   ├── to-suggestion-count.ts            # CountState → the popover's count chip
 │   ├── quick-filter-row.tsx              # one-line toolbar, scrolls horizontally
 │   ├── date-quick-filter.tsx             # FilterButton + Popover + DateRangeFilter
@@ -166,9 +166,9 @@ function useSearchAttributeInclusion(profileEntity: ProfileEntity | undefined): 
 
 ## 4. `entity-item-collection` integration
 
-- `EntityItemCollectionView` renders `<EntitySearchBar profileEntity filters onFiltersChange currentSort />`
-  as its own row between the page title and the table, so it stays usable while the table is
-  loading or shows an error.
+- `EntityItemCollectionView` renders
+  `<EntitySearchBar profileEntity filters onFiltersChange currentSort actions />` as the first row
+  of the view, above the table, so it stays usable while the table is loading or shows an error.
 - The page title block (heading, entity icon, "N items" subtitle) is removed (FR-001a): the
   search bar is the first row of the view.
 - The "Filters" button and dialog stay (FR-033); they read the same `filters`.

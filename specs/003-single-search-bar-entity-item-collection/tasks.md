@@ -179,7 +179,7 @@ US7 (P2); US6, US8 (P3).
   - boolean values: true `CheckCircleIcon`, false `XCircleIcon` (the same icons as `FE/entity-item/attributes/renderers/boolean-attribute-renderer.tsx`)
   - All from `@phosphor-icons/react`; size 14; `aria-hidden`.
 - [x] T022 Create `SB/components/quick-filter-row.tsx`:
-  - a horizontal `ScrollArea` with `<ScrollBar orientation="horizontal" />` from `@contentgrid/ui`, no wrapping (FR-031)
+  - a single line with native `overflow-x-auto` and the `scrollbar-subtle` utility (`ScrollArea` only mounts a vertical bar), no wrapping (FR-031)
   - a render slot per `QuickFilterModel.kind`; until the story phases fill them, each slot renders nothing
   - wire it into the third row of `SB/entity-search-bar.tsx`
   - extend `useEntitySearchBar` with `quickFilters`, `applyQuickFilter(groupKey, values)` and `clearQuickFilter(groupKey)` (removes every param of that model)
@@ -236,8 +236,8 @@ group of values; clicking a value narrows the list, clears the input and resets 
 - [x] T028 [P] [US1] Extend `SelectionChip` in `UI/primitives/selection-chip.tsx` with an optional leading `icon?: ReactNode` and an optional `trailing?: ReactNode`. Existing usages must render unchanged. Add a `WithIconAndCount` story and a test.
 - [x] T029 [US1] Build the `SearchSuggestionsPopover` pattern in `UI/patterns/search-suggestions-popover/search-suggestions-popover.tsx`, exactly per contracts/ui-primitives-and-patterns.md `SearchSuggestionsPopover`:
   - `Popover` + `PopoverAnchor` around the passed `anchor`
-  - top row `role="listbox" aria-orientation="horizontal"` of `SelectionChip` (icon + label + `CountIndicatorChip`)
-  - groups as `role="group"` with headers showing `CountIndicatorChip`
+  - content is a `region`; the top chip row is its own `role="listbox" aria-orientation="horizontal"` whose chips are `role="option"` elements styled as chips (icon + label + `CountIndicatorChip`)
+  - every group with items is its own `listbox`, labelled by its header (with `CountIndicatorChip`); loading / empty / error text sits outside the listboxes
   - controlled `activeId`
   - does not close on interaction inside the anchor (same rule as `UI/patterns/autocomplete-renderer.tsx`)
   - Export the pattern, its types and the `useSuggestionsKeyboard(chips, groups, { activeId, onActiveIdChange, onSelectChip, onSelectItem, onEscape })` helper (returns the input `onKeyDown`) from `UI/patterns/search-suggestions-popover/index.ts` and `UI/patterns/index.ts`.
@@ -251,7 +251,7 @@ group of values; clicking a value narrows the list, clears the input and resets 
   - relation params make an extra request on the target entity with only `targetParam = query` (via `resolveRelationSearchTarget`)
   - a number-typed param whose query cannot be coerced → `idle`, no request
   - query options: `staleTime` 30 s, `gcTime` 60 s, `retry: 0`, no `placeholderData`
-  - Add `queryKeys.searchParamSuggestions.byUrl(profileEntity, url) = ["SearchParamSuggestions", profileEntity.name, url]` to `ND/src/query-keys.ts`, under the per-entity invalidation prefix.
+  - Add `queryKeys.searchParamSuggestions.byUrl(profileEntity, url) = ["EntitySearch", profileEntity.name, url, "suggestions"]` to `ND/src/query-keys.ts`, nested under `entityItemCollection.forEntity` so collection invalidation refreshes it.
   - Export it from `ND/src/hooks/index.ts` and `ND/src/index.ts`. Make T023 pass.
 - [x] T032 [P] [US1] Implement `classifySearchInput(raw)` in `SB/util/classify-search-input.ts`:
   - trims the input
@@ -398,7 +398,7 @@ two lines, then horizontal scroll (spec US3).
 - [x] T050 [US3] Rewrite `UI/patterns/filter-chips/filter-chips.tsx`:
   - props `{ chips: readonly FilterChipItem[]; onRemove(id); maxLines?: 1 | 2; className? }`, per contracts/ui-primitives-and-patterns.md `FilterChips`
   - a `Chip tone="applied" removable` per item
-  - wraps up to `maxLines` lines (default 2), then scrolls horizontally via `ScrollArea` with a horizontal `ScrollBar`
+  - wraps up to `maxLines` lines (default 2), then scrolls horizontally with native `overflow-x-auto` and `scrollbar-subtle` (`ScrollArea` only mounts a vertical bar)
   - `scrollIntoView({ block: "nearest", inline: "nearest" })` on chip focus
   - Delete `UI/patterns/filter-chips/search-property-utils.ts` and the `SearchProperty` type. First confirm with a repo-wide search that nothing outside `filter-chips/` imports them (research R6: no consumers).
   - Update `UI/patterns/filter-chips/index.ts` and `filter-chips.stories.tsx` (`OneLine`, `TwoLines`, `Overflow`, `Empty`). Make T047 pass.
