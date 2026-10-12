@@ -15,7 +15,13 @@ export function classifySearchInput(raw: string): InputClass {
   return "text";
 }
 
-/** A number typed with a decimal comma, normalised to the `.` the wire format expects. */
+/**
+ * A number typed with a decimal comma, normalised to the `.` the wire format expects; a missing
+ * leading zero (".5") is added.
+ */
 export function normaliseNumberInput(raw: string): string {
-  return raw.trim().replace(",", ".");
+  return raw
+    .trim()
+    .replace(",", ".")
+    .replace(/^(-?)\./, "$10.");
 }

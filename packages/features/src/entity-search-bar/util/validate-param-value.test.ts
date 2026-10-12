@@ -37,4 +37,15 @@ describe("validateParamValue", () => {
   it("applies typed text as is for text parameters", () => {
     expect(validate("title~prefix", " Alp ")).toEqual({ ok: true, value: "Alp" });
   });
+
+  it("sends numbers as typed: no rounding, no exponent notation, no hex", () => {
+    expect(validate("quantity", "12345678901234567891")).toEqual({
+      ok: true,
+      value: "12345678901234567891",
+    });
+    expect(validate("amount", "0,0000001")).toEqual({ ok: true, value: "0.0000001" });
+    expect(validate("amount", ",5")).toEqual({ ok: true, value: "0.5" });
+    expect(validate("amount", "1e3")).toEqual({ ok: false, error: "Enter a number" });
+    expect(validate("quantity", "0x1A")).toEqual({ ok: false, error: "Enter a number" });
+  });
 });

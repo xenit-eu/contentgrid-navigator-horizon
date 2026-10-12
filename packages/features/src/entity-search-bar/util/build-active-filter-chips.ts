@@ -1,3 +1,4 @@
+import { shiftLocalDate } from "./date-presets";
 import { type FormatOptions, formatFilterValue } from "./format-filter-value";
 import { paramLabel } from "./param-labels";
 import type { SearchMode, SearchParamDescriptor, SearchValueKind } from "./types";
@@ -91,10 +92,17 @@ function rangeChip(
   const first = lower ?? upper;
   if (!first) return undefined;
 
-  const show = (d: SearchParamDescriptor) => formatFilterValue(d, filters[d.name]!, formatOptions);
+  const show = (d: SearchParamDescriptor, inclusive = false) => {
+    const raw = filters[d.name]!;
+    // "between" reads as the days included: for a date-only attribute an exclusive bound
+    // (`~after` / `~before`, stored one day outside the picked range) is shown one day inwards.
+    const shift =
+      !inclusive || d.valueKind !== "date" ? 0 : d.mode === "gt" ? 1 : d.mode === "lt" ? -1 : 0;
+    return formatFilterValue(d, shift ? shiftLocalDate(raw, shift) : raw, formatOptions);
+  };
   const isDate = first.valueKind === "date" || first.valueKind === "datetime";
   const mode = lower && upper ? "between" : boundLabel(first.mode, isDate);
-  const value = lower && upper ? `${show(lower)} – ${show(upper)}` : show(first);
+  const value = lower && upper ? `${show(lower, true)} – ${show(upper, true)}` : show(first);
 
   return {
     id: `range:${groupKey}`,

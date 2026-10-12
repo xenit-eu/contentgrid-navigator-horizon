@@ -99,4 +99,19 @@ describe("buildQuickFilters", () => {
       "rejected",
     ]);
   });
+
+  it("treats a date's exact parameter as part of its quick filter", () => {
+    const from = descriptors.find((d) => d.name === "due_date~from")!;
+    const withExact = [...descriptors, { ...from, name: "due_date", mode: "exact" as const }];
+    const due = buildQuickFilters(withExact, { due_date: "2026-09-24" }).find(
+      (q) => q.groupKey === "due_date",
+    );
+    expect(due).toMatchObject({
+      kind: "date",
+      isActive: true,
+      tone: "active",
+      exact: "due_date",
+      paramNames: ["due_date~from", "due_date~until", "due_date"],
+    });
+  });
 });

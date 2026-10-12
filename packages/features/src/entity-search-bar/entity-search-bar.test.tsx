@@ -154,6 +154,16 @@ describe("EntitySearchBar", () => {
     expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Alpha" });
   });
 
+  it("returns to All on a second Escape without reopening the suggestions", async () => {
+    const user = userEvent.setup();
+    renderBar({ "title~prefix": "Al" });
+    await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Al" }));
+    const input = screen.getByRole("combobox", { name: "Search" });
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("combobox", { name: "Search in" })).toHaveTextContent("All");
+    expect(input).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("applies a suggestion picked from the popover", async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar();

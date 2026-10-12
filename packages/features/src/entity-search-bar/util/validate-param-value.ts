@@ -1,5 +1,5 @@
 import { filterOptionsByPrefix } from "@contentgrid/ui";
-import { normaliseNumberInput } from "./classify-search-input";
+import { classifySearchInput, normaliseNumberInput } from "./classify-search-input";
 import type { SearchParamDescriptor } from "./types";
 
 export type ParamValueValidation =
@@ -9,7 +9,8 @@ export type ParamValueValidation =
 /**
  * The value to apply when the user presses Enter with a parameter selected (FR-020), or why it
  * cannot be applied:
- * - integer: a whole number; decimal: any number (a decimal comma is accepted);
+ * - integer: a whole number; decimal: a plain decimal (a decimal comma is accepted), sent as typed
+ *   (normalised to a `.` separator) — never rounded or written in exponent notation;
  * - allowed values: one of the options — matched on its label or token, or the single option
  *   the text narrows the list to;
  * - text: the typed text as is (a prefix parameter then searches by that prefix).
@@ -22,14 +23,14 @@ export function validateParamValue(
   switch (descriptor.valueKind) {
     case "integer":
     case "decimal": {
-      const normalised = normaliseNumberInput(input);
-      const parsed = Number(normalised);
-      if (normalised === "" || !Number.isFinite(parsed))
-        return { ok: false, error: "Enter a number" };
-      if (descriptor.valueKind === "integer" && !Number.isInteger(parsed)) {
+      // Validated as text and sent as typed: a round trip through a float would lose precision
+      // on large integers and could produce exponent notation.
+      const kind = classifySearchInput(input);
+      if (kind === "empty" || kind === "text") return { ok: false, error: "Enter a number" };
+      if (descriptor.valueKind === "integer" && kind === "decimal") {
         return { ok: false, error: "Enter a whole number" };
       }
-      return { ok: true, value: String(parsed) };
+      return { ok: true, value: normaliseNumberInput(input) };
     }
     case "allowed-values": {
       const options = descriptor.options ?? [];

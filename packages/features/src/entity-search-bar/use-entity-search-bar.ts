@@ -183,6 +183,13 @@ export function useEntitySearchBar({
     [inputValue],
   );
 
+  /** Back to "All" (Escape / Backspace on an empty input); never reopens the popover. */
+  const resetMode = useCallback(() => {
+    setModeState(ALL);
+    setInputError(undefined);
+    setPopoverRequested(false);
+  }, []);
+
   const resetInput = useCallback(() => {
     setInputValue("");
     setModeState(ALL);
@@ -339,7 +346,7 @@ export function useEntitySearchBar({
       error: inputError,
       mode: effectiveMode,
       setMode,
-      resetMode: () => setMode(ALL),
+      resetMode,
       selected,
       popoverOpen,
       setPopoverOpen: setPopoverRequested,
