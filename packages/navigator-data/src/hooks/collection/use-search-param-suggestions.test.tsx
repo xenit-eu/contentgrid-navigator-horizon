@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createValues } from "@contentgrid/hal-forms/values";
 import {
   SEARCH_BAR_COLLECTION_URL,
@@ -187,6 +187,53 @@ describe("useSearchParamSuggestions", () => {
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(result.current.results[0]?.status).toBe("idle");
     expect(requests.to(SEARCH_BAR_COLLECTION_URL)).toHaveLength(0);
+  });
+
+  it.each(["1e3", "0x1A", "1,000.5"])(
+    "treats %s as not a number for a number parameter",
+    async (query) => {
+      server.use(...searchBarHandlers());
+      const requests = recordRequests();
+      const { result } = renderSuggestions({ requests: [request("quantity", false)], query });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(result.current.results[0]?.status).toBe("idle");
+      expect(requests.to(SEARCH_BAR_COLLECTION_URL)).toHaveLength(0);
+    },
+  );
+
+  it("accepts a decimal comma for a number parameter", async () => {
+    server.use(...searchBarHandlers());
+    const requests = recordRequests();
+    const { result } = renderSuggestions({ requests: [request("quantity", false)], query: "2,5" });
+    await waitFor(() => expect(result.current.results[0]?.status).toBe("success"), {
+      timeout: 3000,
+    });
+    expect(requests.to(SEARCH_BAR_COLLECTION_URL)[0]?.searchParams.get("quantity")).toBe("2.5");
+  });
+
+  it("reports loading, not idle, from the first keystroke until the debounce ends", () => {
+    server.use(...searchBarHandlers());
+    const { result, rerender } = renderSuggestions({
+      requests: [request("title~prefix"), request("quantity", false)],
+      query: "",
+    });
+    rerender({ requests: [request("title~prefix"), request("quantity", false)], query: "a" });
+    expect(result.current.results.map((r) => r.status)).toEqual(["loading", "idle"]);
+  });
+
+  it("gives every idle request its own query, without TanStack's duplicate-query warning", async () => {
+    server.use(...searchBarHandlers());
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = renderSuggestions({
+      requests: [request("title~prefix"), request("notes~fts"), request("quantity", false)],
+      query: "",
+    });
+    expect(result.current.results.map((r) => r.status)).toEqual(["idle", "idle", "idle"]);
+    const messages = [...warn.mock.calls, ...error.mock.calls].flat().join(" ");
+    expect(messages).not.toMatch(/Duplicate Queries/);
+    warn.mockRestore();
+    error.mockRestore();
   });
 
   it("never presents an older query's suggestions as the answer to a newer one", async () => {
