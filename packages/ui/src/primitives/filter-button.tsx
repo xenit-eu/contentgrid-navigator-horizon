@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
-import { XIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, XIcon } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 type FilterButtonTone = "idle" | "active" | "positive" | "negative";
@@ -8,11 +8,13 @@ interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
   readonly icon?: ReactNode;
   readonly label: string;
   /**
-   * Outline colour: `idle` (grey, no filter), `active` (blue, a filter is set), `positive`
+   * Outline colour: `idle` (no outline, no filter), `active` (blue, a filter is set), `positive`
    * (green) and `negative` (red) for a two-valued filter such as a boolean. Colour is never the
    * only signal — pair it with an icon or label that reflects the state.
    */
   readonly tone?: FilterButtonTone;
+  /** Shows a ▾ after the label, hinting at a popover; turn it off for a toggle (e.g. a boolean). */
+  readonly showChevron?: boolean;
   /** When set and `tone` is not `idle`, a separate × button clears the filter. */
   readonly onClear?: () => void;
   /** Accessible name of the × button; defaults to `Clear ${label} filter`. */
@@ -22,15 +24,16 @@ interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 const TONE_CLASSES: Record<FilterButtonTone, string> = {
-  idle: "border-border bg-background",
+  idle: "border-transparent text-muted-foreground hover:text-foreground",
   active: "border-ring bg-accent text-accent-foreground",
   positive: "border-success-foreground bg-success text-success-foreground",
   negative: "border-destructive bg-destructive/10 text-destructive",
 };
 
 /**
- * A compact filter trigger: icon + label inside a coloured outline, with an optional × that
- * clears the filter. The × is a sibling button, not nested in the trigger, so both stay valid,
+ * A compact filter trigger: icon + label, with an optional × that clears the filter. Idle it
+ * reads as plain text (transparent border, so the size does not shift); once a filter is set it
+ * gets a coloured outline. The × is a sibling button, not nested in the trigger, so both stay valid,
  * separately focusable controls. All other props (including those a Radix `asChild` trigger
  * injects, like `onClick`, `aria-expanded` and `ref`) go to the trigger button.
  */
@@ -38,6 +41,7 @@ function FilterButton({
   icon,
   label,
   tone = "idle",
+  showChevron = true,
   onClear,
   clearLabel,
   className,
@@ -51,7 +55,7 @@ function FilterButton({
       data-slot="filter-button"
       data-tone={tone}
       className={cn(
-        "inline-flex h-8 shrink-0 items-stretch overflow-hidden rounded-md border text-sm font-medium shadow-xs transition-colors",
+        "inline-flex h-8 shrink-0 items-stretch overflow-hidden rounded-md border text-sm font-medium transition-colors",
         TONE_CLASSES[tone],
         className,
       )}
@@ -67,6 +71,7 @@ function FilterButton({
       >
         {icon}
         {label}
+        {showChevron && <CaretDownIcon size={12} aria-hidden className="opacity-60" />}
       </button>
       {showClear && (
         <button

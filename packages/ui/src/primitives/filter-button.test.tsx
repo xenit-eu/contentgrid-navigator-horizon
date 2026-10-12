@@ -11,7 +11,7 @@ describe("FilterButton", () => {
   });
 
   it.each([
-    ["idle", "border-border"],
+    ["idle", "border-transparent"],
     ["active", "border-ring"],
     ["positive", "border-success-foreground"],
     ["negative", "border-destructive"],
@@ -20,6 +20,14 @@ describe("FilterButton", () => {
     const root = container.querySelector('[data-slot="filter-button"]');
     expect(root).toHaveAttribute("data-tone", tone);
     expect(root).toHaveClass(className);
+  });
+
+  it("renders a decorative chevron unless showChevron is false", () => {
+    const { container, rerender } = render(<FilterButton label="Due date" />);
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
+    rerender(<FilterButton label="Due date" showChevron={false} />);
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Due date" })).toBeInTheDocument();
   });
 
   it("does not render the clear button while idle", () => {
