@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { type QueryClient, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Link } from "@contentgrid/hal";
 import ProfileEntity, { profileRootQuery } from "../../accessors/entity-profile";
@@ -74,8 +75,16 @@ export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
   const { apiFetch, profileUrl } = useNavigatorData();
   const rootQuery = useQuery(profileRootQuery(apiFetch, profileUrl));
   const results = useProfileEntities(options);
+  // Keep the same array while the loaded profiles are the same instances, so callers can memoise
+  // on it.
+  const loaded = results.filter((r) => r.data).map((r) => r.data as ProfileEntity);
+  const profilesRef = useRef(loaded);
+  const previous = profilesRef.current;
+  if (previous.length !== loaded.length || previous.some((p, i) => p !== loaded[i])) {
+    profilesRef.current = loaded;
+  }
   return {
-    profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
+    profiles: profilesRef.current,
     isLoading: isAnyProfileLoading(rootQuery.isPending, results),
   };
 }
