@@ -1,11 +1,15 @@
 import type { KeyboardEvent } from "react";
 
-/** Identifies a highlighted entry: a chip in the top row, or an item in a group. */
-export type SuggestionEntryId = `chip:${string}` | `item:${string}:${string}`;
+/**
+ * Identifies a highlighted entry: a chip in the top row, an item in a group, or the Retry action
+ * of a group that failed to load.
+ */
+export type SuggestionEntryId = `chip:${string}` | `item:${string}:${string}` | `retry:${string}`;
 
 export const chipEntryId = (chipId: string): SuggestionEntryId => `chip:${chipId}`;
 export const itemEntryId = (groupId: string, itemId: string): SuggestionEntryId =>
   `item:${groupId}:${itemId}`;
+export const retryEntryId = (groupId: string): SuggestionEntryId => `retry:${groupId}`;
 
 interface KeyboardChip {
   readonly id: string;
@@ -14,6 +18,7 @@ interface KeyboardGroup {
   readonly id: string;
   readonly status: "loading" | "empty" | "error" | "ready";
   readonly items: readonly { readonly id: string }[];
+  readonly onRetry?: () => void;
 }
 
 export interface UseSuggestionsKeyboardOptions {
@@ -31,11 +36,12 @@ export interface UseSuggestionsKeyboardOptions {
  * popover is open (WAI-ARIA combobox with `aria-activedescendant`):
  *
  * - ArrowDown / ArrowUp walk the entries in visual order, wrapping: the chip row counts as one
- *   stop above the first item; from a chip, ArrowDown goes to the first item.
+ *   stop above the first item; from a chip, ArrowDown goes to the first item. A group that failed
+ *   to load contributes its Retry action as a stop, so it is reachable without a mouse.
  * - ArrowLeft / ArrowRight move within the chip row while a chip is highlighted; otherwise they
  *   are left to the input (caret movement).
- * - Enter selects the highlighted entry. With nothing highlighted it is NOT handled, so the
- *   caller decides (e.g. apply the typed text).
+ * - Enter selects the highlighted entry (or retries). With nothing highlighted it is NOT handled,
+ *   so the caller decides (e.g. apply the typed text).
  * - Escape calls `onEscape`.
  *
  * `onKeyDown` returns whether it handled the key (and then already called `preventDefault`).
@@ -46,9 +52,11 @@ export function useSuggestionsKeyboard(
   options: UseSuggestionsKeyboardOptions,
 ): { onKeyDown: (event: KeyboardEvent<HTMLElement>) => boolean; activeId: string | null } {
   const chipIds: string[] = chips.map((chip) => chipEntryId(chip.id));
-  const itemIds = groups.flatMap((group) =>
-    group.status === "ready" ? group.items.map((item) => itemEntryId(group.id, item.id)) : [],
-  );
+  const itemIds = groups.flatMap((group): string[] => {
+    if (group.status === "ready") return group.items.map((item) => itemEntryId(group.id, item.id));
+    if (group.status === "error" && group.onRetry) return [retryEntryId(group.id)];
+    return [];
+  });
   const known = new Set<string>([...chipIds, ...itemIds]);
   // A highlight that no longer exists (results changed) is treated as no highlight.
   const activeId =
@@ -71,6 +79,10 @@ export function useSuggestionsKeyboard(
   }
 
   function select(id: string) {
+    if (id.startsWith("retry:")) {
+      groups.find((g) => retryEntryId(g.id) === id)?.onRetry?.();
+      return;
+    }
     if (id.startsWith("chip:")) {
       options.onSelectChip(id.slice("chip:".length));
       return;
