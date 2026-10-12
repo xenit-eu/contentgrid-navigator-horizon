@@ -71,4 +71,24 @@ describe("FilterChips", () => {
     expect(onSelect).toHaveBeenCalledWith("title~prefix");
     expect(screen.queryByRole("button", { name: /^Edit filter Received at/ })).toBeNull();
   });
+
+  it("sizes the list from the chips' natural widths so they fit on two lines", () => {
+    const widths = [600, 350, 600, 350, 600];
+    const many = widths.map((_, i) => ({ id: `c${i}`, field: "F", mode: "is", value: `v${i}` }));
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const index = Array.from(this.parentElement?.children ?? []).indexOf(this);
+        const width = this.tagName === "LI" ? (widths[index] ?? 0) : 0;
+        return { width } as DOMRect;
+      });
+    const client = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+
+    render(<FilterChips chips={many} onRemove={vi.fn()} />);
+    // Half the total (2500 + 5 gaps of 8) plus the widest chip (600 + 8).
+    expect(screen.getByRole("list")).toHaveStyle({ width: `${Math.ceil(2540 / 2 + 608)}px` });
+
+    rect.mockRestore();
+    client.mockRestore();
+  });
 });
