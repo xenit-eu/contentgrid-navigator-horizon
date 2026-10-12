@@ -65,7 +65,8 @@ interface SelectionChipProps {
 interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   icon?: ReactNode;
   label: string;
-  tone?: "idle" | "active" | "positive" | "negative"; // grey / blue / green / red outline
+  tone?: "idle" | "active" | "positive" | "negative"; // none / blue / green / red outline
+  showChevron?: boolean; // default true: trailing ▾ hinting at a popover; false for booleans
   onClear?: () => void; // when set and tone !== "idle", renders a separate × button
   clearLabel?: string; // default `Clear ${label} filter`
   ref?: Ref<HTMLButtonElement>; // usable as <PopoverTrigger asChild>
@@ -77,7 +78,8 @@ interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
   "Approved: true"), so a popover trigger keeps its `aria-expanded` semantics.
 - Colour is never the only state signal (spec Assumptions): the feature passes an icon/label
   that reflects the state.
-- Outlines: idle `border-border`, active `border-ring` on `bg-accent`, positive
+- Outlines: idle `border-transparent` (no outline, muted text — reads as text, not a button),
+  active `border-ring` on `bg-accent`, positive
   `border-success-foreground` on `bg-success`, negative `border-destructive` on
   `bg-destructive/10`. The root carries `data-tone`.
 
