@@ -21,7 +21,7 @@ import {
   suggestionRequestsFor,
 } from "./util/build-suggestion-models";
 import { classifySearchInput } from "./util/classify-search-input";
-import { selectParamChips } from "./util/select-param-chips";
+import { isSelectableParam, selectParamChips } from "./util/select-param-chips";
 import type { SearchParamDescriptor, SelectorMode } from "./util/types";
 import { validateParamValue } from "./util/validate-param-value";
 
@@ -252,6 +252,60 @@ export function useEntitySearchBar({
     [quickFilters, setParams],
   );
 
+  // ---- Clicking an applied-filter chip ----
+
+  /** The quick filter whose popover is open, by group key — also opened from a chip. */
+  const [openQuickFilter, setOpenQuickFilter] = useState<string | undefined>(undefined);
+
+  /**
+   * Where each chip can be edited: a single parameter the selector offers loads into the main
+   * bar; otherwise the rendered quick filter covering all its parameters opens (a range or date
+   * chip). A boolean has no popover, and a chip with neither target is not clickable.
+   */
+  const chipTargets = useMemo(() => {
+    const selectable = new Map(
+      includedDescriptors.filter(isSelectableParam).map((d) => [d.name, d]),
+    );
+    const targets = new Map<string, ChipTarget>();
+    for (const chip of chips) {
+      const descriptor =
+        chip.paramNames.length === 1 ? selectable.get(chip.paramNames[0]!) : undefined;
+      if (descriptor) {
+        targets.set(chip.id, { kind: "input", descriptor });
+        continue;
+      }
+      const quickFilter = quickFilters.find(
+        (q) => q.kind !== "boolean" && chip.paramNames.every((n) => q.paramNames.includes(n)),
+      );
+      if (quickFilter)
+        targets.set(chip.id, { kind: "quick-filter", groupKey: quickFilter.groupKey });
+    }
+    return targets;
+  }, [chips, includedDescriptors, quickFilters]);
+
+  /**
+   * Edits a chip's filter where it was set: selects its parameter with the value in the input
+   * (Enter replaces the filter, which stays applied meanwhile), or opens its quick filter.
+   * Returns where it went, so the caller can focus or scroll to it.
+   */
+  const editChip = useCallback(
+    (id: string): ChipTarget | undefined => {
+      const target = chipTargets.get(id);
+      if (target?.kind === "input") {
+        const raw = filters[target.descriptor.name] ?? "";
+        const option = target.descriptor.options?.find((o) => o.value === raw);
+        setModeState({ kind: "param", name: target.descriptor.name });
+        setInputValue(option?.label ?? raw);
+        setInputError(undefined);
+        setPopoverRequested(false);
+      } else if (target?.kind === "quick-filter") {
+        setOpenQuickFilter(target.groupKey);
+      }
+      return target;
+    },
+    [chipTargets, filters],
+  );
+
   /** Each attribute's resolved fields, in form order — stable while the profile is. */
   const fieldsByGroupKey = useMemo(() => {
     const map = new Map<string, HalFormsField[]>();
@@ -276,6 +330,8 @@ export function useEntitySearchBar({
     setParams,
     chips,
     removeChip,
+    chipTargets,
+    editChip,
     selectorGroups,
     input: {
       value: inputValue,
@@ -297,8 +353,14 @@ export function useEntitySearchBar({
     applyQuickFilter,
     clearQuickFilter,
     cycleBoolean,
+    openQuickFilter,
+    setOpenQuickFilter,
   };
 }
+
+export type ChipTarget =
+  | { readonly kind: "input"; readonly descriptor: SearchParamDescriptor }
+  | { readonly kind: "quick-filter"; readonly groupKey: string };
 
 const NO_REQUESTS: readonly SearchParamSuggestionRequest[] = [];
 const NO_FIELDS: readonly HalFormsField[] = [];

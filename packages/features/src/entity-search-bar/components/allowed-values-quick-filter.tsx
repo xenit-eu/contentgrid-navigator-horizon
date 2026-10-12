@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   FilterButton,
   Popover,
@@ -13,6 +12,9 @@ export interface AllowedValuesQuickFilterProps {
   readonly quickFilter: AllowedValuesQuickFilterModel;
   readonly onApply: (groupKey: string, values: Record<string, string | undefined>) => void;
   readonly onClear: (groupKey: string) => void;
+  /** Whether the popover is open — controlled, so a filter chip can open it too. */
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -24,11 +26,12 @@ export function AllowedValuesQuickFilter({
   quickFilter,
   onApply,
   onClear,
+  open,
+  onOpenChange,
 }: Readonly<AllowedValuesQuickFilterProps>) {
-  const [open, setOpen] = useState(false);
   const selected = quickFilter.options.find((o) => o.value === quickFilter.value);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <FilterButton
           icon={searchTypeIcon("allowed-values", "allowed-values")}
@@ -46,7 +49,7 @@ export function AllowedValuesQuickFilter({
           value={quickFilter.value}
           onValueChange={(value) => {
             onApply(quickFilter.groupKey, { [quickFilter.param]: value });
-            setOpen(false);
+            onOpenChange(false);
           }}
         />
       </PopoverContent>
