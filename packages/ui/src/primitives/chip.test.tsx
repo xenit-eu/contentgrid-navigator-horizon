@@ -84,4 +84,23 @@ describe("Chip with a search mode", () => {
       "A very long value that will be truncated",
     );
   });
+
+  it("makes the body a button when onClick is set, separate from remove", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <Chip
+        field="Title"
+        label="Alpha"
+        removable
+        onRemove={onRemove}
+        onClick={onClick}
+        clickLabel="Edit Title filter"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Edit Title filter" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onRemove).not.toHaveBeenCalled();
+  });
 });
