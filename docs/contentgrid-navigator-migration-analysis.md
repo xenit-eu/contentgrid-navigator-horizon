@@ -80,7 +80,7 @@ The modernised navigator ships from a single monorepo in three coordinated track
 
 **Custom-track apps cannot live in the public OSS monorepo.** A custom app for a specific customer contains prospect or customer names, bespoke UI decisions, and potentially NDA-bound business logic — none of which belongs in an Apache-2.0 public repo. Thijs confirmed this explicitly: "I don't think it's okay to put in prospect names." The concrete model: custom apps live in **private per-customer repos** and consume `@contentgrid/ui`, `@contentgrid/navigator-data`, and `packages/features/*` as **published npm dependencies** (not workspace protocol). This makes the `@contentgrid/*` publish ceremony a hard prerequisite for the first custom-track customer app, not an indefinite deferral. ADR-010 defers Phase 8 scaffolding to the first-customer trigger — that trigger simultaneously fires the publish ceremony for `@contentgrid/navigator-data` and `@contentgrid/ui`. The `pnpm workspace:*` protocol is fine during the cutover scope (Phases 0–7, 10) when all consumers live inside the monorepo; it cannot survive the OSS publish event for a custom-track app that lives outside it. See ADR-013 for the full private-repo delivery model and rejected alternatives.
 
-The data layer follows a **two-layer dependency model** (ADR-007). Layer 1 is the seven existing `@contentgrid/*` packages consumed as `peerDependencies` — backend release cadence drives them. Layer 2 is a new `@contentgrid/navigator-data` composition package that adds navigator-side composition on top: TanStack Query hooks, ETag/`If-Match` optimistic concurrency, the HAL-Forms → `FieldDescriptor[]` bridge, Zod-validated app config, and MSW handler fixtures. **During the cutover scope (Phases 0–7, 10), it is consumed via `pnpm workspace:*` — no publish ceremony.** The publish workflow (semver, changesets, registry) is deferred to first out-of-tree consumer (custom-track app, ContentGrid console, or OSS release) per ADR-010.
+The data layer follows a **two-layer dependency model** (ADR-007). Layer 1 is the seven existing `@contentgrid/*` packages consumed as `peerDependencies` — backend release cadence drives them. Layer 2 is a new `@contentgrid/navigator-data` composition package that adds navigator-side composition on top: TanStack Query hooks, ETag/`If-Match` optimistic concurrency, model enrichment for HAL-Forms templates (the HAL-Forms → `HalFormsField[]` bridge itself lives in the `hal-forms` feature, ADR-004), Zod-validated app config, and MSW handler fixtures. **During the cutover scope (Phases 0–7, 10), it is consumed via `pnpm workspace:*` — no publish ceremony.** The publish workflow (semver, changesets, registry) is deferred to first out-of-tree consumer (custom-track app, ContentGrid console, or OSS release) per ADR-010.
 
 The **ContentGrid console** (admin/operator UI: IAM, deployments, data-model management) stays in a separate repo and consumes `@contentgrid/ui` via npm when published — not the navigator monorepo. See ADR-008 for rationale and publish-trigger conditions.
 
@@ -159,9 +159,9 @@ Honest list, not minimised:
 
 1. **Shedding ~150 KB gzipped of runtime** (`@jsonforms/core` + `@jsonforms/react` + `@jsonforms/material-renderers` + Ajv + a-jv-formats + redux internals JSON Forms still ships in v3). The new renderer is ~one-tenth that, even after counting `react-hook-form` + Zod.
 2. **No MUI in the bundle.** JSON Forms v3 still depends on MUI v5 transitively via the material renderer set. Keeping JSON Forms means either keeping MUI in the tree (defeats the Tailwind v4 + shadcn migration goal) or writing a complete shadcn renderer set anyway — at which point JSON Forms is just plumbing around our own components.
-3. **Direct HAL-Forms → component path, no JSON Schema intermediate.** Today's flow is HAL-Forms `_templates` → translator → JSON Schema → JSON Forms → MUI renderer → DOM. The new flow is HAL-Forms `_templates` → `FieldDescriptor[]` → shadcn renderer → DOM. Two fewer translation layers, fewer places for shape mismatches to hide. The HAL-Forms semantic (allowed values, regex, required, type hints) maps cleanly to shadcn primitives without going through JSON Schema gymnastics.
-4. **Type safety end-to-end.** `FieldDescriptor` is a TypeScript discriminated union. The renderer is a `switch` over a closed set of variants — exhaustiveness checked by the compiler. JSON Forms' tester-based dispatch is dynamic and string-typed; bad combinations fail at runtime.
-5. **AI-friendliness.** A new `FieldDescriptor` variant is a code change in three files (type, renderer case, story). A new JSON Forms renderer requires understanding the tester ranking, the `JsonFormsRendererRegistryEntry` shape, the redux-style state plumbing — all knowledge an agent has to acquire from documentation. Aligns with the broader "AI-driven development" goal of section 4.
+3. **Direct HAL-Forms → component path, no JSON Schema intermediate.** Today's flow is HAL-Forms `_templates` → translator → JSON Schema → JSON Forms → MUI renderer → DOM. The new flow is HAL-Forms `_templates` → `HalFormsField[]` → shadcn renderer → DOM. Two fewer translation layers, fewer places for shape mismatches to hide. The HAL-Forms semantic (allowed values, regex, required, type hints) maps cleanly to shadcn primitives without going through JSON Schema gymnastics.
+4. **Type safety end-to-end.** `HalFormsField` is a TypeScript discriminated union. The renderer is a `switch` over a closed set of variants — exhaustiveness checked by the compiler. JSON Forms' tester-based dispatch is dynamic and string-typed; bad combinations fail at runtime.
+5. **AI-friendliness.** A new `HalFormsField` variant is a code change in three files (type, renderer case, story). A new JSON Forms renderer requires understanding the tester ranking, the `JsonFormsRendererRegistryEntry` shape, the redux-style state plumbing — all knowledge an agent has to acquire from documentation. Aligns with the broader "AI-driven development" goal of section 4.
 6. **Accessibility floor.** Radix primitives ship correct ARIA + keyboard interaction by default. JSON Forms' MUI renderers are a11y-passable but not consistently audited; the custom MUI renderers in the existing navigator are not audited at all.
 7. **Stable peer-dep surface.** JSON Forms v3 → v4 is a major upgrade with renderer-API changes; staying current on JSON Forms is a recurring maintenance tax. Owning the renderer means the only upgrade pressure is shadcn/Radix/Tailwind, which we own anyway.
 
@@ -169,16 +169,16 @@ Honest list, not minimised:
 
 | Dimension                         | JSON Forms (existing)                                           | HAL-Forms-native shadcn renderer (proposed)                            |
 | --------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Schema source                     | HAL-Forms → translator → JSON Schema → JSON Forms               | HAL-Forms → `FieldDescriptor[]` → renderer                             |
-| Translation layers                | 3 (HAL→JSON Schema, JSON Schema→UI Schema, UI Schema→renderer)  | 1 (HAL→FieldDescriptor)                                                |
-| Validation                        | Ajv + custom keywords                                           | Zod, derived from FieldDescriptor                                      |
+| Schema source                     | HAL-Forms → translator → JSON Schema → JSON Forms               | HAL-Forms → `HalFormsField[]` → renderer                               |
+| Translation layers                | 3 (HAL→JSON Schema, JSON Schema→UI Schema, UI Schema→renderer)  | 1 (HAL→HalFormsField)                                                  |
+| Validation                        | Ajv + custom keywords                                           | Zod, derived from HalFormsField                                        |
 | Dispatch                          | Runtime tester ranking                                          | Compile-time discriminated union                                       |
 | Conditional logic                 | Built-in `rule.effect` against JSON pointer                     | Explicit predicate on form state (react-hook-form `watch` + condition) |
 | Layout primitives                 | `VerticalLayout`/`Group`/`Categorization` built-in              | Compose shadcn `<Card>` / `<Tabs>` / `<Fieldset>` directly             |
 | `oneOf` / `anyOf`                 | First-class renderer                                            | Hand-rolled per case (audit-driven, see 5D.7)                          |
 | UI library coupling               | Tied to MUI (or rewrite renderer set)                           | Tied to shadcn/Radix — already chosen                                  |
 | Runtime weight (gzip)             | ~150 KB (JSON Forms + Ajv + MUI renderers)                      | ~15 KB (react-hook-form + Zod, already required)                       |
-| Dev velocity for novel field type | Add tester + renderer + register; navigate JSON Forms internals | Add variant to `FieldDescriptor`, add `case` to renderer, write story  |
+| Dev velocity for novel field type | Add tester + renderer + register; navigate JSON Forms internals | Add variant to `HalFormsField`, add `case` to renderer, write story    |
 | Type safety                       | String-typed scopes, dynamic dispatch                           | Exhaustive switch on union                                             |
 | AI-readability                    | Low (framework-specific patterns)                               | High (plain switch + shadcn primitives)                                |
 | External ecosystem                | Yes (renderer packages, SO answers)                             | None — bespoke                                                         |
@@ -190,10 +190,10 @@ Concretely: write a `@contentgrid/jsonforms-shadcn-renderers` package, register 
 
 Why it doesn't pay off:
 
-- **You still write a complete renderer set.** Every primitive (text, select, checkbox, date, file, HAL-link picker, array, oneOf) needs a shadcn-native renderer with a tester. That's the same effort as the proposed `FieldDescriptor` switch — minus the type safety, plus the framework boilerplate.
+- **You still write a complete renderer set.** Every primitive (text, select, checkbox, date, file, HAL-link picker, array, oneOf) needs a shadcn-native renderer with a tester. That's the same effort as the proposed `HalFormsField` switch — minus the type safety, plus the framework boilerplate.
 - **You still carry JSON Forms' weight.** The bundle keeps `@jsonforms/core` + `@jsonforms/react` + Ajv + redux-bridging code, all of which exist purely to dispatch into renderers we wrote ourselves. ~80–100 KB gzipped of pure overhead.
 - **You inherit the version-coupling risk.** JSON Forms v3 → v4 forces a renderer rewrite anyway (the `tester` API changes between majors); you've taken on a recurring upgrade obligation in exchange for keeping a layer we no longer need.
-- **The HAL-Forms → JSON-Schema translator stays in the codebase forever.** It's the most fragile piece of the existing navigator (every HAL-Forms type extension needs translator changes). Owning the direct HAL→FieldDescriptor mapping removes it.
+- **The HAL-Forms → JSON-Schema translator stays in the codebase forever.** It's the most fragile piece of the existing navigator (every HAL-Forms type extension needs translator changes). Owning the direct HAL→HalFormsField mapping removes it.
 
 The middle path keeps JSON Forms' costs and discards its benefits. Reject.
 
@@ -207,7 +207,7 @@ The audit (task 0.5.3) explicitly catalogues `oneOf` / `anyOf`, `rule.effect`, c
 ### Migration approach
 
 1. Phase 0.5: catalogue every distinct field shape currently rendered by JSON Forms in production (audit task 0.5.3).
-2. Phase 5A: design `FieldDescriptor` as a closed discriminated union covering every catalogued shape; build the HAL-Forms → `FieldDescriptor[]` mapper inside `@contentgrid/navigator-data`; build the renderer in `@contentgrid/ui`.
+2. Phase 5A: design `HalFormsField` as a closed discriminated union covering every catalogued shape; build the HAL-Forms → `HalFormsField[]` mapper and the `kind` switch in the shared `hal-forms` feature (`packages/features/src/hal-forms/`), on top of `@contentgrid/navigator-data`'s model enrichment and `@contentgrid/ui`'s plain-prop widgets. Every form renders through it (ADR-004, amended 2026-10-01).
 3. Phase 5D.7: port any field types not covered by Phase 5A (date-time, multi-select, nested object viewer).
 4. Cutover: the new app is the only consumer of the new renderer; the existing navigator continues to use JSON Forms unchanged until decommissioned. No dual-rendering layer.
 

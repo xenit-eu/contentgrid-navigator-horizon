@@ -23,7 +23,6 @@ export {
   useColumnVisibility,
   filterVisibleAttributes,
   buildColumns,
-  buildRows,
 } from "./use-column-visibility";
 export type { ColumnVisibilityConfig } from "./use-column-visibility";
 export { toAttributeOption } from "./attribute-options";

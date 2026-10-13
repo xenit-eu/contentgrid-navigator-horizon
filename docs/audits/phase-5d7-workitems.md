@@ -4,6 +4,11 @@
 **Date:** 2026-06-04
 **Depends on:** HZN-0.5.2 (entity-profile-templates-inventory) · HZN-0.5.3 (jsonforms-behaviours-to-port)
 
+> **Note (2026-10-01)**: this audit predates the `hal-forms` feature. The `FieldDescriptor`
+> union it maps onto is now `HalFormsField` in `packages/features/src/hal-forms/`, which every
+> form renders through (ADR-004, amended 2026-10-01). The names below are kept as written at the
+> time.
+
 ---
 
 ## Acceptance criteria

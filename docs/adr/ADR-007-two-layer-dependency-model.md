@@ -12,7 +12,7 @@ Backend coupling for the navigator is partly external already. Xenit publishes s
 
 On top of that, we maintain navigator-side composition: TanStack Query hooks, ETag/`If-Match` policy, Zod-validated config, MSW fixtures, and (originally) the HAL-Forms→shadcn bridge (ADR-004). Where should this live? Mixed into the app, in a workspace package, or published as its own thing?
 
-**Update:** ADR-004's rendering-projection bridge (the `FieldDescriptor`/`FieldRenderer` engine) has since moved out of `@contentgrid/navigator-data` into `packages/features/src/entity-item-create/` — see ADR-004's current text and the "What stays out of `@contentgrid/navigator-data`" section below. `@contentgrid/navigator-data` still owns model enrichment (`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`) and re-exports a handful of `@contentgrid/hal-forms` types (`HalFormsProperty`, `HalFormsTemplate`) so `packages/features`/`packages/ui` can type template data they receive without importing the Layer-1 package directly.
+**Update:** ADR-004's rendering-projection bridge has since moved out of `@contentgrid/navigator-data` into `packages/features`, and (per ADR-004's 2026-10-01 amendment) now lives in the shared `packages/features/src/hal-forms/` feature that every form renders through — see ADR-004 and the "What stays out of `@contentgrid/navigator-data`" section below. `@contentgrid/navigator-data` still owns model enrichment (`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`) and re-exports a handful of `@contentgrid/hal-forms` types (`HalFormsProperty`, `HalFormsTemplate`) so `packages/features`/`packages/ui` can type template data they receive without importing the Layer-1 package directly.
 
 ## Decision
 
@@ -37,7 +37,7 @@ Layer 2 — composition layer (workspace package today; publish-ready surface)
 - ETag / `If-Match` optimistic-concurrency policy.
 - Model enrichment for HAL-Forms templates (`CreateHalFormTemplate`, `ProfileAttribute`,
   `ProfileRelation`) — the rendering-projection bridge that consumes it
-  (`FieldDescriptor[]`/`FieldRenderer`, ADR-004) lives in `packages/features/src/entity-item-create/`,
+  (`HalFormsField[]`/`HalFormsFieldRenderer`, ADR-004) lives in `packages/features/src/hal-forms/`,
   not here (see the "What stays out" section below).
 - Zod-validated app config + presets.
 - MSW handler fixtures for tests, exported for consumer reuse.
@@ -85,11 +85,11 @@ We pay the ceremony only when the second column's pain is real. See ADR-010 for 
 
 - `packages/ui` — presentation only, no HAL knowledge. Forms renderers here take plain scalar
   props (`name`, `label`, `value`, `onChange`, `error`, ...); they don't import
-  `@contentgrid/hal-forms` or know what a `FieldDescriptor` is.
+  `@contentgrid/hal-forms` or know what a `HalFormsField` is.
 - `packages/features/*` — feature modules consume `@contentgrid/navigator-data`. They don't
   re-export from it. This is also where the ADR-004 rendering-projection engine
-  (`FieldDescriptor`/`resolveCreateFieldDescriptors`/`FieldRenderer`/`FormContainer`, under
-  `packages/features/src/entity-item-create/`) lives — a `packages/features` feature is the unit
+  (`HalFormsField`/`resolveHalFormsFields`/`HalFormsFieldRenderer`/`HalFormsContainer`, under
+  `packages/features/src/hal-forms/`, which every form renders through) lives — a `packages/features` feature is the unit
   of cross-track sharing (see `packages/features/CLAUDE.md`).
 - `apps/*` — app-level routing, layout, feature composition.
 

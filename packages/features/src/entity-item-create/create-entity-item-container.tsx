@@ -8,6 +8,13 @@ import {
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
+import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
+import {
+  type FieldValidationError,
+  resolveHalFormsFields,
+  toServerFieldErrors,
+  useHalFormsFieldState,
+} from "../hal-forms";
 import {
   ProblemAlert,
   type RelationConflictAlertProps,
@@ -15,10 +22,6 @@ import {
 } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
 import { CreateEntityItemForm } from "./create-entity-item-form";
-import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-descriptors";
-import type { FieldError } from "./state/field-error";
-import { toFieldErrors } from "./state/to-field-errors";
-import { useEntityItemCreateFormState } from "./state/use-entity-item-create-form-state";
 
 export interface CreateEntityItemContainerProps {
   readonly profile: ProfileEntity;
@@ -34,6 +37,10 @@ export interface CreateEntityItemContainerProps {
    * tracks this signal and owns the guard itself.
    */
   readonly onDirtyChange?: (isDirty: boolean) => void;
+  /** Opens a linked item, as legacy's relation "details" action. */
+  readonly onRelationItemClick?: RelationItemClickHandler;
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
   /**
    * Fires for a `duplicate` entity-level validation error (HTTP 400) — e.g. a unique
    * constraint spanning fields the create-form doesn't render inline. Receives the
@@ -78,9 +85,10 @@ function readInitialContinuousCreate(): boolean {
 
 /**
  * Smart component: gates on `profile.createTemplate`, runs `useCreateEntityItem`, and maps
- * server validation errors into external `FieldError[]`. Renders `CreateEntityItemForm` (the
- * `<form>`/chrome-only component) once a create template is available. Rendered by
- * `CreateEntityItemView`, the package's public entry point for both apps' route files.
+ * server validation errors into server-sourced `FieldValidationError[]` via the `hal-forms`
+ * feature. Renders `CreateEntityItemForm` (the `<form>`/chrome-only component) once a create
+ * template is available. Rendered by `CreateEntityItemView`, the package's public entry point
+ * for both apps' route files.
  */
 export function CreateEntityItemContainer(props: Readonly<CreateEntityItemContainerProps>) {
   const createTemplate = props.profile.createTemplate;
@@ -104,6 +112,8 @@ function CreateEntityItemContainerReady({
   onCreated,
   onCancel,
   onDirtyChange,
+  onRelationItemClick,
+  onRelationItemCreateNew,
   onConflictingItemClick,
   onMissingRelationTargetClick,
   onAllowedValuesClick,
@@ -111,12 +121,9 @@ function CreateEntityItemContainerReady({
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
-  const { fields, layout } = useMemo(
-    () => resolveCreateFieldDescriptors(createTemplate),
-    [createTemplate],
-  );
-  const [externalErrors, setExternalErrors] = useState<Record<string, FieldError[]>>({});
-  const formState = useEntityItemCreateFormState({ fields, externalErrors });
+  const { fields, layout } = useMemo(() => resolveHalFormsFields(createTemplate), [createTemplate]);
+  const [externalErrors, setExternalErrors] = useState<Record<string, FieldValidationError[]>>({});
+  const formState = useHalFormsFieldState({ fields, externalErrors });
   const [continuousCreateMode, setContinuousCreateModeState] = useState<boolean>(
     readInitialContinuousCreate,
   );
@@ -170,7 +177,7 @@ function CreateEntityItemContainerReady({
         }
       },
       onError: (error) => {
-        setExternalErrors(toFieldErrors(getValidationFieldErrors(error)));
+        setExternalErrors(toServerFieldErrors(getValidationFieldErrors(error)));
       },
     });
   }
@@ -182,10 +189,10 @@ function CreateEntityItemContainerReady({
   // but contained an entry with no `field`.
   //
   // The same reasoning extends to a field-scoped error whose `field` doesn't match any
-  // rendered field name (e.g. a system/audit field, or any property this attributes-only
-  // form doesn't produce a descriptor for) — `toFieldErrors` buckets it under that field
-  // name, but no `FieldRenderer` exists to show it, and it also isn't a `field === undefined`
-  // entry, so without this check it would be dropped by both paths and never reach the user.
+  // rendered field name (e.g. a system/audit field, or any property this form doesn't produce a
+  // field for) — `toServerFieldErrors` buckets it under that field name, but no
+  // `HalFormsFieldRenderer` exists to show it, and it also isn't a `field === undefined` entry,
+  // so without this check it would be dropped by both paths and never reach the user.
   const knownFieldNames = new Set(fields.map((field) => field.name));
   const submitFieldErrors = createMutation.isError
     ? getValidationFieldErrors(createMutation.error)
@@ -207,6 +214,8 @@ function CreateEntityItemContainerReady({
       fieldState={formState.fieldState}
       onFieldChange={formState.setValue}
       onFieldBlur={formState.touchField}
+      onRelationItemClick={onRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}

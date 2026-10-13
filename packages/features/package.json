@@ -75,6 +75,10 @@
     "./unsaved-changes-guard": {
       "import": "./src/unsaved-changes-guard/index.ts",
       "types": "./src/unsaved-changes-guard/index.ts"
+    },
+    "./hal-forms": {
+      "import": "./src/hal-forms/index.ts",
+      "types": "./src/hal-forms/index.ts"
     }
   },
   "scripts": {

@@ -19,15 +19,14 @@ export type UseAddToManyRelationOptions = {
  * of target URIs to add. The target profile is resolved internally via
  * `useProfileEntities()` — no `targetProfile` parameter is required.
  *
- * Attaches `If-Match` from `relation.source.etag` to prevent concurrent update
- * conflicts (RFC 9110).
+ * Sends no `If-Match` — to-many relations have no ETag, so the request is unconditional.
  *
  * Cache behaviour on settled:
  * - `onSettled`: Invalidates all cached pages of the to-many relation read
  *   (`toManyRelation.forRelationName(relation.name)`) — a newly-added item can land
  *   on any page, so a page-scoped invalidation could miss whichever page is
  *   currently being viewed. Also invalidates the source item's `entityItem` cache
- *   entry, since the add operation is gated on the source item's ETag.
+ *   entry.
  * - Caller's `onSuccess` / `onSettled` run last (after cache is consistent).
  *
  * On HTTP 412 (ETag mismatch) or 409, the error surfaces as `ProblemDetailError` to

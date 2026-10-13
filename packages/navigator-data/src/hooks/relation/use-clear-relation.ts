@@ -22,8 +22,9 @@ export type UseClearRelationOptions = {
  * required. Cardinality (to-one vs. to-many) is determined at runtime via
  * `relation instanceof EntityItemToOneRelation` inside the base.
  *
- * Attaches `If-Match` from `relation.source.etag` to prevent concurrent update
- * conflicts (RFC 9110).
+ * Sends no `If-Match`. For to-many relations this is correct (they have no ETag); for
+ * to-one relations the relation's own ETag is not yet captured — see FIXME(ACC-3186) in
+ * `use-relation-mutation-base.ts`.
  *
  * Cache behaviour on settled:
  * - `onSettled`: Invalidates the relation read key (to-one or to-many, chosen by

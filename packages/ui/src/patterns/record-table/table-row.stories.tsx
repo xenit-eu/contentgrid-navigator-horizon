@@ -82,6 +82,35 @@ export const WithActions: Story = {
   ],
 };
 
+export const WithSelectionCheckbox: Story = {
+  args: {
+    cells: DEFAULT_CELLS,
+    onSelectChange: () => {},
+  },
+  decorators: [
+    (Story) => (
+      <TableWrapper>
+        <Story />
+      </TableWrapper>
+    ),
+  ],
+};
+
+export const SelectedWithCheckbox: Story = {
+  args: {
+    cells: DEFAULT_CELLS,
+    selected: true,
+    onSelectChange: () => {},
+  },
+  decorators: [
+    (Story) => (
+      <TableWrapper>
+        <Story />
+      </TableWrapper>
+    ),
+  ],
+};
+
 export const ManyColumns: Story = {
   args: {
     cells: [

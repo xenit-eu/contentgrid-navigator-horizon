@@ -109,6 +109,15 @@ until the lint enforcement above wires it.
   `packages/ui/src/patterns/`.
 - If logic touches HAL, ETags, or TanStack Query hooks → it belongs in
   `packages/navigator-data`, not in the feature.
+- **Every HAL-Forms-driven form renders through the `hal-forms` feature**
+  (`src/hal-forms/`, ADR-004 amended 2026-10-01) — the create form and the search/filter
+  form today, and any new form (e.g. an update form). Resolve fields with
+  `resolveHalFormsFields`, render them with `HalFormsContainer`, and keep their state in
+  `useHalFormsFieldState`. The feature that owns the form keeps only its chrome (submit,
+  cancel, alerts, the request it sends). Do NOT add a feature-local field type, `kind`
+  switch or field-state hook; to support a new property shape, add a `kind` to
+  `HalFormsField`, map it in `resolveHalFormsFields` and render it in
+  `HalFormsFieldRenderer`.
 
 ---
 

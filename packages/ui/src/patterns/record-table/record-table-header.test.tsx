@@ -100,3 +100,17 @@ describe("RecordTableHeader — actions column", () => {
     expect(headers.at(-1)).toHaveClass("sticky", "right-0", "bg-muted/70");
   });
 });
+
+describe("RecordTableHeader — selection column", () => {
+  it("reserves a leading header cell with a checkbox when onSelectAll is provided", () => {
+    renderHeader({ onSelectAll: vi.fn() });
+    expect(screen.getAllByRole("columnheader")).toHaveLength(COLUMNS.length + 1);
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+  });
+
+  it("does not reserve a selection column when onSelectAll is absent", () => {
+    renderHeader();
+    expect(screen.getAllByRole("columnheader")).toHaveLength(COLUMNS.length);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+});

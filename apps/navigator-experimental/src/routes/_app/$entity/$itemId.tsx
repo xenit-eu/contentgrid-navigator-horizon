@@ -5,6 +5,7 @@ import {
   EntityItemContentFocusView,
   ensureEntityItemDetailLoaderData,
 } from "@contentgrid/features/entity-item";
+import { useOpenInNewTab } from "@contentgrid/features/router-shell";
 import {
   BreadcrumbLink,
   Dialog,
@@ -118,6 +119,7 @@ function EntityItemDetailRoute({
   itemId,
 }: Readonly<{ entityName: string; itemId: string }>) {
   const go = useNavigate();
+  const { openCreatePage } = useOpenInNewTab();
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
   return (
@@ -149,6 +151,7 @@ function EntityItemDetailRoute({
             search: (prev) => prev,
           })
         }
+        onRelationItemCreateNew={openCreatePage}
         onMissingRelationTargetClick={(url, field) =>
           setProblemDialog({ kind: "missingRelationTarget", url, field })
         }

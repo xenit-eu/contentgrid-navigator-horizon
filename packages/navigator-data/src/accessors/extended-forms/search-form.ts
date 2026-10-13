@@ -197,8 +197,10 @@ export class SearchHalFormTemplate {
   constructor(
     /** The underlying HAL-FORMS template */
     public readonly template: HalFormsTemplate<SearchRequestSpec>,
-    /** The profile accessor for attribute/relation linking */
-    private readonly profileEntity: ProfileEntity,
+    /** The profile accessor for attribute/relation linking — public so a caller building an
+     * autocomplete field off a `SearchHalFormTemplateProperty` can supply it to `useTypeahead`
+     * without needing it threaded through separately (see `packages/features/src/hal-forms`). */
+    public readonly profileEntity: ProfileEntity,
   ) {}
 
   /**

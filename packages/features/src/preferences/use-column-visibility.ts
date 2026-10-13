@@ -1,5 +1,5 @@
-import { type EntityItem, type ProfileAttribute, ProfileEntity } from "@contentgrid/navigator-data";
-import { type DataTableColumn, type DataTableRow } from "@contentgrid/ui";
+import { type ProfileAttribute, ProfileEntity } from "@contentgrid/navigator-data";
+import { type DataTableColumn } from "@contentgrid/ui";
 import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface ColumnVisibilityConfig {
@@ -61,8 +61,7 @@ export function filterVisibleAttributes(
  * Includes the id column plus filtered user-defined and audit/system attributes. Pure
  * function — takes the
  * `ColumnVisibilityConfig` from `useColumnVisibility` as a parameter rather than calling the
- * hook itself, so it's safe to call conditionally (e.g. inside `useMemo`, or only when a
- * target profile has resolved) without violating the Rules of Hooks.
+ * hook itself, so it's safe to call inside `useMemo` without violating the Rules of Hooks.
  *
  * @param profile - The entity profile
  * @param visibility - Result of `useColumnVisibility(profile)`, called by the caller
@@ -108,21 +107,4 @@ export function buildColumns(
   });
 
   return columns;
-}
-
-/**
- * Build table rows from entity items and visible columns.
- *
- * @param items - Entity items to display
- * @param columns - Column definitions from buildColumns
- * @returns Array of table rows
- */
-export function buildRows(
-  items: readonly EntityItem[],
-  columns: DataTableColumn[],
-): DataTableRow[] {
-  return items.map((item) => ({
-    id: item.id,
-    data: Object.fromEntries(columns.map((col) => [col.key, item.halItem.data[col.key] ?? ""])),
-  }));
 }

@@ -1,6 +1,10 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.5.0
+- Version change: 1.0.0 → 1.6.0
+- Amendment (1.5.0 → 1.6.0, MINOR): NEW Principle IX — Spec Traceability & Self-Contained
+  Artifacts. Every change in a spec-driven PR must trace to a part of the feature's spec;
+  implementation that departs from the spec must amend the spec in the same PR; repo
+  artifacts, commits and PR descriptions must not reference files outside the repository.
 - Amendment (1.4.1 → 1.5.0, MINOR): Principle IV — Three-Track Delivery & Stability Gating —
   amended to add a pre-GA exception: while the product is pre-GA, a new feature may start at
   any stability tier (typically `stable`) and `apps/navigator` is not gated by stability tier.
@@ -40,6 +44,9 @@ Sync Impact Report
     data-loading guarantee, shared profile-entity gate, view-owned default page content,
     util-layer transformation placement) — explicitly scoped as forward-looking/binding for new
     work only, not retroactive.
+  - IX. Spec Traceability & Self-Contained Artifacts: NEW principle (spec traceability for
+    spec-driven PRs, spec-update-on-divergence, no references to local files) (MINOR bump,
+    1.5.0 → 1.6.0).
 - Modified sections:
   - Error Handling & API Contracts: expanded from two short paragraphs into a concrete,
     testable contract grounded in the actual `packages/navigator-data/src/api/problem-details/`
@@ -146,7 +153,11 @@ model doesn't happen to share it.
 - The primitive/pattern boundary in `packages/ui` MUST hold: primitives (`src/primitives/`)
   carry no Navigator-domain or HAL knowledge; the HAL-Forms field-renderer patterns take only
   plain scalar props (`name`, `label`, `required`, `value`, `onChange`, `error?`, …), never a
-  `FieldDescriptor` or other HAL-Forms-shaped type.
+  `HalFormsField` or other HAL-Forms-shaped type.
+- Every HAL-Forms-driven form MUST render through the `hal-forms` feature
+  (`packages/features/src/hal-forms/`): its `HalFormsField` union, `resolveHalFormsFields`,
+  `HalFormsContainer`/`HalFormsFieldRenderer` and `useHalFormsFieldState`. A feature MUST NOT
+  add its own field type, `kind` switch or field-state hook (ADR-004, amended 2026-10-01).
 - `packages/dev-tools` (dev-only tooling such as the Application Selector) MUST only be
   imported behind an explicit dev-only guard (e.g. `import.meta.env.DEV`) so bundlers
   tree-shake it out of production builds. It carries no `x-stability` flag and has no
@@ -279,6 +290,34 @@ table; a hand-duplicated HAL wire-type switch between `search/` and `entity-item
 Concentrating data loading, gating, and transformation in one owner per concern removes the
 class of bug, not just today's two instances of it.
 
+### IX. Spec Traceability & Self-Contained Artifacts
+
+- **Every change in a spec-driven PR MUST be traceable to the spec.** For a PR implementing a
+  Spec Kit feature (`specs/NNN-*/`), each change MUST map to a specific part of that feature's
+  spec artifacts — a user story, a functional requirement (`FR-xxx`), a success criterion, a
+  `contracts/` entry, or a `tasks.md` task that itself references one of those. A change with
+  no such anchor (an opportunistic refactor, an unrelated fix, a "while I'm here" tweak) MUST
+  either be split into its own PR or be brought into the spec first (next bullet).
+- **When implementation departs from the spec, the spec MUST be updated in the same PR.** If a
+  change is made that the spec does not describe, or a decision in `spec.md`, `plan.md`,
+  `contracts/` or `tasks.md` turns out to be wrong during implementation, the affected
+  artifacts MUST be amended in that PR so they describe what was actually built. Code that
+  silently outgrows its spec is prohibited — the spec is the record of intent, and a stale one
+  is worse than none.
+- **No references to local files.** Spec artifacts, plans, tasks, ADRs, docs, `CLAUDE.md`
+  files, code comments, commit messages and PR descriptions MUST NOT reference files outside
+  this repository: absolute paths (`/Users/…`, `C:\…`), home-relative paths (`~/…`), sibling
+  checkouts (`../<other-repo>/…`), or scratch/temp locations. Reference repo-relative paths,
+  or a public URL (e.g. a GitHub permalink) for external material. If content from an
+  external file is needed, bring the relevant part into the repo or summarize it inline.
+
+Rationale: Spec Kit output is only worth its cost as a contract if it stays true to the code —
+reviewers check a PR against its spec, and later `/speckit-plan` runs build on earlier specs as
+ground truth. Untraceable changes make that review impossible, and an unamended spec misleads
+every reader (human or agent) who comes after. A local file reference resolves on exactly one
+machine: to every other reviewer, to CI and to every future agent it is a dead link, and in a
+repository headed for open source it can leak details of a contributor's environment.
+
 ## Error Handling & API Contracts
 
 All error responses use `Content-Type: application/problem+json` (RFC 9457): `type` (URI),
@@ -311,7 +350,7 @@ the accurate common supertype, and callers narrow at the point of use.
 - **A validation problem's entity-level errors (no `field`) and any field-scoped error whose
   `field` doesn't match a rendered form field MUST still reach the user** — typically via the
   non-field-error fallback path a form's container computes (see `entity-item-create`'s
-  `nonFieldError` handling), never silently dropped because no `FieldRenderer` exists for that
+  `nonFieldError` handling), never silently dropped because no `HalFormsFieldRenderer` exists for that
   field name.
 - **Dismissal is scoped to the specific error's identity** (`status|title|detail`), not a bare
   boolean — `ProblemAlertFrame` re-surfaces automatically when a _different_ error of the same
@@ -363,4 +402,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.5.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-09-23
+**Version**: 1.6.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-06

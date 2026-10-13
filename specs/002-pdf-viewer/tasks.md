@@ -143,6 +143,23 @@ toggles, clear; print opens the browser dialog; all controls operable by keyboar
 
 ---
 
+## Promotion status (2026-09-28)
+
+The "later, separate change" referenced in the Implementation Strategy below (promotion to
+`apps/navigator`) has happened: `apps/navigator`'s `$entity/$itemId.tsx` route now mounts
+`EntityItemContentFocusView` (mirroring `apps/navigator-experimental`'s own wiring), on branch
+`ACC-2902-content-focus-promotion`. This did not follow the literal "move the FR-001 branch into
+`EntityItemView`, flip the route, delete wrapper" shape T021/T039 originally described — that plan
+predates the reviewer's later decision to fold `entity-item-content-focus` into `entity-item` as a
+variation (see `packages/features/src/entity-item/CLAUDE.md`); promotion instead means both apps'
+routes mount the already-folded-in view, with no other stability mechanism left to flip. No task
+IDs above are re-checked or renumbered — this note stands in for a dedicated task that was never
+added to this list. SC-001 has a production-build measurement now (quickstart.md, "Performance
+sanity"); the generic app's own dev/e2e environment still has no content-bearing demo fixture (see
+quickstart.md "End-to-end"), so the e2e spec continues to target `apps/navigator-experimental`.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

@@ -40,7 +40,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -49,6 +49,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # packages/ui/r/ (the shadcn registry build output) is a gitignored build artifact, not
+      # committed. Build it here so a registry item pointing at a missing/renamed source file
+      # fails CI instead of only surfacing when someone runs registry:build locally. This job is
+      # a matrix over apps, so guard the step to run once.
+      - name: Build UI registry
+        if: matrix.app == 'navigator'
+        run: pnpm --filter @contentgrid/ui registry:build
 
       - name: Format check
         run: pnpm format:check
@@ -91,7 +99,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -108,7 +116,7 @@ jobs:
         run: pnpm test:coverage
 
       - name: SonarQube scan
-        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8
         with:
           args: >
             -Dsonar.projectKey=xenit-eu_contentgrid-navigator-horizon

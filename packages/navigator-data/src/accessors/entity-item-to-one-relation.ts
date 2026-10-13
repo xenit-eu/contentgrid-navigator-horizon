@@ -27,8 +27,8 @@ const RELATION_STALE_TIME = 30 * 1000;
  * Provides typed read queries (fetching the related entity item) and request builders
  * for mutating the relation (`set-<name>`, `clear-<name>`).
  *
- * The `source` item is carried so the mutation layer can attach `If-Match` from
- * `source.etag` and re-fetch the parent after mutation.
+ * The `source` item is carried so the mutation layer can re-fetch the parent after
+ * mutation. (It is NOT the `If-Match` source — see FIXME(ACC-3186).)
  *
  * @example
  * ```typescript
@@ -170,10 +170,10 @@ export class EntityItemToOneRelation {
   /**
    * Encode a "set" Request for this to-one relation using the HAL-FORMS codec.
    *
-   * Does NOT attach `If-Match` — the mutation hook attaches it from `source.etag` (RFC 9110).
+   * Does NOT attach `If-Match` — that is the mutation hook's responsibility (see FIXME(ACC-3186)).
    *
    * @param uri - The href of the target entity item
-   * @returns Request ready to be sent with apiFetch (after the hook adds If-Match)
+   * @returns Request ready to be sent with apiFetch
    * @throws {Error} if the `set-<name>` template is absent (ABAC deny)
    */
   setRelationRequest(uri: string): Request {
@@ -194,9 +194,9 @@ export class EntityItemToOneRelation {
   /**
    * Encode a "clear" Request for this relation using the HAL-FORMS codec.
    *
-   * Does NOT attach `If-Match` — the mutation hook attaches it from `source.etag` (RFC 9110).
+   * Does NOT attach `If-Match` — that is the mutation hook's responsibility (see FIXME(ACC-3186)).
    *
-   * @returns Request ready to be sent with apiFetch (after the hook adds If-Match)
+   * @returns Request ready to be sent with apiFetch
    * @throws {Error} if the `clear-<name>` template is absent (ABAC deny)
    */
   clearRelationRequest(): Request {

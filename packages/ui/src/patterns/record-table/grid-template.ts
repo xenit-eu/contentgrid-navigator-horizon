@@ -20,9 +20,14 @@ const ACTIONS_COLUMN_WIDTH = "72px";
  */
 const MIN_DATA_COLUMN_WIDTH = "140px";
 
+/**
+ * Fixed width for the leading selection checkbox column, so header and rows line up.
+ */
+const SELECTION_COLUMN_WIDTH = "40px";
+
 export function getRecordTableGridTemplate(
   columnCount: number,
-  options?: { hasActions?: boolean },
+  options?: { hasActions?: boolean; hasSelection?: boolean },
 ): string {
   if (columnCount < 1) return "";
   const rest = columnCount - 1;
@@ -31,5 +36,6 @@ export function getRecordTableGridTemplate(
     ...Array(rest).fill(`minmax(${MIN_DATA_COLUMN_WIDTH}, 1fr)`),
   ];
   if (options?.hasActions) tracks.push(ACTIONS_COLUMN_WIDTH);
+  if (options?.hasSelection) tracks.unshift(SELECTION_COLUMN_WIDTH);
   return tracks.join(" ");
 }

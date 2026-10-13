@@ -24,12 +24,18 @@ relations, with the production viewer toolbar. `EntityItemContentFocusView` reso
 
 The three-track model (`packages/features/CLAUDE.md`) gates stability per feature directory —
 there is currently no mechanism to flag one variation inside a `stable` feature as
-`experimental`. Folding `content-focus` into `entity-item` accepts this gap knowingly rather than
-inventing a new mechanism for it. Until that gap is closed, enforce this by convention:
+`experimental`. Folding `content-focus` into `entity-item` accepted that gap knowingly rather than
+inventing a new mechanism for it, and the gap is still there: nothing prevents an app from
+importing `EntityItemContentFocusView` the way `x-stability` prevents importing an actually
+`experimental`/`candidate` feature.
 
-- `apps/navigator` (the generic, stable-only track) MUST NOT import or mount
-  `EntityItemContentFocusView`. Its item route mounts plain `EntityItemView` only.
-- `apps/navigator-experimental` is the only app that mounts `EntityItemContentFocusView`.
+**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusView`
+was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
+both apps' `$entity/$itemId.tsx` item routes — `apps/navigator`'s route mirrors
+`apps/navigator-experimental`'s wiring (same `renderHomeLink`/`renderCollectionLink`/relation
+callbacks); it no longer falls back to plain `EntityItemView` at the route level (the view itself
+still does, per-item, for FR-001). There is no longer an "experimental-only" convention to enforce
+here — both tracks may mount this view.
 
 ## Layering (spec-001 `feature-layer-imports.md`)
 

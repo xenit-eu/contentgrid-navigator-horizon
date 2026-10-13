@@ -31,7 +31,7 @@ These URLs are **placeholders** and do not exist until publishing is triggered p
 
 Because `shadcn` does not support `file://` URLs for local registries, you must serve the built registry over HTTP first.
 
-**Step 1 — build the registry** (if you have not done so, or after any change):
+**Step 1 — build the registry.** `packages/ui/r/` is a gitignored build artifact, not committed, so run this first on a fresh checkout and again after any change:
 
 ```
 pnpm registry:build
@@ -68,7 +68,8 @@ pnpm shadcn add @contentgrid/entity-card --cwd apps/navigator --yes
 }
 ```
 
-> **Tip:** You can also bypass the registry and add a pattern directly by path:
+> **Tip:** You can also bypass the registry and add a pattern directly by path. Run
+> `pnpm --filter @contentgrid/ui registry:build` first (see Step 1) so `packages/ui/r/` exists, then:
 >
 > ```
 > pnpm shadcn add packages/ui/r/entity-card.json --cwd apps/navigator --yes
@@ -92,7 +93,7 @@ Or directly in `packages/ui`:
 pnpm --filter @contentgrid/ui registry:build
 ```
 
-The build reads `packages/ui/registry.json` and writes `packages/ui/r/<name>.json` for every item (patterns + their primitive dependencies). The `r/` directory is committed and must be rebuilt after any change to `registry.json` or the source files it references.
+The build reads `packages/ui/registry.json` and writes `packages/ui/r/<name>.json` for every item (patterns + their primitive dependencies). The `r/` directory is a **build artifact** — it is gitignored and generated on demand by `registry:build`, not committed. Run the build after any change to `registry.json` or the source files it references, and before any of the local-install steps above.
 
 ---
 
@@ -108,12 +109,12 @@ All seven patterns declare `registryDependencies` referencing our **own copies**
 
 ## Available patterns
 
-| Registry name        | Component          | npm deps               | Primitives used                                                          |
-| -------------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------ |
-| `branding-header`    | `BrandingHeader`   | —                      | separator                                                                |
-| `data-table`         | `DataTable`        | lucide-react           | alert-dialog, button, dropdown-menu, table, tooltip                      |
-| `entity-card`        | `EntityCard`       | lucide-react           | button, card                                                             |
-| `entity-item-picker` | `EntityItemPicker` | lucide-react           | button, dialog, input, skeleton, table                                   |
-| `file-upload-zone`   | `FileUploadZone`   | lucide-react           | badge, button                                                            |
-| `filter-sidebar`     | `FilterSidebar`    | lucide-react, date-fns | button, input, label, select, separator                                  |
-| `relation-section`   | `RelationSection`  | lucide-react           | alert-dialog, badge, button, card, collapsible, skeleton, table, tooltip |
+| Registry name           | Component              | npm deps     | Primitives used                                                          |
+| ----------------------- | ---------------------- | ------------ | ------------------------------------------------------------------------ |
+| `autocomplete-renderer` | `AutocompleteRenderer` | —            | input, label, popover                                                    |
+| `branding-header`       | `BrandingHeader`       | —            | separator                                                                |
+| `data-table`            | `DataTable`            | lucide-react | alert-dialog, button, dropdown-menu, table, tooltip                      |
+| `entity-card`           | `EntityCard`           | lucide-react | button, card                                                             |
+| `entity-item-picker`    | `EntityItemPicker`     | lucide-react | button, dialog, input, skeleton, table                                   |
+| `file-upload-zone`      | `FileUploadZone`       | lucide-react | badge, button                                                            |
+| `relation-section`      | `RelationSection`      | lucide-react | alert-dialog, badge, button, card, collapsible, skeleton, table, tooltip |

@@ -48,7 +48,7 @@
     "@types/react": "^19.1.5",
     "msw": "2.14.6",
     "prettier": "^3.0.0",
-    "vitest": "4.1.8"
+    "vitest": "4.1.11"
   },
   "lint-staged": {
     "!(packages/eslint-config/rules/__fixtures__/**).{ts,tsx,js,jsx}": [

@@ -1,8 +1,15 @@
 # ADR-004 — Forms: drop JSONForms; HAL-Forms → `FieldDescriptor`/`FieldRenderer` architecture
 
 **Date:** 2026-04-29
-**Status:** Accepted
+**Status:** Accepted — amended 2026-10-01
 **Phase:** 0 — Alignment & decisions
+
+> **Amended 2026-10-01:** the rendering-projection engine described below has moved out of
+> `entity-item-create` into the shared `packages/features/src/hal-forms/` feature, and every form
+> now flows through it. `FieldDescriptor`, `resolveCreateFieldDescriptors`, `FieldRenderer`,
+> `FormContainer`, `LayoutInformation` and `useEntityItemCreateFormState` no longer exist — see
+> [the amendment](#amendment-2026-10-01-all-forms-flow-through-hal-forms) for what replaced each.
+> The sections below are kept as the original decision record.
 
 ---
 
@@ -116,6 +123,68 @@ If a customer's HAL-Forms `_templates` evolves and introduces a shape `FieldDesc
 - HAL-Forms grows shapes the `FieldDescriptor` union can't render with a small custom set (e.g. recursive nested objects, deeply conditional fields). Then evaluate TanStack Form _or_ a focused new renderer.
 - A search-form migration is undertaken — revisit whether `LayoutInformation`'s single-group assumption still holds, and whether `filter`/`sort` warrant their own `FieldDescriptor`-shaped types at that point (see `model/field-descriptor.ts`'s doc comment for why they don't today).
 - A customer requires a forms-builder UX (end-users defining their own forms). That's a different problem domain.
+
+---
+
+## Amendment (2026-10-01): all forms flow through `hal-forms`
+
+**Status:** Accepted.
+
+**Decision:** every HAL-Forms-driven form — the create form, the search/filter form, and any
+form added later (e.g. an update form) — renders through the shared
+`packages/features/src/hal-forms/` feature (`@contentgrid/features/hal-forms`). No feature keeps
+its own field union, `kind` switch, layout type or field-state hook. A feature that renders a
+form owns only its chrome (submit/cancel, alerts, the mutation or search request) and hands the
+fields to `hal-forms`.
+
+**Why:** the original engine lived inside `entity-item-create` because the create form was its
+only consumer. The search/filter form (spec `001-hal-form-layout`) needed the same pipeline —
+template → typed fields → layout → per-`kind` widget → field state — with search-specific
+additions (range filters, relation sections, autocomplete). Building that as a second engine next to the first
+would have meant two field unions drifting apart, so the engine was generalised into
+`hal-forms` and the create form moved onto it. Relation fields (ACC-2881) and file uploads
+(ACC-2895), first built on the old create-form engine, were ported along with it, and the old
+engine was deleted.
+
+**What replaced what:**
+
+| Original (this ADR)                                             | Now (`packages/features/src/hal-forms/`)                                                           |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `FieldDescriptor` union (`model/field-descriptor.ts`)           | `HalFormsField` union (`model/hal-forms-field.ts`)                                                 |
+| `resolveCreateFieldDescriptors()`                               | `resolveHalFormsFields()` — takes a `CreateHalFormTemplate` or `SearchHalFormTemplate`             |
+| `LayoutInformation` (single flat group)                         | `LayoutSchema` — sections of rows, optionally titled or collapsible; a row may carry a description |
+| `FieldRenderer` (`kind` switch)                                 | `HalFormsFieldRenderer`                                                                            |
+| `FormContainer`                                                 | `HalFormsContainer`                                                                                |
+| `FieldError` / `useEntityItemCreateFormState()`                 | `FieldValidationError` / `FieldState` / `useHalFormsFieldState()`                                  |
+| `toFieldErrors()`                                               | `toServerFieldErrors()`                                                                            |
+| relation field (`entity-item-create/render/relation-field.tsx`) | `render/relation-field.tsx`, dispatched for the `relation` kind                                    |
+
+**What changes from the original decision:**
+
+- **Where the engine lives:** in its own `hal-forms` feature rather than inside
+  `entity-item-create`. It is still in `packages/features`, so the original layering holds:
+  `packages/navigator-data` does model enrichment, `packages/ui` has the dumb widgets, and
+  only `hal-forms` maps one onto the other.
+- **Scope:** the union now covers `text`, `number`, `datetime`, `boolean`, `enum`, `file`,
+  `relation` and `autocomplete`. `file` renders `FileRenderer` (no longer a placeholder), and
+  `relation` renders the to-one/to-many relation pickers.
+- **Search-form reuse:** the "not search-form reuse" exclusion in
+  [Scope of this restructure](#scope-of-this-restructure) no longer applies. Search filters are
+  `HalFormsField`s resolved from the search template. `sort` is still not a field — it stays a
+  collection-view control.
+- **Layout:** the "single flat group" limitation in
+  [What is lost](#what-is-lost-by-dropping-jsonforms--honest-inventory-unchanged) no longer
+  applies. A create form still gets one section, one field per row; a search form gets
+  a leading section plus one collapsible section per relation, with a range attribute's
+  bounds paired on one row (labelled by their `prompt`, e.g. "Age: Min" | "Age: Max") that carries its description once.
+- **`packages/ui` value types:** the form renderers take plain value types (`string`, `number`,
+  `boolean`, `Date`, `string[]`, `File`) instead of `FieldValue`, so `packages/ui` no longer
+  depends on `@contentgrid/navigator-data`. `hal-forms/render/narrow-field-value.ts` narrows
+  `FieldValue` to them.
+
+**Rule going forward:** to support a new HAL-Forms property shape, add a `kind` to
+`HalFormsField`, map it in `resolveHalFormsFields`, and render it in `HalFormsFieldRenderer`. Do
+not add a form-specific field type, renderer switch or state hook to another feature.
 
 ---
 

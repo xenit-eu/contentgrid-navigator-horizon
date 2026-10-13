@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
 import { FieldShell, fieldAriaProps } from "./field-shell";
 
@@ -8,9 +7,14 @@ export interface NumberRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  /** A number, or a string as-is (e.g. an already-applied search filter value); `""`/`undefined`
+   * for empty. */
+  readonly value: number | string | undefined;
+  /** A finite number, or `""` when the input is cleared. */
+  readonly onChange: (value: number | "") => void;
   readonly error?: string;
+  /** See `FieldShellProps.hideLabel`. */
+  readonly hideLabel?: boolean;
   readonly min?: number;
   readonly max?: number;
   readonly step?: number;
@@ -18,7 +22,7 @@ export interface NumberRendererProps {
   readonly onBlur?: () => void;
 }
 
-function displayValueFor(value: FieldValue): string {
+function displayValueFor(value: number | string | undefined): string {
   if (typeof value === "number") return String(value);
   if (typeof value === "string") return value;
   return "";
@@ -33,6 +37,7 @@ export function NumberRenderer({
   value,
   onChange,
   error,
+  hideLabel,
   min,
   max,
   step,
@@ -48,6 +53,7 @@ export function NumberRenderer({
       required={required}
       description={description}
       error={error}
+      hideLabel={hideLabel}
     >
       <Input
         id={name}

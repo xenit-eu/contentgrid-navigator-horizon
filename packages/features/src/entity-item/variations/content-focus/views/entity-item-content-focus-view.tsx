@@ -40,7 +40,10 @@ export type ViewToolbarConfiguration = ViewToolbarOptions | false | undefined;
 
 export interface EntityItemContentFocusViewProps extends Pick<
   EntityItemViewProps,
-  "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
+  | "onRelationItemCreateNew"
+  | "onMissingRelationTargetClick"
+  | "onBlindRelationOverwriteClick"
+  | "onRequiredRelationClick"
 > {
   /** Profile entity name from the route. */
   readonly entityName: string;
@@ -106,6 +109,7 @@ function EntityItemContentFocusViewBody({
   itemId,
   toolbar,
   onRelationItemClick,
+  onRelationItemCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
@@ -194,6 +198,7 @@ function EntityItemContentFocusViewBody({
             onSelectAttribute={setUserSelectedAttribute}
             loadedProfiles={loadedProfiles}
             onRelationItemClick={handleRelationItemClick}
+            onRelationItemCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
             onRequiredRelationClick={onRequiredRelationClick}
@@ -204,6 +209,7 @@ function EntityItemContentFocusViewBody({
             itemId={itemId}
             toolbar={false}
             onRelationItemClick={handleRelationItemClick}
+            onRelationItemCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
             onRequiredRelationClick={onRequiredRelationClick}
@@ -240,6 +246,7 @@ function ContentFocusEntityItemBody({
   onSelectAttribute,
   loadedProfiles,
   onRelationItemClick,
+  onRelationItemCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
@@ -257,7 +264,10 @@ function ContentFocusEntityItemBody({
 }> &
   Pick<
     EntityItemContentFocusViewProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
+    | "onRelationItemCreateNew"
+    | "onMissingRelationTargetClick"
+    | "onBlindRelationOverwriteClick"
+    | "onRequiredRelationClick"
   >) {
   if (attributeName === undefined) {
     return null;
@@ -286,6 +296,7 @@ function ContentFocusEntityItemBody({
                     relation={relation}
                     profiles={loadedProfiles}
                     onItemClick={onRelationItemClick}
+                    onCreateNew={onRelationItemCreateNew}
                     onMissingRelationTargetClick={onMissingRelationTargetClick}
                     onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
                   />
@@ -296,6 +307,7 @@ function ContentFocusEntityItemBody({
                     relation={relation}
                     profiles={loadedProfiles}
                     onItemClick={onRelationItemClick}
+                    onCreateNew={onRelationItemCreateNew}
                     onMissingRelationTargetClick={onMissingRelationTargetClick}
                     onRequiredRelationClick={onRequiredRelationClick}
                     onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}

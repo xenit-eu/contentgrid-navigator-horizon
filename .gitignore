@@ -21,3 +21,6 @@ playwright-report/
 blob-report/
 playwright/.cache/
 .pnpm-store/
+
+# shadcn registry build output (packages/ui/registry:build) — regenerate on demand
+packages/ui/r/
