@@ -55,6 +55,12 @@ export interface RightSidePanelLayoutProps {
   readonly sidePanelHeader?: ReactNode;
   /** Whether the side panel starts expanded. Defaults to `true`. */
   readonly defaultSidePanelOpen?: boolean;
+  /**
+   * Whether the user can drag the border between the content and the side panel to resize them
+   * (wide layouts only). When `false` the panel keeps its default 360px width; the show/hide
+   * toggle still works. Defaults to `true`.
+   */
+  readonly resizable?: boolean;
 }
 
 /**
@@ -87,6 +93,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
       sidePanelTitle = "Details",
       sidePanelHeader,
       defaultSidePanelOpen = true,
+      resizable = true,
     },
     ref,
   ) {
@@ -181,6 +188,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
               maxRightSize="60"
               minLeftSize={320}
               rightCollapsible
+              resizable={resizable}
               rightCollapsedSize={48}
               rightCollapsed={!open}
               onRightCollapsedChange={(collapsed) => setOpen(!collapsed)}

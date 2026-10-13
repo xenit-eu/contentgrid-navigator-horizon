@@ -118,5 +118,26 @@ describe("RightSidePanelLayout", () => {
       expect(screen.queryByText("Panel content")).not.toBeInTheDocument();
       expect(screen.getByText("Main content")).toBeInTheDocument();
     });
+
+    it("resizable={false}: disables the handle but keeps the show/hide toggle working", async () => {
+      mockWideViewport();
+      const user = userEvent.setup();
+      render(
+        <RightSidePanelLayout sidePanel={<div>Panel content</div>} resizable={false}>
+          Main content
+        </RightSidePanelLayout>,
+      );
+
+      const handle = screen.getByRole("separator", { name: "Resize Details" });
+      expect(handle).toHaveAttribute("aria-disabled", "true");
+
+      await user.click(screen.getByRole("button", { name: "Hide Details" }));
+
+      expect(screen.getByRole("button", { name: "Show Details" })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      expect(screen.queryByText("Panel content")).not.toBeInTheDocument();
+    });
   });
 });

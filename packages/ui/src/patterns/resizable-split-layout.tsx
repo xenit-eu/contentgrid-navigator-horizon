@@ -71,6 +71,12 @@ export interface ResizableSplitLayoutProps {
   readonly rightCollapsed?: boolean;
   /** Called when the right pane collapses or expands, including by dragging. */
   readonly onRightCollapsedChange?: (collapsed: boolean) => void;
+  /**
+   * When `false`, the panes keep their sizes and the handle can't be dragged or moved with the
+   * keyboard; it renders as a plain divider without the grip. Collapsing the right pane through
+   * `rightCollapsed` still works. Defaults to `true`.
+   */
+  readonly resizable?: boolean;
   /** Accessible name for the drag handle. */
   readonly handleLabel?: string;
   /** Renders a visible grip on the drag handle. */
@@ -102,6 +108,7 @@ function ResizableSplitLayout({
   rightCollapsedSize,
   rightCollapsed,
   onRightCollapsedChange,
+  resizable = true,
   handleLabel = "Resize panes",
   withHandle = true,
   onWidthsChange,
@@ -170,7 +177,8 @@ function ResizableSplitLayout({
           <PaneSideContext.Provider value="left">{left}</PaneSideContext.Provider>
         </ResizablePanel>
         <ResizableHandle
-          withHandle={withHandle}
+          withHandle={withHandle && resizable}
+          disabled={!resizable}
           aria-label={handleLabel}
           className={handleClassName}
         />
