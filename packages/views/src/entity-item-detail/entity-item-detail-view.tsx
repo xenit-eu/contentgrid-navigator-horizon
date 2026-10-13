@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ErrorPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemContentFocusView } from "@contentgrid/features/entity-item";
 import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
+import type { ProfileEntity } from "@contentgrid/navigator-data";
 import { useViewTarget } from "@contentgrid/navigator-data";
 import { ViewTargetGate } from "../gate/view-target-gate";
 import { useNavigation } from "../navigation";
@@ -38,21 +39,7 @@ export function EntityItemDetailView({
       <ViewTargetGate
         result={result}
         renderChrome={(profileEntity, state) =>
-          hideToolbar ? (
-            state
-          ) : (
-            <BreadCrumbsToolBarLayout
-              breadcrumbs={
-                <ItemDetailBreadcrumbs
-                  entityName={profileEntity.name}
-                  pluralName={profileEntity.pluralName}
-                  itemId={itemIdOf(target)}
-                />
-              }
-            >
-              {state}
-            </BreadCrumbsToolBarLayout>
-          )
+          withBreadcrumbsChrome(profileEntity, itemIdOf(target), hideToolbar, state)
         }
       >
         {({ profileEntity, entityItem }) =>
@@ -88,14 +75,21 @@ export function EntityItemDetailView({
               }
             />
           ) : (
-            // A collection target: this view shows one item.
-            <ErrorPage
-              model={{
-                kind: "unknown",
-                title: "Not an item",
-                detail: "This view shows one item; the target addresses a collection.",
-              }}
-            />
+            // A collection target: this view shows one item. The profile is already known here,
+            // so this keeps the same breadcrumb/toolbar chrome as the loading and error states
+            // instead of filling the whole view.
+            withBreadcrumbsChrome(
+              profileEntity,
+              itemIdOf(target),
+              hideToolbar,
+              <ErrorPage
+                model={{
+                  kind: "unknown",
+                  title: "Not an item",
+                  detail: "This view shows one item; the target addresses a collection.",
+                }}
+              />,
+            )
           )
         }
       </ViewTargetGate>
@@ -104,6 +98,30 @@ export function EntityItemDetailView({
         onOpenChange={(open) => !open && setProblemDialog(null)}
       />
     </>
+  );
+}
+
+/** The view's own toolbar (breadcrumbs), shared by every state that isn't the found item itself
+ * (which draws its breadcrumbs through `EntityItemContentFocusView`'s own toolbar prop instead). */
+function withBreadcrumbsChrome(
+  profileEntity: ProfileEntity,
+  itemId: string,
+  hideToolbar: boolean,
+  content: ReactNode,
+): ReactNode {
+  if (hideToolbar) return content;
+  return (
+    <BreadCrumbsToolBarLayout
+      breadcrumbs={
+        <ItemDetailBreadcrumbs
+          entityName={profileEntity.name}
+          pluralName={profileEntity.pluralName}
+          itemId={itemId}
+        />
+      }
+    >
+      {content}
+    </BreadCrumbsToolBarLayout>
   );
 }
 

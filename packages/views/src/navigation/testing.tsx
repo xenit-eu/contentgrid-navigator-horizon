@@ -27,6 +27,11 @@ export function createRecordingNavigation(): RecordingNavigation {
     openItem: (entityName, id) => {
       calls.push({ method: "openItem", args: [entityName, id] });
     },
+    hrefFor: {
+      home: () => "/",
+      entityItemCollection: (entityName) => `/${entityName}`,
+      item: (entityName, id) => `/${entityName}/${id}`,
+    },
   };
   return { navigation, calls };
 }

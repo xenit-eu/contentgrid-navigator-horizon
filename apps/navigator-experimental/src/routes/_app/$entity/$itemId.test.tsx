@@ -1,7 +1,7 @@
 /**
  * Tests for the item detail route's wiring of `EntityItemDetailView`: it builds a `name` target
  * from the URL params, preloads that target in its loader, and provides the app's navigation
- * object (`../../../app-navigation.tsx`) that the view's clicks go through. Same mock stack as
+ * object (`packages/views/src/shells/router-navigation-provider.tsx`) that the view's clicks go through. Same mock stack as
  * `../../__root.test.tsx` and `./index.test.tsx` — the view is mocked to a stub that exposes its
  * props and the navigation object, so these tests isolate the route's own wiring; the view's own
  * behaviour is tested in `packages/views`.

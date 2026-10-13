@@ -4,15 +4,10 @@
  * view does with them: relation clicks go to the navigation object, relation problems open the
  * dialog, and "create" is handed to the host.
  */
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { NavigatorDataProvider } from "@contentgrid/navigator-data";
-import type { TypedFetch } from "@contentgrid/navigator-data";
-import { RecordingNavigationProvider, createRecordingNavigation } from "../navigation/testing";
-import { PROFILE_URL, createFixtureFetch } from "../test-fixtures/item-detail";
+import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
 vi.mock("@contentgrid/features/entity-item", () => ({
@@ -45,24 +40,7 @@ vi.mock("@contentgrid/features/entity-item", () => ({
   ),
 }));
 
-function setup() {
-  const apiFetch = createFixtureFetch().fetch as unknown as TypedFetch;
-  const recording = createRecordingNavigation();
-  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
-    return (
-      <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <NavigatorDataProvider apiFetch={apiFetch} contentFetch={apiFetch} profileUrl={PROFILE_URL}>
-          <RecordingNavigationProvider recording={recording}>
-            {children}
-          </RecordingNavigationProvider>
-        </NavigatorDataProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { Wrapper, recording };
-}
+const setup = createItemDetailTestHarness;
 
 const target = { kind: "name", entityName: "customer", itemId: "cust-001" } as const;
 

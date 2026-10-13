@@ -1,17 +1,14 @@
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { NavigatorDataProvider } from "@contentgrid/navigator-data";
 import type { TypedFetch } from "@contentgrid/navigator-data";
-import { RecordingNavigationProvider, createRecordingNavigation } from "../navigation/testing";
 import {
   CUSTOMER_COLLECTION_URL,
   CUSTOMER_ITEM_URL,
   PROFILE_URL,
   createFixtureFetch,
 } from "../test-fixtures/item-detail";
+import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import type { ViewTarget } from "../types";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 import { preload } from "./preload";
@@ -21,33 +18,17 @@ const findItemName = async () => (await screen.findAllByText("Acme Corp"))[0];
 
 const target: ViewTarget = { kind: "name", entityName: "customer", itemId: "cust-001" };
 
-function setup(options: { queryClient?: QueryClient; fetchFn?: unknown } = {}) {
-  const fixture = createFixtureFetch();
-  const apiFetch = (options.fetchFn ?? fixture.fetch) as TypedFetch;
-  const queryClient =
-    options.queryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const recording = createRecordingNavigation();
-  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} contentFetch={apiFetch} profileUrl={PROFILE_URL}>
-          <RecordingNavigationProvider recording={recording}>
-            {children}
-          </RecordingNavigationProvider>
-        </NavigatorDataProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { Wrapper, recording, queryClient, apiFetch, counts: fixture.counts };
-}
+const setup = createItemDetailTestHarness;
 
 describe("EntityItemDetailView", () => {
   it("shows the item under a Home, collection, item breadcrumb", async () => {
     const { Wrapper } = setup();
     render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
 
-    expect(await screen.findByRole("button", { name: "Home" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Customers" })).toBeInTheDocument();
+    // A deterministic `hrefFor` is always given by the recording navigation, so breadcrumbs render
+    // as real links, not buttons (see `NavigationLink`).
+    expect(await screen.findByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
     expect(screen.getByText("cust-001", { selector: "[aria-current='page']" })).toBeInTheDocument();
     expect(await findItemName()).toBeInTheDocument();
   });
@@ -57,8 +38,8 @@ describe("EntityItemDetailView", () => {
     render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
 
     await findItemName();
-    await userEvent.click(screen.getByRole("button", { name: "Home" }));
-    await userEvent.click(screen.getByRole("button", { name: "Customers" }));
+    await userEvent.click(screen.getByRole("link", { name: "Home" }));
+    await userEvent.click(screen.getByRole("link", { name: "Customers" }));
 
     expect(recording.calls).toEqual([
       { method: "openHome", args: [] },
@@ -71,7 +52,7 @@ describe("EntityItemDetailView", () => {
     render(<EntityItemDetailView target={target} hideToolbar />, { wrapper: Wrapper });
 
     expect(await findItemName()).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Home" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: /breadcrumb/i })).not.toBeInTheDocument();
   });
 
@@ -104,7 +85,7 @@ describe("EntityItemDetailView", () => {
     expect(
       await screen.findByText("Entity item not found", {}, { timeout: 15000 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Customers" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
     // Same as before the view existed: the item query retries three times (`useEntityItem` under
     // the apps' default query client) before the not-found problem is shown.
     expect(itemRequests).toBe(4);
@@ -117,15 +98,21 @@ describe("EntityItemDetailView", () => {
     });
 
     expect(await screen.findByText(/No entity profile named "nope"/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Home" })).not.toBeInTheDocument();
+    // No profile is ever resolved for an unknown entity name, so there is nothing to draw the
+    // toolbar's breadcrumbs from — unlike the "collection target" case below.
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
   });
 
-  it("says so when the target addresses a collection", async () => {
+  it("says so when the target addresses a collection, keeping the toolbar", async () => {
     const { Wrapper } = setup();
     render(<EntityItemDetailView target={{ kind: "name", entityName: "customer" }} />, {
       wrapper: Wrapper,
     });
     expect(await screen.findByText("Not an item")).toBeInTheDocument();
+    // The profile IS known here (unlike the unknown-entity case above), so the view keeps its
+    // breadcrumb toolbar around the error instead of filling the whole view with it.
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
   });
 
   it("opens an item given by link", async () => {

@@ -16,10 +16,33 @@ interface Navigation {
   openClassifyCreate(): void;
   openEditItem(entityName: string, id: string): void;
   openCreateItem(entityName: string): void;
+  // Optional; see "hrefFor" below.
+  hrefFor?: {
+    home(): string;
+    entityItemCollection(entityName: string): string;
+    item(entityName: string, id: string): string;
+  };
 }
 ```
 
 The design lists these six and says the set may be extended. The first PRs only need `openHome`, `openEntityItemCollection` and `openItem`; the others arrive with the pages that use them.
+
+### `hrefFor`
+
+Optional, one entry per `open*` the host has a real address for. When present, a view renders a real
+`<a href>` for that action instead of a `<button>` (component `NavigationLink`, `packages/views/src/navigation/`)
+— so cmd/middle-click, "copy link" and screen-reader link semantics work — while a plain, unmodified
+left click still goes through the matching `open*` function instead of the browser. A host with
+nothing to link to (chat panel, a split-view pane) simply omits it. `ChildNavigationProvider` passes
+the parent's `hrefFor` through unless a child explicitly overrides it; `createRecordingNavigation`
+gives deterministic hrefs (`/`, `/{entityName}`, `/{entityName}/{id}`) for stories and tests.
+
+| Host                | `hrefFor`                                                                   |
+| ------------------- | --------------------------------------------------------------------------- |
+| App                 | `router.buildLocation({ ...same to/params/search as the open* call }).href` |
+| Chat panel          | Absent — nothing to link to                                                 |
+| Storybook and tests | Deterministic fake paths from `createRecordingNavigation`                   |
+| Split view (parent) | The parent's own `hrefFor`, passed through unless a child overrides it      |
 
 ## Rules
 
@@ -33,7 +56,7 @@ The design lists these six and says the set may be extended. The first PRs only 
 
 ## Hosts
 
-_As built (PR 4):_ the app's implementation is `AppNavigationProvider` in each app's `src/app-navigation.tsx`, mounted in the root route. It moves to `packages/views/src/shells/` with PR 7.
+_As built (PR 4):_ the app's implementation is `RouterNavigationProvider`, `packages/views/src/shells/router-navigation-provider.tsx` (`./shells` export, not the package's main export — the one place outside `apps/*` allowed to import `@tanstack/react-router`), mounted in each app's root route. Moved here from each app's own `src/app-navigation.tsx` during PR 4 review, ahead of the rest of `packages/features/src/shells/` which still moves with PR 7.
 
 | Host                | Implementation                                                                 |
 | ------------------- | ------------------------------------------------------------------------------ |

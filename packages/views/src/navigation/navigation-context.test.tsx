@@ -71,6 +71,14 @@ describe("recording navigation", () => {
     // Would throw without a provider in development.
     await userEvent.click(screen.getByText("home"));
   });
+
+  it("gives deterministic hrefs, independent of recorded calls", () => {
+    const recording = createRecordingNavigation();
+    expect(recording.navigation.hrefFor?.home()).toBe("/");
+    expect(recording.navigation.hrefFor?.entityItemCollection("invoice")).toBe("/invoice");
+    expect(recording.navigation.hrefFor?.item("invoice", "42")).toBe("/invoice/42");
+    expect(recording.calls).toEqual([]);
+  });
 });
 
 describe("ChildNavigationProvider", () => {
@@ -92,6 +100,45 @@ describe("ChildNavigationProvider", () => {
       { method: "openEntityItemCollection", args: ["invoice"] },
       { method: "openHome", args: [] },
     ]);
+  });
+
+  it("falls back to the parent's hrefFor when the child does not override it", () => {
+    const host = createRecordingNavigation();
+    let hrefFor: Navigation["hrefFor"];
+    function ReadHrefFor() {
+      hrefFor = useNavigation().hrefFor;
+      return null;
+    }
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ openItem: vi.fn() }}>
+          <ReadHrefFor />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    expect(hrefFor?.item("invoice", "42")).toBe("/invoice/42");
+  });
+
+  it("uses the child's own hrefFor when it overrides one", () => {
+    const host = createRecordingNavigation();
+    const childHrefFor: Navigation["hrefFor"] = {
+      home: () => "#home",
+      entityItemCollection: (entityName) => `#${entityName}`,
+      item: (entityName, id) => `#${entityName}/${id}`,
+    };
+    let hrefFor: Navigation["hrefFor"];
+    function ReadHrefFor() {
+      hrefFor = useNavigation().hrefFor;
+      return null;
+    }
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ hrefFor: childHrefFor }}>
+          <ReadHrefFor />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    expect(hrefFor?.home()).toBe("#home");
   });
 
   it("gives siblings independent navigation objects", async () => {
