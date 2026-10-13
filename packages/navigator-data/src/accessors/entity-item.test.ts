@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { HalObject } from "@contentgrid/hal";
 import { type Link } from "@contentgrid/hal";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
@@ -679,6 +679,14 @@ function makeEntityItemWithContentLink(etag: string | null = '"v1"'): EntityItem
   return new EntityItem(hal, makeProfileEntity(), etag);
 }
 
+function makeEntityItemWithEmptyContent(): EntityItem {
+  const hal = makeEntityItemHal(
+    { id: "inv-001", document: null },
+    { [CG_CONTENT_REL]: [{ href: CONTENT_URL, name: "document" }] },
+  );
+  return new EntityItem(hal, makeProfileEntity(), '"v1"');
+}
+
 function makeEntityItemWithoutContentLink(etag: string | null = '"v1"'): EntityItem {
   const hal = makeEntityItemHal({ id: "inv-001" });
   return new EntityItem(hal, makeProfileEntity(), etag);
@@ -716,8 +724,12 @@ describe("EntityItem — canUploadContent", () => {
 });
 
 describe("EntityItem — uploadContentRequest", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("returns a Request with PUT method pointing to the content link href", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
+    const item = makeEntityItemWithEmptyContent();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
     const req = item.uploadContentRequest("document", file);
     expect(req).toBeInstanceOf(Request);
@@ -725,60 +737,23 @@ describe("EntityItem — uploadContentRequest", () => {
     expect(req.url).toBe(CONTENT_URL);
   });
 
-  it("uses file.type as Content-Type", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
+  it("sends a multipart/form-data body with the file under a 'file' field", () => {
+    const item = makeEntityItemWithEmptyContent();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    // Spy rather than read the body back: a jsdom File loses its name and bytes when undici
+    // serializes the multipart body, so `req.formData()`/`req.text()` can't be asserted on here.
+    const appendSpy = vi.spyOn(FormData.prototype, "append");
     const req = item.uploadContentRequest("document", file);
-    expect(req.headers.get("Content-Type")).toBe("text/plain");
-  });
-
-  it("uses opts.contentType when provided (overrides file.type)", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const req = item.uploadContentRequest("document", file, { contentType: "application/pdf" });
-    expect(req.headers.get("Content-Type")).toBe("application/pdf");
-  });
-
-  it("falls back to application/octet-stream for Blob without type", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["data"]); // no type
-    const req = item.uploadContentRequest("document", blob);
-    expect(req.headers.get("Content-Type")).toBe("application/octet-stream");
-  });
-
-  it("sets Content-Disposition when filename is available from File", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const req = item.uploadContentRequest("document", file);
-    expect(req.headers.get("Content-Disposition")).toContain("hello.txt");
-    expect(req.headers.get("Content-Disposition")).toContain("attachment");
-  });
-
-  it("uses opts.filename when provided", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["data"]);
-    const req = item.uploadContentRequest("document", blob, { filename: "override.pdf" });
-    expect(req.headers.get("Content-Disposition")).toContain("override.pdf");
-  });
-
-  it("omits Content-Disposition when no filename is available (Blob without opts.filename)", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
-    const blob = new Blob(["data"]);
-    const req = item.uploadContentRequest("document", blob);
+    expect(req.headers.get("Content-Type")).toMatch(/^multipart\/form-data; boundary=/);
     expect(req.headers.get("Content-Disposition")).toBeNull();
+    expect(appendSpy).toHaveBeenCalledWith("file", file, "hello.txt");
   });
 
-  it("attaches If-Match when etag is set", () => {
-    const item = makeEntityItemWithContentLink('"v1"');
+  it("sends If-None-Match: * instead of the item's ETag", () => {
+    const item = makeEntityItemWithEmptyContent();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
     const req = item.uploadContentRequest("document", file);
-    expect(req.headers.get("If-Match")).toBe('"v1"');
-  });
-
-  it("omits If-Match when etag is null", () => {
-    const item = makeEntityItemWithContentLink(null);
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const req = item.uploadContentRequest("document", file);
+    expect(req.headers.get("If-None-Match")).toBe("*");
     expect(req.headers.get("If-Match")).toBeNull();
   });
 
@@ -786,6 +761,12 @@ describe("EntityItem — uploadContentRequest", () => {
     const item = makeEntityItemWithoutContentLink();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
     expect(() => item.uploadContentRequest("document", file)).toThrow();
+  });
+
+  it("throws when the attribute already holds a file", () => {
+    const item = makeEntityItemWithContentLink();
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    expect(() => item.uploadContentRequest("document", file)).toThrow("already holds a file");
   });
 });
 

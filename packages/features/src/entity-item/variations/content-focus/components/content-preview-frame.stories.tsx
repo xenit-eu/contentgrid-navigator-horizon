@@ -30,7 +30,11 @@ const downloadFailureProblem: ProblemDisplayModel = {
 };
 
 export const NoFile: Story = {
-  args: { state: "noFile" },
+  args: { state: "noFile", onFileChange: () => {} },
+};
+
+export const Uploading: Story = {
+  args: { state: "uploading", uploadProgress: 40 },
 };
 
 export const Loading: Story = {

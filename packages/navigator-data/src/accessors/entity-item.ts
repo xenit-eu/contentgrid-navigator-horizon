@@ -6,7 +6,7 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels, contentDispositionAttachment } from "../api";
+import { cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
@@ -401,19 +401,20 @@ export class EntityItem {
    * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
    * `contentFetch` omits the `Accept: application/hal+json` header.
    *
-   * If-Match is attached only when an ETag is available (omitted when null).
+   * The file goes in a `multipart/form-data` body, which carries its name and type. (A
+   * `Content-Disposition` header would be blocked by the platform's CORS policy.)
+   *
+   * Only for an attribute with no file: `If-None-Match: *` means "only store this if the attribute
+   * has no file yet", so if someone else uploaded a file in the meantime, the server answers 412
+   * instead of overwriting it.
    *
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
-   * @param opts - Optional overrides for Content-Type and filename
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
+   * @throws Error if the attribute already holds a file
    */
-  public uploadContentRequest(
-    attributeName: string,
-    file: Blob | File,
-    opts?: { contentType?: string; filename?: string },
-  ): Request {
+  public uploadContentRequest(attributeName: string, file: File): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
       throw new Error(
@@ -421,28 +422,18 @@ export class EntityItem {
       );
     }
 
-    const contentType =
-      opts?.contentType ??
-      (file instanceof File && file.type ? file.type : "application/octet-stream");
-
-    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
-
-    const headers: Record<string, string> = {
-      "Content-Type": contentType,
-    };
-
-    if (filename) {
-      headers["Content-Disposition"] = contentDispositionAttachment(filename);
+    const attribute = this.findAttribute(attributeName)?.value;
+    if (attribute?.kind === AttributeKind.CONTENT && attribute.metadata !== null) {
+      throw new Error(`Content attribute '${attributeName}' already holds a file`);
     }
 
-    if (this.etag !== null) {
-      headers["If-Match"] = this.etag;
-    }
+    const body = new FormData();
+    body.append("file", file, file.name);
 
     return new Request(link.href, {
       method: "PUT",
-      body: file,
-      headers,
+      body,
+      headers: { "If-None-Match": "*" },
     });
   }
 

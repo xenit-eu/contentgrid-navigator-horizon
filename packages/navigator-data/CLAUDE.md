@@ -161,7 +161,7 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.getToOneRelation(name)?.setRelationRequest(targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list; via `EntityItemToOneRelation`)
 - `entityItem.getToManyRelation(name)?.addRelationRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemToManyRelation`)
 - `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
-- `entityItem.uploadContentRequest(attrName, file, opts?)` → hand-built PUT `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
+- `entityItem.uploadContentRequest(attrName, file)` → hand-built PUT `Request` to the `cg:content` link, for an attribute with no file only (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 
 **URL construction — never concatenate by hand:**
@@ -724,19 +724,21 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
   not permitted. Use `entityItem.canUploadContent(attrName)` (boolean) before invoking the hook.
   URL always comes from `entityItem.contentLink(attrName)?.href` via `cgRels.content` — never
   string-built.
-- Build the `Request` via `entityItem.uploadContentRequest(attrName, file, opts)` or
+- Build the `Request` via `entityItem.uploadContentRequest(attrName, file)` or
   `entityItem.downloadContentRequest(attrName, opts)` — do NOT construct the Request by hand in
   hook or feature code.
 - Use `contentFetch` (not `apiFetch`) for the binary PUT/GET — `contentFetch` omits the
   `Accept: application/hal+json` header that `apiFetch` adds.
 - `contentFetch` is wired into `NavigatorDataContextValue` alongside `apiFetch`; access it via
   `useNavigatorData()`.
-- Upload (PUT) returns 204 No Content — the hook uses `fetchVoid(contentFetch, req)` then re-fetches
-  the parent item via `apiFetch` to capture the fresh ETag and update the item cache.
+- Upload (PUT) only stores a file into an attribute that has none: it sends the file as
+  `multipart/form-data` with `If-None-Match: *` (never the entity item's ETag — content has its
+  own), and `uploadContentRequest` throws when the attribute already holds a file. It goes through
+  `contentFetch.withUploadProgress(setProgress)`, then re-fetches the parent item via `apiFetch` to
+  capture the fresh ETag and update the item cache.
 - Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
   response is 206 (Range request).
-- Content helpers live in `src/api/content-types.ts`: `contentDispositionAttachment(filename)`,
-  `parseContentDisposition(header)`.
+- Content helpers live in `src/api/content-types.ts`: `parseContentDisposition(header)`.
 - 412/415 surface as `ProblemDetailError`; the hook does not auto-retry.
 
 ---

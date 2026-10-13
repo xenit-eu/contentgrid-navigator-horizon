@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { checkResponse } from "@contentgrid/problem-details";
 import { EntityItem } from "../../accessors/entity-item";
 import { parseContentDisposition } from "../../api/content-types";
 import { fetchHal, fetchVoid } from "../../api/hal-client";
+import { isProblemWithStatus } from "../../api/problem-details/guards";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape } from "../../shapes";
 import { useNavigatorData } from "../context";
@@ -16,12 +18,8 @@ import { useNavigatorData } from "../context";
  * Variables for the `useUploadContent` mutation.
  */
 export type UploadContentVariables = {
-  /** The binary file to upload. */
-  readonly file: Blob | File;
-  /** Optional MIME type override. Defaults to `file.type` (when File) or `application/octet-stream`. */
-  readonly contentType?: string;
-  /** Optional filename override. Defaults to `file.name` (when File). */
-  readonly filename?: string;
+  /** The file to upload. */
+  readonly file: File;
 };
 
 /**
@@ -80,12 +78,13 @@ export interface UseDownloadContentOptions {
  * template rule — they have no `_templates` entry. The `cg:content` link presence
  * is the ABAC gate. The Request is hand-built directly from the link href.
  *
- * Uses `contentFetch` (not `apiFetch`) — the binary client that omits the
- * `Accept: application/hal+json` header set by `createApiClient`.
+ * Sends through `contentFetch.withUploadProgress` (not `apiFetch`) — the binary client that
+ * omits the `Accept: application/hal+json` header set by `createApiClient`, over XHR so the
+ * returned `progress` (0–100) follows the upload.
  *
- * Attaches `If-Match` from the current ETag when available (included inside
- * `entityItem.uploadContentRequest`). On HTTP 412 (ETag mismatch), the error
- * surfaces as `ProblemDetailError` — the hook does NOT auto-retry.
+ * `entityItem.uploadContentRequest` sends `If-None-Match: *`. On HTTP 412 (a file was stored in
+ * the meantime), the error surfaces as `ProblemDetailError` and the item query is invalidated so
+ * the newer version loads — the hook does NOT auto-retry.
  *
  * Cache behaviour on success:
  * - Re-fetches the entity item via `apiFetch` to get fresh metadata + new ETag.
@@ -96,7 +95,8 @@ export interface UseDownloadContentOptions {
  * @param entityItem     - The entity item whose content attribute is being uploaded.
  * @param attributeName  - The name of the content attribute (must have a cg:content link).
  * @param options        - Optional mutation options (onSuccess, onError, etc.)
- * @returns TanStack mutation result; `data` is the updated `EntityItem` (re-fetched).
+ * @returns TanStack mutation result; `data` is the updated `EntityItem` (re-fetched). Also
+ *          `progress`: the percentage of the file sent by the latest upload.
  */
 export function useUploadContent(
   entityItem: EntityItem,
@@ -107,16 +107,18 @@ export function useUploadContent(
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
 
-  const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
+  const { onSuccess, onError, ...restMutationOptions } = options?.mutationOptions ?? {};
+  const [progress, setProgress] = useState(0);
 
-  return useMutation({
-    mutationFn: async ({ file, contentType, filename }: UploadContentVariables) => {
+  const mutation = useMutation({
+    mutationFn: async ({ file }: UploadContentVariables) => {
+      setProgress(0);
       // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
       // uploadContentRequest() throws if the link is absent (ABAC deny).
-      const req = entityItem.uploadContentRequest(attributeName, file, { contentType, filename });
+      const req = entityItem.uploadContentRequest(attributeName, file);
 
-      // PUT binary content — 204 No Content (discard body).
-      await fetchVoid(contentFetch, req);
+      // Send the file, updating `progress` as it goes. The server answers 204 No Content.
+      await fetchVoid(contentFetch.withUploadProgress(setProgress), req);
 
       // Re-fetch the entity item via apiFetch to get fresh metadata + new ETag.
       const { object, etag } = await fetchHal<EntityItemShape>(
@@ -137,8 +139,19 @@ export function useUploadContent(
       // Compose caller's onSuccess LAST — after cache is consistent.
       await onSuccess?.(item, variables, onMutateResult, context);
     },
+    onError: async (error, variables, onMutateResult, context) => {
+      // Someone else stored a file first: reload the item so it shows their file.
+      if (isProblemWithStatus(error, 412)) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
+        });
+      }
+      await onError?.(error, variables, onMutateResult, context);
+    },
     ...restMutationOptions,
   });
+
+  return { ...mutation, progress };
 }
 
 // ---------------------------------------------------------------------------
