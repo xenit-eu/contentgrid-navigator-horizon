@@ -7,7 +7,7 @@
  */
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../test-setup";
 import { createApiClient } from "../api/client";
 import { isProblemWithStatus } from "../api/problem-details/guards";
@@ -155,6 +155,47 @@ describe("ensureViewTarget", () => {
     );
     expect(resolved.profileEntity.name).toBe("customer");
     expect(resolved.entityItem?.id).toBe("cust-001");
+  });
+
+  // Pins current behaviour: `resolveByUrl` checks `ianaRelations.profile` before `cg:profile`.
+  // Every other fixture in this file only ever emits the IANA `profile` rel, so this is the one
+  // case exercising the `cg:profile` branch. Which rel the backend actually sends is an open
+  // question — if that changes, this test should change with it.
+  it("follows the response's cg:profile link when the IANA profile rel is absent", async () => {
+    const counts = setupHandlers({ profileLink: false });
+    let orderProfileFetched = 0;
+    server.use(
+      http.get(CUSTOMER_ITEM_URL, () => {
+        counts.item++;
+        return HttpResponse.json(
+          {
+            ...itemBody(false),
+            _links: {
+              self: { href: CUSTOMER_ITEM_URL },
+              "cg:profile": { href: CUSTOMER_PROFILE_URL },
+              curies,
+            },
+          },
+          { headers: { ETag: '"v1"' } },
+        );
+      }),
+      // Only requested by `loadAllProfiles`, which the `cg:profile` link should make unnecessary.
+      http.get(ORDER_PROFILE_URL, () => {
+        orderProfileFetched++;
+        return HttpResponse.json(profileBody(ORDER_PROFILE_URL, ORDER_COLLECTION_URL, "order"));
+      }),
+    );
+    const resolved = await ensureViewTarget(
+      makeQueryClient(),
+      apiFetch,
+      PROFILE_URL,
+      byUrl(CUSTOMER_ITEM_URL),
+    );
+    expect(resolved.profileEntity.name).toBe("customer");
+    expect(resolved.entityItem?.id).toBe("cust-001");
+    // Resolved through the cg:profile link directly — never fell back to loading every profile
+    // (including the unrelated order profile) and matching on `describes`.
+    expect(orderProfileFetched).toBe(0);
   });
 
   it("falls back to the profile whose describes link covers the resource", async () => {
@@ -339,6 +380,10 @@ describe("ensureViewTarget", () => {
 });
 
 describe("useViewTarget", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("resolves a name target to the profile and item", async () => {
     setupHandlers();
     const { result } = renderHook(() => useViewTarget(byName("cust-001")), {
@@ -415,5 +460,55 @@ describe("useViewTarget", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     await result.current.refetch();
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  // A url target's identity fetch (`fetchHal` directly in `resolveByUrl`) has no query of its
+  // own underneath it, unlike a name target's (`ensureProfileEntity` -> `profileByLinkQuery`,
+  // which already retries). It must get the same retry: 3 policy as the other direct fetches
+  // (EntityItem.fetchByUrlQuery, ProfileEntity.profileByLinkQuery) instead of failing on the
+  // first attempt.
+  it("retries a failed url-target identity fetch like the other direct fetches (retry: 3)", async () => {
+    vi.useFakeTimers();
+    setupHandlers();
+    let attempts = 0;
+    server.use(
+      http.get(CUSTOMER_ITEM_URL, () => {
+        attempts++;
+        return HttpResponse.json(
+          { type: "about:blank", title: "Internal Server Error", status: 500 },
+          { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        );
+      }),
+    );
+    const { result } = renderHook(() => useViewTarget(byUrl(CUSTOMER_ITEM_URL)), {
+      wrapper: makeWrapper(),
+    });
+    await vi.runAllTimersAsync();
+    expect(result.current.isError).toBe(true);
+    expect(attempts).toBe(4); // 1 initial attempt + 3 retries
+  });
+
+  // A not-supported link is a deterministic failure — asking again never turns it into an item
+  // or collection — so it must not burn 3 retries with backoff even though url targets retry.
+  it("does not retry a url target that resolves to a not-supported link", async () => {
+    vi.useFakeTimers();
+    setupHandlers();
+    const relation = `${CUSTOMER_ITEM_URL}/orders`;
+    let attempts = 0;
+    server.use(
+      http.get(relation, () => {
+        attempts++;
+        return HttpResponse.json({
+          _links: { self: { href: relation }, profile: { href: CUSTOMER_PROFILE_URL } },
+        });
+      }),
+    );
+    const { result } = renderHook(() => useViewTarget(byUrl(relation)), {
+      wrapper: makeWrapper(),
+    });
+    await vi.runAllTimersAsync();
+    expect(result.current.isError).toBe(true);
+    expect(isViewTargetNotSupported(result.current.error)).toBe(true);
+    expect(attempts).toBe(1);
   });
 });

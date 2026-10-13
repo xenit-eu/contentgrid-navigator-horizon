@@ -4,7 +4,12 @@ import { EntityItem } from "../accessors/entity-item";
 import { useNavigatorData } from "../hooks/context";
 import { queryKeys } from "../query-keys";
 import { resolveViewTargetIdentity } from "./resolve-view-target";
-import type { ResolvedViewTarget, ViewTarget } from "./view-target";
+import {
+  type ResolvedViewTarget,
+  type ViewTarget,
+  isViewTargetNotFound,
+  isViewTargetNotSupported,
+} from "./view-target";
 
 // Resolving the identity is stable for the session, like the profiles it reads.
 const IDENTITY_STALE_TIME = 5 * 60 * 1000;
@@ -38,8 +43,18 @@ export function useViewTarget(target: ViewTarget): UseViewTargetResult {
     queryKey: queryKeys.viewTarget.byTarget(target),
     queryFn: () => resolveViewTargetIdentity(queryClient, apiFetch, profileUrl, target),
     staleTime: IDENTITY_STALE_TIME,
-    // A missing profile will not appear by asking again; the profile queries retry themselves.
-    retry: false,
+    retry: (failureCount, error) => {
+      // Name targets: resolveByName's nested queries (ensureProfileEntity -> profileByLinkQuery)
+      // already retry themselves; retrying here too would just double the backoff.
+      if (target.kind !== "url") return false;
+      // Deterministic failures: no profile will appear, and no link will turn into an item or
+      // collection, just by asking again — don't burn retries with backoff on them.
+      if (isViewTargetNotFound(error) || isViewTargetNotSupported(error)) return false;
+      // Otherwise a url target fetches the link directly with no query of its own underneath,
+      // so give it the same retry: 3 policy as the other direct fetches (EntityItem.fetchByUrlQuery,
+      // profileByLinkQuery).
+      return failureCount < 3;
+    },
   });
   const identity = identityQuery.data;
 

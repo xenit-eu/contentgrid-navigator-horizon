@@ -894,10 +894,11 @@ Both return the same `ResolvedViewTarget` (`profileEntity`, plus `entityItem` fo
   also read), else from the profile whose `describes` links cover the resource
   (`ProfileEntity.describesItem` / `describesCollection`). No part of the link is parsed and the entity name is
   never taken from it.
-- **Cache**: the item is cached under `queryKeys.entityItem.byUrl(profile, selfLink)` — the key `useEntityItem`
-  reads — so a name and a link for the same item share one entry and one request, in either order. A fetched
-  collection response is cached under `queryKeys.entityItemCollection.byUrl`. `ensureViewTarget` and
-  `useViewTarget` read and write the same keys.
+- **Cache**: the item is cached under `queryKeys.entityItem.byUrl(profile, url)` — keyed by the requested URL
+  (the view target's `href` for a link target, `profileEntity.itemUrl(itemId)` for a name target), matching
+  what `useEntityItem` / `EntityItem.fetchByUrlQuery` key by — so a name and a link for the same item share one
+  entry and one request, in either order. A fetched collection response is cached under
+  `queryKeys.entityItemCollection.byUrl`. `ensureViewTarget` and `useViewTarget` read and write the same keys.
 - **Errors**: `ViewTargetNotFoundError` (unknown name, or no profile for a link) and `ViewTargetNotSupportedError`
   (a link that is neither an item nor a collection), narrowed with `isViewTargetNotFound` /
   `isViewTargetNotSupported`. Request failures surface as problem-detail errors; narrow them with

@@ -345,6 +345,45 @@ describe("ProfileEntity — describes()", () => {
   });
 });
 
+describe("ProfileEntity — describesItem() and describesCollection()", () => {
+  const entity = () =>
+    makeProfileEntity({ collectionHref: "/customers", itemHref: "/customers/{id}" });
+
+  it("describesItem is true for an item URL; describesCollection is false", () => {
+    const link = { href: "/customers/cust-001" } as unknown as SimpleLink;
+    expect(entity().describesItem(link)).toBe(true);
+    expect(entity().describesCollection(link)).toBe(false);
+  });
+
+  it("describesCollection is true for the collection URL; describesItem is false", () => {
+    const link = { href: "/customers" } as unknown as SimpleLink;
+    expect(entity().describesCollection(link)).toBe(true);
+    expect(entity().describesItem(link)).toBe(false);
+  });
+
+  it("describesCollection is true for the collection URL with a query string; describesItem is false", () => {
+    const link = { href: "/customers?name~prefix=A" } as unknown as SimpleLink;
+    expect(entity().describesCollection(link)).toBe(true);
+    expect(entity().describesItem(link)).toBe(false);
+  });
+
+  it("regression: a nested sub-resource path is not treated as an item of this entity", () => {
+    // `{id}` in the item URI template also matches across `/`, so without the extra guard
+    // `/customers/1/orders` would wrongly count as item "1/orders".
+    const link = { href: "/customers/1/orders" } as unknown as SimpleLink;
+    expect(entity().describesItem(link)).toBe(false);
+    expect(entity().describesCollection(link)).toBe(false);
+    expect(entity().describes(link)).toBe(false);
+  });
+
+  it("describes() is true for both an item URL and the collection URL", () => {
+    const itemLink = { href: "/customers/cust-001" } as unknown as SimpleLink;
+    const collectionLink = { href: "/customers" } as unknown as SimpleLink;
+    expect(entity().describes(itemLink)).toBe(true);
+    expect(entity().describes(collectionLink)).toBe(true);
+  });
+});
+
 describe("ProfileEntity — searchTemplate", () => {
   it("returns null when no search template in profile", () => {
     expect(makeProfileEntity().searchTemplate).toBeNull();
