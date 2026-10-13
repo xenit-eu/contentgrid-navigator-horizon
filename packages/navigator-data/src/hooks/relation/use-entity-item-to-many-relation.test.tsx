@@ -7,8 +7,11 @@
  * (b) Query is disabled (isPending, fetchStatus idle, no fetch) until the target profile resolves.
  * (c) `{ url }` mode fetches the given page URL directly.
  * (d) `{ searchValues }` mode fetches a relation-scoped search URL.
+ * (e) `enabled: false` keeps the query from fetching.
+ * (f) useEntityItemToManyRelationInfinite loads further pages via the HAL `next` link, and
+ *     respects `enabled: false`.
  */
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link } from "@contentgrid/hal";
@@ -29,6 +32,7 @@ import { cgRels } from "../../api";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
 import { BASE, PROFILE_URL, makeWrapper } from "../test-utils";
 import { useEntityItemToManyRelation } from "./use-entity-item-to-many-relation";
+import { useEntityItemToManyRelationInfinite } from "./use-entity-item-to-many-relation-infinite";
 
 // ---------------------------------------------------------------------------
 // Fixture URLs
@@ -443,6 +447,94 @@ describe("useEntityItemToManyRelation — { searchValues } mode", () => {
     );
 
     await new Promise((r) => setTimeout(r, 30));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (e) `enabled: false`
+// ---------------------------------------------------------------------------
+
+describe("useEntityItemToManyRelation — enabled option", () => {
+  it("does not fetch while enabled is false", async () => {
+    setupProfileHandlers();
+    // No handler for LINE_ITEMS_RELATION_URL: an unexpected fetch fails the test (onUnhandledRequest).
+
+    const relation = makeLineItemsRelation();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemToManyRelation(relation, undefined, { enabled: false }),
+      { wrapper },
+    );
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (f) useEntityItemToManyRelationInfinite
+// ---------------------------------------------------------------------------
+
+describe("useEntityItemToManyRelationInfinite", () => {
+  const NEXT_PAGE_URL = `${LINE_ITEMS_RELATION_URL}?_cursor=page-2`;
+  const [firstItem, secondItem] = sampleLineItemList._embedded!.item as Record<string, unknown>[];
+
+  /** Serves page 1 (with a `next` link) and page 2 from the same relation path. */
+  function setupTwoPages() {
+    server.use(
+      http.get(LINE_ITEMS_RELATION_URL, ({ request }) => {
+        const onSecondPage = new URL(request.url).searchParams.get("_cursor") === "page-2";
+        return HttpResponse.json({
+          _embedded: { item: [onSecondPage ? secondItem : firstItem] },
+          _links: onSecondPage
+            ? { self: { href: NEXT_PAGE_URL } }
+            : { self: { href: LINE_ITEMS_RELATION_URL }, next: { href: NEXT_PAGE_URL } },
+          page: { size: 1, total_items_exact: 2 },
+        });
+      }),
+    );
+  }
+
+  it("starts at the relation's first page and appends the next page on fetchNextPage", async () => {
+    setupProfileHandlers();
+    setupTwoPages();
+
+    const relation = makeLineItemsRelation();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useEntityItemToManyRelationInfinite(relation), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+    expect(result.current.data?.pages.flatMap((page) => page.items.map((i) => i.id))).toEqual([
+      "li-001",
+    ]);
+    expect(result.current.hasNextPage).toBe(true);
+
+    await act(() => result.current.fetchNextPage());
+
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));
+    expect(result.current.data?.pages.flatMap((page) => page.items.map((i) => i.id))).toEqual([
+      "li-001",
+      "li-002",
+    ]);
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
+  it("does not fetch while enabled is false", async () => {
+    setupProfileHandlers();
+
+    const relation = makeLineItemsRelation();
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityItemToManyRelationInfinite(relation, { enabled: false }),
+      { wrapper },
+    );
+
+    await new Promise((r) => setTimeout(r, 50));
     expect(result.current.isPending).toBe(true);
     expect(result.current.fetchStatus).toBe("idle");
   });

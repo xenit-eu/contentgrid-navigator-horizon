@@ -6,6 +6,7 @@ import {
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import {
+  type EntityItem,
   type EntityItemToManyRelation,
   type ProfileEntity,
   toProblemDisplayModel,
@@ -13,6 +14,7 @@ import {
   useClearRelation,
   useDeleteRelationItem,
   useEntityItemToManyRelation,
+  useEntityItemToManyRelationInfinite,
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import {
@@ -39,6 +41,8 @@ import type {
   RelationProblemHandlers,
 } from "./relation-handlers";
 import { RelationItemSearchDialog } from "./relation-item-search-dialog";
+import { RelationItemStack } from "./relation-item-stack";
+import { useRelationLayout } from "./relation-layout";
 
 export function RelationToManySection({
   relation,
@@ -58,8 +62,27 @@ export function RelationToManySection({
     RelationProblemHandlers,
     "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
   >) {
+  // Wide panes get the paged record table, narrow ones a stack of item references with
+  // "Load more". Both queries are always called (Rules of Hooks); only the one for the current
+  // layout is enabled, and both share the relation's query namespace, so mutations refresh either.
+  const { toManyTable } = useRelationLayout();
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
-  const collection = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined);
+  const collection = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined, {
+    enabled: toManyTable,
+  });
+  const loadedPages = useEntityItemToManyRelationInfinite(relation, { enabled: !toManyTable });
+  // State of whichever query the current layout shows, in one shape for the header and body.
+  const current = toManyTable
+    ? {
+        isPending: collection.isPending,
+        error: collection.isError ? collection.error : null,
+        firstPage: collection.isSuccess ? collection.data : undefined,
+      }
+    : {
+        isPending: loadedPages.isPending,
+        error: loadedPages.isError ? loadedPages.error : null,
+        firstPage: loadedPages.isSuccess ? loadedPages.data.pages[0] : undefined,
+      };
   const {
     mutate: clearRelation,
     isPending: isClearing,
@@ -90,10 +113,39 @@ export function RelationToManySection({
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
-  const total = collection.isSuccess ? collection.data.totalItems : undefined;
-  const canUnlinkAll =
-    relation.canClear && collection.isSuccess && collection.data.items.length > 0;
+  const total = current.firstPage?.totalItems;
+  const canUnlinkAll = relation.canClear && (current.firstPage?.items.length ?? 0) > 0;
   const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
+
+  /** Unlink/delete controls for one linked item, shared by the table rows and the stack. */
+  function renderItemActions(item: EntityItem) {
+    if (!targetProfile) return null;
+    const noun = targetProfile.singularName.toLowerCase();
+    return (
+      <>
+        {relation.canUnlinkItem && (
+          <RecordRowConfirmAction
+            label="Unlink"
+            icon={<LinkBreak className="size-4" aria-hidden />}
+            title={`Unlink ${noun}`}
+            description={`Remove the link to this ${noun}? This will not delete the ${noun} itself.`}
+            disabled={isUnlinking}
+            onConfirm={() => unlinkItem(item)}
+          />
+        )}
+        {item.canDelete && (
+          <RecordRowConfirmAction
+            label="Delete"
+            icon={<Trash className="size-4" aria-hidden />}
+            title="Delete item"
+            description={`Are you sure you want to delete this ${noun}? This action cannot be undone.`}
+            disabled={isDeleting}
+            onConfirm={() => deleteItem(item)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -174,19 +226,19 @@ export function RelationToManySection({
             onRequiredRelationClick={onRequiredRelationClick}
           />
         )}
-        {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
-        {collection.isError && (
-          <ProblemAlert model={toProblemDisplayModel(collection.error)}></ProblemAlert>
+        {current.isPending && <Skeleton className="h-12 w-full rounded-md" />}
+        {current.error && (
+          <ProblemAlert model={toProblemDisplayModel(current.error)}></ProblemAlert>
         )}
-        {collection.isSuccess && collection.data.isEmpty && (
+        {current.firstPage?.isEmpty && (
           <p className="text-sm text-muted-foreground">No items linked</p>
         )}
-        {collection.isSuccess && !collection.data.isEmpty && !targetProfile && (
+        {current.firstPage && !current.firstPage.isEmpty && !targetProfile && (
           <p className="text-sm text-muted-foreground">
             The linked {title.toLowerCase()} can't be shown: their entity profile is unavailable.
           </p>
         )}
-        {collection.isSuccess && !collection.data.isEmpty && targetProfile && (
+        {toManyTable && collection.isSuccess && !collection.data.isEmpty && targetProfile && (
           <EntityItemCollectionTable
             profile={targetProfile}
             collection={collection.data}
@@ -200,30 +252,24 @@ export function RelationToManySection({
                   icon={<Eye className="size-4" aria-hidden />}
                   onClick={() => onItemClick?.(targetProfile.name, item.id)}
                 />
-                {relation.canUnlinkItem && (
-                  <RecordRowConfirmAction
-                    label="Unlink"
-                    icon={<LinkBreak className="size-4" aria-hidden />}
-                    title={`Unlink ${targetProfile.singularName.toLowerCase()}`}
-                    description={`Remove the link to this ${targetProfile.singularName.toLowerCase()}? This will not delete the ${targetProfile.singularName.toLowerCase()} itself.`}
-                    disabled={isUnlinking}
-                    onConfirm={() => unlinkItem(item)}
-                  />
-                )}
-                {item.canDelete && (
-                  <RecordRowConfirmAction
-                    label="Delete"
-                    icon={<Trash className="size-4" aria-hidden />}
-                    title="Delete item"
-                    description={`Are you sure you want to delete this ${targetProfile.singularName.toLowerCase()}? This action cannot be undone.`}
-                    disabled={isDeleting}
-                    onConfirm={() => deleteItem(item)}
-                  />
-                )}
+                {renderItemActions(item)}
               </>
             )}
           />
         )}
+        {!toManyTable &&
+          loadedPages.isSuccess &&
+          !loadedPages.data.pages[0]?.isEmpty &&
+          targetProfile && (
+            <RelationItemStack
+              items={loadedPages.data.pages.flatMap((page) => page.items)}
+              hasNextPage={loadedPages.hasNextPage}
+              isFetchingNextPage={loadedPages.isFetchingNextPage}
+              fetchNextPage={() => void loadedPages.fetchNextPage()}
+              onItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+              renderItemActions={renderItemActions}
+            />
+          )}
       </RelationAccordion>
       {canUnlinkAll && (
         <AlertDialog open={confirmUnlinkAll} onOpenChange={setConfirmUnlinkAll}>
