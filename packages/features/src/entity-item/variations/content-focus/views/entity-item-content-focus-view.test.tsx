@@ -145,8 +145,8 @@ describe("EntityItemContentFocusView", () => {
       <EntityItemContentFocusView profileEntity={profile} entityItem={item} />,
     );
 
-    // EntityItemView's own item-reference header (`data-slot="item-reference"`), rendered by its
-    // "toolbar={false}" body.
+    // EntityItemView's own item-reference header (`data-slot="item-reference"`) — it draws no
+    // toolbar itself, so this always renders.
     expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });

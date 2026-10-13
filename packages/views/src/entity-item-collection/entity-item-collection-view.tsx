@@ -1,5 +1,7 @@
-import { EntityItemCollectionSearchView } from "@contentgrid/features/entity-item-collection";
-import type { EntityItemCollectionSearchViewProps } from "@contentgrid/features/entity-item-collection";
+import {
+  EntityItemCollectionView as EntityItemCollectionFeatureView,
+  type EntityItemCollectionViewProps as EntityItemCollectionFeatureViewProps,
+} from "@contentgrid/features/entity-item-collection";
 import { useViewTarget } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
@@ -11,6 +13,7 @@ import {
 } from "@contentgrid/ui";
 import { ViewTargetGate } from "../gate/view-target-gate";
 import { useNavigation } from "../navigation";
+import { HomeBreadcrumbItem } from "../toolbar/home-breadcrumb-item";
 import { ViewPage } from "../toolbar/view-page";
 import type { ViewProps } from "../types";
 
@@ -18,7 +21,7 @@ export interface EntityItemCollectionViewProps
   extends
     ViewProps,
     Pick<
-      EntityItemCollectionSearchViewProps,
+      EntityItemCollectionFeatureViewProps,
       "pageUrl" | "onPageChange" | "filters" | "onFiltersChange" | "currentSort" | "onSortChange"
     > {
   /** Turns off the view's own toolbar (breadcrumbs and Create action); the host draws its own. */
@@ -29,6 +32,8 @@ export interface EntityItemCollectionViewProps
  * One entity's collection: a Home / entity-name breadcrumb, a "Create" action and the searchable,
  * filterable table. Takes a `ViewTarget` (a name without an item id, or a collection link) and
  * resolves it through `useViewTarget`; every click that opens something calls `useNavigation()`.
+ * The Create action is gated on `profileEntity.createTemplate`: absent means create is not
+ * permitted, so the action is not rendered.
  *
  * Until the collection view owns its state (PR 6), the host passes today's filter, sort and page
  * props and receives their change callbacks.
@@ -49,15 +54,7 @@ export function EntityItemCollectionView({
           breadcrumbs={
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem>
-                  <button
-                    type="button"
-                    onClick={() => navigation.openHome()}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  >
-                    Home
-                  </button>
-                </BreadcrumbItem>
+                <HomeBreadcrumbItem />
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   <BreadcrumbPage>{profileEntity.pluralName}</BreadcrumbPage>
@@ -66,17 +63,19 @@ export function EntityItemCollectionView({
             </Breadcrumb>
           }
           actions={
-            <div>
-              <Button
-                variant="default"
-                onClick={() => navigation.openCreateItem(profileEntity.name)}
-              >
-                Create {profileEntity.singularName}
-              </Button>
-            </div>
+            profileEntity.createTemplate && (
+              <div>
+                <Button
+                  variant="default"
+                  onClick={() => navigation.openCreateItem(profileEntity.name)}
+                >
+                  Create {profileEntity.singularName}
+                </Button>
+              </div>
+            )
           }
         >
-          <EntityItemCollectionSearchView
+          <EntityItemCollectionFeatureView
             {...searchProps}
             profile={profileEntity}
             onEntityItemClick={(item) => navigation.openItem(profileEntity.name, item.id)}

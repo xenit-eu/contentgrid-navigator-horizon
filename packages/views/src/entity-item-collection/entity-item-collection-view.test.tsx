@@ -12,7 +12,7 @@ import { EntityItemCollectionView } from "./entity-item-collection-view";
 // The collection feature has its own tests; here it is a stub that exposes what the view passes
 // it and fires the callbacks the real one does.
 vi.mock("@contentgrid/features/entity-item-collection", () => ({
-  EntityItemCollectionSearchView: (props: {
+  EntityItemCollectionView: (props: {
     profile: { name: string };
     filters?: Record<string, string>;
     pageUrl?: string;
@@ -29,8 +29,8 @@ vi.mock("@contentgrid/features/entity-item-collection", () => ({
   ),
 }));
 
-function setup() {
-  const apiFetch = createFixtureFetch().fetch as unknown as TypedFetch;
+function setup(options?: { readonly withCreateTemplate?: boolean }) {
+  const apiFetch = createFixtureFetch(options).fetch as unknown as TypedFetch;
   const recording = createRecordingNavigation();
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
@@ -52,7 +52,7 @@ const target = { kind: "name", entityName: "customer" } as const;
 
 describe("EntityItemCollectionView", () => {
   it("draws a Home / entity-name breadcrumb and a Create action, and places the feature", async () => {
-    const { Wrapper } = setup();
+    const { Wrapper } = setup({ withCreateTemplate: true });
     render(
       <EntityItemCollectionView
         target={target}
@@ -74,7 +74,7 @@ describe("EntityItemCollectionView", () => {
   });
 
   it("opens home, the create form and a clicked item through the navigation object", async () => {
-    const { Wrapper, recording } = setup();
+    const { Wrapper, recording } = setup({ withCreateTemplate: true });
     render(<EntityItemCollectionView target={target} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByRole("button", { name: "Home" }));
@@ -89,11 +89,22 @@ describe("EntityItemCollectionView", () => {
   });
 
   it("draws no breadcrumb or Create action when the toolbar is hidden", async () => {
-    const { Wrapper } = setup();
+    const { Wrapper } = setup({ withCreateTemplate: true });
     render(<EntityItemCollectionView target={target} hideToolbar />, { wrapper: Wrapper });
 
     expect(await screen.findByTestId("profile")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Home" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
+  });
+
+  it("hides the Create action when the entity's profile has no create template", async () => {
+    // Default fixture: no create-form template, i.e. create is not permitted for this entity.
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView target={target} />, { wrapper: Wrapper });
+
+    expect(await screen.findByTestId("profile")).toBeInTheDocument();
+    // The rest of the toolbar still renders — only the Create action is gated.
+    expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
   });
 

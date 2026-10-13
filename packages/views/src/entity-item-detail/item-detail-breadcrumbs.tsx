@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@contentgrid/ui";
 import { useNavigation } from "../navigation";
+import { HomeBreadcrumbItem } from "../toolbar/home-breadcrumb-item";
 
 /** Home, the entity's collection, then the item id. Every crumb click goes through navigation. */
 export function ItemDetailBreadcrumbs({
@@ -18,13 +19,7 @@ export function ItemDetailBreadcrumbs({
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <button type="button" onClick={() => navigation.openHome()}>
-              Home
-            </button>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
+        <HomeBreadcrumbItem />
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
