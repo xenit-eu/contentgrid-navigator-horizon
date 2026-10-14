@@ -14,8 +14,6 @@ export type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
 } from "./relations/relation-handlers";
-export { ensureEntityItemDetailLoaderData } from "./entity-item-loader";
-export type { EntityItemDetailLoaderContext } from "./entity-item-loader";
 export { EntityItemAttributeSummary } from "./variations/entity-item-attribute-summary";
 export {
   EntityItemReference,
