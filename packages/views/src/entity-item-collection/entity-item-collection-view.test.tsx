@@ -1,12 +1,9 @@
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { NavigatorDataProvider } from "@contentgrid/navigator-data";
-import type { EntityItem, TypedFetch } from "@contentgrid/navigator-data";
-import { RecordingNavigationProvider, createRecordingNavigation } from "../navigation/testing";
-import { PROFILE_URL, createFixtureFetch } from "../test-fixtures/item-detail";
+import type { EntityItem } from "@contentgrid/navigator-data";
+import { createFixtureFetch } from "../test-fixtures/item-detail";
+import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
 // The collection feature has its own tests; here it is a stub that exposes what the view passes
@@ -30,32 +27,17 @@ vi.mock("@contentgrid/features/entity-item-collection", () => ({
 }));
 
 function setup(options?: { readonly withCreateTemplate?: boolean }) {
-  const apiFetch = createFixtureFetch(options).fetch as unknown as TypedFetch;
-  const recording = createRecordingNavigation();
-  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
-    return (
-      <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <NavigatorDataProvider apiFetch={apiFetch} contentFetch={apiFetch} profileUrl={PROFILE_URL}>
-          <RecordingNavigationProvider recording={recording}>
-            {children}
-          </RecordingNavigationProvider>
-        </NavigatorDataProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { Wrapper, recording };
+  return createItemDetailTestHarness({ fetchFn: createFixtureFetch(options).fetch });
 }
 
-const target = { kind: "name", entityName: "customer" } as const;
+const entityName = "customer";
 
 describe("EntityItemCollectionView", () => {
   it("draws a Home / entity-name breadcrumb and a Create action, and places the feature", async () => {
     const { Wrapper } = setup({ withCreateTemplate: true });
     render(
       <EntityItemCollectionView
-        target={target}
+        entityName={entityName}
         filters={{ name: "Acme" }}
         pageUrl="https://api.example.com/customers?_cursor=2"
       />,
@@ -63,7 +45,9 @@ describe("EntityItemCollectionView", () => {
     );
 
     expect(await screen.findByTestId("profile")).toHaveTextContent("customer");
-    expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
+    // A deterministic `hrefFor` is always given by the recording navigation, so the Home crumb
+    // renders as a real link, not a button (see `NavigationLink`).
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(
       screen.getByText("Customers", { selector: "[aria-current='page']" }),
     ).toBeInTheDocument();
@@ -75,9 +59,9 @@ describe("EntityItemCollectionView", () => {
 
   it("opens home, the create form and a clicked item through the navigation object", async () => {
     const { Wrapper, recording } = setup({ withCreateTemplate: true });
-    render(<EntityItemCollectionView target={target} />, { wrapper: Wrapper });
+    render(<EntityItemCollectionView entityName={entityName} />, { wrapper: Wrapper });
 
-    await userEvent.click(await screen.findByRole("button", { name: "Home" }));
+    await userEvent.click(await screen.findByRole("link", { name: "Home" }));
     await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
     await userEvent.click(screen.getByText("row"));
 
@@ -90,29 +74,29 @@ describe("EntityItemCollectionView", () => {
 
   it("draws no breadcrumb or Create action when the toolbar is hidden", async () => {
     const { Wrapper } = setup({ withCreateTemplate: true });
-    render(<EntityItemCollectionView target={target} hideToolbar />, { wrapper: Wrapper });
+    render(<EntityItemCollectionView entityName={entityName} toolbar={false} />, {
+      wrapper: Wrapper,
+    });
 
     expect(await screen.findByTestId("profile")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Home" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
   });
 
   it("hides the Create action when the entity's profile has no create template", async () => {
     // Default fixture: no create-form template, i.e. create is not permitted for this entity.
     const { Wrapper } = setup();
-    render(<EntityItemCollectionView target={target} />, { wrapper: Wrapper });
+    render(<EntityItemCollectionView entityName={entityName} />, { wrapper: Wrapper });
 
     expect(await screen.findByTestId("profile")).toBeInTheDocument();
     // The rest of the toolbar still renders — only the Create action is gated.
-    expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
   });
 
   it("shows the shared not-found state for an unknown entity", async () => {
     const { Wrapper } = setup();
-    render(<EntityItemCollectionView target={{ kind: "name", entityName: "nope" }} />, {
-      wrapper: Wrapper,
-    });
+    render(<EntityItemCollectionView entityName="nope" />, { wrapper: Wrapper });
     expect(await screen.findByText(/No entity profile named "nope"/)).toBeInTheDocument();
   });
 });

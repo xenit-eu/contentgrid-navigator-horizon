@@ -70,8 +70,8 @@ vi.mock("@contentgrid/features/dashboard", () => ({
 }));
 
 vi.mock("@contentgrid/views/entity-item-collection", () => ({
-  EntityItemCollectionView: ({ target }: { target: { entityName: string } }) => (
-    <div data-testid="entity-detail" data-entity={target.entityName} />
+  EntityItemCollectionView: ({ entityName }: { entityName: string }) => (
+    <div data-testid="entity-detail" data-entity={entityName} />
   ),
 }));
 

@@ -164,7 +164,7 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
 
   return (
     <EntityItemCollectionView
-      target={{ kind: "name", entityName: profile.name }}
+      entityName={profile.name}
       pageUrl={pageUrl}
       onPageChange={handlePageChange}
       filters={filters}
