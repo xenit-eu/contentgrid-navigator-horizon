@@ -1,10 +1,9 @@
 /**
- * Tests for the item detail route's wiring of `EntityItemDetailView`: it builds a `name` target
- * from the URL params, preloads that target in its loader, and provides the app's navigation
- * object (`../../../app-navigation.tsx`) that the view's clicks go through. Same mock stack as
- * `../../__root.test.tsx` and `./index.test.tsx` — the view is mocked to a stub that exposes its
- * props and the navigation object, so these tests isolate the route's own wiring; the view's own
- * behaviour is tested in `packages/views`.
+ * Tests for the item detail route's wiring of `EntityItemDetailView`: it passes the route's
+ * entity name and item id straight through, and preloads the same pair in its loader. Same mock
+ * stack as `../../__root.test.tsx` and `./index.test.tsx` — the view is mocked to a stub that
+ * exposes its props, so these tests isolate the route's own wiring; the view's own behaviour
+ * (including navigation) is tested in `packages/views`.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -13,13 +12,11 @@ import {
   createMemoryHistory,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppAuthResult } from "@contentgrid/navigator-data";
 import { useAppAuth } from "@contentgrid/navigator-data";
 import { makeTestAppConfig } from "@contentgrid/navigator-data/test-fixtures/auth/app-config";
-import { useNavigation } from "@contentgrid/views";
 import { routeTree } from "../../../routeTree.gen";
 
 // jsdom does not implement window.matchMedia; SideBarLayout renders the real
@@ -77,39 +74,17 @@ vi.mock("@contentgrid/features/dashboard", () => ({
   EntityCountOverview: () => <div data-testid="entity-overview" />,
 }));
 
-const preload = vi.hoisted(() => vi.fn(async () => {}));
-const openCreatePage = vi.hoisted(() => vi.fn());
-
-vi.mock("@contentgrid/features/router-shell", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/features/router-shell")>();
-  return { ...actual, useOpenInNewTab: () => ({ openCreatePage, openItemPage: vi.fn() }) };
-});
+const preloadEntityItemDetail = vi.hoisted(() => vi.fn(async () => {}));
 
 vi.mock("@contentgrid/views/entity-item-detail", () => ({
-  preload,
-  EntityItemDetailView: (props: {
-    target: unknown;
-    onRelationItemCreateNew?: (entityName: string) => void;
-  }) => <ItemDetailViewStub {...props} />,
-}));
-
-function ItemDetailViewStub({
-  target,
-  onRelationItemCreateNew,
-}: Readonly<{ target: unknown; onRelationItemCreateNew?: (entityName: string) => void }>) {
-  const navigation = useNavigation();
-  return (
+  preloadEntityItemDetail,
+  EntityItemDetailView: (props: { entityName: string; itemId: string }) => (
     <div>
-      <div data-testid="target">{JSON.stringify(target)}</div>
-      <button onClick={() => navigation.openItem("company", "c-1")}>open-item</button>
-      <button onClick={() => navigation.openEntityItemCollection("company")}>
-        open-collection
-      </button>
-      <button onClick={() => navigation.openHome()}>open-home</button>
-      <button onClick={() => onRelationItemCreateNew?.("company")}>create-new</button>
+      <div data-testid="entity-name">{props.entityName}</div>
+      <div data-testid="item-id">{props.itemId}</div>
     </div>
-  );
-}
+  ),
+}));
 
 function makeAuthResult(overrides: Record<string, unknown> = {}): AppAuthResult {
   return {
@@ -150,53 +125,21 @@ function renderItemRoute(initialPath = "/invoice/item-1") {
 }
 
 describe("EntityItemDetailRoute — view wiring", () => {
-  it("mounts the view with a name target built from the route params", async () => {
+  it("mounts the view with the route's entity name and item id", async () => {
     renderItemRoute("/invoice/item-1");
 
-    expect(JSON.parse((await screen.findByTestId("target")).textContent ?? "")).toEqual({
-      kind: "name",
-      entityName: "invoice",
-      itemId: "item-1",
-    });
+    expect(await screen.findByTestId("entity-name")).toHaveTextContent("invoice");
+    expect(screen.getByTestId("item-id")).toHaveTextContent("item-1");
   });
 
-  it("preloads the same target in its loader, with the router context and no state", async () => {
+  it("preloads the same pair in its loader, with the router context", async () => {
     renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("target");
+    await screen.findByTestId("entity-name");
 
-    expect(preload).toHaveBeenCalledWith(
+    expect(preloadEntityItemDetail).toHaveBeenCalledWith(
       expect.objectContaining({ queryClient: expect.anything() }),
-      { kind: "name", entityName: "invoice", itemId: "item-1" },
-      undefined,
+      "invoice",
+      "item-1",
     );
-  });
-
-  it("provides a navigation object whose openItem changes the route", async () => {
-    const user = userEvent.setup();
-    const { router } = renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("target");
-
-    await user.click(screen.getByText("open-item"));
-
-    await waitFor(() => expect(router.state.location.pathname).toBe("/company/c-1"));
-  });
-
-  it("provides a navigation object whose openEntityItemCollection and openHome change the route", async () => {
-    const user = userEvent.setup();
-    const { router } = renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("target");
-
-    await user.click(screen.getByText("open-collection"));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/company"));
-  });
-
-  it("hands the view the app's open-in-new-tab create callback", async () => {
-    const user = userEvent.setup();
-    renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("target");
-
-    await user.click(screen.getByText("create-new"));
-
-    expect(openCreatePage).toHaveBeenCalledWith("company");
   });
 });

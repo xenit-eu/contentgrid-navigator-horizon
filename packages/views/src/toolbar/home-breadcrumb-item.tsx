@@ -1,15 +1,18 @@
 import { BreadcrumbItem, BreadcrumbLink } from "@contentgrid/ui";
-import { useNavigation } from "../navigation";
+import { NavigationLink, useNavigation } from "../navigation";
 
-/** The Home crumb every breadcrumb trail starts with; its click goes through navigation. */
+/**
+ * The Home crumb every breadcrumb trail starts with; renders a real `<a href>` when the host's
+ * navigation gives one (`hrefFor`), otherwise a plain click still goes through navigation.
+ */
 export function HomeBreadcrumbItem() {
   const navigation = useNavigation();
   return (
     <BreadcrumbItem>
       <BreadcrumbLink asChild>
-        <button type="button" onClick={() => navigation.openHome()}>
+        <NavigationLink href={navigation.hrefFor?.home()} onNavigate={() => navigation.openHome()}>
           Home
-        </button>
+        </NavigationLink>
       </BreadcrumbLink>
     </BreadcrumbItem>
   );

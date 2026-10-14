@@ -1,18 +1,13 @@
 /**
  * The view's wiring of the item feature's callbacks. `EntityItemContentFocusView` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
- * view does with them: relation clicks go to the navigation object, relation problems open the
- * dialog, and "create" is handed to the host.
+ * view does with them: relation clicks and "create" go to the navigation object, relation
+ * problems open the dialog.
  */
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { NavigatorDataProvider } from "@contentgrid/navigator-data";
-import type { TypedFetch } from "@contentgrid/navigator-data";
-import { RecordingNavigationProvider, createRecordingNavigation } from "../navigation/testing";
-import { PROFILE_URL, createFixtureFetch } from "../test-fixtures/item-detail";
+import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
 vi.mock("@contentgrid/features/entity-item", () => ({
@@ -43,50 +38,28 @@ vi.mock("@contentgrid/features/entity-item", () => ({
   ),
 }));
 
-function setup() {
-  const apiFetch = createFixtureFetch().fetch as unknown as TypedFetch;
-  const recording = createRecordingNavigation();
-  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
-    return (
-      <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <NavigatorDataProvider apiFetch={apiFetch} contentFetch={apiFetch} profileUrl={PROFILE_URL}>
-          <RecordingNavigationProvider recording={recording}>
-            {children}
-          </RecordingNavigationProvider>
-        </NavigatorDataProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { Wrapper, recording };
-}
+const setup = createItemDetailTestHarness;
 
-const target = { kind: "name", entityName: "customer", itemId: "cust-001" } as const;
+const entityName = "customer";
+const itemId = "cust-001";
 
 describe("EntityItemDetailView — feature callbacks", () => {
   it("opens a clicked relation item through the navigation object", async () => {
     const { Wrapper, recording } = setup();
-    render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText("relation-click"));
 
     expect(recording.calls).toEqual([{ method: "openItem", args: ["company", "c-1"] }]);
   });
 
-  it("hands relation creation to the host", async () => {
-    const { Wrapper } = setup();
-    const onRelationItemCreateNew = vi.fn();
-    render(
-      <EntityItemDetailView target={target} onRelationItemCreateNew={onRelationItemCreateNew} />,
-      {
-        wrapper: Wrapper,
-      },
-    );
+  it("hands relation creation to the navigation object", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText("relation-create"));
 
-    expect(onRelationItemCreateNew).toHaveBeenCalledWith("company");
+    expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["company"] }]);
   });
 
   it.each([
@@ -95,7 +68,7 @@ describe("EntityItemDetailView — feature callbacks", () => {
     ["required", "Required relation"],
   ])("opens the problem dialog for %s", async (button, title) => {
     const { Wrapper } = setup();
-    render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText(button));
     expect(await screen.findByText(title)).toBeInTheDocument();

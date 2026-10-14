@@ -6,16 +6,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@contentgrid/ui";
-import { useNavigation } from "../navigation";
+import { NavigationLink, useNavigation } from "../navigation";
 import { HomeBreadcrumbItem } from "../toolbar/home-breadcrumb-item";
 
-/** Home, the entity's collection, then the item id. Every crumb click goes through navigation. */
+/**
+ * Home, the entity's collection, then the item id. Every crumb is a real link when the host's
+ * navigation gives one (`hrefFor`); either way, a plain click goes through navigation, never the
+ * browser's own address bar handling.
+ */
 export function ItemDetailBreadcrumbs({
   entityName,
   pluralName,
   itemId,
 }: Readonly<{ entityName: string; pluralName: string; itemId: string }>) {
   const navigation = useNavigation();
+  const { hrefFor } = navigation;
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -23,9 +28,12 @@ export function ItemDetailBreadcrumbs({
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <button type="button" onClick={() => navigation.openEntityItemCollection(entityName)}>
+            <NavigationLink
+              href={hrefFor?.entityItemCollection(entityName)}
+              onNavigate={() => navigation.openEntityItemCollection(entityName)}
+            >
               {pluralName}
-            </button>
+            </NavigationLink>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />

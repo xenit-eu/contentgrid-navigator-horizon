@@ -26,6 +26,7 @@ describe("useNavigation", () => {
 
   it("returns a no-op navigation without a provider outside development", () => {
     vi.stubEnv("DEV", false);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = renderHook(() => useNavigation());
     expect(() => {
       result.current.openHome();
@@ -33,6 +34,21 @@ describe("useNavigation", () => {
       result.current.openItem("invoice", "1");
       result.current.openCreateItem("invoice");
     }).not.toThrow();
+    error.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("logs a console error once when called repeatedly outside a provider in production", async () => {
+    vi.stubEnv("DEV", false);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Fresh module instance so the once-per-module flag starts unset, regardless of test order.
+    vi.resetModules();
+    const { useNavigation: freshUseNavigation } = await import("./navigation-context");
+    renderHook(() => freshUseNavigation());
+    renderHook(() => freshUseNavigation());
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0][0]).toMatch(/useNavigation.*NavigationProvider/);
+    error.mockRestore();
     vi.unstubAllEnvs();
   });
 
@@ -62,10 +78,12 @@ describe("recording navigation", () => {
     render(Decorated(NavButtons, {} as never));
     await userEvent.click(screen.getByText("list"));
     await userEvent.click(screen.getByText("item"));
+    await userEvent.click(screen.getByText("create"));
     await userEvent.click(screen.getByText("home"));
     expect(recording.calls).toEqual([
       { method: "openEntityItemCollection", args: ["invoice"] },
       { method: "openItem", args: ["invoice", "42"] },
+      { method: "openCreateItem", args: ["invoice"] },
       { method: "openHome", args: [] },
     ]);
   });
@@ -75,6 +93,14 @@ describe("recording navigation", () => {
     render(Decorated(NavButtons, {} as never));
     // Would throw without a provider in development.
     await userEvent.click(screen.getByText("home"));
+  });
+
+  it("gives deterministic hrefs, independent of recorded calls", () => {
+    const recording = createRecordingNavigation();
+    expect(recording.navigation.hrefFor?.home()).toBe("/");
+    expect(recording.navigation.hrefFor?.entityItemCollection("invoice")).toBe("/invoice");
+    expect(recording.navigation.hrefFor?.item("invoice", "42")).toBe("/invoice/42");
+    expect(recording.calls).toEqual([]);
   });
 });
 
@@ -99,6 +125,74 @@ describe("ChildNavigationProvider", () => {
       { method: "openHome", args: [] },
       { method: "openCreateItem", args: ["invoice"] },
     ]);
+  });
+
+  it("falls back to the parent's hrefFor when the child does not override it", () => {
+    const host = createRecordingNavigation();
+    let hrefFor: Navigation["hrefFor"];
+    function ReadHrefFor() {
+      hrefFor = useNavigation().hrefFor;
+      return null;
+    }
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ openItem: vi.fn() }}>
+          <ReadHrefFor />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    expect(hrefFor?.item("invoice", "42")).toBe("/invoice/42");
+  });
+
+  it("uses the child's own hrefFor when it overrides one", () => {
+    const host = createRecordingNavigation();
+    const childHrefFor: Navigation["hrefFor"] = {
+      home: () => "#home",
+      entityItemCollection: (entityName) => `#${entityName}`,
+      item: (entityName, id) => `#${entityName}/${id}`,
+    };
+    let hrefFor: Navigation["hrefFor"];
+    function ReadHrefFor() {
+      hrefFor = useNavigation().hrefFor;
+      return null;
+    }
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ hrefFor: childHrefFor }}>
+          <ReadHrefFor />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    expect(hrefFor?.home()).toBe("#home");
+  });
+
+  it("falls back to the parent for openItem when it is not overridden", async () => {
+    const host = createRecordingNavigation();
+    const openHome = vi.fn();
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ openHome }}>
+          <NavButtons />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    await userEvent.click(screen.getByText("item"));
+    expect(host.calls).toEqual([{ method: "openItem", args: ["invoice", "42"] }]);
+  });
+
+  it("routes overridden openEntityItemCollection calls away from the parent", async () => {
+    const host = createRecordingNavigation();
+    const openEntityItemCollection = vi.fn();
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ openEntityItemCollection }}>
+          <NavButtons />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    await userEvent.click(screen.getByText("list"));
+    expect(openEntityItemCollection).toHaveBeenCalledWith("invoice");
+    expect(host.calls).toEqual([]);
   });
 
   it("gives siblings independent navigation objects", async () => {

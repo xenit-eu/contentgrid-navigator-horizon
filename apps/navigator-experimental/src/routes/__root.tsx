@@ -2,7 +2,7 @@ import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { AuthShell } from "@contentgrid/features/auth-shell";
 import type { AppRouterContext } from "@contentgrid/features/router-shell";
 import { ThemeProvider, Toaster } from "@contentgrid/ui";
-import { AppNavigationProvider } from "../app-navigation";
+import { RouterNavigationProvider } from "@contentgrid/views/shells";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
   component: RootComponent,
@@ -12,9 +12,9 @@ function RootComponent() {
   return (
     <ThemeProvider>
       <AuthShell>
-        <AppNavigationProvider>
+        <RouterNavigationProvider>
           <Outlet />
-        </AppNavigationProvider>
+        </RouterNavigationProvider>
       </AuthShell>
       <Toaster />
     </ThemeProvider>
