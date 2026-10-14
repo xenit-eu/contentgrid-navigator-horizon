@@ -42,9 +42,17 @@ const noopNavigation: Navigation = {
 export function NavigationProvider({
   navigation,
   children,
-}: Readonly<{ navigation: Navigation; children: ReactNode }>) {
+}: Readonly<{
+  /** Must be referentially stable (e.g. via `useMemo`) — consumers of this context memoise on it. */
+  navigation: Navigation;
+  children: ReactNode;
+}>) {
   return <NavigationContext.Provider value={navigation}>{children}</NavigationContext.Provider>;
 }
+
+// Logged once per module lifetime so a host that never wires a <NavigationProvider> doesn't spam
+// the console on every call.
+let hasLoggedMissingProvider = false;
 
 /** Reads the host's navigation object. Throws in development when there is no provider. */
 export function useNavigation(): Navigation {
@@ -52,6 +60,13 @@ export function useNavigation(): Navigation {
   if (navigation) return navigation;
   if (import.meta.env.DEV) {
     throw new Error("useNavigation must be used inside a <NavigationProvider>");
+  }
+  if (!hasLoggedMissingProvider) {
+    hasLoggedMissingProvider = true;
+    // eslint-disable-next-line no-console -- intentional, once per module; see the comment above.
+    console.error(
+      "useNavigation was called outside a <NavigationProvider>; navigation is a no-op.",
+    );
   }
   return noopNavigation;
 }
@@ -63,7 +78,11 @@ export function useNavigation(): Navigation {
 export function ChildNavigationProvider({
   overrides,
   children,
-}: Readonly<{ overrides: Partial<Navigation>; children: ReactNode }>) {
+}: Readonly<{
+  /** Must be referentially stable (e.g. via `useMemo`) — this provider memoises on it. */
+  overrides: Partial<Navigation>;
+  children: ReactNode;
+}>) {
   const parent = useNavigation();
   const { openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor } = overrides;
   const navigation = useMemo<Navigation>(
