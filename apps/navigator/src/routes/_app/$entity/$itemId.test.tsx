@@ -1,13 +1,10 @@
 /**
- * Tests for EntityItemDetailRoute's wiring of `EntityItemContentFocusView` (promoted from
- * `apps/navigator-experimental` — ACC-2902 content-focus promotion): breadcrumb links, the
- * relation-item navigation callback, and the relation-problem dialog. Same mock stack/technique
- * as `../__root.test.tsx` and `./index.test.tsx` — `EntityItemContentFocusView` is mocked to a
- * data-capturing stub so these tests isolate the route's own wiring (breadcrumb `Link`
- * composition, navigation, dialog state) without re-exercising the view's own content-preview
- * rendering (covered by the feature's own tests).
+ * Tests for the item detail route's wiring of `EntityItemDetailView`: it passes the route's
+ * entity name and item id straight through, and preloads the same pair in its loader. Same mock
+ * stack as `../../__root.test.tsx` and `./index.test.tsx` — the view is mocked to a stub that
+ * exposes its props, so these tests isolate the route's own wiring; the view's own behaviour
+ * (including navigation) is tested in `packages/views`.
  */
-import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   type AnyRouter,
@@ -15,8 +12,7 @@ import {
   createMemoryHistory,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppAuthResult } from "@contentgrid/navigator-data";
 import { useAppAuth } from "@contentgrid/navigator-data";
@@ -78,65 +74,17 @@ vi.mock("@contentgrid/features/dashboard", () => ({
   EntityCountOverview: () => <div data-testid="entity-overview" />,
 }));
 
-// Captures whatever the route passes down, and exposes buttons that fire the same callbacks a
-// real content-focus view would (relation click, the three mutation-problem callbacks) plus the
-// breadcrumb render props, so the route's own composition (real router `Link`s) is exercised.
-vi.mock("@contentgrid/features/entity-item", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/features/entity-item")>();
-  return {
-    ...actual,
-    EntityItemContentFocusView: (props: {
-      entityName: string;
-      itemId: string;
-      renderHomeLink?: (label: ReactNode) => ReactNode;
-      renderCollectionLink?: (entityName: string, label: ReactNode) => ReactNode;
-      onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
-      onMissingRelationTargetClick?: (url: string, field?: string) => void;
-      onBlindRelationOverwriteClick?: (info: {
-        existingItem?: string;
-        existingRelation?: string;
-        newItem?: string;
-        newRelation?: string;
-      }) => void;
-      onRequiredRelationClick?: (affectedRelation: string) => void;
-    }) => (
-      <div>
-        <div data-testid="entity-name">{props.entityName}</div>
-        <div data-testid="item-id">{props.itemId}</div>
-        {/* Scoped container: the real SideBarLayout (unmocked) also renders a "Home" link (its
-            logo/nav home button) with the same accessible name — queries need to distinguish the
-            breadcrumb's own links from the sidebar's. */}
-        <div data-testid="breadcrumbs">
-          {props.renderHomeLink?.("Home")}
-          {props.renderCollectionLink?.("company", "Companies")}
-        </div>
-        <button
-          onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}
-        >
-          go-to-relation
-        </button>
-        <button
-          onClick={() => props.onMissingRelationTargetClick?.("https://api.example.com/x", "owner")}
-        >
-          trigger-missing-relation-target
-        </button>
-        <button
-          onClick={() =>
-            props.onBlindRelationOverwriteClick?.({
-              existingItem: "https://api.example.com/existing",
-              newItem: "https://api.example.com/new",
-            })
-          }
-        >
-          trigger-blind-relation-overwrite
-        </button>
-        <button onClick={() => props.onRequiredRelationClick?.("owner")}>
-          trigger-required-relation
-        </button>
-      </div>
-    ),
-  };
-});
+const preloadEntityItemDetail = vi.hoisted(() => vi.fn(async () => {}));
+
+vi.mock("@contentgrid/views/entity-item-detail", () => ({
+  preloadEntityItemDetail,
+  EntityItemDetailView: (props: { entityName: string; itemId: string }) => (
+    <div>
+      <div data-testid="entity-name">{props.entityName}</div>
+      <div data-testid="item-id">{props.itemId}</div>
+    </div>
+  ),
+}));
 
 function makeAuthResult(overrides: Record<string, unknown> = {}): AppAuthResult {
   return {
@@ -176,63 +124,22 @@ function renderItemRoute(initialPath = "/invoice/item-1") {
   };
 }
 
-describe("EntityItemDetailRoute — content-focus wiring", () => {
-  it("mounts EntityItemContentFocusView with the route's entity name and item id", async () => {
+describe("EntityItemDetailRoute — view wiring", () => {
+  it("mounts the view with the route's entity name and item id", async () => {
     renderItemRoute("/invoice/item-1");
 
     expect(await screen.findByTestId("entity-name")).toHaveTextContent("invoice");
     expect(screen.getByTestId("item-id")).toHaveTextContent("item-1");
   });
 
-  it("renders the home and collection breadcrumbs as real router links", async () => {
+  it("preloads the same pair in its loader, with the router context", async () => {
     renderItemRoute("/invoice/item-1");
+    await screen.findByTestId("entity-name");
 
-    const breadcrumbs = within(await screen.findByTestId("breadcrumbs"));
-    expect(breadcrumbs.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
-    expect(breadcrumbs.getByRole("link", { name: "Companies" })).toHaveAttribute(
-      "href",
-      "/company",
+    expect(preloadEntityItemDetail).toHaveBeenCalledWith(
+      expect.objectContaining({ queryClient: expect.anything() }),
+      "invoice",
+      "item-1",
     );
-  });
-
-  it("navigates to the related item on onRelationItemClick", async () => {
-    const user = userEvent.setup();
-    const { router } = renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("entity-name");
-
-    await user.click(screen.getByText("go-to-relation"));
-
-    await waitFor(() => expect(router.state.location.pathname).toBe("/company/c-1"));
-  });
-
-  it("shows the missing-relation-target dialog", async () => {
-    const user = userEvent.setup();
-    renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("entity-name");
-
-    await user.click(screen.getByText("trigger-missing-relation-target"));
-
-    expect(await screen.findByText("Linked item not found")).toBeInTheDocument();
-    expect(screen.getByText(/https:\/\/api\.example\.com\/x/)).toBeInTheDocument();
-  });
-
-  it("shows the blind-relation-overwrite dialog", async () => {
-    const user = userEvent.setup();
-    renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("entity-name");
-
-    await user.click(screen.getByText("trigger-blind-relation-overwrite"));
-
-    expect(await screen.findByText("Relation already linked")).toBeInTheDocument();
-  });
-
-  it("shows the required-relation dialog", async () => {
-    const user = userEvent.setup();
-    renderItemRoute("/invoice/item-1");
-    await screen.findByTestId("entity-name");
-
-    await user.click(screen.getByText("trigger-required-relation"));
-
-    expect(await screen.findByText("Required relation")).toBeInTheDocument();
   });
 });

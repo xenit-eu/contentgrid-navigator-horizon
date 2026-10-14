@@ -35,8 +35,24 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - `NavigationProvider` is supplied by the host; `useNavigation()` throws in development without one.
 - `ChildNavigationProvider` gives a child view its own navigation object; calls it does not override go to the parent's.
+- `@contentgrid/views/shells` ships `RouterNavigationProvider`: the app's real `Navigation`, backed by
+  `@tanstack/react-router`. It is the one place outside `apps/*` allowed to import the router (root
+  `CLAUDE.md`). `openCreateItem` opens the entity's create form in a new tab via
+  `@contentgrid/features/router-shell`'s `useOpenInNewTab`.
+- `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
+  so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
+  otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.
 - `@contentgrid/views/testing` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
+
+## Views
+
+- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView({ entityName, itemId, toolbar? })` and its
+  `preloadEntityItemDetail`. The view calls `useProfileEntity` directly for the breadcrumb labels and draws its
+  own loading/not-found state for that; the item itself is fetched (and its own loading/error state drawn,
+  inside the same breadcrumb toolbar) by `EntityItemContentFocusView` from `@contentgrid/features/entity-item`.
+  `preloadEntityItemDetail` fills the same two caches with `ensureProfileEntity`/`ensureEntityItem`. The
+  relation-problem dialog lives in the view; relation "create new" goes through `navigation.openCreateItem`.
 
 ## Testing
 
