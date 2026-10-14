@@ -184,7 +184,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 - **FR-003**: Each view MUST offer a way to start loading its data before it shows, from the same props and state the view will receive, so a route can start the loading early.
 - **FR-004**: A view MUST load the data the page is about (the profile entity and the item or collection) and pass it to its features; features MUST NOT load that main data again.
 - **FR-005**: A feature MAY load additional data that follows from the object it received, only by following links on that object; it MUST NOT build addresses itself.
-- **FR-006**: A view MUST show one consistent loading, error and not-found state for its main data, shared by all views.
+- **FR-006**: A view MUST show its own loading, error and not-found state for its main data, rendered with the shared `LoadingPage`/`ErrorPage` components (errors via `toProblemDisplayModel`) so every view looks and behaves the same.
 
 **View props and state**
 

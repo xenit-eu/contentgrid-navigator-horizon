@@ -7,7 +7,10 @@ Sync Impact Report
   right; correct the spec if it's wrong" — a scope/meaning change, hence MINOR. Its bullets are
   also aligned to the review's decisions: explicit per-view plain-value props (no shared target
   type, no HAL link yet) and each view's own preload, replacing the generic
-  `target`/`preload(ctx, target, state)` wording.
+  `target`/`preload(ctx, target, state)` wording; and, following the same review's rejection of
+  the generic `ViewTargetGate`, the gate bullet now has each view render its own loading/error/
+  not-found state through the shared `LoadingPage`/`ErrorPage` components instead of a shared
+  gate primitive.
 - Amendment (1.6.0 → 1.7.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
   ACC-3216). Principle VIII previously cited a non-existent
   `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
@@ -319,9 +322,10 @@ correct them.
   and state, provide the navigation context, and guarantee — via the router's own `loader`
   calling the view's own preload, not a swallow-and-hope `beforeLoad` — that the view's required
   data is loading before it mounts.
-- A view MUST gate its own loading/error/not-found state through one shared, reusable primitive
-  (e.g. a `useProfileEntityGate`-style hook in `packages/views`, or in `navigator-data` for the
-  data-only parts) rather than each view hand-rolling the same three-way branch.
+- A view handles its own loading/error/not-found state and MUST render it with the shared
+  `LoadingPage` / `ErrorPage` components from `@contentgrid/features/app-info-pages` (errors via
+  `toProblemDisplayModel` from `navigator-data`), so every view looks and behaves the same. No
+  separate gate hook or component layer is required.
 - Navigation MUST go through the navigation context the host provides, and only views read it
   (`useNavigation()`). Features MUST NOT read it: they report user actions through callback
   props that their view wires to the navigation object. Views and features MUST NOT use the
