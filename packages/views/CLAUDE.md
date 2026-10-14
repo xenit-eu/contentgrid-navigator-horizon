@@ -48,11 +48,18 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 ## Views
 
 - `@contentgrid/views/entity-item-detail`: `EntityItemDetailView({ entityName, itemId, toolbar? })` and its
-  `preloadEntityItemDetail`. The view calls `useProfileEntity` directly for the breadcrumb labels and draws its
-  own loading/not-found state for that; the item itself is fetched (and its own loading/error state drawn,
-  inside the same breadcrumb toolbar) by `EntityItemContentFocusView` from `@contentgrid/features/entity-item`.
-  `preloadEntityItemDetail` fills the same two caches with `ensureProfileEntity`/`ensureEntityItem`. The
-  relation-problem dialog lives in the view; relation "create new" goes through `navigation.openCreateItem`.
+  `preloadEntityItemDetail`. The view fetches the profile (`useProfileEntity`) and then the item
+  (`useEntityItem`) itself, drawing its own loading/error state for each in the breadcrumb toolbar it draws
+  via `ViewPage` — the toolbar stays up once the profile resolves, even while the item is still loading or
+  fails. `preloadEntityItemDetail` fills the same two caches with `ensureProfileEntity`/`ensureEntityItem`.
+  `EntityItemContentFocusView` from `@contentgrid/features/entity-item` fills the space it is given with the
+  already-loaded profile/item and draws no chrome. The relation-problem dialog lives in the view; relation
+  "create new" goes through `navigation.openCreateItem`.
+- `@contentgrid/views/entity-item-collection`: `EntityItemCollectionView`, the collection page's toolbar
+  (Home, entity name, Create) around the collection feature. The host still passes filter, sort and page
+  props until the view owns its state.
+- `ViewPage` (`src/toolbar/`) is the page chrome every view uses: toolbar over a padded content area, or a
+  plain padded container when the toolbar is hidden. Features placed inside fill the space they get.
 
 ## Testing
 

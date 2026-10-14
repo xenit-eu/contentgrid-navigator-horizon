@@ -1,9 +1,10 @@
 /**
  * Tests for EntityItemCollectionRoute's filters/pageUrl memo wiring — the piece that sits
  * between the URL and EntityItemCollectionView (itself covered by
- * packages/features/src/entity-item-collection/entity-item-collection-view.test.tsx).
+ * packages/features/src/entity-item-collection/entity-item-collection-view.test.tsx and
+ * packages/views/src/entity-item-collection/).
  *
- * EntityItemCollectionSearchView is mocked to a data-capturing stub (same technique as
+ * EntityItemCollectionView (`@contentgrid/views`) is mocked to a data-capturing stub (same technique as
  * ../../__root.test.tsx) so these tests isolate the route's own state/effects — recalling from
  * the QueryClient memos, syncing the URL, and writing back on a real filter change — without
  * re-exercising the view's own pageUrl/filters reconciliation.
@@ -106,8 +107,8 @@ beforeEach(() => {
 
 // Captures whatever EntityItemCollectionRoute passes down, and exposes buttons that fire the
 // same callbacks a real FilterSidebar/table interaction would.
-vi.mock("@contentgrid/features/entity-item-collection", () => ({
-  EntityItemCollectionSearchView: (props: {
+vi.mock("@contentgrid/views/entity-item-collection", () => ({
+  EntityItemCollectionView: (props: {
     pageUrl?: string;
     filters?: Record<string, string>;
     onFiltersChange?: (filters: Record<string, string>) => void;
