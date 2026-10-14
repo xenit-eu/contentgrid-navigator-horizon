@@ -77,14 +77,14 @@ Provided by the host through context; only views read it, features get callback 
 
 Contract: [view-preload.md](contracts/view-preload.md).
 
-Each view's preload takes exactly that view's own props, not a shared `target`/`state` tuple:
+Each view's preload takes exactly that view's own props, not a shared `target`/`state` tuple, and is named `preload<ViewName>`:
 
 ```ts
-type EntityItemDetailViewPreload = (
+function preloadEntityItemDetail(
   ctx: AppRouterContext,
   entityName: string,
   itemId: string,
-) => Promise<void>;
+): Promise<void>;
 ```
 
 `ctx` is the router context: the query client and the API client. A preload is a thin wrapper around the query client's `ensureQueryData(...)`, called with the same `navigator-data` query factories the view's own hooks use — no new query keys. A preload never throws to the route (it swallows failures as `ensureEntityItemDetailLoaderData` does today) and never loads data the view would not need.

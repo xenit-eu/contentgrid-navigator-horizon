@@ -12,8 +12,6 @@ interface EntityItemDetailViewProps {
   entityName: string;
   itemId: string;
   toolbar?: boolean;
-  // state?: EntityItemDetailViewState;            // this view has no state of its own yet
-  // onStateChange?: (state: EntityItemDetailViewState) => void;
 }
 
 interface EntityItemCollectionViewProps {

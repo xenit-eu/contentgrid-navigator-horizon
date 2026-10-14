@@ -89,6 +89,8 @@ Chosen: views draw it; a host or parent can switch it off, and features never dr
 
 Chosen: separate. The state type is defined by each view; `onStateChange` is optional and a view without it keeps its state itself.
 
+_Since reviewed (ACC-3216 PR #227): the "target" side of this comparison is no longer a shared type either — each view declares its own explicit props (e.g. an entity name and item id) instead of a generic `ViewTarget`; the comparison above stays as the historical record of why props and state are kept separate._
+
 ### 2.4 Where stability lives
 
 Features are building blocks; users get views. Tagging views matches what ships. The cost is that a stable view needing an experimental feature needs an experimental copy, and the tag no longer guards features. Both costs are recorded as the first open question.

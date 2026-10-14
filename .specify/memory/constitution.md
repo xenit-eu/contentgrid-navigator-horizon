@@ -1,15 +1,13 @@
 <!--
 Sync Impact Report
 - Version change: 1.0.0 → 1.8.0
-- Amendment (1.7.0 → 1.8.0, MINOR): Principle VIII preamble revised following the ACC-3216 PR #227
-  review (spec 005, the views layer). Dropped the carve-out tying bindingness to work "generated
-  through `/speckit-plan`/`/speckit-tasks`" and the "existing code... is not retroactively
-  non-compliant" framing; the preamble now reads that the principle binds new `packages/views` and
-  `packages/features` work regardless of whether it went through `/speckit-plan`/`/speckit-tasks`,
-  and that existing code is authoritative — a spec found to be wrong against it is corrected, not
-  the other way around. This is a change in scope/meaning, not wording-only, hence MINOR rather
-  than PATCH. (This amendment does not itself reference `ViewTarget`/`ViewProps`/`ViewPreload`;
-  those were spec-005-only abstractions, dropped in that spec's own documents, not in this file.)
+- Amendment (1.7.0 → 1.8.0, MINOR): following ACC-3216 PR #227 review (spec 005, the views
+  layer), Principle VIII's preamble drops the "generated through /speckit-plan" carve-out and
+  the "existing code is not retroactively non-compliant" framing for "existing code is always
+  right; correct the spec if it's wrong" — a scope/meaning change, hence MINOR. Its bullets are
+  also aligned to the review's decisions: explicit per-view plain-value props (no shared target
+  type, no HAL link yet) and each view's own preload, replacing the generic
+  `target`/`preload(ctx, target, state)` wording.
 - Amendment (1.6.0 → 1.7.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
   ACC-3216). Principle VIII previously cited a non-existent
   `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
@@ -307,19 +305,20 @@ layer). Binding for new `packages/views` and `packages/features` work, possibly 
 corresponding plan. The existing code is always right: if you find mistakes in existing specs,
 correct them.
 
-- Views live in `packages/views`. An app (`apps/*`) MUST pass a view only plain values — a
-  target (entity name and item id, or a HAL link) and, optionally, view state — plus plain
-  callback functions. Passing a resolved domain object (`ProfileEntity`, `EntityItem`, …) that
-  the app itself fetched is prohibited; the view resolves its own data via `navigator-data`
-  hooks.
-- A view receives its view state (filters, sort, page, active tab) alongside the target, never
-  inside it. The app maps its own address to view state and back and is the only layer that
-  knows the address format; a frontend address MUST NOT be a target.
-- An app's route-level responsibility is exactly: choose which view to mount, supply the target
+- Views live in `packages/views`. An app (`apps/*`) MUST pass a view only plain values — the
+  explicit props that view declares (e.g. an entity name and item id) and, optionally, view
+  state — plus plain callback functions. A link-based prop is deferred until a view actually
+  needs one (no HAL link today). Passing a resolved domain object (`ProfileEntity`, `EntityItem`,
+  …) that the app itself fetched is prohibited; the view resolves its own data via
+  `navigator-data` hooks.
+- A view receives its view state (filters, sort, page, active tab) alongside its identifying
+  props, never inside them. The app maps its own address to view state and back and is the only
+  layer that knows the address format; a frontend address MUST NOT be passed as one of a view's
+  identifying props.
+- An app's route-level responsibility is exactly: choose which view to mount, supply its props
   and state, provide the navigation context, and guarantee — via the router's own `loader`
-  calling the view's `preload(ctx, target, state)` plus `pendingComponent`/`errorComponent`/
-  `notFoundComponent`, not a swallow-and-hope `beforeLoad` — that the view's required data is
-  loading before it mounts.
+  calling the view's own preload, not a swallow-and-hope `beforeLoad` — that the view's required
+  data is loading before it mounts.
 - A view MUST gate its own loading/error/not-found state through one shared, reusable primitive
   (e.g. a `useProfileEntityGate`-style hook in `packages/views`, or in `navigator-data` for the
   data-only parts) rather than each view hand-rolling the same three-way branch.

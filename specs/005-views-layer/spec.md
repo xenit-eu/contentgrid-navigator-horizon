@@ -254,7 +254,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 ### Measurable Outcomes
 
 - **SC-001**: A fix to the item detail page or the collection page is made in one place and is visible in both apps.
-- **SC-002** _(assumption: a measurable form of the design's rule 1)_: The migrated route files contain only the mapping from the address to a target and state; none keeps filter, sort, page or dialog logic.
+- **SC-002** _(assumption: a measurable form of the design's rule 1)_: The migrated route files contain only the mapping from the address to the view's props and state; none keeps filter, sort, page or dialog logic.
 - **SC-003** _(deferred with User Story 3)_: Opening the same item by name and by link results in one request for the item.
 - **SC-004**: A user can return from an item to its list through the breadcrumb and see the same filters, sort order and page as before, in every case that works today.
 - **SC-005**: A list and detail split view lets a user switch items in the right pane with no route change and with one toolbar.

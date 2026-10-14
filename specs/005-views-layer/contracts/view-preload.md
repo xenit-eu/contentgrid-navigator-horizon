@@ -5,26 +5,26 @@
 
 ## Signature
 
-Each view MAY export its own small preload function, shaped around that view's own props — there is no shared, generic `ViewPreload<S>` type:
+Each view MAY export its own small preload function, shaped around that view's own props — there is no shared, generic `ViewPreload<S>` type. Preload functions are named `preload<ViewName>`:
 
 ```ts
-type EntityItemDetailViewPreload = (
+function preloadEntityItemDetail(
   ctx: AppRouterContext,
   entityName: string,
   itemId: string,
-) => Promise<void>;
+): Promise<void>;
 ```
 
 `ctx` is the router context: the query client and the API client. A view with state takes its state the same way its own props do (see [view-props-and-state.md](view-props-and-state.md)); a view with no state takes none.
 
 ## `ensureQueryData` and TanStack Router
 
-A preload is a thin wrapper around the query client's `ensureQueryData(...)`, called once per query the view's own hooks read, using `navigator-data`'s existing query factories (`profileByLinkQuery`, `fetchByUrlQuery`, `infiniteQuery`, `profileRootQuery`, …). No new query keys are introduced for preloading. The route's TanStack Router `loader` calls the view's preload directly with the route's own parameters; `pendingComponent`, `errorComponent` and `notFoundComponent` stay the router's, driven by the same query state the view reads when it renders.
+A preload is a thin wrapper around the query client's `ensureQueryData(...)`, called once per query the view's own hooks read, using `navigator-data`'s existing query factories (`profileByLinkQuery`, `fetchByUrlQuery`, `infiniteQuery`, `profileRootQuery`, …). No new query keys are introduced for preloading. The route's TanStack Router `loader` calls the view's preload directly with the route's own parameters.
 
 ```ts
 // apps/*/src/routes/_app/$entity/$itemId.tsx
 loader: ({ context, params }) =>
-  entityItemDetailViewPreload(context, params.entity, params.itemId),
+  preloadEntityItemDetail(context, params.entity, params.itemId),
 ```
 
 Because the preload and the view call the exact same query factory with the exact same arguments, the loader's `ensureQueryData` call and the view's own read hit the same cache entry — the view's first render is a cache read, not a second fetch.
