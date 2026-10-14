@@ -6,7 +6,7 @@ import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layo
 import { extractFilterValuesFromCollectionUrl } from "@contentgrid/features/search";
 import { type ProfileEntity, toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { Button } from "@contentgrid/ui";
-import { EntityBreadcrumbs } from "../breadcrumbs";
+import { EntityItemCollectionBreadcrumbs } from "../breadcrumbs";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { useNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
@@ -109,7 +109,7 @@ export function EntityItemCollectionView({
   const profileEntity = result.status === "success" ? result.profileEntity : undefined;
   return (
     <BreadCrumbsToolBarLayout
-      breadcrumbs={<EntityBreadcrumbs page="collection" profileEntity={profileEntity} />}
+      breadcrumbs={<EntityItemCollectionBreadcrumbs profileEntity={profileEntity} />}
       actions={
         <>
           {profileEntity?.createTemplate && (

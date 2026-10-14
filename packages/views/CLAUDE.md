@@ -66,9 +66,11 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Breadcrumbs
 
-- `src/breadcrumbs/` holds `EntityBreadcrumbs({ page, profileEntity?, entityItem? })`, shared by the views: Home ›
-  collection › item, each crumb as soon as the view knows it; the `page` crumb is the current page. Each view draws
-  its own toolbar around it.
+- `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `CollectionBreadcrumb` and
+  `ItemBreadcrumb`, each rendering its `children` crumbs after itself. A crumb with children is a link; the last one
+  is the current page. A crumb draws nothing until its data is known, so pages nest them without conditions. Each
+  page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`); each view draws its
+  own toolbar around it.
 
 ## Testing
 

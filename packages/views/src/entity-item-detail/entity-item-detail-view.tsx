@@ -6,7 +6,7 @@ import {
 } from "@contentgrid/features/entity-item";
 import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
-import { EntityBreadcrumbs } from "../breadcrumbs";
+import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
 import { useNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
@@ -59,8 +59,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   return (
     <BreadCrumbsToolBarLayout
       breadcrumbs={
-        <EntityBreadcrumbs
-          page="item"
+        <EntityItemDetailBreadcrumbs
           profileEntity={profileEntity}
           entityItem={result.status === "success" ? result.entityItem : undefined}
         />
