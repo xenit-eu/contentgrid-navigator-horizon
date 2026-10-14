@@ -1,8 +1,9 @@
 # packages/views — CLAUDE.md
 
 Package: `@contentgrid/views` (private — not published to npm)
-Purpose: the layer between the apps and `@contentgrid/features`. A view takes a target (what to show)
-and optional state (how), loads its main data, draws its toolbar and places features or child views.
+Purpose: the layer between the apps and `@contentgrid/features`. Each view declares its own explicit props
+(what to show), optionally takes state (how), loads its main data, draws its toolbar and places features or
+child views.
 
 Spec: [`specs/005-views-layer/`](../../specs/005-views-layer/spec.md). Decision: [ADR-018](../../docs/adr/ADR-018-views-layer.md).
 
@@ -19,13 +20,16 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - **Only views call `useNavigation()`; no router in views or features.** Every click that opens something,
   including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
-- Views take `ViewProps<S>`: a `ViewTarget` (`name` or `url`, never a frontend address, never filters, sort
-  or page), optional `state` and `onStateChange` ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
-  State is serialisable plain data defined by the view.
-- Each view exports its own `preload` ([contract](../../specs/005-views-layer/contracts/view-preload.md)):
-  it fills the query cache under the keys the view reads, never rejects, and returns when the API client is absent.
+- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: boolean`) and calls
+  navigator-data's hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
+- A view with state (filters, sort, page, …) takes optional `state` / `onStateChange`; with neither it keeps
+  its own internal state. State is plain, serialisable data defined by the view.
+- A view's own preload (e.g. `preloadEntityItemDetail(ctx, entityName, itemId)`) is called from the route
+  loader, fills the cache via navigator-data's ensure helpers, never rejects, and returns while the API
+  client is absent ([contract](../../specs/005-views-layer/contracts/view-preload.md)).
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
-- Each view is its own `exports` entry so its stability tag can be resolved per view (tag moves here in a later PR).
+- Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (tag moves here
+  in a later PR).
 
 ## Navigation
 
