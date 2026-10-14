@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useOpenInNewTab } from "@contentgrid/features/router-shell";
 import { NavigationProvider } from "../navigation";
 import type { Navigation } from "../navigation";
 
@@ -10,6 +11,7 @@ import type { Navigation } from "../navigation";
  * href instead (see the list route's `onEntityItemClick`). `hrefFor` builds the same destinations
  * with the router's own `router.buildLocation(...).href`, so breadcrumbs can render real `<a href>`
  * elements (cmd/middle-click, copy link, screen-reader link semantics) instead of buttons.
+ * `openCreateItem` opens the entity's create form in a new tab, same as the old per-app wiring.
  *
  * Lives under `packages/views/src/shells/`, not the package's main export: this is the one place
  * outside `apps/*` allowed to import `@tanstack/react-router` (root `CLAUDE.md`).
@@ -17,6 +19,7 @@ import type { Navigation } from "../navigation";
 export function RouterNavigationProvider({ children }: Readonly<{ children: ReactNode }>) {
   const navigate = useNavigate();
   const router = useRouter();
+  const { openCreatePage } = useOpenInNewTab();
   const navigation = useMemo<Navigation>(
     () => ({
       openHome: () => void navigate({ to: "/", search: {} }),
@@ -28,6 +31,7 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           params: { entity: entityName, itemId: id },
           search: (prev: Record<string, unknown>) => prev,
         }),
+      openCreateItem: openCreatePage,
       hrefFor: {
         home: () => router.buildLocation({ to: "/", search: {} }).href,
         entityItemCollection: (entityName) =>
@@ -40,7 +44,7 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           }).href,
       },
     }),
-    [navigate, router],
+    [navigate, router, openCreatePage],
   );
   return <NavigationProvider navigation={navigation}>{children}</NavigationProvider>;
 }

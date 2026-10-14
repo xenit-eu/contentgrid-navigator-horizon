@@ -19,11 +19,12 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - **Only views call `useNavigation()`; no router in views or features.** Every click that opens something,
   including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
-- Views take `ViewProps<S>`: a `ViewTarget` (`name` or `url`, never a frontend address, never filters, sort
-  or page), optional `state` and `onStateChange` ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
-  State is serialisable plain data defined by the view.
-- Each view exports its own `preload` ([contract](../../specs/005-views-layer/contracts/view-preload.md)):
-  it fills the query cache under the keys the view reads, never rejects, and returns when the API client is absent.
+- Each view takes the explicit, primitive props it needs (e.g. `entityName`/`itemId`) — never a frontend
+  address, filters, sort or page ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
+- Each view exports its own, view-specific preload function (e.g. `preloadEntityItemDetail`)
+  ([contract](../../specs/005-views-layer/contracts/view-preload.md)): it calls the `ensure*`/query-factory
+  helpers `@contentgrid/navigator-data` already has for the data the view reads, never rejects, and returns
+  when the API client is absent.
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
 - Each view is its own `exports` entry so its stability tag can be resolved per view (tag moves here in a later PR).
 
@@ -36,9 +37,12 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Views
 
-- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView` and its `preload`. Its data comes from
-  `useViewTarget` through the shared `ViewTargetGate` (loading, error and not-found in one place); the
-  relation-problem dialog lives in the view.
+- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView({ entityName, itemId, toolbar? })` and its
+  `preloadEntityItemDetail`. The view calls `useProfileEntity` directly for the breadcrumb labels and draws its
+  own loading/not-found state for that; the item itself is fetched (and its own loading/error state drawn,
+  inside the same breadcrumb toolbar) by `EntityItemContentFocusView` from `@contentgrid/features/entity-item`.
+  `preloadEntityItemDetail` fills the same two caches with `ensureProfileEntity`/`ensureEntityItem`. The
+  relation-problem dialog lives in the view; relation "create new" goes through `navigation.openCreateItem`.
 
 ## Testing
 

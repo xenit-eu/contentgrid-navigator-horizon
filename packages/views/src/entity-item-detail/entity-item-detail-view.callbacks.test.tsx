@@ -1,8 +1,8 @@
 /**
  * The view's wiring of the item feature's callbacks. `EntityItemContentFocusView` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
- * view does with them: relation clicks go to the navigation object, relation problems open the
- * dialog, and "create" is handed to the host.
+ * view does with them: relation clicks and "create" go to the navigation object, relation
+ * problems open the dialog.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -42,31 +42,26 @@ vi.mock("@contentgrid/features/entity-item", () => ({
 
 const setup = createItemDetailTestHarness;
 
-const target = { kind: "name", entityName: "customer", itemId: "cust-001" } as const;
+const entityName = "customer";
+const itemId = "cust-001";
 
 describe("EntityItemDetailView — feature callbacks", () => {
   it("opens a clicked relation item through the navigation object", async () => {
     const { Wrapper, recording } = setup();
-    render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText("relation-click"));
 
     expect(recording.calls).toEqual([{ method: "openItem", args: ["company", "c-1"] }]);
   });
 
-  it("hands relation creation to the host", async () => {
-    const { Wrapper } = setup();
-    const onRelationItemCreateNew = vi.fn();
-    render(
-      <EntityItemDetailView target={target} onRelationItemCreateNew={onRelationItemCreateNew} />,
-      {
-        wrapper: Wrapper,
-      },
-    );
+  it("hands relation creation to the navigation object", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText("relation-create"));
 
-    expect(onRelationItemCreateNew).toHaveBeenCalledWith("company");
+    expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["company"] }]);
   });
 
   it.each([
@@ -75,7 +70,7 @@ describe("EntityItemDetailView — feature callbacks", () => {
     ["required", "Required relation"],
   ])("opens the problem dialog for %s", async (button, title) => {
     const { Wrapper } = setup();
-    render(<EntityItemDetailView target={target} />, { wrapper: Wrapper });
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText(button));
     expect(await screen.findByText(title)).toBeInTheDocument();
@@ -86,7 +81,9 @@ describe("EntityItemDetailView — feature callbacks", () => {
 
   it("tells the feature to draw no toolbar when hidden", async () => {
     const { Wrapper } = setup();
-    render(<EntityItemDetailView target={target} hideToolbar />, { wrapper: Wrapper });
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} toolbar={false} />, {
+      wrapper: Wrapper,
+    });
     expect(await screen.findByText("toolbar-off")).toBeInTheDocument();
   });
 });

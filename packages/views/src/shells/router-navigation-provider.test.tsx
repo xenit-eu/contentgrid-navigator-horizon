@@ -9,9 +9,15 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useNavigation } from "../navigation";
 import { RouterNavigationProvider } from "./router-navigation-provider";
+
+const openCreatePage = vi.hoisted(() => vi.fn());
+vi.mock("@contentgrid/features/router-shell", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@contentgrid/features/router-shell")>();
+  return { ...actual, useOpenInNewTab: () => ({ openCreatePage, openItemPage: vi.fn() }) };
+});
 
 /** Shows the current pathname+search so tests can assert on the route the provider navigated to,
  * without reaching into the router instance directly. */
@@ -29,6 +35,7 @@ function NavigationProbe() {
         open-collection
       </button>
       <button onClick={() => navigation.openItem("invoice", "42")}>open-item</button>
+      <button onClick={() => navigation.openCreateItem("invoice")}>open-create</button>
       <span data-testid="href-home">{navigation.hrefFor?.home()}</span>
       <span data-testid="href-collection">
         {navigation.hrefFor?.entityItemCollection("invoice")}
@@ -102,5 +109,13 @@ describe("RouterNavigationProvider", () => {
     await waitFor(() =>
       expect(screen.getByTestId("location")).toHaveTextContent("/invoice/42?q=acme"),
     );
+  });
+
+  it("opens the create page in a new tab through openCreateItem", async () => {
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-create"));
+
+    expect(openCreatePage).toHaveBeenCalledWith("invoice");
   });
 });

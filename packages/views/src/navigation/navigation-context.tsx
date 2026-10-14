@@ -6,13 +6,15 @@ import type { ReactNode } from "react";
  * it instead of the router; features get callback props that their view wires to it. The host
  * decides what happens next.
  *
- * `openClassifyCreate`, `openEditItem` and `openCreateItem` are added with the pages that use them.
+ * `openClassifyCreate` and `openEditItem` are added with the pages that use them.
  */
 export interface Navigation {
   openHome(): void;
   /** Opens the entity's list, restored as the user left it. */
   openEntityItemCollection(entityName: string): void;
   openItem(entityName: string, id: string): void;
+  /** Opens the create form for a missing relation target (today: a new browser tab). */
+  openCreateItem(entityName: string): void;
   /**
    * The real address for each `open*` above, when the host has one to give (contract
    * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so
@@ -34,6 +36,7 @@ const noopNavigation: Navigation = {
   openHome: () => {},
   openEntityItemCollection: () => {},
   openItem: () => {},
+  openCreateItem: () => {},
 };
 
 export function NavigationProvider({
@@ -62,15 +65,16 @@ export function ChildNavigationProvider({
   children,
 }: Readonly<{ overrides: Partial<Navigation>; children: ReactNode }>) {
   const parent = useNavigation();
-  const { openHome, openEntityItemCollection, openItem, hrefFor } = overrides;
+  const { openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor } = overrides;
   const navigation = useMemo<Navigation>(
     () => ({
       openHome: openHome ?? parent.openHome,
       openEntityItemCollection: openEntityItemCollection ?? parent.openEntityItemCollection,
       openItem: openItem ?? parent.openItem,
+      openCreateItem: openCreateItem ?? parent.openCreateItem,
       hrefFor: hrefFor ?? parent.hrefFor,
     }),
-    [parent, openHome, openEntityItemCollection, openItem, hrefFor],
+    [parent, openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor],
   );
   return <NavigationProvider navigation={navigation}>{children}</NavigationProvider>;
 }
