@@ -1,6 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.7.0
+- Version change: 1.0.0 → 1.8.0
+- Amendment (1.7.0 → 1.8.0, MINOR): Principle VIII preamble revised following the ACC-3216 PR #227
+  review (spec 005, the views layer). Dropped the carve-out tying bindingness to work "generated
+  through `/speckit-plan`/`/speckit-tasks`" and the "existing code... is not retroactively
+  non-compliant" framing; the preamble now reads that the principle binds new `packages/views` and
+  `packages/features` work regardless of whether it went through `/speckit-plan`/`/speckit-tasks`,
+  and that existing code is authoritative — a spec found to be wrong against it is corrected, not
+  the other way around. This is a change in scope/meaning, not wording-only, hence MINOR rather
+  than PATCH. (This amendment does not itself reference `ViewTarget`/`ViewProps`/`ViewPreload`;
+  those were spec-005-only abstractions, dropped in that spec's own documents, not in this file.)
 - Amendment (1.6.0 → 1.7.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
   ACC-3216). Principle VIII previously cited a non-existent
   `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
@@ -36,7 +45,7 @@ Sync Impact Report
   - VIII. View-Owned Data Loading, App-View Contract & Transformation Placement: ADR-018 citation now
     resolves to `ADR-018-views-layer.md`; views live in `packages/views`; navigation context; toolbar drawn by the
     view and switchable off; view state alongside the target; features fill their space
-    (1.6.0 → 1.7.0).
+    (1.6.0 → 1.7.0). Preamble further revised (1.7.0 → 1.8.0): see the amendment entry above.
   - I. HAL Is the Only Interaction Model: added the binary-content exception (no HAL-FORMS
     template exists for `cg:content` PUT/GET) — the principle as written contradicted this
     documented, sanctioned behavior; corrected/completed.
@@ -293,10 +302,10 @@ others.
 ### VIII. View-Owned Data Loading, App-View Contract & Transformation Placement
 
 Forward-looking target architecture ([ADR-018](../../docs/adr/ADR-018-views-layer.md), the views
-layer). Binding for new `packages/views` and `packages/features` work generated through
-`/speckit-plan`/`/speckit-tasks`; existing code that has not yet migrated (e.g. the route files,
-`EntityProfileGate` and its route-mounted gate) is not retroactively non-compliant, but MUST NOT
-be used as a model for new work.
+layer). Binding for new `packages/views` and `packages/features` work, possibly generated through
+`/speckit-plan`/`/speckit-tasks`; in other cases work may have been generated without a
+corresponding plan. The existing code is always right: if you find mistakes in existing specs,
+correct them.
 
 - Views live in `packages/views`. An app (`apps/*`) MUST pass a view only plain values — a
   target (entity name and item id, or a HAL link) and, optionally, view state — plus plain
@@ -452,4 +461,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.7.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-06
+**Version**: 1.8.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-14
