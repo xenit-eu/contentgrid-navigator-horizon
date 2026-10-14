@@ -95,9 +95,11 @@ Features are building blocks; users get views. Tagging views matches what ships.
 
 ### 2.5 Where preferences live
 
-They are read by several features, so no single feature can own them. The data layer already has the type and the backend part. The cost is a state-library peer dependency in the data layer (open question 4d).
+They are read by several features. Other features already import one another (for example every HAL-Forms-driven form goes through the `hal-forms` feature), so that alone does not force preferences into the data layer: the merge, the hook and the store move into their own `user-preferences` feature in `packages/features`, which other features import. `navigator-data` keeps only the type and the backend part it already has. This also resolves open question 4(d): no new peer dependency is needed anywhere, since `packages/features` already depends on Zustand for its existing store.
 
 ### 2.6 How a link is turned into a profile
+
+_Deferred along with User Story 3 (FR-008): recorded here so the reasoning is not lost, for whichever view adds link support when a host first needs it._
 
 | Option                                                                                    | For                                         | Against                                                                       |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------- |

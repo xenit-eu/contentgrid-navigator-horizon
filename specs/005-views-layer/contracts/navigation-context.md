@@ -22,10 +22,13 @@ interface Navigation {
 
 The set may be extended. The functions are implemented page by page, so the interface is not complete from the start:
 
-| Function                                               | Exists from                               |
-| ------------------------------------------------------ | ----------------------------------------- |
-| `openHome`, `openEntityItemCollection`, `openItem`     | PR 2 (the scaffold), needed through PR 6  |
-| `openClassifyCreate`, `openEditItem`, `openCreateItem` | The PR that adds the page using it (T041) |
+| Function                                           | Exists from                                                                                                                                   |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openHome`, `openEntityItemCollection`, `openItem` | PR 2 (the scaffold), needed through PR 5                                                                                                      |
+| `openCreateItem`                                   | PR 3 — the item detail view wires it to the relation popover's existing "create missing target" callback (no separate prop added on the view) |
+| `openClassifyCreate`, `openEditItem`               | The PR that adds the page using it (T041)                                                                                                     |
+
+The item detail view's relation popover already reports "create missing target" through the feature's own `onRelationItemCreateNew` callback prop. The view wires that callback straight to `navigation.openCreateItem(targetEntityName)` itself; it does not re-expose a separate `onRelationItemCreateNew` (or similarly named) prop upward to its own caller. New-tab semantics for that call are open question 6.
 
 ## Rules
 
