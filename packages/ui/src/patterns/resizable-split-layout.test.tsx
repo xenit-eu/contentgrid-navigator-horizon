@@ -54,53 +54,61 @@ describe("ResizableSplitLayout", () => {
     }
   });
 
-  it("stacked: hides and disables the handle but keeps both panes rendered", () => {
-    const { container } = render(
-      <ResizableSplitLayout
-        left={<PaneProbe />}
-        right={<PaneProbe />}
-        handleLabel="Resize"
-        stacked
-      />,
-    );
-
-    expect(container.querySelector("[data-slot=resizable-split-layout]")).toHaveAttribute(
-      "data-stacked",
-    );
-    const handle = screen.getByRole("separator", { name: "Resize", hidden: true });
-    expect(handle).toHaveClass("hidden");
-    expect(handle).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("side:left")).toBeInTheDocument();
-    expect(screen.getByText("side:right")).toBeInTheDocument();
-  });
-
-  describe("stacked widths", () => {
+  describe("stackBelow", () => {
     afterEach(() => {
       vi.restoreAllMocks();
     });
 
-    it("reports the layout's full width for both panes", () => {
+    function mockLayoutWidth(width: number) {
       vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
-        DOMRect.fromRect({ width: 500, height: 400 }),
+        DOMRect.fromRect({ width, height: 400 }),
       );
-      const onWidthsChange = vi.fn();
-      function WidthProbe() {
-        const pane = usePaneWidth();
-        return <span>{`${pane?.side}:${pane?.width}`}</span>;
-      }
+    }
 
-      render(
+    function WidthProbe() {
+      const pane = usePaneWidth();
+      return <span>{`${pane?.side}:${pane?.width}`}</span>;
+    }
+
+    it("stacks the panes, split by a horizontal handle, below the threshold", () => {
+      mockLayoutWidth(500);
+      const onWidthsChange = vi.fn();
+      const { container } = render(
         <ResizableSplitLayout
           left={<WidthProbe />}
           right={<WidthProbe />}
+          handleLabel="Resize"
           onWidthsChange={onWidthsChange}
-          stacked
+          stackBelow={800}
         />,
       );
 
+      expect(container.querySelector("[data-slot=resizable-split-layout]")).toHaveAttribute(
+        "data-stacked",
+      );
+      expect(screen.getByRole("separator", { name: "Resize" })).toHaveAttribute(
+        "aria-orientation",
+        "horizontal",
+      );
+      // Stacked, both panes span the layout's full width.
       expect(screen.getByText("left:500")).toBeInTheDocument();
       expect(screen.getByText("right:500")).toBeInTheDocument();
       expect(onWidthsChange).toHaveBeenLastCalledWith({ left: 500, right: 500 });
+    });
+
+    it("keeps the panes side by side from the threshold up", () => {
+      mockLayoutWidth(800);
+      const { container } = render(
+        <ResizableSplitLayout left="Left" right="Right" handleLabel="Resize" stackBelow={800} />,
+      );
+
+      expect(container.querySelector("[data-slot=resizable-split-layout]")).not.toHaveAttribute(
+        "data-stacked",
+      );
+      expect(screen.getByRole("separator", { name: "Resize" })).toHaveAttribute(
+        "aria-orientation",
+        "vertical",
+      );
     });
   });
 
