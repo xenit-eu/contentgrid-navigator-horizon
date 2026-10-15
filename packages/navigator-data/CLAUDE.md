@@ -334,9 +334,9 @@ Each class carries:
 - `name` — the relation name (matches the `name` field on the `cg:relation` link)
 - `link` — the `cg:relation` navigation link on the source item
 - `profileRelation` — the `ProfileRelation` schema (cardinality, target entity name, title)
-- `source` — the source `EntityItem`. **Not used for `If-Match` by set/add/clear** — see
-  FIXME(ACC-3186) below; `relation.source.etag` is the wrong etag for a relation mutation (it is
-  the source entity item's). `useUnlinkRelation` still sends it — see "Attaching `If-Match`".
+- `source` — the source `EntityItem`. **Never used for `If-Match` on a relation mutation** — see
+  FIXME(ACC-3186) below; `relation.source.etag` is the source entity item's ETag, which is the
+  wrong etag for any relation request.
 
 `EntityItemToOneRelation` key members:
 
@@ -412,9 +412,8 @@ headers — so it likely needs platform support. See
 `use-set-to-one-relation.test.tsx`.
 
 `useDeleteRelationItem` is unaffected — it deletes the target entity item and gates `If-Match` on
-that item's own etag (`item.etag`), which is correct. `useUnlinkRelation` sends `relation.source.etag`
-to the to-many per-item endpoint, which is not a conditional-request resource — see "Attaching
-`If-Match`" below. The request
+that item's own etag (`item.etag`), which is correct. `useUnlinkRelation` sends no `If-Match`: the
+to-many per-item endpoint is not a conditional-request resource. The request
 builders (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) never attach
 `If-Match` themselves regardless — that responsibility always belongs to the mutation hook.
 
@@ -658,10 +657,10 @@ const req = addIfMatchHeader(baseReq, entityItem.etag);
 ```
 
 `useDeleteRelationItem` deletes the target entity item itself, so it sends the **target** item's
-own `item.etag`. `useUnlinkRelation` currently sends `relation.source.etag` on its DELETE to the
-to-many relation's per-item endpoint — that endpoint is not a conditional-request resource and the
-source item's ETag does not belong to it, so treat that header as suspect (same class of problem as
-FIXME(ACC-3186)). The relation accessors never attach `If-Match` in their request builders. For
+own `item.etag`. `useUnlinkRelation` sends no `If-Match` on its DELETE to the to-many relation's
+per-item endpoint — that endpoint is not a conditional-request resource (do NOT send
+`relation.source.etag` there; it belongs to the source item). The relation accessors never attach
+`If-Match` in their request builders. For
 `useSetToOneRelation` / `useAddToManyRelation` / `useClearRelation`, no `If-Match` is sent:
 to-many relations are not conditional-request resources, and for to-one relations see the FIXME(ACC-3186) note under
 "Relation mutation hooks" above — `relation.source.etag` is not a valid substitute.
@@ -780,8 +779,10 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
   `UploadContentVariables`: `If-Match: <contentEtag>` when given (replace only the file the caller
   last saw), `If-None-Match: *` when `null` (store only if the attribute has no file yet). Either
   way a concurrent change answers 412 instead of being overwritten; the hook then invalidates the
-  item query. It goes through `contentFetch.withUploadProgress(setProgress)`, then re-fetches the
-  parent item via `apiFetch` to capture the fresh ETag and update the item cache.
+  item query. It goes through `contentFetch.withUploadProgress(setProgress)` — an XHR adapter with
+  fetch's contract (honours `signal`, rejects on network error/timeout/abort, keeps every exposed
+  response header, so the PUT's new content `ETag` is readable) — then re-fetches the parent item
+  via `apiFetch` to capture the fresh ETag and update the item cache.
 - Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
   response is 206 (Range request); `etag` is the content's own ETag — the value to pass as
   `contentEtag` when replacing that file.

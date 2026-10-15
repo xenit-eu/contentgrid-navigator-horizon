@@ -143,16 +143,20 @@ describe("createContentClient — withUploadProgress", () => {
     open = vi.fn();
     setRequestHeader = vi.fn();
     send = vi.fn();
+    abort = vi.fn(() => this.onabort?.());
     response: unknown = "";
     status = 204;
-    getResponseHeader = vi.fn((): string | null => null);
+    statusText = "";
+    getAllResponseHeaders = vi.fn((): string => "");
     upload: { onprogress: ((event: Partial<ProgressEvent>) => void) | null } = { onprogress: null };
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
+    ontimeout: (() => void) | null = null;
+    onabort: (() => void) | null = null;
   }
 
   /** Starts an upload through a fake XMLHttpRequest and returns it once the body is sent. */
-  async function startUpload(onProgress = vi.fn()) {
+  async function startUpload(onProgress = vi.fn(), signal?: AbortSignal) {
     const created: FakeXMLHttpRequest[] = [];
     vi.stubGlobal(
       "XMLHttpRequest",
@@ -166,7 +170,12 @@ describe("createContentClient — withUploadProgress", () => {
     const uploadFetch = createContentClient(staticSupplier).withUploadProgress(onProgress);
 
     const response = uploadFetch(
-      new Request(TEST_URL, { method: "PUT", body: "hello", headers: { "If-None-Match": "*" } }),
+      new Request(TEST_URL, {
+        method: "PUT",
+        body: "hello",
+        headers: { "If-None-Match": "*" },
+        signal,
+      }),
     ).catch((err: unknown) => err);
 
     // The login step runs before the XHR is created — wait for it to be sent.
@@ -200,10 +209,64 @@ describe("createContentClient — withUploadProgress", () => {
     const { xhr, response } = await startUpload();
 
     xhr.status = 412;
-    xhr.getResponseHeader.mockReturnValue("application/problem+json");
+    xhr.getAllResponseHeaders.mockReturnValue("content-type: application/problem+json\r\n");
     xhr.response = JSON.stringify({ status: 412 });
     xhr.onload?.();
 
     expect(await response).toBeInstanceOf(ProblemDetailError);
+  });
+
+  it("keeps every response header, such as the content's new ETag", async () => {
+    const { xhr, response } = await startUpload();
+
+    xhr.status = 204;
+    xhr.getAllResponseHeaders.mockReturnValue('etag: "content-v2"\r\ncontent-language: en\r\n');
+    xhr.onload?.();
+
+    const result = (await response) as Response;
+    expect(result.headers.get("ETag")).toBe('"content-v2"');
+    expect(result.headers.get("Content-Language")).toBe("en");
+  });
+
+  it("rejects with a TypeError when the upload times out", async () => {
+    const { xhr, response } = await startUpload();
+
+    xhr.ontimeout?.();
+
+    expect(await response).toBeInstanceOf(TypeError);
+  });
+
+  it("aborts the XMLHttpRequest and rejects with an AbortError when the signal aborts", async () => {
+    const controller = new AbortController();
+    const { xhr, response } = await startUpload(vi.fn(), controller.signal);
+
+    controller.abort();
+
+    expect(xhr.abort).toHaveBeenCalledOnce();
+    expect(await response).toMatchObject({ name: "AbortError" });
+  });
+
+  it("rejects without sending when the signal is already aborted", async () => {
+    const created: unknown[] = [];
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class extends FakeXMLHttpRequest {
+        constructor() {
+          super();
+          created.push(this);
+        }
+      },
+    );
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await createContentClient(staticSupplier)
+      .withUploadProgress(vi.fn())(
+        new Request(TEST_URL, { method: "PUT", body: "hello", signal: controller.signal }),
+      )
+      .catch((err: unknown) => err);
+
+    expect(result).toMatchObject({ name: "AbortError" });
+    expect(created).toHaveLength(0);
   });
 });

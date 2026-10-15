@@ -31,7 +31,8 @@ describe("ContentPreviewFrame", () => {
     render(<ContentPreviewFrame state="noFile" />);
 
     expect(screen.getByText("No file")).toBeInTheDocument();
-    expect(screen.queryByText(/Drop a file here/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Drag & drop a file/)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
   it("holds the uploading percentage at 99% until the server has confirmed the upload", () => {
