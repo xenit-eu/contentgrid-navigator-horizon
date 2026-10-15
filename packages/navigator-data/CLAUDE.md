@@ -405,11 +405,22 @@ relation link itself (the followed response's `ETag` is the target entity item's
 for a conditional request to the relation itself"); this package's fetch client follows redirects by default (see
 `src/api/hal-client.ts`), so the intermediate response and its `ETag` header are never seen today. Do
 NOT reintroduce `relation.source.etag` as a fix — it will pass validation locally but sends the wrong
-precondition. The real fix needs the 302 response's own `ETag`, which a browser cannot read: `fetch`
-follows the redirect, and `redirect: "manual"` yields an opaque-redirect response with no readable
-headers — so it likely needs platform support. See
-`use-relation-mutation-base.ts` for the FIXME at the call site and the skipped test in
-`use-set-to-one-relation.test.tsx`.
+precondition. A browser cannot read the 302 response's `ETag` at all: `fetch` follows the redirect,
+and `redirect: "manual"` yields an opaque-redirect response with no readable headers.
+
+**Planned platform fix (in progress on the backend, not shipped yet):** to-one relations get a
+separate `text/uri-list` representation. A GET on the relation link with `Accept: text/uri-list`
+(or an `Accept` in which `text/uri-list` has a higher priority than the other types) does **not**
+redirect; it answers with a `text/uri-list` body containing the one entity-item URI stored in the
+relation, and that response carries the relation's own `ETag` (ETags don't belong on a redirect
+anyway — they describe content). The body has the same format as a `PUT` to the relation. Clients
+that ask for JSON or HAL(-FORMS) keep getting the redirect, so existing reads are unaffected.
+
+Client-side follow-up once it ships (do NOT implement before): GET the to-one relation link with
+`Accept: text/uri-list` — not through `apiFetch` as-is, which sets `Accept: application/hal+json`
+— capture its `ETag`, and send it as `If-Match` on `useSetToOneRelation` / `useClearRelation` (to-one).
+Then un-skip the test in `use-set-to-one-relation.test.tsx` and assert that etag. See
+`use-relation-mutation-base.ts` for the FIXME at the call site.
 
 `useDeleteRelationItem` is unaffected — it deletes the target entity item and gates `If-Match` on
 that item's own etag (`item.etag`), which is correct. `useUnlinkRelation` sends no `If-Match`: the
@@ -589,7 +600,7 @@ resource's current version).
 | Resource        | URL shape                            | ETag source in this package                                                           |
 | --------------- | ------------------------------------ | ------------------------------------------------------------------------------------- |
 | entity-item     | `/{plural}/{id}`                     | `entityItem.etag` (from `fetchHal`)                                                   |
-| to-one relation | `/{plural}/{id}/{relation}`          | Only on the endpoint's 302 response — not captured today, see FIXME(ACC-3186)         |
+| to-one relation | `/{plural}/{id}/{relation}`          | Not obtainable today; planned via `Accept: text/uri-list` — see FIXME(ACC-3186)       |
 | entity-content  | `/{plural}/{id}/{content-attribute}` | `ContentDownload.etag` (from `useDownloadContent`); passed as `contentEtag` on upload |
 
 Never send one resource's ETag to another — the entity item's ETag is NOT valid for its content or

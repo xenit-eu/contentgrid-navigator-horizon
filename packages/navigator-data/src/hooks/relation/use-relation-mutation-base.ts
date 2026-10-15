@@ -77,8 +77,11 @@ export function useRelationMutationBase<
       // target entity item and "can not be used for a conditional request to the relation
       // itself". Our fetch client (see hal-client.ts) follows redirects, so the 302's ETag
       // is never seen here — and a browser cannot read it with `redirect: "manual"` either
-      // (that yields an opaque-redirect response with no readable headers). Then, for
-      // to-one relations only:
+      // (that yields an opaque-redirect response with no readable headers).
+      // Planned platform fix (backend, not shipped yet): a GET on the to-one relation with
+      // `Accept: text/uri-list` will not redirect but answer with a uri-list body holding the
+      // one stored entity-item URI, carrying the relation's own ETag. Once it ships, fetch
+      // that ETag that way and, for to-one relations only:
       // const req = addIfMatchHeader(baseReq, <to-one relation ETag>);
 
       // Execute mutation — 204 No Content.
