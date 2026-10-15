@@ -162,7 +162,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
             left={<div className="h-full min-h-0 min-w-0 overflow-hidden">{children}</div>}
             right={sidePanelRegion}
             defaultRightSize={initiallyOpen ? 360 : RAIL_WIDTH}
-            minRightSize={280}
+            minRightSize={360}
             maxRightSize="60"
             minLeftSize={320}
             rightCollapsedSize={RAIL_WIDTH}
