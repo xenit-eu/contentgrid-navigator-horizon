@@ -48,12 +48,17 @@
   --color-primary-foreground: var(--primary-foreground);
   /* Hover/pressed fill for solid primary surfaces. */
   --color-primary-hover: color-mix(in oklab, var(--primary) 80%, black);
+  /* Opaque primary-tinted fills for hovered and selected rows (opaque so sticky cells stay solid). */
+  --color-hover: color-mix(in oklab, var(--primary) 5%, var(--background));
+  --color-selected: color-mix(in oklab, var(--primary) 10%, var(--background));
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-button-hover: var(--button-hover);
+  --color-button-hover-foreground: var(--button-hover-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -136,6 +141,9 @@
   --muted-foreground: var(--text-muted);
   --accent: var(--sky-50);
   --accent-foreground: var(--ocean);
+  /* Hover fill for outline/ghost buttons. */
+  --button-hover: var(--sky-extract);
+  --button-hover-foreground: #000000;
   --destructive: var(--danger);
   --destructive-foreground: #ffffff;
   /* Success surface — same green identity as StatusPill's "success" variant
@@ -206,8 +214,11 @@
   --secondary-foreground: var(--dark-body);
   --muted: var(--dark-surface-2);
   --muted-foreground: var(--dark-dim);
-  --accent: var(--dark-line); /* mild hover/selected surface, as --sidebar-accent */
-  --accent-foreground: var(--dark-ink);
+  --accent: var(--dark-accent);
+  --accent-foreground: var(--dark-surface);
+  /* A step lighter than --dark-line so an outline button's border stays visible on hover. */
+  --button-hover: color-mix(in oklab, var(--dark-line) 85%, var(--dark-ink));
+  --button-hover-foreground: var(--dark-ink);
   --destructive: #f87171; /* red-400 — lifted for dark-bg contrast */
   --destructive-foreground: #ffffff;
   /* Same green identity as StatusPill's dark "success" variant. */
@@ -244,7 +255,6 @@
   :is(
     a[href],
     button,
-    summary,
     label[for],
     select,
     [role="button"],

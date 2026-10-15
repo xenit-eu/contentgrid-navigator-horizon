@@ -27,9 +27,7 @@ function RecordTableRow({
   onSelectChange,
   className,
 }: RecordTableRowProps) {
-  // `--accent` is already the shadcn convention for a "selected"/highlighted row (see
-  // ItemReference's `selected && "bg-accent"`); both themes define it as a mild surface.
-  const rowBackground = selected ? "bg-accent" : "bg-card/50";
+  const rowBackground = selected ? "bg-selected" : "bg-card/50";
 
   return (
     <div
@@ -64,7 +62,7 @@ function RecordTableRow({
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
         "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
         onClick && "cursor-pointer",
-        onClick && !selected && "hover:bg-primary/5",
+        onClick && !selected && "hover:bg-hover",
         rowBackground,
         className,
       )}

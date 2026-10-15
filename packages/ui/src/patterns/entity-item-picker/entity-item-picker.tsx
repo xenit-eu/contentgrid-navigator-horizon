@@ -224,10 +224,8 @@ export function EntityItemPicker({
             return (
               <TableRow
                 key={item.id}
-                className={cn(
-                  "cursor-pointer transition-colors",
-                  isSelected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-primary/5",
-                )}
+                data-state={isSelected ? "selected" : undefined}
+                className="cursor-pointer"
                 onClick={() => {
                   if (multiSelect) {
                     toggleItem(item.href, getItemLabel(item));
