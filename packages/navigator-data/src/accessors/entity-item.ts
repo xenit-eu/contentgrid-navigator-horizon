@@ -6,7 +6,7 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels, contentDispositionAttachment } from "../api";
+import { cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
@@ -77,7 +77,9 @@ export class EntityItem {
   /**
    * @param halItem - The HAL entity-item resource from the API
    * @param profileEntity - The entity profile providing schema metadata
-   * @param etag - ETag from the response header; pass as `If-Match` on update requests (RFC 9110)
+   * @param etag - ETag from the response header; pass as `If-Match` on update/delete requests to
+   *   this entity item (RFC 9110). It is the entity-item resource's ETag only — its content
+   *   attributes and to-one relations are separate conditional-request resources with their own.
    */
   public constructor(
     public readonly halItem: HalObject<EntityItemShape>,
@@ -401,18 +403,28 @@ export class EntityItem {
    * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
    * `contentFetch` omits the `Accept: application/hal+json` header.
    *
-   * If-Match is attached only when an ETag is available (omitted when null).
+   * The file goes in a `multipart/form-data` body, which carries its name and type. (A
+   * `Content-Disposition` header would be blocked by the platform's CORS policy.)
+   *
+   * The request is always conditional, on the content's own ETag (from a GET/HEAD/PUT on the
+   * `cg:content` link) — never the entity item's ETag, which is a different resource:
+   * - `contentEtag` given: `If-Match: <contentEtag>` — only replace the file the caller last saw.
+   * - `contentEtag` null (the attribute holds no file): `If-None-Match: *` — only store this if the
+   *   attribute has no file yet.
+   *
+   * Either way, if someone else stored a file in the meantime, the server answers 412 instead of
+   * overwriting it.
    *
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
-   * @param opts - Optional overrides for Content-Type and filename
+   * @param contentEtag - The ETag of the stored content, or null when the attribute holds no file
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public uploadContentRequest(
     attributeName: string,
-    file: Blob | File,
-    opts?: { contentType?: string; filename?: string },
+    file: File,
+    contentEtag: string | null,
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -421,28 +433,15 @@ export class EntityItem {
       );
     }
 
-    const contentType =
-      opts?.contentType ??
-      (file instanceof File && file.type ? file.type : "application/octet-stream");
-
-    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
-
-    const headers: Record<string, string> = {
-      "Content-Type": contentType,
-    };
-
-    if (filename) {
-      headers["Content-Disposition"] = contentDispositionAttachment(filename);
-    }
-
-    if (this.etag !== null) {
-      headers["If-Match"] = this.etag;
-    }
+    const body = new FormData();
+    body.append("file", file, file.name);
 
     return new Request(link.href, {
       method: "PUT",
-      body: file,
-      headers,
+      body,
+      // A truthiness check, not `=== null`: a missing ETag (`undefined`, e.g. from a caller still
+      // on the old two-argument signature) must never become a literal `If-Match: undefined`.
+      headers: contentEtag ? { "If-Match": contentEtag } : { "If-None-Match": "*" },
     });
   }
 

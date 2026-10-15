@@ -249,6 +249,8 @@ export interface ContentDownloadHandlerConfig {
    * Format: "bytes start-end/total" e.g. "bytes 0-99/1000".
    */
   contentRange?: string;
+  /** Optional ETag of the content (sent verbatim, quotes included). */
+  etag?: string;
 }
 
 export function createContentDownloadHandler(config: ContentDownloadHandlerConfig): HttpHandler {
@@ -258,6 +260,7 @@ export function createContentDownloadHandler(config: ContentDownloadHandlerConfi
     contentType = "application/octet-stream",
     filename,
     contentRange,
+    etag,
   } = config;
 
   return http.get(url, () => {
@@ -270,6 +273,9 @@ export function createContentDownloadHandler(config: ContentDownloadHandlerConfi
     }
     if (contentRange) {
       headers["Content-Range"] = contentRange;
+    }
+    if (etag) {
+      headers.ETag = etag;
     }
     if (typeof body !== "string") {
       headers["Content-Length"] = String(body.length);
