@@ -161,7 +161,7 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.getToOneRelation(name)?.setRelationRequest(targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list; via `EntityItemToOneRelation`)
 - `entityItem.getToManyRelation(name)?.addRelationRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemToManyRelation`)
 - `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
-- `entityItem.uploadContentRequest(attrName, file)` → hand-built PUT `Request` to the `cg:content` link, for an attribute with no file only (binary exception — no HAL-FORMS template)
+- `entityItem.uploadContentRequest(attrName, file, contentEtag)` → hand-built PUT `Request` to the `cg:content` link, conditional on the content's own ETag (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
 
 **URL construction — never concatenate by hand:**
@@ -334,8 +334,9 @@ Each class carries:
 - `name` — the relation name (matches the `name` field on the `cg:relation` link)
 - `link` — the `cg:relation` navigation link on the source item
 - `profileRelation` — the `ProfileRelation` schema (cardinality, target entity name, title)
-- `source` — the source `EntityItem`. **Not currently used for `If-Match`** — see FIXME(ACC-3186)
-  below; `relation.source.etag` was found to be the wrong etag for a relation mutation.
+- `source` — the source `EntityItem`. **Not used for `If-Match` by set/add/clear** — see
+  FIXME(ACC-3186) below; `relation.source.etag` is the wrong etag for a relation mutation (it is
+  the source entity item's). `useUnlinkRelation` still sends it — see "Attaching `If-Match`".
 
 `EntityItemToOneRelation` key members:
 
@@ -397,18 +398,23 @@ shared `useRelationMutationBase`) currently send **no** `If-Match` header. Only 
 **FIXME(ACC-3186):** for to-one relations (`useSetToOneRelation`, and `useClearRelation` on a to-one
 relation) optimistic-concurrency protection is currently off. They previously sent
 `relation.source.etag`, but that is the wrong etag: per the
-[platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/02_api_usage/index.html#conditional-requests),
+[platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html),
 a to-one relation is its own conditional-request resource with its own `ETag`, separate from both the
 source and target entity items. That etag is only exposed on the 302 response returned when GETing the
-relation link itself; this package's fetch client follows redirects by default (see
+relation link itself (the followed response's `ETag` is the target entity item's and "can not be used
+for a conditional request to the relation itself"); this package's fetch client follows redirects by default (see
 `src/api/hal-client.ts`), so the intermediate response and its `ETag` header are never seen today. Do
 NOT reintroduce `relation.source.etag` as a fix — it will pass validation locally but sends the wrong
-precondition. The real fix needs a manual-redirect fetch path to capture the relation's own etag. See
+precondition. The real fix needs the 302 response's own `ETag`, which a browser cannot read: `fetch`
+follows the redirect, and `redirect: "manual"` yields an opaque-redirect response with no readable
+headers — so it likely needs platform support. See
 `use-relation-mutation-base.ts` for the FIXME at the call site and the skipped test in
 `use-set-to-one-relation.test.tsx`.
 
-`useUnlinkRelation` and `useDeleteRelationItem` are unaffected — they gate `If-Match` on the
-**target** item's own etag (`item.etag`), which is a different, still-correct case. The request
+`useDeleteRelationItem` is unaffected — it deletes the target entity item and gates `If-Match` on
+that item's own etag (`item.etag`), which is correct. `useUnlinkRelation` sends `relation.source.etag`
+to the to-many per-item endpoint, which is not a conditional-request resource — see "Attaching
+`If-Match`" below. The request
 builders (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) never attach
 `If-Match` themselves regardless — that responsibility always belongs to the mutation hook.
 
@@ -432,12 +438,12 @@ no prefix collision with `entityItem.forEntityName`.
 
 **Relation hook cache behaviour:**
 
-- `useSetToOneRelation`: `onSettled` → invalidate `queryKeys.toOneRelation.byUrl` for the relation link URL (lazy refetch of the relation read); AND invalidate `queryKeys.entityItem.byUrl` for the source item (lazy refetch — the op is gated on the source ETag and may bump it). No `setQueryData`. No target item (`byUrlForName`) or collection invalidation.
+- `useSetToOneRelation`: `onSettled` → invalidate `queryKeys.toOneRelation.byUrl` for the relation link URL (lazy refetch of the relation read); AND invalidate `queryKeys.entityItem.byUrl` for the source item (lazy refetch — the op may bump the source item's ETag). No `setQueryData`. No target item (`byUrlForName`) or collection invalidation.
 - `useAddToManyRelation`: `onSettled` → invalidate `queryKeys.toManyRelation.byUrl` for the relation link URL; AND invalidate `queryKeys.entityItem.byUrl` for the source item. No `setQueryData`. No target item or collection invalidation.
 - `useClearRelation`: `onSettled` → invalidate the corresponding relation read key (`toOneRelation.byUrl` or `toManyRelation.byUrl`); AND invalidate `queryKeys.entityItem.byUrl` for the source item. No `setQueryData`. No target item or collection invalidation.
 - The source item invalidation is UNCONDITIONAL — `relation.source.profileEntity` and `relation.source.selfLink.href` are always available, unlike `targetProfile` which requires profile queries to settle.
 - Rationale for relation read key: a relation set/add/clear changes the relation-link response — the relation response cache needs busting.
-- Rationale for source item invalidation: the op is gated on the source item's `If-Match` ETag; the server may bump the ETag on the source item as part of the operation. A lazy refetch keeps the cached ETag valid and prevents a 412 on the next mutation against the same source item.
+- Rationale for source item invalidation: the server may bump the ETag on the source item as part of the operation. A lazy refetch keeps the cached ETag valid and prevents a 412 on the next mutation against the same source item.
 - 409 `integrity/blind-relation-overwrite` from `useSetToOneRelation`: unlink the existing relation first (`useClearRelation`), then set.
 
 **2. Gate every operation on template/link presence — never assume permission.**
@@ -574,10 +580,39 @@ narrow at the call site with these guards.
 
 ## ETag / conditional-request pattern
 
-The platform uses ETags for optimistic concurrency (RFC 9110).
-Problem type for mismatch: `unsatisfied-version` (HTTP 412).
+The platform uses ETags for optimistic concurrency (RFC 9110). Source of truth: the
+[platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html).
+Problem type for a failed precondition: `unsatisfied-version` (HTTP 412; `actual_version` holds the
+resource's current version).
 
-Canonical flow:
+**Resources that support conditional requests — each has its OWN ETag:**
+
+| Resource        | URL shape                            | ETag source in this package                                                           |
+| --------------- | ------------------------------------ | ------------------------------------------------------------------------------------- |
+| entity-item     | `/{plural}/{id}`                     | `entityItem.etag` (from `fetchHal`)                                                   |
+| to-one relation | `/{plural}/{id}/{relation}`          | Only on the endpoint's 302 response — not captured today, see FIXME(ACC-3186)         |
+| entity-content  | `/{plural}/{id}/{content-attribute}` | `ContentDownload.etag` (from `useDownloadContent`); passed as `contentEtag` on upload |
+
+Never send one resource's ETag to another — the entity item's ETag is NOT valid for its content or
+its to-one relations, and the ETag of the response a to-one relation redirects to belongs to the
+target entity item, not the relation. To-many relations (and their per-item endpoints) are not
+conditional-request resources.
+
+**Obtaining an ETag:** GET/HEAD/PUT/PATCH responses carry an `ETag` header, and the new value can be
+used right away. A POST that creates a resource returns the new resource's ETag. DELETE returns none.
+
+**Headers:**
+
+| Method(s)          | Header               | Effect                                                                              |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------- |
+| GET, HEAD          | `If-Match: <e>`      | 412 unless the resource has ETag `<e>`                                              |
+| GET, HEAD          | `If-None-Match: <e>` | 304 Not Modified when the resource still has ETag `<e>`                             |
+| PUT, PATCH, DELETE | `If-Match: <e>`      | 412 unless the resource has ETag `<e>`                                              |
+| PUT                | `If-None-Match: *`   | Create only if the resource does not exist yet, else 412 — **not for entity-items** |
+
+`If-Modified-Since` / `If-Unmodified-Since` are not supported.
+
+Canonical flow (entity item):
 
 1. **GET** `/{plural}/{id}` — capture the `ETag` response header.
    Store the ETag value exactly as received (including surrounding quotes).
@@ -588,18 +623,20 @@ Canonical flow:
 Rules:
 
 - Always send `If-Match` on mutating requests for entity items.
+- Content uploads are conditional on the content's own ETag (`If-Match`), or `If-None-Match: *`
+  when the attribute holds no file — see the Content exception section.
 - Do NOT strip or modify the ETag value — the platform compares verbatim.
 - Do NOT store ETags permanently (session state only).
 - Do NOT parse or construct ETag values — treat them as opaque strings.
 
 **Fetch helpers and ETag capture (`src/api/hal-client.ts`):**
 
-| Helper           | Returns                       | Calls `response.json()` | Use when                                                                                               |
-| ---------------- | ----------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
-| `fetchHal`       | `{ object: HalObject, etag }` | yes                     | GET — need the ETag for subsequent mutations                                                           |
-| `fetchHalObject` | `HalObject` (no ETag)         | yes                     | POST that returns 201 + body (create); not exported from `api/index.ts` — import from `api/hal-client` |
-| `fetchHalSlice`  | `HalSlice` (no ETag)          | yes (via `fetchHal`)    | Collection queries                                                                                     |
-| `fetchVoid`      | `void`                        | no                      | 204 No Content — DELETE / relation set/add/clear / content PUT; calls `checkResponse`, discards body   |
+| Helper           | Returns                       | Calls `response.json()` | Use when                                                                                                                                                                 |
+| ---------------- | ----------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fetchHal`       | `{ object: HalObject, etag }` | yes                     | GET — need the ETag for subsequent mutations                                                                                                                             |
+| `fetchHalObject` | `HalObject` (no ETag)         | yes                     | POST that returns 201 + body (create); not exported from `api/index.ts` — import from `api/hal-client`. The server does return the new item's ETag; this helper drops it |
+| `fetchHalSlice`  | `HalSlice` (no ETag)          | yes (via `fetchHal`)    | Collection queries                                                                                                                                                       |
+| `fetchVoid`      | `void`                        | no                      | 204 No Content — DELETE / relation set/add/clear / content PUT; calls `checkResponse`, discards body                                                                     |
 
 Both `fetchHal` and `fetchHalObject` call `response.json()` and will **throw on a 204 No Content
 response** (empty body). Mutations that return 204 — DELETE, relation set/add/clear, content PUT —
@@ -609,7 +646,8 @@ must use `fetchVoid(apiFetch, request)` instead. `fetchVoid` is implemented and 
 **Attaching `If-Match` to a mutation request:**
 
 Request builders (`editEntityRequest`, `setRelationRequest`, etc.) return a bare `Request` with no
-conditional header. The hook attaches it before calling `apiFetch` via `addIfMatchHeader` from
+conditional header. (Exception: `uploadContentRequest` takes `contentEtag` and sets `If-Match` /
+`If-None-Match: *` itself.) The hook attaches it before calling `apiFetch` via `addIfMatchHeader` from
 `src/api/hal-client.ts`:
 
 ```typescript
@@ -619,14 +657,18 @@ import { addIfMatchHeader } from "../api/hal-client";
 const req = addIfMatchHeader(baseReq, entityItem.etag);
 ```
 
-For `useUnlinkRelation` / `useDeleteRelationItem`, the hook reads the **target** item's own
-`item.etag` — the relation accessor does NOT attach `If-Match` in its request builder. For
+`useDeleteRelationItem` deletes the target entity item itself, so it sends the **target** item's
+own `item.etag`. `useUnlinkRelation` currently sends `relation.source.etag` on its DELETE to the
+to-many relation's per-item endpoint — that endpoint is not a conditional-request resource and the
+source item's ETag does not belong to it, so treat that header as suspect (same class of problem as
+FIXME(ACC-3186)). The relation accessors never attach `If-Match` in their request builders. For
 `useSetToOneRelation` / `useAddToManyRelation` / `useClearRelation`, no `If-Match` is sent:
-to-many relations have no ETag, and for to-one relations see the FIXME(ACC-3186) note under
+to-many relations are not conditional-request resources, and for to-one relations see the FIXME(ACC-3186) note under
 "Relation mutation hooks" above — `relation.source.etag` is not a valid substitute.
 
 Send the stored ETag verbatim — quotes included. Skip the header only when `etag === null`
-(e.g. immediately after a create, before the first GET of that item).
+(e.g. an item built from a collection page, or right after a create — the create response does
+carry the new item's ETag, but `fetchHalObject` drops it).
 
 **Error class for 412:**
 
@@ -706,7 +748,7 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 - `useNavigatorData()` provides both `apiFetch` (HAL client) and `contentFetch` (binary client, no `Accept: application/hal+json`). Use `apiFetch` for standard HAL mutations; use `contentFetch` only for binary content — see the Content exception section below.
 - `onSuccess` composition order: cache → invalidate → caller. Never fire caller `onSuccess` before cache is consistent.
 - 412 must bubble to the caller (`onError`); the hook must not auto-retry.
-  Check `error instanceof ProblemDetailError && error.problemDetail.status === 412`.
+  Check with `isProblemWithStatus(error, 412)`.
 - Tests: use `makeQueryClient()` (zero-arg; `test-utils.tsx` already sets `queries.retry: false`, and TanStack mutations do not retry by default) + `makeWrapper` + MSW handler factories. Extend `contract.test.ts` (ADR-014).
 
 ---
@@ -724,20 +766,25 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
   not permitted. Use `entityItem.canUploadContent(attrName)` (boolean) before invoking the hook.
   URL always comes from `entityItem.contentLink(attrName)?.href` via `cgRels.content` — never
   string-built.
-- Build the `Request` via `entityItem.uploadContentRequest(attrName, file)` or
+- Build the `Request` via `entityItem.uploadContentRequest(attrName, file, contentEtag)` or
   `entityItem.downloadContentRequest(attrName, opts)` — do NOT construct the Request by hand in
   hook or feature code.
 - Use `contentFetch` (not `apiFetch`) for the binary PUT/GET — `contentFetch` omits the
   `Accept: application/hal+json` header that `apiFetch` adds.
 - `contentFetch` is wired into `NavigatorDataContextValue` alongside `apiFetch`; access it via
   `useNavigatorData()`.
-- Upload (PUT) only stores a file into an attribute that has none: it sends the file as
-  `multipart/form-data` with `If-None-Match: *` (never the entity item's ETag — content has its
-  own), and `uploadContentRequest` throws when the attribute already holds a file. It goes through
-  `contentFetch.withUploadProgress(setProgress)`, then re-fetches the parent item via `apiFetch` to
-  capture the fresh ETag and update the item cache.
+- Upload (PUT) sends the file as `multipart/form-data` and is always conditional on the
+  **content's own ETag** — never the entity item's ETag (per the
+  [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html),
+  entity-content is its own conditional-request resource). Callers pass `contentEtag` in
+  `UploadContentVariables`: `If-Match: <contentEtag>` when given (replace only the file the caller
+  last saw), `If-None-Match: *` when `null` (store only if the attribute has no file yet). Either
+  way a concurrent change answers 412 instead of being overwritten; the hook then invalidates the
+  item query. It goes through `contentFetch.withUploadProgress(setProgress)`, then re-fetches the
+  parent item via `apiFetch` to capture the fresh ETag and update the item cache.
 - Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
-  response is 206 (Range request).
+  response is 206 (Range request); `etag` is the content's own ETag — the value to pass as
+  `contentEtag` when replacing that file.
 - Content helpers live in `src/api/content-types.ts`: `parseContentDisposition(header)`.
 - 412/415 surface as `ProblemDetailError`; the hook does not auto-retry.
 
@@ -755,7 +802,8 @@ stored and a rendition endpoint is configured — the platform's PDF rendition o
 - Throws synchronously (during render, not inside `queryFn`) when `attributeName` does not name a
   content attribute of the item — a caller programming error, not a state to render around.
 - Query key: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)` — its own root, never
-  invalidated by an entity item or collection mutation. The ETag in the key means a re-upload onto
+  invalidated by an entity item or collection mutation. The key uses the **entity item's** ETag (the
+  item's content metadata changes with its file), not the content's own ETag. The ETag in the key means a re-upload onto
   the same attribute produces a new key automatically (a stale preview is never served after a
   re-upload); it is NOT invalidated by any relation/entity-item cache invalidation.
 - **Uses `contentFetch` for everything — the stored download AND every rendition request/poll.**

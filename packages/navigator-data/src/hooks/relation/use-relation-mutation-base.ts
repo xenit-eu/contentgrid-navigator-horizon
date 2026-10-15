@@ -70,12 +70,15 @@ export function useRelationMutationBase<
       //
       // FIXME(ACC-3186): to-one set/clear should send If-Match with the relation's own
       // ETag. relation.source.etag (the previous value here) is the WRONG etag: per
-      // https://docs.contentgrid.com/guides/09_app_api/02_api_usage/index.html#conditional-requests
+      // https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html
       // a to-one relation is its own conditional-request resource, distinct from both the
-      // source and target entity items. That ETag is only exposed on the 302 response
-      // returned when GETing the relation link — our fetch client (see hal-client.ts)
-      // follows redirects by default, so it is never seen here. Needs a manual-redirect
-      // fetch path; then, for to-one relations only:
+      // source and target entity items. Its ETag is only on the 302 response returned when
+      // GETing the relation link; the ETag of the followed (final) response belongs to the
+      // target entity item and "can not be used for a conditional request to the relation
+      // itself". Our fetch client (see hal-client.ts) follows redirects, so the 302's ETag
+      // is never seen here — and a browser cannot read it with `redirect: "manual"` either
+      // (that yields an opaque-redirect response with no readable headers). Then, for
+      // to-one relations only:
       // const req = addIfMatchHeader(baseReq, <to-one relation ETag>);
 
       // Execute mutation — 204 No Content.

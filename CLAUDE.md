@@ -195,7 +195,7 @@ Key problem types from `https://contentgrid.cloud/problems/`:
 
 **Versioning:**
 
-- `unsatisfied-version` (412) — ETag mismatch; re-fetch, re-apply, retry
+- `unsatisfied-version` (412) — a conditional request's precondition failed: the `If-Match` ETag is no longer current, or `If-None-Match: *` was sent to a resource that already exists. `actual_version` holds the current version. Re-fetch, re-apply, retry
 
 **Not found:**
 
@@ -215,7 +215,7 @@ Key problem types from `https://contentgrid.cloud/problems/`:
 | 403  | Authenticated but forbidden                                     |
 | 404  | Resource not found OR access denied to a specific entity (ABAC) |
 | 409  | Unique constraint violation or referential integrity conflict   |
-| 412  | ETag mismatch (optimistic locking failure)                      |
+| 412  | Precondition failed (ETag mismatch, or resource already exists) |
 | 415  | Unsupported Content-Type                                        |
 
 ---
@@ -292,7 +292,7 @@ Use these terms consistently across hooks, components, variables, and parameters
 - **`profileRelation`** — a single relation definition within a `profileEntity` (cardinality, target entity).
 - **`searchTemplate`** — the search form (`_templates.search`) on a `profileEntity`; use it to discover filter properties and sort options.
 - **`createTemplate`** — the create form (`_templates.create-form`) on a `profileEntity`; absent means create is not permitted.
-- **`entityItem`** — a single item from a collection (one entity instance). Holds attribute values, the ETag, and mutation templates.
+- **`entityItem`** — a single item from a collection (one entity instance). Holds attribute values, the entity-item's ETag, and mutation templates. That ETag is only valid for the entity item itself — not for its content attributes or relations.
 - **`entityItemCollection`** — a page of `entityItem`s returned from a collection URL. Exposes `items`, pagination hrefs (`nextHref`, `prevHref`), and total count.
 
 For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
@@ -304,7 +304,10 @@ For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/nav
 - Always start API exploration from the root (`/`) — follow `cg:entity` links.
 - Use the entity profile (`/profile/<entity>`) for generic tooling that must adapt to model changes.
 - Prefer PATCH over PUT for partial updates.
-- Always include and validate ETags for mutable operations.
+- Make mutations conditional on the **ETag of the resource being changed** (see the [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html)). Three resource kinds support conditional requests, each with its **own** ETag: entity-item (`/{plural}/{id}`), to-one relation (`/{plural}/{id}/{relation}`) and entity-content (`/{plural}/{id}/{attribute}`). Never send one resource's ETag to another (e.g. the entity item's ETag on a content PUT). To-many relations (and their per-item endpoints) are not on that list — they don't support conditional requests.
+  - ETags come from GET/HEAD/PUT/PATCH responses and from the POST that created the resource; DELETE returns none. A to-one relation's ETag is on the 302 response of the relation endpoint — the ETag of the followed response belongs to the target entity item.
+  - `If-Match: <etag>` on PUT/PATCH/DELETE → 412 when the ETag is no longer current. `If-None-Match: *` on PUT → create only if the resource doesn't exist yet (not supported for entity-items), else 412.
+  - Send ETags verbatim, quotes included. `If-Modified-Since` / `If-Unmodified-Since` are not supported.
 - Never construct or parse pagination cursors — follow HAL `next`/`prev` links directly.
   The one place a `_cursor` value is ever read out of a link is to use it as an opaque
   lookup key (e.g. for browser URL state) into a registry that maps it back to the exact

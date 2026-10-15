@@ -13,7 +13,8 @@ export interface VersionConflictAlertProps {
 
 /**
  * Renders an `unsatisfied-version` problem (HTTP 412) — an `If-Match` ETag
- * mismatch. The caller decides what "retry" means (re-fetch + re-apply).
+ * mismatch, or an `If-None-Match: *` create on a resource that already exists.
+ * The caller decides what "retry" means (re-fetch + re-apply).
  */
 export function VersionConflictAlert({
   model,

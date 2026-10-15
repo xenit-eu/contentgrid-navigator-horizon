@@ -77,7 +77,9 @@ export class EntityItem {
   /**
    * @param halItem - The HAL entity-item resource from the API
    * @param profileEntity - The entity profile providing schema metadata
-   * @param etag - ETag from the response header; pass as `If-Match` on update requests (RFC 9110)
+   * @param etag - ETag from the response header; pass as `If-Match` on update/delete requests to
+   *   this entity item (RFC 9110). It is the entity-item resource's ETag only — its content
+   *   attributes and to-one relations are separate conditional-request resources with their own.
    */
   public constructor(
     public readonly halItem: HalObject<EntityItemShape>,
