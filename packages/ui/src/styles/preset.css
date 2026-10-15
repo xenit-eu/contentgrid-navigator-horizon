@@ -48,9 +48,8 @@
   --color-primary-foreground: var(--primary-foreground);
   /* Hover/pressed fill for solid primary surfaces. */
   --color-primary-hover: color-mix(in oklab, var(--primary) 80%, black);
-  /* Opaque primary-tinted fills for hovered and selected rows (opaque so sticky cells stay solid). */
-  --color-hover: color-mix(in oklab, var(--primary) 5%, var(--background));
-  --color-selected: color-mix(in oklab, var(--primary) 10%, var(--background));
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -141,6 +140,10 @@
   --muted-foreground: var(--text-muted);
   --accent: var(--sky-50);
   --accent-foreground: var(--ocean);
+  /* Opaque primary-tinted fills for hovered and selected rows (opaque so sticky cells stay solid).
+     Kept light so muted text on a selected row stays above 4.5:1 contrast. */
+  --hover: color-mix(in oklab, var(--primary) 3%, var(--background));
+  --selected: color-mix(in oklab, var(--primary) 5%, var(--background));
   /* Hover fill for outline/ghost buttons. */
   --button-hover: var(--sky-extract);
   --button-hover-foreground: #000000;
@@ -216,6 +219,9 @@
   --muted-foreground: var(--dark-dim);
   --accent: var(--dark-accent);
   --accent-foreground: var(--dark-surface);
+  /* Rows darken on hover; selected rows keep a primary tint. */
+  --hover: var(--muted);
+  --selected: color-mix(in oklab, var(--primary) 10%, var(--background));
   /* A step lighter than --dark-line so an outline button's border stays visible on hover. */
   --button-hover: color-mix(in oklab, var(--dark-line) 85%, var(--dark-ink));
   --button-hover-foreground: var(--dark-ink);
