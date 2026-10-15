@@ -16,8 +16,7 @@ const WIDE_LAYOUT_MIN_WIDTH = 800;
 /**
  * Whether the layout's own box (not the viewport — the app sidebar or a host container can make
  * it much narrower) is wide enough for side-by-side regions. `undefined` until measured, which
- * happens in a layout effect, so the first paint already uses the right arrangement and the
- * children never mount in one arrangement only to remount in the other.
+ * happens in a layout effect, so the first paint already uses the right arrangement.
  */
 function useIsWideLayout(): [boolean | undefined, (element: HTMLDivElement | null) => void] {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
@@ -71,7 +70,8 @@ export interface RightSidePanelLayoutProps {
  * collapses it to the rail, same as the toggle. Fills the available height with no nested
  * scrollbars — each region owns its own `overflow`/`min-h-0` so only that region scrolls, never
  * the page. Stacks vertically, without the handle, when the layout itself is narrower than 800px
- * (measured on its own box rather than the viewport). Forwards `ref` to the outer element so a
+ * (measured on its own box rather than the viewport); both regions stay mounted across that
+ * breakpoint. Forwards `ref` to the outer element so a
  * caller can request fullscreen on the whole layout (e.g. a PDF viewer's own fullscreen mode).
  *
  * The show/hide toggle is icon-only, so a `Tooltip` carries its accessible name (self-contained
@@ -115,7 +115,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
           "flex min-h-0 flex-col overflow-hidden rounded-lg border",
           // Wide: fills the resizable panel, whose size (48px when collapsed) sets the width.
           // Narrow: a full-width row under the main content.
-          isWide ? "h-full" : "",
+          isWide === false ? "" : "h-full",
         ].join(" ")}
       >
         {open ? (
@@ -179,10 +179,14 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
     return (
       <TooltipProvider>
         <div ref={rootRef} className="h-full min-h-0">
-          {isWide === true && (
+          {/* One tree for both arrangements: below 800px the split layout stacks instead of
+            being swapped for another element, so `children` (e.g. a PDF viewer) and the side
+            panel stay mounted when the layout crosses the breakpoint. */}
+          {isWide !== undefined && (
             <ResizableSplitLayout
               left={<div className="h-full min-h-0 min-w-0 overflow-hidden">{children}</div>}
               right={sidePanelRegion}
+              stacked={!isWide}
               defaultRightSize={360}
               minRightSize={280}
               maxRightSize="60"
@@ -199,12 +203,6 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
               // border line runs straight through the grip. `z-10` keeps it above the panel.
               handleClassName="z-10 ml-4 -mr-px bg-transparent"
             />
-          )}
-          {isWide === false && (
-            <div className="grid h-full min-h-0 grid-cols-1 gap-4">
-              <div className="min-h-0 min-w-0 overflow-hidden">{children}</div>
-              {sidePanelRegion}
-            </div>
           )}
         </div>
       </TooltipProvider>

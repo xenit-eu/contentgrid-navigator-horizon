@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { useEffect } from "react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RightSidePanelLayout } from "./right-side-panel-layout";
@@ -138,6 +139,62 @@ describe("RightSidePanelLayout", () => {
         "false",
       );
       expect(screen.queryByText("Panel content")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("crossing the 800px breakpoint", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    it("keeps the content and the side panel mounted", () => {
+      let width = 1000;
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() =>
+        DOMRect.fromRect({ width, height: 600 }),
+      );
+      const observers: ResizeObserverCallback[] = [];
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(callback: ResizeObserverCallback) {
+            observers.push(callback);
+          }
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        },
+      );
+      const resizeTo = (next: number) => {
+        width = next;
+        act(() => {
+          for (const callback of observers) callback([], {} as ResizeObserver);
+        });
+      };
+
+      const mounts = { content: 0, panel: 0 };
+      function MountCounter({ name }: { readonly name: keyof typeof mounts }) {
+        useEffect(() => {
+          mounts[name] += 1;
+        }, [name]);
+        return <span>{name}</span>;
+      }
+
+      const { container } = render(
+        <RightSidePanelLayout sidePanel={<MountCounter name="panel" />}>
+          <MountCounter name="content" />
+        </RightSidePanelLayout>,
+      );
+      const layout = () => container.querySelector("[data-slot=resizable-split-layout]");
+      expect(layout()).not.toHaveAttribute("data-stacked");
+
+      resizeTo(600);
+      expect(layout()).toHaveAttribute("data-stacked");
+
+      resizeTo(1000);
+      expect(layout()).not.toHaveAttribute("data-stacked");
+
+      expect(mounts).toEqual({ content: 1, panel: 1 });
     });
   });
 });
