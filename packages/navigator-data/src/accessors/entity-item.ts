@@ -404,27 +404,31 @@ export class EntityItem {
    * The file goes in a `multipart/form-data` body, which carries its name and type. (A
    * `Content-Disposition` header would be blocked by the platform's CORS policy.)
    *
-   * Only for an attribute with no file: `If-None-Match: *` means "only store this if the attribute
-   * has no file yet", so if someone else uploaded a file in the meantime, the server answers 412
-   * instead of overwriting it.
+   * The request is always conditional, on the content's own ETag (from a GET/HEAD/PUT on the
+   * `cg:content` link) — never the entity item's ETag, which is a different resource:
+   * - `contentEtag` given: `If-Match: <contentEtag>` — only replace the file the caller last saw.
+   * - `contentEtag` null (the attribute holds no file): `If-None-Match: *` — only store this if the
+   *   attribute has no file yet.
+   *
+   * Either way, if someone else stored a file in the meantime, the server answers 412 instead of
+   * overwriting it.
    *
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
+   * @param contentEtag - The ETag of the stored content, or null when the attribute holds no file
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
-   * @throws Error if the attribute already holds a file
    */
-  public uploadContentRequest(attributeName: string, file: File): Request {
+  public uploadContentRequest(
+    attributeName: string,
+    file: File,
+    contentEtag: string | null,
+  ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
       throw new Error(
         `Content upload not permitted for attribute '${attributeName}': cg:content link absent`,
       );
-    }
-
-    const attribute = this.findAttribute(attributeName)?.value;
-    if (attribute?.kind === AttributeKind.CONTENT && attribute.metadata !== null) {
-      throw new Error(`Content attribute '${attributeName}' already holds a file`);
     }
 
     const body = new FormData();
@@ -433,7 +437,9 @@ export class EntityItem {
     return new Request(link.href, {
       method: "PUT",
       body,
-      headers: { "If-None-Match": "*" },
+      // A truthiness check, not `=== null`: a missing ETag (`undefined`, e.g. from a caller still
+      // on the old two-argument signature) must never become a literal `If-Match: undefined`.
+      headers: contentEtag ? { "If-Match": contentEtag } : { "If-None-Match": "*" },
     });
   }
 

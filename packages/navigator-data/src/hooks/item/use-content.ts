@@ -20,6 +20,11 @@ import { useNavigatorData } from "../context";
 export type UploadContentVariables = {
   /** The file to upload. */
   readonly file: File;
+  /**
+   * The ETag of the stored content (e.g. `ContentDownload.etag`), or null when the attribute holds
+   * no file. Never the entity item's ETag — content is its own conditional-request resource.
+   */
+  readonly contentEtag: string | null;
 };
 
 /**
@@ -46,6 +51,8 @@ export type ContentDownload = {
   readonly contentLength: number | null;
   /** Whether this is a partial response (HTTP 206 Partial Content). */
   readonly isPartial: boolean;
+  /** The content's own ETag (for a conditional upload), or null if absent. */
+  readonly etag: string | null;
 };
 
 /**
@@ -82,9 +89,10 @@ export interface UseDownloadContentOptions {
  * omits the `Accept: application/hal+json` header set by `createApiClient`, over XHR so the
  * returned `progress` (0–100) follows the upload.
  *
- * `entityItem.uploadContentRequest` sends `If-None-Match: *`. On HTTP 412 (a file was stored in
- * the meantime), the error surfaces as `ProblemDetailError` and the item query is invalidated so
- * the newer version loads — the hook does NOT auto-retry.
+ * `entityItem.uploadContentRequest` makes the PUT conditional on `contentEtag`: `If-Match` when
+ * given, `If-None-Match: *` when null. On HTTP 412 (the stored file changed in the meantime), the
+ * error surfaces as `ProblemDetailError` and the item query is invalidated so the newer version
+ * loads — the hook does NOT auto-retry.
  *
  * Cache behaviour on success:
  * - Re-fetches the entity item via `apiFetch` to get fresh metadata + new ETag.
@@ -111,11 +119,11 @@ export function useUploadContent(
   const [progress, setProgress] = useState(0);
 
   const mutation = useMutation({
-    mutationFn: async ({ file }: UploadContentVariables) => {
+    mutationFn: async ({ file, contentEtag }: UploadContentVariables) => {
       setProgress(0);
       // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
       // uploadContentRequest() throws if the link is absent (ABAC deny).
-      const req = entityItem.uploadContentRequest(attributeName, file);
+      const req = entityItem.uploadContentRequest(attributeName, file, contentEtag);
 
       // Send the file, updating `progress` as it goes. The server answers 204 No Content.
       await fetchVoid(contentFetch.withUploadProgress(setProgress), req);
@@ -140,7 +148,7 @@ export function useUploadContent(
       await onSuccess?.(item, variables, onMutateResult, context);
     },
     onError: async (error, variables, onMutateResult, context) => {
-      // Someone else stored a file first: reload the item so it shows their file.
+      // The stored file changed first: reload the item so it shows the current file.
       if (isProblemWithStatus(error, 412)) {
         await queryClient.invalidateQueries({
           queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
@@ -208,8 +216,16 @@ export function useDownloadContent(
       const contentLength =
         contentLengthHeader === null ? null : Number.parseInt(contentLengthHeader, 10);
       const isPartial = response.status === 206;
+      const etag = response.headers.get("ETag");
 
-      return { blob, mimetype, filename, contentLength, isPartial } satisfies ContentDownload;
+      return {
+        blob,
+        mimetype,
+        filename,
+        contentLength,
+        isPartial,
+        etag,
+      } satisfies ContentDownload;
     },
     onSuccess: async (data, variables, onMutateResult, context) => {
       // No cache writes — blobs are not cached.

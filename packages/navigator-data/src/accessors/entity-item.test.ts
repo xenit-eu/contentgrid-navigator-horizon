@@ -731,7 +731,7 @@ describe("EntityItem — uploadContentRequest", () => {
   it("returns a Request with PUT method pointing to the content link href", () => {
     const item = makeEntityItemWithEmptyContent();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const req = item.uploadContentRequest("document", file);
+    const req = item.uploadContentRequest("document", file, null);
     expect(req).toBeInstanceOf(Request);
     expect(req.method).toBe("PUT");
     expect(req.url).toBe(CONTENT_URL);
@@ -743,30 +743,40 @@ describe("EntityItem — uploadContentRequest", () => {
     // Spy rather than read the body back: a jsdom File loses its name and bytes when undici
     // serializes the multipart body, so `req.formData()`/`req.text()` can't be asserted on here.
     const appendSpy = vi.spyOn(FormData.prototype, "append");
-    const req = item.uploadContentRequest("document", file);
+    const req = item.uploadContentRequest("document", file, null);
     expect(req.headers.get("Content-Type")).toMatch(/^multipart\/form-data; boundary=/);
     expect(req.headers.get("Content-Disposition")).toBeNull();
     expect(appendSpy).toHaveBeenCalledWith("file", file, "hello.txt");
   });
 
-  it("sends If-None-Match: * instead of the item's ETag", () => {
+  it("sends If-None-Match: * instead of the item's ETag when there is no content ETag", () => {
     const item = makeEntityItemWithEmptyContent();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const req = item.uploadContentRequest("document", file);
+    const req = item.uploadContentRequest("document", file, null);
     expect(req.headers.get("If-None-Match")).toBe("*");
     expect(req.headers.get("If-Match")).toBeNull();
+  });
+
+  it("sends If-None-Match: *, never If-Match: undefined, when the content ETag is missing", () => {
+    const item = makeEntityItemWithEmptyContent();
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file, undefined as unknown as null);
+    expect(req.headers.get("If-None-Match")).toBe("*");
+    expect(req.headers.get("If-Match")).toBeNull();
+  });
+
+  it("sends If-Match with the content's ETag, not the item's, when one is given", () => {
+    const item = makeEntityItemWithContentLink('"item-v1"');
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const req = item.uploadContentRequest("document", file, '"content-v1"');
+    expect(req.headers.get("If-Match")).toBe('"content-v1"');
+    expect(req.headers.get("If-None-Match")).toBeNull();
   });
 
   it("throws when the cg:content link is absent", () => {
     const item = makeEntityItemWithoutContentLink();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    expect(() => item.uploadContentRequest("document", file)).toThrow();
-  });
-
-  it("throws when the attribute already holds a file", () => {
-    const item = makeEntityItemWithContentLink();
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    expect(() => item.uploadContentRequest("document", file)).toThrow("already holds a file");
+    expect(() => item.uploadContentRequest("document", file, null)).toThrow();
   });
 });
 

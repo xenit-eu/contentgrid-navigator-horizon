@@ -130,7 +130,8 @@ export function ContentPreviewPanel({
   function handleUpload(file: File | null): void {
     if (file) {
       setUploadAttributeName(attributeName);
-      uploadMutation.mutate({ file });
+      // Only offered in the "No file" state, so there is no stored content to match.
+      uploadMutation.mutate({ file, contentEtag: null });
     }
   }
 

@@ -3,7 +3,7 @@
  *
  * Covers:
  * - Upload success (PUT 204 → re-fetch GET → isSuccess, cache set + invalidated)
- * - Upload If-Match header sent verbatim from item.etag
+ * - Upload conditional on the content's ETag: If-Match when given, If-None-Match: * when null
  * - Upload 412 → isError, handler hit exactly once (no retry)
  * - Upload 415 → isError, ProblemDetailError
  * - Download success full (GET 200 + Blob → ContentDownload populated, isPartial false)
@@ -123,7 +123,10 @@ describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)",
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -145,7 +148,10 @@ describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)",
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -168,7 +174,10 @@ describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)",
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -202,13 +211,76 @@ describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)",
     );
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(callerOnSuccess).toHaveBeenCalledOnce();
     expect(cacheAtCallTime).toBeInstanceOf(EntityItem);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useUploadContent — conditional request on the content's own ETag
+// ---------------------------------------------------------------------------
+
+describe("useUploadContent — conditional request", () => {
+  function wireCapturingUploadHandler() {
+    const captured: { ifMatch: string | null; ifNoneMatch: string | null }[] = [];
+    server.use(
+      http.put(CONTENT_URL, ({ request }) => {
+        captured.push({
+          ifMatch: request.headers.get("If-Match"),
+          ifNoneMatch: request.headers.get("If-None-Match"),
+        });
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    return captured;
+  }
+
+  it("sends If-None-Match: * when there is no content ETag", async () => {
+    const captured = wireCapturingUploadHandler();
+    wireRefetchHandler();
+
+    const entityItem = makeEntityItemWithEmptyContent();
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(captured).toEqual([{ ifMatch: null, ifNoneMatch: "*" }]);
+  });
+
+  it("sends If-Match with the content's ETag, never the item's", async () => {
+    const captured = wireCapturingUploadHandler();
+    wireRefetchHandler();
+
+    const entityItem = makeEntityItemWithContentLink('"item-v1"');
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: '"content-v1"',
+      });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(captured).toEqual([{ ifMatch: '"content-v1"', ifNoneMatch: null }]);
   });
 });
 
@@ -240,7 +312,10 @@ describe("useUploadContent — 412 ETag mismatch", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -272,7 +347,10 @@ describe("useUploadContent — 412 ETag mismatch", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -302,7 +380,10 @@ describe("useUploadContent — 415 Unsupported Media Type", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -326,6 +407,7 @@ describe("useDownloadContent — full download success (GET 200)", () => {
         body: new Uint8Array([0x25, 0x50, 0x44, 0x46]), // %PDF header
         contentType: "application/pdf",
         filename: "invoice.pdf",
+        etag: '"content-v1"',
       }),
     );
 
@@ -347,6 +429,7 @@ describe("useDownloadContent — full download success (GET 200)", () => {
     expect(data.mimetype).toBe("application/pdf");
     expect(data.filename).toBe("invoice.pdf");
     expect(data.isPartial).toBe(false);
+    expect(data.etag).toBe('"content-v1"');
   });
 
   it("sets contentLength from Content-Length header", async () => {
@@ -532,7 +615,10 @@ describe("useUploadContent — ABAC: cg:content link absent", () => {
     });
 
     await act(async () => {
-      result.current.mutate({ file: new File(["hello"], "hello.txt", { type: "text/plain" }) });
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
