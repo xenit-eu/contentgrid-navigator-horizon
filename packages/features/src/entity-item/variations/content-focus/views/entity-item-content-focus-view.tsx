@@ -108,49 +108,11 @@ function EntityItemContentFocusViewBody({
   profileEntity,
   itemId,
   toolbar,
-  onRelationItemClick,
-  onRelationItemCreateNew,
-  onMissingRelationTargetClick,
-  onBlindRelationOverwriteClick,
-  onRequiredRelationClick,
   renderHomeLink,
   renderCollectionLink,
+  ...handlers
 }: Readonly<EntityItemContentFocusViewProps & { profileEntity: ProfileEntity }>) {
   const item = useEntityItem({ profileEntity, entityId: itemId });
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-
-  // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
-  // whenever the item identity changes — entity OR id, not just id (navigating e.g.
-  // /document/1 -> /invoice/1 keeps the same itemId with a different profileEntity) — so an
-  // explicit choice for one item never leaks into the next (FR-006).
-  const [userSelectedAttribute, setUserSelectedAttribute] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    setUserSelectedAttribute(undefined);
-  }, [profileEntity.name, itemId]);
-
-  // Defense in depth alongside the effect above: the effect only clears state AFTER the render
-  // that already switched to the new profileEntity/itemId commits, so a stale
-  // `userSelectedAttribute` from the previous entity can otherwise still reach
-  // `useContentPreview` for one render — which throws synchronously (not just renders an error
-  // state) for an attribute name that isn't a content attribute of the *current* item
-  // (`use-content-preview.ts`'s `findContentAttribute`). Validating here means that render uses
-  // the fresh default instead of crashing.
-  const currentContentAttributeNames = new Set(
-    profileEntity.userDefinedAttributes.filter((attr) => attr.isContent).map((attr) => attr.name),
-  );
-  const validUserSelectedAttribute =
-    userSelectedAttribute !== undefined && currentContentAttributeNames.has(userSelectedAttribute)
-      ? userSelectedAttribute
-      : undefined;
-
-  const defaultAttribute = item.data
-    ? selectDefaultContentAttribute(profileEntity, item.data)
-    : undefined;
-  const selectedAttribute = validUserSelectedAttribute ?? defaultAttribute;
-
-  function handleRelationItemClick(relatedEntityName: string, relatedItemId: string): void {
-    onRelationItemClick?.({ entityName: relatedEntityName, itemId: relatedItemId });
-  }
 
   // Home -> collection -> item id: the view derives the LABELS from the profile/item it already
   // resolved (Principle VIII), but has no route knowledge of its own — a crumb is rendered by the
@@ -190,41 +152,11 @@ function EntityItemContentFocusViewBody({
     <>
       {item.isPending && <LoadingPage />}
       {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-      {item.isSuccess &&
-        (profileEntity.hasContentAttributes ? (
-          <ContentFocusEntityItemBody
-            entityItem={item.data}
-            attributeName={selectedAttribute}
-            onSelectAttribute={setUserSelectedAttribute}
-            loadedProfiles={loadedProfiles}
-            onRelationItemClick={handleRelationItemClick}
-            onRelationItemCreateNew={onRelationItemCreateNew}
-            onMissingRelationTargetClick={onMissingRelationTargetClick}
-            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-            onRequiredRelationClick={onRequiredRelationClick}
-          />
-        ) : (
-          <EntityItemView
-            profile={profileEntity}
-            itemId={itemId}
-            toolbar={false}
-            onRelationItemClick={handleRelationItemClick}
-            onRelationItemCreateNew={onRelationItemCreateNew}
-            onMissingRelationTargetClick={onMissingRelationTargetClick}
-            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-            onRequiredRelationClick={onRequiredRelationClick}
-          />
-        ))}
+      {item.isSuccess && <EntityItemContentFocusBody entityItem={item.data} {...handlers} />}
     </>
   );
 
-  // When the content-focus body is what renders (profileEntity.hasContentAttributes), the
-  // preview panel should run edge to edge rather than sit inside the standard page gutters —
-  // drop the horizontal padding, and the top vertical padding too (the toolbar strip above
-  // already has its own bottom padding, so a top gutter here would just double that gap) —
-  // keeping only the bottom gutter for breathing room at the end of the scroll region. The
-  // EntityItemView fallback body keeps the standard padding on both axes.
-  const contentPadding = profileEntity.hasContentAttributes ? "bottom" : true;
+  const contentPadding = entityItemContentFocusPadding(profileEntity);
 
   if (resolvedToolbar === false) {
     return <PageLayout padded={contentPadding}>{content}</PageLayout>;
@@ -237,6 +169,104 @@ function EntityItemContentFocusViewBody({
     >
       {content}
     </BreadCrumbsToolBarLayout>
+  );
+}
+
+/**
+ * Content padding for whatever wraps {@link EntityItemContentFocusBody}. When the content-focus
+ * body is what renders (`profileEntity.hasContentAttributes`), the preview panel should run edge
+ * to edge rather than sit inside the standard page gutters — drop the horizontal padding, and the
+ * top vertical padding too (the toolbar strip above already has its own bottom padding, so a top
+ * gutter here would just double that gap) — keeping only the bottom gutter for breathing room at
+ * the end of the scroll region. The `EntityItemView` fallback body keeps the standard padding on
+ * both axes.
+ */
+export function entityItemContentFocusPadding(profileEntity: ProfileEntity): true | "bottom" {
+  return profileEntity.hasContentAttributes ? "bottom" : true;
+}
+
+export type EntityItemContentFocusBodyProps = Pick<
+  EntityItemContentFocusViewProps,
+  | "onRelationItemClick"
+  | "onRelationItemCreateNew"
+  | "onMissingRelationTargetClick"
+  | "onBlindRelationOverwriteClick"
+  | "onRequiredRelationClick"
+> & {
+  /** The already-loaded item; its profile is `entityItem.profileEntity`. */
+  readonly entityItem: EntityItem;
+};
+
+/**
+ * The item detail content for an already-loaded `entityItem`, with no toolbar, page layout or
+ * loading/error state of its own — the caller resolved the item and draws those. FR-001: an
+ * entity with no content attributes falls back to the existing (stable) `EntityItemView` body;
+ * one that has them renders the PDF/content preview beside the item's attributes and relations.
+ */
+export function EntityItemContentFocusBody({
+  entityItem,
+  onRelationItemClick,
+  onRelationItemCreateNew,
+  onMissingRelationTargetClick,
+  onBlindRelationOverwriteClick,
+  onRequiredRelationClick,
+}: Readonly<EntityItemContentFocusBodyProps>) {
+  const { profileEntity } = entityItem;
+  const { profiles: loadedProfiles } = useLoadedProfileEntities();
+
+  // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
+  // whenever the item identity changes — entity OR id, not just id (navigating e.g.
+  // /document/1 -> /invoice/1 keeps the same id with a different profileEntity) — so an
+  // explicit choice for one item never leaks into the next (FR-006).
+  const [userSelectedAttribute, setUserSelectedAttribute] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    setUserSelectedAttribute(undefined);
+  }, [profileEntity.name, entityItem.id]);
+
+  // Defense in depth alongside the effect above: the effect only clears state AFTER the render
+  // that already switched to the new profileEntity/id commits, so a stale
+  // `userSelectedAttribute` from the previous entity can otherwise still reach
+  // `useContentPreview` for one render — which throws synchronously (not just renders an error
+  // state) for an attribute name that isn't a content attribute of the *current* item
+  // (`use-content-preview.ts`'s `findContentAttribute`). Validating here means that render uses
+  // the fresh default instead of crashing.
+  const currentContentAttributeNames = new Set(
+    profileEntity.userDefinedAttributes.filter((attr) => attr.isContent).map((attr) => attr.name),
+  );
+  const validUserSelectedAttribute =
+    userSelectedAttribute !== undefined && currentContentAttributeNames.has(userSelectedAttribute)
+      ? userSelectedAttribute
+      : undefined;
+  const selectedAttribute =
+    validUserSelectedAttribute ?? selectDefaultContentAttribute(profileEntity, entityItem);
+
+  function handleRelationItemClick(relatedEntityName: string, relatedItemId: string): void {
+    onRelationItemClick?.({ entityName: relatedEntityName, itemId: relatedItemId });
+  }
+
+  return profileEntity.hasContentAttributes ? (
+    <ContentFocusEntityItemBody
+      entityItem={entityItem}
+      attributeName={selectedAttribute}
+      onSelectAttribute={setUserSelectedAttribute}
+      loadedProfiles={loadedProfiles}
+      onRelationItemClick={handleRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
+      onMissingRelationTargetClick={onMissingRelationTargetClick}
+      onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+      onRequiredRelationClick={onRequiredRelationClick}
+    />
+  ) : (
+    <EntityItemView
+      profile={profileEntity}
+      itemId={entityItem.id}
+      toolbar={false}
+      onRelationItemClick={handleRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
+      onMissingRelationTargetClick={onMissingRelationTargetClick}
+      onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+      onRequiredRelationClick={onRequiredRelationClick}
+    />
   );
 }
 

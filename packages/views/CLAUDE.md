@@ -47,12 +47,30 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Views
 
-- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView({ entityName, itemId, toolbar? })` and its
-  `preloadEntityItemDetail`. The view calls `useProfileEntity` directly for the breadcrumb labels and draws its
-  own loading/not-found state for that; the item itself is fetched (and its own loading/error state drawn,
-  inside the same breadcrumb toolbar) by `EntityItemContentFocusView` from `@contentgrid/features/entity-item`.
-  `preloadEntityItemDetail` fills the same two caches with `ensureProfileEntity`/`ensureEntityItem`. The
-  relation-problem dialog lives in the view; relation "create new" goes through `navigation.openCreateItem`.
+- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView(ViewProps & EntityItemTarget)`, opened by
+  `{ entityName, itemId }` or by `{ itemUrl }`. The view resolves the target itself with `useEntityItemTarget`
+  (`src/hooks/`), which finds the profile by name or through `describesUrl`, never by reading the name from the
+  link. Both modes share `useEntityItem`'s cache key. The view draws the loading, error and not-found states and
+  the toolbar, then hands the loaded `entityItem` to `EntityItemContentFocusBody` from
+  `@contentgrid/features/entity-item`. The toolbar is drawn from the `EntityItemTargetResult` in every state,
+  each crumb as soon as it is known. `ViewProps`/`ViewToolbarConfiguration` live in `src/types/view.tsx`;
+  `EntityItemTarget`/`EntityItemTargetResult` next to the hook. The relation-problem dialog lives in the view; relation
+  "create new" goes through `navigation.openCreateItem`. `preloadEntityItemDetail` covers the by-name mode only.
+
+- `@contentgrid/views/entity-item-collection`: `EntityItemCollectionView(ViewProps & EntityItemCollectionTarget &
+{ state?, onStateChange? })`, opened by `{ entityName }` or `{ collectionUrl }`. The view resolves only the profile
+  (`useProfileEntityTarget`) and owns the `CollectionViewState` (`filters`, `sort`, `pageUrl`), controlled or internal;
+  the `entity-item-collection` feature gets the loaded profile and the state, and fetches the page itself. A link
+  starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
+  collection, plus a create action gated on `profileEntity.createTemplate`.
+
+## Breadcrumbs
+
+- `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `CollectionBreadcrumb` and
+  `ItemBreadcrumb`, each rendering its `children` crumbs after itself. A crumb with children is a link; the last one
+  is the current page. A crumb draws nothing until its data is known, so pages nest them without conditions. Each
+  page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`); each view draws its
+  own toolbar around it.
 
 ## Testing
 
