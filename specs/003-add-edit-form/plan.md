@@ -95,7 +95,7 @@ packages/features/src/
 └── entity-item/
     ├── CLAUDE.md                                 # scope and layering of edit/
     ├── edit/
-    │   ├── use-edit-mode.ts                      # NEW edit mode of the shown item, owned by the views
+    │   ├── use-edit-context.ts                      # NEW edit mode of the shown item, owned by the views
     │   ├── editable-entity-item.ts               # NEW EditableEntityItem, isEditableEntityItem
     │   ├── edit-entity-item-button.tsx           # NEW Edit, a boxed pencil at the right of the item's title row
     │   ├── edit-entity-item-container.tsx        # NEW prefill, useUpdateEntityItem, errors, unsaved-changes guard; 412 Refresh → onRefresh
@@ -112,7 +112,7 @@ No change to `use-content.ts`, `file-upload-zone.tsx`, the content-preview compo
 ### Entry and edit mode (FR-001, FR-003)
 
 - Both views show an **Edit** icon button (a pencil on a filled primary-colored rounded box (the `ui` Button `default` variant), with an "Edit" tooltip and accessible name) at the right of the item's title row (D14), when the item has an update template (FR-001) with at least one property (spec edge case: an update form with no properties offers nothing to change). There is no "Attributes" heading. The views are only rendered by the detail routes today, so FR-002 needs no opt-out prop yet.
-- Edit mode is view state (`useEditMode(item, refetch)`): the version the form was opened on, tied to the item's self link, so it never carries over to another item and stays closed on coming back. A background refetch leaves the open form on that version. The views pass the edited version as `item`, `isEditing`/`onEditingChange` and `onRefresh` (`useEditMode`'s `refresh`) to `EditableEntityItemAttributes`. While editing, the Edit button hides and `EntityItemAttributes` is replaced by `EditEntityItemContainer`; the header, relation sections and content preview stay mounted.
+- Edit mode is view state (`useEditContext(item, refetch)`): the version the form was opened on, tied to the item's self link, so it never carries over to another item and stays closed on coming back. A background refetch leaves the open form on that version. The views pass the edited version as `item`, `isEditing`/`onEditingChange` and `onRefresh` (`useEditContext`'s `refresh`) to `EditableEntityItemAttributes`. While editing, the Edit button hides and `EntityItemAttributes` is replaced by `EditEntityItemContainer`; the header, relation sections and content preview stay mounted.
 - `EditEntityItemContainer` owns `useUnsavedChangesGuard(formState.isDirty)` and `UnsavedChangesDialog`, as `CreateEntityItemView` does. Cancel with unsaved changes opens the same dialog; without changes it leaves edit mode at once (US1-5, US1-6).
 - The form uses the create form's Save/Cancel button row; the pinned action bar, edit-mode heading and transition (FR-003a, FR-003b) are not part of PR 1 (spec § Delivery).
 
