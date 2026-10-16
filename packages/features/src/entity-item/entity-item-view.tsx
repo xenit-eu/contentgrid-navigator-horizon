@@ -10,7 +10,7 @@ import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "./edit/edit-entity-item-button";
-import { useEditMode } from "./edit/use-edit-mode";
+import { useEditContext } from "./edit/use-edit-context";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -88,7 +88,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
     "url" in props ? { url: props.url } : { profileEntity: props.profile, entityId: props.itemId },
   );
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const editMode = useEditMode(item.data, item.refetch);
+  const editContext = useEditContext(item.data, item.refetch);
 
   const content = (
     <>
@@ -98,8 +98,8 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
             <EntityItemReference item={item.data} size="lg" />
             <EditEntityItemButton
               item={item.data}
-              isEditing={editMode.isEditing}
-              onEdit={() => editMode.setIsEditing(true)}
+              isEditing={editContext.isEditing}
+              onEdit={() => editContext.setIsEditing(true)}
             />
           </>
         ) : (
@@ -115,10 +115,10 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
       {item.data && (
         <div className="space-y-6 p-4 pt-0">
           <EditableEntityItemAttributes
-            item={editMode.editedItem ?? item.data}
-            isEditing={editMode.isEditing}
-            onEditingChange={editMode.setIsEditing}
-            onRefresh={() => void editMode.refresh()}
+            item={editContext.editedItem ?? item.data}
+            isEditing={editContext.isEditing}
+            onEditingChange={editContext.setIsEditing}
+            onRefresh={() => void editContext.refresh()}
           />
 
           {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (

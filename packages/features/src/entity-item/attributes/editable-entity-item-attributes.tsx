@@ -4,7 +4,7 @@ import { isEditableEntityItem } from "../edit/editable-entity-item";
 import { EntityItemAttributes } from "./entity-item-attributes";
 
 interface EditableEntityItemAttributesProps {
-  /** While editing, the version the form was opened on (see `useEditMode`). */
+  /** While editing, the version the form was opened on (see `useEditContext`). */
   readonly item: EntityItem;
   /** Shows the update form in place of the attributes; ignored when the item can't be edited. */
   readonly isEditing: boolean;
