@@ -6,7 +6,7 @@ Client-side state only; the server model (entity items, content) does not change
 
 ## PR 1 — metadata edit
 
-Edit mode is state of the item view (`useEditMode(item, refetch)`): the version of the shown item being edited, `null` when not editing. A background refetch does not change it, so the open form keeps the user's input and a save of an item that changed meanwhile gets a 412; Refresh moves it to the refetched version. It belongs to one item (its self link), so it ends when the view moves to another item and stays closed on coming back.
+Edit mode is state of the item view (`useEditContext(item, refetch)`): the version of the shown item being edited, `null` when not editing. A background refetch does not change it, so the open form keeps the user's input and a save of an item that changed meanwhile gets a 412; Refresh moves it to the refetched version. It belongs to one item (its self link), so it ends when the view moves to another item and stays closed on coming back.
 
 State of `EditEntityItemContainer` (entity-item/edit/), alive only while edit mode is open. It holds no item of its own: the view passes the item down, and the form opens again (keyed by `item.etag`) on each new version.
 

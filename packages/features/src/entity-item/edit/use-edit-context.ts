@@ -8,7 +8,7 @@ import type { EntityItem } from "@contentgrid/navigator-data";
  * latest version. Edit mode belongs to one item, so it ends when the page moves on to another item
  * and stays closed when the page comes back to it.
  */
-export function useEditMode(
+export function useEditContext(
   item: EntityItem | undefined,
   refetch: () => Promise<{ readonly data?: EntityItem; readonly isSuccess: boolean }>,
 ) {

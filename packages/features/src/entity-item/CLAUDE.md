@@ -12,7 +12,7 @@ means in practice.
 
 `entity-item` renders an entity item's attributes and relations: `EntityItemView`,
 `EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. The views own edit mode
-(`edit/use-edit-mode.ts`: the version being edited, which a background refetch does not change)
+(`edit/use-edit-context.ts`: the version being edited, which a background refetch does not change)
 and the item query: they show `EditEntityItemButton` next to the item
 title, and `EditableEntityItemAttributes` shows the attributes or, while editing, the update form
 (`edit/`). On a version conflict the form's Refresh asks the view to refetch the item; the form then
@@ -50,7 +50,7 @@ entity-item-view.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 edit/  (edit-entity-item-container -> edit-entity-item-form;
-        edit-entity-item-button, editable-entity-item, use-edit-mode)
+        edit-entity-item-button, editable-entity-item, use-edit-context)
   -> ../../hal-forms (fields, field state), ../../problem-details, ../../unsaved-changes-guard
   -> @contentgrid/ui, @contentgrid/navigator-data
 

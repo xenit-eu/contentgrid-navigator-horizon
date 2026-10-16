@@ -2,16 +2,16 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { makeAllAttributeItem } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
-import { useEditMode } from "./use-edit-mode";
+import { useEditContext } from "./use-edit-context";
 
-describe("useEditMode", () => {
+describe("useEditContext", () => {
   it("does not reopen edit mode when the page comes back to the item", () => {
     const itemA = makeAllAttributeItem();
     const itemB = makeAllAttributeItem({
       _links: { self: { href: "https://api.example.contentgrid.com/all-attributes/other" } },
     });
     const { result, rerender } = renderHook(
-      ({ item }) => useEditMode(item, () => Promise.resolve({ isSuccess: false })),
+      ({ item }) => useEditContext(item, () => Promise.resolve({ isSuccess: false })),
       {
         initialProps: { item: itemA as EntityItem },
       },

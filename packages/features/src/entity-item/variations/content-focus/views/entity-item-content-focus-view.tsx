@@ -19,7 +19,7 @@ import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
 import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
-import { useEditMode } from "../../../edit/use-edit-mode";
+import { useEditContext } from "../../../edit/use-edit-context";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
@@ -120,7 +120,7 @@ function EntityItemContentFocusViewBody({
 }: Readonly<EntityItemContentFocusViewProps & { profileEntity: ProfileEntity }>) {
   const item = useEntityItem({ profileEntity, entityId: itemId });
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const editMode = useEditMode(item.data, item.refetch);
+  const editContext = useEditContext(item.data, item.refetch);
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -200,9 +200,9 @@ function EntityItemContentFocusViewBody({
             entityItem={item.data}
             attributeName={selectedAttribute}
             onSelectAttribute={setUserSelectedAttribute}
-            editedItem={editMode.editedItem}
-            onEditingChange={editMode.setIsEditing}
-            onRefresh={() => void editMode.refresh()}
+            editedItem={editContext.editedItem}
+            onEditingChange={editContext.setIsEditing}
+            onRefresh={() => void editContext.refresh()}
             loadedProfiles={loadedProfiles}
             onRelationItemClick={handleRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
