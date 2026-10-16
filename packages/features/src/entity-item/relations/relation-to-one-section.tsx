@@ -142,7 +142,7 @@ export function RelationToOneSection({
       {linkedItem.isSuccess && linkedItem.data !== null && (
         <button
           type="button"
-          className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
+          className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors"
           onClick={() => {
             const linked = linkedItem.data;
             if (!linked) return;
