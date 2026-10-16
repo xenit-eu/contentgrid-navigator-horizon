@@ -110,7 +110,8 @@ entity name like `invoice`.
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
-  (supports default, URL-pagination, and relation-scoped search via `RelationCollectionParams`)
+  (supports default, URL-pagination, and relation-scoped search via `RelationCollectionParams`),
+  `useEntityItemToManyRelationInfinite` ("load more" over a to-many relation)
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
   delete: `useDeleteEntityItem`, relation set (to-one): `useSetToOneRelation`,
   relation add (to-many): `useAddToManyRelation`, relation clear: `useClearRelation`,
@@ -368,7 +369,15 @@ Each class carries:
     the encoded scoped URL. `searchValues: undefined` disables the query. See the workaround note in
     the "To-many relation collection resolution" section.
 
-  All modes are disabled until the target profile resolves.
+  All modes are disabled until the target profile resolves. Pass `{ enabled: false }` as the
+  third argument to keep it from fetching (e.g. while another view of the relation is shown).
+
+- `useEntityItemToManyRelationInfinite(relation, { enabled? })` → TanStack infinite query result
+  whose `data.pages` are `EntityItemCollection`s: the first page from `relation.link.href`, each
+  further page (`fetchNextPage`/`hasNextPage`) from the previous page's HAL `next` link. Built on
+  `EntityItemToManyRelation.infiniteQuery`, keyed under `toManyRelation.infiniteByUrl` — inside the
+  `forRelationName` prefix, so every relation mutation's existing invalidation refreshes it too.
+  Disabled until the target profile resolves.
 
 **Relation mutation hooks:**
 
@@ -440,6 +449,7 @@ builders (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) 
 queryKeys.toOneRelation.byUrl(targetProfile, url); // exact key for a to-one relation read
 queryKeys.toOneRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-one reads for that entity type
 queryKeys.toManyRelation.byUrl(targetProfile, url); // exact key for a to-many relation read
+queryKeys.toManyRelation.infiniteByUrl(relationName, url); // "load more" query over a to-many relation
 queryKeys.toManyRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-many reads for that entity type
 ```
 

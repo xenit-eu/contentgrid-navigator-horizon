@@ -28,3 +28,4 @@ export * from "./theme-selector";
 export * from "./pdf-viewer";
 export * from "./tabbed-layout";
 export * from "./autocomplete-renderer";
+export * from "./resizable-split-layout";
