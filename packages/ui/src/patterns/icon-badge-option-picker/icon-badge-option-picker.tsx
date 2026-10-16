@@ -1,4 +1,4 @@
-import { type ReactNode, useId } from "react";
+import { type KeyboardEvent, type ReactNode, useId, useRef } from "react";
 import { CheckIcon } from "@phosphor-icons/react";
 import { Label } from "../../primitives/label";
 import { ScrollArea } from "../../primitives/scroll-area";
@@ -43,20 +43,40 @@ function OptionCompactLabel({ option }: Readonly<{ option: IconBadgeOption }>) {
   );
 }
 
-function OptionLabel({ option }: Readonly<{ option: IconBadgeOption }>) {
+/** Named by its title alone; the description is announced as its description, not its name. */
+function OptionItem({ option }: Readonly<{ option: IconBadgeOption }>) {
+  const titleId = useId();
+  const descriptionId = useId();
+
   return (
-    <div className="flex w-full min-w-0 items-center gap-2.5">
-      {option.icon}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-medium">{option.title}</span>
-        {option.description && (
-          <span className="text-muted-foreground truncate text-xs">{option.description}</span>
-        )}
+    <SelectItem
+      value={option.name}
+      textValue={option.title}
+      aria-labelledby={titleId}
+      aria-describedby={option.description ? descriptionId : undefined}
+      className="[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
+    >
+      <div className="flex w-full min-w-0 items-center gap-2.5">
+        {option.icon}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span id={titleId} className="truncate font-medium">
+            {option.title}
+          </span>
+          {option.description && (
+            <span id={descriptionId} className="text-muted-foreground truncate text-xs">
+              {option.description}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+    </SelectItem>
   );
 }
 
+/**
+ * A dropdown of options. Renders every option it is given, even just one or none — whether a
+ * trivial choice is worth showing is the caller's decision.
+ */
 export function IconBadgeOptionPicker({
   options,
   selectedOption,
@@ -65,6 +85,8 @@ export function IconBadgeOptionPicker({
   placeholder = "Select an option",
   size = "default",
 }: Readonly<IconBadgeOptionPickerProps>) {
+  const triggerId = useId();
+
   function handleValueChange(name: string) {
     const option = options.find((candidate) => candidate.name === name);
     if (option) onSelect(option);
@@ -72,27 +94,24 @@ export function IconBadgeOptionPicker({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <Label>{label}</Label>}
-      <Select value={selectedOption?.name} onValueChange={handleValueChange}>
+      {label && <Label htmlFor={triggerId}>{label}</Label>}
+      {/* `""` rather than `undefined` while nothing is selected keeps the Select controlled. */}
+      <Select value={selectedOption?.name ?? ""} onValueChange={handleValueChange}>
         <SelectTrigger
+          id={triggerId}
           size={size}
-          // Grows past the fixed trigger height so an icon badge keeps vertical padding.
-          className="w-full py-1.5 data-[size=default]:h-auto data-[size=default]:min-h-9 data-[size=sm]:h-auto data-[size=sm]:min-h-8"
-          aria-label={label ?? placeholder}
+          fitContent
+          className="w-full py-1.5"
+          aria-label={label ? undefined : placeholder}
         >
           <SelectValue placeholder={placeholder}>
             {selectedOption && <OptionCompactLabel option={selectedOption} />}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        {/* Popper positioning keeps the list inside the viewport, even next to its right edge. */}
+        <SelectContent position="popper" className="max-w-(--radix-select-content-available-width)">
           {options.map((option) => (
-            <SelectItem
-              key={option.name}
-              value={option.name}
-              className="[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
-            >
-              <OptionLabel option={option} />
-            </SelectItem>
+            <OptionItem key={option.name} option={option} />
           ))}
         </SelectContent>
       </Select>
@@ -112,17 +131,32 @@ export interface IconBadgeOptionPickerListProps {
   label: string;
 }
 
+interface OptionRowProps {
+  option: IconBadgeOption;
+  selected: boolean;
+  tabbable: boolean;
+  onSelect: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+  buttonRef: (button: HTMLButtonElement | null) => void;
+}
+
 function OptionRow({
   option,
   selected,
+  tabbable,
   onSelect,
-}: Readonly<{ option: IconBadgeOption; selected: boolean; onSelect: () => void }>) {
+  onKeyDown,
+  buttonRef,
+}: Readonly<OptionRowProps>) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       role="radio"
       aria-checked={selected}
+      tabIndex={tabbable ? 0 : -1}
       onClick={onSelect}
+      onKeyDown={onKeyDown}
       className="group flex min-h-[74px] w-full cursor-pointer items-center gap-3 border-b px-4 py-3 text-left transition-colors outline-none last:border-b-0 hover:bg-primary/5 focus-visible:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset aria-checked:bg-primary/10"
     >
       {option.icon && (
@@ -143,9 +177,20 @@ function OptionRow({
   );
 }
 
+const ARROW_KEY_STEPS: Record<string, number> = {
+  ArrowUp: -1,
+  ArrowLeft: -1,
+  ArrowDown: 1,
+  ArrowRight: 1,
+};
+
 /**
  * The options laid out as an always-visible, scrollable list instead of a dropdown — for a page
- * whose main choice is this one, such as the Create Item page.
+ * whose main choice is this one, such as the Create Item page. Like the dropdown, it renders
+ * every option it is given.
+ *
+ * A WAI-ARIA radio group: only one row is in the tab order (the selected one, else the first),
+ * and the arrow keys move focus to the previous or next row and select it, wrapping at the ends.
  */
 export function IconBadgeOptionPickerList({
   options,
@@ -154,6 +199,18 @@ export function IconBadgeOptionPickerList({
   label,
 }: Readonly<IconBadgeOptionPickerListProps>) {
   const labelId = useId();
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectedIndex = options.findIndex((option) => option.name === selectedOption?.name);
+  const tabbableIndex = Math.max(selectedIndex, 0);
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const step = ARROW_KEY_STEPS[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    const nextIndex = (index + step + options.length) % options.length;
+    buttons.current[nextIndex]?.focus();
+    onSelect(options[nextIndex]);
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -163,15 +220,27 @@ export function IconBadgeOptionPickerList({
       >
         {label}
       </span>
-      {/* An overlay scrollbar, so the row hover and selection run the list's full width. */}
-      <ScrollArea className="flex max-h-[min(296px,45vh)] flex-col overflow-hidden rounded-lg border bg-popover shadow-lg [&>[data-slot=scroll-area-viewport]]:max-h-[inherit] [&>[data-slot=scroll-area-viewport]>div]:block!">
+      {/*
+        An overlay scrollbar, so the row hover and selection run the list's full width. The rows
+        are the tab stops, so the viewport stays out of the tab order. Radix wraps the content in
+        a `display: table` div, which grows to its widest row; `block` lets long rows truncate.
+      */}
+      <ScrollArea
+        className="flex max-h-[min(296px,45vh)] flex-col overflow-hidden rounded-lg border bg-popover shadow-lg"
+        viewportProps={{ tabIndex: -1, className: "max-h-[inherit] [&>div]:block!" }}
+      >
         <div role="radiogroup" aria-labelledby={labelId}>
-          {options.map((option) => (
+          {options.map((option, index) => (
             <OptionRow
               key={option.name}
               option={option}
-              selected={option.name === selectedOption?.name}
+              selected={index === selectedIndex}
+              tabbable={index === tabbableIndex}
               onSelect={() => onSelect(option)}
+              onKeyDown={(event) => handleRowKeyDown(event, index)}
+              buttonRef={(button) => {
+                buttons.current[index] = button;
+              }}
             />
           ))}
         </div>
