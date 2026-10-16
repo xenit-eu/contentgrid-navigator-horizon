@@ -64,6 +64,6 @@ export interface IconBadgeOptionPickerListProps {
 
 `SingleEntity`, `TwoEntities`, `ManyEntities`, `NoSelection`, `WithLabel`, `WithIconsAndDescriptions`, `List`, `ListNoSelection`. Snapshots are re-baselined by CI.
 
-## Features wrappers (`entity-item-create/entity-profile-selector.tsx`)
+## Features wrappers (`entity-item-create/create-entity-item-profile-selector.tsx`)
 
-`EntityProfileSelector` and `EntityProfileSelectorList` take `profiles: readonly ProfileEntity[]`, `selectedProfile?: ProfileEntity` and `onSelect(profile: ProfileEntity)`, map each `profileEntity` to an `IconBadgeOption` (`EntityIconBadge`, muted; small badges for `size="sm"`) and map the chosen option back to its `profileEntity`. Callers never handle options.
+`CreateEntityItemProfileSelector` (toolbar dropdown, `size="sm"`, small icon badges) loads the entities with `useLoadedProfileEntities()` and keeps those with `profile.createTemplate !== null`; `CreateEntityItemProfileSelectorList` (inline list) takes those `profiles` from its caller. Both map each `profileEntity` to an `IconBadgeOption` (`EntityIconBadge`, muted) and map the chosen option back to its `profileEntity`. They take `selectedProfile` and `onSelect(profile: ProfileEntity)`; the list also takes `profiles` and `label`. Callers never handle options.
