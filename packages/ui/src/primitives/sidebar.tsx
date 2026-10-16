@@ -378,7 +378,8 @@ function SidebarGroupLabel({
       data-sidebar="group-label"
       className={cn(
         "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-xs font-medium tracking-wider uppercase outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        // Collapsed, the label slides under the item above it; it must not take that item's clicks.
+        "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
       {...props}
@@ -453,9 +454,10 @@ const sidebarMenuButtonVariants = cva(
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
         // The sidebar's main action: a soft primary tint with a full border, distinct from the
-        // active entity row (sidebar accent, left border only).
+        // active entity row (sidebar accent, left border only). Collapsed, the label is kept for
+        // screen readers only, so the icon sits in the middle of the tile.
         primary:
-          "cursor-pointer rounded-md border border-primary/25 bg-primary/10 font-medium text-primary transition-colors hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary group-data-[collapsible=icon]:justify-center",
+          "cursor-pointer rounded-md border border-primary/25 bg-primary/10 font-medium text-primary transition-colors hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
       },
       size: {
         default: "h-9 text-sm",

@@ -43,7 +43,7 @@ Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/content
 
 ### D1 — Extend `ProfileEntitySelector` (renamed `IconBadgeOptionPicker`) rather than create a new selector
 
-- **Decision**: Extend the existing pattern option gains `description?` and `icon?: ReactNode`; rows adopt the attribute selector's layout; label moves above the field. It holds no entity knowledge, so it is renamed `IconBadgeOptionPicker` (`IconBadgeOptionPickerList`, `IconBadgeOption`). Features wrappers `EntityProfileSelector` / `EntityProfileSelectorList` take `ProfileEntity`s and do the option mapping, so pages never handle options.
+- **Decision**: Extend the existing pattern option gains `description?` and `icon?: ReactNode`; rows adopt the attribute selector's layout; label moves above the field. It holds no entity knowledge, so it is renamed `IconBadgeOptionPicker` (`IconBadgeOptionPickerList`, `IconBadgeOption`). Features wrappers `CreateEntityItemProfileSelector` / `CreateEntityItemProfileSelectorList` work with `ProfileEntity`s and do the option mapping, so pages never handle options.
 - **Rationale**: One entity selector in the design system; no consumers today, so no migration cost.
 - **Alternatives rejected**: A new `EntityPicker` pattern (duplicate); a features-level component (not reusable outside features).
 
@@ -77,7 +77,7 @@ Input to `/speckit-plan`. Records how the original Navigator ([`xenit-eu/content
 
 ### D7 — Entity switch in the create form toolbar
 
-- **Decision**: The `$entity/~create` route passes a toolbar `EntityProfileSelector` (via `BreadCrumbsToolBarLayout`'s `actions` slot, rendered by a features component `CreateEntityItemProfileSelector`) listing the same creatable entities; selecting navigates to that entity's create route. `CreateEntityItemView` is keyed on `profile.name` so the form state resets on switch (TanStack Router keeps the component mounted when only params change). The existing `useUnsavedChangesGuard` already blocks navigation with unsaved changes (FR-021).
+- **Decision**: The `$entity/~create` route passes a toolbar `CreateEntityItemProfileSelector` (via `BreadCrumbsToolBarLayout`'s `actions` slot) listing the same creatable entities; selecting navigates to that entity's create route. `CreateEntityItemView` is keyed on `profile.name` so the form state resets on switch (TanStack Router keeps the component mounted when only params change). The existing `useUnsavedChangesGuard` already blocks navigation with unsaved changes (FR-021).
 - **Rationale**: Lets the user change the entity without going back to the Create Item page, and gives the reusable selector a second consumer.
 
 ### D8 — Empty-attribute upload wiring in `ContentPreviewPanel`

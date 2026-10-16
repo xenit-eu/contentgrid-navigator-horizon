@@ -13,7 +13,7 @@ No server-side data changes. All shapes below are client-side.
 | `description` | `string?`    | Muted second line in option rows; omitted when empty.    |
 | `icon`        | `ReactNode?` | Rendered left of the title; the caller supplies it.      |
 
-Mapping in features (`EntityProfileSelector` / `EntityProfileSelectorList`, internal): `ProfileEntity` → `{ name: profile.name, title: profile.title, description: profile.description || undefined, icon: <EntityIconBadge profile={profile} variant="sm" muted /> }`.
+Mapping in features (`CreateEntityItemProfileSelector` / `CreateEntityItemProfileSelectorList`): `ProfileEntity` → `{ name: profile.name, title: profile.title, description: profile.description || undefined, icon: <EntityIconBadge profile={profile} variant="sm" muted /> }`.
 
 ## Create item page state (`ClassifyCreateEntityItemView`)
 

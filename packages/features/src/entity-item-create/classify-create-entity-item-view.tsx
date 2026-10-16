@@ -12,7 +12,7 @@ import {
   FileUploadZone,
 } from "@contentgrid/ui";
 import { LoadingPage } from "../app-info-pages";
-import { EntityProfileSelectorList } from "./entity-profile-selector";
+import { CreateEntityItemProfileSelectorList } from "./create-entity-item-profile-selector";
 import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
 export interface ClassifyCreateEntityItemViewProps {
@@ -52,7 +52,7 @@ export function ClassifyCreateEntityItemView({
             <p className="text-sm text-muted-foreground">There is nothing you can create.</p>
           ) : (
             <>
-              <EntityProfileSelectorList
+              <CreateEntityItemProfileSelectorList
                 profiles={profiles}
                 selectedProfile={selectedProfile}
                 onSelect={setSelectedProfile}
