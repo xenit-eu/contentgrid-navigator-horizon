@@ -104,7 +104,7 @@ export function createCreateHandler(config: CreateHandlerConfig): HttpHandler {
   });
 }
 
-// ---- Update handler (PATCH -> configurable status) ----
+// ---- Update handler (PUT, the item `default` template's method -> configurable status) ----
 
 export interface UpdateHandlerConfig {
   url: string;
@@ -118,7 +118,7 @@ export interface UpdateHandlerConfig {
 
 export function createUpdateHandler(config: UpdateHandlerConfig): HttpHandler {
   const { url, status = 204, body, etag } = config;
-  return http.patch(url, () => {
+  return http.put(url, () => {
     const headers: Record<string, string> = {};
     if (etag) headers["ETag"] = etag;
     if (body) {
@@ -249,6 +249,8 @@ export interface ContentDownloadHandlerConfig {
    * Format: "bytes start-end/total" e.g. "bytes 0-99/1000".
    */
   contentRange?: string;
+  /** Optional ETag of the content (sent verbatim, quotes included). */
+  etag?: string;
 }
 
 export function createContentDownloadHandler(config: ContentDownloadHandlerConfig): HttpHandler {
@@ -258,6 +260,7 @@ export function createContentDownloadHandler(config: ContentDownloadHandlerConfi
     contentType = "application/octet-stream",
     filename,
     contentRange,
+    etag,
   } = config;
 
   return http.get(url, () => {
@@ -270,6 +273,9 @@ export function createContentDownloadHandler(config: ContentDownloadHandlerConfi
     }
     if (contentRange) {
       headers["Content-Range"] = contentRange;
+    }
+    if (etag) {
+      headers.ETag = etag;
     }
     if (typeof body !== "string") {
       headers["Content-Length"] = String(body.length);

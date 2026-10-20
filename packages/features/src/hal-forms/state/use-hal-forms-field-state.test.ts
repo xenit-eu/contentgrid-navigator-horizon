@@ -127,6 +127,30 @@ describe("useHalFormsFieldState", () => {
   });
 });
 
+describe("useHalFormsFieldState.isDirty", () => {
+  it("does not count a date set to the same moment as a change", () => {
+    const dueField: HalFormsField = {
+      name: "due",
+      label: "Due",
+      required: false,
+      readOnly: false,
+      kind: "datetime",
+      includesTime: true,
+      property: DUMMY_PROPERTY,
+    };
+    const { result } = renderHook(() =>
+      useHalFormsFieldState({
+        fields: [dueField],
+        initialValues: { due: new Date("2024-01-01T00:00:00Z") },
+      }),
+    );
+
+    act(() => result.current.setValue("due", new Date("2024-01-01T00:00:00Z")));
+
+    expect(result.current.isDirty).toBe(false);
+  });
+});
+
 describe("useHalFormsFieldState.buildValues", () => {
   const templateJson = {
     name: "invoice",

@@ -5,6 +5,7 @@ import entityProfilesDump from "../../test-fixtures/entity-profiles/entity-profi
 import ProfileEntity from "../accessors/entity-profile";
 import {
   type AuthenticationTokenSupplier,
+  type ContentFetch,
   type TypedFetch,
   createApiClient,
   createContentClient,
@@ -92,7 +93,7 @@ export function makeQueryClient() {
  * @param queryClient   - TanStack QueryClient to use; defaults to a fresh one.
  * @param apiFetch      - Optional TypedFetch to inject (e.g. a spy for header assertions).
  *                        Defaults to a real client using noopSupplier so MSW intercepts requests.
- * @param contentFetch  - Optional TypedFetch for binary content (cg:content) requests.
+ * @param contentFetch  - Optional ContentFetch for binary content (cg:content) requests.
  *                        Defaults to a real content client using noopSupplier.
  * @param renditionUri  - Optional rendition URI template (must contain `{?url}`) to enable
  *                        `useContentPreview`'s rendition path. When provided, `renditionPolling`
@@ -103,7 +104,7 @@ export function makeQueryClient() {
 export function makeWrapper(
   queryClient = makeQueryClient(),
   apiFetch: TypedFetch = createApiClient(noopSupplier),
-  contentFetch: TypedFetch = createContentClient(noopSupplier),
+  contentFetch: ContentFetch = createContentClient(noopSupplier),
   renditionUri?: string,
 ) {
   const renditionPolling = renditionUri

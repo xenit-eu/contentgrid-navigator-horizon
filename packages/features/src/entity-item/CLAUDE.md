@@ -66,7 +66,7 @@ variations/content-focus/
   import. Transformation logic (e.g. picking the default content attribute) lives here, not
   inline in a component.
 - Data access goes through `@contentgrid/navigator-data` hooks only (`useContentPreview`,
-  `useDownloadContent`, `useProfileEntity`, `useEntityItem`) — never a Layer-1 `@contentgrid/*`
+  `useDownloadContent`, `useUploadContent`, `useProfileEntity`, `useEntityItem`) — never a Layer-1 `@contentgrid/*`
   package directly.
 
 ## Deployment requirements (carries through to the app that mounts the content-focus variation)

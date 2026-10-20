@@ -259,11 +259,11 @@ describe("HAL contract tests — upstream shape assertions (ADR-014)", () => {
       ).toBe(true);
     });
 
-    it("invoiceUpdateTemplate has method PATCH and properties array", () => {
+    it("invoiceUpdateTemplate has method PUT and properties array", () => {
       const result = HalFormsTemplateSchema.safeParse(invoiceUpdateTemplate);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.method).toBe("PATCH");
+        expect(result.data.method).toBe("PUT");
         expect(Array.isArray(result.data.properties)).toBe(true);
       }
     });

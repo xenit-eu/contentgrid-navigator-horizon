@@ -1,6 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.6.0
+- Version change: 1.0.0 → 1.7.0
+- Amendment (1.6.0 → 1.7.0, MINOR): Principle I — the conditional-request bullet ("Every
+  mutating request MUST carry `If-Match`") misstated the platform contract. Per the
+  [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html),
+  only entity-item, to-one relation and entity-content support conditional requests, each with
+  its own ETag; to-many relations do not; a create-only PUT uses `If-None-Match: *` (not for
+  entity-items). Rewritten to require conditionality on the changed resource's OWN ETag, permit
+  `If-None-Match: *` where supported, and forbid sending one resource's ETag to another. 412
+  handling unchanged. MINOR rather than PATCH: it adds a new prohibition and a new permitted
+  form, not just wording. Mirrors the same-PR `CLAUDE.md` corrections (Governance → Amendment).
 - Amendment (1.5.0 → 1.6.0, MINOR): NEW Principle IX — Spec Traceability & Self-Contained
   Artifacts. Every change in a spec-driven PR must trace to a part of the feature's spec;
   implementation that departs from the spec must amend the spec in the same PR; repo
@@ -99,10 +108,17 @@ Sync Impact Report
   links directly. The one narrow exception is using an opaque `_cursor` value as a lookup key
   into a client-side registry that maps back to the exact link it came from; the value itself
   is never decoded, and no fetch URL is ever built from it by hand.
-- Every mutating request MUST carry `If-Match` from a verbatim, unmodified ETag, stored only
-  for the session (never persisted). A 412 (`unsatisfied-version`) MUST be handled by
-  re-fetching, re-applying the user's change, and retrying — a hook MUST NOT swallow or
-  auto-retry a 412 itself.
+- A mutation on a conditional-request resource — entity-item (`/{plural}/{id}`), to-one
+  relation (`/{plural}/{id}/{relation}`) or entity-content (`/{plural}/{id}/{attribute}`) — MUST
+  be conditional on **that resource's own** ETag: `If-Match` with the ETag verbatim and
+  unmodified, stored only for the session (never persisted); or `If-None-Match: *` for a
+  create-only PUT where the platform supports it (never for entity-items). An ETag MUST NOT be
+  sent to a different resource (e.g. an entity item's ETag on its content or relations).
+  Resources outside that list (to-many relations and their per-item endpoints) are not
+  conditional. Where a resource's own ETag cannot currently be obtained, the gap MUST be
+  documented (e.g. FIXME(ACC-3186)) rather than papered over with another resource's ETag. A
+  412 (`unsatisfied-version`) MUST be handled by re-fetching, re-applying the user's change,
+  and retrying — a hook MUST NOT swallow or auto-retry a 412 itself.
 
 Rationale: the REST/HAL API is the platform's only integration point. Every deviation above
 re-encodes a piece of server-owned structure — a path shape, a cursor format, a template
@@ -402,4 +418,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.6.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-06
+**Version**: 1.7.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-15

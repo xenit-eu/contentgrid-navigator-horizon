@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** Dev mock user: "full" (default) or "restricted" (derived permission limits, see RESTRICTED_POLICY). */
+  readonly VITE_MOCK_USER?: string;
   /** "true" in dev → MSW serves the stubbed HAL endpoint (see src/local-mock-backend/). */
   readonly VITE_USE_MOCK_API?: string;
   /** Static bearer token enabling dev-token auth mode (bypasses OIDC). */
