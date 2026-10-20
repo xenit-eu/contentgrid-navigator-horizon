@@ -10,8 +10,7 @@
  *
  * The root route renders EntityOverviewPage — a grid of EntityCards, one per
  * entity type. Each card shows the entity's plural name and the total item
- * count fetched from the collection endpoint. Individual item rows (inv-001
- * etc.) are only shown in the entity detail view, not the overview.
+ * count fetched from the collection endpoint. Individual item rows are only shown in the entity detail view, not the overview.
  */
 import { expect, test } from "@playwright/test";
 
@@ -24,18 +23,14 @@ test("boots and renders an entity overview from the stubbed HAL endpoint", async
 
   await page.goto("/");
 
-  // Entity discovered at runtime from the profile root's cg:entity links.
-  // "Invoice" is the plural name of the entity (falls back to the cg:entity
-  // link title when the profile's describes.collection link has no title).
-  await expect(page.getByText("Invoice").first()).toBeVisible();
+  // Entities discovered at runtime from the profile root's cg:entity links (the recorded model).
+  await expect(page.getByRole("heading", { name: "Customers", level: 2 })).toBeVisible();
 
   // Overview header shows the count of entity types discovered from the profile.
-  await expect(page.getByText("1 entity type available")).toBeVisible();
+  await expect(page.getByText("11 entity types available")).toBeVisible();
 
-  // EntityCard shows the collection item count fetched from the stub /invoices
-  // endpoint. The number and label are separate DOM elements.
-  await expect(page.getByText("3")).toBeVisible();
-  await expect(page.getByText("items")).toBeVisible();
+  // EntityCard shows the collection's total item count from the recorded customers page.
+  await expect(page.getByRole("button", { name: /^Customers .*97 items$/ })).toBeVisible();
 
   expect(errors).toEqual([]);
 });

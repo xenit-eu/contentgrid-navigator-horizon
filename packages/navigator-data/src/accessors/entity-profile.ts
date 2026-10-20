@@ -86,7 +86,9 @@ export default class ProfileEntity {
     const visibleColumns = ["id", ...userColumns];
 
     const textAttribute = this.userDefinedAttributes.find((attr) => attr.type === "string");
-    const nameAttribute = (textAttribute ?? this.idAttribute).name;
+    // Fall back to the literal "id" rather than `this.idAttribute`: a profile without any
+    // attributes (e.g. a minimal stub) has no `id` attribute, and `idAttribute` is `!`-asserted.
+    const nameAttribute = textAttribute?.name ?? "id";
 
     const icon = this.hasContentAttributes ? "FileText" : "Database";
 
