@@ -58,7 +58,7 @@ test.describe("Knowledge graph (mock mode)", () => {
   test("selects a node, shows its details and navigates via View", async ({ page }) => {
     await page.goto(`/customer/${BIG_CORP}/~graph`);
     await openDetailsPanel(page);
-    await node(page, "ORD-003").click();
+    await node(page, "ORD-003").click({ button: "right" });
 
     const menu = page.getByRole("menu", { name: "ORD-003" });
     await expect(menu).toBeVisible();
@@ -72,7 +72,7 @@ test.describe("Knowledge graph (mock mode)", () => {
     page,
   }) => {
     await page.goto(`/customer/${BIG_CORP}/~graph`);
-    await node(page, "ORD-001").click();
+    await node(page, "ORD-001").click({ button: "right" });
     await page.getByRole("menuitem", { name: "Explore relations" }).click();
 
     await expect(node(page, "Widget")).toBeVisible();
@@ -111,7 +111,9 @@ test.describe("Knowledge graph (mock mode)", () => {
 
   test("removes a to-many link after confirmation", async ({ page }) => {
     await page.goto(`/order/${ORDER_1}/~graph`);
-    await canvas(page).getByRole("button", { name: "ORD-001 — Products → Gadget" }).click();
+    await canvas(page)
+      .getByRole("button", { name: "ORD-001 — Products → Gadget" })
+      .click({ button: "right" });
     await page
       .getByRole("menu", { name: "Products" })
       .getByRole("menuitem", { name: "Remove link" })
@@ -127,7 +129,7 @@ test.describe("Knowledge graph (mock mode)", () => {
 
   test("deletes an item after confirmation", async ({ page }) => {
     await page.goto(`/order/${ORDER_1}/~graph`);
-    await node(page, "Sprocket").click();
+    await node(page, "Sprocket").click({ button: "right" });
     await page
       .getByRole("menu", { name: "Sprocket" })
       .getByRole("menuitem", { name: "Delete" })

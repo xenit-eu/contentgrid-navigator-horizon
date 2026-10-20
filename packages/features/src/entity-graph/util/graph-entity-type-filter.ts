@@ -1,4 +1,5 @@
 import type { GraphModel } from "./build-graph-model";
+import { graphNodeId } from "./graph-ids";
 
 /** One entity type drawn in the graph, for the type legend / filter. */
 export interface GraphEntityTypeModel {
@@ -31,15 +32,20 @@ export function graphEntityTypes(model: GraphModel): GraphEntityTypeModel[] {
 /**
  * Leaves out the relation targets (item nodes, and "+ N more" nodes) of the hidden entity types,
  * and every edge to them. The focus and trail items always stay: they are the path being explored.
- * Content nodes belong to their (always kept) expanded item, so they stay too.
+ * Content nodes go with the item holding them.
  */
 export function filterGraphModel(model: GraphModel, hidden: ReadonlySet<string>): GraphModel {
   if (hidden.size === 0) return model;
-  const nodes = model.nodes.filter((node) => {
+  const visible = model.nodes.filter((node) => {
     if (node.kind === "content") return true;
     if (node.kind === "item") return node.role !== "target" || !hidden.has(node.ref.entityName);
     return node.targetEntityName === undefined || !hidden.has(node.targetEntityName);
   });
+  // A file goes wherever the item holding it goes.
+  const keptIds = new Set(visible.map((node) => node.id));
+  const nodes = visible.filter(
+    (node) => node.kind !== "content" || keptIds.has(graphNodeId(node.owner)),
+  );
   const kept = new Set(nodes.map((node) => node.id));
   const edges = model.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
   return { ...model, nodes, edges };

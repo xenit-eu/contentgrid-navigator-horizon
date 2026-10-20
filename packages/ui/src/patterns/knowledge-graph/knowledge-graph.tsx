@@ -17,7 +17,7 @@ import { RelationEdge } from "./edges/relation-edge";
 import { KnowledgeGraphContext, type KnowledgeGraphContextValue } from "./knowledge-graph-context";
 import type { KnowledgeGraphLabels, KnowledgeGraphProps } from "./knowledge-graph.types";
 import { type LayoutPoint, radialLayout } from "./layout/radial-layout";
-import { CONTENT_NODE_WIDTH, ContentNode } from "./nodes/content-node";
+import { COMPACT_CONTENT_NODE_SIZE, CONTENT_NODE_WIDTH, ContentNode } from "./nodes/content-node";
 import { ITEM_NODE_WIDTH, ItemNode } from "./nodes/item-node";
 import { OverflowNode } from "./nodes/overflow-node";
 
@@ -35,7 +35,7 @@ const NODE_HALF_WIDTH = {
 const DEFAULT_LABELS: KnowledgeGraphLabels = {
   graph: "Relations graph",
   usageHint:
-    "Use Tab to move between items and relations, Enter to open the actions of the focused one, Escape to close.",
+    "Use Tab to move between items and relations, Enter to select the focused one, the Menu key or Shift+F10 to open its actions, Escape to close.",
   nodeDescription: "Press Enter to show this item's details and actions.",
   edgeDescription: "Press Enter to show this relation's actions.",
   zoomIn: "Zoom in",
@@ -96,6 +96,8 @@ function KnowledgeGraphCanvas({
   selectedNodeId = null,
   onNodeClick,
   onEdgeClick,
+  onNodeContextMenu,
+  onEdgeContextMenu,
   onPaneClick,
   nodeMenu = null,
   edgeMenu = null,
@@ -108,12 +110,21 @@ function KnowledgeGraphCanvas({
   const previousPositions = useRef<Record<string, LayoutPoint>>({});
 
   const positions = useMemo(() => {
+    // Compact file icons sit right next to the item linking to them.
+    const compact = new Set(
+      nodes.filter((n) => n.kind === "content" && n.compact).map((n) => n.id),
+    );
+    const attachments: Record<string, string> = {};
+    for (const edge of edges) {
+      if (compact.has(edge.target)) attachments[edge.target] = edge.source;
+    }
     const next = radialLayout({
       nodeIds: nodes.map((n) => n.id),
       edges,
       focusNodeId,
       trailNodeIds,
       previous: previousPositions.current,
+      attachments,
     });
     return next;
   }, [nodes, edges, focusNodeId, trailNodeIds]);
@@ -126,11 +137,14 @@ function KnowledgeGraphCanvas({
     () =>
       nodes.map((node) => {
         const p = positions[node.id] ?? { x: 0, y: 0 };
+        const compact = node.kind === "content" && node.compact;
+        const halfWidth = compact ? COMPACT_CONTENT_NODE_SIZE / 2 : NODE_HALF_WIDTH[node.kind];
+        const halfHeight = compact ? COMPACT_CONTENT_NODE_SIZE / 2 : 24;
         return {
           id: node.id,
           type: node.kind,
           // React Flow positions are top-left; the layout yields centres.
-          position: { x: p.x - NODE_HALF_WIDTH[node.kind], y: p.y - 24 },
+          position: { x: p.x - halfWidth, y: p.y - halfHeight },
           data: { node },
           ariaLabel: node.ariaLabel,
           draggable: false,
@@ -175,27 +189,44 @@ function KnowledgeGraphCanvas({
       edgeMenu,
       onMenuOpenChange: closeMenu,
       onEdgeClick,
+      onEdgeContextMenu,
       siblings,
       labels,
     }),
-    [selectedNodeId, nodeMenu, edgeMenu, closeMenu, onEdgeClick, siblings, labels],
+    [
+      selectedNodeId,
+      nodeMenu,
+      edgeMenu,
+      closeMenu,
+      onEdgeClick,
+      onEdgeContextMenu,
+      siblings,
+      labels,
+    ],
   );
 
-  // Keyboard access: Enter/Space on a focused node or edge = click (React Flow only selects).
+  // Keyboard access (React Flow only selects): Enter/Space on a focused node or edge = click; the
+  // Menu key or Shift+F10 = right-click.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
+    const isClick = event.key === "Enter" || event.key === " ";
+    const isContextMenu = event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey);
+    if (!isClick && !isContextMenu) return;
     const target = event.target as HTMLElement;
     const nodeEl = target.closest<HTMLElement>(".react-flow__node");
     if (nodeEl?.dataset.id && nodeEl === target) {
+      const handler = isClick ? onNodeClick : onNodeContextMenu;
+      if (!handler) return;
       event.preventDefault();
-      onNodeClick(nodeEl.dataset.id);
+      handler(nodeEl.dataset.id);
       return;
     }
     const edgeEl = target.closest<SVGGElement>(".react-flow__edge");
     const edgeId = edgeEl?.getAttribute("data-id");
     if (edgeId && edgeEl === (target as unknown as SVGGElement)) {
+      const handler = isClick ? onEdgeClick : onEdgeContextMenu;
+      if (!handler) return;
       event.preventDefault();
-      onEdgeClick(edgeId);
+      handler(edgeId);
     }
   };
 
@@ -219,6 +250,22 @@ function KnowledgeGraphCanvas({
           edgeTypes={edgeTypes}
           onNodeClick={(_, node) => onNodeClick(node.id)}
           onEdgeClick={(_, edge) => onEdgeClick(edge.id)}
+          onNodeContextMenu={
+            onNodeContextMenu
+              ? (event, node) => {
+                  event.preventDefault();
+                  onNodeContextMenu(node.id);
+                }
+              : undefined
+          }
+          onEdgeContextMenu={
+            onEdgeContextMenu
+              ? (event, edge) => {
+                  event.preventDefault();
+                  onEdgeContextMenu(edge.id);
+                }
+              : undefined
+          }
           onPaneClick={() => {
             onMenuOpenChange?.(false);
             onPaneClick?.();

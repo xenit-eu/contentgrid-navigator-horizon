@@ -117,3 +117,63 @@ describe("toKnowledgeGraphProps", () => {
     expect(overflowSel.selectedNodeId).toBe("overflow:c-1:orders");
   });
 });
+
+describe("toKnowledgeGraphProps — content nodes", () => {
+  const withFiles: GraphModel = {
+    ...model,
+    nodes: [
+      ...model.nodes,
+      {
+        kind: "content",
+        id: "content:c-1:contract",
+        owner,
+        attributeName: "contract",
+        attributeTitle: "Contract",
+        label: "contract.pdf",
+        mimetype: "application/pdf",
+      },
+      {
+        kind: "content",
+        id: "content:o-1:invoice",
+        owner: { entityName: "order", id: "o-1" },
+        attributeName: "invoice",
+        attributeTitle: "Invoice",
+        label: "invoice.png",
+        mimetype: "image/png",
+      },
+    ],
+    edges: [
+      ...model.edges,
+      {
+        ...model.edges[0]!,
+        id: "c-1->contract->content:c-1:contract",
+        target: "content:c-1:contract",
+        toContent: true,
+      },
+      {
+        ...model.edges[0]!,
+        id: "o-1->invoice->content:o-1:invoice",
+        source: "o-1",
+        target: "content:o-1:invoice",
+        toContent: true,
+      },
+    ],
+  };
+
+  it("draws the focus item's files in full and other items' files as compact icons", () => {
+    const props = toKnowledgeGraphProps(withFiles, initialGraphState(owner));
+    const node = (id: string) => props.nodes.find((n) => n.id === id);
+    expect(node("content:c-1:contract")).toMatchObject({ compact: false, fileType: "pdf" });
+    expect(node("content:o-1:invoice")).toMatchObject({ compact: true, fileType: "img" });
+
+    const edge = (id: string) => props.edges.find((e) => e.id === id);
+    expect(edge("c-1->contract->content:c-1:contract")).toMatchObject({
+      variant: "content",
+      hideLabel: false,
+    });
+    expect(edge("o-1->invoice->content:o-1:invoice")).toMatchObject({
+      variant: "content",
+      hideLabel: true,
+    });
+  });
+});

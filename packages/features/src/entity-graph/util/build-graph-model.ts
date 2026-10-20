@@ -208,6 +208,36 @@ class ModelBuilder {
     return node;
   }
 
+  /** The item's files, one content node each, linked to the item's node. */
+  contentOf(owner: GraphItemRef, item: EntityItem) {
+    const ownerId = graphNodeId(owner);
+    for (const file of contentFilesOf(item)) {
+      const id = contentNodeId(owner, file.attributeName);
+      this.nodes.set(id, {
+        kind: "content",
+        id,
+        owner,
+        attributeName: file.attributeName,
+        attributeTitle: file.attributeTitle,
+        label: file.filename ?? file.attributeTitle,
+        mimetype: file.mimetype,
+      });
+      this.edge({
+        id: graphEdgeId(ownerId, file.attributeName, id),
+        source: ownerId,
+        target: id,
+        relationName: file.attributeName,
+        relationTitle: file.attributeTitle,
+        cardinality: "to-one",
+        onTrail: false,
+        toOverflow: false,
+        toContent: true,
+        canRemove: false,
+        owner,
+      });
+    }
+  }
+
   edge(edge: GraphEdgeModel) {
     const existing = this.edges.get(edge.id);
     if (existing) {
@@ -284,31 +314,7 @@ function buildPass(input: BuildGraphModelInput, pass: BuildPass) {
 
     // The item's own files, before its relations so they stay within the node budget.
     const ownerItem = items.get(ownerId)?.item;
-    for (const file of ownerItem ? contentFilesOf(ownerItem) : []) {
-      const id = contentNodeId(owner, file.attributeName);
-      b.nodes.set(id, {
-        kind: "content",
-        id,
-        owner,
-        attributeName: file.attributeName,
-        attributeTitle: file.attributeTitle,
-        label: file.filename ?? file.attributeTitle,
-        mimetype: file.mimetype,
-      });
-      b.edge({
-        id: graphEdgeId(ownerId, file.attributeName, id),
-        source: ownerId,
-        target: id,
-        relationName: file.attributeName,
-        relationTitle: file.attributeTitle,
-        cardinality: "to-one",
-        onTrail: false,
-        toOverflow: false,
-        toContent: true,
-        canRemove: false,
-        owner,
-      });
-    }
+    if (ownerItem) b.contentOf(owner, ownerItem);
 
     for (const rt of relations) {
       const relation = rt.relation;
@@ -365,6 +371,8 @@ function buildPass(input: BuildGraphModelInput, pass: BuildPass) {
           relation,
           targetItem: target,
         });
+        // A related item's files too, one step further out.
+        if (target) b.contentOf(ref, target);
       };
 
       if (rt.kind === "to-one") {
@@ -435,6 +443,8 @@ function buildPass(input: BuildGraphModelInput, pass: BuildPass) {
  *    edge to their successor (FR-013, FR-015).
  * 2. to-one → 0 or 1 target; to-many → first `perRelationCap` targets of the first page, plus
  *    pinned targets, plus one overflow node while targets remain (FR-006–FR-008).
+ * 2b. Every drawn item that is expanded or a relation target also gets one content node per
+ *     content attribute holding a file.
  * 3. One node per item id; one edge per (owner, relation, target) — parallel relations between
  *    the same pair stay separate edges; self-relations are self-loops (FR-002, FR-004).
  * 4. ≤ `nodeBudget` nodes: collapse the previous focus first; then lower the per-relation cap

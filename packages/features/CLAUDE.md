@@ -167,9 +167,10 @@ search-parameter selector with a suggestions popover, and quick filters. `x-stab
   (`graph-entity-type-filter.ts`: legend types + dropping hidden types' targets; focus and trail
   always stay). The view keeps the hidden types; reaching a type from the details panel (opening
   its relation row, clicking one of its items) switches it back on.
-- Content nodes (`util/graph-content.ts`): the expanded items' content attributes that hold a file
-  (metadata present) are drawn as `content` nodes linked to their item, never filtered by the
-  legend. Selecting one (node, its edge, or the outline) shows `GraphContentPanel` — the
+- Content nodes (`util/graph-content.ts`): the content attributes holding a file (metadata present)
+  of the expanded items and of their drawn relation targets are `content` nodes linked to their
+  item; they count against the node budget. The legend never filters an expanded item's files; a
+  hidden target's files go with it. Selecting one (node, its edge, or the outline) shows `GraphContentPanel` — the
   entity-item feature's `ContentPreviewPanel` — in the details panel.
 - `hooks/use-graph-items.ts`: trail + pinned items by identity (`profileEntity.itemUrl(id)`).
 - `components/`: details panel, trail breadcrumb, overflow list, remove-link / delete dialogs,

@@ -14,8 +14,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Click a node → its menu opens (anchored, in a portal) → Escape closes it; click an edge label →
- * the edge menu opens. Kept in one `step`-free play() (see packages/ui/CLAUDE.md on the Popover /
+ * Left-click a node → selected, no menu; right-click it → its menu opens (anchored, in a portal)
+ * → Escape closes it; right-click an edge label → the edge menu opens. Kept in one `step`-free play() (see packages/ui/CLAUDE.md on the Popover /
  * step-boundary harness quirk).
  */
 export const WithInteraction: Story = {
@@ -36,6 +36,8 @@ export const WithInteraction: Story = {
     const node = await canvas.findByText("ORD-002", {}, slow);
     await userEvent.click(node);
     await expect(args.onNodeClick).toHaveBeenCalledWith("o2");
+    await expect(body.queryByRole("menu")).not.toBeInTheDocument();
+    await userEvent.pointer({ keys: "[MouseRight]", target: node });
     await waitFor(() => expect(body.getByRole("menu", { name: "ORD-002" })).toBeVisible(), slow);
     await expect(body.getByRole("menuitem", { name: "Explore relations" })).toBeInTheDocument();
 
@@ -43,8 +45,7 @@ export const WithInteraction: Story = {
     await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument(), slow);
 
     const label = await canvas.findByRole("button", { name: "c1 — Account manager → a1" });
-    await userEvent.click(label);
-    await expect(args.onEdgeClick).toHaveBeenCalledWith("c1->Account manager->a1");
+    await userEvent.pointer({ keys: "[MouseRight]", target: label });
     await waitFor(
       () => expect(body.getByRole("menu", { name: "Account manager" })).toBeVisible(),
       slow,

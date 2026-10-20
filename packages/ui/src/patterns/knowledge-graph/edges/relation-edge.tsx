@@ -79,6 +79,15 @@ function RelationEdgeComponent({
         event.stopPropagation();
         ctx.onEdgeClick(id);
       }}
+      onContextMenu={
+        ctx.onEdgeContextMenu
+          ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              ctx.onEdgeContextMenu?.(id);
+            }
+          : undefined
+      }
     >
       {edge.status === "loading" ? (
         <CircleNotchIcon className="size-3 animate-spin" aria-label={ctx.labels.loading} />
@@ -103,24 +112,26 @@ function RelationEdgeComponent({
           strokeDasharray: isContent ? "5 4" : undefined,
         }}
       />
-      <EdgeLabelRenderer>
-        {menu ? (
-          <KnowledgeGraphMenu
-            open
-            onOpenChange={ctx.onMenuOpenChange}
-            anchor={label}
-            title={menu.title}
-            description={menu.description}
-            items={menu.items}
-            footer={menu.footer}
-            returnFocusTo={() =>
-              document.querySelector<HTMLElement>(`[data-kg-edge-label="${CSS.escape(id)}"]`)
-            }
-          />
-        ) : (
-          label
-        )}
-      </EdgeLabelRenderer>
+      {edge.hideLabel && !menu ? null : (
+        <EdgeLabelRenderer>
+          {menu ? (
+            <KnowledgeGraphMenu
+              open
+              onOpenChange={ctx.onMenuOpenChange}
+              anchor={label}
+              title={menu.title}
+              description={menu.description}
+              items={menu.items}
+              footer={menu.footer}
+              returnFocusTo={() =>
+                document.querySelector<HTMLElement>(`[data-kg-edge-label="${CSS.escape(id)}"]`)
+              }
+            />
+          ) : (
+            label
+          )}
+        </EdgeLabelRenderer>
+      )}
     </>
   );
 }

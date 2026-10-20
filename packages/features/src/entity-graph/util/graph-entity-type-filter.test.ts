@@ -118,6 +118,28 @@ describe("filterGraphModel", () => {
     expect(filtered.edges.map((e) => e.target)).toEqual(["content:c-1:contract"]);
   });
 
+  it("drops a hidden target's content nodes with it", () => {
+    const withContent: GraphModel = {
+      ...model,
+      nodes: [
+        ...model.nodes,
+        {
+          kind: "content",
+          id: "content:o-1:invoice",
+          owner: { entityName: "order", id: "o-1" },
+          attributeName: "invoice",
+          attributeTitle: "Invoice",
+          label: "o-1.pdf",
+          mimetype: "application/pdf",
+        },
+      ],
+      edges: [...model.edges, edge("o-1", "content:o-1:invoice")],
+    };
+    const filtered = filterGraphModel(withContent, new Set(["order"]));
+    expect(filtered.nodes.map((n) => n.id)).toEqual(["c-1", "c-2"]);
+    expect(filtered.edges.map((e) => e.target)).toEqual(["c-2"]);
+  });
+
   it("keeps the focus item even when its own type is hidden", () => {
     const filtered = filterGraphModel(model, new Set(["customer"]));
     expect(filtered.nodes.map((n) => n.id)).toEqual(["c-1", "o-1", "o-2", "overflow:c-1:orders"]);

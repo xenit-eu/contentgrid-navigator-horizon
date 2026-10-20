@@ -13,6 +13,7 @@ export interface KnowledgeGraphContextValue {
   readonly edgeMenu: KnowledgeGraphEdgeMenu | null;
   readonly onMenuOpenChange: (open: boolean) => void;
   readonly onEdgeClick: (edgeId: string) => void;
+  readonly onEdgeContextMenu?: (edgeId: string) => void;
   readonly siblings: ReadonlyMap<string, EdgeSiblingInfo>;
   readonly labels: KnowledgeGraphLabels;
 }

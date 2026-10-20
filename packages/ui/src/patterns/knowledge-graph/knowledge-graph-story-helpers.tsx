@@ -84,20 +84,28 @@ export function StoryFrame({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * Stateful harness: clicking a node or edge opens its menu, like the knowledge-graph feature does.
+ * Stateful harness: right-clicking a node or edge opens its menu, like the knowledge-graph feature
+ * does; a left-click only selects a node.
  */
 export function InteractiveKnowledgeGraph(props: Readonly<KnowledgeGraphProps>) {
   const [menu, setMenu] = useState<{ kind: "node" | "edge"; id: string } | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   return (
     <KnowledgeGraph
       {...props}
-      selectedNodeId={menu?.kind === "node" ? menu.id : null}
+      selectedNodeId={selected}
       onNodeClick={(id) => {
         props.onNodeClick(id);
+        setSelected(id);
+        setMenu(null);
+      }}
+      onNodeContextMenu={(id) => {
+        props.onNodeContextMenu?.(id);
+        setSelected(id);
         setMenu({ kind: "node", id });
       }}
-      onEdgeClick={(id) => {
-        props.onEdgeClick(id);
+      onEdgeContextMenu={(id) => {
+        props.onEdgeContextMenu?.(id);
         setMenu({ kind: "edge", id });
       }}
       onMenuOpenChange={(open) => !open && setMenu(null)}

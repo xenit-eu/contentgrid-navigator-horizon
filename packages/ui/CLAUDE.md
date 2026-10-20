@@ -364,7 +364,10 @@ pinned `12.11.6`, MIT, no lifecycle scripts) — nothing outside this folder may
 - **Content nodes** (`nodes/content-node.tsx`, `kind: "content"`): a file held by an item, drawn as
   a compact vertical card with a muted header band (`FileIcon` from `fileType`, filename on up to two
   lines, attribute as sublabel; `CONTENT_NODE_WIDTH`) so it never reads as an item card. Link it
-  with an edge of `variant: "content"`: dashed, no arrowhead, paperclip on the label.
+  with an edge of `variant: "content"`: dashed, no arrowhead, paperclip on the label. A `compact`
+  content node is just the file icon (filename in the tooltip/aria label); the layout places it
+  right beyond the node linking to it (`radialLayout`'s `attachments`) instead of on a ring —
+  pair it with a `hideLabel` edge. The feature draws only the focus item's files in full.
 - **Legend** (`knowledge-graph-legend.tsx`, `KnowledgeGraphLegend`): a horizontally scrolling row
   of node-type toggles styled like the item nodes (`aria-pressed`; inactive = dashed + faded). The
   caller decides what toggling does — the graph itself has no filtering.

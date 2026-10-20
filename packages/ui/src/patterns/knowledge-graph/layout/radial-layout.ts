@@ -10,6 +10,10 @@
  * - Older trail nodes continue further left on a straight line (the "trail line").
  * - Anything else is placed on an outer ring.
  *
+ * - Attached nodes (`attachments`: node id → owner id, e.g. an item's small file icons) are left
+ *   out of all of the above and placed just beyond their owner, on the side facing away from the
+ *   focus, fanned out sideways when an owner has several.
+ *
  * Spacing is derived from `nodeSpacing` so neighbouring centres are never closer than it.
  * When `previous` positions are given, the whole layout is translated so the focus node keeps
  * the position it had before — the graph grows around the item the user just clicked instead of
@@ -29,7 +33,13 @@ export interface RadialLayoutInput {
   readonly previous?: Readonly<Record<string, LayoutPoint>>;
   /** Minimum distance between two node centres (default 220). */
   readonly nodeSpacing?: number;
+  /** Small nodes to place right next to another node (attached id → owner id). */
+  readonly attachments?: Readonly<Record<string, string>>;
 }
+
+/** Distance from an owner's centre to its attached nodes, and between attached siblings. */
+const ATTACHMENT_DISTANCE = 140;
+const ATTACHMENT_GAP = 52;
 
 export const DEFAULT_NODE_SPACING = 220;
 const MIN_RING_RADIUS = 280;
@@ -63,6 +73,44 @@ const polar = (radius: number, angle: number): LayoutPoint => ({
 });
 
 export function radialLayout(input: RadialLayoutInput): Record<string, LayoutPoint> {
+  const attachments = input.attachments ?? {};
+  const attached = new Set(Object.keys(attachments));
+  if (attached.size === 0) return radialLayoutCore(input);
+
+  const positions = radialLayoutCore({
+    ...input,
+    nodeIds: input.nodeIds.filter((id) => !attached.has(id)),
+    edges: input.edges.filter((e) => !attached.has(e.source) && !attached.has(e.target)),
+  });
+  const centre = positions[input.focusNodeId];
+  if (!centre) return positions;
+
+  const byOwner = new Map<string, string[]>();
+  for (const id of input.nodeIds) {
+    const owner = attachments[id];
+    if (owner === undefined || !positions[owner]) continue;
+    byOwner.set(owner, [...(byOwner.get(owner) ?? []), id]);
+  }
+  for (const [owner, ids] of byOwner) {
+    const o = positions[owner]!;
+    const dx = o.x - centre.x;
+    const dy = o.y - centre.y;
+    const length = Math.hypot(dx, dy);
+    // Away from the focus; the focus's own attachments go to its right.
+    const ux = length === 0 ? 1 : dx / length;
+    const uy = length === 0 ? 0 : dy / length;
+    ids.forEach((id, i) => {
+      const side = (i - (ids.length - 1) / 2) * ATTACHMENT_GAP;
+      positions[id] = {
+        x: Math.round(o.x + ux * ATTACHMENT_DISTANCE - uy * side),
+        y: Math.round(o.y + uy * ATTACHMENT_DISTANCE + ux * side),
+      };
+    });
+  }
+  return positions;
+}
+
+function radialLayoutCore(input: RadialLayoutInput): Record<string, LayoutPoint> {
   const spacing = input.nodeSpacing ?? DEFAULT_NODE_SPACING;
   const exists = new Set(input.nodeIds);
   const positions: Record<string, LayoutPoint> = {};

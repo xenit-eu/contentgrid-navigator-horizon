@@ -124,4 +124,28 @@ describe("radialLayout", () => {
     });
     expect(Object.keys(pos)).toHaveLength(2);
   });
+
+  it("places attached nodes just beyond their owner, away from the focus", () => {
+    const { ids, edges } = star("f", 4, "n");
+    const files = ["file-a", "file-b"];
+    const positions = radialLayout({
+      nodeIds: ["f", ...ids, ...files],
+      edges: [...edges, ...files.map((id) => ({ source: "n1", target: id }))],
+      focusNodeId: "f",
+      trailNodeIds: ["f"],
+      attachments: { "file-a": "n1", "file-b": "n1" },
+    });
+    // The ring is laid out as if the files weren't there.
+    expect(positions).toMatchObject(
+      radialLayout({ nodeIds: ["f", ...ids], edges, focusNodeId: "f", trailNodeIds: ["f"] }),
+    );
+    const owner = positions.n1!;
+    for (const id of files) {
+      const p = positions[id]!;
+      expect(distance(p, owner)).toBeLessThan(DEFAULT_NODE_SPACING);
+      // Further from the focus than the owner: on its outer side.
+      expect(distance(p, positions.f!)).toBeGreaterThan(distance(owner, positions.f!));
+    }
+    expect(distance(positions["file-a"]!, positions["file-b"]!)).toBeGreaterThan(40);
+  });
 });

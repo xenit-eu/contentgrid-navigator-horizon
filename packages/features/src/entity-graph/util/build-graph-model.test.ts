@@ -356,32 +356,33 @@ describe("buildGraphModel — permissions and failures", () => {
 });
 
 describe("buildGraphModel — content of expanded items", () => {
+  // An item with one file; getters are overridden on a prototype-linked copy.
+  const withFile = (item: EntityItem, attributeName: string): EntityItem => {
+    const profileEntity = Object.create(item.profileEntity) as ProfileEntity;
+    Object.defineProperty(profileEntity, "userDefinedAttributes", {
+      value: [{ name: attributeName, title: "Invoice", isContent: true }],
+    });
+    const copy = Object.create(item) as EntityItem;
+    Object.defineProperty(copy, "profileEntity", { value: profileEntity });
+    Object.defineProperty(copy, "findAttribute", {
+      value: (name: string) =>
+        name === attributeName
+          ? {
+              value: new EntityItemAttributeContent(
+                attributeName,
+                { length: 1, mimetype: "application/pdf", filename: "ord-001.pdf" },
+                { href: "https://api.example/x" } as never,
+              ),
+            }
+          : undefined,
+    });
+    return copy;
+  };
+
   it("draws one content node per file of the focus item, linked to it", () => {
     const state = initialGraphState(ref("order", ids.order(1)));
     const input = inputFor(state);
     const focusItem = input.items.get(ids.order(1))!.item!;
-    // The focus item with one file; getters are overridden on a prototype-linked copy.
-    const withFile = (item: EntityItem, attributeName: string): EntityItem => {
-      const profileEntity = Object.create(item.profileEntity) as ProfileEntity;
-      Object.defineProperty(profileEntity, "userDefinedAttributes", {
-        value: [{ name: attributeName, title: "Invoice", isContent: true }],
-      });
-      const copy = Object.create(item) as EntityItem;
-      Object.defineProperty(copy, "profileEntity", { value: profileEntity });
-      Object.defineProperty(copy, "findAttribute", {
-        value: (name: string) =>
-          name === attributeName
-            ? {
-                value: new EntityItemAttributeContent(
-                  attributeName,
-                  { length: 1, mimetype: "application/pdf", filename: "ord-001.pdf" },
-                  { href: "https://api.example/x" } as never,
-                ),
-              }
-            : undefined,
-      });
-      return copy;
-    };
     const items = new Map(input.items);
     items.set(ids.order(1), {
       item: withFile(focusItem, "invoice"),
@@ -409,5 +410,18 @@ describe("buildGraphModel — content of expanded items", () => {
       toContent: true,
       canRemove: false,
     });
+  });
+
+  it("draws the files of related items too, linked to that item", () => {
+    const state = initialGraphState(ref("order", ids.order(1)));
+    const order = demo.item(ids.order(1));
+    const expansion = expansionOf(order).map((rt) =>
+      rt.kind === "to-one" && rt.target ? { ...rt, target: withFile(rt.target, "invoice") } : rt,
+    );
+    const model = buildGraphModel(inputFor(state, { expand: { [ids.order(1)]: expansion } }));
+
+    const content = model.nodes.filter((n) => n.kind === "content");
+    expect(content.map((n) => n.id)).toEqual([`content:${ids.bigCorp}:invoice`]);
+    expect(model.edges.find((e) => e.target === content[0]!.id)?.source).toBe(ids.bigCorp);
   });
 });

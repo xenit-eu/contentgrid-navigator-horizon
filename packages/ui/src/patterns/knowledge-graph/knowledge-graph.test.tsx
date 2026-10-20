@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { KnowledgeGraph } from "./knowledge-graph";
@@ -160,6 +160,41 @@ describe("KnowledgeGraph", () => {
     expect(document.activeElement).toBe(nodeEl);
     fireEvent.keyDown(nodeEl, { key: "Enter" });
     expect(props.onNodeClick).toHaveBeenCalledWith("o-1");
+  });
+
+  it("reports right-clicks on nodes and edge labels and suppresses the browser menu", async () => {
+    const onNodeContextMenu = vi.fn();
+    const onEdgeContextMenu = vi.fn();
+    renderGraph({ onNodeContextMenu, onEdgeContextMenu });
+
+    const nodeEvent = createEvent.contextMenu(screen.getByText("ORD-001"));
+    fireEvent(screen.getByText("ORD-001"), nodeEvent);
+    expect(onNodeContextMenu).toHaveBeenCalledWith("o-1");
+    expect(nodeEvent.defaultPrevented).toBe(true);
+
+    const label = await screen.findByRole("button", { name: "Big Corp — Orders → ORD-001" });
+    const labelEvent = createEvent.contextMenu(label);
+    fireEvent(label, labelEvent);
+    expect(onEdgeContextMenu).toHaveBeenCalledWith("c-1->orders->o-1");
+    expect(labelEvent.defaultPrevented).toBe(true);
+  });
+
+  it("leaves the browser menu alone when no context-menu handler is given", () => {
+    renderGraph();
+    const event = createEvent.contextMenu(screen.getByText("ORD-001"));
+    fireEvent(screen.getByText("ORD-001"), event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("fires onNodeContextMenu for the Menu key and Shift+F10 on a focused node", () => {
+    const onNodeContextMenu = vi.fn();
+    const { container } = renderGraph({ onNodeContextMenu });
+    const nodeEl = container.querySelector<HTMLElement>('.react-flow__node[data-id="o-1"]')!;
+    nodeEl.focus();
+    fireEvent.keyDown(nodeEl, { key: "ContextMenu" });
+    fireEvent.keyDown(nodeEl, { key: "F10", shiftKey: true });
+    expect(onNodeContextMenu).toHaveBeenCalledTimes(2);
+    expect(onNodeContextMenu).toHaveBeenCalledWith("o-1");
   });
 
   it("marks the selected node", () => {

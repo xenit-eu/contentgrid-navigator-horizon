@@ -121,12 +121,43 @@ describe("EntityGraphView — US1 relations of an item", () => {
 });
 
 describe("EntityGraphView — US2 details and node menu", () => {
-  it("clicking a node selects it, shows its details and opens View / Explore", async () => {
+  it("left-click only selects a node; right-click opens its menu", async () => {
+    useDemo();
+    const { container } = renderGraph({ entityName: "order", itemId: ids.order(1) });
+    await within(await screen.findByRole("application")).findByText("Widget");
+
+    fireEvent.click(nodeEl(container, ids.product(1))!);
+    const details = screen.getByRole("region", { name: "Item details" });
+    await waitFor(() =>
+      expect(
+        within(within(details).getByRole("list", { name: "Relations" })).getByText("Supplier"),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    const edgeLabel = within(graph()).getByRole("button", { name: "ORD-001 — Products → Widget" });
+    fireEvent.click(edgeLabel);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    fireEvent.contextMenu(edgeLabel);
+    expect(await screen.findByRole("menu", { name: "Products" })).toBeInTheDocument();
+  });
+
+  it("opens the menus from the relations list view on a plain click", async () => {
+    useDemo();
+    renderGraph({ entityName: "order", itemId: ids.order(1) });
+    await within(await screen.findByRole("application")).findByText("Widget");
+    fireEvent.click(screen.getByText(/list view/));
+    const outline = screen.getByText(/list view/).closest("details")!;
+    fireEvent.click(within(outline).getByRole("button", { name: "Widget" }));
+    expect(await screen.findByRole("menu", { name: "Widget" })).toBeInTheDocument();
+  });
+
+  it("right-clicking a node selects it, shows its details and opens View / Explore", async () => {
     useDemo();
     const { container, onOpenItem } = renderGraph({ entityName: "order", itemId: ids.order(1) });
     await within(await screen.findByRole("application")).findByText("Widget");
 
-    fireEvent.click(nodeEl(container, ids.product(1))!);
+    fireEvent.contextMenu(nodeEl(container, ids.product(1))!);
 
     const menu = await screen.findByRole("menu", { name: "Widget" });
     expect(within(menu).getByRole("menuitem", { name: "View" })).toBeInTheDocument();
@@ -146,7 +177,7 @@ describe("EntityGraphView — US2 details and node menu", () => {
     const { container } = renderGraph({ entityName: "order", itemId: ids.order(1) });
     await within(await screen.findByRole("application")).findByText("Widget");
 
-    fireEvent.click(nodeEl(container, ids.order(1))!);
+    fireEvent.contextMenu(nodeEl(container, ids.order(1))!);
     const menu = await screen.findByRole("menu", { name: "ORD-001" });
     expect(
       within(menu).queryByRole("menuitem", { name: "Explore relations" }),
@@ -159,7 +190,7 @@ describe("EntityGraphView — US2 details and node menu", () => {
     const { container } = renderGraph({ entityName: "order", itemId: ids.order(1) });
     await within(await screen.findByRole("application")).findByText("Widget");
 
-    fireEvent.click(nodeEl(container, ids.product(2))!);
+    fireEvent.contextMenu(nodeEl(container, ids.product(2))!);
     const menu = await screen.findByRole("menu", { name: "Gadget" });
     fireEvent.keyDown(menu, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
@@ -177,7 +208,7 @@ describe("EntityGraphView — US3 traversal and trail", () => {
     });
     await within(await screen.findByRole("application")).findByText("+ ~15 more");
 
-    fireEvent.click(nodeEl(container, ids.order(1))!);
+    fireEvent.contextMenu(nodeEl(container, ids.order(1))!);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "ORD-001" })).getByRole("menuitem", {
         name: "Explore relations",
@@ -194,7 +225,7 @@ describe("EntityGraphView — US3 traversal and trail", () => {
     expect(within(graph()).getByText("+ ~15 more")).toBeInTheDocument();
 
     // Explore a product next: only product + order expanded; Big Corp is trail-only.
-    fireEvent.click(nodeEl(container, ids.product(1))!);
+    fireEvent.contextMenu(nodeEl(container, ids.product(1))!);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Widget" })).getByRole("menuitem", {
         name: "Explore relations",
@@ -265,7 +296,7 @@ describe("EntityGraphView — US5 remove link", () => {
       name: "ORD-001 — Products → Gadget",
     });
 
-    fireEvent.click(label);
+    fireEvent.contextMenu(label);
     const menu = await screen.findByRole("menu", { name: "Products" });
     expect(screen.getByText("ORD-001 → Gadget")).toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Remove link" }));
@@ -284,7 +315,7 @@ describe("EntityGraphView — US5 remove link", () => {
     const label = await within(await screen.findByRole("application")).findByRole("button", {
       name: "ORD-002 — Customer → Big Corp",
     });
-    fireEvent.click(label);
+    fireEvent.contextMenu(label);
     const menu = await screen.findByRole("menu", { name: "Customer" });
     expect(within(menu).queryByRole("menuitem", { name: "Remove link" })).not.toBeInTheDocument();
   });
@@ -295,7 +326,7 @@ describe("EntityGraphView — US5 remove link", () => {
     const label = await within(await screen.findByRole("application")).findByRole("button", {
       name: "ORD-001 — Customer → Big Corp",
     });
-    fireEvent.click(label);
+    fireEvent.contextMenu(label);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Customer" })).getByRole("menuitem", {
         name: "Remove link",
@@ -314,7 +345,7 @@ describe("EntityGraphView — US5 remove link", () => {
     const label = await within(await screen.findByRole("application")).findByRole("button", {
       name: "ORD-001 — Products → Gadget",
     });
-    fireEvent.click(label);
+    fireEvent.contextMenu(label);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Products" })).getByRole("menuitem", {
         name: "Remove link",
@@ -334,7 +365,7 @@ describe("EntityGraphView — US6 delete item", () => {
     const { container } = renderGraph({ entityName: "order", itemId: ids.order(1) });
     await within(await screen.findByRole("application")).findByText("Sprocket");
 
-    fireEvent.click(nodeEl(container, ids.product(3))!);
+    fireEvent.contextMenu(nodeEl(container, ids.product(3))!);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Sprocket" })).getByRole("menuitem", {
         name: "Delete",
@@ -352,7 +383,7 @@ describe("EntityGraphView — US6 delete item", () => {
     const { container } = renderGraph({ entityName: "order", itemId: ids.order(1) });
     await within(await screen.findByRole("application")).findByText("Big Corp");
 
-    fireEvent.click(nodeEl(container, ids.bigCorp)!);
+    fireEvent.contextMenu(nodeEl(container, ids.bigCorp)!);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Big Corp" })).getByRole("menuitem", {
         name: "Delete",
@@ -378,7 +409,7 @@ describe("EntityGraphView — US6 delete item", () => {
     });
     await within(await screen.findByRole("application")).findByText("ACME");
 
-    fireEvent.click(nodeEl(container, ids.product(1))!);
+    fireEvent.contextMenu(nodeEl(container, ids.product(1))!);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Widget" })).getByRole("menuitem", {
         name: "Delete",
@@ -404,7 +435,7 @@ describe("EntityGraphView — US6 delete item", () => {
     await screen.findByRole("application");
     await waitFor(() => expect(nodeEl(container, ids.lonelyLtd)).not.toBeNull());
 
-    fireEvent.click(nodeEl(container, ids.lonelyLtd)!);
+    fireEvent.contextMenu(nodeEl(container, ids.lonelyLtd)!);
     fireEvent.click(
       within(await screen.findByRole("menu", { name: "Lonely Ltd" })).getByRole("menuitem", {
         name: "Delete",

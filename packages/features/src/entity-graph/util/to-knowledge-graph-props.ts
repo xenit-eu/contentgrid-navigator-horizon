@@ -17,6 +17,7 @@ export interface GraphViewNode {
   readonly color?: string;
   readonly icon?: string;
   readonly fileType?: "pdf" | "img" | "doc";
+  readonly compact?: boolean;
   readonly emphasis: "focus" | "previous-focus" | "trail" | "normal";
   readonly muted?: boolean;
   readonly estimated?: boolean;
@@ -30,6 +31,7 @@ export interface GraphViewEdge {
   readonly label: string;
   readonly emphasis: "trail" | "normal";
   readonly variant?: "relation" | "content";
+  readonly hideLabel?: boolean;
   readonly ariaLabel: string;
 }
 
@@ -55,6 +57,7 @@ export function overflowLabel(
 function nodeView(
   node: GraphNodeModel,
   labelFor: (id: string) => string,
+  focusNodeId: string,
   locale?: string,
 ): GraphViewNode {
   if (node.kind === "content") {
@@ -64,6 +67,8 @@ function nodeView(
       label: node.label,
       sublabel: node.attributeTitle,
       fileType: contentFileType(node.mimetype),
+      // Only the focus item's files are drawn in full; other items' files are small icons.
+      compact: graphNodeId(node.owner) !== focusNodeId,
       emphasis: "normal",
       ariaLabel: `${node.attributeTitle} of ${labelFor(graphNodeId(node.owner))}: ${node.label} — open the preview`,
     };
@@ -104,7 +109,11 @@ function nodeView(
   };
 }
 
-function edgeView(edge: GraphEdgeModel, labelFor: (id: string) => string): GraphViewEdge {
+function edgeView(
+  edge: GraphEdgeModel,
+  labelFor: (id: string) => string,
+  focusNodeId: string,
+): GraphViewEdge {
   return {
     id: edge.id,
     source: edge.source,
@@ -112,6 +121,7 @@ function edgeView(edge: GraphEdgeModel, labelFor: (id: string) => string): Graph
     label: edge.relationTitle,
     emphasis: edge.onTrail ? "trail" : "normal",
     variant: edge.toContent ? "content" : "relation",
+    hideLabel: edge.toContent && edge.source !== focusNodeId,
     ariaLabel: edge.toOverflow
       ? `${edge.relationTitle} of ${labelFor(edge.source)}: more items`
       : `${labelFor(edge.source)} — ${edge.relationTitle} → ${labelFor(edge.target)}`,
@@ -145,10 +155,11 @@ export function toKnowledgeGraphProps(
     model.nodes.map((n) => [n.id, n.kind === "overflow" ? n.relationTitle : n.label]),
   );
   const labelFor = (id: string) => labels.get(id) ?? id;
+  const focusNodeId = graphNodeId(state.trail[state.trail.length - 1]!);
   return {
-    nodes: model.nodes.map((n) => nodeView(n, labelFor, locale)),
-    edges: model.edges.map((e) => edgeView(e, labelFor)),
-    focusNodeId: graphNodeId(state.trail[state.trail.length - 1]!),
+    nodes: model.nodes.map((n) => nodeView(n, labelFor, focusNodeId, locale)),
+    edges: model.edges.map((e) => edgeView(e, labelFor, focusNodeId)),
+    focusNodeId,
     trailNodeIds: state.trail.map((t) => graphNodeId(t)),
     selectedNodeId: selectedNodeIdOf(state.selected, model),
   };

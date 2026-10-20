@@ -21,6 +21,11 @@ export interface KnowledgeGraphNode {
   readonly icon?: string;
   /** `content` nodes only: which file icon to show. Defaults to `"doc"`. */
   readonly fileType?: "pdf" | "img" | "doc";
+  /**
+   * `content` nodes only: draw just the file icon (label and sublabel move to the tooltip) and
+   * place the node right next to the item it is linked from, instead of on a ring.
+   */
+  readonly compact?: boolean;
   readonly emphasis: "focus" | "previous-focus" | "trail" | "normal";
   /** Rendered dimmed (loading / unavailable). */
   readonly muted?: boolean;
@@ -42,6 +47,8 @@ export interface KnowledgeGraphEdge {
    * link, drawn dashed without an arrowhead and with a paperclip on its label.
    */
   readonly variant?: "relation" | "content";
+  /** Draw the line only, without its label (e.g. to a compact file icon). */
+  readonly hideLabel?: boolean;
   readonly status?: "loading" | "error";
   readonly ariaLabel: string;
 }
@@ -99,6 +106,12 @@ export interface KnowledgeGraphProps {
 
   readonly onNodeClick: (nodeId: string) => void;
   readonly onEdgeClick: (edgeId: string) => void;
+  /**
+   * Right-click (or the keyboard's Menu key / Shift+F10) on a node or an edge, typically to open
+   * its menu. When set, the browser's own context menu is suppressed there.
+   */
+  readonly onNodeContextMenu?: (nodeId: string) => void;
+  readonly onEdgeContextMenu?: (edgeId: string) => void;
   readonly onPaneClick?: () => void;
 
   /** Menus: content decided by the consumer; anchoring, Escape and outside-click owned here. */

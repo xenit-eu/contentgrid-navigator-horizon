@@ -234,6 +234,19 @@ function EntityGraphViewBody({
       return;
     }
     if (node.unavailable) return;
+    // Left-click only selects (details panel); the actions menu is on right-click.
+    selectNode(node.ref);
+    setOpenMenu(null);
+  };
+
+  /** Right-click: an item's actions menu; files and "+ N more" have none, so they act as a click. */
+  const onNodeContextMenu = (nodeId: string) => {
+    const node = nodeById.get(nodeId);
+    if (node?.kind !== "item") {
+      onNodeClick(nodeId);
+      return;
+    }
+    if (node.unavailable) return;
     selectNode(node.ref);
     setOpenMenu({ kind: "node", nodeId });
   };
@@ -246,7 +259,20 @@ function EntityGraphViewBody({
       onNodeClick(edge.target);
       return;
     }
-    dispatch({ type: "select", selection: { kind: "edge", edgeId } });
+    setOpenMenu(null);
+  };
+
+  /**
+   * Right-click on a relation link: its actions menu. The details panel keeps what it shows —
+   * swapping it would also move focus away and dismiss the menu.
+   */
+  const onEdgeContextMenu = (edgeId: string) => {
+    const edge = edgeById.get(edgeId);
+    if (!edge) return;
+    if (edge.toContent) {
+      onNodeClick(edge.target);
+      return;
+    }
     setOpenMenu({ kind: "edge", edgeId });
   };
 
@@ -368,8 +394,15 @@ function EntityGraphViewBody({
             n.attributeName === selection.attribute,
         )
       : undefined;
+  // The owner is a trail item (loaded by the graph itself) or a relation target (loaded with its
+  // relation, so its item lives on its node).
+  const contentOwnerNode =
+    selection?.kind === "content" ? nodeById.get(graphNodeId(selection.owner)) : undefined;
   const contentOwner =
-    selection?.kind === "content" ? items.get(graphNodeId(selection.owner))?.item : undefined;
+    selection?.kind === "content"
+      ? (items.get(graphNodeId(selection.owner))?.item ??
+        (contentOwnerNode?.kind === "item" ? contentOwnerNode.item : undefined))
+      : undefined;
   if (selection?.kind === "content" && contentNode?.kind === "content" && contentOwner) {
     panel = (
       <GraphContentPanel
@@ -556,14 +589,18 @@ function EntityGraphViewBody({
                 selectedNodeId={graphProps.selectedNodeId}
                 onNodeClick={onNodeClick}
                 onEdgeClick={onEdgeClick}
+                onNodeContextMenu={onNodeContextMenu}
+                onEdgeContextMenu={onEdgeContextMenu}
                 onPaneClick={() => setOpenMenu(null)}
                 nodeMenu={nodeMenu}
                 edgeMenu={edgeMenu}
                 onMenuOpenChange={(open) => !open && setOpenMenu(null)}
                 labels={{
                   graph: `Relations graph of ${labelOf(focusNodeId)}`,
-                  nodeDescription: "Press Enter to show this item's details and actions.",
-                  edgeDescription: "Press Enter to show this relation link's actions.",
+                  nodeDescription:
+                    "Press Enter to show this item's details, the Menu key or Shift+F10 for its actions.",
+                  edgeDescription:
+                    "Press the Menu key or Shift+F10 to show this relation link's actions.",
                 }}
               />
             </div>
@@ -571,8 +608,9 @@ function EntityGraphViewBody({
           <GraphRelationsOutline
             focusLabel={labelOf(focusNodeId)}
             groups={graphOutlineGroups(model, focusNodeId)}
-            onNodeClick={onNodeClick}
-            onEdgeClick={onEdgeClick}
+            // The list view stays the keyboard/AT way to the actions: its entries open the menus.
+            onNodeClick={onNodeContextMenu}
+            onEdgeClick={onEdgeContextMenu}
           />
         </div>
       </RightSidePanelLayout>
