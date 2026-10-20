@@ -1,6 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.8.0
+- Version change: 1.0.0 → 1.9.0
+- Amendment (1.8.0 → 1.9.0, MINOR): a second round of the same ACC-3216 PR #227 review. Principle
+  VIII's app-view contract bullet said a link-based prop was "deferred until a view actually needs
+  one (no HAL link today)". The reference implementation (ACC-3216 PR #246, now adopted as PR 3 of
+  this series) builds it directly: the item detail view (`itemUrl`) and the collection view
+  (`collectionUrl`) both resolve a link themselves, through `navigator-data`'s existing
+  `describesUrl` and the profile-optional `useEntityItem`, with no shared target-resolution
+  mechanism. The bullet is corrected to describe this as built, not deferred — a scope/meaning
+  change, hence MINOR, not PATCH.
 - Amendment (1.7.0 → 1.8.0, MINOR): following ACC-3216 PR #227 review (spec 005, the views
   layer), Principle VIII's preamble drops the "generated through /speckit-plan" carve-out and
   the "existing code is not retroactively non-compliant" framing for "existing code is always
@@ -47,6 +55,8 @@ Sync Impact Report
     resolves to `ADR-018-views-layer.md`; views live in `packages/views`; navigation context; toolbar drawn by the
     view and switchable off; view state alongside the target; features fill their space
     (1.6.0 → 1.7.0). Preamble further revised (1.7.0 → 1.8.0): see the amendment entry above.
+    App-view contract bullet corrected: a link-based prop is built, not deferred (1.8.0 → 1.9.0,
+    see the amendment entry above).
   - I. HAL Is the Only Interaction Model: added the binary-content exception (no HAL-FORMS
     template exists for `cg:content` PUT/GET) — the principle as written contradicted this
     documented, sanctioned behavior; corrected/completed.
@@ -309,11 +319,13 @@ corresponding plan. The existing code is always right: if you find mistakes in e
 correct them.
 
 - Views live in `packages/views`. An app (`apps/*`) MUST pass a view only plain values — the
-  explicit props that view declares (e.g. an entity name and item id) and, optionally, view
-  state — plus plain callback functions. A link-based prop is deferred until a view actually
-  needs one (no HAL link today). Passing a resolved domain object (`ProfileEntity`, `EntityItem`,
-  …) that the app itself fetched is prohibited; the view resolves its own data via
-  `navigator-data` hooks.
+  explicit props that view declares (e.g. an entity name and item id, or a link such as
+  `itemUrl`/`collectionUrl`) and, optionally, view state — plus plain callback functions. A view
+  that accepts a link resolves it itself through `navigator-data`'s existing hooks (profile
+  discovery by `describesUrl`, item loading by `useEntityItem`'s profile-optional mode) — there is
+  no shared target-resolution mechanism for this, in `navigator-data` or anywhere else. Passing a
+  resolved domain object (`ProfileEntity`, `EntityItem`, …) that the app itself fetched is
+  prohibited; the view resolves its own data via `navigator-data` hooks.
 - A view receives its view state (filters, sort, page, active tab) alongside its identifying
   props, never inside them. The app maps its own address to view state and back and is the only
   layer that knows the address format; a frontend address MUST NOT be passed as one of a view's
@@ -464,4 +476,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.8.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-14
+**Version**: 1.9.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-20

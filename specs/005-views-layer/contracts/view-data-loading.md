@@ -1,11 +1,11 @@
-# Contract: view preload
+# Contract: view data loading
 
 **Requirements**: FR-003, FR-004, FR-027
-**Package**: `packages/views`; existing query factories from `packages/navigator-data`
+**Package**: `packages/views`; `ensure*` helpers from `packages/navigator-data`
 
-## Signature
+## `ensureQueryData` and TanStack Router
 
-Each view MAY export its own small preload function, shaped around that view's own props — there is no shared, generic `ViewPreload<S>` type. Preload functions are named `preload<ViewName>`:
+A route starts loading a view's data before it mounts through a TanStack Router `loader`, not a generic preload contract. A view that benefits from it exports its own small, plainly-named function, shaped around that view's own props — there is no shared `ViewPreload<S>` type, and not every view exports one. Where a view does, it is named `preload<ViewName>`:
 
 ```ts
 function preloadEntityItemDetail(
@@ -17,9 +17,7 @@ function preloadEntityItemDetail(
 
 `ctx` is the router context: the query client and the API client. A view with state takes its state the same way its own props do (see [view-props-and-state.md](view-props-and-state.md)); a view with no state takes none.
 
-## `ensureQueryData` and TanStack Router
-
-A preload is a thin wrapper around the query client's `ensureQueryData(...)`, called once per query the view's own hooks read, using `navigator-data`'s existing query factories (`profileByLinkQuery`, `fetchByUrlQuery`, `infiniteQuery`, `profileRootQuery`, …). No new query keys are introduced for preloading. The route's TanStack Router `loader` calls the view's preload directly with the route's own parameters.
+A preload function is a thin wrapper around `navigator-data`'s own `ensure*` helpers (`ensureProfileEntity`, `ensureEntityItem`, …), each of which calls the query client's `ensureQueryData(...)` with the exact query factory the view's own hooks read — no new query keys, and no helper added to `navigator-data` for this beyond the `ensure*` functions it already has. The route's TanStack Router `loader` calls the view's preload directly with the route's own parameters.
 
 ```ts
 // apps/*/src/routes/_app/$entity/$itemId.tsx

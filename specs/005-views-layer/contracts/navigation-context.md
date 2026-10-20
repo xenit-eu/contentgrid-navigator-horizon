@@ -24,7 +24,7 @@ The set may be extended. The functions are implemented page by page, so the inte
 
 | Function                                           | Exists from                                                                                                                                   |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openHome`, `openEntityItemCollection`, `openItem` | PR 2 (the scaffold), needed through PR 5                                                                                                      |
+| `openHome`, `openEntityItemCollection`, `openItem` | PR 2 (the scaffold), needed through PR 3                                                                                                      |
 | `openCreateItem`                                   | PR 3 — the item detail view wires it to the relation popover's existing "create missing target" callback (no separate prop added on the view) |
 | `openClassifyCreate`, `openEditItem`               | The PR that adds the page using it (T041)                                                                                                     |
 

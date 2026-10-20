@@ -101,13 +101,16 @@ They are read by several features. Other features already import one another (fo
 
 ### 2.6 How a link is turned into a profile
 
-_Deferred along with User Story 3 (FR-008): recorded here so the reasoning is not lost, for whichever view adds link support when a host first needs it._
+_Built in PR 3 (FR-008–FR-010), not deferred — only the host that would exercise it (the chat assistant) stays out of scope (User Story 3)._
 
-| Option                                                                                    | For                                         | Against                                                                       |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Follow the response's profile link; else find the profile that describes the resource** | Follows the API's own links; no URL parsing | The fallback needs the list of profiles                                       |
-| Cut the entity name out of the link                                                       | Simple                                      | Forbidden by constitution Principle I; the API's URL shape is a server detail |
+| Option                                                                           | For                                                                         | Against                                                                                                                       |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Match the link against the profiles already loaded (`describesUrl`)**          | No URL parsing; resolves before any request for the resource itself is made | Needs every profile loaded first                                                                                              |
+| Follow the response's own profile link, falling back to matching loaded profiles | Could use a profile link embedded in the response                           | The profile is needed to build the request for the resource in the first place — there is no response yet to read a link from |
+| Cut the entity name out of the link                                              | Simple                                                                      | Forbidden by constitution Principle I; the API's URL shape is a server detail                                                 |
+
+Chosen: matching against loaded profiles. `useProfileEntityTarget` resolves the target before anything about the resource itself is fetched, so there is no response to read a profile link from; `useEntityItemTarget` builds the item target the same way, sharing `useEntityItem`'s cache key with the by-name mode so the same item opened either way is loaded once.
 
 ## 3. Unknowns that stay open
 
-The six open questions in `spec.md` stay open. In particular, the design does not say how a child's state is prefixed in the address (question 2) or where the unsaved-changes guard lives (question 3); the tasks keep the guard where it is.
+Five of the six open questions in `spec.md` stay open (question 5, filters in a link, is resolved — see §2.6). In particular, the design does not say how a child's state is prefixed in the address (question 2) or where the unsaved-changes guard lives (question 3); the tasks keep the guard where it is.
