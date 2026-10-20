@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemContentFocusBody,
@@ -10,6 +10,7 @@ import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
 import { useNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
+import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
 
 /** Opened by entity name and item id, or by the item's own link. */
 export type EntityItemDetailViewProps = ViewProps & EntityItemTarget;
@@ -24,12 +25,15 @@ function describeTarget(target: EntityItemTarget): string {
  * One entity item: its content or attributes and relations, under a Home, collection, item
  * breadcrumb toolbar. Resolves the target itself (`useEntityItemTarget`); the toolbar is drawn
  * from that result in every state, each crumb appearing as soon as it is known, and the loading,
- * error and not-found states show inside it. The feature only gets the loaded `entityItem`.
+ * error and not-found states show inside it. The feature only gets the loaded `entityItem`. The
+ * relation-problem dialog lives here (not in the feature): `onMissingRelationTargetClick`/
+ * `onBlindRelationOverwriteClick`/`onRequiredRelationClick` fill `RelationProblemDialogState`.
  * Every click that opens something calls `useNavigation()`.
  */
 export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItemDetailViewProps>) {
   const navigation = useNavigation();
   const result = useEntityItemTarget(target);
+  const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
   let content: ReactNode;
   if (result.status === "not-found") {
@@ -44,6 +48,15 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
           navigation.openItem(relatedEntityName, relatedItemId)
         }
         onRelationItemCreateNew={navigation.openCreateItem}
+        onMissingRelationTargetClick={(url, field) =>
+          setProblemDialog({ kind: "missingRelationTarget", url, field })
+        }
+        onBlindRelationOverwriteClick={(info) =>
+          setProblemDialog({ kind: "blindRelationOverwrite", ...info })
+        }
+        onRequiredRelationClick={(affectedRelation) =>
+          setProblemDialog({ kind: "requiredRelation", affectedRelation })
+        }
       />
     );
   } else {
@@ -54,7 +67,15 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const contentPadding = profileEntity ? entityItemContentFocusPadding(profileEntity) : true;
 
   if (toolbar === false) {
-    return <PageLayout padded={contentPadding}>{content}</PageLayout>;
+    return (
+      <PageLayout padded={contentPadding}>
+        {content}
+        <RelationProblemDialog
+          state={problemDialog}
+          onOpenChange={(open) => !open && setProblemDialog(null)}
+        />
+      </PageLayout>
+    );
   }
   return (
     <BreadCrumbsToolBarLayout
@@ -68,6 +89,10 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
       contentPadded={contentPadding}
     >
       {content}
+      <RelationProblemDialog
+        state={problemDialog}
+        onOpenChange={(open) => !open && setProblemDialog(null)}
+      />
     </BreadCrumbsToolBarLayout>
   );
 }
