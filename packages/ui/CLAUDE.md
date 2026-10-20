@@ -361,13 +361,17 @@ pinned `12.11.6`, MIT, no lifecycle scripts) — nothing outside this folder may
 - **Styling**: `@xyflow/react/dist/base.css` is imported in `src/styles/preset.css` (`layer(base)`)
   and the `--xy-*` variables are mapped to our semantic tokens, so dark mode follows `.dark`
   automatically. The React Flow attribution is kept (restyled for contrast).
+- **Legend** (`knowledge-graph-legend.tsx`, `KnowledgeGraphLegend`): a horizontally scrolling row
+  of node-type toggles styled like the item nodes (`aria-pressed`; inactive = dashed + faded). The
+  caller decides what toggling does — the graph itself has no filtering.
 - **jsdom**: both `packages/ui` and `packages/features` test setups shim `ResizeObserver` (calling
-  back on `observe`), `DOMMatrixReadOnly`, node `offsetWidth/Height` and `getBBox`, per the React
+  back on `observe` for React Flow elements only — react-resizable-panels must keep the no-op), `DOMMatrixReadOnly`, node `offsetWidth/Height` and `getBBox`, per the React
   Flow testing guide. Use `fireEvent`, not `userEvent`, for clicks on the canvas — d3-drag/zoom
   crash on userEvent's synthetic mousedown in jsdom.
 - Stories: `Patterns/KnowledgeGraph` — `Default`, `ParallelAndSelfLoop`, `Overflow`,
   `TrailCollapsed`, `LoadingAndErrorEdges`, `Dark` (visual baselines still to be generated on the
-  pinned Linux image), plus `WithInteraction` (`knowledge-graph.interaction.stories.tsx`).
+  pinned Linux image), plus `WithInteraction` (`knowledge-graph.interaction.stories.tsx`);
+  `Patterns/KnowledgeGraphLegend` — `Default`, `Overflowing` (baselines to generate too).
 
 ---
 

@@ -163,7 +163,10 @@ search-parameter selector with a suggestions popover, and quick filters. `x-stab
 
 - `util/` (pure, no JSX/hooks/ui): ids, the navigation reducer (`graph-state.ts`), the model
   builder (`build-graph-model.ts`: last 2 focus items expanded, ≤10 targets per to-many relation +
-  overflow node, ≤50 nodes), the ui-prop mapper, URL validation.
+  overflow node, ≤50 nodes), the ui-prop mapper, URL validation, and the entity-type filter
+  (`graph-entity-type-filter.ts`: legend types + dropping hidden types' targets; focus and trail
+  always stay). The view keeps the hidden types; reaching a type from the details panel (opening
+  its relation row, clicking one of its items) switches it back on.
 - `hooks/use-graph-items.ts`: trail + pinned items by identity (`profileEntity.itemUrl(id)`).
 - `components/`: details panel, trail breadcrumb, overflow list, remove-link / delete dialogs,
   relations outline (keyboard/AT list view).

@@ -34,13 +34,19 @@ export interface EntityItemSectionsState {
  * Open/closed state for {@link EntityItemSections}, kept by the caller so something outside the
  * sections (the relation summary under the item's title) can expand and scroll to one of them.
  */
-export function useEntityItemSectionsState(): EntityItemSectionsState {
+export function useEntityItemSectionsState(
+  options: {
+    /** Fired when the user expands a section, whether from its row or through `reveal`. */
+    readonly onOpen?: (section: string) => void;
+  } = {},
+): EntityItemSectionsState {
   // Only sections the user has toggled are stored; the rest use their default.
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
   const elements = useRef(new Map<string, HTMLElement>());
 
   function setOpen(section: string, open: boolean) {
     setToggled((prev) => new Map(prev).set(section, open));
+    if (open) options.onOpen?.(section);
   }
 
   return {

@@ -82,6 +82,8 @@ export interface GraphOverflowNodeModel {
   readonly remaining: number | null;
   readonly isEstimated: boolean;
   readonly color: string | undefined;
+  /** Entity type of the relation's targets, when its profile is known. */
+  readonly targetEntityName: string | undefined;
 }
 
 export type GraphNodeModel = GraphItemNodeModel | GraphOverflowNodeModel;
@@ -357,6 +359,7 @@ function buildPass(input: BuildGraphModelInput, pass: BuildPass) {
           remaining,
           isEstimated: collection?.totalItems?.isEstimated ?? false,
           color: targetDisplay?.color,
+          targetEntityName: rt.targetProfile?.name,
         });
         b.edge({
           id: graphEdgeId(ownerId, relation.name, id),

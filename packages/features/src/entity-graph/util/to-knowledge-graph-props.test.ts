@@ -44,6 +44,7 @@ const model: GraphModel = {
       remaining: 1240,
       isEstimated: true,
       color: undefined,
+      targetEntityName: "order",
     },
   ],
   edges: [

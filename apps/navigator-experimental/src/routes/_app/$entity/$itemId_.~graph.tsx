@@ -60,6 +60,13 @@ function EntityGraphRoute({
             search: {},
           })
         }
+        onOpenGraph={({ entityName: targetEntity, itemId: targetId }) =>
+          go({
+            to: "/$entity/$itemId/~graph",
+            params: { entity: targetEntity, itemId: targetId },
+            search: {},
+          })
+        }
         onOpenCollection={(targetEntity) =>
           go({ to: "/$entity", params: { entity: targetEntity }, search: {} })
         }

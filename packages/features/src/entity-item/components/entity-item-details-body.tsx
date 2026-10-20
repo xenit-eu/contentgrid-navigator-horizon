@@ -13,6 +13,11 @@ export type EntityItemDetailsBodyProps = RelationProblemHandlers & {
   readonly onRelationItemClick?: RelationItemClickHandler;
   /** Fired from a relation picker's "Create" button with the target entity's profile name. */
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /**
+   * Fired when the user expands a relation's row (directly or from the relation summary), with
+   * the profile name of the relation's target entity.
+   */
+  readonly onRelationExpand?: (targetEntityName: string) => void;
 };
 
 /**
@@ -28,9 +33,18 @@ export function EntityItemDetailsBody({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  onRelationExpand,
 }: Readonly<EntityItemDetailsBodyProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const sections = useEntityItemSectionsState();
+  const sections = useEntityItemSectionsState({
+    onOpen: (section) => {
+      const relation = [...entityItem.toOneRelations, ...entityItem.toManyRelations].find(
+        (rel) => rel.name === section,
+      );
+      const target = relation?.profileRelation.getTargetProfile(loadedProfiles);
+      if (target) onRelationExpand?.(target.name);
+    },
+  });
 
   return (
     <div>

@@ -1,11 +1,19 @@
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
+import { ArrowSquareOutIcon, CrosshairIcon } from "@phosphor-icons/react";
 import {
   type ProfileEntity,
   toProblemDisplayModel,
   useEntityItem,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
-import { Button, Skeleton } from "@contentgrid/ui";
+import {
+  Button,
+  Skeleton,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@contentgrid/ui";
 import {
   EntityItemDetailsBody,
   type EntityItemDetailsBodyProps,
@@ -19,11 +27,14 @@ export type GraphDetailsPanelProps = Pick<
   | "onMissingRelationTargetClick"
   | "onBlindRelationOverwriteClick"
   | "onRequiredRelationClick"
+  | "onRelationExpand"
 > & {
   readonly entityName: string;
   readonly itemId: string;
   /** Open the item's regular detail page (FR-011). */
   readonly onOpenItem: (target: { entityName: string; itemId: string }) => void;
+  /** Restart the graph on this item. Omit to hide the action. */
+  readonly onOpenGraph?: (target: { entityName: string; itemId: string }) => void;
 };
 
 /** Details of the item selected in the graph, shown next to it (FR-010, FR-011). */
@@ -37,6 +48,7 @@ function GraphDetailsPanelBody({
   entityName,
   itemId,
   onOpenItem,
+  onOpenGraph,
   profileEntity,
   ...bodyProps
 }: Readonly<GraphDetailsPanelProps & { profileEntity: ProfileEntity }>) {
@@ -52,15 +64,24 @@ function GraphDetailsPanelBody({
             <Skeleton className="h-10 w-full" />
           )}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onOpenItem({ entityName, itemId })}
-        >
-          <ArrowSquareOutIcon />
-          Open item page
-        </Button>
+        <TooltipProvider>
+          <div className="flex shrink-0 items-center gap-1">
+            {onOpenGraph && (
+              <PanelIconButton
+                label="Center in graph"
+                onClick={() => onOpenGraph({ entityName, itemId })}
+              >
+                <CrosshairIcon />
+              </PanelIconButton>
+            )}
+            <PanelIconButton
+              label="Open item page"
+              onClick={() => onOpenItem({ entityName, itemId })}
+            >
+              <ArrowSquareOutIcon />
+            </PanelIconButton>
+          </div>
+        </TooltipProvider>
       </div>
       {item.isError ? <ProblemAlert model={toProblemDisplayModel(item.error)} /> : null}
       {/* The body's rows run edge to edge: cancel the side panel's own padding around them. */}
@@ -70,5 +91,23 @@ function GraphDetailsPanelBody({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** Icon-only action in the panel header; the tooltip carries its accessible name. */
+function PanelIconButton({
+  label,
+  onClick,
+  children,
+}: Readonly<{ label: string; onClick: () => void; children: ReactNode }>) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label={label} onClick={onClick}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   );
 }

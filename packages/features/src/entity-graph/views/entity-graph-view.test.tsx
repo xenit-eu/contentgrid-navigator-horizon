@@ -419,3 +419,72 @@ describe("EntityGraphView — US6 delete item", () => {
     expect(onOpenCollection).toHaveBeenCalledWith("customer");
   });
 });
+
+describe("EntityGraphView — entity type legend", () => {
+  it("hides a type's nodes when its legend toggle is switched off", async () => {
+    useDemo();
+    renderGraph({ entityName: "order", itemId: ids.order(1) });
+    const canvas = await screen.findByRole("application");
+    await within(canvas).findByText("Widget");
+
+    const legend = screen.getByRole("list", { name: "Entity types" });
+    const products = await within(legend).findByRole("button", { name: /^Product/ });
+    expect(products).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(products);
+
+    expect(products).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(within(canvas).queryByText("Widget")).not.toBeInTheDocument());
+    expect(within(canvas).getByText("Big Corp")).toBeInTheDocument();
+    // The focus item stays even when its own type is switched off.
+    fireEvent.click(within(legend).getByRole("button", { name: /^Order/ }));
+    expect(within(canvas).getByText("ORD-001")).toBeInTheDocument();
+  });
+
+  it("switches a type back on when its relation is opened in the details panel", async () => {
+    useDemo();
+    renderGraph({ entityName: "order", itemId: ids.order(1) });
+    const canvas = await screen.findByRole("application");
+    await within(canvas).findByText("Widget");
+    const legend = screen.getByRole("list", { name: "Entity types" });
+    const products = within(legend).getByRole("button", { name: /^Product/ });
+    fireEvent.click(products);
+    await waitFor(() => expect(within(canvas).queryByText("Widget")).not.toBeInTheDocument());
+
+    const details = screen.getByRole("region", { name: "Item details" });
+    const summary = await within(details).findByRole("list", { name: "Relations" });
+    fireEvent.click(within(summary).getByRole("button", { name: /Products/ }));
+
+    expect(products).toHaveAttribute("aria-pressed", "true");
+    expect(await within(canvas).findByText("Widget")).toBeInTheDocument();
+  });
+});
+
+describe("EntityGraphView — details panel actions", () => {
+  it("centers the graph on the selected item and opens its item page", async () => {
+    useDemo();
+    const onOpenGraph = vi.fn();
+    const { container, onOpenItem } = renderGraph({
+      entityName: "order",
+      itemId: ids.order(1),
+      onOpenGraph,
+    });
+    await within(await screen.findByRole("application")).findByText("Widget");
+    fireEvent.click(nodeEl(container, ids.product(1))!);
+
+    const details = screen.getByRole("region", { name: "Item details" });
+    fireEvent.click(await within(details).findByRole("button", { name: "Center in graph" }));
+    expect(onOpenGraph).toHaveBeenCalledWith({ entityName: "product", itemId: ids.product(1) });
+
+    fireEvent.click(within(details).getByRole("button", { name: "Open item page" }));
+    expect(onOpenItem).toHaveBeenCalledWith({ entityName: "product", itemId: ids.product(1) });
+  });
+
+  it("hides Center in graph when the host gives no onOpenGraph", async () => {
+    useDemo();
+    renderGraph({ entityName: "order", itemId: ids.order(1) });
+    const details = await screen.findByRole("region", { name: "Item details" });
+    expect(await within(details).findByRole("button", { name: "Open item page" })).toBeVisible();
+    expect(within(details).queryByRole("button", { name: "Center in graph" })).toBeNull();
+  });
+});

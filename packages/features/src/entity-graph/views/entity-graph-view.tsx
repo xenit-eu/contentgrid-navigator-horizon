@@ -18,6 +18,7 @@ import {
   Button,
   KnowledgeGraph,
   type KnowledgeGraphEdgeMenu,
+  KnowledgeGraphLegend,
   type KnowledgeGraphMenuItem,
   type KnowledgeGraphNodeMenu,
 } from "@contentgrid/ui";
@@ -38,6 +39,7 @@ import {
   type GraphItemNodeModel,
   buildGraphModel,
 } from "../util/build-graph-model";
+import { filterGraphModel, graphEntityTypes } from "../util/graph-entity-type-filter";
 import { type GraphItemRef, graphEdgeId, graphNodeId, sameRef } from "../util/graph-ids";
 import { graphOutlineGroups } from "../util/graph-outline";
 import { type TrailEntry, focusOf, graphReducer, initialGraphState } from "../util/graph-state";
@@ -62,6 +64,11 @@ export interface EntityGraphViewProps extends Pick<
   readonly onTrailChange?: (trail: readonly TrailEntry[]) => void;
   /** Open an item's regular detail page. */
   readonly onOpenItem: (target: { entityName: string; itemId: string }) => void;
+  /**
+   * Restart the graph on another item (the details panel's "Center in graph"); the host navigates
+   * to that item's graph with an empty trail. Omit to hide the action.
+   */
+  readonly onOpenGraph?: (target: { entityName: string; itemId: string }) => void;
   /** Go to the collection of an entity type (offered after the root item is deleted). */
   readonly onOpenCollection?: (entityName: string) => void;
   /** `undefined` uses the default toolbar; `false` renders no toolbar chrome. */
@@ -98,6 +105,7 @@ function EntityGraphViewBody({
   trail: trailProp = [],
   onTrailChange,
   onOpenItem,
+  onOpenGraph,
   onOpenCollection,
   toolbar,
   renderHomeLink,
@@ -115,6 +123,9 @@ function EntityGraphViewBody({
   const [removeEdgeId, setRemoveEdgeId] = useState<string | null>(null);
   const [deleteNodeId, setDeleteNodeId] = useState<string | null>(null);
   const [trailNotice, setTrailNotice] = useState(false);
+  // Entity types filtered out of the graph through the legend (by profile entity name). Kept in
+  // component state only, not in the URL: a reload or another root starts with every type shown.
+  const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<string>>(new Set());
 
   // --- URL sync (FR-026): external trail → state (back/forward), state → host. ---------------
   const lastSynced = useRef(trailKey(trailProp));
@@ -161,13 +172,15 @@ function EntityGraphViewBody({
   const expansions = new Map([[graphNodeId(focus), focusRelations.relations]]);
   if (previous) expansions.set(graphNodeId(previous), previousRelations.relations);
 
-  const model = buildGraphModel({
+  const fullModel = buildGraphModel({
     state,
     items,
     expansions,
     display,
     entityTitle: (name) => profiles.find((p) => p.name === name)?.title ?? name,
   });
+  const entityTypes = graphEntityTypes(fullModel);
+  const model = filterGraphModel(fullModel, hiddenTypes);
   const graphProps = toKnowledgeGraphProps(model, state);
   const nodeById = new Map(model.nodes.map((n) => [n.id, n]));
   const edgeById = new Map(model.edges.map((e) => [e.id, e]));
@@ -179,6 +192,25 @@ function EntityGraphViewBody({
   // --- Interaction ------------------------------------------------------------------------
   const selectNode = (ref: GraphItemRef) =>
     dispatch({ type: "select", selection: { kind: "node", ref } });
+
+  const toggleType = (entityTypeName: string) =>
+    setHiddenTypes((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(entityTypeName)) next.add(entityTypeName);
+      return next;
+    });
+  /** Reaching an entity type from the details panel brings it back into the graph. */
+  const showType = (entityTypeName: string) =>
+    setHiddenTypes((prev) => {
+      if (!prev.has(entityTypeName)) return prev;
+      const next = new Set(prev);
+      next.delete(entityTypeName);
+      return next;
+    });
+  const selectFromPanel = (ref: GraphItemRef) => {
+    showType(ref.entityName);
+    selectNode(ref);
+  };
 
   const onNodeClick = (nodeId: string) => {
     const node = nodeById.get(nodeId);
@@ -300,10 +332,12 @@ function EntityGraphViewBody({
   // --- Panel ------------------------------------------------------------------------------
   const selection = state.selected;
   const panelRelationClick = (targetEntity: string, targetId: string) =>
-    selectNode({ entityName: targetEntity, id: targetId });
+    selectFromPanel({ entityName: targetEntity, id: targetId });
   const detailsProps = {
     onOpenItem,
+    onOpenGraph,
     onRelationItemClick: panelRelationClick,
+    onRelationExpand: showType,
     onMissingRelationTargetClick,
     onBlindRelationOverwriteClick,
     onRequiredRelationClick,
@@ -320,10 +354,11 @@ function EntityGraphViewBody({
         ownerLabel={labelOf(graphNodeId(selection.owner))}
         relation={relation}
         visibleNodeIds={new Set(model.nodes.map((n) => n.id))}
-        onShowDetails={selectNode}
-        onShowInGraph={(ref) =>
-          dispatch({ type: "pin", owner: selection.owner, relation: selection.relation, ref })
-        }
+        onShowDetails={selectFromPanel}
+        onShowInGraph={(ref) => {
+          showType(ref.entityName);
+          dispatch({ type: "pin", owner: selection.owner, relation: selection.relation, ref });
+        }}
         onBack={() => dispatch({ type: "select", selection: null })}
       />
     ) : null;
@@ -452,34 +487,49 @@ function EntityGraphViewBody({
           {focusHasNoRelations ? (
             <p className="text-sm text-muted-foreground">This item has no relations.</p>
           ) : null}
-          <div className="min-h-0 flex-1 rounded-lg border">
-            <KnowledgeGraph
-              nodes={graphProps.nodes}
-              edges={graphProps.edges.map((edge) => ({
-                ...edge,
-                status: model.relationStatus.some(
-                  (s) =>
-                    s.status === "pending" &&
-                    edge.id.startsWith(`${s.owner.id}->${s.relationName}->`),
-                )
-                  ? "loading"
-                  : undefined,
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+            <KnowledgeGraphLegend
+              label="Entity types"
+              className="shrink-0 border-b"
+              items={entityTypes.map((type) => ({
+                id: type.entityName,
+                label: type.title,
+                color: type.color,
+                icon: type.icon,
+                count: type.count,
+                active: !hiddenTypes.has(type.entityName),
               }))}
-              focusNodeId={graphProps.focusNodeId}
-              trailNodeIds={graphProps.trailNodeIds}
-              selectedNodeId={graphProps.selectedNodeId}
-              onNodeClick={onNodeClick}
-              onEdgeClick={onEdgeClick}
-              onPaneClick={() => setOpenMenu(null)}
-              nodeMenu={nodeMenu}
-              edgeMenu={edgeMenu}
-              onMenuOpenChange={(open) => !open && setOpenMenu(null)}
-              labels={{
-                graph: `Relations graph of ${labelOf(focusNodeId)}`,
-                nodeDescription: "Press Enter to show this item's details and actions.",
-                edgeDescription: "Press Enter to show this relation link's actions.",
-              }}
+              onToggle={toggleType}
             />
+            <div className="min-h-0 flex-1">
+              <KnowledgeGraph
+                nodes={graphProps.nodes}
+                edges={graphProps.edges.map((edge) => ({
+                  ...edge,
+                  status: model.relationStatus.some(
+                    (s) =>
+                      s.status === "pending" &&
+                      edge.id.startsWith(`${s.owner.id}->${s.relationName}->`),
+                  )
+                    ? "loading"
+                    : undefined,
+                }))}
+                focusNodeId={graphProps.focusNodeId}
+                trailNodeIds={graphProps.trailNodeIds}
+                selectedNodeId={graphProps.selectedNodeId}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                onPaneClick={() => setOpenMenu(null)}
+                nodeMenu={nodeMenu}
+                edgeMenu={edgeMenu}
+                onMenuOpenChange={(open) => !open && setOpenMenu(null)}
+                labels={{
+                  graph: `Relations graph of ${labelOf(focusNodeId)}`,
+                  nodeDescription: "Press Enter to show this item's details and actions.",
+                  edgeDescription: "Press Enter to show this relation link's actions.",
+                }}
+              />
+            </div>
           </div>
           <GraphRelationsOutline
             focusLabel={labelOf(focusNodeId)}
