@@ -33,34 +33,36 @@ function placeholderInfiniteQuery(relationUrl: string) {
  * last loaded one (`fetchNextPage` / `hasNextPage`). Keyed under the relation's
  * `toManyRelation` namespace, so link/unlink/delete/clear mutations on the relation refresh it.
  *
- * Disabled until the target profile resolves from `useProfileEntities()`.
+ * Disabled until both `relation` and its target profile (from `useProfileEntities()`) resolve.
  *
- * @param relation - The to-many relation from `entityItem.getToManyRelation(name)`
+ * @param relation - The to-many relation from `entityItem.getToManyRelation(name)`; `undefined`
+ *                   disables the query (Rules of Hooks)
  * @param options  - Optional `enabled` flag
  */
 export function useEntityItemToManyRelationInfinite(
-  relation: EntityItemToManyRelation,
+  relation: EntityItemToManyRelation | undefined,
   options?: UseEntityItemToManyRelationInfiniteOptions,
 ) {
   const { apiFetch } = useNavigatorData();
 
   // Always call unconditionally — Rules of Hooks.
   const profileResults = useProfileEntities();
-  const targetProfile = relation.profileRelation.getTargetProfile(
+  const targetProfile = relation?.profileRelation.getTargetProfile(
     profileResults.flatMap((r) => r.data ?? []),
   );
 
-  const queryOptions = targetProfile
-    ? EntityItemToManyRelation.infiniteQuery(
-        apiFetch,
-        relation.link.href,
-        targetProfile,
-        relation.name,
-      )
-    : placeholderInfiniteQuery(relation.link.href);
+  const queryOptions =
+    relation && targetProfile
+      ? EntityItemToManyRelation.infiniteQuery(
+          apiFetch,
+          relation.link.href,
+          targetProfile,
+          relation.name,
+        )
+      : placeholderInfiniteQuery(relation?.link.href ?? "");
 
   return useInfiniteQuery({
     ...queryOptions,
-    enabled: options?.enabled !== false && !!targetProfile,
+    enabled: options?.enabled !== false && !!relation && !!targetProfile,
   });
 }

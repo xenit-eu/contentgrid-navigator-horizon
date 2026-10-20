@@ -19,6 +19,7 @@ import { Route as AppChar126configurationEntityRouteImport } from './routes/_app
 import { Route as AppEntityChar126createRouteImport } from './routes/_app/$entity/~create'
 import { Route as AppEntityItemIdRouteImport } from './routes/_app/$entity/$itemId'
 import { Route as AppChar126configurationEntityIndexRouteImport } from './routes/_app/~configuration/$entity/index'
+import { Route as AppEntityItemIdChar126graphRouteImport } from './routes/_app/$entity/$itemId_.~graph'
 
 const ConfigRoute = ConfigRouteImport.update({
   id: '/config',
@@ -72,6 +73,12 @@ const AppChar126configurationEntityIndexRoute =
     path: '/',
     getParentRoute: () => AppChar126configurationEntityRoute,
   } as any)
+const AppEntityItemIdChar126graphRoute =
+  AppEntityItemIdChar126graphRouteImport.update({
+    id: '/$itemId_/~graph',
+    path: '/$itemId/~graph',
+    getParentRoute: () => AppEntityRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/~configuration/$entity': typeof AppChar126configurationEntityRouteWithChildren
   '/$entity/': typeof AppEntityIndexRoute
   '/~configuration/': typeof AppChar126configurationIndexRoute
+  '/$entity/$itemId/~graph': typeof AppEntityItemIdChar126graphRoute
   '/~configuration/$entity/': typeof AppChar126configurationEntityIndexRoute
 }
 export interface FileRoutesByTo {
@@ -91,6 +99,7 @@ export interface FileRoutesByTo {
   '/$entity/~create': typeof AppEntityChar126createRoute
   '/$entity': typeof AppEntityIndexRoute
   '/~configuration': typeof AppChar126configurationIndexRoute
+  '/$entity/$itemId/~graph': typeof AppEntityItemIdChar126graphRoute
   '/~configuration/$entity': typeof AppChar126configurationEntityIndexRoute
 }
 export interface FileRoutesById {
@@ -104,6 +113,7 @@ export interface FileRoutesById {
   '/_app/~configuration/$entity': typeof AppChar126configurationEntityRouteWithChildren
   '/_app/$entity/': typeof AppEntityIndexRoute
   '/_app/~configuration/': typeof AppChar126configurationIndexRoute
+  '/_app/$entity/$itemId_/~graph': typeof AppEntityItemIdChar126graphRoute
   '/_app/~configuration/$entity/': typeof AppChar126configurationEntityIndexRoute
 }
 export interface FileRouteTypes {
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/~configuration/$entity'
     | '/$entity/'
     | '/~configuration/'
+    | '/$entity/$itemId/~graph'
     | '/~configuration/$entity/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/$entity/~create'
     | '/$entity'
     | '/~configuration'
+    | '/$entity/$itemId/~graph'
     | '/~configuration/$entity'
   id:
     | '__root__'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
     | '/_app/~configuration/$entity'
     | '/_app/$entity/'
     | '/_app/~configuration/'
+    | '/_app/$entity/$itemId_/~graph'
     | '/_app/~configuration/$entity/'
   fileRoutesById: FileRoutesById
 }
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChar126configurationEntityIndexRouteImport
       parentRoute: typeof AppChar126configurationEntityRoute
     }
+    '/_app/$entity/$itemId_/~graph': {
+      id: '/_app/$entity/$itemId_/~graph'
+      path: '/$itemId/~graph'
+      fullPath: '/$entity/$itemId/~graph'
+      preLoaderRoute: typeof AppEntityItemIdChar126graphRouteImport
+      parentRoute: typeof AppEntityRoute
+    }
   }
 }
 
@@ -225,12 +245,14 @@ interface AppEntityRouteChildren {
   AppEntityItemIdRoute: typeof AppEntityItemIdRoute
   AppEntityChar126createRoute: typeof AppEntityChar126createRoute
   AppEntityIndexRoute: typeof AppEntityIndexRoute
+  AppEntityItemIdChar126graphRoute: typeof AppEntityItemIdChar126graphRoute
 }
 
 const AppEntityRouteChildren: AppEntityRouteChildren = {
   AppEntityItemIdRoute: AppEntityItemIdRoute,
   AppEntityChar126createRoute: AppEntityChar126createRoute,
   AppEntityIndexRoute: AppEntityIndexRoute,
+  AppEntityItemIdChar126graphRoute: AppEntityItemIdChar126graphRoute,
 }
 
 const AppEntityRouteWithChildren = AppEntityRoute._addFileChildren(

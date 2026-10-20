@@ -49,6 +49,15 @@ export { useEntityItemToOneRelation } from "./relation/use-entity-item-to-one-re
 export type { UseEntityItemToOneRelationOptions } from "./relation/use-entity-item-to-one-relation";
 export { useEntityItemToManyRelation } from "./relation/use-entity-item-to-many-relation";
 export { useEntityItemToManyRelationInfinite } from "./relation/use-entity-item-to-many-relation-infinite";
+export type { UseEntityItemToManyRelationInfiniteOptions } from "./relation/use-entity-item-to-many-relation-infinite";
+export { useEntityItemRelationTargets } from "./relation/use-entity-item-relation-targets";
+export type {
+  RelationTargets,
+  ToOneRelationTargets,
+  ToManyRelationTargets,
+  UseEntityItemRelationTargetsOptions,
+  UseEntityItemRelationTargetsResult,
+} from "./relation/use-entity-item-relation-targets";
 export type {
   UseEntityItemToManyRelationOptions,
   RelationCollectionParams,

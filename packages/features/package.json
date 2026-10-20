@@ -83,6 +83,10 @@
     "./hal-forms": {
       "import": "./src/hal-forms/index.ts",
       "types": "./src/hal-forms/index.ts"
+    },
+    "./entity-graph": {
+      "import": "./src/entity-graph/index.ts",
+      "types": "./src/entity-graph/index.ts"
     }
   },
   "scripts": {

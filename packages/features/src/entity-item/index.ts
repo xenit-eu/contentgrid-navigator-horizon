@@ -6,6 +6,8 @@ export type {
   EntityItemViewByUrl,
 } from "./entity-item-view";
 export { EntityItemAttributes } from "./attributes/entity-item-attributes";
+export { EntityItemDetailsBody } from "./components/entity-item-details-body";
+export type { EntityItemDetailsBodyProps } from "./components/entity-item-details-body";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
 export { RelationToManySection } from "./relations/relation-to-many-section";

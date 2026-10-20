@@ -212,3 +212,38 @@ describe("queryKeys.contentPreview", () => {
     expect(contentPreviewKey[0]).not.toEqual(entityItemKey[0]);
   });
 });
+
+describe("queryKeys relation roots and infinite keys (spec 007)", () => {
+  it("toOneRelation.all is a prefix of every to-one relation key", () => {
+    const root = queryKeys.toOneRelation.all();
+    const full = queryKeys.toOneRelation.byUrl("supplier", "/invoices/inv-001/supplier");
+    expect(root).toEqual(["ToOneRelation"]);
+    expect(full.slice(0, root.length)).toEqual(root);
+  });
+
+  it("toManyRelation.all is a prefix of paged and infinite to-many keys", () => {
+    const root = queryKeys.toManyRelation.all();
+    expect(root).toEqual(["ToManyRelation"]);
+    const paged = queryKeys.toManyRelation.byUrl("lineItems", "/invoices/inv-001/lineItems");
+    const infinite = queryKeys.toManyRelation.infiniteByUrl(
+      "lineItems",
+      "/invoices/inv-001/lineItems",
+    );
+    expect(paged.slice(0, 1)).toEqual(root);
+    expect(infinite.slice(0, 1)).toEqual(root);
+  });
+
+  it("infiniteByUrl appends 'infinite' and is prefixed by forRelationName", () => {
+    const prefix = queryKeys.toManyRelation.forRelationName("lineItems");
+    const key = queryKeys.toManyRelation.infiniteByUrl("lineItems", "/invoices/inv-001/lineItems");
+    expect(key).toEqual(["ToManyRelation", "lineItems", "/invoices/inv-001/lineItems", "infinite"]);
+    expect(key.slice(0, prefix.length)).toEqual(prefix);
+  });
+
+  it("infiniteByUrl differs from byUrl for the same relation URL", () => {
+    const url = "/invoices/inv-001/lineItems";
+    expect(queryKeys.toManyRelation.infiniteByUrl("lineItems", url)).not.toEqual(
+      queryKeys.toManyRelation.byUrl("lineItems", url),
+    );
+  });
+});
