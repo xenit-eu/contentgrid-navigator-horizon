@@ -253,7 +253,8 @@
  * ------------------------------------------------------------------------- */
 .react-flow,
 .react-flow.dark {
-  --xy-background-color: var(--background);
+  /* Transparent: the knowledge-graph wrapper below paints the canvas backdrop. */
+  --xy-background-color: transparent;
   --xy-node-color-default: var(--foreground);
   --xy-node-background-color-default: var(--card);
   --xy-node-border-default: 1px solid var(--border);
@@ -303,4 +304,24 @@
       background: var(--primary) padding-box;
     }
   }
+}
+
+/* Knowledge-graph canvas backdrop. Light: near-white "blueprint paper" — a faint blue line grid,
+ * a white glow behind the graph's centre and a cool tint toward the edges. Dark: a deep blue
+ * gradient under a faint dot grid. */
+[data-slot="knowledge-graph"] {
+  --kg-grid: color-mix(in oklch, oklch(0.6 0.08 240) 3%, transparent);
+  background:
+    radial-gradient(ellipse at 50% 50%, oklch(1 0 0 / 0.9) 0%, transparent 65%),
+    linear-gradient(var(--kg-grid) 1px, transparent 1px) 0 0 / 32px 320px,
+    radial-gradient(ellipse at 50% 50%, oklch(0.99 0.004 240) 40%, oklch(0.95 0.02 240) 100%);
+}
+
+.dark [data-slot="knowledge-graph"] {
+  --kg-dot: color-mix(in oklch, oklch(0.8 0.08 240) 14%, transparent);
+  background:
+    radial-gradient(circle, var(--kg-dot) 1px, transparent 1.5px) 0 0 / 22px 22px,
+    radial-gradient(ellipse at 20% 0%, oklch(0.32 0.08 240) 0%, transparent 60%),
+    radial-gradient(ellipse at 100% 100%, oklch(0.3 0.09 270) 0%, transparent 55%),
+    linear-gradient(160deg, oklch(0.2 0.04 245) 0%, oklch(0.16 0.05 260) 100%);
 }

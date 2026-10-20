@@ -31,14 +31,15 @@ export function graphEntityTypes(model: GraphModel): GraphEntityTypeModel[] {
 /**
  * Leaves out the relation targets (item nodes, and "+ N more" nodes) of the hidden entity types,
  * and every edge to them. The focus and trail items always stay: they are the path being explored.
+ * Content nodes belong to their (always kept) expanded item, so they stay too.
  */
 export function filterGraphModel(model: GraphModel, hidden: ReadonlySet<string>): GraphModel {
   if (hidden.size === 0) return model;
-  const nodes = model.nodes.filter((node) =>
-    node.kind === "item"
-      ? node.role !== "target" || !hidden.has(node.ref.entityName)
-      : node.targetEntityName === undefined || !hidden.has(node.targetEntityName),
-  );
+  const nodes = model.nodes.filter((node) => {
+    if (node.kind === "content") return true;
+    if (node.kind === "item") return node.role !== "target" || !hidden.has(node.ref.entityName);
+    return node.targetEntityName === undefined || !hidden.has(node.targetEntityName);
+  });
   const kept = new Set(nodes.map((node) => node.id));
   const edges = model.edges.filter((edge) => kept.has(edge.source) && kept.has(edge.target));
   return { ...model, nodes, edges };

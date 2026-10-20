@@ -361,6 +361,10 @@ pinned `12.11.6`, MIT, no lifecycle scripts) — nothing outside this folder may
 - **Styling**: `@xyflow/react/dist/base.css` is imported in `src/styles/preset.css` (`layer(base)`)
   and the `--xy-*` variables are mapped to our semantic tokens, so dark mode follows `.dark`
   automatically. The React Flow attribution is kept (restyled for contrast).
+- **Content nodes** (`nodes/content-node.tsx`, `kind: "content"`): a file held by an item, drawn as
+  a compact vertical card with a muted header band (`FileIcon` from `fileType`, filename on up to two
+  lines, attribute as sublabel; `CONTENT_NODE_WIDTH`) so it never reads as an item card. Link it
+  with an edge of `variant: "content"`: dashed, no arrowhead, paperclip on the label.
 - **Legend** (`knowledge-graph-legend.tsx`, `KnowledgeGraphLegend`): a horizontally scrolling row
   of node-type toggles styled like the item nodes (`aria-pressed`; inactive = dashed + faded). The
   caller decides what toggling does — the graph itself has no filtering.
@@ -369,7 +373,7 @@ pinned `12.11.6`, MIT, no lifecycle scripts) — nothing outside this folder may
   Flow testing guide. Use `fireEvent`, not `userEvent`, for clicks on the canvas — d3-drag/zoom
   crash on userEvent's synthetic mousedown in jsdom.
 - Stories: `Patterns/KnowledgeGraph` — `Default`, `ParallelAndSelfLoop`, `Overflow`,
-  `TrailCollapsed`, `LoadingAndErrorEdges`, `Dark` (visual baselines still to be generated on the
+  `TrailCollapsed`, `LoadingAndErrorEdges`, `Dark`, `WithContent` (visual baselines still to be generated on the
   pinned Linux image), plus `WithInteraction` (`knowledge-graph.interaction.stories.tsx`);
   `Patterns/KnowledgeGraphLegend` — `Default`, `Overflowing` (baselines to generate too).
 

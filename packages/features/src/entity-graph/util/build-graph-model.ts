@@ -8,8 +8,10 @@ import type {
   RelationTargets,
 } from "@contentgrid/navigator-data";
 import { entityItemLabel } from "./entity-item-label";
+import { contentFilesOf } from "./graph-content";
 import {
   type GraphItemRef,
+  contentNodeId,
   expansionKey,
   graphEdgeId,
   graphNodeId,
@@ -86,7 +88,19 @@ export interface GraphOverflowNodeModel {
   readonly targetEntityName: string | undefined;
 }
 
-export type GraphNodeModel = GraphItemNodeModel | GraphOverflowNodeModel;
+/** A file held by an expanded item, in one of its content attributes. */
+export interface GraphContentNodeModel {
+  readonly kind: "content";
+  readonly id: string;
+  readonly owner: GraphItemRef;
+  readonly attributeName: string;
+  readonly attributeTitle: string;
+  /** The filename, or the attribute title for a file stored without a name. */
+  readonly label: string;
+  readonly mimetype: string;
+}
+
+export type GraphNodeModel = GraphItemNodeModel | GraphOverflowNodeModel | GraphContentNodeModel;
 
 export interface GraphEdgeModel {
   readonly id: string;
@@ -98,6 +112,8 @@ export interface GraphEdgeModel {
   /** The edge the trail walked along (kept visible for collapsed items, FR-013). */
   readonly onTrail: boolean;
   readonly toOverflow: boolean;
+  /** Links an item to one of its files: no relation behind it, nothing to remove. */
+  readonly toContent?: boolean;
   /** Remove-link capability (FR-021): to-one → `canClear`, to-many → `canUnlinkItem`. */
   readonly canRemove: boolean;
   readonly owner: GraphItemRef;
@@ -265,6 +281,34 @@ function buildPass(input: BuildGraphModelInput, pass: BuildPass) {
     const owner: GraphItemRef = { entityName: ownerEntry.entityName, id: ownerEntry.id };
     const ownerId = graphNodeId(owner);
     const relations = expansions.get(ownerId) ?? [];
+
+    // The item's own files, before its relations so they stay within the node budget.
+    const ownerItem = items.get(ownerId)?.item;
+    for (const file of ownerItem ? contentFilesOf(ownerItem) : []) {
+      const id = contentNodeId(owner, file.attributeName);
+      b.nodes.set(id, {
+        kind: "content",
+        id,
+        owner,
+        attributeName: file.attributeName,
+        attributeTitle: file.attributeTitle,
+        label: file.filename ?? file.attributeTitle,
+        mimetype: file.mimetype,
+      });
+      b.edge({
+        id: graphEdgeId(ownerId, file.attributeName, id),
+        source: ownerId,
+        target: id,
+        relationName: file.attributeName,
+        relationTitle: file.attributeTitle,
+        cardinality: "to-one",
+        onTrail: false,
+        toOverflow: false,
+        toContent: true,
+        canRemove: false,
+        owner,
+      });
+    }
 
     for (const rt of relations) {
       const relation = rt.relation;

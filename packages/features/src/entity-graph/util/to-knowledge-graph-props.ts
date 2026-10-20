@@ -1,5 +1,6 @@
 import type { GraphEdgeModel, GraphModel, GraphNodeModel } from "./build-graph-model";
-import { graphNodeId } from "./graph-ids";
+import { contentFileType } from "./graph-content";
+import { contentNodeId, graphNodeId } from "./graph-ids";
 import type { GraphSelection, GraphState } from "./graph-state";
 
 /*
@@ -10,11 +11,12 @@ import type { GraphSelection, GraphState } from "./graph-state";
 
 export interface GraphViewNode {
   readonly id: string;
-  readonly kind: "item" | "overflow";
+  readonly kind: "item" | "overflow" | "content";
   readonly label: string;
   readonly sublabel?: string;
   readonly color?: string;
   readonly icon?: string;
+  readonly fileType?: "pdf" | "img" | "doc";
   readonly emphasis: "focus" | "previous-focus" | "trail" | "normal";
   readonly muted?: boolean;
   readonly estimated?: boolean;
@@ -27,6 +29,7 @@ export interface GraphViewEdge {
   readonly target: string;
   readonly label: string;
   readonly emphasis: "trail" | "normal";
+  readonly variant?: "relation" | "content";
   readonly ariaLabel: string;
 }
 
@@ -54,6 +57,17 @@ function nodeView(
   labelFor: (id: string) => string,
   locale?: string,
 ): GraphViewNode {
+  if (node.kind === "content") {
+    return {
+      id: node.id,
+      kind: "content",
+      label: node.label,
+      sublabel: node.attributeTitle,
+      fileType: contentFileType(node.mimetype),
+      emphasis: "normal",
+      ariaLabel: `${node.attributeTitle} of ${labelFor(graphNodeId(node.owner))}: ${node.label} — open the preview`,
+    };
+  }
   if (node.kind === "overflow") {
     const label = overflowLabel(node.remaining, node.isEstimated, locale);
     const count =
@@ -97,6 +111,7 @@ function edgeView(edge: GraphEdgeModel, labelFor: (id: string) => string): Graph
     target: edge.target,
     label: edge.relationTitle,
     emphasis: edge.onTrail ? "trail" : "normal",
+    variant: edge.toContent ? "content" : "relation",
     ariaLabel: edge.toOverflow
       ? `${edge.relationTitle} of ${labelFor(edge.source)}: more items`
       : `${labelFor(edge.source)} — ${edge.relationTitle} → ${labelFor(edge.target)}`,
@@ -106,6 +121,7 @@ function edgeView(edge: GraphEdgeModel, labelFor: (id: string) => string): Graph
 function selectedNodeIdOf(selection: GraphSelection | null, model: GraphModel): string | null {
   if (!selection) return null;
   if (selection.kind === "node") return graphNodeId(selection.ref);
+  if (selection.kind === "content") return contentNodeId(selection.owner, selection.attribute);
   if (selection.kind === "overflow") {
     return (
       model.nodes.find(
@@ -126,7 +142,7 @@ export function toKnowledgeGraphProps(
   locale?: string,
 ): GraphViewProps {
   const labels = new Map<string, string>(
-    model.nodes.map((n) => [n.id, n.kind === "item" ? n.label : n.relationTitle]),
+    model.nodes.map((n) => [n.id, n.kind === "overflow" ? n.relationTitle : n.label]),
   );
   const labelFor = (id: string) => labels.get(id) ?? id;
   return {

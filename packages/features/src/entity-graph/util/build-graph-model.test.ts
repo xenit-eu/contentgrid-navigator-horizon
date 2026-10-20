@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProblemDetailError } from "@contentgrid/navigator-data";
+import { EntityItemAttributeContent, ProblemDetailError } from "@contentgrid/navigator-data";
 import type { EntityItem, ProfileEntity, RelationTargets } from "@contentgrid/navigator-data";
 import { createRelationDemoAccessors } from "@contentgrid/navigator-data/test-fixtures/hal/relation-demo-accessors";
 import { RELATION_DEMO_IDS as ids } from "@contentgrid/navigator-data/test-fixtures/msw/relation-demo-handlers";
@@ -352,5 +352,62 @@ describe("buildGraphModel — permissions and failures", () => {
     model.relationStatus[1]!.retry();
     expect(retry).toHaveBeenCalled();
     expect(model.nodes).toHaveLength(1);
+  });
+});
+
+describe("buildGraphModel — content of expanded items", () => {
+  it("draws one content node per file of the focus item, linked to it", () => {
+    const state = initialGraphState(ref("order", ids.order(1)));
+    const input = inputFor(state);
+    const focusItem = input.items.get(ids.order(1))!.item!;
+    // The focus item with one file; getters are overridden on a prototype-linked copy.
+    const withFile = (item: EntityItem, attributeName: string): EntityItem => {
+      const profileEntity = Object.create(item.profileEntity) as ProfileEntity;
+      Object.defineProperty(profileEntity, "userDefinedAttributes", {
+        value: [{ name: attributeName, title: "Invoice", isContent: true }],
+      });
+      const copy = Object.create(item) as EntityItem;
+      Object.defineProperty(copy, "profileEntity", { value: profileEntity });
+      Object.defineProperty(copy, "findAttribute", {
+        value: (name: string) =>
+          name === attributeName
+            ? {
+                value: new EntityItemAttributeContent(
+                  attributeName,
+                  { length: 1, mimetype: "application/pdf", filename: "ord-001.pdf" },
+                  { href: "https://api.example/x" } as never,
+                ),
+              }
+            : undefined,
+      });
+      return copy;
+    };
+    const items = new Map(input.items);
+    items.set(ids.order(1), {
+      item: withFile(focusItem, "invoice"),
+      status: "success",
+      unavailable: false,
+    });
+
+    const model = buildGraphModel({ ...input, items });
+
+    const content = model.nodes.filter((n) => n.kind === "content");
+    expect(content).toEqual([
+      {
+        kind: "content",
+        id: `content:${ids.order(1)}:invoice`,
+        owner: ref("order", ids.order(1)),
+        attributeName: "invoice",
+        attributeTitle: "Invoice",
+        label: "ord-001.pdf",
+        mimetype: "application/pdf",
+      },
+    ]);
+    expect(model.edges.find((e) => e.target === content[0]!.id)).toMatchObject({
+      source: ids.order(1),
+      relationTitle: "Invoice",
+      toContent: true,
+      canRemove: false,
+    });
   });
 });

@@ -17,12 +17,20 @@ import { RelationEdge } from "./edges/relation-edge";
 import { KnowledgeGraphContext, type KnowledgeGraphContextValue } from "./knowledge-graph-context";
 import type { KnowledgeGraphLabels, KnowledgeGraphProps } from "./knowledge-graph.types";
 import { type LayoutPoint, radialLayout } from "./layout/radial-layout";
-import { ItemNode } from "./nodes/item-node";
+import { CONTENT_NODE_WIDTH, ContentNode } from "./nodes/content-node";
+import { ITEM_NODE_WIDTH, ItemNode } from "./nodes/item-node";
 import { OverflowNode } from "./nodes/overflow-node";
 
 // Module-level so React Flow never sees new type maps (which would remount every node).
-const nodeTypes: NodeTypes = { item: ItemNode, overflow: OverflowNode };
+const nodeTypes: NodeTypes = { item: ItemNode, overflow: OverflowNode, content: ContentNode };
 const edgeTypes: EdgeTypes = { relation: RelationEdge };
+
+/** Half of each node kind's width: React Flow positions are top-left, the layout yields centres. */
+const NODE_HALF_WIDTH = {
+  item: ITEM_NODE_WIDTH / 2,
+  overflow: 64,
+  content: CONTENT_NODE_WIDTH / 2,
+} as const;
 
 const DEFAULT_LABELS: KnowledgeGraphLabels = {
   graph: "Relations graph",
@@ -122,7 +130,7 @@ function KnowledgeGraphCanvas({
           id: node.id,
           type: node.kind,
           // React Flow positions are top-left; the layout yields centres.
-          position: { x: p.x - (node.kind === "item" ? 92 : 64), y: p.y - 24 },
+          position: { x: p.x - NODE_HALF_WIDTH[node.kind], y: p.y - 24 },
           data: { node },
           ariaLabel: node.ariaLabel,
           draggable: false,
@@ -142,7 +150,10 @@ function KnowledgeGraphCanvas({
         type: "relation",
         data: { edge },
         ariaLabel: edge.ariaLabel,
-        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
+        markerEnd:
+          edge.variant === "content"
+            ? undefined
+            : { type: MarkerType.ArrowClosed, width: 16, height: 16 },
         focusable: true,
       })),
     [edges],

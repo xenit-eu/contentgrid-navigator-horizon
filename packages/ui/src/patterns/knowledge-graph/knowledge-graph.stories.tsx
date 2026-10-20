@@ -6,6 +6,8 @@ import {
   PRODUCT,
   StoryFrame,
   baseArgs,
+  defaultEdges,
+  defaultNodes,
   edge,
   item,
 } from "./knowledge-graph-story-helpers";
@@ -49,6 +51,38 @@ export const ParallelAndSelfLoop: Story = {
 };
 
 /** Exact and estimated overflow placeholders for large to-many relations. */
+/** Files held by the focus item, drawn as content nodes next to its relations. */
+export const WithContent: Story = {
+  args: {
+    nodes: [
+      ...defaultNodes,
+      {
+        id: "content:c1:contract",
+        kind: "content",
+        label: "framework-contract.pdf",
+        sublabel: "Contract",
+        fileType: "pdf",
+        emphasis: "normal",
+        ariaLabel: "Contract framework-contract.pdf",
+      },
+      {
+        id: "content:c1:logo",
+        kind: "content",
+        label: "logo.png",
+        sublabel: "Logo",
+        fileType: "img",
+        emphasis: "normal",
+        ariaLabel: "Logo logo.png",
+      },
+    ],
+    edges: [
+      ...defaultEdges,
+      { ...edge("c1", "Contract", "content:c1:contract"), variant: "content" },
+      { ...edge("c1", "Logo", "content:c1:logo"), variant: "content" },
+    ],
+  },
+};
+
 export const Overflow: Story = {
   args: {
     nodes: [

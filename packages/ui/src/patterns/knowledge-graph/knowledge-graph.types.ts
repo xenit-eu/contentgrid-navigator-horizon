@@ -6,8 +6,11 @@ import type { ReactNode } from "react";
  */
 export interface KnowledgeGraphNode {
   readonly id: string;
-  /** `item` = a regular node; `overflow` = a "+ N more" placeholder pill. */
-  readonly kind: "item" | "overflow";
+  /**
+   * `item` = a regular node; `overflow` = a "+ N more" placeholder pill; `content` = a file held
+   * by an item (label = filename, sublabel = the attribute holding it).
+   */
+  readonly kind: "item" | "overflow" | "content";
   /** Main text (item display name, or "+ 15 more"). Truncated visually; full text in a tooltip. */
   readonly label: string;
   /** Secondary text (entity type / relation name). */
@@ -16,6 +19,8 @@ export interface KnowledgeGraphNode {
   readonly color?: string;
   /** Icon name from `ENTITY_ICON_OPTIONS` (resolved via `resolveEntityIcon`). */
   readonly icon?: string;
+  /** `content` nodes only: which file icon to show. Defaults to `"doc"`. */
+  readonly fileType?: "pdf" | "img" | "doc";
   readonly emphasis: "focus" | "previous-focus" | "trail" | "normal";
   /** Rendered dimmed (loading / unavailable). */
   readonly muted?: boolean;
@@ -32,6 +37,11 @@ export interface KnowledgeGraphEdge {
   /** Edge label (relation name). */
   readonly label: string;
   readonly emphasis: "trail" | "normal";
+  /**
+   * `relation` (default): a directed relation link with an arrowhead. `content`: an item → file
+   * link, drawn dashed without an arrowhead and with a paperclip on its label.
+   */
+  readonly variant?: "relation" | "content";
   readonly status?: "loading" | "error";
   readonly ariaLabel: string;
 }

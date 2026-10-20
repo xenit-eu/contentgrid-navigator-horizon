@@ -25,6 +25,11 @@ export function overflowNodeId(owner: GraphItemRef, relationName: string): strin
   return `overflow:${graphNodeId(owner)}:${relationName}`;
 }
 
+/** Node id of the file one item holds in one content attribute. */
+export function contentNodeId(owner: GraphItemRef, attributeName: string): string {
+  return `content:${graphNodeId(owner)}:${attributeName}`;
+}
+
 /** Node id of the placeholder for a to-one target the current user cannot read. */
 export function unavailableNodeId(owner: GraphItemRef, relationName: string): string {
   return `unavailable:${graphNodeId(owner)}:${relationName}`;

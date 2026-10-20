@@ -17,6 +17,8 @@ export type GraphSelection =
   | { readonly kind: "node"; readonly ref: GraphItemRef }
   /** The details panel shows the overflow list of `owner.relation`. */
   | { readonly kind: "overflow"; readonly owner: GraphItemRef; readonly relation: string }
+  /** The details panel previews the file `owner` holds in content attribute `attribute`. */
+  | { readonly kind: "content"; readonly owner: GraphItemRef; readonly attribute: string }
   /** The edge menu is open for this edge. */
   | { readonly kind: "edge"; readonly edgeId: string };
 
@@ -113,7 +115,9 @@ function withoutPinned(
 function selectionMentions(selection: GraphSelection | null, ref: GraphItemRef): boolean {
   if (!selection) return false;
   if (selection.kind === "node") return sameRef(selection.ref, ref);
-  if (selection.kind === "overflow") return sameRef(selection.owner, ref);
+  if (selection.kind === "overflow" || selection.kind === "content") {
+    return sameRef(selection.owner, ref);
+  }
   const nodeId = graphNodeId(ref);
   return selection.edgeId.startsWith(`${nodeId}->`) || selection.edgeId.endsWith(`->${nodeId}`);
 }

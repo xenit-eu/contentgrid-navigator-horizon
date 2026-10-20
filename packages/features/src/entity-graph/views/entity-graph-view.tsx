@@ -28,6 +28,7 @@ import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../.
 import { useEntityDisplayPreferencesResolver } from "../../preferences";
 import { useProfileEntityGate } from "../../util/use-profile-entity-gate";
 import { DeleteItemDialog } from "../components/delete-item-dialog";
+import { GraphContentPanel } from "../components/graph-content-panel";
 import { GraphDetailsPanel } from "../components/graph-details-panel";
 import { GraphRelationsOutline } from "../components/graph-relations-outline";
 import { GraphTrailBreadcrumb } from "../components/graph-trail-breadcrumb";
@@ -186,7 +187,8 @@ function EntityGraphViewBody({
   const edgeById = new Map(model.edges.map((e) => [e.id, e]));
   const labelOf = (id: string) => {
     const node = nodeById.get(id);
-    return node?.kind === "item" ? node.label : (node?.relationTitle ?? id);
+    if (!node) return id;
+    return node.kind === "overflow" ? node.relationTitle : node.label;
   };
 
   // --- Interaction ------------------------------------------------------------------------
@@ -215,6 +217,14 @@ function EntityGraphViewBody({
   const onNodeClick = (nodeId: string) => {
     const node = nodeById.get(nodeId);
     if (!node) return;
+    if (node.kind === "content") {
+      setOpenMenu(null);
+      dispatch({
+        type: "select",
+        selection: { kind: "content", owner: node.owner, attribute: node.attributeName },
+      });
+      return;
+    }
     if (node.kind === "overflow") {
       setOpenMenu(null);
       dispatch({
@@ -229,7 +239,13 @@ function EntityGraphViewBody({
   };
 
   const onEdgeClick = (edgeId: string) => {
-    if (!edgeById.has(edgeId)) return;
+    const edge = edgeById.get(edgeId);
+    if (!edge) return;
+    // An item → file link has no actions of its own: it opens the file, like its node.
+    if (edge.toContent) {
+      onNodeClick(edge.target);
+      return;
+    }
     dispatch({ type: "select", selection: { kind: "edge", edgeId } });
     setOpenMenu({ kind: "edge", edgeId });
   };
@@ -343,7 +359,28 @@ function EntityGraphViewBody({
     onRequiredRelationClick,
   };
   let panel: ReactNode;
-  if (selection?.kind === "overflow") {
+  const contentNode =
+    selection?.kind === "content"
+      ? model.nodes.find(
+          (n) =>
+            n.kind === "content" &&
+            sameRef(n.owner, selection.owner) &&
+            n.attributeName === selection.attribute,
+        )
+      : undefined;
+  const contentOwner =
+    selection?.kind === "content" ? items.get(graphNodeId(selection.owner))?.item : undefined;
+  if (selection?.kind === "content" && contentNode?.kind === "content" && contentOwner) {
+    panel = (
+      <GraphContentPanel
+        key={contentNode.id}
+        item={contentOwner}
+        attributeName={contentNode.attributeName}
+        attributeTitle={contentNode.attributeTitle}
+        onBack={() => dispatch({ type: "select", selection: null })}
+      />
+    );
+  } else if (selection?.kind === "overflow") {
     const ownerItem = items.get(graphNodeId(selection.owner))?.item;
     const relation: EntityItemToManyRelation | undefined = ownerItem?.getToManyRelation(
       selection.relation,

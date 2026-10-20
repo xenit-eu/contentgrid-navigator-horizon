@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { CircleNotchIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { CircleNotchIcon, PaperclipIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import {
   BaseEdge,
   type Edge,
@@ -58,6 +58,7 @@ function RelationEdgeComponent({
         );
 
   const menu = ctx.edgeMenu?.edgeId === id ? ctx.edgeMenu : null;
+  const isContent = edge.variant === "content";
   const label = (
     <button
       type="button"
@@ -66,6 +67,7 @@ function RelationEdgeComponent({
         "nodrag nopan pointer-events-auto absolute flex max-w-40 items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 text-xs text-foreground shadow-e1",
         "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         edge.emphasis === "trail" && "font-semibold",
+        isContent && "border-dashed text-muted-foreground",
         menu && "ring-2 ring-ring",
       )}
       style={{
@@ -84,6 +86,7 @@ function RelationEdgeComponent({
       {edge.status === "error" ? (
         <WarningCircleIcon className="size-3 text-destructive" aria-label={ctx.labels.error} />
       ) : null}
+      {isContent ? <PaperclipIcon className="size-3 shrink-0" aria-hidden /> : null}
       <span className="truncate">{edge.label}</span>
     </button>
   );
@@ -95,7 +98,10 @@ function RelationEdgeComponent({
         path={geometry.path}
         markerEnd={markerEnd}
         interactionWidth={16}
-        style={{ strokeWidth: edge.emphasis === "trail" ? 2.5 : 1.5 }}
+        style={{
+          strokeWidth: edge.emphasis === "trail" ? 2.5 : 1.5,
+          strokeDasharray: isContent ? "5 4" : undefined,
+        }}
       />
       <EdgeLabelRenderer>
         {menu ? (
