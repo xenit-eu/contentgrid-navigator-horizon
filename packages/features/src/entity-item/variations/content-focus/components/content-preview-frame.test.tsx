@@ -22,7 +22,7 @@ describe("ContentPreviewFrame", () => {
     );
 
     expect(screen.getByText("No file")).toBeInTheDocument();
-    expect(screen.getByText(/Drag & drop a file/)).toBeInTheDocument();
+    expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });

@@ -4,7 +4,7 @@ Package: `@contentgrid/navigator-data`
 Purpose: Navigator-side HAL data access layer. Composes the seven
 `@contentgrid/*` core packages (Layer 1) into TanStack Query hooks, an
 ETag/`If-Match` policy, model-enrichment accessors for HAL-Forms templates
-(`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`), Zod-
+(`CreateHalFormTemplate`, `UpdateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`), Zod-
 validated app config, and MSW handler fixtures. This is Layer 2 of the
 two-layer dependency model.
 
@@ -110,7 +110,8 @@ entity name like `invoice`.
 - Single-item queries: `useEntityItem`
 - Profile queries: `useProfileEntity`, `useProfileEntities`
 - Relation read queries: `useEntityItemToOneRelation`, `useEntityItemToManyRelation`
-  (supports default, URL-pagination, and relation-scoped search via `RelationCollectionParams`)
+  (supports default, URL-pagination, and relation-scoped search via `RelationCollectionParams`),
+  `useEntityItemToManyRelationInfinite` ("load more" over a to-many relation)
 - Mutations — create: `useCreateEntityItem`, update: `useUpdateEntityItem`,
   delete: `useDeleteEntityItem`, relation set (to-one): `useSetToOneRelation`,
   relation add (to-many): `useAddToManyRelation`, relation clear: `useClearRelation`,
@@ -141,6 +142,7 @@ Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query f
 | `ProfileRelation`          | `blueprint:relation` embedded resource      | —                                                                                                                 |
 | `SearchHalFormTemplate`    | `_templates.search` HAL-FORMS template      | —                                                                                                                 |
 | `CreateHalFormTemplate`    | `_templates.create-form` HAL-FORMS template | —                                                                                                                 |
+| `UpdateHalFormTemplate`    | an item's `_templates.default` (update)     | — (via `entityItem.updateTemplate`; prefill values from `entityItem.updateFormValues`)                            |
 | `EntityItem`               | `/{plural}/{id}` HAL entity-item resource   | `fetchByUrlQuery(apiFetch, url, profileEntity)`                                                                   |
 | `EntityItemCollection`     | `/{plural}` HAL entity-collection resource  | `fetchByUrlQuery(apiFetch, url, profileEntity)`, `infiniteQuery(apiFetch, url, profileEntity)`                    |
 | `EntityItemToOneRelation`  | to-one relation link on an entity item      | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItem \| null` (null = empty slot; 404 → null)           |
@@ -269,8 +271,7 @@ const { data: collection } = useEntityItemCollection({
   via `src/api/problem-details/index.ts`). Read the RFC 9457 detail via `error.problemDetail`
   (`{ type, title, detail, status, ... }`). Do NOT manually inspect raw `response.status`.
 - Surface the parsed problem detail via TanStack Query's `error` field.
-- 412 (ETag mismatch) must be handled at the call site: re-fetch, re-apply, retry. The hook must
-  not swallow or auto-retry 412. Detect via `isProblemWithStatus(error, 412)` (see
+- 412 (ETag mismatch) must be handled at the call site: re-fetch, re-apply, retry. The hook must not swallow or auto-retry 412. Detect via `isProblemWithStatus(error, 412)` (see
   [Problem-detail handling](#problem-detail-handling) below) rather than a raw `instanceof` +
   `.problemDetail.status` check.
 
@@ -368,7 +369,15 @@ Each class carries:
     the encoded scoped URL. `searchValues: undefined` disables the query. See the workaround note in
     the "To-many relation collection resolution" section.
 
-  All modes are disabled until the target profile resolves.
+  All modes are disabled until the target profile resolves. Pass `{ enabled: false }` as the
+  third argument to keep it from fetching (e.g. while another view of the relation is shown).
+
+- `useEntityItemToManyRelationInfinite(relation, { enabled? })` → TanStack infinite query result
+  whose `data.pages` are `EntityItemCollection`s: the first page from `relation.link.href`, each
+  further page (`fetchNextPage`/`hasNextPage`) from the previous page's HAL `next` link. Built on
+  `EntityItemToManyRelation.infiniteQuery`, keyed under `toManyRelation.infiniteByUrl` — inside the
+  `forRelationName` prefix, so every relation mutation's existing invalidation refreshes it too.
+  Disabled until the target profile resolves.
 
 **Relation mutation hooks:**
 
@@ -440,6 +449,7 @@ builders (`setRelationRequest` / `addRelationRequest` / `clearRelationRequest`) 
 queryKeys.toOneRelation.byUrl(targetProfile, url); // exact key for a to-one relation read
 queryKeys.toOneRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-one reads for that entity type
 queryKeys.toManyRelation.byUrl(targetProfile, url); // exact key for a to-many relation read
+queryKeys.toManyRelation.infiniteByUrl(relationName, url); // "load more" query over a to-many relation
 queryKeys.toManyRelation.forTargetEntity(targetProfile); // prefix — invalidates all to-many reads for that entity type
 ```
 
@@ -494,11 +504,13 @@ Do NOT derive URLs via string transforms such as `href.replace(/\/profile\//, "/
 Read `item.id`. Do NOT call `selfHref.split("/").pop()` or any
 href-parsing idiom. URL structure is an implementation detail the server can change.
 
-**5. Model-enrichment accessors (`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`)
-must expose full template property metadata — never a lossy subset.**
+**5. Model-enrichment accessors (`CreateHalFormTemplate`, `UpdateHalFormTemplate`,
+`ProfileAttribute`, `ProfileRelation`) must expose full template property metadata — never a lossy
+subset.**
 
 `CreateHalFormTemplate.userDefinedProperties`/`toOneRelationProperties`/`toManyRelationProperties`
-carry the raw `HalFormsProperty` (`options.inline`/`options.link`, `required`, `regex`, `readOnly`,
+and `UpdateHalFormTemplate.userDefinedProperties` (attribute properties of both are the shared
+`FormAttributeProperty`, built by `toFormAttributeProperty`) carry the raw `HalFormsProperty` (`options.inline`/`options.link`, `required`, `regex`, `readOnly`,
 etc.) alongside profile-derived metadata (`profileAttribute`/`profileRelation`). Do NOT narrow
 what these accessors expose — the rendering-projection bridge that consumes them
 (`resolveHalFormsFields` in `packages/features/src/hal-forms/model/`, ADR-004)
@@ -646,10 +658,10 @@ Rules:
 | `fetchHal`       | `{ object: HalObject, etag }` | yes                     | GET — need the ETag for subsequent mutations                                                                                                                             |
 | `fetchHalObject` | `HalObject` (no ETag)         | yes                     | POST that returns 201 + body (create); not exported from `api/index.ts` — import from `api/hal-client`. The server does return the new item's ETag; this helper drops it |
 | `fetchHalSlice`  | `HalSlice` (no ETag)          | yes (via `fetchHal`)    | Collection queries                                                                                                                                                       |
-| `fetchVoid`      | `void`                        | no                      | 204 No Content — DELETE / relation set/add/clear / content PUT; calls `checkResponse`, discards body                                                                     |
+| `fetchVoid`      | `void`                        | no                      | 204 No Content — item PUT / DELETE / relation set/add/clear / content PUT; calls `checkResponse`, discards body                                                          |
 
 Both `fetchHal` and `fetchHalObject` call `response.json()` and will **throw on a 204 No Content
-response** (empty body). Mutations that return 204 — DELETE, relation set/add/clear, content PUT —
+response** (empty body). Mutations that return 204 — item PUT, DELETE, relation set/add/clear, content PUT —
 must use `fetchVoid(apiFetch, request)` instead. `fetchVoid` is implemented and exported from
 `src/api/hal-client.ts` — it calls `checkResponse` and discards the body, making it 204-safe.
 
@@ -723,7 +735,9 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
             })
           : baseReq;
 
-      // 3a. Response has a body (create / update) — use fetchHal to capture new ETag
+      // 3a. Response has a body (create) — use fetchHal to capture new ETag.
+      //     An item PUT (update) answers 204: fetchVoid, then invalidate the item's
+      //     `entityItem.byUrl` key so it is re-fetched with its new ETag (`useUpdateEntityItem`).
       const { object, etag } = await fetchHal<EntityItemShape>(apiFetch, req);
       return new EntityItem(object, profileEntity, etag);
 
@@ -943,7 +957,7 @@ Belongs here:
 - TanStack Query hooks for HAL resources.
 - ETag / `If-Match` policy implementation.
 - Model-enrichment accessors for HAL-Forms templates (`CreateHalFormTemplate`,
-  `ProfileAttribute`, `ProfileRelation`) — "what the backend requires."
+  `UpdateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`) — "what the backend requires."
 - Zod-validated app config + presets.
 - MSW handler fixtures (exported for consumers).
 

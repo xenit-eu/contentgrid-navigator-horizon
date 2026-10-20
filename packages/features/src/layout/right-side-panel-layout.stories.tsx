@@ -55,6 +55,21 @@ export const CollapsedByDefault: Story = {
   ),
 };
 
+/** The panel keeps its default width: the border can't be dragged, but the toggle still works. */
+export const NotResizable: Story = {
+  args: {
+    children: <SampleContent />,
+    sidePanel: <SampleSidePanel />,
+    sidePanelTitle: "Details",
+    resizable: false,
+  },
+  render: (args) => (
+    <div style={{ height: 600, width: 1000 }}>
+      <RightSidePanelLayout {...args} />
+    </div>
+  ),
+};
+
 /** Below the 800px breakpoint the two regions stack vertically instead of side by side. */
 export const NarrowViewport: Story = {
   args: {

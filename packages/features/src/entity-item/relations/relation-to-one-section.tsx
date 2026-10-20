@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LinkBreakIcon as LinkBreak } from "@phosphor-icons/react";
 import {
+  type EntityItem,
   type EntityItemToOneRelation,
   type ProfileEntity,
   toProblemDisplayModel,
@@ -22,14 +23,17 @@ import {
   RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
+import { useEntityDisplayPreferences } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
 import { EntityItemAttributeSummary } from "../variations/entity-item-attribute-summary";
+import { EntityItemReference } from "../variations/entity-item-reference";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
 } from "./relation-handlers";
 import { RelationItemSearchDialog } from "./relation-item-search-dialog";
+import { type RelationLayout, useRelationLayout } from "./relation-layout";
 
 export function RelationToOneSection({
   relation,
@@ -62,6 +66,7 @@ export function RelationToOneSection({
   const [linkOpen, setLinkOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
+  const layout = useRelationLayout();
 
   return (
     <RelationAccordion
@@ -140,18 +145,49 @@ export function RelationToOneSection({
         <p className="text-sm text-muted-foreground">No item linked</p>
       )}
       {linkedItem.isSuccess && linkedItem.data !== null && (
-        <button
-          type="button"
-          className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors"
-          onClick={() => {
-            const linked = linkedItem.data;
-            if (!linked) return;
-            onItemClick?.(linked.profileEntity.name, linked.id);
-          }}
-        >
-          <EntityItemAttributeSummary item={linkedItem.data} />
-        </button>
+        <LinkedItem
+          item={linkedItem.data}
+          layout={layout}
+          onClick={(item) => onItemClick?.(item.profileEntity.name, item.id)}
+        />
       )}
     </RelationAccordion>
+  );
+}
+
+/**
+ * The linked item as its reference (icon, name, subtitle). When the pane has room for it
+ * (`layout.toOneSummaryColumns`), a grid of further attributes follows, leaving out the ones the
+ * reference already shows.
+ */
+function LinkedItem({
+  item,
+  layout,
+  onClick,
+}: Readonly<{ item: EntityItem; layout: RelationLayout; onClick: (item: EntityItem) => void }>) {
+  const { nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(item.profileEntity);
+  const columns = layout.toOneSummaryColumns;
+  const shownByReference = [nameAttribute?.name, subtitleAttribute?.name].filter(
+    (name): name is string => name !== undefined,
+  );
+
+  return (
+    <div className="space-y-3 rounded-md border p-2">
+      <EntityItemReference
+        item={item}
+        size="default"
+        onClick={() => onClick(item)}
+        className="p-1"
+      />
+      {columns !== 0 && (
+        <EntityItemAttributeSummary
+          item={item}
+          columns={columns}
+          count={layout.toOneSummaryCount}
+          excludeAttributeNames={shownByReference}
+          className="px-1 pb-1"
+        />
+      )}
+    </div>
   );
 }

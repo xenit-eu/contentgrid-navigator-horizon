@@ -98,6 +98,13 @@ export const queryKeys = {
     /** Exact key for a specific to-many relation by relation name and relation URL. */
     byUrl: (relationName: string, relationUrl: string) =>
       [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
+    /**
+     * Exact key for a "load more" (infinite) query over a to-many relation, starting at the
+     * relation URL. Nested under `forRelationName` (and `byUrl`), so every relation mutation's
+     * existing prefix invalidation refreshes it too.
+     */
+    infiniteByUrl: (relationName: string, relationUrl: string) =>
+      [TO_MANY_RELATION_KEY, relationName, relationUrl, "infinite"] as const,
   },
 
   typeaheadSuggestions: {
