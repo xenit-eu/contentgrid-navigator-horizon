@@ -31,6 +31,7 @@ import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
+  RelationSectionDisplayProps,
 } from "./relation-handlers";
 import { RelationItemSearchDialog } from "./relation-item-search-dialog";
 import { type RelationLayout, useRelationLayout } from "./relation-layout";
@@ -42,12 +43,16 @@ export function RelationToOneSection({
   onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
+  variant,
+  open,
+  onOpenChange,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
 }> &
+  RelationSectionDisplayProps &
   Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
@@ -71,6 +76,9 @@ export function RelationToOneSection({
   return (
     <RelationAccordion
       title={title}
+      variant={variant}
+      open={open}
+      onOpenChange={onOpenChange}
       actions={
         <>
           {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (

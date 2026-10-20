@@ -18,6 +18,12 @@ export interface RelationAccordionProps {
   open?: boolean;
   /** Called with the new expanded state on trigger click. Required when `open` is provided. */
   onOpenChange?: (open: boolean) => void;
+  /**
+   * `"card"` (default) wraps the section in its own `Card`. `"row"` drops the card chrome and
+   * renders a flat, full-width row with a top border, for stacking several sections as a
+   * collapsible list inside one surrounding card.
+   */
+  variant?: "card" | "row";
 }
 
 /**
@@ -34,6 +40,7 @@ export function RelationAccordion({
   children,
   open,
   onOpenChange,
+  variant = "card",
 }: Readonly<RelationAccordionProps>) {
   const controlledProps =
     open === undefined
@@ -42,6 +49,21 @@ export function RelationAccordion({
           value: open ? "relation" : "",
           onValueChange: (value: string) => onOpenChange?.(value === "relation"),
         };
+  if (variant === "row") {
+    return (
+      <Accordion type="single" collapsible {...controlledProps}>
+        <AccordionItem value="relation" className="border-t border-b-0">
+          <div className="flex items-center justify-between gap-2 px-6 hover:bg-muted/50">
+            <AccordionTrigger className="flex-1 items-center gap-2 py-3 hover:no-underline">
+              <span className="text-sm font-semibold">{title}</span>
+            </AccordionTrigger>
+            {actions && <div className="flex items-center gap-2">{actions}</div>}
+          </div>
+          <AccordionContent className="px-6 pt-1">{children}</AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    );
+  }
   return (
     <Card className="py-4 gap-4">
       <Accordion type="single" collapsible {...controlledProps}>

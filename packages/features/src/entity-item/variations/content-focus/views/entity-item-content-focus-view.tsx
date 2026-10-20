@@ -13,15 +13,13 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Separator,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
+import { EntityItemSections, useEntityItemSectionsState } from "../../../entity-item-sections";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
-import { RelationToManySection } from "../../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemReference } from "../../entity-item-reference";
+import { EntityItemRelationSummary } from "../../entity-item-relation-summary";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
 import { selectDefaultContentAttribute } from "../util/select-default-content-attribute";
@@ -269,6 +267,8 @@ function ContentFocusEntityItemBody({
     | "onBlindRelationOverwriteClick"
     | "onRequiredRelationClick"
   >) {
+  const sections = useEntityItemSectionsState();
+
   if (attributeName === undefined) {
     return null;
   }
@@ -282,41 +282,25 @@ function ContentFocusEntityItemBody({
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
       sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
+      sidePanelPadded={false}
       sidePanel={
-        <div className="space-y-6">
-          <EntityItemAttributes item={entityItem} />
-          {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {entityItem.toOneRelations.map((relation) => (
-                  <RelationToOneSection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {entityItem.toManyRelations.map((relation) => (
-                  <RelationToManySection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <>
+          <EntityItemRelationSummary
+            item={entityItem}
+            onRelationClick={sections.reveal}
+            className="px-[1.125rem] py-2"
+          />
+          <EntityItemSections
+            item={entityItem}
+            profiles={loadedProfiles}
+            state={sections}
+            onRelationItemClick={onRelationItemClick}
+            onRelationItemCreateNew={onRelationItemCreateNew}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
+          />
+        </>
       }
     >
       <ContentPreviewPanel
