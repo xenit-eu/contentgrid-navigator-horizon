@@ -1,4 +1,11 @@
+/**
+ * DEV-ONLY stand-in for a ContentGrid backend when running `pnpm dev` without one; never
+ * bundled into PR previews or production (import gated on `import.meta.env.DEV` in `main.tsx`).
+ * To work against a real backend, connect one at `/config` (which disables this mock backend)
+ * or set `VITE_USE_MOCK_API=false` + backend vars in `.env.development.local`.
+ */
 import { HttpResponse, http } from "msw";
+import { recordedEntityLinks } from "@contentgrid/navigator-data/test-fixtures/msw/demo-handlers";
 import {
   createContentDownloadHandler,
   createEntityHandler,
@@ -54,11 +61,9 @@ function requireBearer(url: string) {
  * backend.
  *
  * Registered BEFORE `createDemoHandlers()` in `browser.ts` — this module's own `/profile` root
- * response lists both `cg:entity` links (`invoice`, from the shared fixture, and `document`, from
- * here), so it must win the match over the shared fixture's invoice-only one. The shared
- * `packages/navigator-data/test-fixtures/msw/demo-handlers.ts` (used by both apps) is not
- * modified — this file only adds to it, never replaces the invoice handlers apps/navigator's own
- * boot smoke test and this app's cursor-pagination e2e test depend on.
+ * response lists the recorded model's `cg:entity` links plus `document`, so it must win the match
+ * over the shared recorded-model root, which has no `document` entity. This file only adds to the
+ * shared handlers in `packages/navigator-data/test-fixtures/msw/demo-handlers.ts`.
  */
 export function createContentFocusDemoHandlers(baseUrl = "") {
   const profileUrl = `${baseUrl}/profile/documents`;
@@ -223,7 +228,7 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
             },
           ],
           "cg:entity": [
-            { href: `${baseUrl}/profile/invoices`, name: "invoice", title: "Invoice" },
+            ...recordedEntityLinks(baseUrl),
             { href: profileUrl, name: "document", title: "Document" },
           ],
         },

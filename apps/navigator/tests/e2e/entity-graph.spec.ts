@@ -2,9 +2,13 @@
  * E2E: the knowledge-graph view (spec `007-entity-knowledge-graph`, quickstart scenarios 1, 2, 4,
  * 6, 8, 9, 10, 11, 14).
  *
- * Like `content-focus.spec.ts`, this runs against a dev server in MSW mock mode (the relation demo
- * model from `@contentgrid/navigator-data/test-fixtures/msw/relation-demo-handlers`, registered
- * by `src/mocks/browser.ts`) rather than a real backend, so it needs no login or `.env.test`.
+ * Like `content-focus.spec.ts`, this runs against a dev server in MSW mock mode rather than a real
+ * backend, so it needs no login or `.env.test`. It was written for the relation demo model
+ * (`@contentgrid/navigator-data/test-fixtures/msw/relation-demo-handlers`: Big Corp, ORD-001, …).
+ * FIXME: the dev mock backend (`src/local-mock-backend/browser.ts`) now serves only the recorded
+ * model (its `customer`/`product` entities collide with the relation demo's), so these scenarios
+ * must be rewritten against recorded data — or the relation demo served on its own — before e2e
+ * is re-enabled in CI.
  * It is skipped unless `NAVIGATOR_MOCK_URL` points at such a server:
  *
  *   VITE_USE_MOCK_API=true VITE_DEV_TOKEN=dev-token VITE_API_BASE_URL=http://localhost:5199 \
