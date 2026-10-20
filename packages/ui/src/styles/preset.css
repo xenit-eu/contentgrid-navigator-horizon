@@ -142,9 +142,9 @@
   --accent-foreground: var(--ocean);
   /* Opaque fills for hovered and selected rows (opaque so sticky cells stay solid).
      Selected uses --sky because a dark --primary tint reads grey on a light background;
-     10% keeps muted text on a selected row at 4.5:1 contrast. */
+     8% keeps muted text on a selected row above 4.5:1 contrast. */
   --hover: color-mix(in oklab, var(--primary) 3%, var(--background));
-  --selected: color-mix(in oklab, var(--sky) 10%, var(--background));
+  --selected: color-mix(in oklab, var(--sky) 8%, var(--background));
   /* Hover fill for outline/ghost buttons. */
   --button-hover: var(--sky-extract);
   --button-hover-foreground: #000000;
