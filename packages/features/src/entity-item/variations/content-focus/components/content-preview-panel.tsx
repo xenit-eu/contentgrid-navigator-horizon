@@ -1,8 +1,9 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { ImageBrokenIcon, VideoCameraSlashIcon } from "@phosphor-icons/react";
 import {
   type EntityItem,
-  isPdfMimetype,
+  needsRendition,
   toProblemDisplayModel,
   useContentPreview,
   useDownloadContent,
@@ -14,7 +15,8 @@ import { getContentAttributeMetadata } from "../util/content-attribute-metadata"
 import type { ViewerLoadErrorKind } from "../util/derive-content-preview-state";
 import { deriveContentPreviewState } from "../util/derive-content-preview-state";
 import { pdfiumWasmUrl } from "../util/pdfium-wasm-url";
-import { ContentPreviewFrame } from "./content-preview-frame";
+import { ContentPreviewFrame, type ContentPreviewFrameLabels } from "./content-preview-frame";
+import { ImageVideoViewer } from "./image-video-viewer";
 
 /**
  * Lazy import of `@contentgrid/ui`'s `PdfViewer` — its dependency (the PDFium/WASM engine, ~4.4
@@ -36,16 +38,20 @@ function buildPreviewUnavailableMessage(mimetype: string | null | undefined): st
     : "Preview isn't available for this file type.";
 }
 
+/** `cannotDisplay`'s message for a stored image or video names which of the two it is. */
+function buildCannotDisplayMessage(kind: "image" | "video"): string {
+  return `Your browser can't open this ${kind}. You can download it instead.`;
+}
+
 export interface ContentPreviewPanelProps {
   readonly entityItem: EntityItem;
   readonly attributeName: string;
   /**
-   * Content to render in the mounted `PdfViewer`'s toolbar `start` slot — the view (per
+   * Content to render at the start of the preview's toolbar — the view (per
    * `contracts/content-focus-view.md`'s "Components" section) passes its `ContentAttributeSelector`
-   * here so the user can switch attributes without leaving the viewer's own toolbar. The panel
-   * itself has no attribute-selection logic; it only forwards this node into the toolbar when the
-   * viewer is actually mounted (`ready` state) — every other preview state has no viewer toolbar
-   * to put it in, so this prop has no effect there.
+   * here so the user can switch attributes from whatever is shown: the PDF viewer's toolbar, the
+   * image or video toolbar, or the frame's header bar in every other state. The panel itself has
+   * no attribute-selection logic.
    */
   readonly toolbarStart?: ReactNode;
 }
@@ -64,7 +70,9 @@ function triggerDownload(blob: Blob, filename: string): void {
  * and renders the matching `ContentPreviewFrame` state (data-model.md's "Content preview panel state", FR-024).
  * Lazy-loads `@contentgrid/ui`'s `PdfViewer` — wrapped in `PdfViewerErrorBoundary` (catches a
  * render-time exception → `viewerFailure`) and its own `PdfEngineProvider` (self-hosted
- * `wasmUrl`) — only once a displayable PDF (stored or converted) is available.
+ * `wasmUrl`) — only once a displayable PDF (stored or converted) is available. A stored image or
+ * video is shown by `ImageVideoViewer` instead; one the browser cannot display reports
+ * `cannotDisplay`, like an invalid PDF.
  */
 export function ContentPreviewPanel({
   entityItem,
@@ -104,9 +112,9 @@ export function ContentPreviewPanel({
   const expectedOrigin =
     metadata === null || metadata === undefined
       ? null
-      : isPdfMimetype(metadata.mimetype)
-        ? "stored"
-        : "rendition";
+      : needsRendition(metadata.mimetype)
+        ? "rendition"
+        : "stored";
 
   const { state, problem, mimetype } = deriveContentPreviewState({
     queryStatus: query.status,
@@ -142,6 +150,23 @@ export function ContentPreviewPanel({
   }
 
   const canDownload = metadata !== null && metadata !== undefined;
+
+  if (state === "ready" && (query.data?.kind === "image" || query.data?.kind === "video")) {
+    return (
+      <ContentPreviewFrame state="ready">
+        <ImageVideoViewer
+          // A different file gets a fresh element, so it never shows the previous file.
+          key={`${attributeName}:${entityItem.etag ?? ""}`}
+          source={query.data}
+          filename={metadata?.filename ?? null}
+          toolbarStart={toolbarStart}
+          onDownload={handleDownload}
+          // The browser can't show this image or video: the same state as a PDF that can't be opened.
+          onLoadError={() => setViewerLoadErrorKind("invalid")}
+        />
+      </ContentPreviewFrame>
+    );
+  }
 
   if (state === "ready" && query.data?.kind === "pdf") {
     const previewSource = query.data;
@@ -214,26 +239,35 @@ export function ContentPreviewPanel({
       ? toProblemDisplayModel(attributeUpload.error)
       : undefined;
 
+  // Message (and icon) for the states that have their own wording.
+  let frameLabels: ContentPreviewFrameLabels | undefined;
+  let frameIcon: ReactNode;
+  if (state === "previewUnavailable") {
+    frameLabels = { previewUnavailableMessage: buildPreviewUnavailableMessage(mimetype) };
+  } else if (state === "cannotDisplay" && query.data?.kind === "image") {
+    frameLabels = { cannotDisplayMessage: buildCannotDisplayMessage("image") };
+    frameIcon = <ImageBrokenIcon aria-hidden />;
+  } else if (state === "cannotDisplay" && query.data?.kind === "video") {
+    frameLabels = { cannotDisplayMessage: buildCannotDisplayMessage("video") };
+    frameIcon = <VideoCameraSlashIcon aria-hidden />;
+  }
+
   return (
     <ContentPreviewFrame
       state={state}
       problem={uploadProblem ?? problem}
+      icon={frameIcon}
       // One upload at a time: no drop zone on another attribute while an upload is running.
       onFileChange={
         state === "noFile" && canUpload && !uploadMutation.isPending ? handleUpload : undefined
       }
       onDownload={canDownload ? handleDownload : undefined}
       onRetry={handleRetry}
-      // Every non-"ready" state must still offer the attribute selector (round-2 review: it must
-      // not disappear when the current attribute can't be opened or still needs a file uploaded)
-      // — only the "ready" branch above skips this, since the mounted PdfViewer's own toolbar
-      // already carries it via `toolbar.start`.
+      // Every non-"ready" state still offers the attribute selector, so the user can switch away
+      // from an attribute that can't be opened or still needs a file uploaded — the "ready"
+      // branches above pass it to the viewer's own toolbar instead.
       toolbarStart={toolbarStart}
-      labels={
-        state === "previewUnavailable"
-          ? { previewUnavailableMessage: buildPreviewUnavailableMessage(mimetype) }
-          : undefined
-      }
+      labels={frameLabels}
     />
   );
 }

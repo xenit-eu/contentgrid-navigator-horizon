@@ -156,9 +156,9 @@ double-invoke guard, upstream #700), `use-pdf-viewer-document-lifecycle.ts`
 (`useDocumentSearchState` — search state/actions, split out because it has a
 clean input/output boundary of its own; `use-pdf-viewer-state.ts` re-exports
 its public types so existing imports don't need updating), `pdf-viewer-toolbar.tsx`,
-`pdf-viewer-icon-button.tsx` (shared `IconButton`, used by both the toolbar
-and the search popover), `pdf-viewer-search-popover.tsx`
-(`PdfViewerSearchPopover`), `pdf-viewer-labels.ts`, `pdf-viewer-story-helpers.tsx`
+`pdf-viewer-search-popover.tsx` (`PdfViewerSearchPopover`) — both use the shared
+`ToolbarIconButton` (`src/patterns/toolbar-icon-button.tsx`, kept outside this folder so
+other preview toolbars can use it without pulling in the lazily loaded viewer), `pdf-viewer-labels.ts`, `pdf-viewer-story-helpers.tsx`
 (shared story harness — not a `*.stories.tsx` file itself, so Storybook's
 story glob skips it), `fixtures/` (hand-built `minimal.pdf` / `js-in-pdf.pdf`).
 Stories live in two files sharing one `title`

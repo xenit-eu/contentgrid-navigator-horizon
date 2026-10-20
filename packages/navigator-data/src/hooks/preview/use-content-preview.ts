@@ -1,8 +1,8 @@
 /**
- * Turns a content attribute into displayable PDF bytes — the one hook the PDF viewer
- * feature needs, regardless of whether the stored file already is a PDF or must first go
- * through the platform's rendition service. See `contracts/content-preview-hooks.md` and
- * `data-model.md`'s "PreviewSource" (spec 002-pdf-viewer).
+ * Turns a content attribute into something displayable — the one hook the content preview
+ * needs: PDF bytes (the stored PDF, or the platform's PDF rendition of a document), or the
+ * stored image or video itself. See `contracts/content-preview-hooks.md` and `data-model.md`'s
+ * "PreviewSource" (spec 002-pdf-viewer).
  *
  * Bytes and rendition requests both go through `contentFetch` — the same authenticated
  * binary client `useDownloadContent`/`useUploadContent` already use — never `apiFetch`. The
@@ -13,7 +13,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { AttributeKind } from "../../accessors/entity-item";
 import type { EntityItem, EntityItemAttributeContent } from "../../accessors/entity-item";
 import { isProblemWithStatus } from "../../api/problem-details/guards";
-import { isPdfMimetype } from "../../preview/content-mimetype";
+import { nativePreviewKind } from "../../preview/content-mimetype";
 import { requestRendition } from "../../preview/rendition-job";
 import { queryKeys } from "../../query-keys";
 import { useNavigatorData } from "../context";
@@ -39,6 +39,8 @@ export type PreviewSource =
       /** Drives the "converted preview" indicator (FR-020) — never inferred from mimetype. */
       readonly origin: "stored" | "rendition";
     }
+  /** The stored image or video file, shown as it is (no rendition). */
+  | { readonly kind: "image" | "video"; readonly blob: Blob }
   | { readonly kind: "noFile" }
   | { readonly kind: "unavailable"; readonly mimetype: string | null }
   | { readonly kind: "unsupported"; readonly mimetype: string | null };
@@ -71,9 +73,9 @@ function findContentAttribute(
 }
 
 /**
- * Resolves a content attribute to displayable PDF bytes: the stored file directly when it
- * is already a PDF, or — when a non-PDF file is stored and a rendition endpoint is
- * configured — the platform's PDF rendition of it.
+ * Resolves a content attribute to a displayable preview: the stored file directly when it is a
+ * PDF, an image or a video, or — for any other file, when a rendition endpoint is configured —
+ * the platform's PDF rendition of it.
  *
  * Key: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)`. The ETag makes a
  * re-upload onto the same attribute produce a new key automatically, so a stale preview
@@ -116,7 +118,9 @@ export function useContentPreview(
         return { kind: "noFile" };
       }
 
-      if (isPdfMimetype(metadata.mimetype)) {
+      // A PDF, an image or a video is shown as it is stored.
+      const previewKind = nativePreviewKind(metadata.mimetype);
+      if (previewKind !== undefined) {
         const request = entityItem.downloadContentRequest(attributeName);
         try {
           // No checkResponse call needed here: contentFetch already composes
@@ -124,13 +128,15 @@ export function useContentPreview(
           // non-2xx response before this ever resolves — see rendition-job.ts's fetchStep,
           // which relies on and documents the same behaviour.
           const response = await contentFetch(new Request(request, { signal }));
-          const bytes = await response.arrayBuffer();
-          return {
-            kind: "pdf",
-            bytes,
-            filename: metadata.filename ?? FALLBACK_FILENAME,
-            origin: "stored",
-          };
+          if (previewKind === "pdf") {
+            return {
+              kind: "pdf",
+              bytes: await response.arrayBuffer(),
+              filename: metadata.filename ?? FALLBACK_FILENAME,
+              origin: "stored",
+            };
+          }
+          return { kind: previewKind, blob: await response.blob() };
         } catch (error) {
           if (isProblemWithStatus(error, 404)) {
             return { kind: "noFile" };
@@ -139,7 +145,7 @@ export function useContentPreview(
         }
       }
 
-      // Non-PDF from here on (isPdfMimetype/needsRendition are exact complements).
+      // Any other file can only be shown through its PDF rendition.
       if (renditionUri === undefined || renditionPolling === undefined) {
         return { kind: "unavailable", mimetype: metadata.mimetype };
       }

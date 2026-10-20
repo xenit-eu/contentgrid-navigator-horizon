@@ -5,6 +5,7 @@
 ```ts
 export type PreviewSource =
   | { kind: "pdf"; bytes: ArrayBuffer; filename: string; origin: "stored" | "rendition" }
+  | { kind: "image" | "video"; blob: Blob }
   | { kind: "noFile" }
   | { kind: "unavailable"; mimetype: string | null }
   | { kind: "unsupported"; mimetype: string | null };
@@ -25,7 +26,8 @@ export function useContentPreview(
 - Key: `queryKeys.contentPreview.byUrl(contentHref, entityItem.etag)`.
 - `queryFn` honours `signal`; unmount or key change aborts any download or poll in flight.
 - `retry: false`, `staleTime: Infinity`, `gcTime: 300_000`. Retry is `refetch()`.
-- Uses `contentFetch` for both stored PDFs and rendition requests (the user's credentials; TokenMonger handles any exchange on the platform side); never `apiFetch`.
+- A stored PDF, image (`image/*`) or video (`video/*`) is downloaded as it is; any other file goes to the rendition service.
+- Uses `contentFetch` for both stored files and rendition requests (the user's credentials; TokenMonger handles any exchange on the platform side); never `apiFetch`.
 - Never writes to other query keys; never invalidates item or collection caches.
 
 ## `requestRendition(fetch, uriTemplate, contentHref, options)`
@@ -67,8 +69,11 @@ in `hooks/test-utils.tsx` gains matching optional parameters.
 ## Utilities
 
 ```ts
-export function isPdfMimetype(mimetype: string | null | undefined): boolean; // "application/pdf; charset=binary" → true, case-insensitive
-export function needsRendition(mimetype: string | null | undefined): boolean; // !isPdfMimetype; missing/generic → true
+// Internal to navigator-data (used by useContentPreview); not re-exported from the package.
+function nativePreviewKind(
+  mimetype: string | null | undefined,
+): "pdf" | "image" | "video" | undefined; // "application/pdf; charset=binary" → "pdf", image/* → "image", video/* → "video"; case-insensitive
+export function needsRendition(mimetype: string | null | undefined): boolean; // nativePreviewKind(...) === undefined; missing/generic → true
 export const RENDITION_INVALID_CONVERSION =
   "https://contentgrid.cloud/problems/renditions/invalid-conversion";
 ```

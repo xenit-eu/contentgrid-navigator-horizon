@@ -14,7 +14,8 @@ export type ContentPreviewOrigin = "stored" | "rendition";
 
 /** The three outcomes the PDF viewer's own `onLoadError` callback reports (mirrors
  * `@contentgrid/ui`'s `PdfLoadError["kind"]` structurally — this module stays decoupled from
- * `@contentgrid/ui` types per the util layer's "no UI import" rule). */
+ * `@contentgrid/ui` types per the util layer's "no UI import" rule). The image and video preview
+ * report `invalid` too, when the browser cannot display the file. */
 export type ViewerLoadErrorKind = "invalid" | "protected" | "engine";
 
 export interface DeriveContentPreviewStateInput {
@@ -22,8 +23,8 @@ export interface DeriveContentPreviewStateInput {
   readonly previewSource: PreviewSource | undefined;
   readonly queryError: Error | null;
   readonly expectedOrigin: ContentPreviewOrigin | null;
-  /** Set once the mounted `PdfViewer` reports a load problem; `null` otherwise (including after
-   * it has been reset for a new attribute/item — see `content-preview-panel.tsx`). */
+  /** Set once the mounted viewer (PDF, image or video) reports a load problem; `null` otherwise
+   * (including after it has been reset for a new attribute/item — see `content-preview-panel.tsx`). */
   readonly viewerLoadErrorKind: ViewerLoadErrorKind | null;
 }
 
@@ -38,12 +39,12 @@ export interface DerivedContentPreviewState {
 }
 
 /**
- * Pure mapping from `useContentPreview`'s query state (plus the PDF viewer's own load-error
+ * Pure mapping from `useContentPreview`'s query state (plus the viewer's own load-error
  * callback) to data-model.md's "Content preview panel state" (FR-024). No fetching, no React.
  *
- * Order of precedence: a viewer-reported load error always wins (it can only occur once
- * `previewSource.kind === "pdf"` was already showing, so it is never stale relative to the query
- * status); then the query's own success/error/pending status.
+ * Order of precedence: a viewer-reported load error always wins (it can only occur once a PDF,
+ * image or video was already showing, so it is never stale relative to the query status); then
+ * the query's own success/error/pending status.
  */
 export function deriveContentPreviewState(
   input: DeriveContentPreviewStateInput,
@@ -64,6 +65,8 @@ export function deriveContentPreviewState(
   if (queryStatus === "success" && previewSource !== undefined) {
     switch (previewSource.kind) {
       case "pdf":
+      case "image":
+      case "video":
         return { state: "ready" };
       case "noFile":
         return { state: "noFile" };
@@ -76,7 +79,7 @@ export function deriveContentPreviewState(
   if (queryStatus === "error") {
     const problem = queryError ? toProblemDisplayModel(queryError) : undefined;
     // A rendition-path failure (timeout, invalid-conversion-adjacent 5xx, network) is
-    // "couldNotPrepare"; a stored-PDF download failure (anything but 404 — 404 already resolves
+    // "couldNotPrepare"; a stored-file download failure (anything but 404 — 404 already resolves
     // the query to `noFile` inside useContentPreview, never rejects) is "couldNotRetrieve".
     return expectedOrigin === "rendition"
       ? { state: "couldNotPrepare", problem }

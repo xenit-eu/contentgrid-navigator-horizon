@@ -819,9 +819,10 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
 ## Content preview and renditions
 
 `useContentPreview(entityItem, attributeName, options?)` (`src/hooks/preview/use-content-preview.ts`)
-turns a content attribute into displayable PDF bytes for the PDF viewer feature (spec
-`002-pdf-viewer`): the stored file directly when it is already a PDF, or — when a non-PDF file is
-stored and a rendition endpoint is configured — the platform's PDF rendition of it.
+turns a content attribute into something displayable for the content preview (spec
+`002-pdf-viewer`): the stored file directly when it is a PDF (`kind: "pdf"`), an image or a video
+(`kind: "image" | "video"`, the file as a `Blob`), or — for any other file, when a rendition
+endpoint is configured — the platform's PDF rendition of it.
 
 **Rules:**
 
@@ -840,8 +841,9 @@ stored and a rendition endpoint is configured — the platform's PDF rendition o
 - `retry: false`, `staleTime: Infinity`, `gcTime: 300_000` — a failed download/rendition is not
   silently retried (the caller's Retry action is `refetch()`); a specific ETag's content never goes
   stale on its own.
-- Mimetype classification: `isPdfMimetype`/`needsRendition` (`src/preview/content-mimetype.ts`) —
-  pure string functions, exact complements of each other.
+- Mimetype classification: `nativePreviewKind`/`needsRendition` (`src/preview/content-mimetype.ts`)
+  — pure string functions; `nativePreviewKind` returns `"pdf"`/`"image"`/`"video"` for a file shown
+  as it is, and `needsRendition` is true exactly when it returns `undefined`.
 - Rendition protocol: `requestRendition(fetch, uriTemplate, contentHref, options)`
   (`src/preview/rendition-job.ts`) is a pure async state machine, no React/TanStack — expands the
   configured `{?url}` URI template with `@contentgrid/uri-template` (the content href passed only as
