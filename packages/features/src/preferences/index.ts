@@ -1,7 +1,8 @@
 /**
  * @contentgrid/features/preferences
  *
- * Entity display preferences: icon, color, cardStyle, nameAttribute, visibleColumns.
+ * Entity display preferences: icon, color, cardStyle, nameAttribute, visibleColumns,
+ * searchAttributes.
  * Three layers, highest priority first — user override (persisted, per-backend) > backend
  * automation default (currently stubbed, see `useEntityDisplayDefaults` in
  * `@contentgrid/navigator-data`) > heuristic default (`ProfileEntity.getDefaultPreferences()`).
@@ -29,6 +30,10 @@ export { toAttributeOption } from "./attribute-options";
 export { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 export type { UseEntityDisplayPreferencesResult } from "./use-entity-display-preferences";
 export { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+export { resolveEntityDisplayPreferences } from "./resolve-entity-display-preferences";
+export type { ResolvedEntityDisplayPreferences } from "./resolve-entity-display-preferences";
+export { useEntityDisplayPreferencesResolver } from "./use-entity-display-preferences-resolver";
+export type { ResolvedEntityDisplay } from "./use-entity-display-preferences-resolver";
 export { resolveEntityCardIcon } from "./resolve-entity-icon";
 export {
   EntityConfigurationOverview,

@@ -1,20 +1,16 @@
 import {
   type EntityDisplayPreferences,
-  type ProfileAttribute,
   ProfileEntity,
-  deepMerge,
   useEntityDisplayDefaults,
   useNavigatorData,
 } from "@contentgrid/navigator-data";
 import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import {
+  type ResolvedEntityDisplayPreferences,
+  resolveEntityDisplayPreferences,
+} from "./resolve-entity-display-preferences";
 
-export interface UseEntityDisplayPreferencesResult {
-  /** Fully merged preferences: user override > backend default > heuristic default. */
-  readonly preferences: EntityDisplayPreferences;
-  /** `preferences.nameAttribute` resolved against the profile, or `undefined` if unresolvable. */
-  readonly nameAttribute: ProfileAttribute | undefined;
-  /** `preferences.subtitleAttribute` resolved against the profile, or `undefined` if unresolvable. */
-  readonly subtitleAttribute: ProfileAttribute | undefined;
+export interface UseEntityDisplayPreferencesResult extends ResolvedEntityDisplayPreferences {
   /** Persist a partial override for this entity, scoped to the current backend. */
   readonly setOverride: (partial: Partial<EntityDisplayPreferences>) => void;
 }
@@ -50,21 +46,10 @@ export function useEntityDisplayPreferences(
   );
   const setOverrideRaw = useEntityDisplayPreferencesStore((state) => state.setOverride);
 
-  const heuristic = profileEntity?.getDefaultPreferences() ?? {};
   const backend = entityName ? backendDefaultsMap[entityName] : undefined;
-  const preferences = deepMerge(
-    deepMerge(heuristic as unknown as Record<string, unknown>, backend ?? {}),
-    override ?? {},
-  ) as unknown as EntityDisplayPreferences;
 
   return {
-    preferences,
-    nameAttribute: preferences.nameAttribute
-      ? profileEntity?.getAttribute(preferences.nameAttribute)
-      : undefined,
-    subtitleAttribute: preferences.subtitleAttribute
-      ? profileEntity?.getAttribute(preferences.subtitleAttribute)
-      : undefined,
+    ...resolveEntityDisplayPreferences(profileEntity, override, backend),
     setOverride: (partial) => {
       if (!entityName) return; // no resolved entity to scope this override to
       setOverrideRaw(profileUrl, entityName, partial);

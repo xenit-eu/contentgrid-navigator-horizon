@@ -5,21 +5,20 @@ import {
   useEntityItem,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { Separator } from "@contentgrid/ui";
+import { EntityCard } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
-import { EntityItemAttributes } from "./attributes/entity-item-attributes";
+import { EntityItemSections, useEntityItemSectionsState } from "./entity-item-sections";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
 } from "./relations/relation-handlers";
-import { RelationToManySection } from "./relations/relation-to-many-section";
-import { RelationToOneSection } from "./relations/relation-to-one-section";
 import {
   EntityItemReference,
   EntityItemReferenceLoading,
 } from "./variations/entity-item-reference";
+import { EntityItemRelationSummary } from "./variations/entity-item-relation-summary";
 
 /** Identify the item by its already-known profile and id. */
 export interface EntityItemViewByProfile {
@@ -87,57 +86,41 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
   );
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
+  const sections = useEntityItemSectionsState();
+
   const content = (
     <>
-      <div className="p-4">
-        {item.data ? (
-          <EntityItemReference item={item.data} size="lg" />
-        ) : (
-          <EntityItemReferenceLoading size="lg" />
+      <EntityCard
+        name={item.data?.id ?? ""}
+        flushContent
+        heading={
+          item.data ? (
+            <div className="space-y-2">
+              <EntityItemReference item={item.data} size="lg" />
+              <EntityItemRelationSummary item={item.data} onRelationClick={sections.reveal} />
+            </div>
+          ) : (
+            <EntityItemReferenceLoading size="lg" />
+          )
+        }
+      >
+        {item.isSuccess && (
+          <EntityItemSections
+            item={item.data}
+            profiles={loadedProfiles}
+            state={sections}
+            onRelationItemClick={onRelationItemClick}
+            onRelationItemCreateNew={onRelationItemCreateNew}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
+          />
         )}
-      </div>
+      </EntityCard>
 
       {item.isPending && <LoadingPage />}
 
       {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-
-      {item.isSuccess && (
-        <div className="space-y-6 p-4 pt-0">
-          <EntityItemAttributes item={item.data} />
-
-          {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {item.data.toOneRelations.map((rel) => (
-                  <RelationToOneSection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {item.data.toManyRelations.map((rel) => (
-                  <RelationToManySection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </>
   );
 

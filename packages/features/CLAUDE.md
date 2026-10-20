@@ -121,6 +121,72 @@ until the lint enforcement above wires it.
 
 ---
 
+## `entity-search-bar` feature (`src/entity-search-bar/`)
+
+The single search bar on the entity item collection page (spec
+`specs/003-single-search-bar-entity-item-collection/`): active-filter chips, a
+search-parameter selector with a suggestions popover, and quick filters. `x-stability: stable`
+(its importer, `entity-item-collection`, is stable).
+
+- **Controlled by the collection's `filters`** (the `s.<param>` URL state) through
+  `onFiltersChange` — it shares that state with the advanced filter dialog; it keeps no filter
+  state of its own and adds no URL keys.
+- **`util/` vs `components/`**: every model (search-parameter descriptors, selector groups,
+  suggestion chips/groups, active-filter chips, quick filters, date presets) is built by a pure
+  function in `util/` with a sibling test; `use-entity-search-bar.ts` only orchestrates;
+  components render finished models and pick icons (`components/search-icons.tsx`).
+- **Fields come from `resolveHalFormsFields`**, so the bar offers exactly the dialog's
+  parameters. The number quick filter renders through `HalFormsContainer` +
+  `useHalFormsFieldState`. `valueKindOf` in `util/build-search-param-descriptors.ts` holds the one
+  switch on a field's `kind`, mapping it to the feature's own `valueKind`;
+  `util/build-quick-filters.ts` then picks a quick-filter type from that `valueKind`. This is a
+  documented deviation from the "no feature-local `kind` switch" rule above (see the spec's
+  `plan.md`, Complexity Tracking); do not add a second switch on `field.kind`.
+- **Editing an applied filter**: clicking a chip loads a single selectable parameter into the main
+  bar (selected, value in the focused input; Enter replaces the filter) or opens the quick filter
+  covering all its parameters. The quick-filter popovers are controlled by the hook
+  (`openQuickFilter`) so a chip can open them.
+- **Inclusion**: `searchAttributes` in `EntityDisplayPreferences` (edited next to "Visible
+  columns") limits the selector, suggestions and quick filters; chips always show every active
+  filter, and relation parameters are always included. Import `useSearchAttributeInclusion` by
+  file path (`../preferences/use-search-attribute-inclusion`), not through `../preferences` —
+  the preferences previews import the collection view, which imports this feature.
+
+---
+
+## `entity-graph` feature (spec 007 — knowledge graph)
+
+`src/entity-graph/` (`x-stability: "stable"`, pre-GA), exported as `@contentgrid/features/entity-graph`.
+`EntityGraphView({ entityName, itemId, trail, onTrailChange, onOpenItem, onOpenCollection, … })`
+— primitive props only; the app owns the URL (`graphSearchValidator` / `searchToTrail` /
+`trailToSearch` for the `trail` search param). Layering:
+
+- `util/` (pure, no JSX/hooks/ui): ids, the navigation reducer (`graph-state.ts`), the model
+  builder (`build-graph-model.ts`: last 2 focus items expanded, ≤10 targets per to-many relation +
+  overflow node, ≤50 nodes), the ui-prop mapper, URL validation, and the entity-type filter
+  (`graph-entity-type-filter.ts`: legend types + dropping hidden types' targets; focus and trail
+  always stay). The view keeps the hidden types; reaching a type from the details panel (opening
+  its relation row, clicking one of its items) switches it back on.
+- Content nodes (`util/graph-content.ts`): the content attributes holding a file (metadata present)
+  of the expanded items and of their drawn relation targets are `content` nodes linked to their
+  item; they count against the node budget. The legend never filters an expanded item's files; a
+  hidden target's files go with it. Selecting one (node, its edge, or the outline) shows `GraphContentPanel` — the
+  entity-item feature's `ContentPreviewPanel` — in the details panel.
+- `hooks/use-graph-items.ts`: trail + pinned items by identity (`profileEntity.itemUrl(id)`).
+- `components/`: details panel, trail breadcrumb, overflow list, remove-link / delete dialogs,
+  relations outline (keyboard/AT list view).
+- Rendering is the `KnowledgeGraph` pattern from `@contentgrid/ui`; this feature never imports
+  `@xyflow/react` or Radix.
+
+Shared pieces added alongside: `util/use-profile-entity-gate.tsx` (constitution VIII shared gate),
+`preferences/resolve-entity-display-preferences.ts` + `useEntityDisplayPreferencesResolver()`
+(display preferences for many entity types at once), and
+`entity-item/components/entity-item-details-body.tsx` (relation summary + the collapsible
+attribute/relation/audit rows of `entity-item-sections.tsx`, shared by the content-focus side panel
+and the graph panel).
+
+---
+
 ## peerDep policy
 
 Features consume `packages/ui` and `packages/navigator-data` via the workspace

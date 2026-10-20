@@ -42,7 +42,10 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
     `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
-    reused across multiple tracks or apps.
+    reused across multiple tracks or apps. Documented exception: the search and filter
+    building blocks below (spec 003) live here although the entity search bar is their only
+    consumer today — they are domain-free and meant for the advanced filter dialog and the
+    relation pickers next; move one into its feature if that reuse does not happen.
 
 ---
 
@@ -312,6 +315,70 @@ BufferSource argument is empty` reaches the console), but
   generated in this change): `Patterns/PdfViewer` — `Default`,
   `ToolbarMinimal`, `Protected`, `Invalid`, `EngineFailure`, `JsInPdf`,
   `SearchOpen`, `SearchNoResults`, `PrintReady`.
+
+---
+
+## Search and filter building blocks
+
+Domain-free pieces used by the entity search bar (spec
+`specs/003-single-search-bar-entity-item-collection/`, contract
+`contracts/ui-primitives-and-patterns.md`), reusable for any filtered list:
+
+- **Primitives**: `FilterButton` (filter trigger with idle / active / positive / negative
+  outlines and a sibling × to clear; works as `<PopoverTrigger asChild>`), plus `Chip` (now with
+  a visible `mode` segment, icons and an optional clickable body), `CountIndicatorChip` (`isLoading`) and `SelectionChip`
+  (`icon` / `trailing`). `--success*` tokens are mapped into `@theme` (`bg-success`,
+  `border-success-foreground`, …).
+- **Patterns**: `FilterChips` (removable chips, optionally `selectable` via `onSelect`, at most two
+  lines then horizontal scroll),
+  `GroupedSelect`, `SearchSuggestionsPopover` (chip row + grouped suggestions, owns the combobox
+  keyboard model via `renderAnchor`), `DateRangeFilter` (range calendar + presets), and
+  `SearchableOptionList`. `filterOptionsByPrefix` (`src/lib/filter-options.ts`) is the shared
+  client-side prefix filter.
+- **ARIA lesson from the axe audit**: a `listbox` may only contain options and groups — keep
+  loading / empty / error text outside it (the popover renders one listbox per group with
+  results), and don't put buttons inside one (`nested-interactive`).
+- **Horizontal scrolling**: `ScrollArea` only mounts a vertical scrollbar; these rows use native
+  `overflow-x-auto` with the `scrollbar-subtle` utility.
+
+## `KnowledgeGraph` pattern (`src/patterns/knowledge-graph/`)
+
+Spec `007-entity-knowledge-graph`. The repo's only consumer of **`@xyflow/react`** (React Flow,
+pinned `12.11.6`, MIT, no lifecycle scripts) — nothing outside this folder may import it.
+
+- **Plain props only**: `KnowledgeGraphNode` / `KnowledgeGraphEdge` / menu items are strings,
+  numbers, booleans and callbacks. No navigator-data or HAL types (the feature maps its model to
+  these in `entity-graph/util/to-knowledge-graph-props.ts`).
+- **Layout** is our own deterministic radial layout (`layout/radial-layout.ts`, pure, tested):
+  focus centred, its neighbours on ring 1 (previous trail node pinned left), the previous node's
+  neighbours on a sector of ring 2, older trail nodes on a line further left. No layout library.
+- **Edges** (`edges/relation-edge.tsx`): straight for one link, curved apart for parallel links
+  between the same pair, a loop for self-relations; HTML labels via `EdgeLabelRenderer` that also
+  anchor the edge menu.
+- **Menus**: node/edge menus are Radix popovers rendered inside the node / edge label, positioned
+  with `updatePositionStrategy="always"` (the anchor moves with React Flow's CSS-transformed
+  viewport without scroll/resize events). Focus returns to the node/label on close.
+- **Styling**: `@xyflow/react/dist/base.css` is imported in `src/styles/preset.css` (`layer(base)`)
+  and the `--xy-*` variables are mapped to our semantic tokens, so dark mode follows `.dark`
+  automatically. The React Flow attribution is kept (restyled for contrast).
+- **Content nodes** (`nodes/content-node.tsx`, `kind: "content"`): a file held by an item, drawn as
+  a compact vertical card with a muted header band (`FileIcon` from `fileType`, filename on up to two
+  lines, attribute as sublabel; `CONTENT_NODE_WIDTH`) so it never reads as an item card. Link it
+  with an edge of `variant: "content"`: dashed, no arrowhead, paperclip on the label. A `compact`
+  content node is just the file icon (filename in the tooltip/aria label); the layout places it
+  right beyond the node linking to it (`radialLayout`'s `attachments`) instead of on a ring —
+  pair it with a `hideLabel` edge. The feature draws only the focus item's files in full.
+- **Legend** (`knowledge-graph-legend.tsx`, `KnowledgeGraphLegend`): a horizontally scrolling row
+  of node-type toggles styled like the item nodes (`aria-pressed`; inactive = dashed + faded). The
+  caller decides what toggling does — the graph itself has no filtering.
+- **jsdom**: both `packages/ui` and `packages/features` test setups shim `ResizeObserver` (calling
+  back on `observe` for React Flow elements only — react-resizable-panels must keep the no-op), `DOMMatrixReadOnly`, node `offsetWidth/Height` and `getBBox`, per the React
+  Flow testing guide. Use `fireEvent`, not `userEvent`, for clicks on the canvas — d3-drag/zoom
+  crash on userEvent's synthetic mousedown in jsdom.
+- Stories: `Patterns/KnowledgeGraph` — `Default`, `ParallelAndSelfLoop`, `Overflow`,
+  `TrailCollapsed`, `LoadingAndErrorEdges`, `Dark`, `WithContent` (visual baselines still to be generated on the
+  pinned Linux image), plus `WithInteraction` (`knowledge-graph.interaction.stories.tsx`);
+  `Patterns/KnowledgeGraphLegend` — `Default`, `Overflowing` (baselines to generate too).
 
 ---
 

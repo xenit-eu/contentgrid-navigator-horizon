@@ -85,6 +85,8 @@ export const queryKeys = {
   },
 
   toOneRelation: {
+    /** Root key — invalidates EVERY cached to-one relation query (all relation names). */
+    all: () => [TO_ONE_RELATION_KEY] as const,
     /** Prefix key — invalidates ALL cached to-one relation queries for a given relation name. */
     forRelationName: (relationName: string) => [TO_ONE_RELATION_KEY, relationName] as const,
     /** Exact key for a specific to-one relation by relation name and relation URL. */
@@ -93,6 +95,8 @@ export const queryKeys = {
   },
 
   toManyRelation: {
+    /** Root key — invalidates EVERY cached to-many relation query (paged and infinite). */
+    all: () => [TO_MANY_RELATION_KEY] as const,
     /** Prefix key — invalidates ALL cached to-many relation queries for a given relation name. */
     forRelationName: (relationName: string) => [TO_MANY_RELATION_KEY, relationName] as const,
     /** Exact key for a specific to-many relation by relation name and relation URL. */
@@ -126,6 +130,21 @@ export const queryKeys = {
      */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
+  },
+
+  searchParamSuggestions: {
+    /**
+     * Exact key for one `useSearchParamSuggestions` request (a per-parameter suggestion/count
+     * search), by URL.
+     *
+     * Nested under `entityItemCollection.forEntity(...)` — unlike `typeaheadSuggestions` — so a
+     * create/update/delete invalidation refreshes the result counts the search bar shows. The
+     * trailing `"suggestions"` segment keeps it a different cache entry from the table's own
+     * `entityItemCollection.byUrl` even when both encode the same URL (the same way
+     * `infiniteByUrl` stays apart), so the two queries' option sets never share one entry.
+     */
+    byUrl: (profileEntity: ProfileEntity, url: string) =>
+      [ENTITY_COLLECTION_KEY, profileEntity.name, url, "suggestions"] as const,
   },
 
   collectionPage: {

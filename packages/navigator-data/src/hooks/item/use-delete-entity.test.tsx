@@ -369,3 +369,62 @@ describe("useDeleteEntityItem — 404 not-found/entity-item", () => {
     expect(problemError.problemDetail.type).toContain("not-found/entity-item");
   });
 });
+
+describe("useDeleteEntityItem — relation caches (spec 007)", () => {
+  it("invalidates every cached to-one and to-many relation read after success", async () => {
+    server.use(createDeleteHandler({ url: INVOICE_ITEM_URL }));
+
+    const queryClient = makeQueryClient();
+    const entityItem = makeEntityItemWithDeleteTemplate('"v1"');
+
+    // Seed relation reads that may list the deleted item somewhere else in the model.
+    const toManyKey = queryKeys.toManyRelation.byUrl("lineItems", `${BASE}/orders/o-1/invoices`);
+    const toOneKey = queryKeys.toOneRelation.byUrl("invoice", `${BASE}/payments/p-1/invoice`);
+    const infiniteKey = queryKeys.toManyRelation.infiniteByUrl(
+      "lineItems",
+      `${BASE}/orders/o-1/invoices`,
+    );
+    queryClient.setQueryData(toManyKey, { stale: false });
+    queryClient.setQueryData(toOneKey, { stale: false });
+    queryClient.setQueryData(infiniteKey, { pages: [], pageParams: [] });
+
+    const { result } = renderHook(() => useDeleteEntityItem(), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await act(async () => {
+      result.current.mutate(entityItem);
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(queryClient.getQueryState(toManyKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(toOneKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(infiniteKey)?.isInvalidated).toBe(true);
+  });
+
+  it("does not invalidate relation caches when the delete fails", async () => {
+    server.use(
+      createProblemHandler({
+        url: INVOICE_ITEM_URL,
+        method: "delete",
+        status: 409,
+        type: "https://contentgrid.cloud/problems/integrity/required-relation",
+        title: "Relation is required",
+      }),
+    );
+
+    const queryClient = makeQueryClient();
+    const toManyKey = queryKeys.toManyRelation.byUrl("lineItems", `${BASE}/orders/o-1/invoices`);
+    queryClient.setQueryData(toManyKey, { stale: false });
+
+    const { result } = renderHook(() => useDeleteEntityItem(), {
+      wrapper: makeWrapper(queryClient),
+    });
+    await act(async () => {
+      result.current.mutate(makeEntityItemWithDeleteTemplate('"v1"'));
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(queryClient.getQueryState(toManyKey)?.isInvalidated).toBe(false);
+  });
+});

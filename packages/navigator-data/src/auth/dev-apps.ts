@@ -64,6 +64,17 @@ export const sandboxApps: DevApp[] = [
     },
     category: "sandbox",
   },
+  {
+    name: "Banking + Loans",
+    description: "Demo for banks and loan with payments",
+    config: {
+      apiBaseUrl: "https://210c3c51-f6f9-4c7e-8c50-2f4dcf54faaf.sandbox.contentgrid.cloud",
+      authority:
+        "https://auth.sandbox.contentgrid.cloud/realms/cg-19375d3d-21c3-433c-8d82-648283399e30",
+      clientId: "contentgrid-webapp-2b5ef8b9-f7e3-4062-b633-f36a1855f5df",
+    },
+    category: "sandbox",
+  },
 ];
 
 export function getDefaultExtractServiceUrl(

@@ -277,6 +277,23 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.getByRole("link", { name: "1" })).toBeInTheDocument();
   });
 
+  it("offers an 'View in the grid' toolbar action only when the host supplies onOpenGraph (spec 007, FR-025)", async () => {
+    const profile = makeProfile({ hasContentAttributes: false });
+    const item = makeEntityItem({ profileEntity: profile });
+    mockHooks(profile, item);
+    const onOpenGraph = vi.fn();
+
+    const { unmount } = renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    expect(screen.queryByRole("button", { name: "View in the grid" })).not.toBeInTheDocument();
+    unmount();
+
+    renderView(
+      <EntityItemContentFocusView entityName="order" itemId="1" onOpenGraph={onOpenGraph} />,
+    );
+    screen.getByRole("button", { name: "View in the grid" }).click();
+    expect(onOpenGraph).toHaveBeenCalledTimes(1);
+  });
+
   it("renders Home/collection crumbs as plain, non-interactive text when no link renderers are supplied (Principle VIII: the view has no route knowledge of its own)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });

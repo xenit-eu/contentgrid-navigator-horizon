@@ -22,6 +22,9 @@ export interface UseDeleteEntityItemOptions {
  * Cache behaviour on success:
  * - `removeQueries` on `entityItem.byUrl` (item is gone).
  * - `invalidateQueries` on `entityItemCollection.forEntity` so lists reflect the deletion.
+ * - `invalidateQueries` on the `toOneRelation` / `toManyRelation` roots (not awaited): any relation
+ *   of any item may have listed (or pointed at) the deleted item, and the client cannot know which,
+ *   so every cached relation read is refreshed in the background.
  * - Caller's `onSuccess` runs after cache is consistent.
  *
  * @param options - Optional mutation options (onSuccess, onError, etc.)
@@ -48,6 +51,10 @@ export function useDeleteEntityItem(options?: UseDeleteEntityItemOptions) {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
       });
+      // Not awaited: the refetches include the deleted item's own relations (now 404, retried),
+      // which must not hold back the caller's onSuccess. Marking them invalid is synchronous.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.toOneRelation.all() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.toManyRelation.all() });
       await onSuccess?.(deletedItem, variables, onMutateResult, context);
     },
     ...restMutationOptions,
