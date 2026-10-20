@@ -22,11 +22,15 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
 - Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: boolean`) and calls
   navigator-data's hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
-- A view with state (filters, sort, page, …) takes optional `state` / `onStateChange`; with neither it keeps
-  its own internal state. State is plain, serialisable data defined by the view.
-- A view's own preload (e.g. `preloadEntityItemDetail(ctx, entityName, itemId)`) is called from the route
-  loader, fills the cache via navigator-data's ensure helpers, never rejects, and returns while the API
-  client is absent ([contract](../../specs/005-views-layer/contracts/view-preload.md)).
+- A view that has list state (filters, sort, page, …) takes it bundled as an optional `state` / `onStateChange`
+  pair — never as separate top-level props — and exports its own state type for it; with neither `state` nor
+  `onStateChange` passed, the view MUST still work correctly, keeping that state internally. A view with no
+  such state exports no state type and takes neither prop.
+- Exporting a preload is per view, not a requirement every view meets: a view MAY export its own small preload
+  function (e.g. `preloadEntityItemDetail(ctx, entityName, itemId)`) for a route that wants to start loading
+  before mount. Where one exists, the route loader calls it directly; it fills the cache via navigator-data's
+  ensure helpers, never rejects, and returns while the API client is absent
+  ([contract](../../specs/005-views-layer/contracts/view-preload.md)).
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
 - Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (tag moves here
   in a later PR).
