@@ -30,7 +30,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   function (e.g. `preloadEntityItemDetail(ctx, entityName, itemId)`) for a route that wants to start loading
   before mount. Where one exists, the route loader calls it directly; it fills the cache via navigator-data's
   ensure helpers, never rejects, and returns while the API client is absent
-  ([contract](../../specs/005-views-layer/contracts/view-preload.md)).
+  ([contract](../../specs/005-views-layer/contracts/view-data-loading.md)).
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
 - Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (tag moves here
   in a later PR).
