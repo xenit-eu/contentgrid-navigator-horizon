@@ -27,7 +27,7 @@
  * credentials are required: `apps/navigator-experimental/.env.development` runs its dev server
  * against MSW-mocked HAL data with dev-token auth (`VITE_USE_MOCK_API=true` / `VITE_DEV_TOKEN`,
  * see `apps/navigator-experimental/src/main.tsx`'s `enableMocking()`), never a real backend — so
- * this spec exercises the demo fixtures registered in `apps/navigator-experimental/src/mocks/
+ * this spec exercises the demo fixtures registered in `apps/navigator-experimental/src/local-mock-backend/
  * content-focus-handlers.ts` and `rendition-handlers.ts` (T031) instead of a seeded item on a real
  * ContentGrid application. The original task wording ("log in, open the fixture item with
  * fixtures/twenty-pages.pdf") assumed a real-backend flow; that fixture file is reused here as a

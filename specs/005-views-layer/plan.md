@@ -32,7 +32,7 @@ Add `packages/views` between the apps and `packages/features`. The app reads the
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-Checked against constitution v1.7.0 (this PR amends Principles III, IV and VIII, to v1.9.0 across two review rounds; see `docs/adr/ADR-018-views-layer.md`).
+Checked against constitution v1.8.0 (this PR amends Principles III, IV and VIII, to v1.10.0 across two review rounds; see `docs/adr/ADR-018-views-layer.md`).
 
 | Principle                               | Status | Notes                                                                                                                                                                                                                                                                                                                                                           |
 | --------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,7 +48,7 @@ Checked against constitution v1.7.0 (this PR amends Principles III, IV and VIII,
 
 ### Principle VIII in detail
 
-| Bullet (v1.7.0)                                                                                                                                  | How this plan complies                                                                                                                                                                                                                                                                           |
+| Bullet (v1.8.0)                                                                                                                                  | How this plan complies                                                                                                                                                                                                                                                                           |
 | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | An app passes a view only plain-value props and the view state; never a resolved domain object it fetched itself.                                | Each view declares its own explicit props (e.g. an entity name and item id, or a link such as `itemUrl`/`collectionUrl`) and its own state type, all plain data ([view-props-and-state.md](contracts/view-props-and-state.md)). The collection route stops loading `ProfileEntity` (PR 3).       |
 | An app's route-level responsibility is: choose the view, supply its props/state, and guarantee loading before mount through the router `loader`. | Where a view exports one, the route loader calls its own `preload`, built around `navigator-data`'s `ensure*` helpers over the query factories the view's own hooks use ([view-data-loading.md](contracts/view-data-loading.md)); the pending, error and not-found components stay the router's. |
@@ -82,7 +82,7 @@ specs/005-views-layer/
 └── tasks.md
 ```
 
-Documents outside the spec directory changed by PR 1: `docs/adr/ADR-018-views-layer.md` (new), `docs/adr/ADR-007-two-layer-dependency-model.md` (amendment note), `docs/adr/README.md`, root `CLAUDE.md` (ADR list) and `.specify/memory/constitution.md` (v1.9.0).
+Documents outside the spec directory changed by PR 1: `docs/adr/ADR-018-views-layer.md` (new), `docs/adr/ADR-007-two-layer-dependency-model.md` (amendment note), `docs/adr/README.md`, root `CLAUDE.md` (ADR list) and `.specify/memory/constitution.md` (v1.10.0).
 
 ### Source Code (repository root)
 

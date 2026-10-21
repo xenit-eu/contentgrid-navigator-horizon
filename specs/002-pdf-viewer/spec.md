@@ -25,7 +25,7 @@
 - User-authored annotations: comments, drawing, stamps, redaction, form filling inside the PDF.
 - Native previews of images, video or any non-PDF format that is not converted to PDF (HZN-6A.5, ACC-2906).
 - Previewing a locally selected file before it is saved (belongs to the content upload / create story; the viewer receives its document as bytes, so it can be reused there).
-- The upload flow itself (replacing a file from the toolbar, upload progress, upload errors): the content-upload story. This spec only requires that the "No file" state hosts the drag-and-drop area (Story 1, scenario 5).
+- Replacing a file that is already stored: belongs to the edit-entity form. This spec only covers uploading into an attribute that holds no file, from the "No file" state (Story 1, scenario 5).
 - Byte-range / progressive download of large PDFs (explicitly deferred in the roadmap, Phase 6A).
 - Page rotation and thumbnail sidebar (never shipped in production; not requested).
 - The attribute-focus layout for entities without a content attribute (mockup page 04) beyond the routing rule that selects between the two layouts.
@@ -52,7 +52,7 @@ A user opens an entity item that has a content attribute holding a PDF. The page
 2. **Given** page 1 of a 3-page document is shown, **When** the user activates "next page", **Then** page 2 is shown and the indicator reads "2 / 3"; "previous page" is disabled on page 1 and "next page" on page 3.
 3. **Given** the document is shown at fit-width (the default), **When** the user zooms in, **Then** the zoom increases to the next preset and the indicator shows the percentage; fit-width and fit-page remain selectable; scrolling continuously through pages keeps the page indicator in sync.
 4. **Given** an entity item has two content attributes that both hold a file, **When** the page opens, **Then** the first one in profile order is shown and an attribute selector lets the user switch; switching cancels any load still in flight and never shows the previous document while the new one loads.
-5. **Given** an entity item has a content attribute but no file stored in it, **When** the page opens, **Then** the viewer area shows a "No file" state without any error, offers a drag-and-drop area to upload a file for that attribute (the upload behaviour itself is specified in the content-upload story), and the layout stays content-focus.
+5. **Given** an entity item has a content attribute but no file stored in it, **When** the page opens, **Then** the viewer area shows a "No file" state without any error, offers a drag-and-drop area to upload a file for that attribute when the user may upload to it, and the layout stays content-focus. Dropping a file uploads it and shows the percentage sent; a failed upload shows its problem above the drag-and-drop area; if another user stored a file first, the upload is refused and their file is shown.
 6. **Given** an entity whose profile has no content attribute, **When** its detail page opens, **Then** the attribute-focus layout is used and no viewer is rendered.
 7. **Given** a document is displayed, **When** the user activates Download, **Then** the original file is delivered with its original filename using the user's own credentials.
 8. **Given** a document is displayed, **When** the user enters fullscreen and later leaves it, **Then** the viewer fills the screen and afterwards returns to the content-focus layout with the same zoom mode as before.
@@ -150,7 +150,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 **States and errors**
 
-- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; protected document; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed.
+- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area when the user may upload); uploading (with the percentage sent); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; protected document; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed.
 - **FR-025**: A failure inside the embedded document renderer MUST be contained to the viewer area; the rest of the detail page MUST remain usable.
 
 **Security**

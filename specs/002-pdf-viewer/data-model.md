@@ -92,11 +92,13 @@ Transitions: `idle → opening → ready | protected | invalid`; `ready → idle
 
 ## Content preview panel state (new, feature component)
 
-Derived, not stored: `query.status × PreviewSource` → one of the FR-024 states.
+Derived, not stored: `query.status × PreviewSource` → one of the FR-024 states. The one exception is
+`uploading`, which the panel shows while its `useUploadContent` mutation is pending.
 
 | Preview state        | Condition                                                        | Download | Retry |
 | -------------------- | ---------------------------------------------------------------- | -------- | ----- |
 | `noFile`             | `metadata === null` or `PreviewSource.noFile`                    | no       | no    |
+| `uploading`          | `useUploadContent` pending for this attribute                    | no       | no    |
 | `loading`            | query pending, expected `origin: stored`                         | yes      | no    |
 | `preparingPreview`   | query pending, non-PDF with rendition configured (FR-006/FR-012) | yes      | no    |
 | `ready`              | `PreviewSource.pdf`                                              | yes      | no    |

@@ -1,7 +1,8 @@
 /**
  * Data-model.md's "Content preview panel state" — derived (never stored) from
  * `useContentPreview`'s query status × `PreviewSource`, or from the PDF viewer's own callbacks
- * (`cannotDisplay`/`protected`/`viewerFailure`). See spec `002-pdf-viewer` FR-024.
+ * (`cannotDisplay`/`protected`/`viewerFailure`). See spec `002-pdf-viewer` FR-024. `uploading` is
+ * the one exception: `ContentPreviewPanel` sets it while `useUploadContent` is pending.
  *
  * Lives in `util/` (not `components/`) so `derive-content-preview-state.ts` — a pure function —
  * can share this type without a util module importing from `components/` (forbidden by
@@ -10,6 +11,7 @@
  */
 export type ContentPreviewState =
   | "noFile"
+  | "uploading"
   | "loading"
   | "preparingPreview"
   | "ready"
@@ -23,7 +25,7 @@ export type ContentPreviewState =
 /** The states data-model.md marks with an error message + optional Retry action. */
 export type ErrorPreviewState = Exclude<
   ContentPreviewState,
-  "noFile" | "loading" | "preparingPreview" | "ready"
+  "noFile" | "uploading" | "loading" | "preparingPreview" | "ready"
 >;
 
 /** data-model.md's "Content preview panel state" table — which error states offer Retry. */

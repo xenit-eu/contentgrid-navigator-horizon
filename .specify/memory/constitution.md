@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.9.0
-- Amendment (1.8.0 → 1.9.0, MINOR): a second round of the same ACC-3216 PR #227 review. Principle
+- Version change: 1.0.0 → 1.10.0
+- Amendment (1.9.0 → 1.10.0, MINOR): a second round of the same ACC-3216 PR #227 review. Principle
   VIII's app-view contract bullet said a link-based prop was "deferred until a view actually needs
   one (no HAL link today)". The reference implementation (ACC-3216 PR #246, now adopted as PR 3 of
   this series) builds it directly: the item detail view (`itemUrl`) and the collection view
@@ -9,7 +9,7 @@ Sync Impact Report
   `describesUrl` and the profile-optional `useEntityItem`, with no shared target-resolution
   mechanism. The bullet is corrected to describe this as built, not deferred — a scope/meaning
   change, hence MINOR, not PATCH.
-- Amendment (1.7.0 → 1.8.0, MINOR): following ACC-3216 PR #227 review (spec 005, the views
+- Amendment (1.8.0 → 1.9.0, MINOR): following ACC-3216 PR #227 review (spec 005, the views
   layer), Principle VIII's preamble drops the "generated through /speckit-plan" carve-out and
   the "existing code is not retroactively non-compliant" framing for "existing code is always
   right; correct the spec if it's wrong" — a scope/meaning change, hence MINOR. Its bullets are
@@ -19,7 +19,7 @@ Sync Impact Report
   the generic `ViewTargetGate`, the gate bullet now has each view render its own loading/error/
   not-found state through the shared `LoadingPage`/`ErrorPage` components instead of a shared
   gate primitive.
-- Amendment (1.6.0 → 1.7.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
+- Amendment (1.7.0 → 1.8.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
   ACC-3216). Principle VIII previously cited a non-existent
   `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
   `ADR-018-views-layer.md`, which this citation resolves to; the earlier ADR-018 references in this report, such as "ADR-018's export-gaps section", pointed to a planned ADR that was never written) and placed views and the shared gate hook in
@@ -29,6 +29,15 @@ Sync Impact Report
   alongside the target. Principle III gains the `packages/views` import boundary. Principle IV
   gains a forward-looking bullet: the `x-stability` tag moves from features to views when spec 005
   moves stability to views (ACC-3216); the generic-app gate stays suspended pre-GA.
+- Amendment (1.6.0 → 1.7.0, MINOR): Principle I — the conditional-request bullet ("Every
+  mutating request MUST carry `If-Match`") misstated the platform contract. Per the
+  [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html),
+  only entity-item, to-one relation and entity-content support conditional requests, each with
+  its own ETag; to-many relations do not; a create-only PUT uses `If-None-Match: *` (not for
+  entity-items). Rewritten to require conditionality on the changed resource's OWN ETag, permit
+  `If-None-Match: *` where supported, and forbid sending one resource's ETag to another. 412
+  handling unchanged. MINOR rather than PATCH: it adds a new prohibition and a new permitted
+  form, not just wording. Mirrors the same-PR `CLAUDE.md` corrections (Governance → Amendment).
 - Amendment (1.5.0 → 1.6.0, MINOR): NEW Principle IX — Spec Traceability & Self-Contained
   Artifacts. Every change in a spec-driven PR must trace to a part of the feature's spec;
   implementation that departs from the spec must amend the spec in the same PR; repo
@@ -47,15 +56,15 @@ Sync Impact Report
   Found while auditing the real barrel for ADR-018's export-gaps section.
 - Modified principles:
   - III. Two-Layer Dependency Model & Package Boundaries: added the `packages/views` import
-    boundary (1.6.0 → 1.7.0).
+    boundary (1.7.0 → 1.8.0).
   - IV. Three-Track Delivery & Stability Gating: added a forward-looking bullet — the tag moves
     from features to views when spec 005 moves stability to views (ACC-3216); the generic-app gate stays suspended
-    pre-GA (1.6.0 → 1.7.0).
+    pre-GA (1.7.0 → 1.8.0).
   - VIII. View-Owned Data Loading, App-View Contract & Transformation Placement: ADR-018 citation now
     resolves to `ADR-018-views-layer.md`; views live in `packages/views`; navigation context; toolbar drawn by the
     view and switchable off; view state alongside the target; features fill their space
-    (1.6.0 → 1.7.0). Preamble further revised (1.7.0 → 1.8.0): see the amendment entry above.
-    App-view contract bullet corrected: a link-based prop is built, not deferred (1.8.0 → 1.9.0,
+    (1.7.0 → 1.8.0). Preamble further revised (1.8.0 → 1.9.0): see the amendment entry above.
+    App-view contract bullet corrected: a link-based prop is built, not deferred (1.9.0 → 1.10.0,
     see the amendment entry above).
   - I. HAL Is the Only Interaction Model: added the binary-content exception (no HAL-FORMS
     template exists for `cg:content` PUT/GET) — the principle as written contradicted this
@@ -138,10 +147,17 @@ Sync Impact Report
   links directly. The one narrow exception is using an opaque `_cursor` value as a lookup key
   into a client-side registry that maps back to the exact link it came from; the value itself
   is never decoded, and no fetch URL is ever built from it by hand.
-- Every mutating request MUST carry `If-Match` from a verbatim, unmodified ETag, stored only
-  for the session (never persisted). A 412 (`unsatisfied-version`) MUST be handled by
-  re-fetching, re-applying the user's change, and retrying — a hook MUST NOT swallow or
-  auto-retry a 412 itself.
+- A mutation on a conditional-request resource — entity-item (`/{plural}/{id}`), to-one
+  relation (`/{plural}/{id}/{relation}`) or entity-content (`/{plural}/{id}/{attribute}`) — MUST
+  be conditional on **that resource's own** ETag: `If-Match` with the ETag verbatim and
+  unmodified, stored only for the session (never persisted); or `If-None-Match: *` for a
+  create-only PUT where the platform supports it (never for entity-items). An ETag MUST NOT be
+  sent to a different resource (e.g. an entity item's ETag on its content or relations).
+  Resources outside that list (to-many relations and their per-item endpoints) are not
+  conditional. Where a resource's own ETag cannot currently be obtained, the gap MUST be
+  documented (e.g. FIXME(ACC-3186)) rather than papered over with another resource's ETag. A
+  412 (`unsatisfied-version`) MUST be handled by re-fetching, re-applying the user's change,
+  and retrying — a hook MUST NOT swallow or auto-retry a 412 itself.
 
 Rationale: the REST/HAL API is the platform's only integration point. Every deviation above
 re-encodes a piece of server-owned structure — a path shape, a cursor format, a template
@@ -476,4 +492,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.9.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-20
+**Version**: 1.10.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-21

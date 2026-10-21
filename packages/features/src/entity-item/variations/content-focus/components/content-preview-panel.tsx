@@ -6,6 +6,7 @@ import {
   toProblemDisplayModel,
   useContentPreview,
   useDownloadContent,
+  useUploadContent,
 } from "@contentgrid/navigator-data";
 import { Badge, PdfEngineProvider, PdfViewerErrorBoundary } from "@contentgrid/ui";
 import type { PdfLoadError, PdfViewerToolbarOptions } from "@contentgrid/ui";
@@ -59,8 +60,8 @@ function triggerDownload(blob: Blob, filename: string): void {
 }
 
 /**
- * Owns `useContentPreview` + `useDownloadContent` for one content attribute and renders the
- * matching `ContentPreviewFrame` state (data-model.md's "Content preview panel state", FR-024).
+ * Owns `useContentPreview` + `useDownloadContent` + `useUploadContent` for one content attribute
+ * and renders the matching `ContentPreviewFrame` state (data-model.md's "Content preview panel state", FR-024).
  * Lazy-loads `@contentgrid/ui`'s `PdfViewer` — wrapped in `PdfViewerErrorBoundary` (catches a
  * render-time exception → `viewerFailure`) and its own `PdfEngineProvider` (self-hosted
  * `wasmUrl`) — only once a displayable PDF (stored or converted) is available.
@@ -72,6 +73,20 @@ export function ContentPreviewPanel({
 }: Readonly<ContentPreviewPanelProps>) {
   const query = useContentPreview(entityItem, attributeName);
   const downloadMutation = useDownloadContent(entityItem, attributeName);
+  const uploadMutation = useUploadContent(entityItem, attributeName);
+  // The attribute the upload was started on: other attributes don't show its progress or error.
+  const [uploadAttributeName, setUploadAttributeName] = useState<string | null>(null);
+  const canUpload = entityItem.canUploadContent(attributeName);
+
+  // Leaving the attribute of a finished upload forgets that upload, so its error isn't shown
+  // again when the user comes back. An upload still running is kept, so its progress is.
+  const [shownAttributeName, setShownAttributeName] = useState(attributeName);
+  if (attributeName !== shownAttributeName) {
+    setShownAttributeName(attributeName);
+    if (shownAttributeName === uploadAttributeName && !uploadMutation.isPending) {
+      setUploadAttributeName(null);
+    }
+  }
   const [viewerLoadErrorKind, setViewerLoadErrorKind] = useState<ViewerLoadErrorKind | null>(null);
   // Bumped on every Retry so the viewer/engine subtree's `key` changes, forcing a full remount —
   // an "engine" load error (`PdfEngineProvider`) needs a fresh engine attempt, not just a
@@ -110,6 +125,14 @@ export function ContentPreviewPanel({
         );
       },
     });
+  }
+
+  function handleUpload(file: File | null): void {
+    if (file) {
+      setUploadAttributeName(attributeName);
+      // Only offered in the "No file" state, so there is no stored content to match.
+      uploadMutation.mutate({ file, contentEtag: null });
+    }
   }
 
   function handleRetry(): void {
@@ -174,10 +197,31 @@ export function ContentPreviewPanel({
     );
   }
 
+  const attributeUpload = uploadAttributeName === attributeName ? uploadMutation : undefined;
+
+  if (attributeUpload?.isPending) {
+    return (
+      <ContentPreviewFrame
+        state="uploading"
+        uploadProgress={attributeUpload.progress}
+        toolbarStart={toolbarStart}
+      />
+    );
+  }
+
+  const uploadProblem =
+    state === "noFile" && attributeUpload?.error
+      ? toProblemDisplayModel(attributeUpload.error)
+      : undefined;
+
   return (
     <ContentPreviewFrame
       state={state}
-      problem={problem}
+      problem={uploadProblem ?? problem}
+      // One upload at a time: no drop zone on another attribute while an upload is running.
+      onFileChange={
+        state === "noFile" && canUpload && !uploadMutation.isPending ? handleUpload : undefined
+      }
       onDownload={canDownload ? handleDownload : undefined}
       onRetry={handleRetry}
       // Every non-"ready" state must still offer the attribute selector (round-2 review: it must
