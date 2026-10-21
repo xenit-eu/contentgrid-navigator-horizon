@@ -12,6 +12,10 @@ const config: StorybookConfig = {
       directory: "../../../packages/features/src",
       files: "**/*.stories.@(ts|tsx)",
     },
+    {
+      directory: "../../../packages/views/src",
+      files: "**/*.stories.@(ts|tsx)",
+    },
   ],
   addons: ["@storybook/addon-themes", "@storybook/addon-a11y"],
 };
