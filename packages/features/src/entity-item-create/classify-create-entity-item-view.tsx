@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { ArrowRightIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, FilePlusIcon } from "@phosphor-icons/react";
 import { type ProfileEntity, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   Button,
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
   FileUploadZone,
+  IconBadge,
+  PageTitle,
 } from "@contentgrid/ui";
 import { LoadingPage } from "../app-info-pages";
 import { CreateEntityItemProfileSelectorList } from "./create-entity-item-profile-selector";
@@ -41,10 +41,13 @@ export function ClassifyCreateEntityItemView({
     <div className="flex min-h-full items-center justify-center px-4 py-6">
       <Card className="w-full max-w-xl">
         <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>Create Item</h1>
-          </CardTitle>
-          <CardDescription>Select the entity you want to create.</CardDescription>
+          <PageTitle
+            title={"New Item"}
+            icon={<IconBadge icon={<FilePlusIcon />} />}
+            header="Create Entity Item"
+            subtitle="Select the entity you want to create."
+            boldTitle={false}
+          />
         </CardHeader>
 
         <CardContent className="flex flex-col gap-6">
