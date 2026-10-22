@@ -19,10 +19,6 @@
     "./entity-item-collection": {
       "import": "./src/entity-item-collection/index.ts",
       "types": "./src/entity-item-collection/index.ts"
-    },
-    "./shells": {
-      "import": "./src/shells/index.ts",
-      "types": "./src/shells/index.ts"
     }
   },
   "scripts": {

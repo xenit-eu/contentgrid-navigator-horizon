@@ -1,8 +1,8 @@
 import { type ReactNode, useMemo } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useOpenInNewTab } from "@contentgrid/features/router-shell";
-import { NavigationProvider } from "../navigation";
-import type { Navigation } from "../navigation";
+import type { Navigation } from "@contentgrid/views";
+import { NavigationProvider } from "@contentgrid/views";
 
 /**
  * The app's navigation object for views: every `open*` becomes a route change. The collection is
@@ -13,8 +13,12 @@ import type { Navigation } from "../navigation";
  * elements (cmd/middle-click, copy link, screen-reader link semantics) instead of buttons.
  * `openCreateItem` opens the entity's create form in a new tab, same as the old per-app wiring.
  *
- * Lives under `packages/views/src/shells/`, not the package's main export: this is the one place
- * outside `apps/*` allowed to import `@tanstack/react-router` (root `CLAUDE.md`).
+ * Lives in `src/routes/` with a leading `-` so TanStack Router's file-based router ignores it
+ * (`routeFileIgnorePrefix`, default `"-"`) while this file still type-checks `to`/`search` against
+ * this app's own registered route tree (see `main.tsx`'s `declare module "@tanstack/react-router"`)
+ * — a typo'd or renamed route string fails `pnpm typecheck` here, same as any other route file.
+ * `packages/views` must not import `@tanstack/react-router` at all; this is the one place in each
+ * app allowed to (`packages/views/CLAUDE.md`).
  */
 export function RouterNavigationProvider({ children }: Readonly<{ children: ReactNode }>) {
   const navigate = useNavigate();
@@ -29,7 +33,7 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
         void navigate({
           to: "/$entity/$itemId",
           params: { entity: entityName, itemId: id },
-          search: (prev: Record<string, unknown>) => prev,
+          search: (prev) => prev,
         }),
       openCreateItem: openCreatePage,
       hrefFor: {
@@ -40,7 +44,7 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           router.buildLocation({
             to: "/$entity/$itemId",
             params: { entity: entityName, itemId: id },
-            search: (prev: Record<string, unknown>) => prev,
+            search: (prev) => prev,
           }).href,
       },
     }),
