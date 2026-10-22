@@ -17,11 +17,12 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - Views import `@contentgrid/navigator-data`, `@contentgrid/features` and `@contentgrid/ui`. Features,
   `navigator-data` and `ui` never import views.
-- **Only views call `useNavigation()`; no router in views or features.** Every click that opens something,
+- **Only views call `useViewNavigation()`; no router in views or features.** Every click that opens something,
   including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
-- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: boolean`) and calls
-  navigator-data's hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
+- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: ViewToolbarConfiguration`
+  where `ViewToolbarConfiguration = { actions?: ReactNode } | false | undefined`) and calls navigator-data's
+  hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
 - A view that has list state (filters, sort, page, …) takes it bundled as an optional `state` / `onStateChange`
   pair — never as separate top-level props — and exports its own state type for it; with neither `state` nor
   `onStateChange` passed, the view MUST still work correctly, keeping that state internally. A view with no
@@ -37,8 +38,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Navigation
 
-- `NavigationProvider` is supplied by the host; `useNavigation()` throws in development without one.
-- `ChildNavigationProvider` gives a child view its own navigation object; calls it does not override go to the parent's.
+- `NavigationProvider` is supplied by the host; `useViewNavigation()` throws in development without one.
+- `ChildNavigationProvider` gives a child view its own navigation object; calls it doesn't override go to the parent's navigation.
 - `@contentgrid/views/testing` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
 

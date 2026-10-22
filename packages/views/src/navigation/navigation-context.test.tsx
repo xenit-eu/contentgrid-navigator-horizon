@@ -1,12 +1,16 @@
 import { render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ChildNavigationProvider, NavigationProvider, useNavigation } from "./navigation-context";
+import {
+  ChildNavigationProvider,
+  NavigationProvider,
+  useViewNavigation,
+} from "./navigation-context";
 import type { Navigation } from "./navigation-context";
 import { createRecordingNavigation, withRecordingNavigation } from "./testing";
 
 function NavButtons() {
-  const navigation = useNavigation();
+  const navigation = useViewNavigation();
   return (
     <>
       <button onClick={() => navigation.openHome()}>home</button>
@@ -16,17 +20,17 @@ function NavButtons() {
   );
 }
 
-describe("useNavigation", () => {
+describe("useViewNavigation", () => {
   it("throws a clear error without a provider in development", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => renderHook(() => useNavigation())).toThrow(/NavigationProvider/);
+    expect(() => renderHook(() => useViewNavigation())).toThrow(/NavigationProvider/);
     error.mockRestore();
   });
 
   it("returns a no-op navigation without a provider outside development", () => {
     vi.stubEnv("DEV", false);
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { result } = renderHook(() => useNavigation());
+    const { result } = renderHook(() => useViewNavigation());
     expect(() => {
       result.current.openHome();
       result.current.openEntityItemCollection("invoice");
@@ -41,11 +45,11 @@ describe("useNavigation", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     // Fresh module instance so the once-per-module flag starts unset, regardless of test order.
     vi.resetModules();
-    const { useNavigation: freshUseNavigation } = await import("./navigation-context");
+    const { useViewNavigation: freshUseNavigation } = await import("./navigation-context");
     renderHook(() => freshUseNavigation());
     renderHook(() => freshUseNavigation());
     expect(error).toHaveBeenCalledTimes(1);
-    expect(error.mock.calls[0][0]).toMatch(/useNavigation.*NavigationProvider/);
+    expect(error.mock.calls[0][0]).toMatch(/useViewNavigation.*NavigationProvider/);
     error.mockRestore();
     vi.unstubAllEnvs();
   });

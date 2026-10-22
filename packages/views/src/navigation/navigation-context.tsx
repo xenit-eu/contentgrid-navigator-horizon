@@ -40,17 +40,17 @@ export function NavigationProvider({
 let hasLoggedMissingProvider = false;
 
 /** Reads the host's navigation object. Throws in development when there is no provider. */
-export function useNavigation(): Navigation {
+export function useViewNavigation(): Navigation {
   const navigation = useContext(NavigationContext);
   if (navigation) return navigation;
   if (import.meta.env.DEV) {
-    throw new Error("useNavigation must be used inside a <NavigationProvider>");
+    throw new Error("useViewNavigation must be used inside a <NavigationProvider>");
   }
   if (!hasLoggedMissingProvider) {
     hasLoggedMissingProvider = true;
     // eslint-disable-next-line no-console -- intentional, once per module; see the comment above.
     console.error(
-      "useNavigation was called outside a <NavigationProvider>; navigation is a no-op.",
+      "useViewNavigation was called outside a <NavigationProvider>; navigation is a no-op.",
     );
   }
   return noopNavigation;
@@ -68,7 +68,7 @@ export function ChildNavigationProvider({
   overrides: Partial<Navigation>;
   children: ReactNode;
 }>) {
-  const parent = useNavigation();
+  const parent = useViewNavigation();
   const { openHome, openEntityItemCollection, openItem } = overrides;
   const navigation = useMemo<Navigation>(
     () => ({
