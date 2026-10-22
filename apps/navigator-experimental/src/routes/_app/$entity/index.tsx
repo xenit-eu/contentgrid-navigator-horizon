@@ -10,16 +10,17 @@ import {
   entitySearchStateValidator,
 } from "@contentgrid/features/search";
 import {
-  type ProfileEntity,
   recallCollectionFilters,
   recallCollectionPageHref,
   recallCollectionSort,
   rememberCollectionFilters,
   rememberCollectionPageHref,
   rememberCollectionSort,
-  useProfileEntity,
 } from "@contentgrid/navigator-data";
-import { EntityItemCollectionView } from "@contentgrid/views/entity-item-collection";
+import {
+  type CollectionViewState,
+  EntityItemCollectionView,
+} from "@contentgrid/views/entity-item-collection";
 
 export const Route = createFileRoute("/_app/$entity/")({
   validateSearch: entitySearchStateValidator,
@@ -28,149 +29,107 @@ export const Route = createFileRoute("/_app/$entity/")({
 
 function EntityItemCollectionPage() {
   const { entity: entityName } = useParams({ strict: false });
+  if (!entityName) return <LoadingPage />;
 
-  // EntityProfileGate (the parent /$entity route) already resolved and
-  // validated the profile before this renders — this is a cached read.
-  const { data: profile } = useProfileEntity({ name: entityName });
-
-  if (!profile) return <LoadingPage />;
-
-  // Remounts EntityItemCollectionRoute on a genuine entity switch, so its pageUrl state (seeded
-  // once from the page-href memo on mount) doesn't leak the previous entity's remembered page.
-  return <EntityItemCollectionRoute key={profile.name} profile={profile} />;
+  // Remounts on an entity switch, so the state seeded from one entity's memo never leaks into
+  // another's list.
+  return <EntityItemCollectionRoute key={entityName} entityName={entityName} />;
 }
 
-function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntity }>) {
+/**
+ * The list page: the app owns the address, the view owns the list. Filters and sort live in the
+ * URL as readable, shareable params; the page position stays out of it (an opaque cursor only
+ * resolves in the session that received it). All three are remembered per entity in the
+ * QueryClient, so coming back to the list with a clean URL — an item's breadcrumb opens it with an
+ * empty search — restores it as the user left it.
+ */
+function EntityItemCollectionRoute({ entityName }: Readonly<{ entityName: string }>) {
   const go = useNavigate();
   const queryClient = useQueryClient();
   const search = useSearch({ strict: false });
   const urlFilters = useMemo(() => decodeFiltersFromSearchState(search), [search]);
-
-  // Filters round-trip through the URL as individual, readable s.<property> params — shareable
-  // across sessions — EXCEPT across a trip to an item's detail page: that page's URL stays
-  // clean (see `onEntityItemClick` below and the $itemId route's breadcrumb), so the URL alone
-  // isn't enough to restore them on the way back. `rememberCollectionFilters` is a second, plain
-  // memo kept in sync with `filters` (below) — independent of pagination, unlike the page-href
-  // memo, which only ever gets written on an explicit next/prev click and is therefore empty
-  // for a filter the user applied but never paged through.
-  const [filters, setFilters] = useState<Record<string, string>>(() =>
-    Object.keys(urlFilters).length > 0
-      ? urlFilters
-      : (recallCollectionFilters(queryClient, profile.name) ?? {}),
-  );
-
-  // Keeps the memo in sync with `filters` regardless of how `filters` changed — an explicit
-  // sidebar edit (`handleFiltersChange`), the URL-sync effect below, or the initial state itself
-  // (a deep link/bookmark arrives with filters already in the URL, which never otherwise touches
-  // the memo). Without this, filters that only ever arrived via the URL are invisible to the
-  // memo, so a round trip through an item's clean-URL detail page silently drops them.
-  useEffect(() => {
-    rememberCollectionFilters(queryClient, profile.name, filters);
-  }, [filters, queryClient, profile.name]);
-
-  // Keeps `filters` in sync if the URL's own filters change while this route stays mounted
-  // (e.g. browser back/forward between two filtered searches, or a shared link opened while
-  // already here). Never resets to `{}` on its own — an empty URL is ambiguous between "not
-  // synced from the URL yet" and "explicitly cleared," and the explicit-clear path
-  // (`handleFiltersChange`) already updates `filters` directly for that case.
-  useEffect(() => {
-    // First pass is handled by the lazy initializer; from here on the URL is authoritative.
-    if (!didSyncUrlFromCacheRef.current) return;
-    setFilters(urlFilters);
-  }, [urlFilters]);
-
-  // The initial `filters` state above may have come from the cache rather than the URL (arrived
-  // via the item-detail breadcrumb with a clean URL, but a filter was remembered). Reflect that
-  // back into the URL once, so it's shareable/bookmarkable again and the address bar agrees
-  // with what the sidebar shows — mirrors what `handleFiltersChange` already does for an
-  // in-app filter edit, just for this one restore-from-cache case. Runs only once per mount
-  // (guarded by the ref) — this is a one-time reconciliation, not a continuous sync.
-  const didSyncUrlFromCacheRef = useRef(false);
-  useEffect(() => {
-    if (didSyncUrlFromCacheRef.current) return;
-    didSyncUrlFromCacheRef.current = true;
-    if (Object.keys(urlFilters).length === 0 && Object.keys(filters).length > 0) {
-      go({
-        to: "/$entity",
-        params: { entity: profile.name },
-        search: (prev) => applyFiltersToSearchState(prev, filters),
-        replace: true,
-      });
-    }
-  }, [urlFilters, filters, go, profile.name]);
-
-  // Pagination position is deliberately kept out of the URL — an opaque cursor only ever
-  // resolves back to a real page in the session that received it from the server, so there's
-  // nothing to gain from putting it there. It's remembered per entity in the QueryClient cache
-  // instead, purely to survive an unmount/remount within this session (e.g. item detail → back).
-  const [pageUrl, setPageUrl] = useState<string | undefined>(() =>
-    recallCollectionPageHref(queryClient, profile.name),
-  );
-
-  function handlePageChange(href: string | undefined) {
-    setPageUrl(href);
-    rememberCollectionPageHref(queryClient, profile.name, href);
-  }
-
-  function handleFiltersChange(nextFilters: Record<string, string>) {
-    handlePageChange(undefined);
-    setFilters(nextFilters);
-    go({
-      to: "/$entity",
-      params: { entity: profile.name },
-      search: (prev) => applyFiltersToSearchState(prev, nextFilters),
-    });
-  }
-
-  // Sort mirrors the filters block above exactly — a URL-shareable `sort` param backed by a
-  // session memo so it survives a round trip through an item's clean-URL detail page.
   const urlSort = useMemo(() => decodeSortFromSearchState(search), [search]);
 
-  const [sort, setSort] = useState<string | undefined>(
-    () => urlSort ?? recallCollectionSort(queryClient, profile.name),
-  );
+  const [state, setState] = useState<CollectionViewState>(() => {
+    const urlIsClean = Object.keys(urlFilters).length === 0 && urlSort === undefined;
+    return {
+      filters: urlIsClean ? (recallCollectionFilters(queryClient, entityName) ?? {}) : urlFilters,
+      sort: urlIsClean ? recallCollectionSort(queryClient, entityName) : urlSort,
+      // The remembered page belongs to the remembered filters/sort — a URL that carries either
+      // of its own is a different search, so it starts at page 1 rather than reusing a stale link.
+      pageUrl: urlIsClean ? recallCollectionPageHref(queryClient, entityName) : undefined,
+    };
+  });
 
+  // Remembers whatever the list shows, however it got there (the URL, the memo, or a change in
+  // the view), so a round trip through a clean-URL page restores it.
   useEffect(() => {
-    rememberCollectionSort(queryClient, profile.name, sort);
-  }, [sort, queryClient, profile.name]);
+    rememberCollectionFilters(queryClient, entityName, state.filters ?? {});
+    rememberCollectionSort(queryClient, entityName, state.sort);
+    rememberCollectionPageHref(queryClient, entityName, state.pageUrl);
+  }, [state, queryClient, entityName]);
 
+  // Once, on mount: when the state was restored from the memo, write it back into the URL so the
+  // address bar agrees with the list and is shareable again. Replaces, so back skips the clean URL.
+  const didMountRef = useRef(false);
   useEffect(() => {
-    if (!didSyncSortFromCacheRef.current) return;
-    setSort(urlSort);
-  }, [urlSort]);
-
-  const didSyncSortFromCacheRef = useRef(false);
-  useEffect(() => {
-    if (didSyncSortFromCacheRef.current) return;
-    didSyncSortFromCacheRef.current = true;
-    if (urlSort === undefined && sort !== undefined) {
-      go({
-        to: "/$entity",
-        params: { entity: profile.name },
-        search: (prev) => applySortToSearchState(prev, sort),
-        replace: true,
-      });
-    }
-  }, [urlSort, sort, go, profile.name]);
-
-  function handleSortChange(nextSort: string | undefined) {
-    setSort(nextSort);
-    go({
+    if (didMountRef.current) return;
+    didMountRef.current = true;
+    if (Object.keys(urlFilters).length > 0 || urlSort !== undefined) return;
+    if (Object.keys(state.filters ?? {}).length === 0 && state.sort === undefined) return;
+    void go({
       to: "/$entity",
-      params: { entity: profile.name },
-      search: (prev) => applySortToSearchState(prev, nextSort),
+      params: { entity: entityName },
+      search: (prev) =>
+        applySortToSearchState(applyFiltersToSearchState(prev, state.filters ?? {}), state.sort),
+      replace: true,
+    });
+  }, [urlFilters, urlSort, state, go, entityName]);
+
+  // After mount the URL is authoritative: back/forward between two searches, or a link opened
+  // while already here, shows that search from its first page.
+  const lastUrlSearchRef = useRef({ urlFilters, urlSort });
+  useEffect(() => {
+    const last = lastUrlSearchRef.current;
+    if (last.urlFilters === urlFilters && last.urlSort === urlSort) return;
+    lastUrlSearchRef.current = { urlFilters, urlSort };
+    setState((current) =>
+      sameSearch(current, urlFilters, urlSort)
+        ? current
+        : { filters: urlFilters, sort: urlSort, pageUrl: undefined },
+    );
+  }, [urlFilters, urlSort]);
+
+  function handleStateChange(next: CollectionViewState) {
+    setState(next);
+    if (sameSearch(state, next.filters ?? {}, next.sort)) return;
+    void go({
+      to: "/$entity",
+      params: { entity: entityName },
+      search: (prev) =>
+        applySortToSearchState(applyFiltersToSearchState(prev, next.filters ?? {}), next.sort),
     });
   }
 
   return (
     <EntityItemCollectionView
-      entityName={profile.name}
-      pageUrl={pageUrl}
-      onPageChange={handlePageChange}
-      filters={filters}
-      onFiltersChange={handleFiltersChange}
-      currentSort={sort}
-      onSortChange={handleSortChange}
+      entityName={entityName}
+      state={state}
+      onStateChange={handleStateChange}
     />
+  );
+}
+
+function sameSearch(
+  state: CollectionViewState,
+  filters: Record<string, string>,
+  sort: string | undefined,
+): boolean {
+  const current = state.filters ?? {};
+  const keys = Object.keys(current);
+  return (
+    state.sort === sort &&
+    keys.length === Object.keys(filters).length &&
+    keys.every((key) => current[key] === filters[key])
   );
 }

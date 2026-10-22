@@ -18,10 +18,11 @@ export interface UseEntityItemOptions {
 /**
  * Known profile: profile is supplied directly; item URL is expanded from the entity ID
  * using the profile's `itemLink` URI template.
- * Query is disabled when `entityId` is undefined.
+ * Query is disabled while `profileEntity` or `entityId` is undefined, so a caller can pass a
+ * profile it is still resolving without branching its hook calls.
  */
 export interface EntityItemByProfile {
-  profileEntity: ProfileEntity;
+  profileEntity: ProfileEntity | undefined;
   entityId: string | undefined;
 }
 
@@ -47,7 +48,7 @@ function isByProfile(params: UseEntityItemParams): params is EntityItemByProfile
  * Two modes:
  * - **Known profile** `{ profileEntity, entityId }` — use when the profile is already loaded.
  *   The item URL is expanded from the profile's `itemLink` URI template.
- *   Query is disabled when `entityId` is undefined.
+ *   Query is disabled while `profileEntity` or `entityId` is undefined.
  * - **Discover profile** `{ url }` — use when only the full item URL is known.
  *   Matches the URL against each loaded profile's `describes()` links to find the right profile.
  *   Query is disabled until the matching profile is available.
@@ -70,7 +71,8 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
 
   if (isByProfile(params)) {
     profileEntity = params.profileEntity;
-    url = params.entityId == null ? undefined : profileEntity.itemUrl(params.entityId);
+    url =
+      profileEntity && params.entityId != null ? profileEntity.itemUrl(params.entityId) : undefined;
   } else {
     url = params.url;
     profileEntity = profileResults.find((r) => r.data?.describes(SimpleLink.to(url!)))?.data;

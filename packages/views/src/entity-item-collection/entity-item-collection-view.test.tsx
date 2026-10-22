@@ -1,102 +1,155 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { EntityItem } from "@contentgrid/navigator-data";
-import { createFixtureFetch } from "../test-fixtures/item-detail";
+import { CUSTOMER_NEXT_PAGE_URL, createCollectionFixtureFetch } from "../test-fixtures/collection";
+import { CUSTOMER_COLLECTION_URL } from "../test-fixtures/item-detail";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
-// The collection feature has its own tests; here it is a stub that exposes what the view passes
-// it and fires the callbacks the real one does.
-vi.mock("@contentgrid/features/entity-item-collection", () => ({
-  EntityItemCollectionView: (props: {
-    profile: { name: string };
-    filters?: Record<string, string>;
-    pageUrl?: string;
-    onEntityItemClick?: (item: EntityItem) => void;
-  }) => (
-    <div>
-      <div data-testid="profile">{props.profile.name}</div>
-      <div data-testid="filters">{JSON.stringify(props.filters)}</div>
-      <div data-testid="page-url">{props.pageUrl}</div>
-      <button onClick={() => props.onEntityItemClick?.({ id: "cust-001" } as EntityItem)}>
-        row
-      </button>
-    </div>
-  ),
-}));
-
-function setup(options?: { readonly withCreateTemplate?: boolean }) {
-  return createItemDetailTestHarness({ fetchFn: createFixtureFetch(options).fetch });
+function setup(options?: Parameters<typeof createCollectionFixtureFetch>[0]) {
+  const fixture = createCollectionFixtureFetch(options);
+  return { ...createItemDetailTestHarness({ fetchFn: fixture.fetch }), fixture };
 }
 
-const entityName = "customer";
+// The item name can show more than once in its row.
+const findFirstItem = async () => (await screen.findAllByText("Acme Corp"))[0];
 
 describe("EntityItemCollectionView", () => {
-  it("draws a Home / entity-name breadcrumb and a Create action, and places the feature", async () => {
-    const { Wrapper } = setup({ withCreateTemplate: true });
+  it("shows the list under a Home, collection breadcrumb", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    expect(await findFirstItem()).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(document.querySelector("[aria-current='page']")).toHaveTextContent("Customers");
+  });
+
+  it("opens a clicked item through the navigation object", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await userEvent.click(await findFirstItem());
+
+    expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
+  });
+
+  it("offers create only when the profile has a create form", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
+    expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["customer"] }]);
+  });
+
+  it("draws no create action without a create form", async () => {
+    const { Wrapper } = setup({ creatable: false });
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    expect(screen.queryByRole("button", { name: /Create/ })).not.toBeInTheDocument();
+  });
+
+  it("draws no toolbar when hidden", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="customer" toolbar={false} />, {
+      wrapper: Wrapper,
+    });
+
+    await findFirstItem();
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+  });
+
+  it("shows not-found for an unknown entity, with only the Home crumb", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="nope" />, { wrapper: Wrapper });
+
+    expect(await screen.findByText(/No profile for entity "nope"/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(document.querySelector("[aria-current='page']")).toBeNull();
+  });
+});
+
+describe("EntityItemCollectionView by link", () => {
+  it("finds the profile through its describes links and fetches the link itself", async () => {
+    const { Wrapper, fixture } = setup();
+    const link = `${CUSTOMER_COLLECTION_URL}?name~prefix=acme`;
+    render(<EntityItemCollectionView collectionUrl={link} />, { wrapper: Wrapper });
+
+    expect(await findFirstItem()).toBeInTheDocument();
+    expect(document.querySelector("[aria-current='page']")).toHaveTextContent("Customers");
+    expect(fixture.collectionRequests).toEqual([link]);
+  });
+
+  it("shows not-found for a link no profile describes", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView collectionUrl="https://api.example.com/unknown" />, {
+      wrapper: Wrapper,
+    });
+
+    expect(await screen.findByText(/No profile describes/)).toBeInTheDocument();
+  });
+
+  it("controlled with no state yet still starts from the link's own page and filters", async () => {
+    const { Wrapper, fixture } = setup();
+    const link = `${CUSTOMER_COLLECTION_URL}?name~prefix=acme`;
+    render(<EntityItemCollectionView collectionUrl={link} onStateChange={vi.fn()} />, {
+      wrapper: Wrapper,
+    });
+
+    expect(await findFirstItem()).toBeInTheDocument();
+    // Not the plain collection URL: the link's own filter/page must reach the feature even
+    // though the host hasn't echoed a `state` back yet.
+    expect(fixture.collectionRequests).toEqual([link]);
+  });
+
+  it("uncontrolled, switches to a new link's own page and filters when the collectionUrl prop changes", async () => {
+    const { Wrapper, fixture } = setup();
+    const firstLink = `${CUSTOMER_COLLECTION_URL}?name~prefix=acme`;
+    const secondLink = `${CUSTOMER_COLLECTION_URL}?name~prefix=globex`;
+
+    const { rerender } = render(<EntityItemCollectionView collectionUrl={firstLink} />, {
+      wrapper: Wrapper,
+    });
+    await findFirstItem();
+    expect(fixture.collectionRequests).toEqual([firstLink]);
+
+    rerender(<EntityItemCollectionView collectionUrl={secondLink} />);
+
+    // Same entity both times, but a different link — the view must not keep showing the first
+    // link's stale internal state.
+    await waitFor(() => expect(fixture.collectionRequests).toContain(secondLink));
+  });
+});
+
+describe("EntityItemCollectionView state", () => {
+  it("keeps its own state without onStateChange", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
+  });
+
+  it("reports every change once with the full next state when controlled", async () => {
+    const { Wrapper, fixture } = setup();
+    const onStateChange = vi.fn();
     render(
       <EntityItemCollectionView
-        entityName={entityName}
-        filters={{ name: "Acme" }}
-        pageUrl="https://api.example.com/customers?_cursor=2"
+        entityName="customer"
+        state={{ filters: {} }}
+        onStateChange={onStateChange}
       />,
       { wrapper: Wrapper },
     );
 
-    expect(await screen.findByTestId("profile")).toHaveTextContent("customer");
-    // A deterministic `hrefFor` is always given by the recording navigation, so the Home crumb
-    // renders as a real link, not a button (see `NavigationLink`).
-    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Customers", { selector: "[aria-current='page']" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create customer" })).toBeInTheDocument();
-    // The host's state props reach the feature unchanged.
-    expect(screen.getByTestId("filters")).toHaveTextContent('{"name":"Acme"}');
-    expect(screen.getByTestId("page-url")).toHaveTextContent("_cursor=2");
-  });
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
 
-  it("opens home, the create form and a clicked item through the navigation object", async () => {
-    const { Wrapper, recording } = setup({ withCreateTemplate: true });
-    render(<EntityItemCollectionView entityName={entityName} />, { wrapper: Wrapper });
-
-    await userEvent.click(await screen.findByRole("link", { name: "Home" }));
-    await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
-    await userEvent.click(screen.getByText("row"));
-
-    expect(recording.calls).toEqual([
-      { method: "openHome", args: [] },
-      { method: "openCreateItem", args: ["customer"] },
-      { method: "openItem", args: ["customer", "cust-001"] },
-    ]);
-  });
-
-  it("draws no breadcrumb or Create action when the toolbar is hidden", async () => {
-    const { Wrapper } = setup({ withCreateTemplate: true });
-    render(<EntityItemCollectionView entityName={entityName} toolbar={false} />, {
-      wrapper: Wrapper,
-    });
-
-    expect(await screen.findByTestId("profile")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
-  });
-
-  it("hides the Create action when the entity's profile has no create template", async () => {
-    // Default fixture: no create-form template, i.e. create is not permitted for this entity.
-    const { Wrapper } = setup();
-    render(<EntityItemCollectionView entityName={entityName} />, { wrapper: Wrapper });
-
-    expect(await screen.findByTestId("profile")).toBeInTheDocument();
-    // The rest of the toolbar still renders — only the Create action is gated.
-    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
-  });
-
-  it("shows the shared not-found state for an unknown entity", async () => {
-    const { Wrapper } = setup();
-    render(<EntityItemCollectionView entityName="nope" />, { wrapper: Wrapper });
-    expect(await screen.findByText(/No entity profile named "nope"/)).toBeInTheDocument();
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({ filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL });
+    // The host did not apply it, so the view keeps showing the state it was given.
+    expect(fixture.collectionRequests).not.toContain(CUSTOMER_NEXT_PAGE_URL);
   });
 });

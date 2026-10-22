@@ -1,5 +1,5 @@
 /**
- * The view's wiring of the item feature's callbacks. `EntityItemContentFocusView` is stubbed to
+ * The view's wiring of the item feature's callbacks. `EntityItemContentFocusBody` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
  * view does with them: relation clicks and "create" go to the navigation object, relation
  * problems open the dialog.
@@ -11,7 +11,10 @@ import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harnes
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
 vi.mock("@contentgrid/features/entity-item", () => ({
-  EntityItemContentFocusView: (props: {
+  entityItemContentFocusPadding: () => true,
+  // The breadcrumbs draw the loaded item with it.
+  EntityItemReference: () => <span>item-reference</span>,
+  EntityItemContentFocusBody: (props: {
     onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
     onRelationItemCreateNew?: (entityName: string) => void;
     onMissingRelationTargetClick?: (url: string, field?: string) => void;
@@ -75,5 +78,14 @@ describe("EntityItemDetailView — feature callbacks", () => {
 
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByText(title)).not.toBeInTheDocument();
+  });
+
+  it("hands the feature the loaded item, with no toolbar when hidden", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} toolbar={false} />, {
+      wrapper: Wrapper,
+    });
+    expect(await screen.findByText("relation-click")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
   });
 });

@@ -14,10 +14,10 @@ means in practice.
 `EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
-`EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, or a non-PDF
+`EntityItemContentFocusBody`) renders an entity item's content attribute — a PDF, or a non-PDF
 previewed through the platform's PDF rendition service — next to those same attributes and
-relations, with the production viewer toolbar. `EntityItemContentFocusView` takes an
-already-loaded `profileEntity` and `entityItem` from the view above it
+relations, with the production viewer toolbar. `EntityItemContentFocusBody` takes an
+already-loaded `entityItem` (its profile is `entityItem.profileEntity`) from the view above it
 (`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemView` for any item
 with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
 in `packages/features/CLAUDE.md`).
@@ -28,10 +28,10 @@ The three-track model (`packages/features/CLAUDE.md`) gates stability per featur
 there is currently no mechanism to flag one variation inside a `stable` feature as
 `experimental`. Folding `content-focus` into `entity-item` accepted that gap knowingly rather than
 inventing a new mechanism for it, and the gap is still there: nothing prevents an app from
-importing `EntityItemContentFocusView` the way `x-stability` prevents importing an actually
+importing `EntityItemContentFocusBody` the way `x-stability` prevents importing an actually
 `experimental`/`candidate` feature.
 
-**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusView`
+**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusBody`
 was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
 both apps' `$entity/$itemId.tsx` item routes, through the item detail view in `packages/views`;
 the view itself falls back to plain `EntityItemView` per item for FR-001. There is no longer an "experimental-only" convention to enforce
@@ -59,8 +59,8 @@ variations/content-focus/
   util               -> @contentgrid/navigator-data only — no UI, no React components
 ```
 
-- `variations/content-focus/views/entity-item-content-focus-view.tsx` takes the loaded
-  `profileEntity` and `entityItem` plus relation callbacks, and no toolbar, breadcrumb or link
+- `variations/content-focus/views/entity-item-content-focus-view.tsx` (`EntityItemContentFocusBody`)
+  takes the loaded `entityItem` plus relation callbacks, and no toolbar, breadcrumb or link
   render props: its view loads the main object once and draws the chrome (ADR-018; this
   supersedes the earlier "primitives only" rule of spec `002-pdf-viewer`).
 - `variations/content-focus/util/` stays pure: no `useQuery`, no JSX, no `@contentgrid/ui`

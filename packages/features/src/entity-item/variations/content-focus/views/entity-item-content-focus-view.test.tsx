@@ -1,5 +1,5 @@
 /**
- * Tests for `EntityItemContentFocusView`'s own orchestration logic: the FR-001 layout branch,
+ * Tests for `EntityItemContentFocusBody`'s own orchestration logic: the FR-001 layout branch,
  * default content-attribute selection and attribute-selector switching, for an already-loaded
  * profile and item (the view above it owns loading, the toolbar and padding). `ContentPreviewPanel` and
  * `ContentAttributeSelector` are mocked too, for the same reason (T027's own test already covers
@@ -20,19 +20,19 @@ import {
   createApiClient,
   createContentClient,
 } from "@contentgrid/navigator-data";
-import { EntityItemContentFocusView } from "./entity-item-content-focus-view";
+import { EntityItemContentFocusBody } from "./entity-item-content-focus-view";
 
 const PROFILE_URL = "https://api.example.com/profile/order";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
 /**
- * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useProfileEntity`/
- * `useEntityItem` are mocked below): `EntityItemView`'s `EntityItemReference` header (stable
- * `entity-item` feature) calls `useEntityDisplayPreferences`, which reads `useNavigatorData()`
- * directly, so any render of the FR-001 fallback body needs a provider in scope even though no
- * real fetch ever happens — same pattern as `entity-item/variations/entity-item-reference.test.tsx`.
- * No router context is needed here (unlike an earlier version of this test) — the view no
- * longer renders a `Link`; its default breadcrumbs are plain buttons/text driven by props.
+ * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useLoadedProfileEntities` is
+ * mocked below): `EntityItemView`'s `EntityItemReference` header (stable `entity-item` feature)
+ * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
+ * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
+ * pattern as `entity-item/variations/entity-item-reference.test.tsx`. `EntityItemContentFocusBody`
+ * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
+ * needed here either.
  */
 function renderView(children: ReactNode) {
   return render(
@@ -136,14 +136,12 @@ function makeEntityItem(options: {
   } as unknown as EntityItem;
 }
 
-describe("EntityItemContentFocusView", () => {
+describe("EntityItemContentFocusBody", () => {
   it("renders the existing EntityItemView body when the entity has no content attributes (FR-001)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderView(
-      <EntityItemContentFocusView profileEntity={profile} entityItem={item} />,
-    );
+    const { container } = renderView(<EntityItemContentFocusBody entityItem={item} />);
 
     // EntityItemView's own item-reference header (`data-slot="item-reference"`) — it draws no
     // toolbar itself, so this always renders.
@@ -164,7 +162,7 @@ describe("EntityItemContentFocusView", () => {
       ],
     });
 
-    renderView(<EntityItemContentFocusView profileEntity={profile} entityItem={item} />);
+    renderView(<EntityItemContentFocusBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
     expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
@@ -180,7 +178,7 @@ describe("EntityItemContentFocusView", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderView(<EntityItemContentFocusView profileEntity={profile} entityItem={item} />);
+    renderView(<EntityItemContentFocusBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
   });
@@ -195,7 +193,7 @@ describe("EntityItemContentFocusView", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderView(<EntityItemContentFocusView profileEntity={profile} entityItem={item} />);
+    renderView(<EntityItemContentFocusBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
 
@@ -214,9 +212,7 @@ describe("EntityItemContentFocusView", () => {
       profileEntity: profileA,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    const { rerender } = renderView(
-      <EntityItemContentFocusView profileEntity={profileA} entityItem={itemA} />,
-    );
+    const { rerender } = renderView(<EntityItemContentFocusBody entityItem={itemA} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
@@ -237,7 +233,7 @@ describe("EntityItemContentFocusView", () => {
         contentFetch={createContentClient(noopSupplier)}
         profileUrl={PROFILE_URL}
       >
-        <EntityItemContentFocusView profileEntity={profileB} entityItem={itemB} />
+        <EntityItemContentFocusBody entityItem={itemB} />
       </NavigatorDataProvider>,
     );
 
@@ -261,11 +257,7 @@ describe("EntityItemContentFocusView", () => {
     const onRelationItemClick = vi.fn();
 
     renderView(
-      <EntityItemContentFocusView
-        profileEntity={profile}
-        entityItem={item}
-        onRelationItemClick={onRelationItemClick}
-      />,
+      <EntityItemContentFocusBody entityItem={item} onRelationItemClick={onRelationItemClick} />,
     );
 
     expect(await screen.findByText("many-relation")).toBeInTheDocument();
@@ -277,9 +269,7 @@ describe("EntityItemContentFocusView", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderView(
-      <EntityItemContentFocusView profileEntity={profile} entityItem={item} />,
-    );
+    const { container } = renderView(<EntityItemContentFocusBody entityItem={item} />);
 
     const root = container.firstElementChild as HTMLElement;
     expect(root).toHaveClass("h-full", "min-h-0");

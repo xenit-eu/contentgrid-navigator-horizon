@@ -1,10 +1,9 @@
 /**
  * Tests for EntityItemCollectionRoute's filters/pageUrl memo wiring — the piece that sits
- * between the URL and EntityItemCollectionView (itself covered by
- * packages/features/src/entity-item-collection/entity-item-collection-view.test.tsx and
- * packages/views/src/entity-item-collection/).
+ * between the URL and the views' EntityItemCollectionView (itself covered by
+ * packages/views/src/entity-item-collection/entity-item-collection-view.test.tsx).
  *
- * EntityItemCollectionView (`@contentgrid/views`) is mocked to a data-capturing stub (same technique as
+ * The view is mocked to a data-capturing stub (same technique as
  * ../../__root.test.tsx) so these tests isolate the route's own state/effects — recalling from
  * the QueryClient memos, syncing the URL, and writing back on a real filter change — without
  * re-exercising the view's own pageUrl/filters reconciliation.
@@ -105,22 +104,37 @@ beforeEach(() => {
   vi.mocked(useAppAuth).mockReturnValue(makeAuthResult());
 });
 
-// Captures whatever EntityItemCollectionRoute passes down, and exposes buttons that fire the
-// same callbacks a real FilterSidebar/table interaction would.
+// Captures the state EntityItemCollectionRoute hands the view, and exposes buttons that report
+// the same state changes a real filter edit or next-page click in the view would.
 vi.mock("@contentgrid/views/entity-item-collection", () => ({
   EntityItemCollectionView: (props: {
-    pageUrl?: string;
-    filters?: Record<string, string>;
-    onFiltersChange?: (filters: Record<string, string>) => void;
-    onPageChange?: (href: string | undefined) => void;
+    state?: { filters?: Record<string, string>; sort?: string; pageUrl?: string };
+    onStateChange?: (state: {
+      filters?: Record<string, string>;
+      sort?: string;
+      pageUrl?: string;
+    }) => void;
   }) => (
     <div>
-      <div data-testid="filters">{JSON.stringify(props.filters ?? null)}</div>
-      <div data-testid="pageUrl">{props.pageUrl ?? ""}</div>
-      <button onClick={() => props.onFiltersChange?.({ status: "closed" })}>change-filters</button>
+      <div data-testid="filters">{JSON.stringify(props.state?.filters ?? null)}</div>
+      <div data-testid="pageUrl">{props.state?.pageUrl ?? ""}</div>
       <button
         onClick={() =>
-          props.onPageChange?.("https://api.example.com/invoices?status=open&_cursor=next")
+          props.onStateChange?.({
+            ...props.state,
+            filters: { status: "closed" },
+            pageUrl: undefined,
+          })
+        }
+      >
+        change-filters
+      </button>
+      <button
+        onClick={() =>
+          props.onStateChange?.({
+            ...props.state,
+            pageUrl: "https://api.example.com/invoices?status=open&_cursor=next",
+          })
         }
       >
         go-next-page
@@ -163,6 +177,15 @@ describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
     await renderEntityRoute(queryClient, "/invoice?s.status=closed");
 
     expect(await screen.findByTestId("filters")).toHaveTextContent('{"status":"closed"}');
+  });
+
+  it("does not reuse a remembered page when the URL carries its own sort, even with no filters", async () => {
+    const queryClient = new QueryClient();
+    rememberCollectionPageHref(queryClient, "invoice", "https://api.example.com/invoices?p=3");
+
+    await renderEntityRoute(queryClient, "/invoice?sort=date,desc");
+
+    expect(await screen.findByTestId("pageUrl")).toHaveTextContent("");
   });
 
   it("writes filters that arrive via the URL into the memo, not just ones set through the sidebar", async () => {

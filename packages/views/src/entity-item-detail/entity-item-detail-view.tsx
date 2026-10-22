@@ -1,101 +1,49 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
-import { EntityItemContentFocusView } from "@contentgrid/features/entity-item";
 import {
-  type ProfileEntity,
-  toProblemDisplayModel,
-  useEntityItem,
-  useProfileEntity,
-} from "@contentgrid/navigator-data";
-import { useNavigation } from "../navigation";
-import { ViewPage } from "../toolbar/view-page";
-import { ItemDetailBreadcrumbs } from "./item-detail-breadcrumbs";
+  EntityItemContentFocusBody,
+  entityItemContentFocusPadding,
+} from "@contentgrid/features/entity-item";
+import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
+import { toProblemDisplayModel } from "@contentgrid/navigator-data";
+import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
+import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
+import { useViewNavigation } from "../navigation";
+import type { ViewProps } from "../types/view";
 import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
 
-export interface EntityItemDetailViewProps {
-  /** Profile entity name — never the plural path. */
-  readonly entityName: string;
-  /** The item's `id` field. */
-  readonly itemId: string;
-  /** Turns off the view's own toolbar (breadcrumbs); the host then draws its own. Defaults to `true`. */
-  readonly toolbar?: boolean;
+/** Opened by entity name and item id, or by the item's own link. */
+export type EntityItemDetailViewProps = ViewProps & EntityItemTarget;
+
+function describeTarget(target: EntityItemTarget): string {
+  return "itemUrl" in target
+    ? `No profile describes "${target.itemUrl}"`
+    : `No profile for entity "${target.entityName}"`;
 }
 
 /**
  * One entity item: its content or attributes and relations, under a Home, collection, item
- * breadcrumb toolbar drawn by this view (`ViewPage`). Fetches the profile (`useProfileEntity`) and
- * then the item (`useEntityItem`) itself, drawing its own loading/error state for each — the
- * breadcrumb toolbar is already known and stays up once the profile resolves, even while the item
- * is still loading or fails. `EntityItemContentFocusView` fills the space it is given with an
- * already-loaded `profileEntity`/`entityItem`; it fetches nothing and draws no chrome. Every click
- * that opens something calls `useNavigation()`.
+ * breadcrumb toolbar. Resolves the target itself (`useEntityItemTarget`); the toolbar is drawn
+ * from that result in every state, each crumb appearing as soon as it is known, and the loading,
+ * error and not-found states show inside it. The feature only gets the loaded `entityItem`. The
+ * relation-problem dialog lives here (not in the feature): `onMissingRelationTargetClick`/
+ * `onBlindRelationOverwriteClick`/`onRequiredRelationClick` fill `RelationProblemDialogState`.
+ * Every click that opens something calls `useViewNavigation()`.
  */
-export function EntityItemDetailView({
-  entityName,
-  itemId,
-  toolbar = true,
-}: Readonly<EntityItemDetailViewProps>) {
-  const profile = useProfileEntity({ name: entityName });
-
-  if (!profile.data) {
-    // Defensive: the app's `/$entity` route gate already guarantees a valid, loaded profile
-    // before this view mounts — unreachable in practice, but this view can also be mounted
-    // standalone.
-    return profile.isPending ? (
-      <LoadingPage />
-    ) : (
-      <ErrorPage
-        model={toProblemDisplayModel(profile.error ?? `No profile for entity "${entityName}"`)}
-      />
-    );
-  }
-
-  return (
-    <LoadedEntityItemDetailView profileEntity={profile.data} itemId={itemId} toolbar={toolbar} />
-  );
-}
-
-function LoadedEntityItemDetailView({
-  profileEntity,
-  itemId,
-  toolbar,
-}: Readonly<{ profileEntity: ProfileEntity; itemId: string; toolbar: boolean }>) {
-  const navigation = useNavigation();
+export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItemDetailViewProps>) {
+  const navigation = useViewNavigation();
+  const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
-  const item = useEntityItem({ profileEntity, entityId: itemId });
 
-  const breadcrumbs = (
-    <ItemDetailBreadcrumbs
-      entityName={profileEntity.name}
-      pluralName={profileEntity.pluralName}
-      itemId={itemId}
-    />
-  );
-
-  if (!item.data) {
-    const state = item.isPending ? (
-      <LoadingPage />
-    ) : (
-      <ErrorPage model={toProblemDisplayModel(item.error ?? `Item "${itemId}" not found`)} />
-    );
-    return (
-      <ViewPage breadcrumbs={breadcrumbs} hideToolbar={!toolbar}>
-        {state}
-      </ViewPage>
-    );
-  }
-
-  return (
-    <ViewPage
-      breadcrumbs={breadcrumbs}
-      hideToolbar={!toolbar}
-      // A content preview runs edge to edge under the toolbar; the plain body keeps the page
-      // gutters.
-      contentPadded={profileEntity.hasContentAttributes ? "bottom" : true}
-    >
-      <EntityItemContentFocusView
-        profileEntity={profileEntity}
-        entityItem={item.data}
+  let content: ReactNode;
+  if (result.status === "not-found") {
+    content = <ErrorPage model={toProblemDisplayModel(describeTarget(target))} />;
+  } else if (result.status === "error") {
+    content = <ErrorPage model={toProblemDisplayModel(result.error)} />;
+  } else if (result.status === "success") {
+    content = (
+      <EntityItemContentFocusBody
+        entityItem={result.entityItem}
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           navigation.openItem(relatedEntityName, relatedItemId)
         }
@@ -110,10 +58,41 @@ function LoadedEntityItemDetailView({
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
       />
+    );
+  } else {
+    content = <LoadingPage />;
+  }
+
+  const profileEntity = result.status === "not-found" ? undefined : result.profileEntity;
+  const contentPadding = profileEntity ? entityItemContentFocusPadding(profileEntity) : true;
+
+  if (toolbar === false) {
+    return (
+      <PageLayout padded={contentPadding}>
+        {content}
+        <RelationProblemDialog
+          state={problemDialog}
+          onOpenChange={(open) => !open && setProblemDialog(null)}
+        />
+      </PageLayout>
+    );
+  }
+  return (
+    <BreadCrumbsToolBarLayout
+      breadcrumbs={
+        <EntityItemDetailBreadcrumbs
+          profileEntity={profileEntity}
+          entityItem={result.status === "success" ? result.entityItem : undefined}
+        />
+      }
+      actions={toolbar?.actions}
+      contentPadded={contentPadding}
+    >
+      {content}
       <RelationProblemDialog
         state={problemDialog}
         onOpenChange={(open) => !open && setProblemDialog(null)}
       />
-    </ViewPage>
+    </BreadCrumbsToolBarLayout>
   );
 }

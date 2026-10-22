@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { TypedFetch } from "@contentgrid/navigator-data";
@@ -9,6 +9,9 @@ import { preloadEntityItemDetail } from "./preload";
 
 // The item's name shows in its reference header and again in its attribute table.
 const findItemName = async () => (await screen.findAllByText("Acme Corp"))[0];
+
+// The item crumb is the breadcrumb's current page, drawn as the item's reference once it loaded.
+const currentCrumbs = () => document.querySelectorAll("[aria-current='page']");
 
 const entityName = "customer";
 const itemId = "cust-001";
@@ -22,10 +25,10 @@ describe("EntityItemDetailView", () => {
 
     // A deterministic `hrefFor` is always given by the recording navigation, so breadcrumbs render
     // as real links, not buttons (see `NavigationLink`).
-    expect(await screen.findByRole("link", { name: "Home" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
-    expect(screen.getByText("cust-001", { selector: "[aria-current='page']" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Customers" })).toBeInTheDocument();
     expect(await findItemName()).toBeInTheDocument();
+    expect(currentCrumbs()[0]).toHaveTextContent("Acme Corp");
   });
 
   it("opens home and the collection through the navigation object", async () => {
@@ -80,14 +83,54 @@ describe("EntityItemDetailView", () => {
     expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
   });
 
-  it("shows not-found for an unknown entity, without a toolbar", async () => {
+  it("shows not-found for an unknown entity, with only the Home crumb", async () => {
     const { Wrapper } = setup();
     render(<EntityItemDetailView entityName="nope" itemId="1" />, { wrapper: Wrapper });
 
     expect(await screen.findByText(/No profile for entity "nope"/)).toBeInTheDocument();
-    // No profile is ever resolved for an unknown entity name, so there is nothing to draw the
-    // toolbar's breadcrumbs from.
-    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+    // No profile is ever resolved for an unknown entity name, so there is no collection or item
+    // crumb to draw.
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(currentCrumbs()).toHaveLength(0);
+  });
+});
+
+describe("EntityItemDetailView by link", () => {
+  it("finds the profile through its describes links and shows the item", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView itemUrl={CUSTOMER_ITEM_URL} />, { wrapper: Wrapper });
+
+    expect(await findItemName()).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
+    expect(currentCrumbs()[0]).toHaveTextContent("Acme Corp");
+  });
+
+  it("shares one cached item when opened by name and by link", async () => {
+    const { Wrapper, queryClient } = setup();
+    render(
+      <>
+        <EntityItemDetailView entityName={entityName} itemId={itemId} />
+        <EntityItemDetailView itemUrl={CUSTOMER_ITEM_URL} />
+      </>,
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(currentCrumbs()).toHaveLength(2));
+    const itemQueries = queryClient
+      .getQueryCache()
+      .findAll({ predicate: (query) => query.queryKey[0] === "EntityItem" });
+    expect(itemQueries).toHaveLength(1);
+  });
+
+  it("shows not-found for a link no profile describes, with only the Home crumb", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView itemUrl="https://api.example.com/unknown/1" />, {
+      wrapper: Wrapper,
+    });
+
+    expect(await screen.findByText(/No profile describes/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Customers" })).not.toBeInTheDocument();
   });
 });
 

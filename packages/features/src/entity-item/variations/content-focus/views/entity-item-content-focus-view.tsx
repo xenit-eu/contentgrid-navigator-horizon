@@ -7,7 +7,11 @@ import {
 import { Separator } from "@contentgrid/ui";
 import { RightSidePanelLayout } from "../../../../layout";
 import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
-import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
+import { EntityItemView } from "../../../entity-item-view";
+import type {
+  RelationItemCreateHandler,
+  RelationProblemHandlers,
+} from "../../../relations/relation-handlers";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemReference } from "../../entity-item-reference";
@@ -15,54 +19,60 @@ import { ContentAttributeSelector } from "../components/content-attribute-select
 import { ContentPreviewPanel } from "../components/content-preview-panel";
 import { selectDefaultContentAttribute } from "../util/select-default-content-attribute";
 
-export interface EntityItemContentFocusViewProps extends Pick<
-  EntityItemViewProps,
-  | "onRelationItemCreateNew"
-  | "onMissingRelationTargetClick"
-  | "onBlindRelationOverwriteClick"
-  | "onRequiredRelationClick"
-> {
-  /** The item's profile. The caller (a view) owns loading it. */
-  readonly profileEntity: ProfileEntity;
-  /** The loaded item. The caller (a view) owns loading and revalidating it. */
+/**
+ * Content padding for whatever wraps {@link EntityItemContentFocusBody}. When the content-focus
+ * body is what renders (`profileEntity.hasContentAttributes`), the preview panel should run edge
+ * to edge rather than sit inside the standard page gutters — drop the horizontal padding, and the
+ * top vertical padding too (the toolbar strip above already has its own bottom padding, so a top
+ * gutter here would just double that gap) — keeping only the bottom gutter for breathing room at
+ * the end of the scroll region. The `EntityItemView` fallback body keeps the standard padding on
+ * both axes.
+ */
+export function entityItemContentFocusPadding(profileEntity: ProfileEntity): true | "bottom" {
+  return profileEntity.hasContentAttributes ? "bottom" : true;
+}
+
+export type EntityItemContentFocusBodyProps = RelationProblemHandlers & {
+  /** The already-loaded item; its profile is `entityItem.profileEntity`. */
   readonly entityItem: EntityItem;
   /** Fired when the user clicks through to a related entity item, from either a to-one or
    * to-many relation section in the side panel. */
   readonly onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
-}
+  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
+  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+};
 
 /**
  * App-agnostic content-focus item detail (spec `002-pdf-viewer`, contract
- * `contracts/content-focus-view.md`) for an already-loaded `profileEntity` + `entityItem`; the
- * view above it owns loading, the toolbar and page padding, and this fills the space it is given.
- * FR-001: an entity with no content attributes falls back to the existing (stable)
- * `EntityItemView` body; one that has them renders the PDF/content preview beside the item's
- * attributes and relations. The preview and relations load their own follow-up data by following
- * the item's links.
+ * `contracts/content-focus-view.md`) for an already-loaded `entityItem`, with no toolbar, page
+ * layout or loading/error state of its own — the view above it (`@contentgrid/views/entity-item-
+ * detail`) resolved the item and draws those. FR-001: an entity with no content attributes falls
+ * back to the existing (stable) `EntityItemView` body; one that has them renders the PDF/content
+ * preview beside the item's attributes and relations. The preview and relations load their own
+ * follow-up data by following the item's links.
  */
-export function EntityItemContentFocusView({
-  profileEntity,
+export function EntityItemContentFocusBody({
   entityItem,
   onRelationItemClick,
   onRelationItemCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<EntityItemContentFocusViewProps>) {
-  const itemId = entityItem.id;
+}: Readonly<EntityItemContentFocusBodyProps>) {
+  const { profileEntity } = entityItem;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
-  // /document/1 -> /invoice/1 keeps the same itemId with a different profileEntity) — so an
+  // /document/1 -> /invoice/1 keeps the same id with a different profileEntity) — so an
   // explicit choice for one item never leaks into the next (FR-006).
   const [userSelectedAttribute, setUserSelectedAttribute] = useState<string | undefined>(undefined);
   useEffect(() => {
     setUserSelectedAttribute(undefined);
-  }, [profileEntity.name, itemId]);
+  }, [profileEntity.name, entityItem.id]);
 
   // Defense in depth alongside the effect above: the effect only clears state AFTER the render
-  // that already switched to the new profileEntity/itemId commits, so a stale
+  // that already switched to the new profileEntity/id commits, so a stale
   // `userSelectedAttribute` from the previous entity can otherwise still reach
   // `useContentPreview` for one render — which throws synchronously (not just renders an error
   // state) for an attribute name that isn't a content attribute of the *current* item
@@ -75,7 +85,6 @@ export function EntityItemContentFocusView({
     userSelectedAttribute !== undefined && currentContentAttributeNames.has(userSelectedAttribute)
       ? userSelectedAttribute
       : undefined;
-
   const selectedAttribute =
     validUserSelectedAttribute ?? selectDefaultContentAttribute(profileEntity, entityItem);
 
@@ -83,31 +92,27 @@ export function EntityItemContentFocusView({
     onRelationItemClick?.({ entityName: relatedEntityName, itemId: relatedItemId });
   }
 
-  return (
-    <div className="h-full min-h-0">
-      {profileEntity.hasContentAttributes ? (
-        <ContentFocusEntityItemBody
-          entityItem={entityItem}
-          attributeName={selectedAttribute}
-          onSelectAttribute={setUserSelectedAttribute}
-          loadedProfiles={loadedProfiles}
-          onRelationItemClick={handleRelationItemClick}
-          onRelationItemCreateNew={onRelationItemCreateNew}
-          onMissingRelationTargetClick={onMissingRelationTargetClick}
-          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-          onRequiredRelationClick={onRequiredRelationClick}
-        />
-      ) : (
-        <EntityItemView
-          item={entityItem}
-          onRelationItemClick={handleRelationItemClick}
-          onRelationItemCreateNew={onRelationItemCreateNew}
-          onMissingRelationTargetClick={onMissingRelationTargetClick}
-          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-          onRequiredRelationClick={onRequiredRelationClick}
-        />
-      )}
-    </div>
+  return profileEntity.hasContentAttributes ? (
+    <ContentFocusEntityItemBody
+      entityItem={entityItem}
+      attributeName={selectedAttribute}
+      onSelectAttribute={setUserSelectedAttribute}
+      loadedProfiles={loadedProfiles}
+      onRelationItemClick={handleRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
+      onMissingRelationTargetClick={onMissingRelationTargetClick}
+      onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+      onRequiredRelationClick={onRequiredRelationClick}
+    />
+  ) : (
+    <EntityItemView
+      item={entityItem}
+      onRelationItemClick={handleRelationItemClick}
+      onRelationItemCreateNew={onRelationItemCreateNew}
+      onMissingRelationTargetClick={onMissingRelationTargetClick}
+      onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+      onRequiredRelationClick={onRequiredRelationClick}
+    />
   );
 }
 
@@ -134,7 +139,7 @@ function ContentFocusEntityItemBody({
   onRelationItemClick: (relatedEntityName: string, relatedItemId: string) => void;
 }> &
   Pick<
-    EntityItemContentFocusViewProps,
+    EntityItemContentFocusBodyProps,
     | "onRelationItemCreateNew"
     | "onMissingRelationTargetClick"
     | "onBlindRelationOverwriteClick"

@@ -17,10 +17,10 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - Views import `@contentgrid/navigator-data`, `@contentgrid/features` and `@contentgrid/ui`. Features,
   `navigator-data` and `ui` never import views.
-- **Only views call `useNavigation()`; no router in views or features.** Every click that opens something,
+- **Only views call `useViewNavigation()`; no router in views or features.** Every click that opens something,
   including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
-- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: boolean`) and calls
+- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: ViewToolbarConfiguration`) and calls
   navigator-data's hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
 - A view with state (filters, sort, page, …) takes optional `state` / `onStateChange`; with neither it keeps
   its own internal state. State is plain, serialisable data defined by the view.
@@ -33,12 +33,14 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Navigation
 
-- `NavigationProvider` is supplied by the host; `useNavigation()` throws in development without one.
-- `ChildNavigationProvider` gives a child view its own navigation object; calls it does not override go to the parent's.
-- `@contentgrid/views/shells` ships `RouterNavigationProvider`: the app's real `Navigation`, backed by
-  `@tanstack/react-router`. It is the one place outside `apps/*` allowed to import the router (root
-  `CLAUDE.md`). `openCreateItem` opens the entity's create form in a new tab via
-  `@contentgrid/features/router-shell`'s `useOpenInNewTab`.
+- `NavigationProvider` is supplied by the host; `useViewNavigation()` throws in development without one.
+- `ChildNavigationProvider` gives a child view its own navigation object; any call it doesn't override
+  goes to the parent's navigation.
+- The app's real `Navigation`, `RouterNavigationProvider` (backed by `@tanstack/react-router`), lives in
+  each app's own `src/routes/-router-navigation-provider.tsx` — not in this package. The leading `-` keeps
+  TanStack Router's file-based router from treating it as a route. Views and features never import
+  `@tanstack/react-router`; only `apps/*` may. `openCreateItem` opens the entity's create form in a new tab
+  via `@contentgrid/features/router-shell`'s `useOpenInNewTab`.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.
@@ -47,19 +49,30 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Views
 
-- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView({ entityName, itemId, toolbar? })` and its
-  `preloadEntityItemDetail`. The view fetches the profile (`useProfileEntity`) and then the item
-  (`useEntityItem`) itself, drawing its own loading/error state for each in the breadcrumb toolbar it draws
-  via `ViewPage` — the toolbar stays up once the profile resolves, even while the item is still loading or
-  fails. `preloadEntityItemDetail` fills the same two caches with `ensureProfileEntity`/`ensureEntityItem`.
-  `EntityItemContentFocusView` from `@contentgrid/features/entity-item` fills the space it is given with the
-  already-loaded profile/item and draws no chrome. The relation-problem dialog lives in the view; relation
-  "create new" goes through `navigation.openCreateItem`.
-- `@contentgrid/views/entity-item-collection`: `EntityItemCollectionView`, the collection page's toolbar
-  (Home, entity name, Create) around the collection feature. The host still passes filter, sort and page
-  props until the view owns its state.
-- `ViewPage` (`src/toolbar/`) is the page chrome every view uses: toolbar over a padded content area, or a
-  plain padded container when the toolbar is hidden. Features placed inside fill the space they get.
+- `@contentgrid/views/entity-item-detail`: `EntityItemDetailView(ViewProps & EntityItemTarget)`, opened by
+  `{ entityName, itemId }` or by `{ itemUrl }`. The view resolves the target itself with `useEntityItemTarget`
+  (`src/hooks/`), which finds the profile by name or through `describesUrl`, never by reading the name from the
+  link. Both modes share `useEntityItem`'s cache key. The view draws the loading, error and not-found states and
+  the toolbar, then hands the loaded `entityItem` to `EntityItemContentFocusBody` from
+  `@contentgrid/features/entity-item`. The toolbar is drawn from the `EntityItemTargetResult` in every state,
+  each crumb as soon as it is known. `ViewProps`/`ViewToolbarConfiguration` live in `src/types/view.tsx`;
+  `EntityItemTarget`/`EntityItemTargetResult` next to the hook. The relation-problem dialog lives in the view; relation
+  "create new" goes through `navigation.openCreateItem`. `preloadEntityItemDetail` covers the by-name mode only.
+
+- `@contentgrid/views/entity-item-collection`: `EntityItemCollectionView(ViewProps & EntityItemCollectionTarget &
+{ state?, onStateChange? })`, opened by `{ entityName }` or `{ collectionUrl }`. The view resolves only the profile
+  (`useProfileEntityTarget`) and owns the `CollectionViewState` (`filters`, `sort`, `pageUrl`), controlled or internal;
+  the `entity-item-collection` feature gets the loaded profile and the state, and fetches the page itself. A link
+  starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
+  collection, plus a create action gated on `profileEntity.createTemplate`.
+
+## Breadcrumbs
+
+- `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `CollectionBreadcrumb` and
+  `ItemBreadcrumb`, each rendering its `children` crumbs after itself. A crumb with children is a link; the last one
+  is the current page. A crumb draws nothing until its data is known, so pages nest them without conditions. Each
+  page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`); each view draws its
+  own toolbar around it.
 
 ## Testing
 

@@ -1,8 +1,8 @@
 /**
- * Hand-built HAL responses and a fetch over them, for the item detail and collection views' tests
- * and story. One entity (`customer`) with `id` and `name`, one item, no relations or content. No
- * `create-form` template by default (create not permitted); pass `withCreateTemplate: true` to
- * `createFixtureFetch` for a profile that permits it.
+ * Hand-built HAL responses and a fetch over them, for the item detail view's tests and story
+ * (also reused as the base `customer` entity by `../test-fixtures/collection.ts` for the
+ * collection view's own tests). One entity (`customer`) with `id` and `name`, one item, no
+ * relations or content.
  */
 export const API = "https://api.example.com";
 export const PROFILE_URL = `${API}/profile`;
@@ -78,31 +78,13 @@ const json = (body: unknown, status = 200) =>
     },
   });
 
-/**
- * A `TypedFetch`-shaped function that answers from the bodies above and counts item requests.
- * `withCreateTemplate` adds a minimal `create-form` template to the customer profile, for tests
- * that need create permitted.
- */
-export function createFixtureFetch(options?: { readonly withCreateTemplate?: boolean }) {
+/** A `TypedFetch`-shaped function that answers from the bodies above and counts item requests. */
+export function createFixtureFetch() {
   const counts = { item: 0 };
-  const profileBody = options?.withCreateTemplate
-    ? {
-        ...customerProfileBody,
-        _templates: {
-          "create-form": {
-            method: "POST",
-            target: CUSTOMER_COLLECTION_URL,
-            contentType: "application/json",
-            title: "Create customer",
-            properties: [{ name: "name", type: "text", required: true }],
-          },
-        },
-      }
-    : customerProfileBody;
   const fetchFn = async (input: Request | string | URL): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input);
     if (url === PROFILE_URL) return json(profileRootBody);
-    if (url === CUSTOMER_PROFILE_URL) return json(profileBody);
+    if (url === CUSTOMER_PROFILE_URL) return json(customerProfileBody);
     if (url === CUSTOMER_ITEM_URL) {
       counts.item++;
       return json(customerItemBody);
