@@ -80,6 +80,7 @@ export function ContentPreviewPanel({
   toolbarStart,
 }: Readonly<ContentPreviewPanelProps>) {
   const query = useContentPreview(entityItem, attributeName);
+  const previewSource = query.data;
   const downloadMutation = useDownloadContent(entityItem, attributeName);
   const uploadMutation = useUploadContent(entityItem, attributeName);
   // The attribute the upload was started on: other attributes don't show its progress or error.
@@ -118,7 +119,7 @@ export function ContentPreviewPanel({
 
   const { state, problem, mimetype } = deriveContentPreviewState({
     queryStatus: query.status,
-    previewSource: query.data,
+    previewSource,
     queryError: query.error,
     expectedOrigin,
     viewerLoadErrorKind,
@@ -151,13 +152,13 @@ export function ContentPreviewPanel({
 
   const canDownload = metadata !== null && metadata !== undefined;
 
-  if (state === "ready" && (query.data?.kind === "image" || query.data?.kind === "video")) {
+  if (state === "ready" && (previewSource?.kind === "image" || previewSource?.kind === "video")) {
     return (
       <ContentPreviewFrame state="ready">
         <ImageVideoViewer
           // A different file gets a fresh element, so it never shows the previous file.
-          key={`${attributeName}:${entityItem.etag ?? ""}`}
-          source={query.data}
+          key={`${attributeName}:${previewSource.etag ?? ""}`}
+          source={previewSource}
           filename={metadata?.filename ?? null}
           toolbarStart={toolbarStart}
           onDownload={handleDownload}
@@ -168,8 +169,7 @@ export function ContentPreviewPanel({
     );
   }
 
-  if (state === "ready" && query.data?.kind === "pdf") {
-    const previewSource = query.data;
+  if (state === "ready" && previewSource?.kind === "pdf") {
     const toolbar: PdfViewerToolbarOptions = {
       start: toolbarStart,
       end:
@@ -244,10 +244,10 @@ export function ContentPreviewPanel({
   let frameIcon: ReactNode;
   if (state === "previewUnavailable") {
     frameLabels = { previewUnavailableMessage: buildPreviewUnavailableMessage(mimetype) };
-  } else if (state === "cannotDisplay" && query.data?.kind === "image") {
+  } else if (state === "cannotDisplay" && previewSource?.kind === "image") {
     frameLabels = { cannotDisplayMessage: buildCannotDisplayMessage("image") };
     frameIcon = <ImageBrokenIcon aria-hidden />;
-  } else if (state === "cannotDisplay" && query.data?.kind === "video") {
+  } else if (state === "cannotDisplay" && previewSource?.kind === "video") {
     frameLabels = { cannotDisplayMessage: buildCannotDisplayMessage("video") };
     frameIcon = <VideoCameraSlashIcon aria-hidden />;
   }

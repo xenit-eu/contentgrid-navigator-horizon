@@ -20,7 +20,7 @@ describe("ImageVideoViewer", () => {
   it("switches an image between fitting the panel and its actual size", async () => {
     render(
       <ImageVideoViewer
-        source={{ kind: "image", blob: new Blob() }}
+        source={{ kind: "image", blob: new Blob(), etag: null }}
         filename="scan.png"
         onDownload={() => {}}
         onLoadError={() => {}}
@@ -39,7 +39,7 @@ describe("ImageVideoViewer", () => {
   it("offers no size switch for a video", () => {
     render(
       <ImageVideoViewer
-        source={{ kind: "video", blob: new Blob() }}
+        source={{ kind: "video", blob: new Blob(), etag: null }}
         filename="clip.mp4"
         onDownload={() => {}}
         onLoadError={() => {}}

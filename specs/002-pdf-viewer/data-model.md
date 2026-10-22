@@ -25,8 +25,8 @@ Discriminated union returned by `useContentPreview` as query data.
 | Variant       | Fields                                                                      | Meaning                                                                     |
 | ------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `pdf`         | `bytes: ArrayBuffer`, `filename: string`, `origin: "stored" \| "rendition"` | Displayable PDF; `origin` drives the "converted preview" indicator (FR-020) |
-| `image`       | `blob: Blob`                                                                | The stored image file, shown as it is (FR-032)                              |
-| `video`       | `blob: Blob`                                                                | The stored video file, shown as it is (FR-032)                              |
+| `image`       | `blob: Blob`, `etag: string \| null`                                        | The stored image file, shown as it is (FR-032); `etag` is the content's own |
+| `video`       | `blob: Blob`, `etag: string \| null`                                        | The stored video file, shown as it is (FR-032); `etag` is the content's own |
 | `noFile`      | —                                                                           | Attribute holds no file (metadata `null` or link answered 404)              |
 | `unavailable` | `mimetype: string \| null`                                                  | Needs a rendition and no rendition endpoint is configured (FR-022)          |
 | `unsupported` | `mimetype: string \| null`                                                  | Rendition service reported `invalid-conversion` (FR-018)                    |

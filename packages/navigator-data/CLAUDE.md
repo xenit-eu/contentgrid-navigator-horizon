@@ -821,7 +821,7 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
 `useContentPreview(entityItem, attributeName, options?)` (`src/hooks/preview/use-content-preview.ts`)
 turns a content attribute into something displayable for the content preview (spec
 `002-pdf-viewer`): the stored file directly when it is a PDF (`kind: "pdf"`), an image or a video
-(`kind: "image" | "video"`, the file as a `Blob`), or — for any other file, when a rendition
+(`kind: "image" | "video"`, the file as a `Blob` plus the content's own `etag`), or — for any other file, when a rendition
 endpoint is configured — the platform's PDF rendition of it.
 
 **Rules:**

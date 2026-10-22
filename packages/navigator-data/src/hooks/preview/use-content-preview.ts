@@ -40,7 +40,12 @@ export type PreviewSource =
       readonly origin: "stored" | "rendition";
     }
   /** The stored image or video file, shown as it is (no rendition). */
-  | { readonly kind: "image" | "video"; readonly blob: Blob }
+  | {
+      readonly kind: "image" | "video";
+      readonly blob: Blob;
+      /** The content's own ETag (from the download response), or null if absent. */
+      readonly etag: string | null;
+    }
   | { readonly kind: "noFile" }
   | { readonly kind: "unavailable"; readonly mimetype: string | null }
   | { readonly kind: "unsupported"; readonly mimetype: string | null };
@@ -136,7 +141,11 @@ export function useContentPreview(
               origin: "stored",
             };
           }
-          return { kind: previewKind, blob: await response.blob() };
+          return {
+            kind: previewKind,
+            blob: await response.blob(),
+            etag: response.headers.get("ETag"),
+          };
         } catch (error) {
           if (isProblemWithStatus(error, 404)) {
             return { kind: "noFile" };

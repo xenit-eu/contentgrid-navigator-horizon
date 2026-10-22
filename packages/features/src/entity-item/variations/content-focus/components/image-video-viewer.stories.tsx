@@ -23,7 +23,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Image: Story = {
   args: {
-    source: { kind: "image", blob: new Blob([SAMPLE_SVG], { type: "image/svg+xml" }) },
+    source: { kind: "image", blob: new Blob([SAMPLE_SVG], { type: "image/svg+xml" }), etag: null },
     filename: "sample.svg",
     toolbarStart: <span className="text-sm">File</span>,
     onDownload: () => {},

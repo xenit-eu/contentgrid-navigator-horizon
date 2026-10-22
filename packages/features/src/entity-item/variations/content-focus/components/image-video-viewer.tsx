@@ -6,9 +6,10 @@ import {
   MagnifyingGlassPlusIcon,
 } from "@phosphor-icons/react";
 import type { PreviewSource } from "@contentgrid/navigator-data";
-import { DEFAULT_PDF_VIEWER_LABELS, ToolbarIconButton, TooltipProvider } from "@contentgrid/ui";
+import { ToolbarIconButton, TooltipProvider } from "@contentgrid/ui";
 import { ContentPreviewToolbar } from "./content-preview-toolbar";
 
+const DOWNLOAD_LABEL = "Download";
 const ACTUAL_SIZE_LABEL = "Actual size";
 const FIT_TO_PANEL_LABEL = "Fit to panel";
 const IMAGE_FALLBACK_ALT = "Content image";
@@ -62,26 +63,26 @@ export function ImageVideoViewer({
           {showActualSize ? <MagnifyingGlassMinusIcon /> : <MagnifyingGlassPlusIcon />}
         </ToolbarIconButton>
       )}
-      <ToolbarIconButton label={DEFAULT_PDF_VIEWER_LABELS.download} onClick={onDownload}>
+      <ToolbarIconButton label={DOWNLOAD_LABEL} onClick={onDownload}>
         <DownloadIcon />
       </ToolbarIconButton>
     </TooltipProvider>
   );
 
-  // `m-auto` centres the file while it fits, and still lets the user scroll to every edge of an
-  // image shown at its actual size.
+  // `mx-auto` centres the file horizontally while it fits, and still lets the user scroll to every
+  // edge of an image shown at its actual size. The file sits at the top of the panel.
   const imageSizeClass = showActualSize ? "max-w-none" : "max-h-full max-w-full object-contain";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ContentPreviewToolbar start={toolbarStart} end={toolbarButtons} />
-      <div className="flex min-h-0 flex-1 overflow-auto p-4">
+      <div className="flex min-h-0 flex-1 items-start overflow-auto p-4">
         {url !== null && source.kind === "image" && (
           <img
             src={url}
             alt={filename ?? IMAGE_FALLBACK_ALT}
             onError={onLoadError}
-            className={`m-auto ${imageSizeClass}`}
+            className={`mx-auto ${imageSizeClass}`}
           />
         )}
         {url !== null && source.kind === "video" && (
@@ -89,7 +90,7 @@ export function ImageVideoViewer({
             src={url}
             controls
             onError={onLoadError}
-            className="m-auto max-h-full max-w-full"
+            className="mx-auto max-h-full max-w-full"
           />
         )}
       </div>

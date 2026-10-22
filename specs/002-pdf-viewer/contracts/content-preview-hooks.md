@@ -5,7 +5,7 @@
 ```ts
 export type PreviewSource =
   | { kind: "pdf"; bytes: ArrayBuffer; filename: string; origin: "stored" | "rendition" }
-  | { kind: "image" | "video"; blob: Blob }
+  | { kind: "image" | "video"; blob: Blob; etag: string | null }
   | { kind: "noFile" }
   | { kind: "unavailable"; mimetype: string | null }
   | { kind: "unsupported"; mimetype: string | null };

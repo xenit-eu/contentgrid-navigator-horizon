@@ -198,6 +198,7 @@ describe("useContentPreview — stored image or video", () => {
           url: contentUrlFor("item-1"),
           body: MEDIA_BYTES,
           contentType: mimetype,
+          etag: '"content-v1"',
         }),
         http.get(RENDITION_REQUEST_URL, () => {
           renditionRequested = true;
@@ -211,7 +212,7 @@ describe("useContentPreview — stored image or video", () => {
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data).toMatchObject({ kind });
+      expect(result.current.data).toMatchObject({ kind, etag: '"content-v1"' });
       expect(result.current.data).toHaveProperty("blob.size", MEDIA_BYTES.length);
       expect(renditionRequested).toBe(false);
     },
