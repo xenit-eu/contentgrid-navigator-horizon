@@ -8,7 +8,7 @@ import { type ProfileEntity, toProblemDisplayModel } from "@contentgrid/navigato
 import { Button } from "@contentgrid/ui";
 import { EntityItemCollectionBreadcrumbs } from "../breadcrumbs";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
-import { useNavigation } from "../navigation";
+import { useViewNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
 
 /**
@@ -66,7 +66,7 @@ function initialStateForLink(profileEntity: ProfileEntity, url: string): Collect
  * with a create action when the profile allows creating. Resolves the target's profile itself
  * (`useProfileEntityTarget`) and draws the loading and not-found states inside the toolbar; the
  * feature gets the loaded profile and the state, and fetches the page itself. Every click that
- * opens something calls `useNavigation()`.
+ * opens something calls `useViewNavigation()`.
  */
 export function EntityItemCollectionView({
   toolbar,
@@ -74,7 +74,7 @@ export function EntityItemCollectionView({
   onStateChange,
   ...target
 }: Readonly<EntityItemCollectionViewProps>) {
-  const navigation = useNavigation();
+  const navigation = useViewNavigation();
   const result = useProfileEntityTarget(
     "collectionUrl" in target ? { url: target.collectionUrl } : target,
   );
@@ -137,7 +137,7 @@ function CollectionBody({
   state: CollectionViewState | undefined;
   onStateChange: ((state: CollectionViewState) => void) | undefined;
 }>) {
-  const navigation = useNavigation();
+  const navigation = useViewNavigation();
   const [internalState, setInternalState] = useState(initialState);
   const current = onStateChange ? (state ?? {}) : internalState;
 

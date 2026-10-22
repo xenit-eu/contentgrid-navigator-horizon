@@ -7,7 +7,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@contentgrid/ui";
-import { NavigationLink, useNavigation } from "../navigation";
+import { NavigationLink, useViewNavigation } from "../navigation";
 
 /**
  * The entity's collection — its icon badge and plural name — followed by its `children` crumbs:
@@ -18,7 +18,7 @@ export function CollectionBreadcrumb({
   profileEntity,
   children,
 }: Readonly<{ profileEntity: ProfileEntity | undefined; children?: ReactNode }>) {
-  const navigation = useNavigation();
+  const navigation = useViewNavigation();
   if (!profileEntity) return null;
 
   return (

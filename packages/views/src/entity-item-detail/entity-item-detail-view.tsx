@@ -8,7 +8,7 @@ import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layo
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
-import { useNavigation } from "../navigation";
+import { useViewNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
 import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
 
@@ -28,10 +28,10 @@ function describeTarget(target: EntityItemTarget): string {
  * error and not-found states show inside it. The feature only gets the loaded `entityItem`. The
  * relation-problem dialog lives here (not in the feature): `onMissingRelationTargetClick`/
  * `onBlindRelationOverwriteClick`/`onRequiredRelationClick` fill `RelationProblemDialogState`.
- * Every click that opens something calls `useNavigation()`.
+ * Every click that opens something calls `useViewNavigation()`.
  */
 export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItemDetailViewProps>) {
-  const navigation = useNavigation();
+  const navigation = useViewNavigation();
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 

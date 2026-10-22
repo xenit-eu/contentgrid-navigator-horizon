@@ -17,10 +17,10 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - Views import `@contentgrid/navigator-data`, `@contentgrid/features` and `@contentgrid/ui`. Features,
   `navigator-data` and `ui` never import views.
-- **Only views call `useNavigation()`; no router in views or features.** Every click that opens something,
+- **Only views call `useViewNavigation()`; no router in views or features.** Every click that opens something,
   including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
-- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: boolean`) and calls
+- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: ViewToolbarConfiguration`) and calls
   navigator-data's hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
 - A view with state (filters, sort, page, …) takes optional `state` / `onStateChange`; with neither it keeps
   its own internal state. State is plain, serialisable data defined by the view.
@@ -33,12 +33,14 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 ## Navigation
 
-- `NavigationProvider` is supplied by the host; `useNavigation()` throws in development without one.
-- `ChildNavigationProvider` gives a child view its own navigation object; calls it does not override go to the parent's.
-- `@contentgrid/views/shells` ships `RouterNavigationProvider`: the app's real `Navigation`, backed by
-  `@tanstack/react-router`. It is the one place outside `apps/*` allowed to import the router (root
-  `CLAUDE.md`). `openCreateItem` opens the entity's create form in a new tab via
-  `@contentgrid/features/router-shell`'s `useOpenInNewTab`.
+- `NavigationProvider` is supplied by the host; `useViewNavigation()` throws in development without one.
+- `ChildNavigationProvider` gives a child view its own navigation object; calls its overrides don't cover
+  go to the parent's navigation.
+- The app's real `Navigation`, `RouterNavigationProvider` (backed by `@tanstack/react-router`), lives in
+  each app's own `src/routes/-router-navigation-provider.tsx` — not in this package. The leading `-` keeps
+  TanStack Router's file-based router from treating it as a route. Views and features never import
+  `@tanstack/react-router`; only `apps/*` may. `openCreateItem` opens the entity's create form in a new tab
+  via `@contentgrid/features/router-shell`'s `useOpenInNewTab`.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.

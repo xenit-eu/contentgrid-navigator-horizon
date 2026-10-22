@@ -6,7 +6,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@contentgrid/ui";
-import { NavigationLink, useNavigation } from "../navigation";
+import { NavigationLink, useViewNavigation } from "../navigation";
 
 /**
  * The root of every breadcrumb trail: Home, followed by its `children` crumbs. Like every crumb,
@@ -15,7 +15,7 @@ import { NavigationLink, useNavigation } from "../navigation";
  * through navigation.
  */
 export function HomeBreadcrumb({ children }: Readonly<{ children?: ReactNode }>) {
-  const navigation = useNavigation();
+  const navigation = useViewNavigation();
   return (
     <Breadcrumb>
       <BreadcrumbList>
