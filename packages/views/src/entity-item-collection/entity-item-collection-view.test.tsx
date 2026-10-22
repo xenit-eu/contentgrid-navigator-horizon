@@ -88,6 +88,37 @@ describe("EntityItemCollectionView by link", () => {
 
     expect(await screen.findByText(/No profile describes/)).toBeInTheDocument();
   });
+
+  it("controlled with no state yet still starts from the link's own page and filters", async () => {
+    const { Wrapper, fixture } = setup();
+    const link = `${CUSTOMER_COLLECTION_URL}?name~prefix=acme`;
+    render(<EntityItemCollectionView collectionUrl={link} onStateChange={vi.fn()} />, {
+      wrapper: Wrapper,
+    });
+
+    expect(await findFirstItem()).toBeInTheDocument();
+    // Not the plain collection URL: the link's own filter/page must reach the feature even
+    // though the host hasn't echoed a `state` back yet.
+    expect(fixture.collectionRequests).toEqual([link]);
+  });
+
+  it("uncontrolled, switches to a new link's own page and filters when the collectionUrl prop changes", async () => {
+    const { Wrapper, fixture } = setup();
+    const firstLink = `${CUSTOMER_COLLECTION_URL}?name~prefix=acme`;
+    const secondLink = `${CUSTOMER_COLLECTION_URL}?name~prefix=globex`;
+
+    const { rerender } = render(<EntityItemCollectionView collectionUrl={firstLink} />, {
+      wrapper: Wrapper,
+    });
+    await findFirstItem();
+    expect(fixture.collectionRequests).toEqual([firstLink]);
+
+    rerender(<EntityItemCollectionView collectionUrl={secondLink} />);
+
+    // Same entity both times, but a different link — the view must not keep showing the first
+    // link's stale internal state.
+    await waitFor(() => expect(fixture.collectionRequests).toContain(secondLink));
+  });
 });
 
 describe("EntityItemCollectionView state", () => {

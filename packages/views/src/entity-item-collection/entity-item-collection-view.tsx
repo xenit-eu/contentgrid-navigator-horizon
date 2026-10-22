@@ -86,9 +86,11 @@ export function EntityItemCollectionView({
     content = <LoadingPage />;
   } else {
     content = (
-      // Keyed by entity, so internal state never carries over to a different entity's list.
+      // Keyed by entity AND target link, so internal state never carries over to a different
+      // entity's list, and a new link for the same entity (e.g. a different relation's
+      // collection) remounts with ITS OWN starting page/filters instead of keeping the old link's.
       <CollectionBody
-        key={result.profileEntity.name}
+        key={`${result.profileEntity.name}|${"collectionUrl" in target ? target.collectionUrl : ""}`}
         profileEntity={result.profileEntity}
         initialState={
           state ??
@@ -139,7 +141,9 @@ function CollectionBody({
 }>) {
   const navigation = useViewNavigation();
   const [internalState, setInternalState] = useState(initialState);
-  const current = onStateChange ? (state ?? {}) : internalState;
+  // Controlled with no `state` yet still starts from `initialState` (the target link's own page
+  // and filters) rather than an empty state, the same way the uncontrolled branch does.
+  const current = onStateChange ? (state ?? initialState) : internalState;
 
   function update(next: CollectionViewState): void {
     if (onStateChange) onStateChange(next);

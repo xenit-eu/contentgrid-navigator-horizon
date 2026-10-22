@@ -55,7 +55,9 @@ function EntityItemCollectionRoute({ entityName }: Readonly<{ entityName: string
     return {
       filters: urlIsClean ? (recallCollectionFilters(queryClient, entityName) ?? {}) : urlFilters,
       sort: urlIsClean ? recallCollectionSort(queryClient, entityName) : urlSort,
-      pageUrl: recallCollectionPageHref(queryClient, entityName),
+      // The remembered page belongs to the remembered filters/sort — a URL that carries either
+      // of its own is a different search, so it starts at page 1 rather than reusing a stale link.
+      pageUrl: urlIsClean ? recallCollectionPageHref(queryClient, entityName) : undefined,
     };
   });
 

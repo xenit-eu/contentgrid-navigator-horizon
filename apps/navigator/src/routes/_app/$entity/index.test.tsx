@@ -179,6 +179,15 @@ describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
     expect(await screen.findByTestId("filters")).toHaveTextContent('{"status":"closed"}');
   });
 
+  it("does not reuse a remembered page when the URL carries its own sort, even with no filters", async () => {
+    const queryClient = new QueryClient();
+    rememberCollectionPageHref(queryClient, "invoice", "https://api.example.com/invoices?p=3");
+
+    await renderEntityRoute(queryClient, "/invoice?sort=date,desc");
+
+    expect(await screen.findByTestId("pageUrl")).toHaveTextContent("");
+  });
+
   it("writes filters that arrive via the URL into the memo, not just ones set through the sidebar", async () => {
     const queryClient = new QueryClient();
 
