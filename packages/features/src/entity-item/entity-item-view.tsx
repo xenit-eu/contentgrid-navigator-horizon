@@ -8,7 +8,9 @@ import {
 import { Separator } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
-import { EntityItemAttributes } from "./attributes/entity-item-attributes";
+import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
+import { EditEntityItemButton } from "./edit/edit-entity-item-button";
+import { useEditContext } from "./edit/use-edit-context";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -86,12 +88,20 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
     "url" in props ? { url: props.url } : { profileEntity: props.profile, entityId: props.itemId },
   );
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
+  const editContext = useEditContext(item.data, item.refetch);
 
   const content = (
     <>
-      <div className="p-4">
+      <div className="flex items-center justify-between gap-2 p-4">
         {item.data ? (
-          <EntityItemReference item={item.data} size="lg" />
+          <>
+            <EntityItemReference item={item.data} size="lg" />
+            <EditEntityItemButton
+              item={item.data}
+              isEditing={editContext.isEditing}
+              onEdit={() => editContext.setIsEditing(true)}
+            />
+          </>
         ) : (
           <EntityItemReferenceLoading size="lg" />
         )}
@@ -99,11 +109,17 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
 
       {item.isPending && <LoadingPage />}
 
-      {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
+      {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
+      {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
 
-      {item.isSuccess && (
+      {item.data && (
         <div className="space-y-6 p-4 pt-0">
-          <EntityItemAttributes item={item.data} />
+          <EditableEntityItemAttributes
+            item={editContext.editedItem ?? item.data}
+            isEditing={editContext.isEditing}
+            onEditingChange={editContext.setIsEditing}
+            onRefresh={() => void editContext.refresh()}
+          />
 
           {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
             <>
