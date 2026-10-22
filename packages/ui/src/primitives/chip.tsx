@@ -80,7 +80,7 @@ function Chip({
           data-slot="chip-body"
           aria-label={clickLabel}
           onClick={onClick}
-          className="inline-flex min-w-0 cursor-pointer items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-inherit outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-inherit outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {body}
         </button>

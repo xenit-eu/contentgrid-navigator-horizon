@@ -64,7 +64,7 @@ function FilterButton({
         ref={ref}
         type={type}
         className={cn(
-          "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap px-2.5 outline-none hover:bg-foreground/5 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+          "inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 outline-none hover:bg-foreground/5 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
           showClear ? "pr-1.5" : undefined,
         )}
         {...triggerProps}
@@ -78,7 +78,7 @@ function FilterButton({
           type="button"
           aria-label={clearLabel ?? `Clear ${label} filter`}
           onClick={onClear}
-          className="inline-flex cursor-pointer items-center px-1.5 outline-none hover:bg-foreground/10 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="inline-flex items-center px-1.5 outline-none hover:bg-foreground/10 focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <XIcon size={13} aria-hidden />
         </button>

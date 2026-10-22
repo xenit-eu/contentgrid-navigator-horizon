@@ -108,7 +108,7 @@ export function SearchableOptionList({
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => onValueChange(option.value)}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+                  "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
                   index === activeIndex && "bg-accent",
                 )}
               >
