@@ -231,7 +231,7 @@ export function SearchSuggestionsPopover({
                     data-slot="suggestion-chip"
                     {...entryProps(entryId, () => onSelectChip(chip.id))}
                     className={cn(
-                      "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 py-1 text-xs hover:bg-accent",
+                      "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border bg-background px-2 py-1 text-xs hover:bg-accent",
                       activeId === entryId && "border-ring bg-accent ring-2 ring-ring/40",
                     )}
                   >
@@ -309,7 +309,7 @@ export function SearchSuggestionsPopover({
                           key={item.id}
                           {...entryProps(entryId, () => onSelectItem(group.id, item.id))}
                           className={cn(
-                            "cursor-pointer truncate rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+                            "truncate rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
                             activeId === entryId && "bg-accent",
                           )}
                         >
