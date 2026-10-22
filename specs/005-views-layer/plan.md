@@ -32,7 +32,7 @@ Add `packages/views` between the apps and `packages/features`. The app reads the
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-Checked against constitution v1.8.0 (this PR amends Principles III, IV and VIII, to v1.10.0 across two review rounds; see `docs/adr/ADR-018-views-layer.md`).
+Checked against constitution v1.8.0 (this PR amends Principles III, IV and VIII, to v1.10.1 across three review rounds; see `docs/adr/ADR-018-views-layer.md`).
 
 | Principle                               | Status | Notes                                                                                                                                                                                                                                                                                                                                                           |
 | --------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -82,7 +82,7 @@ specs/005-views-layer/
 └── tasks.md
 ```
 
-Documents outside the spec directory changed by PR 1: `docs/adr/ADR-018-views-layer.md` (new), `docs/adr/ADR-007-two-layer-dependency-model.md` (amendment note), `docs/adr/README.md`, root `CLAUDE.md` (ADR list) and `.specify/memory/constitution.md` (v1.10.0).
+Documents outside the spec directory changed by PR 1: `docs/adr/ADR-018-views-layer.md` (new), `docs/adr/ADR-007-two-layer-dependency-model.md` (amendment note), `docs/adr/README.md`, root `CLAUDE.md` (ADR list) and `.specify/memory/constitution.md` (v1.10.1).
 
 ### Source Code (repository root)
 
@@ -90,7 +90,7 @@ Documents outside the spec directory changed by PR 1: `docs/adr/ADR-018-views-la
 packages/views/                    # NEW (PR 2)
 ├── package.json                   # per-view exports; x-stability per view from PR 8
 ├── src/
-│   ├── navigation/                 # context, provider, useNavigation, recording fake (PR 2)
+│   ├── navigation/                 # context, provider, useViewNavigation, recording fake (PR 2)
 │   ├── types/view.tsx              # only the shared bits (the toolbar switch); each view's own props/state live with that view (PR 2)
 │   ├── hooks/                      # useProfileEntityTarget, useEntityItemTarget — by name or by link, no shared resolver (PR 3)
 │   ├── breadcrumbs/                # HomeBreadcrumb, CollectionBreadcrumb, ItemBreadcrumb + one export per page (PR 3)
@@ -114,7 +114,8 @@ packages/features/src/
 packages/eslint-config/rules/      # layer rules; no-unstable-features checks views (PR 8)
 
 apps/navigator/src/routes/, apps/navigator-experimental/src/routes/
-└── thin route files: URL -> view props/state, loader -> preload, navigation provider (PR 3, 5)
+├── -router-navigation-provider.tsx  # each app's own Navigation implementation; file-route-ignored, not in packages/views/src/shells/ (research.md §2.7) (PR 3, 5)
+└── thin route files: URL -> view props/state, loader -> preload (PR 3, 5)
 ```
 
 **Structure Decision**: one new workspace package `packages/views`, exposing each view through its own export path so the stability tag and the lint rule can resolve it per view, like features today. There is no shared target-resolution or generic-props package to add — each view resolves its own data through existing `navigator-data` hooks. Preferences stay a `packages/features` concern, in their own feature, since other stable features may already import one another (Principle III).

@@ -1,6 +1,6 @@
 # Contract: view data loading
 
-**Requirements**: FR-003, FR-004, FR-027
+**Requirements**: FR-003, FR-004, FR-005, FR-027
 **Package**: `packages/views`; `ensure*` helpers from `packages/navigator-data`
 
 ## `ensureQueryData` and TanStack Router
@@ -34,9 +34,11 @@ Because the preload and the view call the exact same query factory with the exac
 3. **Never blocks the page on failure** _(carried over from current behaviour)_. A preload swallows failures (as `ensureEntityItemDetailLoaderData` does today) so the view's own loading, error and not-found handling still runs. It resolves when the data is cached or when it gave up.
 4. **Skips when not ready** _(carried over from current behaviour: the loader skips while the API client is null)_. If the API client is not yet available (auth not finished), a preload returns without loading.
 5. **Parents call children.** A parent's preload calls each child's preload with that child's own props, and awaits them together (FR-027).
+6. **A feature may fetch more, only through links it already has** (FR-005). This is a feature-level rule, not a preload rule: a preload loads only the view's main data (rule 2). Beyond that, a feature MAY load additional data that follows from the object its view passed it — but only by following a link already present on that object (e.g. a `cg:relation` or `cg:content` link); it MUST NOT build an address itself. The item detail view's relation popover and content previews are existing examples: both follow links on the loaded `entityItem`, never a hand-built URL.
 
 ## Test obligations
 
 - After `preload`, rendering the view makes no further request for the main data.
 - `preload` resolves (does not reject) when the API client is absent or a request fails.
 - A parent preload triggers each child's preload once.
+- A feature that loads data beyond what its view passed it does so via a link already present on that data, never a hand-built URL (FR-005).

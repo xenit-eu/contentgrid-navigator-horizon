@@ -1,6 +1,21 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.10.0
+- Version change: 1.0.0 → 1.10.1
+- Amendment (1.10.0 → 1.10.1, PATCH): a third round of the same ACC-3216 PR #227 review, two
+  naming/location corrections with no principle content added. (a) The navigation hook is
+  renamed `useNavigation()` → `useViewNavigation()`, to avoid confusion with TanStack Router's
+  own `useNavigate` — the `Navigation` interface, `NavigationProvider` and
+  `ChildNavigationProvider` names are unchanged. (b) Principle VIII's router-allowance bullet
+  incorrectly bundled the app's own `Navigation` implementation together with router setup,
+  both inside `packages/views/src/shells/`. That implementation in fact lives under each app's
+  own `apps/<app>/src/routes/`, as a TanStack file-route-ignored file (e.g.
+  `-router-navigation-provider.tsx`): `packages/views` has no app's registered route tree (the
+  `Register` augmentation lives in each app) to typecheck a view's hardcoded route strings
+  (`/$entity`, `/$entity/$itemId`) against, so a route rename would not fail typecheck there,
+  while it does inside the app; the placement also keeps the file under the existing Sonar CPD
+  exclusion for mirrored app route files (`apps/*/src/routes/**`, PR #204). Router setup itself
+  stays in `packages/views/src/shells/`, unchanged. Both corrections are wording/location only —
+  no rule, obligation or boundary changes — hence PATCH, not MINOR.
 - Amendment (1.9.0 → 1.10.0, MINOR): a second round of the same ACC-3216 PR #227 review. Principle
   VIII's app-view contract bullet said a link-based prop was "deferred until a view actually needs
   one (no HAL link today)". The reference implementation (ACC-3216 PR #246, now adopted as PR 3 of
@@ -65,7 +80,10 @@ Sync Impact Report
     view and switchable off; view state alongside the target; features fill their space
     (1.7.0 → 1.8.0). Preamble further revised (1.8.0 → 1.9.0): see the amendment entry above.
     App-view contract bullet corrected: a link-based prop is built, not deferred (1.9.0 → 1.10.0,
-    see the amendment entry above).
+    see the amendment entry above). Navigation hook renamed `useNavigation()` →
+    `useViewNavigation()`; router-allowance bullet corrected to place the app's own `Navigation`
+    implementation under `apps/<app>/src/routes/`, not `packages/views/src/shells/` (1.10.0 →
+    1.10.1, see the amendment entry above).
   - I. HAL Is the Only Interaction Model: added the binary-content exception (no HAL-FORMS
     template exists for `cg:content` PUT/GET) — the principle as written contradicted this
     documented, sanctioned behavior; corrected/completed.
@@ -355,11 +373,15 @@ correct them.
   `toProblemDisplayModel` from `navigator-data`), so every view looks and behaves the same. No
   separate gate hook or component layer is required.
 - Navigation MUST go through the navigation context the host provides, and only views read it
-  (`useNavigation()`). Features MUST NOT read it: they report user actions through callback
-  props that their view wires to the navigation object. Views and features MUST NOT use the
-  router; host code (the shells area of `packages/views`: router setup, the app's navigation
-  implementation) and the apps MAY. A callback prop also remains fine for an action only one
-  page needs (e.g. "after create, go to the new item").
+  (`useViewNavigation()` — named to avoid confusion with TanStack Router's own `useNavigate`).
+  Features MUST NOT read it: they report user actions through callback props that their view
+  wires to the navigation object. Views and features MUST NOT use the router; host code (the
+  shells area of `packages/views`: router setup only) and the apps MAY — each app's own
+  `Navigation` implementation lives under that app's own `apps/<app>/src/routes/`, as a
+  TanStack file-route-ignored file, not inside `packages/views/src/shells/`: a view's
+  identifying props carry hardcoded route strings, and only the app's own registered route tree
+  (the `Register` augmentation) can typecheck them. A callback prop also remains fine for an
+  action only one page needs (e.g. "after create, go to the new item").
 - A view draws its default toolbar (breadcrumbs and actions), computed from the data it
   resolved, with every click going through the navigation context. A host or parent view MUST
   be able to turn it off. A feature MUST NOT draw a
@@ -492,4 +514,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.10.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-21
+**Version**: 1.10.1 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-22

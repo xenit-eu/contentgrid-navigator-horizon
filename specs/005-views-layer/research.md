@@ -111,6 +111,22 @@ _Built in PR 3 (FR-008–FR-010), not deferred — only the host that would exer
 
 Chosen: matching against loaded profiles. `useProfileEntityTarget` resolves the target before anything about the resource itself is fetched, so there is no response to read a profile link from; `useEntityItemTarget` builds the item target the same way, sharing `useEntityItem`'s cache key with the by-name mode so the same item opened either way is loaded once.
 
+### 2.7 Where the app's `Navigation` implementation lives
+
+_Corrected during review (ACC-3216 PR #227): earlier drafts of this spec, ADR-018 and the
+constitution bundled the app's own `Navigation` implementation together with router setup, both
+inside `packages/views/src/shells/`. It does not belong there._
+
+| Option                                                                                                                           | For                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Against                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A file under `apps/<app>/src/routes/`, ignored by the TanStack file-route generator (e.g. `-router-navigation-provider.tsx`)** | The app's own registered route tree (the `Register` augmentation) only exists inside the app; a view's hardcoded route strings (`/$entity`, `/$entity/$itemId`) typecheck against it there, so a route rename that no longer matches fails the build. Also falls inside the existing Sonar CPD exclusion for mirrored app route files (`apps/*/src/routes/**`, PR #204), so the two apps' near-identical implementations are not flagged as duplication. | One more file per app instead of one shared file.                                                                                                                                                            |
+| `packages/views/src/shells/` (the original plan)                                                                                 | One file instead of two                                                                                                                                                                                                                                                                                                                                                                                                                                  | `packages/views` has no app's `Register` augmentation to typecheck a route string against, so a route rename elsewhere would not fail typecheck here — the exact gap the two-layer boundary exists to catch. |
+
+Chosen: each app keeps its own navigation-provider file under `src/routes/` (built in PR 3,
+T017). Router _setup_ (route tree creation, the app shell component, opening a link in a new
+tab) is a different concern and still moves into `packages/views/src/shells/` in PR 5 (T036),
+unchanged by this correction.
+
 ## 3. Unknowns that stay open
 
 Five of the six open questions in `spec.md` stay open (question 5, filters in a link, is resolved — see §2.6). In particular, the design does not say how a child's state is prefixed in the address (question 2) or where the unsaved-changes guard lives (question 3); the tasks keep the guard where it is.
