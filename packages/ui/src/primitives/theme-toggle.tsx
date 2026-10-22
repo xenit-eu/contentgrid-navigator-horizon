@@ -19,7 +19,7 @@ export function ThemeToggle({ className }: Readonly<ThemeToggleProps>) {
       onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
-        "inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-white/20 bg-white/10 shadow-inner transition-colors outline-none data-[state=checked]:border-black/20 data-[state=checked]:bg-black/30",
+        "inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-white/20 bg-white/10 shadow-inner transition-colors outline-none data-[state=checked]:border-black/20 data-[state=checked]:bg-black/30",
         className,
       )}
     >
