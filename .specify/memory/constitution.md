@@ -1,6 +1,49 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.7.0
+- Version change: 1.0.0 → 1.10.1
+- Amendment (1.10.0 → 1.10.1, PATCH): a third round of the same ACC-3216 PR #227 review, two
+  naming/location corrections with no principle content added. (a) The navigation hook is
+  renamed `useNavigation()` → `useViewNavigation()`, to avoid confusion with TanStack Router's
+  own `useNavigate` — the `Navigation` interface, `NavigationProvider` and
+  `ChildNavigationProvider` names are unchanged. (b) Principle VIII's router-allowance bullet
+  incorrectly bundled the app's own `Navigation` implementation together with router setup,
+  both inside `packages/views/src/shells/`. That implementation in fact lives under each app's
+  own `apps/<app>/src/routes/`, as a TanStack file-route-ignored file (e.g.
+  `-router-navigation-provider.tsx`): `packages/views` has no app's registered route tree (the
+  `Register` augmentation lives in each app) to typecheck a view's hardcoded route strings
+  (`/$entity`, `/$entity/$itemId`) against, so a route rename would not fail typecheck there,
+  while it does inside the app; the placement also keeps the file under the existing Sonar CPD
+  exclusion for mirrored app route files (`apps/*/src/routes/**`, PR #204). Router setup itself
+  stays in `packages/views/src/shells/`, unchanged. Both corrections are wording/location only —
+  no rule, obligation or boundary changes — hence PATCH, not MINOR.
+- Amendment (1.9.0 → 1.10.0, MINOR): a second round of the same ACC-3216 PR #227 review. Principle
+  VIII's app-view contract bullet said a link-based prop was "deferred until a view actually needs
+  one (no HAL link today)". The reference implementation (ACC-3216 PR #246, now adopted as PR 3 of
+  this series) builds it directly: the item detail view (`itemUrl`) and the collection view
+  (`collectionUrl`) both resolve a link themselves, through `navigator-data`'s existing
+  `describesUrl` and the profile-optional `useEntityItem`, with no shared target-resolution
+  mechanism. The bullet is corrected to describe this as built, not deferred — a scope/meaning
+  change, hence MINOR, not PATCH.
+- Amendment (1.8.0 → 1.9.0, MINOR): following ACC-3216 PR #227 review (spec 005, the views
+  layer), Principle VIII's preamble drops the "generated through /speckit-plan" carve-out and
+  the "existing code is not retroactively non-compliant" framing for "existing code is always
+  right; correct the spec if it's wrong" — a scope/meaning change, hence MINOR. Its bullets are
+  also aligned to the review's decisions: explicit per-view plain-value props (no shared target
+  type, no HAL link yet) and each view's own preload, replacing the generic
+  `target`/`preload(ctx, target, state)` wording; and, following the same review's rejection of
+  the generic `ViewTargetGate`, the gate bullet now has each view render its own loading/error/
+  not-found state through the shared `LoadingPage`/`ErrorPage` components instead of a shared
+  gate primitive.
+- Amendment (1.7.0 → 1.8.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
+  ACC-3216). Principle VIII previously cited a non-existent
+  `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
+  `ADR-018-views-layer.md`, which this citation resolves to; the earlier ADR-018 references in this report, such as "ADR-018's export-gaps section", pointed to a planned ADR that was never written) and placed views and the shared gate hook in
+  `packages/features`; it now cites the real ADR-018, places views in `packages/views`, routes navigation
+  through a host-provided navigation context read only by views (callback props stay fine for one-page-only actions),
+  lets views draw their default toolbar and be told not to, and has views receive view state
+  alongside the target. Principle III gains the `packages/views` import boundary. Principle IV
+  gains a forward-looking bullet: the `x-stability` tag moves from features to views when spec 005
+  moves stability to views (ACC-3216); the generic-app gate stays suspended pre-GA.
 - Amendment (1.6.0 → 1.7.0, MINOR): Principle I — the conditional-request bullet ("Every
   mutating request MUST carry `If-Match`") misstated the platform contract. Per the
   [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html),
@@ -27,6 +70,20 @@ Sync Impact Report
   features/ui never need it directly. Replaced with `HalFormValues`, which is actually exported.
   Found while auditing the real barrel for ADR-018's export-gaps section.
 - Modified principles:
+  - III. Two-Layer Dependency Model & Package Boundaries: added the `packages/views` import
+    boundary (1.7.0 → 1.8.0).
+  - IV. Three-Track Delivery & Stability Gating: added a forward-looking bullet — the tag moves
+    from features to views when spec 005 moves stability to views (ACC-3216); the generic-app gate stays suspended
+    pre-GA (1.7.0 → 1.8.0).
+  - VIII. View-Owned Data Loading, App-View Contract & Transformation Placement: ADR-018 citation now
+    resolves to `ADR-018-views-layer.md`; views live in `packages/views`; navigation context; toolbar drawn by the
+    view and switchable off; view state alongside the target; features fill their space
+    (1.7.0 → 1.8.0). Preamble further revised (1.8.0 → 1.9.0): see the amendment entry above.
+    App-view contract bullet corrected: a link-based prop is built, not deferred (1.9.0 → 1.10.0,
+    see the amendment entry above). Navigation hook renamed `useNavigation()` →
+    `useViewNavigation()`; router-allowance bullet corrected to place the app's own `Navigation`
+    implementation under `apps/<app>/src/routes/`, not `packages/views/src/shells/` (1.10.0 →
+    1.10.1, see the amendment entry above).
   - I. HAL Is the Only Interaction Model: added the binary-content exception (no HAL-FORMS
     template exists for `cg:content` PUT/GET) — the principle as written contradicted this
     documented, sanctioned behavior; corrected/completed.
@@ -166,6 +223,15 @@ model doesn't happen to share it.
 - `packages/features` MUST NOT import a Layer-1 `@contentgrid/*` package directly (go through
   `@contentgrid/navigator-data`), and MUST NOT import from `apps/*`. A `stable` feature MUST
   NOT import a `candidate` or `experimental` feature.
+- `packages/views` (ADR-018) sits between the apps and `packages/features`: it MAY import
+  `packages/features`, `packages/ui` and `@contentgrid/navigator-data`, and MUST NOT import
+  `apps/*`. `packages/features`, `packages/ui` and
+  `@contentgrid/navigator-data` MUST NOT import `packages/views`. These boundaries bind new work
+  now and are enforced by lint once spec 005 adds the layer rules (ACC-3216); existing app imports of
+  `packages/features` are migrated by that spec and are not retroactively non-compliant. The
+  design says "apps only import views"; the working reading here — apps import features only
+  through views, and still import the data and UI packages to bootstrap — is to be confirmed in
+  review.
 - The primitive/pattern boundary in `packages/ui` MUST hold: primitives (`src/primitives/`)
   carry no Navigator-domain or HAL knowledge; the HAL-Forms field-renderer patterns take only
   plain scalar props (`name`, `label`, `required`, `value`, `onChange`, `error?`, …), never a
@@ -203,6 +269,12 @@ data concern.
   to allow all tiers. This exception ends at production go-live, at which point the original
   rules above are reinstated (see the
   [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga)).
+- **Forward-looking (ADR-018): stability moves to views.** When spec 005 moves stability to views
+  (ACC-3216), the `x-stability` field moves from feature directories to views in `packages/views`, and the
+  `no-unstable-features` rule checks views instead of features. From then on a stable view MUST
+  NOT import an experimental view, and a stable view that needs an experimental feature is
+  copied into an experimental variant. Until then the bullets above apply to features as
+  written, and the generic-app gate stays suspended pre-GA throughout.
 
 Rationale: this is the mechanism that lets one shared codebase serve a production track and
 an experimentation track without either contaminating the other. Pre-GA, every feature is
@@ -274,37 +346,61 @@ others.
 
 ### VIII. View-Owned Data Loading, App-View Contract & Transformation Placement
 
-Forward-looking target architecture (ADR-018, `docs/adr/ADR-018-feature-view-component-viewmodel-split.md`
-— a living spec, not a frozen decision record). Binding for new `packages/features` work
-generated through `/speckit-plan`/`/speckit-tasks`; existing code that has not yet migrated
-(e.g. `EntityProfileGate` and its route-mounted gate) is not retroactively non-compliant, but
-MUST NOT be used as a model for new work.
+Forward-looking target architecture ([ADR-018](../../docs/adr/ADR-018-views-layer.md), the views
+layer). Binding for new `packages/views` and `packages/features` work, possibly generated through
+`/speckit-plan`/`/speckit-tasks`; in other cases work may have been generated without a
+corresponding plan. The existing code is always right: if you find mistakes in existing specs,
+correct them.
 
-- An app (`apps/*`) MUST pass a view only primitive props — string identifiers and plain
-  callback functions. Passing a resolved domain object (`ProfileEntity`, `EntityItem`, …) that
-  the app itself fetched is prohibited; the view resolves its own data via `navigator-data`
-  hooks.
-- An app's route-level responsibility is exactly: choose which view to mount, choose the
-  layout wrapping it, supply identifiers/callbacks, and guarantee — via the router's own
-  `loader` plus `pendingComponent`/`errorComponent`/`notFoundComponent`, not a swallow-and-hope
-  `beforeLoad` — that the view's required data is loaded before it mounts.
-- A view MUST gate its own loading/error/not-found state through one shared, reusable
-  primitive (e.g. a `useProfileEntityGate`-style hook in `packages/features/src/util/`) rather
-  than each view hand-rolling the same three-way branch.
-- A view computes its own default page content (e.g. breadcrumb labels) from the data it
-  resolved, while remaining overridable via explicit props (e.g. `breadcrumbs`, `actions`) for
-  a caller that needs different chrome.
-- Transformation logic (data reshaping, formatting, HAL-wire-type mapping, etc.) MUST live in
-  a feature's `util/` layer — or the cross-feature `packages/features/src/util/` root when used
-  by 2+ features — never duplicated inline inside a view or component. A view's job is
+- Views live in `packages/views`. An app (`apps/*`) MUST pass a view only plain values — the
+  explicit props that view declares (e.g. an entity name and item id, or a link such as
+  `itemUrl`/`collectionUrl`) and, optionally, view state — plus plain callback functions. A view
+  that accepts a link resolves it itself through `navigator-data`'s existing hooks (profile
+  discovery by `describesUrl`, item loading by `useEntityItem`'s profile-optional mode) — there is
+  no shared target-resolution mechanism for this, in `navigator-data` or anywhere else. Passing a
+  resolved domain object (`ProfileEntity`, `EntityItem`, …) that the app itself fetched is
+  prohibited; the view resolves its own data via `navigator-data` hooks.
+- A view receives its view state (filters, sort, page, active tab) alongside its identifying
+  props, never inside them. The app maps its own address to view state and back and is the only
+  layer that knows the address format; a frontend address MUST NOT be passed as one of a view's
+  identifying props.
+- An app's route-level responsibility is exactly: choose which view to mount, supply its props
+  and state, provide the navigation context, and guarantee — via the router's own `loader`
+  calling the view's own preload, not a swallow-and-hope `beforeLoad` — that the view's required
+  data is loading before it mounts.
+- A view handles its own loading/error/not-found state and MUST render it with the shared
+  `LoadingPage` / `ErrorPage` components from `@contentgrid/features/app-info-pages` (errors via
+  `toProblemDisplayModel` from `navigator-data`), so every view looks and behaves the same. No
+  separate gate hook or component layer is required.
+- Navigation MUST go through the navigation context the host provides, and only views read it
+  (`useViewNavigation()` — named to avoid confusion with TanStack Router's own `useNavigate`).
+  Features MUST NOT read it: they report user actions through callback props that their view
+  wires to the navigation object. Views and features MUST NOT use the router; host code (the
+  shells area of `packages/views`: router setup only) and the apps MAY — each app's own
+  `Navigation` implementation lives under that app's own `apps/<app>/src/routes/`, as a
+  TanStack file-route-ignored file, not inside `packages/views/src/shells/`: a view's
+  identifying props carry hardcoded route strings, and only the app's own registered route tree
+  (the `Register` augmentation) can typecheck them. A callback prop also remains fine for an
+  action only one page needs (e.g. "after create, go to the new item").
+- A view draws its default toolbar (breadcrumbs and actions), computed from the data it
+  resolved, with every click going through the navigation context. A host or parent view MUST
+  be able to turn it off. A feature MUST NOT draw a
+  toolbar or breadcrumbs, and MUST fill the space it is given.
+- A view loads the main data its page is about and passes it to its features; a feature MAY
+  fetch more only by following links on the object it received, and MUST NOT load the main
+  object again or build URLs.
+- Transformation logic (data reshaping, formatting, HAL-wire-type mapping, etc.) MUST live in a
+  `util/` layer — a feature's own, or the cross-feature `packages/features/src/util/` root when
+  used by 2+ features — never duplicated inline inside a view or component. A view's job is
   orchestration only; a component consumes already-transformed data.
 
 Rationale: an app holding a resolved domain object forces every app to re-derive anything built
 from it (e.g. breadcrumb labels), once per call site — the exact duplication pattern already
 found in this codebase (independent, drifting "item count" strings in the collection view and
 table; a hand-duplicated HAL wire-type switch between `search/` and `entity-item-create/`).
-Concentrating data loading, gating, and transformation in one owner per concern removes the
-class of bug, not just today's two instances of it.
+Concentrating data loading, gating, page chrome and transformation in one owner per concern
+removes the class of bug, not just today's two instances of it, and lets the same view be shown
+by the app, a chat panel or next to another view.
 
 ### IX. Spec Traceability & Self-Contained Artifacts
 
@@ -418,4 +514,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.7.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-15
+**Version**: 1.10.1 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-22

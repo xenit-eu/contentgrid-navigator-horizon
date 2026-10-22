@@ -23,6 +23,7 @@ These live in the WORK vault during planning. They migrate to `docs/adr/` in the
 - [[ADR-013-custom-track-private-repo-model]]
 - [[ADR-014-hal-contract-tests-msw]]
 - [[ADR-015-documentation-surface-split]]
+- [[ADR-018-views-layer]]
 
 ## Index (legacy)
 
@@ -43,6 +44,7 @@ These live in the WORK vault during planning. They migrate to `docs/adr/` in the
 | [013](ADR-013-custom-track-private-repo-model.md)         | Custom-track delivery: private per-customer repos consuming published packages                                                           | Accepted                                    |
 | [014](ADR-014-hal-contract-tests-msw.md)                  | Cross-repo integration testing: HAL contract tests with MSW                                                                              | Accepted                                    |
 | [015](ADR-015-documentation-surface-split.md)             | Documentation surface split: in-repo docs, public docs site, Confluence                                                                  | Accepted                                    |
+| [018](ADR-018-views-layer.md)                             | Views layer between apps and features (amends ADR-007)                                                                                   | Proposed                                    |
 
 ## Conventions
 
