@@ -141,7 +141,7 @@ function SidebarCreateItemButton() {
 
   return (
     <SidebarLinkButton
-      icon={<FilePlusIcon aria-hidden className="size-5!" />}
+      icon={<FilePlusIcon aria-hidden />}
       label="Create Item"
       variant="primary"
       onClick={() => navigate({ to: "/~create" as string })}

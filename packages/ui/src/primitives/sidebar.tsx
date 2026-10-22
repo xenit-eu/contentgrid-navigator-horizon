@@ -453,11 +453,11 @@ const sidebarMenuButtonVariants = cva(
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
-        // The sidebar's main action: a soft primary tint with a full border, distinct from the
-        // active entity row (sidebar accent, left border only). Collapsed, the label is kept for
-        // screen readers only, so the icon sits in the middle of the tile.
+        // The sidebar's main action: a soft primary tint with a full frame, distinct from the
+        // active entity row (sidebar accent, left border only). The frame is an outline, which
+        // takes no space, so the icon lines up with the other rows and stays centred collapsed.
         primary:
-          "cursor-pointer rounded-md border border-primary/25 bg-primary/10 font-medium text-primary transition-colors hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
+          "cursor-pointer rounded-md bg-primary/10 font-medium text-primary outline-1 -outline-offset-1 outline-solid outline-primary/25 transition-[width,height,padding,color,background-color] hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary",
       },
       size: {
         default: "h-9 text-sm",
