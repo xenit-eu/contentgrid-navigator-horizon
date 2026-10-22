@@ -34,8 +34,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 ## Navigation
 
 - `NavigationProvider` is supplied by the host; `useViewNavigation()` throws in development without one.
-- `ChildNavigationProvider` gives a child view its own navigation object; calls its overrides don't cover
-  go to the parent's navigation.
+- `ChildNavigationProvider` gives a child view its own navigation object; any call it doesn't override
+  goes to the parent's navigation.
 - The app's real `Navigation`, `RouterNavigationProvider` (backed by `@tanstack/react-router`), lives in
   each app's own `src/routes/-router-navigation-provider.tsx` — not in this package. The leading `-` keeps
   TanStack Router's file-based router from treating it as a route. Views and features never import
