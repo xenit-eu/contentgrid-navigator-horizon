@@ -34,15 +34,14 @@ type SearchValueKind =
   | "boolean"
   | "allowed-values";
 
-type SearchMode = "prefix" | "full-text" | "exact" | "allowed-values" | "gt" | "gte" | "lt" | "lte";
-
 interface SearchParamDescriptor {
   name: string; // HAL-FORMS property name, e.g. "customer.name~prefix" — the filters key
   groupKey: string; // attribute key, e.g. "customer.name"; groups an attribute's params
   attributeLabel: string; // attribute title (or target attribute title for relations)
   label: string; // field label from resolveHalFormsFields (prompt-based)
   valueKind: SearchValueKind;
-  mode: SearchMode;
+  searchType: ProfileAttributeSearchType; // SearchHalFormTemplateProperty.searchType
+  bound?: SearchRangeBound; // { side: "lower" | "upper"; inclusive: boolean } — range params only
   relation?: { name: string; title: string }; // set when isOverRelation
   auditRole?: "created" | "modified"; // from isCreatedDate / isModifiedDate, direct only
   options?: readonly { value: string; label: string }[]; // inline options (allowed-values)
@@ -55,7 +54,13 @@ interface SearchParamDescriptor {
 - `valueKind` (research R2): inline options → `allowed-values`; `checkbox` → `boolean`;
   `date` → `date`; `datetime`/`datetime-local` → `datetime`; `number` → `integer` when the
   (target) attribute type is `long`, `decimal` when `double`; otherwise `text`.
-- `mode` maps 1:1 from `ProfileAttributeSearchType`; `allowed-values` overrides `exact`.
+- `searchType` and `bound` are copied from the `SearchHalFormTemplateProperty`; the feature never
+  compares property-name suffixes or search-type strings to classify a parameter. Range semantics
+  (which side, inclusive or not, which bound wins) live in `@contentgrid/navigator-data`:
+  `SearchHalFormTemplate.getRange(groupKey)` prefers the inclusive bound (`~from`/`~until`,
+  `~gte`/`~lte`) and falls back to the strict one (`~after`/`~before`, `~gt`/`~lt`), and
+  `resolveHalFormsFields` drops every bound `isSupersededBound` reports, so a descriptor list holds
+  at most one bound per side.
 - `auditRole` only from `ProfileAttribute.isCreatedDate` / `isModifiedDate` — never names
   (Principle II).
 - Hidden properties and `_sort` never produce a descriptor (already excluded by
@@ -91,7 +96,7 @@ interface SelectorOption {
 ```
 
 - Options: descriptors with `valueKind ∈ {text, allowed-values, integer, decimal}` and
-  `mode ∈ {prefix, full-text, exact, allowed-values}` (FR-007).
+  no `bound` (FR-007).
 - Groups: own attributes first, then one group per relation in profile order (FR-009).
 - **State transitions**: `all` ⇄ `all-direct` ⇄ `param` by user choice; any successful apply →
   `all` (FR-010, FR-019); Escape on a closed popover → `all`.
@@ -168,8 +173,8 @@ interface ActiveFilterChipModel {
   field: string; // attribute label (with relation title prefix when relevant)
   mode: string; // "prefix", "full text", "is", "one of", "after", "before", "between", "≥", "≤"
   value: string; // formatted value ("1 Jan 2026 – 7 Jan 2026", "Approved", "12.5")
-  valueKind?: SearchValueKind; // with searchMode, the component picks the mode icon
-  searchMode?: SearchMode;
+  valueKind?: SearchValueKind; // with searchType, the component picks the mode icon
+  searchType?: ProfileAttributeSearchType;
   booleanValue?: boolean; // the component shows the true/false icon
   isUnresolved: boolean; // key not in the current template (stale URL) — raw key shown
 }
@@ -177,7 +182,7 @@ interface ActiveFilterChipModel {
 
 **Rules** (`buildActiveFilterChips(descriptors, filters)`):
 
-- Range params of the same `groupKey` (`gt|gte` with `lt|lte`) merge into one chip
+- Range params of the same `groupKey` (a `bound.side` `lower` with an `upper`) merge into one chip
   (`mode: "between"` when both are set). Other params: one chip each.
 - Empty-string values are not active filters.
 - Order: the order filters were applied is not tracked in the URL; chips follow descriptor
@@ -200,6 +205,7 @@ type QuickFilterModel =
       upper?: string; // param names of the bounds offered
       lowerInclusive: boolean;
       upperInclusive: boolean;
+      exact?: string; // exact-date param: part of paramNames (active state, ×), replaced by a range
     }
   | {
       kind: "number";
