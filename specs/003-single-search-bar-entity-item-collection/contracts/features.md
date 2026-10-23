@@ -37,12 +37,12 @@ function EntitySearchBar(props: EntitySearchBarProps): JSX.Element | null;
 ### Internal layout (not exported)
 
 ```text
-entity-search-bar/
+entity-search-bar/                        # (the search-bar MSW wrapper is src/test-utils/search-bar-wrapper.tsx)
 ├── package.json
 ├── index.ts
 ├── entity-search-bar.tsx                 # composes the three rows; orchestration only
 ├── use-entity-search-bar.ts              # the view-model hook (below)
-├── test-utils.tsx                        # query client + provider wired to the search-bar MSW fixture
+├── test-utils.tsx                        # test harness for controlled quick-filter popovers
 ├── components/
 │   ├── search-param-selector.tsx         # GroupedSelect wrapper (icon-only below `sm`)
 │   ├── search-input.tsx                  # input + SearchSuggestionsPopover; Enter submits, other keys forwarded
@@ -156,7 +156,8 @@ function useSearchAttributeInclusion(profileEntity: ProfileEntity | undefined): 
 };
 ```
 
-- Reads `preferences.searchAttributes` from `useEntityDisplayPreferences`; `undefined` → `"all"`.
+- Reads `preferences.searchAttributes` from `useEntityDisplayPreferences`; `undefined` → `"all"`,
+  and so does a list naming none of the entity's current attributes (all renamed or removed).
 - `entity-configuration-detail.tsx`: add an `AttributeMultiSelect` labelled "Searchable
   attributes" under "Visible columns", options = direct attributes with at least one search
   parameter (audit attributes as system options), `onChange` → `setOverride({ searchAttributes })`
