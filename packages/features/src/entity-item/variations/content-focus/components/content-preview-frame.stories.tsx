@@ -1,3 +1,4 @@
+import { VideoCameraSlashIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ProblemDisplayModel } from "@contentgrid/navigator-data";
 import { ContentPreviewFrame } from "./content-preview-frame";
@@ -95,6 +96,14 @@ export const CouldNotRetrieve: Story = {
 
 export const CannotDisplay: Story = {
   args: { state: "cannotDisplay", onDownload: () => {} },
+};
+
+export const CannotDisplayWithIcon: Story = {
+  args: {
+    state: "cannotDisplay",
+    onDownload: () => {},
+    icon: <VideoCameraSlashIcon aria-hidden />,
+  },
 };
 
 export const Protected: Story = {

@@ -20,9 +20,10 @@ opens again on the latest version. When a refetch of a loaded item fails, the vi
 (and an open edit form) on screen.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
-`EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, or a non-PDF
-previewed through the platform's PDF rendition service — next to those same attributes and
-relations, with the production viewer toolbar. `EntityItemContentFocusView` resolves
+`EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, an image or a
+video as stored, or any other file previewed through the platform's PDF rendition service — next
+to those same attributes and relations, with the production viewer toolbar.
+`EntityItemContentFocusView` resolves
 `entityName`/`itemId` into a `profileEntity`/`EntityItem` itself and falls back to plain
 `EntityItemView` for any item with no content attributes (FR-001).
 
@@ -56,7 +57,8 @@ edit/  (edit-entity-item-container -> edit-entity-item-form;
 
 variations/content-focus/
   views/  (entity-item-content-focus-view.tsx)
-    -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel)
+    -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel,
+                     content-preview-toolbar, image-video-viewer)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
     -> entity-item's own attributes/, relations/, entity-item-view.tsx — a sibling import
        within the same feature now, not a cross-feature one
@@ -84,6 +86,8 @@ variations/content-focus/
 
 - **CSP `worker-src blob:`** — the PDF engine (`@contentgrid/ui`'s `pdf-viewer` pattern) creates
   its PDFium worker as a `blob:` module worker (research.md §8.1/§8.2 of spec 002-pdf-viewer).
+- **CSP `img-src blob:` and `media-src blob:`** — a stored image or video is shown through an
+  object URL (`image-video-viewer.tsx`).
 - **CSP `connect-src` must include the rendition service origin** whenever `renditionUri` is
   configured — non-PDF previews poll that origin via `contentFetch` (research.md §8.3).
 - **No CDN**: the PDFium WASM binary is self-hosted (`util/pdfium-wasm-url.ts` imports it as a

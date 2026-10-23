@@ -33,7 +33,14 @@ const MINIMAL_PDF_BASE64 =
 const TWENTY_PAGES_PDF_BASE64 =
   "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFs0IDAgUiA2IDAgUiA4IDAgUiAxMCAwIFIgMTIgMCBSIDE0IDAgUiAxNiAwIFIgMTggMCBSIDIwIDAgUiAyMiAwIFIgMjQgMCBSIDI2IDAgUiAyOCAwIFIgMzAgMCBSIDMyIDAgUiAzNCAwIFIgMzYgMCBSIDM4IDAgUiA0MCAwIFIgNDIgMCBSXSAvQ291bnQgMjAgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iago0IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDUgMCBSID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago2IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDcgMCBSID4+CmVuZG9iago3IDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago4IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDkgMCBSID4+CmVuZG9iago5IDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMykgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoxMCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAxMSAwIFIgPj4KZW5kb2JqCjExIDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgNCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoxMiAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAxMyAwIFIgPj4KZW5kb2JqCjEzIDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgNSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoxNCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAxNSAwIFIgPj4KZW5kb2JqCjE1IDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgNikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoxNiAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAxNyAwIFIgPj4KZW5kb2JqCjE3IDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgNykgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoxOCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAxOSAwIFIgPj4KZW5kb2JqCjE5IDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgOCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoyMCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAyMSAwIFIgPj4KZW5kb2JqCjIxIDAgb2JqCjw8IC9MZW5ndGggMzggPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgOSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoyMiAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAyMyAwIFIgPj4KZW5kb2JqCjIzIDAgb2JqCjw8IC9MZW5ndGggMzkgPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMTApIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKMjQgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSAzIDAgUiA+PiA+PiAvQ29udGVudHMgMjUgMCBSID4+CmVuZG9iagoyNSAwIG9iago8PCAvTGVuZ3RoIDM5ID4+CnN0cmVhbQpCVAovRjEgMjQgVGYKNzIgNzAwIFRkIChQYWdlIDExKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjI2IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDI3IDAgUiA+PgplbmRvYmoKMjcgMCBvYmoKPDwgL0xlbmd0aCAzOSA+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjcyIDcwMCBUZCAoUGFnZSAxMikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagoyOCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAyOSAwIFIgPj4KZW5kb2JqCjI5IDAgb2JqCjw8IC9MZW5ndGggMzkgPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMTMpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKMzAgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSAzIDAgUiA+PiA+PiAvQ29udGVudHMgMzEgMCBSID4+CmVuZG9iagozMSAwIG9iago8PCAvTGVuZ3RoIDM5ID4+CnN0cmVhbQpCVAovRjEgMjQgVGYKNzIgNzAwIFRkIChQYWdlIDE0KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjMyIDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDMzIDAgUiA+PgplbmRvYmoKMzMgMCBvYmoKPDwgL0xlbmd0aCAzOSA+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjcyIDcwMCBUZCAoUGFnZSAxNSkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagozNCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyAzNSAwIFIgPj4KZW5kb2JqCjM1IDAgb2JqCjw8IC9MZW5ndGggMzkgPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMTYpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKMzYgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSAzIDAgUiA+PiA+PiAvQ29udGVudHMgMzcgMCBSID4+CmVuZG9iagozNyAwIG9iago8PCAvTGVuZ3RoIDM5ID4+CnN0cmVhbQpCVAovRjEgMjQgVGYKNzIgNzAwIFRkIChQYWdlIDE3KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjM4IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDM5IDAgUiA+PgplbmRvYmoKMzkgMCBvYmoKPDwgL0xlbmd0aCAzOSA+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjcyIDcwMCBUZCAoUGFnZSAxOCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago0MCAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDIgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDMgMCBSID4+ID4+IC9Db250ZW50cyA0MSAwIFIgPj4KZW5kb2JqCjQxIDAgb2JqCjw8IC9MZW5ndGggMzkgPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo3MiA3MDAgVGQgKFBhZ2UgMTkpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNDIgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSAzIDAgUiA+PiA+PiAvQ29udGVudHMgNDMgMCBSID4+CmVuZG9iago0MyAwIG9iago8PCAvTGVuZ3RoIDM5ID4+CnN0cmVhbQpCVAovRjEgMjQgVGYKNzIgNzAwIFRkIChQYWdlIDIwKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA0NAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMjUzIDAwMDAwIG4gCjAwMDAwMDAzMjMgMDAwMDAgbiAKMDAwMDAwMDQ0OSAwMDAwMCBuIAowMDAwMDAwNTM2IDAwMDAwIG4gCjAwMDAwMDA2NjIgMDAwMDAgbiAKMDAwMDAwMDc0OSAwMDAwMCBuIAowMDAwMDAwODc1IDAwMDAwIG4gCjAwMDAwMDA5NjIgMDAwMDAgbiAKMDAwMDAwMTA5MCAwMDAwMCBuIAowMDAwMDAxMTc4IDAwMDAwIG4gCjAwMDAwMDEzMDYgMDAwMDAgbiAKMDAwMDAwMTM5NCAwMDAwMCBuIAowMDAwMDAxNTIyIDAwMDAwIG4gCjAwMDAwMDE2MTAgMDAwMDAgbiAKMDAwMDAwMTczOCAwMDAwMCBuIAowMDAwMDAxODI2IDAwMDAwIG4gCjAwMDAwMDE5NTQgMDAwMDAgbiAKMDAwMDAwMjA0MiAwMDAwMCBuIAowMDAwMDAyMTcwIDAwMDAwIG4gCjAwMDAwMDIyNTggMDAwMDAgbiAKMDAwMDAwMjM4NiAwMDAwMCBuIAowMDAwMDAyNDc1IDAwMDAwIG4gCjAwMDAwMDI2MDMgMDAwMDAgbiAKMDAwMDAwMjY5MiAwMDAwMCBuIAowMDAwMDAyODIwIDAwMDAwIG4gCjAwMDAwMDI5MDkgMDAwMDAgbiAKMDAwMDAwMzAzNyAwMDAwMCBuIAowMDAwMDAzMTI2IDAwMDAwIG4gCjAwMDAwMDMyNTQgMDAwMDAgbiAKMDAwMDAwMzM0MyAwMDAwMCBuIAowMDAwMDAzNDcxIDAwMDAwIG4gCjAwMDAwMDM1NjAgMDAwMDAgbiAKMDAwMDAwMzY4OCAwMDAwMCBuIAowMDAwMDAzNzc3IDAwMDAwIG4gCjAwMDAwMDM5MDUgMDAwMDAgbiAKMDAwMDAwMzk5NCAwMDAwMCBuIAowMDAwMDA0MTIyIDAwMDAwIG4gCjAwMDAwMDQyMTEgMDAwMDAgbiAKMDAwMDAwNDMzOSAwMDAwMCBuIAowMDAwMDA0NDI4IDAwMDAwIG4gCjAwMDAwMDQ1NTYgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA0NCAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNDY0NQolJUVPRgo=";
 
-function decodeBase64Pdf(base64: string): Uint8Array {
+/**
+ * A 48×32 PNG (a blue field with a white box), base64-encoded like the PDFs above: a genuinely
+ * decodable file, so `content-focus.spec.ts` can check that the browser really displays it.
+ */
+const SAMPLE_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAADAAAAAgCAIAAADbtmxLAAAATElEQVR42u3WsQ0AIQwDQECM8eOxFWwHc6CfgA6kFOc2zSlunHOfKVJKChYgIKDXqafDbt/bT4ylMiAgICAgIKDQe+i0V1QGBAR0OT8vDgZF32uiagAAAABJRU5ErkJggg==";
+
+function decodeBase64(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -70,12 +77,12 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
   const collectionUrl = `${baseUrl}/documents`;
   const itemUrl = `${collectionUrl}/doc-1`;
   const contentUrl = `${itemUrl}/file`;
-  const pdfBytes = decodeBase64Pdf(MINIMAL_PDF_BASE64);
+  const pdfBytes = decodeBase64(MINIMAL_PDF_BASE64);
   // `doc-3`: the real twenty-pages.pdf fixture — see `content-focus.spec.ts` (T030), which needs
   // an actual multi-page document for its page-navigation and zoom assertions.
   const twentyPagesItemUrl = `${collectionUrl}/doc-3`;
   const twentyPagesContentUrl = `${twentyPagesItemUrl}/file`;
-  const twentyPagesBytes = decodeBase64Pdf(TWENTY_PAGES_PDF_BASE64);
+  const twentyPagesBytes = decodeBase64(TWENTY_PAGES_PDF_BASE64);
 
   const noConstraints = {
     "blueprint:constraint": [],
@@ -214,6 +221,38 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
     },
   };
 
+  // `doc-4` / `doc-5`: an image and a video, shown as they are stored (never sent for rendition).
+  const imageItemUrl = `${collectionUrl}/doc-4`;
+  const imageContentUrl = `${imageItemUrl}/file`;
+  const imageBytes = decodeBase64(SAMPLE_PNG_BASE64);
+  const imageItemBody = {
+    id: "doc-4",
+    file: { filename: "sample.png", mimetype: "image/png", length: imageBytes.length },
+    _links: {
+      self: { href: imageItemUrl },
+      "cg:content": [{ href: imageContentUrl, name: "file", title: "File" }],
+      curies: [
+        { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
+      ],
+    },
+  };
+  const videoItemUrl = `${collectionUrl}/doc-5`;
+  const videoContentUrl = `${videoItemUrl}/file`;
+  // Placeholder bytes, not a playable video: the video preview loads its file the same way as
+  // the image preview, which already proves that path with a real file.
+  const videoBytes = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]);
+  const videoItemBody = {
+    id: "doc-5",
+    file: { filename: "sample.webm", mimetype: "video/webm", length: videoBytes.length },
+    _links: {
+      self: { href: videoItemUrl },
+      "cg:content": [{ href: videoContentUrl, name: "file", title: "File" }],
+      curies: [
+        { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
+      ],
+    },
+  };
+
   return [
     requireBearer(`${baseUrl}/profile`),
     http.get(`${baseUrl}/profile`, () =>
@@ -254,6 +293,20 @@ export function createContentFocusDemoHandlers(baseUrl = "") {
       body: pdfBytes,
       contentType: "application/pdf",
       filename: "minimal.pdf",
+    }),
+    createEntityHandler({ url: imageItemUrl, body: imageItemBody }),
+    createContentDownloadHandler({
+      url: imageContentUrl,
+      body: imageBytes,
+      contentType: "image/png",
+      filename: "sample.png",
+    }),
+    createEntityHandler({ url: videoItemUrl, body: videoItemBody }),
+    createContentDownloadHandler({
+      url: videoContentUrl,
+      body: videoBytes,
+      contentType: "video/webm",
+      filename: "sample.webm",
     }),
   ];
 }

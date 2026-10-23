@@ -7,6 +7,7 @@ import {
   type ErrorPreviewState,
   RETRYABLE_PREVIEW_STATES,
 } from "../util/content-preview-state";
+import { ContentPreviewToolbar } from "./content-preview-toolbar";
 
 export type { ContentPreviewState } from "../util/content-preview-state";
 
@@ -56,12 +57,11 @@ export interface ContentPreviewFrameProps {
   readonly children?: ReactNode;
   /**
    * Content-attribute selector (or any other toolbar-start node), rendered in a small header bar
-   * above the state body for every state EXCEPT `"ready"` — there, the mounted `PdfViewer`'s own
-   * toolbar already includes it via its `start` slot (`content-preview-panel.tsx`). Keeps the
+   * above the state body for every state EXCEPT `"ready"` — there, the mounted viewer's own
+   * toolbar already includes it (`content-preview-panel.tsx`). Keeps the
    * selector visible and usable no matter what state the current attribute is in, so a user can
    * always switch to a different content attribute — including away from one that errors out or
-   * still needs a file uploaded (round-2 review: "cannot look or switch content attributes when
-   * one cannot be opened or needs to be uploaded").
+   * still needs a file uploaded.
    */
   readonly toolbarStart?: ReactNode;
   /**
@@ -72,6 +72,8 @@ export interface ContentPreviewFrameProps {
    * `noFile` state it is a failed upload, shown above the drop zone.
    */
   readonly problem?: ProblemDisplayModel;
+  /** Shown above an error state's message, e.g. a broken-image icon. */
+  readonly icon?: ReactNode;
   /** Fires when the user clicks Download. Omitted hides the Download button. */
   readonly onDownload?: () => void;
   /**
@@ -99,6 +101,7 @@ export function ContentPreviewFrame({
   state,
   children,
   problem,
+  icon,
   onDownload,
   onRetry,
   onFileChange,
@@ -154,6 +157,11 @@ export function ContentPreviewFrame({
     const message = labels[ERROR_MESSAGE_LABEL_KEY[state]];
     body = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 p-6">
+        {icon && (
+          <div className="flex size-16 items-center justify-center rounded-full border bg-secondary text-secondary-foreground [&_svg]:size-8">
+            {icon}
+          </div>
+        )}
         <div className="w-full max-w-md">
           {problem ? (
             <ProblemAlert model={problem} />
@@ -183,8 +191,7 @@ export function ContentPreviewFrame({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* px-2 py-1.5 matches PdfViewerToolbar's row so both bars line up */}
-      <div className="flex shrink-0 items-center gap-2 border-b px-2 py-1.5">{toolbarStart}</div>
+      <ContentPreviewToolbar start={toolbarStart} />
       <div className="min-h-0 flex-1">{body}</div>
     </div>
   );
