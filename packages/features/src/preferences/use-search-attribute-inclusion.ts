@@ -12,8 +12,10 @@ export interface SearchAttributeInclusion {
  * Which attributes take part in the entity search bar (spec 003, FR-034–FR-036), resolved like
  * visible columns: user preference, then backend default, then everything. Search parameters
  * over a relation are not governed by this — the search bar always includes them. A saved list
- * that names none of the entity's current attributes (all renamed or removed) falls back to
- * everything, so the search bar is never left with no attribute to search.
+ * that names none of the entity's current searchable attributes (all renamed or removed, or only
+ * attributes without a search parameter such as `id`) falls back to everything, so the search bar
+ * is never left with no attribute to search. "Searchable" matches the options the configuration
+ * panel offers.
  *
  * Accepts `profileEntity: undefined` — call it unconditionally, every render.
  */
@@ -23,7 +25,11 @@ export function useSearchAttributeInclusion(
   const { preferences } = useEntityDisplayPreferences(profileEntity);
   const searchAttributes = preferences.searchAttributes;
   return useMemo(() => {
-    const known = new Set(profileEntity?.attributes.map((attribute) => attribute.name));
+    const known = new Set(
+      [...(profileEntity?.userDefinedAttributes ?? []), ...(profileEntity?.auditAttributes ?? [])]
+        .filter((attribute) => attribute.searchParams.length > 0)
+        .map((attribute) => attribute.name),
+    );
     const resolves = searchAttributes?.some((name) => known.has(name));
     if (!searchAttributes || (profileEntity && !resolves)) {
       return { includedAttributes: "all", isIncluded: () => true };
