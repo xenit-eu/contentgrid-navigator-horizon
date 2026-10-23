@@ -168,6 +168,8 @@ export const searchBarProfileJson = {
         searchParams: [
           ["received_at~after", "Received at: After", "greater-than"],
           ["received_at~before", "Received at: Before", "less-than"],
+          ["received_at~from", "Received at: From", "greater-than-or-equal"],
+          ["received_at~until", "Received at: Until", "less-than-or-equal"],
         ],
       }),
       attribute({
@@ -185,6 +187,8 @@ export const searchBarProfileJson = {
         searchParams: [
           ["created_at~after", "Created at: After", "greater-than"],
           ["created_at~before", "Created at: Before", "less-than"],
+          ["created_at~from", "Created at: From", "greater-than-or-equal"],
+          ["created_at~until", "Created at: Until", "less-than-or-equal"],
         ],
       }),
       attribute({
@@ -196,6 +200,8 @@ export const searchBarProfileJson = {
         searchParams: [
           ["modified_at~after", "Modified at: After", "greater-than"],
           ["modified_at~before", "Modified at: Before", "less-than"],
+          ["modified_at~from", "Modified at: From", "greater-than-or-equal"],
+          ["modified_at~until", "Modified at: Until", "less-than-or-equal"],
         ],
       }),
     ],
@@ -229,11 +235,17 @@ export const searchBarProfileJson = {
         { name: "due_date~until", prompt: "Due date: Until", type: "date" },
         { name: "received_at~after", prompt: "Received at: After", type: "datetime" },
         { name: "received_at~before", prompt: "Received at: Before", type: "datetime" },
+        { name: "received_at~from", prompt: "Received at: From", type: "datetime" },
+        { name: "received_at~until", prompt: "Received at: Until", type: "datetime" },
         { name: "urgent", prompt: "Urgent", type: "checkbox" },
         { name: "created_at~after", prompt: "Created at: After", type: "datetime" },
         { name: "created_at~before", prompt: "Created at: Before", type: "datetime" },
+        { name: "created_at~from", prompt: "Created at: From", type: "datetime" },
+        { name: "created_at~until", prompt: "Created at: Until", type: "datetime" },
         { name: "modified_at~after", prompt: "Modified at: After", type: "datetime" },
         { name: "modified_at~before", prompt: "Modified at: Before", type: "datetime" },
+        { name: "modified_at~from", prompt: "Modified at: From", type: "datetime" },
+        { name: "modified_at~until", prompt: "Modified at: Until", type: "datetime" },
         { name: "customer.name~prefix", prompt: "Customer: Name", type: "text" },
         { name: "owner.email~prefix", prompt: "Owner: Email", type: "text" },
         {

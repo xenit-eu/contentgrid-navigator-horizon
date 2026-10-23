@@ -1101,6 +1101,16 @@
                   "name": "datetime~before",
                   "title": "Datetime: Before",
                   "type": "less-than"
+                },
+                {
+                  "name": "datetime~from",
+                  "title": "Datetime: From",
+                  "type": "greater-than-or-equal"
+                },
+                {
+                  "name": "datetime~until",
+                  "title": "Datetime: Until",
+                  "type": "less-than-or-equal"
                 }
               ],
               "blueprint:attribute": []
@@ -1383,6 +1393,16 @@
             {
               "name": "datetime~before",
               "prompt": "Datetime: Before",
+              "type": "datetime"
+            },
+            {
+              "name": "datetime~from",
+              "prompt": "Datetime: From",
+              "type": "datetime"
+            },
+            {
+              "name": "datetime~until",
+              "prompt": "Datetime: Until",
               "type": "datetime"
             },
             {
