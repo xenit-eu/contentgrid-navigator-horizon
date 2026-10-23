@@ -73,7 +73,37 @@ export interface SearchHalFormTemplateProperty {
    * Computed once here so consumers never need to parse the raw property name.
    */
   groupKey: string;
+  /**
+   * The range end this property bounds, derived from `searchType` — `undefined` for a
+   * non-range search (exact, prefix, full-text). Consumers read this instead of comparing
+   * search types or property-name suffixes themselves.
+   */
+  bound?: SearchRangeBound;
 }
+
+/** Which end of a range a search property bounds, and whether the bound value itself matches. */
+export interface SearchRangeBound {
+  readonly side: "lower" | "upper";
+  readonly inclusive: boolean;
+}
+
+/**
+ * The bounds a range search offers for one `groupKey`: at most one property per side. An
+ * inclusive bound (`~gte`/`~lte`, `~from`/`~until`) is preferred over the strict one
+ * (`~gt`/`~lt`, `~after`/`~before`), which is only used when the backend offers no inclusive
+ * bound on that side.
+ */
+export interface SearchRange {
+  readonly lower?: SearchHalFormTemplateProperty;
+  readonly upper?: SearchHalFormTemplateProperty;
+}
+
+const BOUND_BY_SEARCH_TYPE: Partial<Record<ProfileAttributeSearchType, SearchRangeBound>> = {
+  [ProfileAttributeSearchType.greaterThan]: { side: "lower", inclusive: false },
+  [ProfileAttributeSearchType.greaterThanOrEqual]: { side: "lower", inclusive: true },
+  [ProfileAttributeSearchType.lessThan]: { side: "upper", inclusive: false },
+  [ProfileAttributeSearchType.lessThanOrEqual]: { side: "upper", inclusive: true },
+};
 
 /**
  * Raw sort option as returned in the HAL-FORMS `_sort` property's inline options array.
@@ -102,14 +132,9 @@ function isRawSortOption(opt: unknown): opt is RawSortOption {
  * "invoice_date.~from" form) — so splitting at the first "~" is always correct; no
  * dot-aware special case is needed here.
  *
- * `~from`/`~until` themselves aren't in the committed profile dump (it only has
- * `~prefix`/`~gt`/`~gte`/`~lt`/`~lte`/`~after`/`~before` — verified: `git grep "~from\|~until"
- * -- "*test-fixtures*"` is empty), but they're real: the legacy Navigator's
- * `RangedJsfFormConvertor` pairs exactly those suffixes with `~after`/`~before` as fallbacks
- * (`contentgrid-navigator/src/components/form/jsonforms.ts:325`,
- * `NestedRange("~from", "~until", "~after", "~before")`). The plain-tilde claim above is what
- * the dump DOES back directly — every operator suffix it contains uses a single tilde, no
- * dotted form.
+ * Datetime attributes carry `~from`/`~until` (inclusive bounds) next to `~after`/`~before`
+ * (exclusive) — see the `datetime` attribute in the committed profile dump. Every operator
+ * suffix the dump contains uses a single tilde, no dotted form.
  */
 function basePropertyName(propertyName: string): string {
   const tildeIdx = propertyName.indexOf("~");
@@ -193,6 +218,7 @@ export interface SortOption {
 export class SearchHalFormTemplate {
   private _searchProperties?: readonly SearchHalFormTemplateProperty[];
   private _sortOptions?: readonly SortOption[];
+  private _ranges?: ReadonlyMap<string, SearchRange>;
 
   constructor(
     /** The underlying HAL-FORMS template */
@@ -293,6 +319,39 @@ export class SearchHalFormTemplate {
   }
 
   /**
+   * The range bounds offered for an attribute (or relation-traversal) `groupKey`, the inclusive
+   * bound preferred on each side — see `SearchRange`. `undefined` when the template has no range
+   * search for it.
+   */
+  getRange(groupKey: string): SearchRange | undefined {
+    if (this._ranges === undefined) {
+      const ranges = new Map<
+        string,
+        { lower?: SearchHalFormTemplateProperty; upper?: SearchHalFormTemplateProperty }
+      >();
+      for (const prop of this.searchProperties) {
+        if (!prop.bound) continue;
+        const range = ranges.get(prop.groupKey) ?? {};
+        const current = range[prop.bound.side];
+        if (!current || (prop.bound.inclusive && !current.bound!.inclusive)) {
+          range[prop.bound.side] = prop;
+        }
+        ranges.set(prop.groupKey, range);
+      }
+      this._ranges = ranges;
+    }
+    return this._ranges.get(groupKey);
+  }
+
+  /**
+   * Whether `prop` is a range bound that `getRange` passes over, because an inclusive bound on
+   * the same side exists (e.g. `~after` next to `~from`). A form offers only the preferred one.
+   */
+  isSupersededBound(prop: SearchHalFormTemplateProperty): boolean {
+    return prop.bound !== undefined && this.getRange(prop.groupKey)?.[prop.bound.side] !== prop;
+  }
+
+  /**
    * Get all search properties that traverse relations.
    *
    * @returns Array of search properties that search across relations
@@ -315,10 +374,8 @@ export class SearchHalFormTemplate {
     const propertyName = property.name;
     // A dot always separates a relation name from its target attribute (e.g.
     // "customer.first_name~prefix"). None of the operator suffixes the committed profile dump
-    // actually contains (~prefix, ~gt/~gte/~lt/~lte, ~after/~before) use a dot; ~from/~until
-    // aren't in the dump but are real per the legacy Navigator's NestedRange pairing (see
-    // basePropertyName's doc comment) and, per that same source, are also plain-tilde, never
-    // dotted. So "any dot" is a sufficient and correct relation-traversal check.
+    // contains (~prefix, ~gt/~gte/~lt/~lte, ~after/~before, ~from/~until) use a dot, so "any
+    // dot" is a sufficient and correct relation-traversal check.
     const parts = propertyName.split(".");
     const isOverRelation = parts.length > 1;
 
@@ -356,6 +413,7 @@ export class SearchHalFormTemplate {
       profileRelation,
       searchType,
       groupKey,
+      bound: BOUND_BY_SEARCH_TYPE[searchType],
     };
   }
 
