@@ -110,7 +110,7 @@ function makeStubEntityItem(options: {
     uploadContentRequest: EntityItem.prototype.uploadContentRequest,
     downloadContentRequest: (
       _attrName: string,
-      opts?: { range?: { start: number; end?: number } },
+      opts?: { range?: { start: number; end?: number }; ifNoneMatch?: string },
     ) => {
       const headers: Record<string, string> = {};
       if (opts?.range) {
@@ -118,6 +118,9 @@ function makeStubEntityItem(options: {
           opts.range.end === undefined
             ? `bytes=${opts.range.start}-`
             : `bytes=${opts.range.start}-${opts.range.end}`;
+      }
+      if (opts?.ifNoneMatch !== undefined) {
+        headers["If-None-Match"] = opts.ifNoneMatch;
       }
       return new Request(CONTENT_URL, { method: "GET", headers });
     },
@@ -154,7 +157,7 @@ function makeStubEntityItemWithAttributes(
     uploadContentRequest: EntityItem.prototype.uploadContentRequest,
     downloadContentRequest: (
       attrName: string,
-      opts?: { range?: { start: number; end?: number } },
+      opts?: { range?: { start: number; end?: number }; ifNoneMatch?: string },
     ) => {
       const match = attrs.find((attr) => attr.name === attrName);
       const url = match?.url ?? attrs[0].url;
@@ -164,6 +167,9 @@ function makeStubEntityItemWithAttributes(
           opts.range.end === undefined
             ? `bytes=${opts.range.start}-`
             : `bytes=${opts.range.start}-${opts.range.end}`;
+      }
+      if (opts?.ifNoneMatch !== undefined) {
+        headers["If-None-Match"] = opts.ifNoneMatch;
       }
       return new Request(url, { method: "GET", headers });
     },
@@ -461,6 +467,8 @@ describe("ContentPreviewPanel", () => {
 
   it("shows a converted-preview badge for a rendition-backed non-PDF file", async () => {
     server.use(
+      // The stored file is fetched first, for the version (ETag) its rendition is made of.
+      createContentDownloadHandler({ url: CONTENT_URL, etag: '"content-v1"' }),
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: JOB_URL,
@@ -730,6 +738,8 @@ describe("ContentPreviewPanel", () => {
 
   it("shows previewUnavailable naming the mimetype when the rendition service reports invalid-conversion", async () => {
     server.use(
+      // The stored file is fetched first, for the version (ETag) its rendition is made of.
+      createContentDownloadHandler({ url: CONTENT_URL, etag: '"content-v1"' }),
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: JOB_URL,
@@ -753,6 +763,8 @@ describe("ContentPreviewPanel", () => {
 
   it("shows couldNotPrepare when the rendition job never reaches a terminal state (timeout)", async () => {
     server.use(
+      // The stored file is fetched first, for the version (ETag) its rendition is made of.
+      createContentDownloadHandler({ url: CONTENT_URL, etag: '"content-v1"' }),
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: JOB_URL,
@@ -777,6 +789,8 @@ describe("ContentPreviewPanel", () => {
 
   it("shows couldNotPrepare with the real problem detail on a generic rendition failure", async () => {
     server.use(
+      // The stored file is fetched first, for the version (ETag) its rendition is made of.
+      createContentDownloadHandler({ url: CONTENT_URL, etag: '"content-v1"' }),
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: JOB_URL,
@@ -806,6 +820,7 @@ describe("ContentPreviewPanel", () => {
       // The rendition job for "photo" never reaches a terminal state (`outcome: "never"`) — this
       // test only cares about the instant right after switching, not about how the new
       // attribute's own state eventually settles.
+      createContentDownloadHandler({ url: PHOTO_CONTENT_URL, etag: '"content-v1"' }),
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: `${JOB_URL}-photo`,
@@ -849,6 +864,7 @@ describe("ContentPreviewPanel", () => {
         body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
         contentType: "application/pdf",
       }),
+      createContentDownloadHandler({ url: PHOTO_CONTENT_URL, etag: '"content-v1"' }),
       http.get(
         RENDITION_REQUEST_URL,
         () => new HttpResponse(null, { status: 202, headers: { Location: JOB_URL } }),

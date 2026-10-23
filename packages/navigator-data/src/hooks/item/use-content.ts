@@ -91,13 +91,15 @@ export interface UseDownloadContentOptions {
  *
  * `entityItem.uploadContentRequest` makes the PUT conditional on `contentEtag`: `If-Match` when
  * given, `If-None-Match: *` when null. On HTTP 412 (the stored file changed in the meantime), the
- * error surfaces as `ProblemDetailError` and the item query is invalidated so the newer version
- * loads — the hook does NOT auto-retry.
+ * error surfaces as `ProblemDetailError` and the item and content preview queries are invalidated
+ * so the newer version loads — the hook does NOT auto-retry.
  *
  * Cache behaviour on success:
  * - Re-fetches the entity item via `apiFetch` to get fresh metadata + new ETag.
  * - `setQueryData` on `entityItem.byUrl` with the fresh item.
  * - `invalidateQueries` on `entityItemCollection.forEntity`.
+ * - `invalidateQueries` on `contentPreview.byUrl` for the uploaded attribute, so a shown preview
+ *   revalidates and picks up the new file.
  * - Caller's `onSuccess` runs after cache is consistent.
  *
  * @param entityItem     - The entity item whose content attribute is being uploaded.
@@ -117,6 +119,13 @@ export function useUploadContent(
 
   const { onSuccess, onError, ...restMutationOptions } = options?.mutationOptions ?? {};
   const [progress, setProgress] = useState(0);
+
+  async function invalidateContentPreview(): Promise<void> {
+    const link = entityItem.contentLink(attributeName);
+    if (link !== null) {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.contentPreview.byUrl(link.href) });
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: async ({ file, contentEtag }: UploadContentVariables) => {
@@ -144,6 +153,9 @@ export function useUploadContent(
         queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
       });
 
+      // The preview's key holds no ETag, so it would not pick up the new file on its own.
+      await invalidateContentPreview();
+
       // Compose caller's onSuccess LAST — after cache is consistent.
       await onSuccess?.(item, variables, onMutateResult, context);
     },
@@ -153,6 +165,7 @@ export function useUploadContent(
         await queryClient.invalidateQueries({
           queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
         });
+        await invalidateContentPreview();
       }
       await onError?.(error, variables, onMutateResult, context);
     },

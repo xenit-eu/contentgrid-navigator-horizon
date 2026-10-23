@@ -4,7 +4,13 @@
 
 ```ts
 export type PreviewSource =
-  | { kind: "pdf"; bytes: ArrayBuffer; filename: string; origin: "stored" | "rendition" }
+  | {
+      kind: "pdf";
+      bytes: ArrayBuffer;
+      filename: string;
+      origin: "stored" | "rendition";
+      etag: string | null;
+    }
   | { kind: "image" | "video"; blob: Blob; etag: string | null }
   | { kind: "noFile" }
   | { kind: "unavailable"; mimetype: string | null }
@@ -23,12 +29,19 @@ export function useContentPreview(
 
 - Takes the domain object, not an href. Throws (synchronously) if `attributeName` is not a content
   attribute of the item.
-- Key: `queryKeys.contentPreview.byUrl(contentHref, entityItem.etag)`.
+- Key: `queryKeys.contentPreview.byUrl(contentHref)` — no ETag: the entity item's ETag does not
+  change when only its file is replaced (ACC-3294).
+- Every fetch after the first downloads the stored file conditionally (`If-None-Match`) on the
+  content's own ETag from the previous result (`etag` on `pdf`/`image`/`video`; for a rendition, the
+  ETag of the file it was made of). A 304 keeps the previous preview as it is — no download, no new
+  rendition. For a rendition the download's body is not read; it only tells which version is stored.
 - `queryFn` honours `signal`; unmount or key change aborts any download or poll in flight.
-- `retry: false`, `staleTime: Infinity`, `gcTime: 300_000`. Retry is `refetch()`.
+- `retry: false`, default `staleTime` (0: a remount or the window regaining focus revalidates),
+  `gcTime: 300_000`. Retry is `refetch()`.
 - A stored PDF, image (`image/*`) or video (`video/*`) is downloaded as it is; any other file goes to the rendition service.
 - Uses `contentFetch` for both stored files and rendition requests (the user's credentials; TokenMonger handles any exchange on the platform side); never `apiFetch`.
 - Never writes to other query keys; never invalidates item or collection caches.
+- `useUploadContent` invalidates this key after an upload (and after a 412), so the new file shows.
 
 ## `requestRendition(fetch, uriTemplate, contentHref, options)`
 

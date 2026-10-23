@@ -821,26 +821,34 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
 `useContentPreview(entityItem, attributeName, options?)` (`src/hooks/preview/use-content-preview.ts`)
 turns a content attribute into something displayable for the content preview (spec
 `002-pdf-viewer`): the stored file directly when it is a PDF (`kind: "pdf"`), an image or a video
-(`kind: "image" | "video"`, the file as a `Blob` plus the content's own `etag`), or — for any other file, when a rendition
-endpoint is configured — the platform's PDF rendition of it.
+(`kind: "image" | "video"`, the file as a `Blob`), or — for any other file, when a rendition
+endpoint is configured — the platform's PDF rendition of it. Every variant made from the stored file
+(`pdf`, `image`, `video`) carries the content's own `etag` — for a rendition, the ETag of the file it
+was made of.
 
 **Rules:**
 
 - Throws synchronously (during render, not inside `queryFn`) when `attributeName` does not name a
   content attribute of the item — a caller programming error, not a state to render around.
-- Query key: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)` — its own root, never
-  invalidated by an entity item or collection mutation. The key uses the **entity item's** ETag (the
-  item's content metadata changes with its file), not the content's own ETag. The ETag in the key means a re-upload onto
-  the same attribute produces a new key automatically (a stale preview is never served after a
-  re-upload); it is NOT invalidated by any relation/entity-item cache invalidation.
+- Query key: `queryKeys.contentPreview.byUrl(link.href)` — its own root, no ETag. The entity
+  item's ETag does **not** change when only its file is replaced, and the content's own ETag is only
+  known after a download, so neither can make a new file a new key. Instead every fetch after the
+  first is a conditional download (`downloadContentRequest(name, { ifNoneMatch })`) on the content
+  ETag of the previous result: a 304 keeps that preview as it is (same object, no download, no new
+  rendition), a 200 shows the new file, a 404 gives `noFile`. For a rendition, the download's body is
+  cancelled unread — it only tells which version is stored.
+- Invalidated by `useUploadContent` (after an upload, and after a 412), never by an entity item,
+  relation or collection mutation.
+- Viewers are keyed on the preview's content `etag` (plus a Retry token), never on
+  `entityItem.etag`.
 - **Uses `contentFetch` for everything — the stored download AND every rendition request/poll.**
   Never `apiFetch`. The frontend performs no token exchange: the rendition service receives the same
   Bearer credential as a content download; TokenMonger handles whatever exchange it needs on the
   platform side (research.md §8.3 of spec 002-pdf-viewer). Rendition config is delivered like
   `apiBaseUrl`/OIDC — through `RuntimeAppConfig`/Liaison, not a separate client.
-- `retry: false`, `staleTime: Infinity`, `gcTime: 300_000` — a failed download/rendition is not
-  silently retried (the caller's Retry action is `refetch()`); a specific ETag's content never goes
-  stale on its own.
+- `retry: false`, default `staleTime` (0), `gcTime: 300_000` — a failed download/rendition is not
+  silently retried (the caller's Retry action is `refetch()`); a remount or the window regaining
+  focus revalidates, which is how a file replaced by someone else shows up.
 - Mimetype classification: `nativePreviewKind`/`needsRendition` (`src/preview/content-mimetype.ts`)
   — pure string functions; `nativePreviewKind` returns `"pdf"`/`"image"`/`"video"` for a file shown
   as it is, and `needsRendition` is true exactly when it returns `undefined`.

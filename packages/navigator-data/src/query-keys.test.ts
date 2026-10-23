@@ -183,31 +183,20 @@ describe("queryKeys.toManyRelation", () => {
 });
 
 describe("queryKeys.contentPreview", () => {
-  it("byUrl returns key including href and etag", () => {
-    const key = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v1"');
-    expect(key).toEqual(["ContentPreview", "/invoices/inv-001/document", '"v1"']);
-  });
-
-  it("byUrl accepts a null etag", () => {
-    const key = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", null);
-    expect(key).toEqual(["ContentPreview", "/invoices/inv-001/document", null]);
-  });
-
-  it("different etags for the same href produce different keys", () => {
-    const key1 = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v1"');
-    const key2 = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v2"');
-    expect(key1).not.toEqual(key2);
+  it("byUrl returns key including the href", () => {
+    const key = queryKeys.contentPreview.byUrl("/invoices/inv-001/document");
+    expect(key).toEqual(["ContentPreview", "/invoices/inv-001/document"]);
   });
 
   it("different hrefs produce different keys", () => {
-    const key1 = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v1"');
-    const key2 = queryKeys.contentPreview.byUrl("/invoices/inv-002/document", '"v1"');
+    const key1 = queryKeys.contentPreview.byUrl("/invoices/inv-001/document");
+    const key2 = queryKeys.contentPreview.byUrl("/invoices/inv-002/document");
     expect(key1).not.toEqual(key2);
   });
 
   it("root string does not collide with entityItem namespace", () => {
     const profile = makeProfileEntity("invoice", "/profile/invoices");
-    const contentPreviewKey = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v1"');
+    const contentPreviewKey = queryKeys.contentPreview.byUrl("/invoices/inv-001/document");
     const entityItemKey = queryKeys.entityItem.forEntity(profile);
     expect(contentPreviewKey[0]).not.toEqual(entityItemKey[0]);
   });

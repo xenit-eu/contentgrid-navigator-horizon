@@ -22,14 +22,14 @@ cross package boundaries. Platform entities (`ProfileEntity`, `ProfileAttribute`
 
 Discriminated union returned by `useContentPreview` as query data.
 
-| Variant       | Fields                                                                      | Meaning                                                                     |
-| ------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `pdf`         | `bytes: ArrayBuffer`, `filename: string`, `origin: "stored" \| "rendition"` | Displayable PDF; `origin` drives the "converted preview" indicator (FR-020) |
-| `image`       | `blob: Blob`, `etag: string \| null`                                        | The stored image file, shown as it is (FR-032); `etag` is the content's own |
-| `video`       | `blob: Blob`, `etag: string \| null`                                        | The stored video file, shown as it is (FR-032); `etag` is the content's own |
-| `noFile`      | —                                                                           | Attribute holds no file (metadata `null` or link answered 404)              |
-| `unavailable` | `mimetype: string \| null`                                                  | Needs a rendition and no rendition endpoint is configured (FR-022)          |
-| `unsupported` | `mimetype: string \| null`                                                  | Rendition service reported `invalid-conversion` (FR-018)                    |
+| Variant       | Fields                                                                                              | Meaning                                                                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pdf`         | `bytes: ArrayBuffer`, `filename: string`, `origin: "stored" \| "rendition"`, `etag: string \| null` | Displayable PDF; `origin` drives the "converted preview" indicator (FR-020); `etag` is the content's own (of the stored file, also for a rendition) |
+| `image`       | `blob: Blob`, `etag: string \| null`                                                                | The stored image file, shown as it is (FR-032); `etag` is the content's own                                                                         |
+| `video`       | `blob: Blob`, `etag: string \| null`                                                                | The stored video file, shown as it is (FR-032); `etag` is the content's own                                                                         |
+| `noFile`      | —                                                                                                   | Attribute holds no file (metadata `null` or link answered 404)                                                                                      |
+| `unavailable` | `mimetype: string \| null`                                                                          | Needs a rendition and no rendition endpoint is configured (FR-022)                                                                                  |
+| `unsupported` | `mimetype: string \| null`                                                                          | Rendition service reported `invalid-conversion` (FR-018)                                                                                            |
 
 Failures are not variants: they reject the query with `ProblemDetailError`, `RenditionTimeoutError`,
 `RenditionProtocolError` or a plain `Error`, surfaced by TanStack Query as `error`.
@@ -39,9 +39,11 @@ Failures are not variants: they reject the query with `ProblemDetailError`, `Ren
 - `bytes.byteLength > 0`; the viewer decides whether the bytes are a valid or protected PDF.
 - `filename` falls back to `metadata.filename`, then `"document.pdf"` for renditions.
 
-**Query key**: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)` — own root
-`["ContentPreview", href, etag]`. The ETag makes a re-upload a new key. Never invalidated by relation
-or item mutations; `gcTime` 5 min, `staleTime` Infinity.
+**Query key**: `queryKeys.contentPreview.byUrl(link.href)` — own root `["ContentPreview", href]`.
+No ETag in the key: the entity item's ETag does not change when only its file is replaced
+(ACC-3294). Each refetch revalidates with a conditional download on the content's own `etag`; a 304
+keeps the previous preview. Invalidated by `useUploadContent`, never by relation or item mutations;
+`gcTime` 5 min, default `staleTime` (0).
 
 ## RenditionJob (new, `navigator-data/preview/rendition-job.ts`)
 

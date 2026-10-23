@@ -102,12 +102,13 @@ export function ContentPreviewPanel({
   // re-render with the same `bytes`, which retrying otherwise would not produce.
   const [retryToken, setRetryToken] = useState(0);
 
-  // A new attribute/item (or a re-upload bumping the ETag) means nothing from the previous
-  // selection should keep showing as belonging to the new one (FR-006) — including a
-  // viewer-reported load error from whatever was displayed before.
+  // A new attribute/item, or a new file on the same attribute (a re-upload, here or elsewhere),
+  // means nothing from the previous selection should keep showing as belonging to the new one
+  // (FR-006) — including a viewer-reported load error from whatever was displayed before. An
+  // unchanged file keeps the same `previewSource` object (a 304 keeps the cached preview).
   useEffect(() => {
     setViewerLoadErrorKind(null);
-  }, [entityItem, attributeName]);
+  }, [entityItem, attributeName, previewSource]);
 
   const metadata = getContentAttributeMetadata(entityItem, attributeName);
   const expectedOrigin =
@@ -156,8 +157,9 @@ export function ContentPreviewPanel({
     return (
       <ContentPreviewFrame state="ready">
         <ImageVideoViewer
-          // A different file gets a fresh element, so it never shows the previous file.
-          key={`${attributeName}:${previewSource.etag ?? ""}`}
+          // A different file (by the content's own ETag — the item's does not change with its
+          // file) or a Retry gets a fresh element, so it never shows the previous file.
+          key={`${attributeName}:${previewSource.etag ?? ""}:${retryToken}`}
           source={previewSource}
           filename={metadata?.filename ?? null}
           toolbarStart={toolbarStart}
@@ -201,7 +203,9 @@ export function ContentPreviewPanel({
           )}
         >
           <PdfEngineProvider
-            key={`${attributeName}:${entityItem.etag ?? ""}:${retryToken}`}
+            // Keyed on the content's own ETag, like the image/video viewer: the item's ETag does
+            // not change when only its file is replaced.
+            key={`${attributeName}:${previewSource.etag ?? ""}:${retryToken}`}
             wasmUrl={pdfiumWasmUrl}
           >
             <Suspense

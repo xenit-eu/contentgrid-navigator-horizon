@@ -12,7 +12,8 @@
  * - Rendition "never" outcome → RenditionTimeoutError after the ceiling
  * - A poll-time 500 → isError (ProblemDetailError)
  * - Key change (attribute/item switch) aborts in-flight polling — no further handler calls
- * - ETag change produces a new key — the item is re-fetched, not served from cache
+ * - Revalidation on the content's own ETag: a 304 keeps the preview (stored file and rendition),
+ *   a changed file replaces it, a removed file becomes noFile
  * - contentFetch is used; apiFetch is never called
  * - Throws synchronously for a non-content attribute name
  */
@@ -89,6 +90,26 @@ function contentUrlFor(itemId: string): string {
   return `${BASE}/all-attributes/${itemId}/content`;
 }
 
+/**
+ * A stored file whose version (ETag) the test can change. Answers 304 to a matching
+ * `If-None-Match`, and records the `If-None-Match` of every request.
+ */
+function storedFile(itemId: string, contentType: string, initialEtag = '"content-v1"') {
+  const file = { etag: initialEtag, ifNoneMatch: [] as (string | null)[] };
+  const handler = http.get(contentUrlFor(itemId), ({ request }) => {
+    const ifNoneMatch = request.headers.get("If-None-Match");
+    file.ifNoneMatch.push(ifNoneMatch);
+    if (ifNoneMatch === file.etag) {
+      return new HttpResponse(null, { status: 304, headers: { ETag: file.etag } });
+    }
+    return new HttpResponse(PDF_BYTES, {
+      status: 200,
+      headers: { "Content-Type": contentType, ETag: file.etag },
+    });
+  });
+  return { file, handler };
+}
+
 // ---------------------------------------------------------------------------
 // Stored PDF
 // ---------------------------------------------------------------------------
@@ -116,6 +137,7 @@ describe("useContentPreview — stored PDF", () => {
       bytes: expect.any(ArrayBuffer),
       filename: "report.pdf",
       origin: "stored",
+      etag: null,
     });
   });
 
@@ -240,6 +262,7 @@ describe("useContentPreview — no renditionUri configured", () => {
 describe("useContentPreview — rendition ready", () => {
   it("returns { kind: 'pdf', origin: 'rendition' } when the rendition succeeds", async () => {
     server.use(
+      storedFile("item-1", "application/msword").handler,
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: RENDITION_JOB_URL,
@@ -262,6 +285,7 @@ describe("useContentPreview — rendition ready", () => {
       bytes: expect.any(ArrayBuffer),
       filename: "report.docx",
       origin: "rendition",
+      etag: '"content-v1"',
     });
   });
 });
@@ -269,6 +293,7 @@ describe("useContentPreview — rendition ready", () => {
 describe("useContentPreview — rendition invalid-conversion", () => {
   it("returns { kind: 'unsupported' } when the rendition service cannot convert the file", async () => {
     server.use(
+      storedFile("item-1", "application/msword").handler,
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: RENDITION_JOB_URL,
@@ -292,6 +317,7 @@ describe("useContentPreview — rendition invalid-conversion", () => {
 describe("useContentPreview — rendition failure (poll-time 500)", () => {
   it("surfaces isError with the underlying problem", async () => {
     server.use(
+      storedFile("item-1", "application/msword").handler,
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: RENDITION_JOB_URL,
@@ -316,6 +342,7 @@ describe("useContentPreview — rendition timeout", () => {
   it("rejects with RenditionTimeoutError once the ceiling is reached", async () => {
     vi.useFakeTimers();
     server.use(
+      storedFile("item-1", "application/msword").handler,
       ...createRenditionHandlers({
         url: RENDITION_REQUEST_URL,
         jobUrl: RENDITION_JOB_URL,
@@ -358,6 +385,8 @@ describe("useContentPreview — key change aborts in-flight polling", () => {
     const jobUrlFor2 = `${BASE}/renditions/jobs/job-item-2`;
 
     server.use(
+      storedFile("item-1", "application/msword").handler,
+      storedFile("item-2", "application/msword").handler,
       http.get(RENDITION_REQUEST_URL, ({ request }) => {
         const contentHref = new URL(request.url).searchParams.get("url") ?? "";
         const jobUrl = contentHref.includes("item-2") ? jobUrlFor2 : jobUrlFor1;
@@ -409,35 +438,124 @@ describe("useContentPreview — key change aborts in-flight polling", () => {
 });
 
 // ---------------------------------------------------------------------------
-// ETag change → new key
+// Revalidation on the content's own ETag
 // ---------------------------------------------------------------------------
 
-describe("useContentPreview — ETag change produces a new key", () => {
-  it("re-fetches (does not reuse the cache) when only the ETag changes", async () => {
-    let downloadCount = 0;
-    server.use(
-      http.get(contentUrlFor("item-1"), () => {
-        downloadCount += 1;
-        return new HttpResponse(PDF_BYTES, {
-          status: 200,
-          headers: { "Content-Type": "application/pdf" },
-        });
-      }),
-    );
+describe("useContentPreview — revalidation on the content's own ETag", () => {
+  it("keeps the stored preview as it is while the file is unchanged (304)", async () => {
+    const { file, handler } = storedFile("item-1", "application/pdf");
+    server.use(handler);
 
-    const itemV1 = makeItem({ etag: '"v1"' });
-    const { result, rerender } = renderHook(({ item }) => useContentPreview(item, "content"), {
-      initialProps: { item: itemV1 },
+    const entityItem = makeItem();
+    const { result } = renderHook(() => useContentPreview(entityItem, "content"), {
       wrapper: makeWrapper(),
     });
-
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(downloadCount).toBe(1);
+    const firstPreview = result.current.data;
+    expect(firstPreview).toMatchObject({ kind: "pdf", etag: '"content-v1"' });
 
-    const itemV2 = makeItem({ etag: '"v2"' });
-    rerender({ item: itemV2 });
+    await act(async () => {
+      await result.current.refetch();
+    });
 
-    await waitFor(() => expect(downloadCount).toBe(2));
+    expect(file.ifNoneMatch).toEqual([null, '"content-v1"']);
+    expect(result.current.data).toBe(firstPreview);
+  });
+
+  it("shows the new file once someone else replaced it, though the item's ETag is unchanged", async () => {
+    const { file, handler } = storedFile("item-1", "image/png");
+    server.use(handler);
+
+    const entityItem = makeItem({
+      metadata: { filename: "photo.png", mimetype: "image/png", length: PDF_BYTES.length },
+    });
+    const { result } = renderHook(() => useContentPreview(entityItem, "content"), {
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const firstPreview = result.current.data;
+
+    file.etag = '"content-v2"';
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    await waitFor(() =>
+      expect(result.current.data).toMatchObject({ kind: "image", etag: '"content-v2"' }),
+    );
+    expect(result.current.data).not.toBe(firstPreview);
+    expect(file.ifNoneMatch).toEqual([null, '"content-v1"']);
+  });
+
+  it("keeps a rendition without converting again while the file is unchanged (304)", async () => {
+    let renditionRequests = 0;
+    const { file, handler } = storedFile("item-1", "application/msword");
+    server.use(
+      handler,
+      http.get(RENDITION_REQUEST_URL, () => {
+        renditionRequests += 1;
+        return new HttpResponse(null, { status: 202, headers: { Location: RENDITION_JOB_URL } });
+      }),
+      http.get(RENDITION_JOB_URL, () =>
+        HttpResponse.arrayBuffer(PDF_BYTES.buffer, {
+          status: 200,
+          headers: { "Content-Type": "application/pdf" },
+        }),
+      ),
+    );
+
+    const entityItem = makeItem({
+      metadata: { filename: "report.docx", mimetype: "application/msword", length: 10 },
+    });
+    const { result } = renderHook(() => useContentPreview(entityItem, "content"), {
+      wrapper: makeWrapper(makeQueryClient(), undefined, undefined, RENDITION_URI_TEMPLATE),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const firstPreview = result.current.data;
+    expect(renditionRequests).toBe(1);
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+    expect(file.ifNoneMatch).toEqual([null, '"content-v1"']);
+    expect(result.current.data).toBe(firstPreview);
+    expect(renditionRequests).toBe(1);
+
+    file.etag = '"content-v2"';
+    await act(async () => {
+      await result.current.refetch();
+    });
+    await waitFor(() =>
+      expect(result.current.data).toMatchObject({ origin: "rendition", etag: '"content-v2"' }),
+    );
+    expect(renditionRequests).toBe(2);
+  });
+
+  it("becomes noFile once the file was removed (404)", async () => {
+    const { handler } = storedFile("item-1", "application/pdf");
+    server.use(handler);
+
+    const entityItem = makeItem();
+    const { result } = renderHook(() => useContentPreview(entityItem, "content"), {
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject({ kind: "pdf" });
+
+    server.use(
+      createProblemHandler({
+        method: "get",
+        url: contentUrlFor("item-1"),
+        status: 404,
+        title: "Not Found",
+        type: "https://contentgrid.cloud/problems/not-found/content",
+      }),
+    );
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.data).toEqual({ kind: "noFile" }));
   });
 });
 

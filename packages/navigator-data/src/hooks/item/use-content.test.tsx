@@ -187,6 +187,30 @@ describe("useUploadContent — upload success (PUT 204 → re-fetch → cache)",
     });
   });
 
+  it("marks the attribute's content preview stale so the new file shows", async () => {
+    server.use(createContentUploadHandler({ url: CONTENT_URL }));
+    wireRefetchHandler();
+
+    const queryClient = makeQueryClient();
+    const entityItem = makeEntityItemWithEmptyContent();
+    const previewQueryKey = queryKeys.contentPreview.byUrl(CONTENT_URL);
+    queryClient.setQueryData(previewQueryKey, { kind: "noFile" });
+
+    const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await act(async () => {
+      result.current.mutate({
+        file: new File(["hello"], "hello.txt", { type: "text/plain" }),
+        contentEtag: null,
+      });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryState(previewQueryKey)?.isInvalidated).toBe(true);
+  });
+
   it("calls caller onSuccess after cache is populated", async () => {
     server.use(createContentUploadHandler({ url: CONTENT_URL }));
     wireRefetchHandler();
@@ -328,7 +352,7 @@ describe("useUploadContent — 412 ETag mismatch", () => {
     expect(putCallCount).toBe(1);
   });
 
-  it("marks the cached item stale so the newer version loads", async () => {
+  it("marks the cached item and its content preview stale so the newer version loads", async () => {
     server.use(
       http.put(CONTENT_URL, () =>
         HttpResponse.json(
@@ -342,6 +366,8 @@ describe("useUploadContent — 412 ETag mismatch", () => {
     const entityItem = makeEntityItemWithEmptyContent();
     const itemQueryKey = queryKeys.entityItem.byUrl(makeInvoiceProfile(), INVOICE_ITEM_URL);
     queryClient.setQueryData(itemQueryKey, entityItem);
+    const previewQueryKey = queryKeys.contentPreview.byUrl(CONTENT_URL);
+    queryClient.setQueryData(previewQueryKey, { kind: "noFile" });
     const { result } = renderHook(() => useUploadContent(entityItem, "document"), {
       wrapper: makeWrapper(queryClient),
     });
@@ -355,6 +381,7 @@ describe("useUploadContent — 412 ETag mismatch", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(queryClient.getQueryState(itemQueryKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(previewQueryKey)?.isInvalidated).toBe(true);
   });
 });
 

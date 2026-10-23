@@ -807,6 +807,18 @@ describe("EntityItem — downloadContentRequest", () => {
     expect(req.headers.get("Range")).toBe("bytes=512-");
   });
 
+  it("adds no If-None-Match header by default", () => {
+    const item = makeEntityItemWithContentLink();
+    const req = item.downloadContentRequest("document");
+    expect(req.headers.get("If-None-Match")).toBeNull();
+  });
+
+  it("adds the given content ETag verbatim as If-None-Match", () => {
+    const item = makeEntityItemWithContentLink();
+    const req = item.downloadContentRequest("document", { ifNoneMatch: '"content-v1"' });
+    expect(req.headers.get("If-None-Match")).toBe('"content-v1"');
+  });
+
   it("throws when the cg:content link is absent", () => {
     const item = makeEntityItemWithoutContentLink();
     expect(() => item.downloadContentRequest("document")).toThrow();
