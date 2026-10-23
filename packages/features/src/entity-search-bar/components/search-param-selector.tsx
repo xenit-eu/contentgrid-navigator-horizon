@@ -35,7 +35,7 @@ export function SearchParamSelector({
           label: option.label,
           hint: option.descriptor ? searchTypeLabel(option.descriptor) : undefined,
           icon: option.descriptor
-            ? searchTypeIcon(option.descriptor.valueKind, option.descriptor.mode)
+            ? searchTypeIcon(option.descriptor.valueKind, option.descriptor.searchType)
             : undefined,
         })),
       }))}

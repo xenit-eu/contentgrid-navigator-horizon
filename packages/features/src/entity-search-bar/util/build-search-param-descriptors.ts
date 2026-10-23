@@ -1,6 +1,5 @@
 import {
   type ProfileAttribute,
-  ProfileAttributeSearchType,
   ProfileAttributeType,
   type ProfileEntity,
   type SearchHalFormTemplate,
@@ -8,17 +7,7 @@ import {
   resolveRelationSearchTarget,
 } from "@contentgrid/navigator-data";
 import type { HalFormsField } from "../../hal-forms";
-import type { SearchMode, SearchParamDescriptor, SearchValueKind } from "./types";
-
-const MODE_BY_SEARCH_TYPE: Readonly<Record<ProfileAttributeSearchType, SearchMode>> = {
-  [ProfileAttributeSearchType.exactMatch]: "exact",
-  [ProfileAttributeSearchType.prefixMatch]: "prefix",
-  [ProfileAttributeSearchType.fullText]: "full-text",
-  [ProfileAttributeSearchType.greaterThan]: "gt",
-  [ProfileAttributeSearchType.greaterThanOrEqual]: "gte",
-  [ProfileAttributeSearchType.lessThan]: "lt",
-  [ProfileAttributeSearchType.lessThanOrEqual]: "lte",
-};
+import type { SearchParamDescriptor, SearchValueKind } from "./types";
 
 /**
  * Normalises the entity's search form into one `SearchParamDescriptor` per field
@@ -62,10 +51,8 @@ function toDescriptor(
     attributeLabel: attribute?.title ?? searchProperty.groupKey.split(".").pop()!,
     label: field.label,
     valueKind,
-    mode:
-      valueKind === "allowed-values"
-        ? "allowed-values"
-        : MODE_BY_SEARCH_TYPE[searchProperty.searchType],
+    searchType: searchProperty.searchType,
+    bound: searchProperty.bound,
     relation: relation ? { name: relation.name, title: relation.title } : undefined,
     auditRole: relation ? undefined : auditRoleOf(searchProperty.profileAttribute),
     options: field.kind === "enum" ? field.options : undefined,

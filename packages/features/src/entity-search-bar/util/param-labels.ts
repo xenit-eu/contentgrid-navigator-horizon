@@ -1,3 +1,4 @@
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
 import type { SearchParamDescriptor } from "./types";
 
 /** The parameter's display name: the attribute, prefixed by the relation it goes through. */
@@ -19,10 +20,10 @@ export function searchTypeLabel(descriptor: SearchParamDescriptor): string {
     default:
       break;
   }
-  switch (descriptor.mode) {
-    case "prefix":
+  switch (descriptor.searchType) {
+    case ProfileAttributeSearchType.prefixMatch:
       return "Starts with";
-    case "full-text":
+    case ProfileAttributeSearchType.fullText:
       return "Full text";
     default:
       return "Exact";

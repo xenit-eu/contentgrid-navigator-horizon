@@ -22,7 +22,7 @@ export function BooleanQuickFilter({
   const state = value === undefined ? "any" : value ? "true" : "false";
   return (
     <FilterButton
-      icon={value === undefined ? searchTypeIcon("boolean", "exact") : booleanValueIcon(value)}
+      icon={value === undefined ? searchTypeIcon("boolean") : booleanValueIcon(value)}
       label={
         value === undefined
           ? quickFilter.label

@@ -34,7 +34,7 @@ export function AllowedValuesQuickFilter({
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <FilterButton
-          icon={searchTypeIcon("allowed-values", "allowed-values")}
+          icon={searchTypeIcon("allowed-values")}
           label={selected ? `${quickFilter.label}: ${selected.label}` : quickFilter.label}
           tone={quickFilter.tone}
           onClear={() => onClear(quickFilter.groupKey)}
