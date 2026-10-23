@@ -244,12 +244,19 @@ function planRequest(
   const targetTemplate = target?.targetProfile.searchTemplate;
   if (!target || !targetTemplate)
     return { name, withSuggestions, countUrl, attributeName: undefined, awaitingTarget: !target };
-  const targetUrl = target.targetProfile.searchEntityRequest(
-    createValues(targetTemplate.template).withValue(
-      target.targetSearchProperty.property.name,
-      value,
-    ),
-  ).url;
+  let targetUrl: string;
+  try {
+    targetUrl = target.targetProfile.searchEntityRequest(
+      createValues(targetTemplate.template).withValue(
+        target.targetSearchProperty.property.name,
+        value,
+      ),
+    ).url;
+  } catch {
+    // `value` was coerced for this parameter's type; the target's own property may reject it.
+    // Keep the count and drop the suggestions rather than breaking the caller's render.
+    return { name, withSuggestions, countUrl, attributeName: undefined };
+  }
   return {
     name,
     withSuggestions,
