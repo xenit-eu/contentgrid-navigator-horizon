@@ -75,8 +75,10 @@ function Chip({
         <span
           data-slot="chip-mode"
           className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-[4px] bg-foreground/5 px-1 text-[11px] font-normal",
-            isWarning ? "text-inherit" : "text-foreground",
+            "inline-flex shrink-0 items-center gap-1 rounded-[4px] px-1 text-[11px] font-normal",
+            // On the orange warning surface a darkening overlay drops the text under 4.5:1; a
+            // background-tinted one keeps the segment visible and raises the contrast instead.
+            isWarning ? "bg-background/50 text-inherit" : "bg-foreground/5 text-foreground",
           )}
         >
           {modeIcon}
