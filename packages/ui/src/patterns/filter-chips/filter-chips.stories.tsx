@@ -58,3 +58,19 @@ export const Selectable: Story = {
     onSelect: fn(),
   },
 };
+
+/** A chip whose filter is not applied (e.g. an unknown URL key) is orange, with a warning icon. */
+export const WithWarning: Story = {
+  args: {
+    chips: [
+      ...base,
+      {
+        id: "foo",
+        field: "foo",
+        mode: "is",
+        value: "bar",
+        warning: "Not a search parameter of this entity — not applied",
+      },
+    ],
+  },
+};
