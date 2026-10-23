@@ -182,6 +182,32 @@ describe("SearchSuggestionsPopover", () => {
     expect(input()).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("closes when focus leaves the input for another control", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Harness />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    await user.click(input());
+    expect(input()).toHaveAttribute("aria-expanded", "true");
+
+    await user.tab();
+
+    expect(screen.getByRole("button", { name: "Elsewhere" })).toHaveFocus();
+    expect(input()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("region", { name: "Suggestions" })).not.toBeInTheDocument();
+  });
+
+  it("stays open while the input is clicked and typed in", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(input());
+    await user.type(input(), "Al");
+    expect(input()).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("forgets the highlight when the caller closes and reopens it", async () => {
     const user = userEvent.setup();
     const onUnhandledKeyDown = vi.fn();
