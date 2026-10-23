@@ -63,6 +63,13 @@ describe("useSearchAttributeInclusion", () => {
     expect(result.current.isIncluded("reference")).toBe(false);
   });
 
+  it("falls back to every attribute when the list names only attributes without search", () => {
+    backendDefaults.value = { "search-bar": { searchAttributes: ["id"] } };
+    const { result } = render();
+    expect(result.current.includedAttributes).toBe("all");
+    expect(result.current.isIncluded("title")).toBe(true);
+  });
+
   it("falls back to every attribute when no saved name exists any more", () => {
     backendDefaults.value = { "search-bar": { searchAttributes: ["renamed_away"] } };
     const { result } = render();
