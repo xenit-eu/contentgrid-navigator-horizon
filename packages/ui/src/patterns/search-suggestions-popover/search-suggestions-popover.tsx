@@ -196,9 +196,9 @@ export function SearchSuggestionsPopover({
           className,
         )}
         onOpenAutoFocus={(event) => event.preventDefault()}
-        onFocusOutside={(event) => event.preventDefault()}
         onInteractOutside={(event) => {
-          // Typing in or clicking the input is part of using the popover, not leaving it.
+          // Typing in, clicking or focusing the input is part of using the popover, not leaving
+          // it; focus moving anywhere else (e.g. tabbing out) closes it.
           if (anchorRef.current?.contains(event.target as Node)) event.preventDefault();
         }}
       >
