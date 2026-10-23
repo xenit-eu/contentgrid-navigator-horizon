@@ -11,6 +11,8 @@ import { SearchInput } from "./components/search-input";
 import { SearchParamSelector } from "./components/search-param-selector";
 import { type EntitySearchBarProps, useEntitySearchBar } from "./use-entity-search-bar";
 
+const UNRESOLVED_FILTER_WARNING = "Not a search parameter of this entity — not applied";
+
 export type { EntitySearchBarProps } from "./use-entity-search-bar";
 
 /**
@@ -63,6 +65,9 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
           valueIcon:
             chip.booleanValue === undefined ? undefined : booleanValueIcon(chip.booleanValue),
           selectable: searchBar.chipTargets.has(chip.id),
+          // The search request only encodes the template's own properties, so an unknown key
+          // (e.g. a stale or hand-edited link) is dropped: show it, but as not applied.
+          warning: chip.isUnresolved ? UNRESOLVED_FILTER_WARNING : undefined,
         }))}
       />,
     );
