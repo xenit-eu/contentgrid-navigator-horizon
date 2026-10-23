@@ -50,6 +50,21 @@ describe("EntitySearchBar", () => {
     expect(screen.queryByRole("list", { name: "Active filters" })).not.toBeInTheDocument();
   });
 
+  it("shows a filter key the search form does not know as a warning chip that can be removed", async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar({ foo: "bar", "title~prefix": "Al" });
+
+    const list = screen.getByRole("list", { name: "Active filters" });
+    const [known, unknown] = within(list).getAllByRole("listitem");
+    expect(known!.querySelector("[data-slot='chip']")).toHaveAttribute("data-tone", "applied");
+    const chip = unknown!.querySelector("[data-slot='chip']");
+    expect(chip).toHaveAttribute("data-tone", "warning");
+    expect(chip).toHaveAttribute("title", "Not a search parameter of this entity — not applied");
+
+    await user.click(within(unknown!).getByRole("button", { name: "Remove filter foo is bar" }));
+    expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Al" });
+  });
+
   it("shows a filter set elsewhere (e.g. the advanced dialog) as an active quick filter with an ×", async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar({ "received_at~from": "2026-10-01T00:00:00.000Z" });
