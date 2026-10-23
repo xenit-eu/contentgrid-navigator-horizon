@@ -58,7 +58,7 @@ export function DateQuickFilter({
 
   const icon = quickFilter.auditRole
     ? auditRoleIcon(quickFilter.auditRole)
-    : searchTypeIcon(quickFilter.includesTime ? "datetime" : "date", "gte");
+    : searchTypeIcon(quickFilter.includesTime ? "datetime" : "date");
 
   function apply() {
     // Re-encoding an untouched range would round exact timestamps (e.g. from a preset) out to

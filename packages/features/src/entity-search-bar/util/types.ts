@@ -1,3 +1,4 @@
+import type { ProfileAttributeSearchType, SearchRangeBound } from "@contentgrid/navigator-data";
 import type { HalFormsField } from "../../hal-forms";
 
 /**
@@ -16,17 +17,6 @@ export type SearchValueKind =
   | "boolean"
   | "allowed-values";
 
-/** How a search parameter matches (data-model.md §2). */
-export type SearchMode =
-  | "prefix"
-  | "full-text"
-  | "exact"
-  | "allowed-values"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte";
-
 export interface SearchParamOption {
   readonly value: string;
   readonly label: string;
@@ -43,7 +33,10 @@ export interface SearchParamDescriptor {
   /** Field label from `resolveHalFormsFields` (prompt-based). */
   readonly label: string;
   readonly valueKind: SearchValueKind;
-  readonly mode: SearchMode;
+  /** How the parameter matches, as the search template states it. */
+  readonly searchType: ProfileAttributeSearchType;
+  /** The range end the parameter bounds; `undefined` for a non-range parameter. */
+  readonly bound?: SearchRangeBound;
   /** Set when the parameter searches through a relation. */
   readonly relation?: { readonly name: string; readonly title: string };
   /** Audit role of a direct attribute, from its profile constraints — never from its name. */

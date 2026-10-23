@@ -1,7 +1,8 @@
+import { ProfileAttributeSearchType, type SearchRangeBound } from "@contentgrid/navigator-data";
 import { shiftLocalDate } from "./date-presets";
 import { type FormatOptions, formatFilterValue } from "./format-filter-value";
 import { paramLabel } from "./param-labels";
-import type { SearchMode, SearchParamDescriptor, SearchValueKind } from "./types";
+import type { SearchParamDescriptor, SearchValueKind } from "./types";
 
 export interface ActiveFilterChipModel {
   /** `range:<groupKey>` for a merged range, else the parameter name — unique per chip. */
@@ -13,15 +14,12 @@ export interface ActiveFilterChipModel {
   readonly mode: string;
   readonly value: string;
   readonly valueKind?: SearchValueKind;
-  readonly searchMode?: SearchMode;
+  readonly searchType?: ProfileAttributeSearchType;
   /** Set for a boolean filter, so the chip can show the true / false icon. */
   readonly booleanValue?: boolean;
   /** The key is not a parameter of the current search form (e.g. a stale link). */
   readonly isUnresolved: boolean;
 }
-
-const LOWER: ReadonlySet<SearchMode> = new Set(["gt", "gte"]);
-const UPPER: ReadonlySet<SearchMode> = new Set(["lt", "lte"]);
 
 /**
  * One chip per active filter (data-model.md §6, FR-003, FR-004a, FR-037), whatever set it: the
@@ -41,9 +39,7 @@ export function buildActiveFilterChips(
 
   for (const descriptor of descriptors) {
     const raw = filters[descriptor.name];
-    const isBound = LOWER.has(descriptor.mode) || UPPER.has(descriptor.mode);
-
-    if (isBound) {
+    if (descriptor.bound) {
       if (handledRanges.has(descriptor.groupKey)) continue;
       handledRanges.add(descriptor.groupKey);
       const chip = rangeChip(descriptors, descriptor.groupKey, filters, formatOptions);
@@ -55,10 +51,10 @@ export function buildActiveFilterChips(
       id: descriptor.name,
       paramNames: [descriptor.name],
       field: paramLabel(descriptor),
-      mode: modeLabel(descriptor.mode),
+      mode: modeLabel(descriptor.searchType),
       value: formatFilterValue(descriptor, raw, formatOptions),
       valueKind: descriptor.valueKind,
-      searchMode: descriptor.mode,
+      searchType: descriptor.searchType,
       booleanValue: descriptor.valueKind === "boolean" ? raw === "true" : undefined,
       isUnresolved: false,
     });
@@ -84,11 +80,9 @@ function rangeChip(
   filters: Readonly<Record<string, string>>,
   formatOptions: FormatOptions | undefined,
 ): ActiveFilterChipModel | undefined {
-  const bounds = descriptors.filter(
-    (d) => d.groupKey === groupKey && (LOWER.has(d.mode) || UPPER.has(d.mode)) && filters[d.name],
-  );
-  const lower = bounds.find((d) => LOWER.has(d.mode));
-  const upper = bounds.find((d) => UPPER.has(d.mode));
+  const bounds = descriptors.filter((d) => d.groupKey === groupKey && d.bound && filters[d.name]);
+  const lower = bounds.find((d) => d.bound?.side === "lower");
+  const upper = bounds.find((d) => d.bound?.side === "upper");
   const first = lower ?? upper;
   if (!first) return undefined;
 
@@ -97,11 +91,15 @@ function rangeChip(
     // "between" reads as the days included: for a date-only attribute an exclusive bound
     // (`~after` / `~before`, stored one day outside the picked range) is shown one day inwards.
     const shift =
-      !inclusive || d.valueKind !== "date" ? 0 : d.mode === "gt" ? 1 : d.mode === "lt" ? -1 : 0;
+      !inclusive || d.valueKind !== "date" || !d.bound || d.bound.inclusive
+        ? 0
+        : d.bound.side === "lower"
+          ? 1
+          : -1;
     return formatFilterValue(d, shift ? shiftLocalDate(raw, shift) : raw, formatOptions);
   };
   const isDate = first.valueKind === "date" || first.valueKind === "datetime";
-  const mode = lower && upper ? "between" : boundLabel(first.mode, isDate);
+  const mode = lower && upper ? "between" : boundLabel(first.bound!, isDate);
   const value = lower && upper ? `${show(lower, true)} – ${show(upper, true)}` : show(first);
 
   return {
@@ -111,31 +109,25 @@ function rangeChip(
     mode,
     value,
     valueKind: first.valueKind,
-    searchMode: first.mode,
+    searchType: first.searchType,
     isUnresolved: false,
   };
 }
 
-function boundLabel(mode: SearchMode, isDate: boolean): string {
-  switch (mode) {
-    case "gt":
-      return isDate ? "after" : ">";
-    case "gte":
-      return isDate ? "from" : "≥";
-    case "lt":
-      return isDate ? "before" : "<";
-    case "lte":
-      return isDate ? "until" : "≤";
-    default:
-      return modeLabel(mode);
+function boundLabel(bound: SearchRangeBound, isDate: boolean): string {
+  if (bound.side === "lower") {
+    if (bound.inclusive) return isDate ? "from" : "≥";
+    return isDate ? "after" : ">";
   }
+  if (bound.inclusive) return isDate ? "until" : "≤";
+  return isDate ? "before" : "<";
 }
 
-function modeLabel(mode: SearchMode): string {
-  switch (mode) {
-    case "prefix":
+function modeLabel(searchType: ProfileAttributeSearchType): string {
+  switch (searchType) {
+    case ProfileAttributeSearchType.prefixMatch:
       return "starts with";
-    case "full-text":
+    case ProfileAttributeSearchType.fullText:
       return "full text";
     default:
       return "is";

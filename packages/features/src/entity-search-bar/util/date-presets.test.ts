@@ -21,10 +21,10 @@ const dateOnlyExclusive = {
 };
 const dateTime = {
   includesTime: true,
-  lower: "received_at~after",
-  lowerInclusive: false,
-  upper: "received_at~before",
-  upperInclusive: false,
+  lower: "received_at~from",
+  lowerInclusive: true,
+  upper: "received_at~until",
+  upperInclusive: true,
 };
 
 describe("resolveDatePreset", () => {
@@ -51,8 +51,8 @@ describe("encodeDateRange", () => {
   it("encodes a datetime range as ISO timestamps", () => {
     const range = resolveDatePreset("last-week", now);
     expect(encodeDateRange(range, dateTime)).toEqual({
-      "received_at~after": local(2026, 9, 30, 10).toISOString(),
-      "received_at~before": now.toISOString(),
+      "received_at~from": local(2026, 9, 30, 10).toISOString(),
+      "received_at~until": now.toISOString(),
     });
   });
 
@@ -62,8 +62,8 @@ describe("encodeDateRange", () => {
         wholeDays: true,
       }),
     ).toEqual({
-      "received_at~after": local(2026, 10, 1).toISOString(),
-      "received_at~before": new Date(2026, 9, 3, 23, 59, 59, 999).toISOString(),
+      "received_at~from": local(2026, 10, 1).toISOString(),
+      "received_at~until": new Date(2026, 9, 3, 23, 59, 59, 999).toISOString(),
     });
   });
 
@@ -105,7 +105,7 @@ describe("decodeDateRange", () => {
 
   it("reads datetime bounds", () => {
     expect(
-      decodeDateRange(dateTime, { "received_at~after": "2026-10-01T08:00:00.000Z" }).from,
+      decodeDateRange(dateTime, { "received_at~from": "2026-10-01T08:00:00.000Z" }).from,
     ).toEqual(new Date("2026-10-01T08:00:00.000Z"));
   });
 

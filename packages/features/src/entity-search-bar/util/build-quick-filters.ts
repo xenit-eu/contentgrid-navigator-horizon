@@ -1,3 +1,4 @@
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
 import type { SearchParamDescriptor, SearchParamOption } from "./types";
 
 export type QuickFilterTone = "idle" | "active" | "positive" | "negative";
@@ -100,11 +101,13 @@ function toQuickFilter(
   switch (first.valueKind) {
     case "date":
     case "datetime": {
-      const lower = group.find((d) => d.mode === "gte" || d.mode === "gt");
-      const upper = group.find((d) => d.mode === "lte" || d.mode === "lt");
+      // The group holds only the bounds the search template prefers (inclusive over strict,
+      // `SearchHalFormTemplate.getRange`), so at most one per side.
+      const lower = group.find((d) => d.bound?.side === "lower");
+      const upper = group.find((d) => d.bound?.side === "upper");
       // An exact-date parameter is part of the same filter: setting it (e.g. from the advanced
       // dialog) makes the quick filter active, its × clears it, and applying a range replaces it.
-      const exact = group.find((d) => d.mode === "exact");
+      const exact = group.find((d) => d.searchType === ProfileAttributeSearchType.exactMatch);
       if (!lower && !upper) return undefined;
       const paramNames = [lower?.name, upper?.name, exact?.name].filter((n): n is string => !!n);
       const isActive = paramNames.some(has);
@@ -118,9 +121,9 @@ function toQuickFilter(
         includesTime: first.valueKind === "datetime",
         auditRole: first.auditRole,
         lower: lower?.name,
-        lowerInclusive: lower?.mode === "gte",
+        lowerInclusive: lower?.bound?.inclusive ?? false,
         upper: upper?.name,
-        upperInclusive: upper?.mode === "lte",
+        upperInclusive: upper?.bound?.inclusive ?? false,
         exact: exact?.name,
       };
     }

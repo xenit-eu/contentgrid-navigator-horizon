@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
 import { makeSearchBarProfiles } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { resolveHalFormsFields } from "../../hal-forms";
 import { buildQuickFilters } from "./build-quick-filters";
@@ -49,10 +50,10 @@ describe("buildQuickFilters", () => {
     });
     expect(receivedAt).toMatchObject({
       includesTime: true,
-      lower: "received_at~after",
-      lowerInclusive: false,
-      upper: "received_at~before",
-      upperInclusive: false,
+      lower: "received_at~from",
+      lowerInclusive: true,
+      upper: "received_at~until",
+      upperInclusive: true,
     });
   });
 
@@ -75,7 +76,7 @@ describe("buildQuickFilters", () => {
   });
 
   it("is active when any of its params has a value, whatever set it", () => {
-    const filters = { "received_at~before": "2026-10-01T00:00:00.000Z", "quantity~gte": "3" };
+    const filters = { "received_at~until": "2026-10-01T00:00:00.000Z", "quantity~gte": "3" };
     const byKey = new Map(quickFilters(filters).map((q) => [q.groupKey, q]));
     expect(byKey.get("received_at")).toMatchObject({ isActive: true, tone: "active" });
     expect(byKey.get("quantity")).toMatchObject({ isActive: true, tone: "active" });
@@ -102,7 +103,15 @@ describe("buildQuickFilters", () => {
 
   it("treats a date's exact parameter as part of its quick filter", () => {
     const from = descriptors.find((d) => d.name === "due_date~from")!;
-    const withExact = [...descriptors, { ...from, name: "due_date", mode: "exact" as const }];
+    const withExact = [
+      ...descriptors,
+      {
+        ...from,
+        name: "due_date",
+        searchType: ProfileAttributeSearchType.exactMatch,
+        bound: undefined,
+      },
+    ];
     const due = buildQuickFilters(withExact, { due_date: "2026-09-24" }).find(
       (q) => q.groupKey === "due_date",
     );

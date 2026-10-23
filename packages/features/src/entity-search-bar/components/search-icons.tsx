@@ -13,7 +13,8 @@ import {
   ToggleLeftIcon,
   XCircleIcon,
 } from "@phosphor-icons/react";
-import type { SearchMode, SearchValueKind } from "../util/types";
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
+import type { SearchValueKind } from "../util/types";
 
 /**
  * Presentation map: which icon stands for a search type, an audit role or a boolean value.
@@ -26,11 +27,18 @@ import type { SearchMode, SearchValueKind } from "../util/types";
 const ICON_SIZE = 14;
 
 /** Icon for a search parameter's type indicator (FR-008). */
-export function searchTypeIcon(valueKind: SearchValueKind, mode: SearchMode): ReactNode {
+export function searchTypeIcon(
+  valueKind: SearchValueKind,
+  searchType?: ProfileAttributeSearchType,
+): ReactNode {
   switch (valueKind) {
     case "text":
-      if (mode === "prefix") return <TextAaIcon size={ICON_SIZE} aria-hidden />;
-      if (mode === "full-text") return <MagnifyingGlassIcon size={ICON_SIZE} aria-hidden />;
+      if (searchType === ProfileAttributeSearchType.prefixMatch) {
+        return <TextAaIcon size={ICON_SIZE} aria-hidden />;
+      }
+      if (searchType === ProfileAttributeSearchType.fullText) {
+        return <MagnifyingGlassIcon size={ICON_SIZE} aria-hidden />;
+      }
       return <EqualsIcon size={ICON_SIZE} aria-hidden />;
     case "allowed-values":
       return <ListChecksIcon size={ICON_SIZE} aria-hidden />;

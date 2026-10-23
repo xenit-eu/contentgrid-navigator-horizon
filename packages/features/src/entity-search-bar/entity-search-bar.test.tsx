@@ -52,7 +52,7 @@ describe("EntitySearchBar", () => {
 
   it("shows a filter set elsewhere (e.g. the advanced dialog) as an active quick filter with an ×", async () => {
     const user = userEvent.setup();
-    const { onFiltersChange } = renderBar({ "received_at~after": "2026-10-01T00:00:00.000Z" });
+    const { onFiltersChange } = renderBar({ "received_at~from": "2026-10-01T00:00:00.000Z" });
 
     const receivedAt = within(quickFilters()).getByRole("button", { name: "Received at" });
     expect(toneOf(receivedAt)).toBe("active");

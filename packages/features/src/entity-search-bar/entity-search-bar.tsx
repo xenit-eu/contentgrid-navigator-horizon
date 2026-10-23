@@ -59,10 +59,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
           field: chip.field,
           mode: chip.mode,
           value: chip.value,
-          modeIcon:
-            chip.valueKind && chip.searchMode
-              ? searchTypeIcon(chip.valueKind, chip.searchMode)
-              : undefined,
+          modeIcon: chip.valueKind ? searchTypeIcon(chip.valueKind, chip.searchType) : undefined,
           valueIcon:
             chip.booleanValue === undefined ? undefined : booleanValueIcon(chip.booleanValue),
           selectable: searchBar.chipTargets.has(chip.id),
