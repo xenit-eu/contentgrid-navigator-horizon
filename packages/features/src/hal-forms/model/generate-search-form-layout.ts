@@ -2,6 +2,7 @@ import type {
   ProfileRelation,
   SearchHalFormTemplate,
   SearchHalFormTemplateProperty,
+  SearchRangeBound,
 } from "@contentgrid/navigator-data";
 import type { HalFormsField } from "./hal-forms-field";
 import type { FieldRow, FieldSection, LayoutSchema } from "./layout-schema";
@@ -51,7 +52,7 @@ export function generateSearchFormLayout(
   }
   const isRangeField = (field: HalFormsField) => {
     const sp = searchPropertyByName.get(field.name);
-    return sp !== undefined && directionLabel(sp) !== undefined;
+    return sp?.bound !== undefined;
   };
 
   const rows: RelationScopedRow[] = [];
@@ -154,25 +155,14 @@ function groupRowsIntoSections(rows: readonly RelationScopedRow[]): FieldSection
 }
 
 /**
- * Mirrors `packages/features/src/search/filter-properties.ts`'s `computeDirectionLabel` — same
- * four-way classification — kept local (rather than importing that module's) so this pure model
- * function doesn't need to depend on `@contentgrid/ui`'s `SearchOperator` type for one small
- * switch. Exported so `resolve-hal-forms-fields.ts`'s label computation uses this exact same
- * classification rather than a second, potentially-drifting copy.
+ * The direction word of a range bound (from its `bound`, see `SearchHalFormTemplateProperty`),
+ * `undefined` for a non-range property. Exported so `resolve-hal-forms-fields.ts`'s label
+ * computation uses this exact same wording.
  */
 export function directionLabel(sp: {
-  searchType: string;
+  bound?: SearchRangeBound;
 }): "After" | "Before" | "From" | "Until" | undefined {
-  switch (sp.searchType) {
-    case "greater-than":
-      return "After";
-    case "greater-than-or-equal":
-      return "From";
-    case "less-than":
-      return "Before";
-    case "less-than-or-equal":
-      return "Until";
-    default:
-      return undefined;
-  }
+  if (!sp.bound) return undefined;
+  if (sp.bound.side === "lower") return sp.bound.inclusive ? "From" : "After";
+  return sp.bound.inclusive ? "Until" : "Before";
 }
