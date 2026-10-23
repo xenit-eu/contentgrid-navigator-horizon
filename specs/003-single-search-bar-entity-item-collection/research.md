@@ -57,7 +57,9 @@ duplicate the hal-forms redundancy rules and drift from the dialog); classifying
 
 ## R2. Search-parameter classification
 
-**Decision**: Each descriptor gets a `valueKind` and a `mode`:
+**Decision**: Each descriptor gets a `valueKind`, plus the template property's `searchType` and
+range `bound` (amended: the feature-local `mode` copy of the search type was dropped, see
+data-model.md §2). The table's `mode` column names the search type / bound for reading:
 
 | Source                             | `valueKind`         | `mode`                        | In selector | In popover                         | Quick filter            |
 | ---------------------------------- | ------------------- | ----------------------------- | ----------- | ---------------------------------- | ----------------------- |

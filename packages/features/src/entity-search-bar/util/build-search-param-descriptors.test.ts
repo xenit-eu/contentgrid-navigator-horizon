@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
 import {
   SEARCH_BAR_STATUS_OPTIONS,
   makeSearchBarProfiles,
@@ -22,23 +23,59 @@ describe("buildSearchParamDescriptors", () => {
   });
 
   it.each([
-    ["title~prefix", "text", "prefix"],
-    ["notes~fts", "text", "full-text"],
-    ["reference", "text", "exact"],
-    ["status", "allowed-values", "allowed-values"],
-    ["quantity", "integer", "exact"],
-    ["quantity~gte", "integer", "gte"],
-    ["quantity~lte", "integer", "lte"],
-    ["amount", "decimal", "exact"],
-    ["amount~gte", "decimal", "gte"],
-    ["due_date~from", "date", "gte"],
-    ["due_date~until", "date", "lte"],
-    ["received_at~after", "datetime", "gt"],
-    ["received_at~before", "datetime", "lt"],
-    ["urgent", "boolean", "exact"],
-    ["customer.name~prefix", "text", "prefix"],
-  ] as const)("%s → valueKind %s, mode %s", (name, valueKind, mode) => {
-    expect(byName.get(name)).toMatchObject({ valueKind, mode });
+    ["title~prefix", "text", ProfileAttributeSearchType.prefixMatch, undefined],
+    ["notes~fts", "text", ProfileAttributeSearchType.fullText, undefined],
+    ["reference", "text", ProfileAttributeSearchType.exactMatch, undefined],
+    ["status", "allowed-values", ProfileAttributeSearchType.exactMatch, undefined],
+    ["quantity", "integer", ProfileAttributeSearchType.exactMatch, undefined],
+    [
+      "quantity~gte",
+      "integer",
+      ProfileAttributeSearchType.greaterThanOrEqual,
+      { side: "lower", inclusive: true },
+    ],
+    [
+      "quantity~lte",
+      "integer",
+      ProfileAttributeSearchType.lessThanOrEqual,
+      { side: "upper", inclusive: true },
+    ],
+    ["amount", "decimal", ProfileAttributeSearchType.exactMatch, undefined],
+    [
+      "amount~gte",
+      "decimal",
+      ProfileAttributeSearchType.greaterThanOrEqual,
+      { side: "lower", inclusive: true },
+    ],
+    [
+      "due_date~from",
+      "date",
+      ProfileAttributeSearchType.greaterThanOrEqual,
+      { side: "lower", inclusive: true },
+    ],
+    [
+      "due_date~until",
+      "date",
+      ProfileAttributeSearchType.lessThanOrEqual,
+      { side: "upper", inclusive: true },
+    ],
+    [
+      "received_at~from",
+      "datetime",
+      ProfileAttributeSearchType.greaterThanOrEqual,
+      { side: "lower", inclusive: true },
+    ],
+    [
+      "received_at~until",
+      "datetime",
+      ProfileAttributeSearchType.lessThanOrEqual,
+      { side: "upper", inclusive: true },
+    ],
+    ["urgent", "boolean", ProfileAttributeSearchType.exactMatch, undefined],
+    ["customer.name~prefix", "text", ProfileAttributeSearchType.prefixMatch, undefined],
+  ] as const)("%s → valueKind %s, search type %s", (name, valueKind, searchType, bound) => {
+    expect(byName.get(name)).toMatchObject({ valueKind, searchType });
+    expect(byName.get(name)?.bound).toEqual(bound);
   });
 
   it("drops the exact title parameter because a prefix sibling exists (hal-forms redundancy)", () => {
@@ -52,9 +89,9 @@ describe("buildSearchParamDescriptors", () => {
   });
 
   it("reads audit roles from the profile constraints", () => {
-    expect(byName.get("created_at~after")?.auditRole).toBe("created");
-    expect(byName.get("modified_at~before")?.auditRole).toBe("modified");
-    expect(byName.get("received_at~after")?.auditRole).toBeUndefined();
+    expect(byName.get("created_at~from")?.auditRole).toBe("created");
+    expect(byName.get("modified_at~until")?.auditRole).toBe("modified");
+    expect(byName.get("received_at~from")?.auditRole).toBeUndefined();
   });
 
   it("groups an attribute's parameters under its groupKey", () => {

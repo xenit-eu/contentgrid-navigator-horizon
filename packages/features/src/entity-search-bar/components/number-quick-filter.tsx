@@ -36,7 +36,7 @@ export function NumberQuickFilter(props: Readonly<NumberQuickFilterProps>) {
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <FilterButton
-          icon={searchTypeIcon(quickFilter.valueKind, "exact")}
+          icon={searchTypeIcon(quickFilter.valueKind)}
           label={quickFilter.label}
           tone={quickFilter.tone}
           onClear={() => onClear(quickFilter.groupKey)}

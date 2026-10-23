@@ -1,4 +1,7 @@
-import type { SearchParamSuggestionResult } from "@contentgrid/navigator-data";
+import {
+  ProfileAttributeSearchType,
+  type SearchParamSuggestionResult,
+} from "@contentgrid/navigator-data";
 import { filterOptionsByPrefix } from "@contentgrid/ui";
 import type { CountState, SearchParamDescriptor, SelectorMode } from "./types";
 
@@ -26,7 +29,10 @@ export interface SuggestionGroupModel {
 
 /** A parameter whose suggestions come from real searches (FR-016). */
 export function isSearchedParam(descriptor: SearchParamDescriptor): boolean {
-  return descriptor.mode === "prefix" || descriptor.mode === "full-text";
+  return (
+    descriptor.searchType === ProfileAttributeSearchType.prefixMatch ||
+    descriptor.searchType === ProfileAttributeSearchType.fullText
+  );
 }
 
 /**

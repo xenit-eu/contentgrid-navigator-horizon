@@ -1,7 +1,6 @@
 import type { InputClass, SearchParamDescriptor, SelectorMode } from "./types";
 
 const TEXT_KINDS = new Set(["text", "allowed-values"]);
-const SELECTABLE_MODES = new Set(["prefix", "full-text", "exact", "allowed-values"]);
 
 /**
  * Whether a parameter can be chosen in the selector and offered as a popover chip (FR-007):
@@ -10,7 +9,7 @@ const SELECTABLE_MODES = new Set(["prefix", "full-text", "exact", "allowed-value
  */
 export function isSelectableParam(descriptor: SearchParamDescriptor): boolean {
   return (
-    SELECTABLE_MODES.has(descriptor.mode) &&
+    descriptor.bound === undefined &&
     (TEXT_KINDS.has(descriptor.valueKind) ||
       descriptor.valueKind === "integer" ||
       descriptor.valueKind === "decimal")

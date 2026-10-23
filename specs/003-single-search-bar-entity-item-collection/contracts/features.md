@@ -71,7 +71,7 @@ entity-search-bar/                        # (the search-bar MSW wrapper is src/t
 ```
 
 Each `util/*.ts` is pure and has a sibling `*.test.ts`. The models in `util/` carry no
-`ReactNode`s: components choose icons from `valueKind` / `mode` / `auditRole` / boolean value
+`ReactNode`s: components choose icons from `valueKind` / `searchType` / `auditRole` / boolean value
 (`components/search-icons.tsx`).
 
 ### `useEntitySearchBar` (internal view-model)

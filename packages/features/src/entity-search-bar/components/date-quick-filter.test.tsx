@@ -23,12 +23,12 @@ const receivedAt: Model = {
   ...dueDate,
   groupKey: "received_at",
   label: "Received at",
-  paramNames: ["received_at~after", "received_at~before"],
+  paramNames: ["received_at~from", "received_at~until"],
   includesTime: true,
-  lower: "received_at~after",
-  lowerInclusive: false,
-  upper: "received_at~before",
-  upperInclusive: false,
+  lower: "received_at~from",
+  lowerInclusive: true,
+  upper: "received_at~until",
+  upperInclusive: true,
 };
 
 function renderFilter(quickFilter: Model, filters: Record<string, string> = {}) {
@@ -75,8 +75,8 @@ describe("DateQuickFilter", () => {
   it("leaves an untouched filter as it is on Apply, instead of rounding it to whole days", async () => {
     const user = userEvent.setup();
     const filters = {
-      "received_at~after": "2026-09-30T10:15:00.000Z",
-      "received_at~before": "2026-10-07T10:15:00.000Z",
+      "received_at~from": "2026-09-30T10:15:00.000Z",
+      "received_at~until": "2026-10-07T10:15:00.000Z",
     };
     const { onApply } = renderFilter(receivedAt, filters);
 

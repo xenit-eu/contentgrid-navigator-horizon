@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ProfileAttributeSearchType } from "@contentgrid/navigator-data";
 import { makeSearchBarProfiles } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { resolveHalFormsFields } from "../../hal-forms";
 import { buildActiveFilterChips } from "./build-active-filter-chips";
@@ -33,15 +34,15 @@ describe("buildActiveFilterChips", () => {
 
   it("merges both bounds of a range into one chip that removes both", () => {
     const [chip] = chips({
-      "received_at~after": "2026-10-01T00:00:00.000Z",
-      "received_at~before": "2026-10-07T00:00:00.000Z",
+      "received_at~from": "2026-10-01T00:00:00.000Z",
+      "received_at~until": "2026-10-07T00:00:00.000Z",
     });
     expect(chip).toMatchObject({
       id: "range:received_at",
       field: "Received at",
       mode: "between",
       value: "1 Oct 2026, 00:00 – 7 Oct 2026, 00:00",
-      paramNames: ["received_at~after", "received_at~before"],
+      paramNames: ["received_at~from", "received_at~until"],
     });
   });
 
@@ -55,7 +56,7 @@ describe("buildActiveFilterChips", () => {
       mode: "until",
       value: "31 Dec 2026",
     });
-    expect(chips({ "received_at~after": "2026-10-01T00:00:00.000Z" })[0]?.mode).toBe("after");
+    expect(chips({ "received_at~from": "2026-10-01T00:00:00.000Z" })[0]?.mode).toBe("from");
   });
 
   it("keeps an exact number next to its range as separate chips", () => {
@@ -104,8 +105,18 @@ describe("buildActiveFilterChips", () => {
     const until = descriptors.find((d) => d.name === "due_date~until")!;
     const exclusive = [
       ...descriptors.filter((d) => d.groupKey !== "due_date"),
-      { ...from, name: "due_date~after", mode: "gt" as const },
-      { ...until, name: "due_date~before", mode: "lt" as const },
+      {
+        ...from,
+        name: "due_date~after",
+        searchType: ProfileAttributeSearchType.greaterThan,
+        bound: { side: "lower" as const, inclusive: false },
+      },
+      {
+        ...until,
+        name: "due_date~before",
+        searchType: ProfileAttributeSearchType.lessThan,
+        bound: { side: "upper" as const, inclusive: false },
+      },
     ];
     const [chip] = buildActiveFilterChips(
       exclusive,

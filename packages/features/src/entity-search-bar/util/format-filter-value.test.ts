@@ -22,7 +22,7 @@ describe("formatFilterValue", () => {
   });
 
   it("formats a datetime in the given time zone", () => {
-    expect(format("received_at~after", "2026-10-02T09:00:00.000Z")).toBe("2 Oct 2026, 09:00");
+    expect(format("received_at~from", "2026-10-02T09:00:00.000Z")).toBe("2 Oct 2026, 09:00");
   });
 
   it("formats numbers with locale grouping and keeps decimals", () => {

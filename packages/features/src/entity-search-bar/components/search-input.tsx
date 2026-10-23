@@ -55,13 +55,13 @@ export function SearchInput({
         chips={paramChips.map(({ descriptor, count }) => ({
           id: descriptor.name,
           label: paramLabel(descriptor),
-          icon: searchTypeIcon(descriptor.valueKind, descriptor.mode),
+          icon: searchTypeIcon(descriptor.valueKind, descriptor.searchType),
           count: toSuggestionCount(count),
         }))}
         groups={groups.map(({ descriptor, count, status, items, retry }) => ({
           id: descriptor.name,
           label: paramLabel(descriptor),
-          icon: searchTypeIcon(descriptor.valueKind, descriptor.mode),
+          icon: searchTypeIcon(descriptor.valueKind, descriptor.searchType),
           count: toSuggestionCount(count),
           status,
           items: items.map((item) => ({ id: item.value, label: item.label })),
