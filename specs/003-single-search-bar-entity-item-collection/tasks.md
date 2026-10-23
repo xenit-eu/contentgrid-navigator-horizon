@@ -154,7 +154,8 @@ US7 (P2); US6, US8 (P3).
 
 - [x] T016 [P] Create the `FilterButton` primitive in `UI/primitives/filter-button.tsx`, per contracts/ui-primitives-and-patterns.md `FilterButton`:
   - Props: `icon?`, `label`, `tone?: "idle" | "active" | "positive" | "negative"`, `onClear?`, `clearLabel?` (default `` `Clear ${label} filter` ``), and `ref` usable as `<PopoverTrigger asChild>`.
-  - Outlines by tone: idle `border-border`, active `border-ring`, positive `border-success`, negative `border-destructive`.
+  - Outlines by tone: idle `border-transparent` with muted text (reads as text, not a button), active `border-ring` on `bg-accent`, positive `border-success-foreground` on `bg-success`, negative `border-destructive` on `bg-destructive/10`.
+  - `showChevron?` (default `true`): a trailing chevron hinting at a popover (FR-025a); a boolean turns it off.
   - When `onClear` is set and tone ≠ `idle`, render the × as a **sibling** `<button>`, not nested in the trigger.
   - Do not set `aria-pressed`.
   - Export it from `UI/primitives/index.ts`.
@@ -460,11 +461,11 @@ own icons (spec US4).
 
 ## Phase 7: User Story 5 - Quick filter on booleans (Priority: P2)
 
-**Goal**: one-click tri-state boolean quick filters with green / red / grey outlines and true /
+**Goal**: one-click tri-state boolean quick filters with green / red / no outlines and true /
 false icons.
 
 **Independent Test**: click `urgent` three times → the filter is true (green), then false (red),
-then unset (grey), and the list follows (spec US5).
+then unset (no outline), and the list follows (spec US5).
 
 ### Tests for User Story 5 ⚠️
 
