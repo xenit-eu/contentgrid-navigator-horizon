@@ -1,4 +1,5 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { WarningIcon } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Chip } from "../../primitives/chip";
 
@@ -14,6 +15,11 @@ export interface FilterChipItem {
   readonly valueIcon?: ReactNode;
   /** Whether clicking the chip calls `onSelect`; chips without it are not interactive. */
   readonly selectable?: boolean;
+  /**
+   * Set when the filter is not applied (e.g. a URL key the search form does not know): the chip
+   * turns orange with a warning icon, and this text explains why.
+   */
+  readonly warning?: string;
 }
 
 export interface FilterChipsProps {
@@ -98,12 +104,15 @@ export function FilterChips({
         {chips.map((chip) => (
           <li key={chip.id} className="flex min-w-0">
             <Chip
-              tone="applied"
+              tone={chip.warning ? "warning" : "applied"}
               field={chip.field}
               mode={chip.mode}
-              modeIcon={chip.modeIcon}
+              modeIcon={
+                chip.modeIcon ?? (chip.warning ? <WarningIcon size={12} aria-hidden /> : undefined)
+              }
               label={chip.value}
               valueIcon={chip.valueIcon}
+              description={chip.warning}
               removable
               onRemove={() => onRemove(chip.id)}
               removeLabel={`Remove filter ${chip.field} ${chip.mode} ${chip.value}`}

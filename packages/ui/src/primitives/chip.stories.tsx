@@ -97,3 +97,16 @@ export const Clickable: Story = {
     onClick: () => {},
   },
 };
+
+/** A filter that is not applied, e.g. a URL key the search form does not know. */
+export const Warning: Story = {
+  args: {
+    field: "foo",
+    mode: "is",
+    label: "bar",
+    tone: "warning",
+    description: "Not a search parameter of this entity — not applied",
+    removable: true,
+    onRemove: () => {},
+  },
+};

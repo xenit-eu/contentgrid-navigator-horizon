@@ -30,6 +30,27 @@ describe("FilterChips", () => {
     expect(onRemove).toHaveBeenCalledWith("received_at");
   });
 
+  it("shows a chip whose filter is not applied in the warning tone, with its explanation", () => {
+    render(
+      <FilterChips
+        chips={[
+          ...chips,
+          { id: "foo", field: "foo", mode: "is", value: "bar", warning: "Not applied" },
+        ]}
+        onRemove={vi.fn()}
+      />,
+    );
+    const items = within(screen.getByRole("list", { name: "Active filters" })).getAllByRole(
+      "listitem",
+    );
+    const chip = items[2]!.querySelector("[data-slot='chip']");
+    expect(chip).toHaveAttribute("data-tone", "warning");
+    expect(chip).toHaveAttribute("title", "Not applied");
+    expect(items[2]).toHaveTextContent("Not applied");
+    expect(items[2]!.querySelector("[data-slot='chip-mode'] svg")).not.toBeNull();
+    expect(items[0]!.querySelector("[data-slot='chip']")).toHaveAttribute("data-tone", "applied");
+  });
+
   it("renders nothing for no chips", () => {
     const { container } = render(<FilterChips chips={[]} onRemove={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
