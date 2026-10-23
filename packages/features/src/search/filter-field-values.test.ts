@@ -39,14 +39,14 @@ describe("filterFieldValues", () => {
     const filters = {
       "quantity~gte": "3",
       urgent: "true",
-      "received_at~after": "2026-10-01T00:00:00.000Z",
+      "received_at~from": "2026-10-01T00:00:00.000Z",
       "title~prefix": "Alp",
     };
     const values = filterFieldValues(fields, filters);
 
     expect(values["quantity~gte"]).toBe(3);
     expect(values.urgent).toBe(true);
-    expect(values["received_at~after"]).toEqual(new Date("2026-10-01T00:00:00.000Z"));
+    expect(values["received_at~from"]).toEqual(new Date("2026-10-01T00:00:00.000Z"));
     expect(values["title~prefix"]).toBe("Alp");
 
     for (const [key, raw] of Object.entries(filters)) {

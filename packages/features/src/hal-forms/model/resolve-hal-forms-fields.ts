@@ -7,7 +7,11 @@ import type {
   SearchHalFormTemplateProperty,
   UpdateHalFormTemplate,
 } from "@contentgrid/navigator-data";
-import { CreateHalFormTemplate, SearchHalFormTemplate } from "@contentgrid/navigator-data";
+import {
+  CreateHalFormTemplate,
+  ProfileAttributeSearchType,
+  SearchHalFormTemplate,
+} from "@contentgrid/navigator-data";
 import type { EnumOption } from "@contentgrid/ui";
 import { formatFieldName } from "../../format-field-name";
 import { directionLabel, generateSearchFormLayout } from "./generate-search-form-layout";
@@ -210,17 +214,19 @@ function searchPropertyHalFormsField(
 }
 
 function isStringSearchable(sp: SearchHalFormTemplateProperty): boolean {
-  const operator = searchOperatorOf(sp);
-  return operator === "prefix-match" || operator === "full-text";
+  return (
+    sp.searchType === ProfileAttributeSearchType.prefixMatch ||
+    sp.searchType === ProfileAttributeSearchType.fullText
+  );
 }
 
 function resolveSearchFields(template: SearchHalFormTemplate): HalFormsField[] {
   const properties = template.searchProperties.filter((sp) => sp.property.type !== "hidden");
-  const surviving = properties.filter((sp) => !isRedundantSearchField(sp, properties));
+  const surviving = properties.filter((sp) => !isRedundantSearchField(sp, properties, template));
   // Same "has a range variant" test `generateSearchFormLayout` uses to keep an attribute's rows
   // together and put its description on the range row, so no field of it repeats that text.
   const rangeGroupKeys = new Set(
-    surviving.filter((sp) => directionLabel(sp) !== undefined).map((sp) => sp.groupKey),
+    surviving.filter((sp) => sp.bound !== undefined).map((sp) => sp.groupKey),
   );
   return surviving.map((sp) =>
     searchPropertyHalFormsField(sp, template.profileEntity, rangeGroupKeys.has(sp.groupKey)),
@@ -268,20 +274,6 @@ function mapToHalFormsField(base: FieldMappingInput, property: HalFormsProperty)
   }
 }
 
-const KNOWN_SEARCH_OPERATORS = new Set([
-  "exact-match",
-  "prefix-match",
-  "full-text",
-  "greater-than",
-  "greater-than-or-equal",
-  "less-than",
-  "less-than-or-equal",
-]);
-
-function searchOperatorOf(sp: SearchHalFormTemplateProperty): string {
-  return KNOWN_SEARCH_OPERATORS.has(sp.searchType) ? sp.searchType : "exact-match";
-}
-
 /**
  * Ported from `filter-properties.ts`'s `isRedundantExactMatch`/`isRedundantStrictRangeBound`: an
  * exact-match property is redundant once a narrower (prefix/full-text) sibling exists for the
@@ -289,36 +281,24 @@ function searchOperatorOf(sp: SearchHalFormTemplateProperty): string {
  * exists: its input is minute precision, so it would practically never equal a stored
  * timestamp, and the range pair covers the real use case. A `date` or number exact-match
  * property is kept next to its range siblings ("everything due on 24 Sep" is a real query) —
- * `generate-search-form-layout.ts` keeps their rows together. A strict range bound
- * (`greater-than`/`less-than`) is redundant once its inclusive equivalent
- * (`greater-than-or-equal`/`less-than-or-equal`) exists for the same `groupKey`.
+ * `generate-search-form-layout.ts` keeps their rows together. A range bound is redundant when
+ * the template prefers another bound on the same side (`SearchHalFormTemplate.isSupersededBound`:
+ * a strict `~after` once an inclusive `~from` exists).
  */
 function isRedundantSearchField(
   sp: SearchHalFormTemplateProperty,
   allProperties: readonly SearchHalFormTemplateProperty[],
+  template: SearchHalFormTemplate,
 ): boolean {
-  const operator = searchOperatorOf(sp);
-  const siblings = allProperties.filter((other) => other.groupKey === sp.groupKey);
+  if (sp.bound) return template.isSupersededBound(sp);
+  if (sp.searchType !== ProfileAttributeSearchType.exactMatch) return false;
 
-  if (operator === "exact-match") {
-    const isDatetime = sp.property.type === "datetime" || sp.property.type === "datetime-local";
-    return siblings.some((other) => {
-      const otherOperator = searchOperatorOf(other);
-      return (
-        otherOperator === "prefix-match" ||
-        otherOperator === "full-text" ||
-        (isDatetime && directionLabel(other) !== undefined)
-      );
-    });
-  }
-
-  if (operator === "greater-than" || operator === "less-than") {
-    const inclusiveEquivalent =
-      operator === "greater-than" ? "greater-than-or-equal" : "less-than-or-equal";
-    return siblings.some((other) => searchOperatorOf(other) === inclusiveEquivalent);
-  }
-
-  return false;
+  const isDatetime = sp.property.type === "datetime" || sp.property.type === "datetime-local";
+  return allProperties.some(
+    (other) =>
+      other.groupKey === sp.groupKey &&
+      (isStringSearchable(other) || (isDatetime && other.bound !== undefined)),
+  );
 }
 
 function resolveInlineOptions(property: HalFormsProperty): readonly EnumOption[] | undefined {
