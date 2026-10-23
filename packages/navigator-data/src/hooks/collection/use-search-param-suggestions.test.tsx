@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createValues } from "@contentgrid/hal-forms/values";
 import {
   SEARCH_BAR_COLLECTION_URL,
@@ -9,6 +9,7 @@ import {
   searchBarHandlers,
 } from "../../../test-fixtures/msw/search-bar-fixtures";
 import { server } from "../../../test-setup";
+import ProfileEntity from "../../accessors/entity-profile";
 import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
 import { makeQueryClient, makeWrapper } from "../test-utils";
 import {
@@ -57,6 +58,10 @@ function renderSuggestions(props: {
 describe("useSearchParamSuggestions", () => {
   beforeEach(() => {
     server.events.removeAllListeners();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("makes one request for a direct prefix parameter and returns values and the exact count", async () => {
@@ -110,6 +115,33 @@ describe("useSearchParamSuggestions", () => {
     ).toBe("Ac");
     const countCall = requests.to(SEARCH_BAR_COLLECTION_URL)[0];
     expect(countCall?.searchParams.get("customer.name~prefix")).toBe("Ac");
+  });
+
+  it("keeps the count when the relation target rejects the value, without throwing", async () => {
+    server.use(...searchBarHandlers({ resolveTotal: () => 4 }));
+    const original = ProfileEntity.prototype.searchEntityRequest;
+    vi.spyOn(ProfileEntity.prototype, "searchEntityRequest").mockImplementation(function (
+      this: ProfileEntity,
+      values,
+    ) {
+      if (this.name === "customer") throw new Error("target rejects the value");
+      return original.call(this, values);
+    });
+    const requests = recordRequests();
+
+    const { result } = renderSuggestions({
+      requests: [request("customer.name~prefix")],
+      query: "Ac",
+    });
+
+    await waitFor(() => expect(result.current.results[0]?.status).toBe("success"), {
+      timeout: 3000,
+    });
+    expect(result.current.results[0]).toMatchObject({
+      suggestions: [],
+      totalItems: { count: 4, isEstimated: false },
+    });
+    expect(requests.to(SEARCH_BAR_CUSTOMER_COLLECTION_URL)).toHaveLength(0);
   });
 
   it("carries the active filters into the count request", async () => {
