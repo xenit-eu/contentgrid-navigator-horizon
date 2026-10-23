@@ -264,6 +264,7 @@ const { data: collection } = useEntityItemCollection({
 
 - Use `searchTemplate.searchProperties` / `getSearchPropertiesByType()` to find filter fields — do not hardcode property names.
 - Use `searchTemplate.sortOptions` to find sort values — do not construct sort strings like `"field,asc"` by hand.
+- Range bounds: read `searchProperty.bound` (`{ side, inclusive }`) and `searchTemplate.getRange(groupKey)` (inclusive `~from`/`~until`/`~gte`/`~lte` preferred, strict `~after`/`~before`/`~gt`/`~lt` as fallback); `searchTemplate.isSupersededBound(prop)` says which bound a form should drop. Never classify a parameter by its name suffix or by comparing `searchType` strings — use the `ProfileAttributeSearchType` enum and these accessors.
 - `_sort` is always multi-value: pass `[sortOption.value]` (an array), never a plain string.
 - `searchValues = undefined` disables the query (no fetch). Intentional when prerequisites are missing.
 
