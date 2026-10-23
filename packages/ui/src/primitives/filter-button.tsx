@@ -25,7 +25,8 @@ interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
 
 const TONE_CLASSES: Record<FilterButtonTone, string> = {
   idle: "border-transparent text-muted-foreground hover:text-foreground",
-  active: "border-ring bg-accent text-accent-foreground",
+  // Dark mode: the accent foreground is too dark on the sky accent; use the ink, as `Chip` does.
+  active: "border-ring bg-accent text-accent-foreground dark:text-foreground",
   positive: "border-success-foreground bg-success text-success-foreground",
   negative: "border-destructive bg-destructive/10 text-destructive",
 };
