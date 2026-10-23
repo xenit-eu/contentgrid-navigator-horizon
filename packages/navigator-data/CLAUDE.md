@@ -164,7 +164,7 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.getToManyRelation(name)?.addRelationRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemToManyRelation`)
 - `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
 - `entityItem.uploadContentRequest(attrName, file, contentEtag)` → hand-built PUT `Request` to the `cg:content` link, conditional on the content's own ETag (binary exception — no HAL-FORMS template)
-- `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
+- `entityItem.downloadContentRequest(attrName, contentEtag, opts?)` → hand-built GET `Request` to the `cg:content` link, `If-None-Match` on the content's own ETag when given (binary exception — no HAL-FORMS template)
 
 **URL construction — never concatenate by hand:**
 
@@ -791,7 +791,7 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
   URL always comes from `entityItem.contentLink(attrName)?.href` via `cgRels.content` — never
   string-built.
 - Build the `Request` via `entityItem.uploadContentRequest(attrName, file, contentEtag)` or
-  `entityItem.downloadContentRequest(attrName, opts)` — do NOT construct the Request by hand in
+  `entityItem.downloadContentRequest(attrName, contentEtag, opts)` — do NOT construct the Request by hand in
   hook or feature code.
 - Use `contentFetch` (not `apiFetch`) for the binary PUT/GET — `contentFetch` omits the
   `Accept: application/hal+json` header that `apiFetch` adds.
@@ -833,7 +833,7 @@ was made of.
 - Query key: `queryKeys.contentPreview.byUrl(link.href)` — its own root, no ETag. The entity
   item's ETag does **not** change when only its file is replaced, and the content's own ETag is only
   known after a download, so neither can make a new file a new key. Instead every fetch after the
-  first is a conditional download (`downloadContentRequest(name, { ifNoneMatch })`) on the content
+  first is a conditional download (`downloadContentRequest(name, contentEtag)`) on the content
   ETag of the previous result: a 304 keeps that preview as it is (same object, no download, no new
   rendition), a 200 shows the new file, a 404 gives `noFile`. For a rendition, the download's body is
   cancelled unread — it only tells which version is stored.

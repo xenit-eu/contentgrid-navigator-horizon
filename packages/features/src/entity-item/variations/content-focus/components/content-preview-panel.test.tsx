@@ -110,7 +110,8 @@ function makeStubEntityItem(options: {
     uploadContentRequest: EntityItem.prototype.uploadContentRequest,
     downloadContentRequest: (
       _attrName: string,
-      opts?: { range?: { start: number; end?: number }; ifNoneMatch?: string },
+      contentEtag: string | null,
+      opts?: { range?: { start: number; end?: number } },
     ) => {
       const headers: Record<string, string> = {};
       if (opts?.range) {
@@ -119,8 +120,8 @@ function makeStubEntityItem(options: {
             ? `bytes=${opts.range.start}-`
             : `bytes=${opts.range.start}-${opts.range.end}`;
       }
-      if (opts?.ifNoneMatch !== undefined) {
-        headers["If-None-Match"] = opts.ifNoneMatch;
+      if (contentEtag) {
+        headers["If-None-Match"] = contentEtag;
       }
       return new Request(CONTENT_URL, { method: "GET", headers });
     },
@@ -157,7 +158,8 @@ function makeStubEntityItemWithAttributes(
     uploadContentRequest: EntityItem.prototype.uploadContentRequest,
     downloadContentRequest: (
       attrName: string,
-      opts?: { range?: { start: number; end?: number }; ifNoneMatch?: string },
+      contentEtag: string | null,
+      opts?: { range?: { start: number; end?: number } },
     ) => {
       const match = attrs.find((attr) => attr.name === attrName);
       const url = match?.url ?? attrs[0].url;
@@ -168,8 +170,8 @@ function makeStubEntityItemWithAttributes(
             ? `bytes=${opts.range.start}-`
             : `bytes=${opts.range.start}-${opts.range.end}`;
       }
-      if (opts?.ifNoneMatch !== undefined) {
-        headers["If-None-Match"] = opts.ifNoneMatch;
+      if (contentEtag) {
+        headers["If-None-Match"] = contentEtag;
       }
       return new Request(url, { method: "GET", headers });
     },

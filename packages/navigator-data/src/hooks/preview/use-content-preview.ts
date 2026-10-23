@@ -93,7 +93,7 @@ async function downloadStoredFile(
   known: { readonly source: StoredFilePreview; readonly etag: string } | undefined,
   signal: AbortSignal,
 ): Promise<{ readonly response: Response } | { readonly preview: PreviewSource }> {
-  const request = entityItem.downloadContentRequest(attributeName, { ifNoneMatch: known?.etag });
+  const request = entityItem.downloadContentRequest(attributeName, known?.etag ?? null);
   try {
     // No checkResponse call needed here: contentFetch already composes problemDetailsHook
     // (api/client.ts), which throws ProblemDetailError for any non-2xx response (a 304

@@ -215,7 +215,7 @@ export function useDownloadContent(
 
       // Hand-built Request: no HAL-FORMS template. URL only from the cg:content link.
       // downloadContentRequest() throws if the link is absent (ABAC deny).
-      const req = entityItem.downloadContentRequest(attributeName, { range });
+      const req = entityItem.downloadContentRequest(attributeName, null, { range });
 
       // Execute request — checkResponse throws ProblemDetailError on non-2xx.
       const response = await contentFetch(req).then(checkResponse);

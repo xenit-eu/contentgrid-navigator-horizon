@@ -783,7 +783,7 @@ describe("EntityItem — uploadContentRequest", () => {
 describe("EntityItem — downloadContentRequest", () => {
   it("returns a Request with GET method pointing to the content link href", () => {
     const item = makeEntityItemWithContentLink();
-    const req = item.downloadContentRequest("document");
+    const req = item.downloadContentRequest("document", null);
     expect(req).toBeInstanceOf(Request);
     expect(req.method).toBe("GET");
     expect(req.url).toBe(CONTENT_URL);
@@ -791,37 +791,37 @@ describe("EntityItem — downloadContentRequest", () => {
 
   it("omits Range header when no opts.range provided", () => {
     const item = makeEntityItemWithContentLink();
-    const req = item.downloadContentRequest("document");
+    const req = item.downloadContentRequest("document", null);
     expect(req.headers.get("Range")).toBeNull();
   });
 
   it("adds Range header when opts.range is provided (start and end)", () => {
     const item = makeEntityItemWithContentLink();
-    const req = item.downloadContentRequest("document", { range: { start: 0, end: 99 } });
+    const req = item.downloadContentRequest("document", null, { range: { start: 0, end: 99 } });
     expect(req.headers.get("Range")).toBe("bytes=0-99");
   });
 
   it("adds Range header with open end when only start is provided", () => {
     const item = makeEntityItemWithContentLink();
-    const req = item.downloadContentRequest("document", { range: { start: 512 } });
+    const req = item.downloadContentRequest("document", null, { range: { start: 512 } });
     expect(req.headers.get("Range")).toBe("bytes=512-");
   });
 
-  it("adds no If-None-Match header by default", () => {
+  it("adds no If-None-Match header without a content ETag", () => {
     const item = makeEntityItemWithContentLink();
-    const req = item.downloadContentRequest("document");
+    const req = item.downloadContentRequest("document", null);
     expect(req.headers.get("If-None-Match")).toBeNull();
   });
 
   it("adds the given content ETag verbatim as If-None-Match", () => {
     const item = makeEntityItemWithContentLink();
-    const req = item.downloadContentRequest("document", { ifNoneMatch: '"content-v1"' });
+    const req = item.downloadContentRequest("document", '"content-v1"');
     expect(req.headers.get("If-None-Match")).toBe('"content-v1"');
   });
 
   it("throws when the cg:content link is absent", () => {
     const item = makeEntityItemWithoutContentLink();
-    expect(() => item.downloadContentRequest("document")).toThrow();
+    expect(() => item.downloadContentRequest("document", null)).toThrow();
   });
 });
 

@@ -496,19 +496,24 @@ export class EntityItem {
    * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
    * `contentFetch` omits the `Accept: application/hal+json` header.
    *
-   * Optionally adds a `Range` header for partial content requests (206 Partial Content), and an
-   * `If-None-Match` header with the content's own ETag (from an earlier GET/HEAD/PUT on the
-   * `cg:content` link — never the entity item's ETag): the server then answers 304 Not Modified
-   * while the stored file still has that ETag.
+   * Like an upload, the request can be conditional on the content's own ETag (from a GET/HEAD/PUT
+   * on the `cg:content` link) — never the entity item's ETag, which is a different resource:
+   * - `contentEtag` given: `If-None-Match: <contentEtag>` — the server answers 304 Not Modified
+   *   while the stored file still has that ETag, so a file the caller already has is not sent again.
+   * - `contentEtag` null: an unconditional download.
+   *
+   * Optionally adds a `Range` header for partial content requests (206 Partial Content).
    *
    * @param attributeName - The name of the content attribute
-   * @param opts - Optional range for partial downloads, and the content ETag to revalidate
+   * @param contentEtag - The ETag of the stored content the caller already has, or null
+   * @param opts - Optional range for partial downloads
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public downloadContentRequest(
     attributeName: string,
-    opts?: { range?: { start: number; end?: number }; ifNoneMatch?: string },
+    contentEtag: string | null,
+    opts?: { range?: { start: number; end?: number } },
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -524,8 +529,10 @@ export class EntityItem {
       headers["Range"] = end === undefined ? `bytes=${start}-` : `bytes=${start}-${end}`;
     }
 
-    if (opts?.ifNoneMatch !== undefined) {
-      headers["If-None-Match"] = opts.ifNoneMatch;
+    // A truthiness check, like `uploadContentRequest`: a missing ETag must never become a literal
+    // `If-None-Match: undefined`.
+    if (contentEtag) {
+      headers["If-None-Match"] = contentEtag;
     }
 
     return new Request(link.href, {
