@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SidebarShell } from "@contentgrid/views/sidebar-shell";
+import { DevAppSelectorLink } from "../components/dev-app-selector-link";
 import { ExperimentalBanner } from "../components/experimental-banner";
 
 export const Route = createFileRoute("/_app")({
@@ -7,5 +8,10 @@ export const Route = createFileRoute("/_app")({
 });
 
 function ExperimentalLayout() {
-  return <SidebarShell topChildren={<ExperimentalBanner />} />;
+  return (
+    <SidebarShell
+      topChildren={<ExperimentalBanner />}
+      footer={import.meta.env.DEV ? <DevAppSelectorLink /> : undefined}
+    />
+  );
 }

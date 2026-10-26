@@ -2,43 +2,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { AppAuthResult } from "@contentgrid/navigator-data";
-import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
-import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import {
+  mockSidebarData,
+  preferencesModuleMock,
+  sidebarNavigatorDataMock,
+} from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
-vi.mock("@contentgrid/features/preferences", () => ({
-  useEntityDisplayPreferences: () => ({ preferences: {} }),
-  resolveEntityCardIcon: () => () => null,
-}));
+vi.mock("@contentgrid/features/preferences", () => preferencesModuleMock);
 
-vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
-  return {
-    ...actual,
-    useAppAuth: vi.fn(),
-    useLoadedProfileEntities: vi.fn(),
-    useCachedEntityItemCollection: () => ({ data: undefined }),
-  };
-});
-
-const invoice = makeProfileEntity(
-  { name: "invoice", title: "Invoice", description: "" },
-  "https://example.com/profile/invoices",
-  "invoice",
-);
+vi.mock("@contentgrid/navigator-data", sidebarNavigatorDataMock);
 
 function renderLayout(user: unknown, props: Partial<SideBarLayoutProps> = {}) {
-  vi.mocked(useAppAuth).mockReturnValue({
-    auth: { isLoading: false, isAuthenticated: true, user, signoutRedirect: vi.fn() },
-    apiFetch: vi.fn(),
-    contentFetch: vi.fn(),
-    profileUrl: "https://api.example.com/profile",
-  } as unknown as AppAuthResult);
-  vi.mocked(useLoadedProfileEntities).mockReturnValue({
-    profiles: [invoice],
-    isLoading: false,
-  } as unknown as ReturnType<typeof useLoadedProfileEntities>);
+  mockSidebarData(user);
 
   const handlers = {
     onOpenHome: vi.fn(),

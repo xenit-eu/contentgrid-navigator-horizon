@@ -1,22 +1,8 @@
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { useProfileEntity } from "@contentgrid/navigator-data";
-import {
-  RecordingNavigationProvider,
-  createRecordingNavigation,
-} from "../../navigation/recording-navigation";
 import { EntityProfileGate } from "./entity-profile-gate";
-import { EntityProfileGateRoute } from "./entity-profile-gate-route";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
@@ -36,10 +22,6 @@ function mockProfile(result: {
     error: null,
     ...result,
   } as unknown as ReturnType<typeof useProfileEntity>);
-}
-
-function withQueryClient(children: ReactNode) {
-  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
 }
 
 describe("EntityProfileGate", () => {
@@ -90,36 +72,5 @@ describe("EntityProfileGate", () => {
     await userEvent.click(screen.getByRole("button", { name: "Back to home" }));
 
     expect(onBackHome).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("EntityProfileGateRoute", () => {
-  it("reads the entity from the route and opens home through the navigation context", async () => {
-    mockProfile({ data: null });
-    const recording = createRecordingNavigation();
-    const rootRoute = createRootRoute();
-    const entityRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: "/$entity",
-      component: EntityProfileGateRoute,
-    });
-    const router = createRouter({
-      routeTree: rootRoute.addChildren([entityRoute]),
-      history: createMemoryHistory({ initialEntries: ["/ghost"] }),
-    });
-
-    render(
-      withQueryClient(
-        <RecordingNavigationProvider recording={recording}>
-          <RouterProvider router={router} />
-        </RecordingNavigationProvider>,
-      ),
-    );
-
-    expect(await screen.findByText(/Profile ghost does not exist/)).toBeInTheDocument();
-    expect(vi.mocked(useProfileEntity)).toHaveBeenCalledWith({ name: "ghost" });
-    await userEvent.click(screen.getByRole("button", { name: "Back to home" }));
-
-    expect(recording.calls).toEqual([{ method: "openHome", args: [] }]);
   });
 });

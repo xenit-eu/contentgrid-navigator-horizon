@@ -66,8 +66,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - `src/shells/` is host code and the **only** place in this package that may import `@tanstack/react-router`:
   `router-shell` (`mountNavigatorApp`, `AppRouterContext`, `useOpenInNewTab`), `auth-shell`, `entity-profile-gate` and
   `sidebar-shell`. `SidebarShell` wires `SideBarLayout` to the router (active entity, outlet) and to
-  `useViewNavigation()`. `EntityProfileGate` takes `entityName`, `onBackHome` and `children`; `EntityProfileGateRoute`
-  is its `/$entity` route adapter. Each shell is its own `exports` entry (`@contentgrid/views/<name>`). The app's own
+  `useViewNavigation()`; the app passes its dev-only footer link in through `footer`. `EntityProfileGate` is
+  router-free (`entityName`, `onBackHome`, `children`); each app's `$entity` route files read the param and wire it. Each shell is its own `exports` entry (`@contentgrid/views/<name>`). The app's own
   `Navigation` stays in `apps/*/src/routes/`.
 - `EntityOverviewView` (`entity-overview`) and `NotFoundView` (`not-found`) are the two small views around the
   features' `EntityCountOverview` and `NotFoundPage`; those take callback props and never read navigation.
