@@ -7,7 +7,7 @@ import {
   useViewNavigation,
 } from "./navigation-context";
 import type { Navigation } from "./navigation-context";
-import { createRecordingNavigation, withRecordingNavigation } from "./testing";
+import { createRecordingNavigation, withRecordingNavigation } from "./recording-navigation";
 
 function NavButtons() {
   const navigation = useViewNavigation();
@@ -119,6 +119,37 @@ describe("NavigationOptions", () => {
       { method: "openEntityItemCollection", args: ["invoice", { openInNewTab: true }] },
       { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
       { method: "openCreateItem", args: ["invoice", { openInNewTab: true }] },
+      { method: "openItem", args: ["invoice", "43"] },
+    ]);
+  });
+
+  it("forwards options through ChildNavigationProvider to the parent", () => {
+    const host = createRecordingNavigation();
+    const { result } = renderHook(() => useViewNavigation(), {
+      wrapper: ({ children }) => (
+        <NavigationProvider navigation={host.navigation}>
+          <ChildNavigationProvider overrides={{}}>{children}</ChildNavigationProvider>
+        </NavigationProvider>
+      ),
+    });
+    result.current.openItem("invoice", "42", { openInNewTab: true });
+    expect(host.calls).toEqual([
+      { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
+    ]);
+  });
+});
+
+describe("NavigationOptions", () => {
+  it("records options only when the caller passes them", () => {
+    const recording = createRecordingNavigation();
+    recording.navigation.openHome({ openInNewTab: true });
+    recording.navigation.openEntityItemCollection("invoice", { openInNewTab: true });
+    recording.navigation.openItem("invoice", "42", { openInNewTab: true });
+    recording.navigation.openItem("invoice", "43");
+    expect(recording.calls).toEqual([
+      { method: "openHome", args: [{ openInNewTab: true }] },
+      { method: "openEntityItemCollection", args: ["invoice", { openInNewTab: true }] },
+      { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
       { method: "openItem", args: ["invoice", "43"] },
     ]);
   });

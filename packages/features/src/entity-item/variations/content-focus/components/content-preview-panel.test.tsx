@@ -9,18 +9,20 @@
  * `entityItem` is a duck-typed stub (`as unknown as EntityItem`), not a real `HalObject`-backed
  * instance — `@contentgrid/hal` is a forbidden import in `packages/features`
  * (`packages/features/CLAUDE.md`). The stub implements exactly the members the real hooks touch
- * (`attributes`, `etag`, `downloadContentRequest`), built from real navigator-data value classes
+ * (`attributes`, `findAttribute`, `etag`, `contentLink`, `downloadContentRequest`) and reuses the
+ * real `EntityItem.prototype.canUploadContent`/`uploadContentRequest`, built from real navigator-data value classes
  * (`EntityItemAttributeContent`) — the same pattern `entity-item/attributes/
  * entity-item-attributes.test.tsx` already established for this package.
  */
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
-  type EntityItem,
+  EntityItem,
   EntityItemAttributeContent,
   NavigatorDataProvider,
   createApiClient,
@@ -86,8 +88,9 @@ function makeStubEntityItem(options: {
   attributeName: string;
   metadata: { filename: string | null; mimetype: string; length: number } | null;
   etag?: string | null;
+  canUpload?: boolean;
 }): EntityItem {
-  const { attributeName, metadata, etag = '"v1"' } = options;
+  const { attributeName, metadata, etag = '"v1"', canUpload = true } = options;
   const attributes = [
     {
       value: new EntityItemAttributeContent(attributeName, metadata, {
@@ -101,6 +104,10 @@ function makeStubEntityItem(options: {
     // lookup here instead of hand-rolling a `.attributes.find(...)` in the stub.
     findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
     etag,
+    // No cg:content link means no upload, as on a real item.
+    contentLink: () => (canUpload ? { href: CONTENT_URL } : null),
+    canUploadContent: EntityItem.prototype.canUploadContent,
+    uploadContentRequest: EntityItem.prototype.uploadContentRequest,
     downloadContentRequest: (
       _attrName: string,
       opts?: { range?: { start: number; end?: number } },
@@ -139,6 +146,12 @@ function makeStubEntityItemWithAttributes(
     // See the matching comment in `makeStubEntityItem` above.
     findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
     etag,
+    contentLink: (name: string) => {
+      const match = attrs.find((attr) => attr.name === name);
+      return match ? { href: match.url } : null;
+    },
+    canUploadContent: EntityItem.prototype.canUploadContent,
+    uploadContentRequest: EntityItem.prototype.uploadContentRequest,
     downloadContentRequest: (
       attrName: string,
       opts?: { range?: { start: number; end?: number } },
@@ -206,6 +219,118 @@ describe("ContentPreviewPanel", () => {
     });
 
     expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toBeInTheDocument();
+  });
+
+  it("shows only 'No file', without a drop zone, when the user may not upload", () => {
+    const entityItem = makeStubEntityItem({
+      attributeName: "document",
+      metadata: null,
+      canUpload: false,
+    });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
+  it("uploads a dropped file into the empty attribute, showing the uploading state", async () => {
+    const user = userEvent.setup();
+    let uploadRequests = 0;
+    server.use(
+      http.put(CONTENT_URL, () => {
+        uploadRequests++;
+        // Never settles: keeps the panel in its uploading state for the assertion.
+        return new Promise<Response>(() => {});
+      }),
+    );
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input!, new File(["%PDF-1.7"], "invoice.pdf", { type: "application/pdf" }));
+
+    expect(await screen.findByText("Uploading… 0%")).toBeInTheDocument();
+    expect(uploadRequests).toBe(1);
+  });
+
+  it("shows the problem and offers the drop zone again when the upload fails", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.put(CONTENT_URL, () =>
+        HttpResponse.json(
+          { status: 415, title: "Unsupported Media Type" },
+          { status: 415, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
+      wrapper: makeWrapper(),
+    });
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input!, new File(["x"], "notes.bin", { type: "application/octet-stream" }));
+
+    expect(await screen.findByText("Unsupported Media Type")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toBeInTheDocument();
+  });
+
+  it("shows the uploading state only on the attribute being uploaded to, with no second drop zone", async () => {
+    const user = userEvent.setup();
+    server.use(http.put(CONTENT_URL, () => new Promise<Response>(() => {})));
+    const entityItem = makeStubEntityItemWithAttributes([
+      { name: "document", metadata: null, url: CONTENT_URL },
+      { name: "photo", metadata: null, url: PHOTO_CONTENT_URL },
+    ]);
+    const { rerender } = render(
+      <ContentPreviewPanel entityItem={entityItem} attributeName="document" />,
+      { wrapper: makeWrapper() },
+    );
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input!, new File(["%PDF-1.7"], "invoice.pdf", { type: "application/pdf" }));
+    expect(await screen.findByText("Uploading… 0%")).toBeInTheDocument();
+
+    rerender(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />);
+
+    expect(screen.queryByText(/Uploading…/)).not.toBeInTheDocument();
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
+  it("no longer shows a failed upload's problem after the user switches away and back", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.put(CONTENT_URL, () =>
+        HttpResponse.json(
+          { status: 415, title: "Unsupported Media Type" },
+          { status: 415, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const entityItem = makeStubEntityItemWithAttributes([
+      { name: "document", metadata: null, url: CONTENT_URL },
+      { name: "photo", metadata: null, url: PHOTO_CONTENT_URL },
+    ]);
+    const { rerender } = render(
+      <ContentPreviewPanel entityItem={entityItem} attributeName="document" />,
+      { wrapper: makeWrapper() },
+    );
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input!, new File(["x"], "notes.bin", { type: "application/octet-stream" }));
+    expect(await screen.findByText("Unsupported Media Type")).toBeInTheDocument();
+
+    rerender(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />);
+    rerender(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />);
+
+    expect(screen.queryByText("Unsupported Media Type")).not.toBeInTheDocument();
+    expect(screen.getByText("No file")).toBeInTheDocument();
   });
 
   it("renders the stored PDF once the download resolves, and downloads it on demand", async () => {
@@ -234,12 +359,70 @@ describe("ContentPreviewPanel", () => {
     expect(anchorClick).toHaveBeenCalledOnce();
   });
 
-  it("shows previewUnavailable for a non-PDF file with no rendition endpoint configured", async () => {
+  it.each([
+    { filename: "photo.png", mimetype: "image/png", element: "img" },
+    { filename: "dashcam.mp4", mimetype: "video/mp4", element: "video" },
+  ])(
+    "shows a stored $mimetype file as it is, under the attribute selector",
+    async ({ filename, mimetype, element }) => {
+      server.use(
+        createContentDownloadHandler({
+          url: CONTENT_URL,
+          body: new Uint8Array([0x00, 0x01]),
+          contentType: mimetype,
+        }),
+      );
+      const entityItem = makeStubEntityItem({
+        attributeName: "media",
+        metadata: { filename, mimetype, length: 2 },
+      });
+      const { container } = render(
+        <ContentPreviewPanel
+          entityItem={entityItem}
+          attributeName="media"
+          toolbarStart={<span>attribute selector</span>}
+        />,
+        { wrapper: makeWrapper() },
+      );
+
+      await waitFor(() => expect(container.querySelector(element)).not.toBeNull());
+      expect(screen.getByText("attribute selector")).toBeInTheDocument();
+    },
+  );
+
+  it("shows cannotDisplay with Download, and no Retry, when the browser cannot play the file", async () => {
+    server.use(
+      createContentDownloadHandler({
+        url: CONTENT_URL,
+        body: new Uint8Array([0x00]),
+        contentType: "video/x-msvideo",
+      }),
+    );
     const entityItem = makeStubEntityItem({
-      attributeName: "photo",
-      metadata: { filename: "photo.png", mimetype: "image/png", length: 100 },
+      attributeName: "recording",
+      metadata: { filename: "old.avi", mimetype: "video/x-msvideo", length: 1 },
     });
-    render(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />, {
+    const { container } = render(
+      <ContentPreviewPanel entityItem={entityItem} attributeName="recording" />,
+      { wrapper: makeWrapper() },
+    );
+
+    await waitFor(() => expect(container.querySelector("video")).not.toBeNull());
+    fireEvent.error(container.querySelector("video")!);
+
+    expect(
+      await screen.findByText("Your browser can't open this video. You can download it instead."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("shows previewUnavailable for a document with no rendition endpoint configured", async () => {
+    const entityItem = makeStubEntityItem({
+      attributeName: "document",
+      metadata: { filename: "report.docx", mimetype: "application/msword", length: 100 },
+    });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
       wrapper: makeWrapper(),
     });
 
@@ -555,15 +738,15 @@ describe("ContentPreviewPanel", () => {
       }),
     );
     const entityItem = makeStubEntityItem({
-      attributeName: "photo",
-      metadata: { filename: "photo.tiff", mimetype: "image/x-tiff", length: 100 },
+      attributeName: "document",
+      metadata: { filename: "data.mdb", mimetype: "application/x-msaccess", length: 100 },
     });
-    render(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />, {
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
       wrapper: makeWrapper(RENDITION_URI_TEMPLATE),
     });
 
     expect(
-      await screen.findByText("Preview isn't available for image/x-tiff files."),
+      await screen.findByText("Preview isn't available for application/x-msaccess files."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });

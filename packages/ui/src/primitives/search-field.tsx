@@ -43,7 +43,7 @@ function SearchField({
               type="button"
               onClick={() => onRemoveChip(index)}
               aria-label={`Remove ${chip.label} filter`}
-              className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer p-0 border-0 bg-transparent flex items-center"
+              className="ml-1 text-muted-foreground hover:text-foreground p-0 border-0 bg-transparent flex items-center"
             >
               <X size={11} aria-hidden />
             </button>

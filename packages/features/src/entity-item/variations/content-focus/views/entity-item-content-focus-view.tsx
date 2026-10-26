@@ -17,7 +17,9 @@ import {
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
+import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
+import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
+import { useEditContext } from "../../../edit/use-edit-context";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
@@ -151,8 +153,11 @@ function EntityItemContentFocusViewBody({
   const content = (
     <>
       {item.isPending && <LoadingPage />}
-      {item.isError && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-      {item.isSuccess && <EntityItemContentFocusBody entityItem={item.data} {...handlers} />}
+      {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
+      {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
+      {item.data && (
+        <EntityItemContentFocusBody entityItem={item.data} refetch={item.refetch} {...handlers} />
+      )}
     </>
   );
 
@@ -185,6 +190,11 @@ export function entityItemContentFocusPadding(profileEntity: ProfileEntity): tru
   return profileEntity.hasContentAttributes ? "bottom" : true;
 }
 
+type EditContextRefetch = Parameters<typeof useEditContext>[1];
+
+// Without a `refetch` the edit form's Refresh has nothing to reload, so it leaves the form as is.
+const noRefetch: EditContextRefetch = async () => ({ isSuccess: false });
+
 export type EntityItemContentFocusBodyProps = Pick<
   EntityItemContentFocusViewProps,
   | "onRelationItemClick"
@@ -195,6 +205,11 @@ export type EntityItemContentFocusBodyProps = Pick<
 > & {
   /** The already-loaded item; its profile is `entityItem.profileEntity`. */
   readonly entityItem: EntityItem;
+  /**
+   * Reloads the item; the view that owns the item query supplies it. After a version conflict the
+   * edit form's Refresh calls it and moves the form onto the latest version.
+   */
+  readonly refetch?: EditContextRefetch;
 };
 
 /**
@@ -205,6 +220,7 @@ export type EntityItemContentFocusBodyProps = Pick<
  */
 export function EntityItemContentFocusBody({
   entityItem,
+  refetch = noRefetch,
   onRelationItemClick,
   onRelationItemCreateNew,
   onMissingRelationTargetClick,
@@ -213,6 +229,7 @@ export function EntityItemContentFocusBody({
 }: Readonly<EntityItemContentFocusBodyProps>) {
   const { profileEntity } = entityItem;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
+  const editContext = useEditContext(entityItem, refetch);
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -249,6 +266,9 @@ export function EntityItemContentFocusBody({
       entityItem={entityItem}
       attributeName={selectedAttribute}
       onSelectAttribute={setUserSelectedAttribute}
+      editedItem={editContext.editedItem}
+      onEditingChange={editContext.setIsEditing}
+      onRefresh={() => void editContext.refresh()}
       loadedProfiles={loadedProfiles}
       onRelationItemClick={handleRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
@@ -274,6 +294,9 @@ function ContentFocusEntityItemBody({
   entityItem,
   attributeName,
   onSelectAttribute,
+  editedItem,
+  onEditingChange,
+  onRefresh,
   loadedProfiles,
   onRelationItemClick,
   onRelationItemCreateNew,
@@ -286,6 +309,11 @@ function ContentFocusEntityItemBody({
    * `hasContentAttributes` being true — defensive; should not occur in practice. */
   attributeName: string | undefined;
   onSelectAttribute: (attributeName: string) => void;
+  /** The version the update form was opened on; `null` when not editing. */
+  editedItem: EntityItem | null;
+  onEditingChange: (isEditing: boolean) => void;
+  /** Reloads the item after a version conflict and moves the form onto it. */
+  onRefresh: () => void;
   loadedProfiles: readonly ProfileEntity[];
   /** Adapter already bound to the object-shaped `onRelationItemClick` prop on the outer view —
    * `RelationToOneSection`/`RelationToManySection` (from the stable `entity-item` feature) still
@@ -311,10 +339,24 @@ function ContentFocusEntityItemBody({
       // body already shows above its attributes/relations (`entity-item-view.tsx`). `sm` to fit
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
-      sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
+      sidePanelHeader={
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <EntityItemReference item={entityItem} size="sm" />
+          <EditEntityItemButton
+            item={entityItem}
+            isEditing={editedItem !== null}
+            onEdit={() => onEditingChange(true)}
+          />
+        </div>
+      }
       sidePanel={
         <div className="space-y-6">
-          <EntityItemAttributes item={entityItem} />
+          <EditableEntityItemAttributes
+            item={editedItem ?? entityItem}
+            isEditing={editedItem !== null}
+            onEditingChange={onEditingChange}
+            onRefresh={onRefresh}
+          />
           {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
             <>
               <Separator />

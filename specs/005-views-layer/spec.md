@@ -1,6 +1,6 @@
 # Feature Specification: Views Layer Between Apps and Features
 
-**Feature Branch**: `ACC-3216-1-spec` (stacked series ACC-3216, PRs 1–9)
+**Feature Branch**: `ACC-3216-1-spec` (stacked series ACC-3216, PRs 1–8)
 
 **Created**: 2026-10-06
 
@@ -25,7 +25,7 @@
 
 **Out of scope** (tracked elsewhere or deferred)
 
-- Building the chat assistant itself. Showing a view from a plain API link (rather than an entity name and item id) is itself deferred until a view needs it — see User Story 3 — so this series does not build a shared target-resolution mechanism for it.
+- Building the chat assistant itself: the item detail and collection views already accept a link (`itemUrl`, `collectionUrl`) alongside their entity-name prop and resolve it themselves through `navigator-data`'s existing hooks — see User Story 3 — but no host exercises that mode yet. There is still no shared target-resolution mechanism to build for it, because each view resolves its own link directly.
 - The unsaved-changes guard: where it lives is an open question; it stays as it is in this series.
 - The backend preferences API: the merge exists, the backend part keeps returning nothing until the API is defined.
 - Saving user preferences on the server.
@@ -70,22 +70,22 @@ A user filters and sorts a list, opens an item, and returns through the breadcru
 
 ---
 
-### User Story 3 - Show an item or list from an API link (Priority: P2, deferred)
+### User Story 3 - Show an item or list from an API link (Priority: P2)
 
-**Deferred**: not built in PRs 1–9. A view's props are explicit (an entity name and item id — see User Story 1); a link-based prop such as `itemUrl` is added to a view only when a host that needs it (the chat assistant) is actually being built, and is that view's own prop, resolved through `navigator-data`'s existing hooks. There is no shared `ViewTarget`/target-resolution mechanism to build ahead of that need. The story below records the intent for when that happens; its acceptance scenarios are not tested in this series.
+**Status**: The item detail and collection views already accept a link (`itemUrl`, `collectionUrl`) as of PR 3, alongside their entity-name props — see User Story 1 and User Story 2 — and resolve it themselves through `navigator-data`'s existing hooks (profile discovery by `ProfileEntity.describesUrl`, item loading by `useEntityItem`, whose cache key is the same for both modes). There is no shared `ViewTarget`/target-resolution mechanism, and none is planned; each view resolves its own link directly. What is not built in PRs 1–8 is a second host that actually opens a view this way: the chat assistant itself stays out of scope (see Scope). The acceptance scenarios below are already exercised by the views' own stories and tests, not yet by a production host.
 
 A host that only has a link from the API (for example the chat assistant) shows the same item page or list that the app shows for a route.
 
 **Why this priority**: It is the second host the design is built for, but it needs the P1 slices first.
 
-**Independent Test**: Open the item view once by name and once by its API link in the same session: both show the same page, and the item is fetched once.
+**Independent Test**: Open the item view once by name and once by its API link in the same session: both show the same page, and the item is fetched once. _(Testable today at the view level; a production host is still to be built.)_
 
 **Acceptance Scenarios**:
 
 1. **Given** a link to an item, **When** a view is opened with it, **Then** the view shows the same page as when opened by entity name and item id.
-2. **Given** a link, **When** the view starts, **Then** the entity's profile is found from the link's own response, or from the profiles that describe the resource when the response gives none; the entity name is never cut out of the link text.
-3. **Given** the same item opened by name and by link, **Then** it is loaded once and shared.
-4. **Given** a link to a search that already contains filters, **Then** the view shows the results; whether the filter form shows those filters is an open question.
+2. **Given** a link, **When** the view starts, **Then** the entity's profile is found by matching the link against the profiles already loaded (`describesUrl`); the entity name is never cut out of the link text.
+3. **Given** the same item opened by name and by link, **Then** it is loaded once and shared, since both modes resolve to the same cache key.
+4. **Given** a link to a search that already contains filters, **Then** the view shows the results with the filter values the link carries for the search template's own fields already applied _(resolved — see Open question 5)_.
 5. **Given** a host with its own navigation (for example "open in Navigator"), **When** the user clicks a breadcrumb or related item, **Then** the host's navigation runs and the app's route change does not.
 
 ---
@@ -164,9 +164,8 @@ A user's display choices (icon, colour, card style, name attribute, visible colu
 
 Edge cases marked _assumption_ are not in the design; those marked _current behaviour_ describe what the code does today.
 
-- _(deferred with User Story 3)_ A link whose response carries no profile link, and no profile describes it → the view shows the not-found state, and no name is guessed from the link.
-- _(deferred with User Story 3)_ A link to a resource that is not an entity item or collection → the view shows a not-supported state _(assumption)_.
-- _(deferred with User Story 3)_ The same item is opened by name in one place and by link in another while loading → one request.
+- A link that no loaded profile describes — whether because it isn't an item or collection resource, or simply because no profile's `describes` links match it — → the view shows the not-found state, and no name is guessed from the link.
+- The same item is opened by name in one place and by link in another while loading → one request, since both modes resolve to the same `useEntityItem` cache key.
 - A host provides no navigation → views that need it fail loudly in development, not silently do nothing _(assumption)_.
 - A host turns the toolbar off and the view has actions → the actions are not shown; the host is responsible for offering them _(assumption)_.
 - A stored list state refers to a field the profile no longer has → the field is ignored and the list shows _(assumption)_.
@@ -189,9 +188,9 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 **View props and state**
 
 - **FR-007**: Each view MUST declare its own explicit props for what it shows (for example an entity name and an optional item id). There MUST be no shared, generic target type that every view extends to be given one; the only prop views share is the toolbar on/off switch (FR-024).
-- **FR-008** _(deferred, User Story 3)_: Opening a view from a link from the API, resolved into the same loaded objects as opening it by name, with the rest of the view not seeing the difference, is deferred until a view needs it. Until then, no view accepts a link-shaped prop, and no shared resolution mechanism is built for it. When a view does add one, it is that view's own prop (e.g. `itemUrl`), resolved through `navigator-data`'s existing hooks.
-- **FR-009** _(deferred, together with FR-008)_: Once a view accepts a link, the entity's profile MUST be found by following the profile link in the response, or, when it is absent, by finding which profile describes the resource through its describing links. The entity name MUST NOT be taken from the link text. This rule is recorded now so it is not forgotten when FR-008 is picked up; it is not implemented in this series.
-- **FR-010** _(deferred, together with FR-008)_: Once a view accepts a link, loaded data MUST be cached under the item's own link, so the same item opened by name or by link is loaded once and shared.
+- **FR-008**: The item detail view and the collection view MUST each also accept a link-shaped prop (`itemUrl`, `collectionUrl`) as an alternative to their entity-name prop, resolved into the same loaded objects as opening by name, with the rest of the view not seeing the difference. There is no shared, generic target type or resolution mechanism for this in `navigator-data`; each view resolves its own link through `navigator-data`'s existing hooks. A view not listed here MAY add a link-shaped prop of its own the same way, when a host needs it.
+- **FR-009**: When a view resolves a link, the entity's profile MUST be found by matching the link against the profiles already loaded, through their `describes` links (`ProfileEntity.describesUrl`). The entity name MUST NOT be taken from the link text.
+- **FR-010**: A view that opens the same resource by name and by link MUST load and cache it once: both modes resolve to the same `useEntityItem` cache key, so the data is fetched once and shared.
 - **FR-011**: A view's identifying props MUST only say what to show. What the user is looking at (filters, sort order, page, active tab) MUST be view state, passed separately and defined by each view's own state type.
 - **FR-012**: A view MUST accept an optional state and an optional change notification. Without a change notification, the view MUST keep its state itself and MUST still function correctly with neither passed.
 - **FR-013**: An app MUST read its address into view state and write state changes back to the address, and MUST be the only layer that knows the address format. A frontend address MUST NOT be accepted as one of a view's identifying props.
@@ -200,8 +199,8 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 
 **Navigation**
 
-- **FR-016**: The host MUST provide one navigation object. Only views read it; a view opens pages only through it. Features MUST NOT read it: they report user actions through callback props, which their view wires to the navigation object. Views and features MUST NOT use the router. Host code (the shells area of the views package: router setup and the app's navigation implementation) and the apps MAY use the router.
-- **FR-017**: The navigation object MUST offer six functions: `openHome()`, `openClassifyCreate()`, `openEntityItemCollection(entityName)`, `openItem(entityName, id)`, `openEditItem(entityName, id)` and `openCreateItem(entityName)`. It MAY be extended later. They are implemented page by page: `openHome`, `openEntityItemCollection` and `openItem` are needed from PR 2 through PR 5; `openCreateItem` is needed from PR 3, where the item detail view wires it to the relation popover's existing "create missing target" callback (no separate prop added on the view for that); `openClassifyCreate` and `openEditItem` arrive with the page that first uses them.
+- **FR-016**: The host MUST provide one navigation object, read by views through `useViewNavigation()`. Only views read it; a view opens pages only through it. Features MUST NOT read it: they report user actions through callback props, which their view wires to the navigation object. Views and features MUST NOT use the router. Host code (the shells area of the views package: router setup) and the apps — including each app's own `Navigation` implementation (see Assumptions) — MAY use the router.
+- **FR-017**: The navigation object MUST offer six functions: `openHome()`, `openClassifyCreate()`, `openEntityItemCollection(entityName)`, `openItem(entityName, id)`, `openEditItem(entityName, id)` and `openCreateItem(entityName)`. It MAY be extended later. Each takes an optional trailing `options?: { openInNewTab?: boolean }` argument (default `false`), set by the view. They are implemented page by page: `openHome`, `openEntityItemCollection` and `openItem` are needed from PR 2 through PR 3; `openCreateItem` is needed from PR 3, where the item detail view wires it to the relation popover's existing "create missing target" callback (no separate prop added on the view for that); `openClassifyCreate` and `openEditItem` arrive with the page that first uses them.
 - **FR-018**: Opening a collection through the navigation object MUST bring the user back to the list as they left it (filters, sort order, page); views MUST NOT need to know how.
 - **FR-019**: Hosts other than the app (the chat assistant, Storybook stories, tests) MUST be able to provide their own navigation. A recording implementation MUST exist for stories and tests.
 - **FR-020**: An action only one page needs MAY remain a normal property instead of going through the navigation object.
@@ -233,7 +232,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 
 **Enforcement and migration**
 
-- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review), features and views never import the router, the UI package never imports features, and stable views never import experimental views.
+- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review); features and views never import the router; the UI package never imports features; features never import views, and neither does the UI package or `navigator-data`; and stable views never import experimental views.
 - **FR-035**: The existing stability lint rule MUST check views instead of features.
 - **FR-036**: The router calls in the dashboard, sidebar, profile gate and not-found page MUST be replaced by callback props that the view or host code wires to the navigation object.
 - **FR-037**: The two apps MUST share the page logic of every migrated page; a fix to a page MUST NOT need two edits.
@@ -242,7 +241,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 ### Key Entities
 
 - **View**: a unit that owns the composition of one page or pane: its data, its toolbar and the placement of features or child views.
-- **View props**: the explicit, per-view props that say what a view shows (for example an entity name and an item id); each view declares its own, there is no shared target type. A link-based prop is deferred (see FR-008).
+- **View props**: the explicit, per-view props that say what a view shows (for example an entity name and an item id, or a link such as `itemUrl`/`collectionUrl`); each view declares its own, there is no shared target type (see FR-008).
 - **View state**: how a view shows it (filters, sort, page, active tab); owned by the view's type, read and written by the host.
 - **Host**: whatever shows a view: the app, the chat panel, a Storybook story, or a parent view.
 - **Navigation object**: the host-provided set of "open this" actions that views call; features reach it only through callback props.
@@ -255,7 +254,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 
 - **SC-001**: A fix to the item detail page or the collection page is made in one place and is visible in both apps.
 - **SC-002** _(assumption: a measurable form of the design's rule 1)_: The migrated route files contain only the mapping from the address to the view's props and state; none keeps filter, sort, page or dialog logic.
-- **SC-003** _(deferred with User Story 3)_: Opening the same item by name and by link results in one request for the item.
+- **SC-003**: Opening the same item by name and by link results in one request for the item — true at the view level from PR 3; a production host that exercises the link mode is still to be built (User Story 3).
 - **SC-004**: A user can return from an item to its list through the breadcrumb and see the same filters, sort order and page as before, in every case that works today.
 - **SC-005**: A list and detail split view lets a user switch items in the right pane with no route change and with one toolbar.
 - **SC-006** _(from rule 4 and ADR-009)_: Every view and feature story has a visual snapshot in a fixed-size box showing no overflow outside the box.
@@ -264,22 +263,23 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 
 ## Open questions
 
-These stay open. A team meeting settles them; none is decided here.
+These stay open. A team meeting settles them; none is decided here — except question 5, resolved by what PR 3 actually built, and question 6, resolved during review.
 
 1. **Experimental copies and unfinished features.** How do we keep an experimental copy of a view up to date with fixes to the original? And once features carry no stability tag, what stops someone from putting an unfinished feature in a stable view?
 2. **Two panes, one address.** Each pane has its own filters, sort and page. Proposal: child views report changes to their parent through the change notification (FR-012), and the app writes them to the address with a prefix per pane. Not yet agreed.
-3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. Not yet agreed. To keep this series small, the guard stays where it is for now; that is a sequencing choice, not an answer.
+3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useViewNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. Not yet agreed. To keep this series small, the guard stays where it is for now; that is a sequencing choice, not an answer.
 4. **Preferences.** (a) A list setting a user changed, such as visible columns, replaces the backend's list as a whole, so a column the backend adds later never shows for that user; a reset per setting is needed, not only "reset all". (b) Can the backend lock a preference so users cannot change it? (c) Will user preferences move to the server so they follow the user across devices? (d) _Resolved during review:_ the store moves into its own `user-preferences` feature in `packages/features`, not into the data layer, so no new peer dependency arises — `packages/features` already depends on the state library.
-5. **Filters in a link** _(added during spec writing, not from the design review; it comes from the design's "open point" under rule 2; moot for now, since opening a view from a link is deferred — FR-008)_. If the chat backend sends a search link that already contains filters, does the filter form start empty, or does the backend send the filters separately? Reading them back out of the link would mean parsing it.
-6. **New tab for create** _(added during spec writing, not from the design review)_. The item page today opens "create a new related item" in a new tab. Does `openCreateItem(entityName)` carry new-tab semantics, does it take an option, or does the host decide?
+5. **Filters in a link** _(added during spec writing, not from the design review; it comes from the design's "open point" under rule 2)_ — _Resolved as of PR 3_: a `collectionUrl` target starts the view at the link's own page, with the filter values the link carries for the search template's own fields extracted into the view's initial state, so the filter form shows them as active; fields the template does not have are not extracted. This is not cursor-decoding — it reads declared search parameters by the template's own field names, never the opaque page key.
+6. **New tab for create** _(added during spec writing, not from the design review)_. The item page today opens "create a new related item" in a new tab. Does `openCreateItem(entityName)` carry new-tab semantics, does it take an option, or does the host decide? _Resolved during review:_ every navigation function takes an optional `{ openInNewTab }` option (default `false`), set by the view; the "create missing related item" action passes `{ openInNewTab: true }`.
 
 ## Assumptions
 
 - The design approved on 2026-10-06 is the source of the requirements; questions 1 to 4 are the design's open questions; questions 5 and 6 were added during spec writing. Together they are the only unsettled points.
 - The design says "apps only import views". This spec reads it as: apps do not import the features package directly. Apps still import the data and UI packages for their own bootstrap (configuration, authentication, router context, providers). This reading is to be confirmed in review.
 - The navigation functions the design lists are home, classify-create, collection, item, edit item and create item. The first PRs need `openHome`, `openEntityItemCollection` and `openItem`; `openCreateItem` is needed a little earlier than the rest, from the item detail view's relation-create wiring (PR 3); `openClassifyCreate` and `openEditItem` arrive with the pages that use them.
-- The router-setup code in the shells (router creation, the app component, opening a page in a new tab) is router-bound host code. "Features never import the router" therefore requires it to leave the features package first. It moves to the shells area of the views package (`packages/views/src/shells/`), together with the app's navigation implementation if it lives there. That host code and the apps MAY use the router; views and features MAY NOT. This reading is to be confirmed in review.
-- Stripping the toolbar from the collection feature happens before the collection view gets its state, so a thin collection view that draws the toolbar is needed in between.
+- The router-setup code in the shells (router creation, the app component, opening a page in a new tab) is router-bound host code. "Features never import the router" therefore requires it to leave the features package first. It moves to the shells area of the views package (`packages/views/src/shells/`). That host code and the apps MAY use the router; views and features MAY NOT. This reading is to be confirmed in review.
+- Each app's own `Navigation` implementation (the concrete object `useViewNavigation()` reads, wiring `openItem`/`openHome`/etc. to the router) is a separate concern from router setup, and does not move into `packages/views/src/shells/`: it lives under that app's own `apps/<app>/src/routes/` as a TanStack file-route-ignored file (e.g. `apps/navigator/src/routes/-router-navigation-provider.tsx`, mirrored in `apps/navigator-experimental`). A view's identifying props include hardcoded route strings (`/$entity`, `/$entity/$itemId`); `packages/views` has no app's registered route tree (the `Register` augmentation) to typecheck those against, so a route rename would not fail typecheck there, while it does inside the app that owns the route tree. This placement also keeps the file under the existing Sonar CPD exclusion for mirrored app route files (`apps/*/src/routes/**`, PR #204). See `research.md` §2.7.
+- The collection view gets its full state (filters, sort, page) in PR 3, placing the existing collection feature under its own toolbar from the start; stripping the feature's own (now unused) toolbar/breadcrumbs/actions props happens afterwards, in PR 4. No intermediate "thin" collection view is needed.
 - "Features never import views" is inferred from "each layer imports only from the layers below it"; the design does not state it separately.
 - Once the stability tag leaves features, the rule "a stable feature never imports an experimental feature" has no mechanism. It stays as written until stability moves to views, and what replaces it is open question 1.
 - Existing pages keep their behaviour while they move; no visual change is intended, so existing snapshot baselines should not change except where a view starts drawing what a feature drew.

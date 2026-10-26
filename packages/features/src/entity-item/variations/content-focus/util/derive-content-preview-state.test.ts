@@ -58,16 +58,16 @@ describe("deriveContentPreviewState", () => {
       deriveContentPreviewState({
         ...BASE,
         queryStatus: "success",
-        previewSource: { kind: "unavailable", mimetype: "image/png" },
+        previewSource: { kind: "unavailable", mimetype: "application/msword" },
       }),
-    ).toEqual({ state: "previewUnavailable", mimetype: "image/png" });
+    ).toEqual({ state: "previewUnavailable", mimetype: "application/msword" });
     expect(
       deriveContentPreviewState({
         ...BASE,
         queryStatus: "success",
-        previewSource: { kind: "unsupported", mimetype: "image/x-tiff" },
+        previewSource: { kind: "unsupported", mimetype: "application/x-msaccess" },
       }),
-    ).toEqual({ state: "previewUnavailable", mimetype: "image/x-tiff" });
+    ).toEqual({ state: "previewUnavailable", mimetype: "application/x-msaccess" });
   });
 
   it("carries a null mimetype through unchanged when the file's mimetype is unknown", () => {

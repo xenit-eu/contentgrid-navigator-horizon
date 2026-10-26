@@ -25,8 +25,10 @@ Discriminated union returned by `useContentPreview` as query data.
 | Variant       | Fields                                                                      | Meaning                                                                     |
 | ------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `pdf`         | `bytes: ArrayBuffer`, `filename: string`, `origin: "stored" \| "rendition"` | Displayable PDF; `origin` drives the "converted preview" indicator (FR-020) |
+| `image`       | `blob: Blob`, `etag: string \| null`                                        | The stored image file, shown as it is (FR-032); `etag` is the content's own |
+| `video`       | `blob: Blob`, `etag: string \| null`                                        | The stored video file, shown as it is (FR-032); `etag` is the content's own |
 | `noFile`      | —                                                                           | Attribute holds no file (metadata `null` or link answered 404)              |
-| `unavailable` | `mimetype: string \| null`                                                  | Non-PDF and no rendition endpoint configured (FR-022)                       |
+| `unavailable` | `mimetype: string \| null`                                                  | Needs a rendition and no rendition endpoint is configured (FR-022)          |
 | `unsupported` | `mimetype: string \| null`                                                  | Rendition service reported `invalid-conversion` (FR-018)                    |
 
 Failures are not variants: they reject the query with `ProblemDetailError`, `RenditionTimeoutError`,
@@ -92,18 +94,20 @@ Transitions: `idle → opening → ready | protected | invalid`; `ready → idle
 
 ## Content preview panel state (new, feature component)
 
-Derived, not stored: `query.status × PreviewSource` → one of the FR-024 states.
+Derived, not stored: `query.status × PreviewSource` → one of the FR-024 states. The one exception is
+`uploading`, which the panel shows while its `useUploadContent` mutation is pending.
 
 | Preview state        | Condition                                                        | Download | Retry |
 | -------------------- | ---------------------------------------------------------------- | -------- | ----- |
 | `noFile`             | `metadata === null` or `PreviewSource.noFile`                    | no       | no    |
+| `uploading`          | `useUploadContent` pending for this attribute                    | no       | no    |
 | `loading`            | query pending, expected `origin: stored`                         | yes      | no    |
 | `preparingPreview`   | query pending, non-PDF with rendition configured (FR-006/FR-012) | yes      | no    |
-| `ready`              | `PreviewSource.pdf`                                              | yes      | no    |
+| `ready`              | `PreviewSource.pdf`, `.image` or `.video`                        | yes      | no    |
 | `previewUnavailable` | `unavailable` or `unsupported`                                   | yes      | no    |
 | `couldNotPrepare`    | `RenditionTimeoutError` or rendition failure                     | yes      | yes   |
 | `couldNotRetrieve`   | download failure (`ProblemDetailError` other than 404)           | yes      | yes   |
-| `cannotDisplay`      | viewer reports `invalid`                                         | yes      | no    |
+| `cannotDisplay`      | viewer reports `invalid`; an image/video fails to load           | yes      | no    |
 | `protected`          | viewer reports `protected`                                       | yes      | no    |
 | `viewerFailure`      | error boundary caught a viewer exception (FR-025)                | yes      | yes   |
 

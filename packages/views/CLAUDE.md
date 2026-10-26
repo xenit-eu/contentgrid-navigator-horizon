@@ -20,13 +20,18 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - **Only views call `useViewNavigation()`; no router in views or features.** Every click that opens something,
   including one reported by a feature through a callback prop that its view wires up, calls it
   ([contract](../../specs/005-views-layer/contracts/navigation-context.md)). One-page-only actions stay props.
-- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: ViewToolbarConfiguration`) and calls
-  navigator-data's hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
-- A view with state (filters, sort, page, …) takes optional `state` / `onStateChange`; with neither it keeps
-  its own internal state. State is plain, serialisable data defined by the view.
-- A view's own preload (e.g. `preloadEntityItemDetail(ctx, entityName, itemId)`) is called from the route
-  loader, fills the cache via navigator-data's ensure helpers, never rejects, and returns while the API
-  client is absent ([contract](../../specs/005-views-layer/contracts/view-preload.md)).
+- Each view declares its own explicit props (e.g. `entityName` + `itemId`, `toolbar?: ViewToolbarConfiguration`
+  where `ViewToolbarConfiguration = { actions?: ReactNode } | false | undefined`) and calls navigator-data's
+  hooks itself. No shared props or target type ([contract](../../specs/005-views-layer/contracts/view-props-and-state.md)).
+- A view that has list state (filters, sort, page, …) takes it bundled as an optional `state` / `onStateChange`
+  pair — never as separate top-level props — and exports its own state type for it; with neither `state` nor
+  `onStateChange` passed, the view MUST still work correctly, keeping that state internally. A view with no
+  such state exports no state type and takes neither prop.
+- Exporting a preload is per view, not a requirement every view meets: a view MAY export its own small preload
+  function (e.g. `preloadEntityItemDetail(ctx, entityName, itemId)`) for a route that wants to start loading
+  before mount. Where one exists, the route loader calls it directly; it fills the cache via navigator-data's
+  ensure helpers, never rejects, and returns while the API client is absent
+  ([contract](../../specs/005-views-layer/contracts/view-data-loading.md)).
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
 - Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (tag moves here
   in a later PR).
@@ -47,7 +52,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.
-- `@contentgrid/views/testing` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
+- `@contentgrid/views/recording-navigation` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
 
 ## Views

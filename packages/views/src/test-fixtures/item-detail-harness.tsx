@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NavigatorDataProvider } from "@contentgrid/navigator-data";
 import type { TypedFetch } from "@contentgrid/navigator-data";
-import { RecordingNavigationProvider, createRecordingNavigation } from "../navigation/testing";
+import {
+  RecordingNavigationProvider,
+  createRecordingNavigation,
+} from "../navigation/recording-navigation";
 import { PROFILE_URL, createFixtureFetch } from "./item-detail";
 
 /**
@@ -16,6 +19,7 @@ export function createItemDetailTestHarness(
 ) {
   const fixture = createFixtureFetch();
   const apiFetch = (options.fetchFn ?? fixture.fetch) as TypedFetch;
+  const contentFetch = Object.assign(apiFetch, { withUploadProgress: () => apiFetch });
   const queryClient =
     options.queryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const recording = createRecordingNavigation();
@@ -23,7 +27,11 @@ export function createItemDetailTestHarness(
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider apiFetch={apiFetch} contentFetch={apiFetch} profileUrl={PROFILE_URL}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          profileUrl={PROFILE_URL}
+        >
           <RecordingNavigationProvider recording={recording}>
             {children}
           </RecordingNavigationProvider>

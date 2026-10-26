@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain — the six unsettled points are recorded as Open questions and are deliberately left open for the team meeting
+- [x] No [NEEDS CLARIFICATION] markers remain — the six unsettled points are recorded as Open questions; five are deliberately left open for the team meeting, and question 5 (filters in a link) was resolved by what PR 3 actually built
 - [x] Requirements are testable and unambiguous (FR-001–FR-038)
 - [x] Success criteria are measurable (SC-001–SC-008)
 - [x] Success criteria are technology-agnostic
@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Items still open by design: the six Open questions in `spec.md`. They do not block PRs 2–7; PR 7 marks its address scheme provisional, PR 6 leaves the unsaved-changes guard in place, PR 8 does not decide the preferences questions, and PR 9 marks the experimental-copy convention provisional.
+- Items still open by design: five of the six Open questions in `spec.md` (question 5 is resolved). They do not block PRs 2–6; PR 6 marks its address scheme provisional, PR 5 leaves the unsaved-changes guard in place, PR 7 does not decide the preferences questions, and PR 8 marks the experimental-copy convention provisional.
 - Points found while writing, for review: (1) the design lists six navigation functions, of which the first PRs need three; (2) "apps import only views" cannot mean literally nothing else, since apps bootstrap with the data and UI packages; (3) the router-setup code in the shells is router-bound, so "features never import the router" needs it to leave the features package first; (4) the design's navigation list includes functions whose pages are on other branches.
 - Review path: human review of `spec.md`, ADR-018 and the constitution amendment in the pull request, then PR 2.

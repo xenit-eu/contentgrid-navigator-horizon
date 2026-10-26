@@ -11,27 +11,30 @@ There is no shared `ViewTarget`/`ResolvedViewTarget` type and no generic `ViewPr
 What a view shows, as the view's own props. Contract: [view-props-and-state.md](contracts/view-props-and-state.md).
 
 ```ts
-interface EntityItemDetailViewProps {
-  entityName: string;
-  itemId: string;
-  toolbar?: boolean;
+type EntityItemTarget = { entityName: string; itemId: string } | { itemUrl: string };
+
+interface EntityItemDetailViewProps extends EntityItemTarget {
+  toolbar?: ViewToolbarConfiguration;
 }
 
-interface EntityItemCollectionViewProps {
-  entityName: string;
-  toolbar?: boolean;
+type EntityItemCollectionTarget = { entityName: string } | { collectionUrl: string };
+
+interface EntityItemCollectionViewProps extends EntityItemCollectionTarget {
+  toolbar?: ViewToolbarConfiguration;
   state?: CollectionViewState;
   onStateChange?: (state: CollectionViewState) => void;
 }
 ```
 
-| Field        | Meaning                                                                                                                                                                    |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entityName` | The profile name, never the plural path. The collection address comes from the profile (`profileEntity.collectionUrl`), the item address from `profileEntity.itemUrl(id)`. |
-| `itemId`     | The item's `id` field; it is never read out of a link.                                                                                                                     |
-| `toolbar`    | Default on. The one prop every view that draws a toolbar shares (FR-024).                                                                                                  |
+| Field           | Meaning                                                                                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entityName`    | The profile name, never the plural path. The collection address comes from the profile (`profileEntity.collectionUrl`), the item address from `profileEntity.itemUrl(id)`. |
+| `itemId`        | The item's `id` field; it is never read out of a link.                                                                                                                     |
+| `itemUrl`       | The item's own link (e.g. its `self` href), in place of `entityName`/`itemId`; its profile is found through `describesUrl` (FR-008, FR-009).                               |
+| `collectionUrl` | A collection link from the API, in place of `entityName`, shown as the view's starting page (FR-008; see Collection view state below).                                     |
+| `toolbar`       | Default on. The one prop every view that draws a toolbar shares (FR-024).                                                                                                  |
 
-**Deferred**: a link-based prop (for example `itemUrl`) for the item detail view, so a host such as the chat assistant can open it from an API link instead of an entity name and item id. Not a requirement now (FR-008); when a view adds one, it resolves the link itself through `navigator-data`'s existing hooks — there is no shared target-resolution mechanism to build first.
+Both targets are unions, not an optional field alongside the name — a caller gives one or the other, never both. Both views resolve their target through their own view-local hook (`useEntityItemTarget`, `useProfileEntityTarget` in `packages/views/src/hooks/`), built on `navigator-data`'s existing hooks; there is no shared target type or resolution mechanism in `navigator-data` itself (FR-008).
 
 ## View state
 
@@ -43,17 +46,17 @@ Each view defines its own state type and takes it the same way: an optional `sta
 
 ```ts
 interface CollectionViewState {
-  filters: Record<string, string>; // keys = search template field names
+  filters?: Record<string, string>; // keys = search template field names
   sort?: string; // as produced by the search template's sort options
-  page?: string; // opaque cursor key
+  pageUrl?: string; // the opaque next/prev link being shown; undefined is page 1
 }
 ```
 
 **Rules**
 
 - Filter keys are field names of `profileEntity.searchTemplate`; the view builds the request through the template (FR-014).
-- `page` is the opaque key from the existing cursor-registry pattern. It is never decoded, and no address is built from it (constitution Principle I).
-- An empty `filters` and no `sort` or `page` is the default state.
+- `pageUrl` is the opaque link from the existing cursor-registry pattern (a next/prev link, or the `collectionUrl` target's own link). It is never decoded, and no address is built from it (constitution Principle I).
+- No `filters`, `sort` or `pageUrl` is the default state. A `collectionUrl` target's initial state is that link as `pageUrl`, with the filter values it carries for the search template's own fields already in `filters` (Open question 5, resolved).
 - Keys that the profile no longer has are ignored.
 
 ### Composite view state (split views)
@@ -66,16 +69,18 @@ Provided by the host through context; only views read it, features get callback 
 
 | Function                               | Purpose                                                      | Exists from                                                                                              |
 | -------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `openHome()`                           | The home page                                                | PR 2, needed through PR 5                                                                                |
-| `openEntityItemCollection(entityName)` | The list of an entity, restored as the user left it (FR-018) | PR 2, needed through PR 5                                                                                |
-| `openItem(entityName, id)`             | One item                                                     | PR 2, needed through PR 5                                                                                |
+| `openHome()`                           | The home page                                                | PR 2, needed through PR 3                                                                                |
+| `openEntityItemCollection(entityName)` | The list of an entity, restored as the user left it (FR-018) | PR 2, needed through PR 3                                                                                |
+| `openItem(entityName, id)`             | One item                                                     | PR 2, needed through PR 3                                                                                |
 | `openCreateItem(entityName)`           | An entity's create form                                      | PR 3 — the item detail view wires its relation popover's existing "create missing target" callback to it |
 | `openClassifyCreate()`                 | The general create page                                      | Arrives with the page that uses it                                                                       |
 | `openEditItem(entityName, id)`         | An item's edit form                                          | Arrives with the page that uses it                                                                       |
 
+Every function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default `false`), set by the view (see `contracts/navigation-context.md`).
+
 ## Preload signature
 
-Contract: [view-preload.md](contracts/view-preload.md).
+Contract: [view-data-loading.md](contracts/view-data-loading.md).
 
 Each view's preload takes exactly that view's own props, not a shared `target`/`state` tuple, and is named `preload<ViewName>`:
 
@@ -87,7 +92,7 @@ function preloadEntityItemDetail(
 ): Promise<void>;
 ```
 
-`ctx` is the router context: the query client and the API client. A preload is a thin wrapper around the query client's `ensureQueryData(...)`, called with the same `navigator-data` query factories the view's own hooks use — no new query keys. A preload never throws to the route (it swallows failures as `ensureEntityItemDetailLoaderData` does today) and never loads data the view would not need.
+`ctx` is the router context: the query client and the API client. A preload is a thin wrapper around `navigator-data`'s own `ensure*` helpers (`ensureProfileEntity`, `ensureEntityItem`, …), each of which calls the query client's `ensureQueryData(...)` with the exact query factory the view's own hooks read — no new query keys, and no view-specific helper added to `navigator-data`. A preload never throws to the route (it swallows failures as `ensureEntityItemDetailLoaderData` does today) and never loads data the view would not need.
 
 ## Display preferences (move to a user-preferences feature)
 
@@ -103,4 +108,4 @@ The `EntityDisplayPreferences` type and the backend part already live in `@conte
 
 ## Stability tag
 
-Today: `x-stability` in each feature directory's `package.json`. After PR 9: `x-stability` in each view's `package.json`; features carry none. Values stay `experimental | candidate | stable`.
+Today: `x-stability` in each feature directory's `package.json`. After PR 8: `x-stability` in each view's `package.json`; features carry none. Values stay `experimental | candidate | stable`.

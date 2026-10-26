@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationOptions } from "@tanstack/react-query";
 import type { EntityItem } from "../../accessors/entity-item";
 import type { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
-import { addIfMatchHeader, fetchVoid } from "../../api/hal-client";
+import { fetchVoid } from "../../api/hal-client";
 import { queryKeys } from "../../query-keys";
 import { useNavigatorData } from "../context";
 
@@ -18,8 +18,9 @@ export type UseUnlinkRelationOptions = {
  * exists yet; the server returns 403 if ABAC denies the operation.
  * Replace with a template-driven hook when the server adds the template.
  *
- * Attaches `If-Match` from `relation.source.etag` to guard against concurrent
- * source-item mutations.
+ * Sends no `If-Match`: the per-item endpoint of a to-many relation is not a
+ * conditional-request resource, and `relation.source.etag` belongs to the source entity item
+ * (https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html).
  *
  * Cache behaviour on settled:
  * - Invalidates all cached pages for this relation via
@@ -41,9 +42,7 @@ export function useUnlinkRelation(
 
   return useMutation<void, Error, EntityItem>({
     mutationFn: async (item) => {
-      const baseReq = relation.unlinkItemRequest(item);
-      const req = addIfMatchHeader(baseReq, relation.source.etag);
-      await fetchVoid(apiFetch, req);
+      await fetchVoid(apiFetch, relation.unlinkItemRequest(item));
     },
     onSuccess: async (_, item, onMutateResult, context) => {
       await onSuccess?.(_, item, onMutateResult, context);

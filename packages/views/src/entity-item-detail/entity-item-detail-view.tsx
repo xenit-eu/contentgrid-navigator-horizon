@@ -44,6 +44,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
     content = (
       <EntityItemContentFocusBody
         entityItem={result.entityItem}
+        refetch={result.refetch}
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           navigation.openItem(relatedEntityName, relatedItemId)
         }

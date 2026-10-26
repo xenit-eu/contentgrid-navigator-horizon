@@ -200,7 +200,7 @@ export function AutocompleteRenderer({
                   aria-selected={index === activeIndex}
                   tabIndex={-1}
                   className={cn(
-                    "cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+                    "rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
                     index === activeIndex && "bg-accent",
                   )}
                   // Keep the input's onBlur (which commits the draft) from firing before onClick.

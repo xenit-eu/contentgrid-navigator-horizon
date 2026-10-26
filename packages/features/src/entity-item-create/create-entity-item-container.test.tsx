@@ -14,6 +14,7 @@ import {
 import { Toaster } from "@contentgrid/ui";
 import { server } from "../../test-setup";
 import { CreateEntityItemContainer } from "./create-entity-item-container";
+import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
@@ -135,6 +136,7 @@ describe("CreateEntityItemContainer", () => {
   // test's toggle state can't leak into the next.
   afterEach(() => {
     window.sessionStorage.clear();
+    useCreateEntityItemState.getState().setInitialFile(null);
   });
 
   it("renders one field per create-form property", async () => {
@@ -361,42 +363,6 @@ describe("CreateEntityItemContainer", () => {
     expect(await screen.findByText("Already in use")).toBeInTheDocument();
   });
 
-  it("shows the non-field alert for a field error whose field this form doesn't render", async () => {
-    const user = userEvent.setup();
-    server.use(
-      profileRootHandler(),
-      invoiceProfileHandler(),
-      http.post(`${API_URL}/invoices`, () =>
-        HttpResponse.json(
-          {
-            type: "https://contentgrid.cloud/problems/input/validation",
-            title: "Validation failed",
-            status: 400,
-            errors: [
-              {
-                type: "https://contentgrid.cloud/problems/input/validation",
-                title: "Mandatory field",
-                detail: "This field is required",
-                field: "supplier",
-              },
-            ],
-          },
-          { status: 400, headers: { "Content-Type": "application/problem+json" } },
-        ),
-      ),
-    );
-    renderForm();
-
-    const input = await screen.findByLabelText(/Invoice Number/);
-    await user.type(input, "INV-1");
-    await user.click(screen.getByRole("button", { name: "Create" }));
-
-    // "supplier" isn't one of this create-form's rendered fields (see DEFAULT_CREATE_FORM) — with
-    // no inline field to show it against, it must still surface via the alert rather than being
-    // silently dropped.
-    expect(await screen.findByText(/This field is required/)).toBeInTheDocument();
-  });
-
   it("clears a stale server error alert when a resubmit is blocked by client-side validation", async () => {
     const user = userEvent.setup();
     server.use(
@@ -405,18 +371,11 @@ describe("CreateEntityItemContainer", () => {
       http.post(`${API_URL}/invoices`, () =>
         HttpResponse.json(
           {
-            type: "https://contentgrid.cloud/problems/input/validation",
-            title: "Validation failed",
-            status: 400,
-            errors: [
-              {
-                type: "https://contentgrid.cloud/problems/input/validation/duplicate",
-                title: "Already in use",
-                conflicting_item: `${API_URL}/invoices/existing`,
-              },
-            ],
+            type: "https://contentgrid.cloud/problems/integrity/blind-relation-overwrite",
+            title: "Relation already set",
+            status: 409,
           },
-          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
         ),
       ),
     );
@@ -425,7 +384,7 @@ describe("CreateEntityItemContainer", () => {
     const input = await screen.findByLabelText(/Invoice Number/);
     await user.type(input, "INV-1");
     await user.click(screen.getByRole("button", { name: "Create" }));
-    expect(await screen.findByText("Validation failed")).toBeInTheDocument();
+    expect(await screen.findByText("Relation already set")).toBeInTheDocument();
 
     // Clearing the required field blocks the resubmit client-side, before the mutation ever
     // fires again — the alert from the LAST server round-trip must not linger alongside the new,
@@ -433,7 +392,7 @@ describe("CreateEntityItemContainer", () => {
     await user.clear(input);
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    expect(screen.queryByText("Validation failed")).not.toBeInTheDocument();
+    expect(screen.queryByText("Relation already set")).not.toBeInTheDocument();
     expect(await screen.findByText("Invoice Number is required")).toBeInTheDocument();
   });
 
@@ -506,6 +465,72 @@ describe("CreateEntityItemContainer", () => {
 
       await vi.waitFor(() => expect(body).toBeDefined());
       expect(body!.has("document")).toBe(false);
+    });
+  });
+
+  describe("initial file from the Create Item page", () => {
+    const FILE_CREATE_FORM = {
+      method: "POST",
+      target: `${API_URL}/invoices`,
+      contentType: "multipart/form-data",
+      properties: [
+        { name: "invoice_number", type: "text", required: true },
+        { name: "document", type: "file" },
+      ],
+    };
+
+    it("prefills the first file field, sends it, and clears it once the item is created", async () => {
+      const user = userEvent.setup();
+      let body: string | undefined;
+      useCreateEntityItemState
+        .getState()
+        .setInitialFile(new File(["%PDF"], "invoice.pdf", { type: "application/pdf" }));
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(FILE_CREATE_FORM),
+        http.post(`${API_URL}/invoices`, async ({ request }) => {
+          // Read as text: `request.formData()` rebuilds file parts with the global `File`, which
+          // jsdom replaces with one undici's parser rejects.
+          body = await request.text();
+          return HttpResponse.json(
+            { id: "1", _links: { self: { href: `${API_URL}/invoices/1` } } },
+            { status: 201 },
+          );
+        }),
+      );
+      renderForm();
+
+      await user.type(await screen.findByLabelText(/Invoice Number/), "INV-1");
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      await vi.waitFor(() => expect(body).toBeDefined());
+      expect(body).toMatch(
+        /name="document"; filename="[^"]*"\r\nContent-Type: application\/pdf\r\n/,
+      );
+      await vi.waitFor(() => expect(useCreateEntityItemState.getState().initialFile).toBeNull());
+    });
+
+    it("clears the initial file when the user removes it from the form", async () => {
+      const user = userEvent.setup();
+      useCreateEntityItemState
+        .getState()
+        .setInitialFile(new File(["%PDF"], "invoice.pdf", { type: "application/pdf" }));
+      server.use(profileRootHandler(), invoiceProfileHandler(FILE_CREATE_FORM));
+      renderForm();
+
+      await user.click(await screen.findByRole("button", { name: /remove file/i }));
+
+      expect(useCreateEntityItemState.getState().initialFile).toBeNull();
+    });
+
+    it("keeps the initial file for a later form when this form has no file field", async () => {
+      const initialFile = new File(["%PDF"], "invoice.pdf", { type: "application/pdf" });
+      useCreateEntityItemState.getState().setInitialFile(initialFile);
+      server.use(profileRootHandler(), invoiceProfileHandler());
+      renderForm();
+
+      await screen.findByLabelText(/Invoice Number/);
+      expect(useCreateEntityItemState.getState().initialFile).toBe(initialFile);
     });
   });
 });

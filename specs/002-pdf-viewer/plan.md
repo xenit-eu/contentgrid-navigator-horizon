@@ -108,7 +108,7 @@ packages/navigator-data/src/
 │                                          #   ContentGridConfigSchema reads v1.renditionUri (Liaison)
 ├── hooks/context.tsx                      # NavigatorDataContextValue + renditionUri?, renditionPolling?
 ├── preview/
-│   ├── content-mimetype.ts                # isPdfMimetype(), needsRendition() (parameters, case)
+│   ├── content-mimetype.ts                # nativePreviewKind(), needsRendition() (parameters, case)
 │   ├── rendition-job.ts                   # requestRendition(): 202+Location, poll, ceiling, AbortSignal
 │   └── index.ts
 ├── hooks/preview/
