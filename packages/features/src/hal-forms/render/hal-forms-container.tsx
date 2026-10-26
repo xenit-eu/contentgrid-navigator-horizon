@@ -50,7 +50,7 @@ export function HalFormsContainer({
           key={section.title ?? sectionIndex}
           className={sectionIndex < layout.sections.length - 1 ? "border-b pb-4" : undefined}
         >
-          <FieldSectionView
+          <FieldSectionLayout
             section={section}
             fieldsByName={fieldsByName}
             values={values}
@@ -80,7 +80,7 @@ export function HalFormsContainer({
  * non-collapsible (or untitled — the only shape this feature produced before sections existed)
  * section just renders its header, if any, followed by its rows with no collapse behavior.
  */
-function FieldSectionView({
+function FieldSectionLayout({
   section,
   fieldsByName,
   values,
@@ -176,7 +176,7 @@ function FieldSectionRows({
   return (
     <div className="space-y-4">
       {rows.map((row, index) => (
-        <FieldRowView key={index} row={row} {...fieldListProps} />
+        <FieldRowLayout key={index} row={row} {...fieldListProps} />
       ))}
     </div>
   );
@@ -187,7 +187,7 @@ function FieldSectionRows({
  * row's `description` renders once below its fields; the row then becomes a `group` described by
  * it, so assistive tech reads it for every field in the row without it repeating visually.
  */
-function FieldRowView({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & FieldListProps>) {
+function FieldRowLayout({ row, ...fieldListProps }: Readonly<{ row: FieldRow } & FieldListProps>) {
   const descriptionId = useId();
   const {
     fieldsByName,

@@ -34,7 +34,7 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
  * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
  * needed here either.
  */
-function renderView(children: ReactNode) {
+function renderBody(children: ReactNode) {
   return render(
     <NavigatorDataProvider
       apiFetch={createApiClient(noopSupplier)}
@@ -143,7 +143,7 @@ describe("EntityItemContentFocusBody", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderView(<EntityItemContentFocusBody entityItem={item} />);
+    const { container } = renderBody(<EntityItemContentFocusBody entityItem={item} />);
 
     // EntityItemDetail's own item-reference header (`data-slot="item-reference"`) — it draws no
     // toolbar itself, so this always renders.
@@ -164,7 +164,7 @@ describe("EntityItemContentFocusBody", () => {
       ],
     });
 
-    renderView(<EntityItemContentFocusBody entityItem={item} />);
+    renderBody(<EntityItemContentFocusBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
     expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
@@ -180,7 +180,7 @@ describe("EntityItemContentFocusBody", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderView(<EntityItemContentFocusBody entityItem={item} />);
+    renderBody(<EntityItemContentFocusBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
   });
@@ -195,7 +195,7 @@ describe("EntityItemContentFocusBody", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderView(<EntityItemContentFocusBody entityItem={item} />);
+    renderBody(<EntityItemContentFocusBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
 
@@ -214,7 +214,7 @@ describe("EntityItemContentFocusBody", () => {
       profileEntity: profileA,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    const { rerender } = renderView(<EntityItemContentFocusBody entityItem={itemA} />);
+    const { rerender } = renderBody(<EntityItemContentFocusBody entityItem={itemA} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
@@ -258,7 +258,7 @@ describe("EntityItemContentFocusBody", () => {
     } as unknown as EntityItem;
     const onRelationItemClick = vi.fn();
 
-    renderView(
+    renderBody(
       <EntityItemContentFocusBody entityItem={item} onRelationItemClick={onRelationItemClick} />,
     );
 
@@ -271,7 +271,7 @@ describe("EntityItemContentFocusBody", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderView(<EntityItemContentFocusBody entityItem={item} />);
+    const { container } = renderBody(<EntityItemContentFocusBody entityItem={item} />);
 
     const root = container.firstElementChild as HTMLElement;
     expect(root).toHaveClass("h-full", "min-h-0");
