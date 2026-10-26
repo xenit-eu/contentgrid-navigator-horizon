@@ -57,8 +57,8 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/" });
 const entityRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity" });
 const itemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/$itemId" });
-const createRoute_ = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/~create" });
-const routeTree = rootRoute.addChildren([indexRoute, entityRoute, itemRoute, createRoute_]);
+const createItemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/~create" });
+const routeTree = rootRoute.addChildren([indexRoute, entityRoute, itemRoute, createItemRoute]);
 
 function renderRouter(initialPath = "/") {
   const router = createRouter({
