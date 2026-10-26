@@ -1,5 +1,5 @@
-import type { AppRouterContext } from "@contentgrid/features/router-shell";
 import { ensureEntityItem, ensureProfileEntity } from "@contentgrid/navigator-data";
+import type { AppRouterContext } from "../shells/router-shell";
 
 /**
  * Preload for the item detail view: fills the cache with the profile and the item under the keys

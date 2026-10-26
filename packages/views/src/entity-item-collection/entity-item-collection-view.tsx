@@ -2,12 +2,12 @@ import { type ReactNode, useState } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
-import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { extractFilterValuesFromCollectionUrl } from "@contentgrid/features/search";
 import { type ProfileEntity, toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { Button } from "@contentgrid/ui";
 import { EntityItemCollectionBreadcrumbs } from "../breadcrumbs";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
+import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useViewNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
 

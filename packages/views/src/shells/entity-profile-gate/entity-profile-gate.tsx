@@ -1,11 +1,11 @@
-import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   type ProfileEntity,
   ensureProfileEntity,
   toProblemDisplayModel,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
-import { ErrorPage, LoadingPage } from "../../app-info-pages";
 import type { AppRouterContext } from "../router-shell";
 
 // ---------------------------------------------------------------------------
@@ -35,14 +35,21 @@ export async function ensureEntityProfileLoaded(
 }
 
 /**
- * Layout for the /$entity subtree: resolves the entity's profile once and
- * gates both the collection and item-detail pages behind it, so an unknown
- * entity name shows one consistent error page instead of each page
- * independently loading and silently rendering blank.
+ * Gate for the /$entity subtree: resolves the entity's profile once and gates both the collection
+ * and item-detail pages behind it, so an unknown entity name shows one consistent error page
+ * instead of each page independently loading and silently rendering blank. Takes plain props;
+ * `EntityProfileGateRoute` wires it to the router and to `useViewNavigation()`.
  */
-export function EntityProfileGate() {
-  const { entity: entityName } = useParams({ strict: false }) as { entity: string };
-  const go = useNavigate();
+export function EntityProfileGate({
+  entityName,
+  onBackHome,
+  children,
+}: Readonly<{
+  entityName: string;
+  /** Called by the not-found page's "Back to home" button. */
+  onBackHome: () => void;
+  children: ReactNode;
+}>) {
   const {
     data: profile,
     isPending,
@@ -66,11 +73,11 @@ export function EntityProfileGate() {
     return (
       <ErrorPage
         model={toProblemDisplayModel(`Profile ${entityName} does not exist.`)}
-        onRetry={() => go({ to: "/", search: {} })}
+        onRetry={onBackHome}
         retryLabel="Back to home"
       />
     );
   }
 
-  return <Outlet />;
+  return children;
 }

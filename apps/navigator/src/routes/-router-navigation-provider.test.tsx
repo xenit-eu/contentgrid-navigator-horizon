@@ -36,6 +36,11 @@ function NavigationProbe() {
       <button onClick={() => navigation.openItem("invoice", "42", { openInNewTab: true })}>
         open-item-new-tab
       </button>
+      <button onClick={() => navigation.openClassifyCreate()}>open-classify-create</button>
+      <button onClick={() => navigation.openSettings()}>open-settings</button>
+      <button onClick={() => navigation.openSettings({ openInNewTab: true })}>
+        open-settings-new-tab
+      </button>
       <span data-testid="href-home">{navigation.hrefFor?.home()}</span>
       <span data-testid="href-collection">
         {navigation.hrefFor?.entityItemCollection("invoice")}
@@ -58,7 +63,16 @@ const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/" });
 const entityRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity" });
 const itemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/$itemId" });
 const createItemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/~create" });
-const routeTree = rootRoute.addChildren([indexRoute, entityRoute, itemRoute, createItemRoute]);
+const classifyCreateRoute = createRoute({ getParentRoute: () => rootRoute, path: "/~create" });
+const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/~configuration" });
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  entityRoute,
+  itemRoute,
+  createItemRoute,
+  classifyCreateRoute,
+  settingsRoute,
+]);
 
 function renderRouter(initialPath = "/") {
   const router = createRouter({
@@ -144,6 +158,28 @@ describe("RouterNavigationProvider", () => {
 
     expect(windowOpen).toHaveBeenCalledWith("/invoice/42?q=acme", "_blank", "noopener,noreferrer");
     expect(screen.getByTestId("location")).toHaveTextContent("/invoice?q=acme");
+    windowOpen.mockRestore();
+  });
+
+  it("navigates to the classify-create page and to settings", async () => {
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-classify-create"));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/~create"));
+
+    await userEvent.click(screen.getByText("open-settings"));
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/~configuration"),
+    );
+  });
+
+  it("opens settings in a new tab without navigating", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-settings-new-tab"));
+
+    expect(windowOpen).toHaveBeenCalledWith("/~configuration", "_blank", "noopener,noreferrer");
     windowOpen.mockRestore();
   });
 });

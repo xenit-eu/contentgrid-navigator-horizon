@@ -1,5 +1,4 @@
 import { PlusIcon as Plus } from "@phosphor-icons/react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   type ProfileEntity,
   useEntityItemCollection,
@@ -12,14 +11,10 @@ import { EntityIconBadge } from "../layout";
 // EntityOverviewPage — index route component (grid of entity cards)
 // ---------------------------------------------------------------------------
 
-export function EntityCountOverview() {
-  const go = useNavigate();
-
-  return (
-    <EntityOverview
-      onSelectEntity={(profile) => go({ to: "/$entity", params: { entity: profile.name } })}
-    />
-  );
+export function EntityCountOverview({
+  onOpenEntity,
+}: Readonly<{ onOpenEntity: (entityName: string) => void }>) {
+  return <EntityOverview onSelectEntity={(profile) => onOpenEntity(profile.name)} />;
 }
 
 // ---------------------------------------------------------------------------
