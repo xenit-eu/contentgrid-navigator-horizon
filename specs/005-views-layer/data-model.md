@@ -73,7 +73,8 @@ Provided by the host through context; only views read it, features get callback 
 | `openEntityItemCollection(entityName)` | The list of an entity, restored as the user left it (FR-018) | PR 2, needed through PR 3                                                                                |
 | `openItem(entityName, id)`             | One item                                                     | PR 2, needed through PR 3                                                                                |
 | `openCreateItem(entityName)`           | An entity's create form                                      | PR 3 — the item detail view wires its relation popover's existing "create missing target" callback to it |
-| `openClassifyCreate()`                 | The general create page                                      | Arrives with the page that uses it                                                                       |
+| `openClassifyCreate()`                 | The general create page (the sidebar's "Create Item")        | PR 5 — the sidebar's "Create Item" button                                                                |
+| `openSettings()`                       | The application's settings (the user menu's "Settings")      | PR 5 — an extension to the six functions of FR-017                                                       |
 | `openEditItem(entityName, id)`         | An item's edit form                                          | Arrives with the page that uses it                                                                       |
 
 Every function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default `false`), set by the view (see `contracts/navigation-context.md`).
