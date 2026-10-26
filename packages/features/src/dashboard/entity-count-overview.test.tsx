@@ -32,25 +32,34 @@ function mockProfiles(profiles: unknown[], isLoading = false) {
 }
 
 describe("EntityCountOverview", () => {
-  it("reports the entity name when a card is opened", async () => {
+  it("reports the entity name when a card is clicked", async () => {
     mockProfiles([invoiceProfile()]);
     const onOpenEntity = vi.fn();
     render(<EntityCountOverview onOpenEntity={onOpenEntity} />);
 
-    await userEvent.click(screen.getByText("7"));
+    await userEvent.click(screen.getByRole("button"));
 
-    expect(onOpenEntity).toHaveBeenCalledWith("invoice");
+    expect(onOpenEntity).toHaveBeenCalledExactlyOnceWith("invoice");
   });
 
-  it("reports the entity name from the create action without a second call from the card", async () => {
+  it("opens a card from the keyboard", async () => {
     mockProfiles([invoiceProfile()]);
     const onOpenEntity = vi.fn();
     render(<EntityCountOverview onOpenEntity={onOpenEntity} />);
 
-    await userEvent.click(screen.getByText(/^Create /));
+    screen.getByRole("button").focus();
+    await userEvent.keyboard("{Enter}");
 
-    expect(onOpenEntity).toHaveBeenCalledTimes(1);
-    expect(onOpenEntity).toHaveBeenCalledWith("invoice");
+    expect(onOpenEntity).toHaveBeenCalledExactlyOnceWith("invoice");
+  });
+
+  it("makes the card the only interactive element, with no create button", () => {
+    mockProfiles([invoiceProfile()]);
+    render(<EntityCountOverview onOpenEntity={vi.fn()} />);
+
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /^Create/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Create/)).not.toBeInTheDocument();
   });
 
   it("shows an empty state without entities", () => {

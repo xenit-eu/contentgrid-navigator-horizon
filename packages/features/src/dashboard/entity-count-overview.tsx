@@ -1,10 +1,10 @@
-import { PlusIcon as Plus } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import {
   type ProfileEntity,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { Button, EntityCard, Skeleton } from "@contentgrid/ui";
+import { EntityCard, Skeleton } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 
 // ---------------------------------------------------------------------------
@@ -97,22 +97,15 @@ function EntityCardConnected({
       description={profile.description || undefined}
       icon={<EntityIconBadge profile={profile} />}
       onCardClick={onSelect}
-      action={
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={(event) => {
-            event.stopPropagation();
-            onSelect();
-          }}
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          <span className="sr-only">Create {profile.pluralName}</span>
-        </Button>
-      }
     >
-      <div className="text-2xl font-bold p-0">{collection.data?.totalItems?.count ?? "—"}</div>
-      <p className="text-xs text-muted-foreground">items</p>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <div className="text-2xl font-bold p-0">{collection.data?.totalItems?.count ?? "—"}</div>
+          <p className="text-xs text-muted-foreground">items</p>
+        </div>
+        {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
+        <ArrowRightIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
+      </div>
     </EntityCard>
   );
 }
