@@ -5,6 +5,11 @@ import type { ReactNode } from "react";
 export interface NavigationOptions {
   /** Open the destination in a new browser tab instead of the current one. Default `false`. */
   openInNewTab?: boolean;
+  /**
+   * For `openEntityItemCollection`: bring the list back as the user left it (filters, sort, page).
+   * Default `true`; pass `false` to open a fresh list, e.g. from the sidebar.
+   */
+  restoreState?: boolean;
 }
 
 /**

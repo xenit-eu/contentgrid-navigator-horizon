@@ -25,7 +25,9 @@ export function SidebarShell({
       topChildren={topChildren}
       activeEntity={activeEntity}
       onOpenHome={() => navigation.openHome()}
-      onOpenEntity={(entityName) => navigation.openEntityItemCollection(entityName)}
+      onOpenEntity={(entityName) =>
+        navigation.openEntityItemCollection(entityName, { restoreState: false })
+      }
       onOpenCreate={() => navigation.openClassifyCreate()}
       onOpenSettings={() => navigation.openSettings()}
       homeHref={hrefFor?.home()}

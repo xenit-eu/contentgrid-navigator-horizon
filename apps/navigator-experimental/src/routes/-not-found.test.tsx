@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   RouterProvider,
@@ -33,7 +34,11 @@ describe("defaultNotFoundComponent with NotFoundView", () => {
       history: createMemoryHistory({ initialEntries: ["/does-not-exist"] }),
       defaultNotFoundComponent: NotFoundView,
     });
-    render(<RouterProvider router={router} />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
 
     await userEvent.click(await screen.findByRole("button", { name: "Back to home" }));
 
