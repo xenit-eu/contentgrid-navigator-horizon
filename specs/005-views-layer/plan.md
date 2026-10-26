@@ -96,8 +96,9 @@ packages/views/                    # NEW (PR 2)
 │   ├── breadcrumbs/                # HomeBreadcrumb, CollectionBreadcrumb, ItemBreadcrumb + one export per page (PR 3)
 │   ├── entity-item-detail/         # item detail view + preload + relation-problem dialog (PR 3)
 │   ├── entity-item-collection/     # collection view + state, thin list route (PR 3)
-│   ├── layout/                     # moved from features/layout (PR 5)
-│   ├── shells/                     # moved from features/shells (PR 5)
+│   ├── layout/                     # page frames moved from features/layout (PR 5); RightSidePanelLayout and EntityIconBadge stay in features
+│   ├── shells/                     # moved from features/shells (PR 5), plus the sidebar shell; host code that may use the router
+│   ├── entity-overview/, not-found/  # small views wiring the dashboard and not-found page to navigation (PR 5)
 │   └── entity-item-split/          # list and detail split view (PR 6)
 └── CLAUDE.md
 
@@ -108,7 +109,8 @@ packages/features/src/
 ├── entity-item/                   # stripped of toolbar, breadcrumbs, actions, PageLayout (PR 4)
 ├── entity-item-collection/        # same (PR 4)
 ├── dashboard/, app-info-pages/    # router calls removed (PR 5)
-├── layout/, shells/               # moved out (PR 5)
+├── layout/                        # keeps only RightSidePanelLayout and EntityIconBadge (PR 5)
+├── shells/                        # moved out (PR 5)
 └── user-preferences/              # merge, hook, store with storage option; reorganised from preferences/ (PR 7)
 
 packages/eslint-config/rules/      # layer rules; no-unstable-features checks views (PR 8)
