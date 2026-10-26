@@ -96,6 +96,18 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
   collection, plus a create action gated on `profileEntity.createTemplate`.
 
+- `@contentgrid/views/entity-item-split` (`x-stability: experimental`, no route yet — spec open question 2):
+  `EntityItemSplitView({ entityName, toolbar?, state?, onStateChange? })` places `EntityItemCollectionView` and
+  `EntityItemDetailView`, both with `toolbar={false}`, side by side under one toolbar it draws itself (Home ›
+  collection, then the selected item; a create action gated on `createTemplate`; the host's `toolbar.actions`).
+  State is `EntityItemSplitViewState { collection?: CollectionViewState; selectedItemId?: string }`, controlled or
+  internal like the collection view; the list's state sits under its own `collection` key, the selection beside it
+  because the detail view has no state. Only the list gets a `ChildNavigationProvider`: its `openItem` selects the
+  item in the detail pane (no route change), unless it asks for a new tab or names another entity, and every other
+  call goes to the parent's navigation. The detail pane is not wrapped: what it opens (a relation's item) leaves the
+  split through the parent. `preloadEntityItemSplit(ctx, entityName, itemId?)` starts `preloadEntityItemCollection`
+  and `preloadEntityItemDetail` together; the view has no address scheme.
+
 ## Breadcrumbs
 
 - `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `CollectionBreadcrumb` and
