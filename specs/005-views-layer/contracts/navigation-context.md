@@ -17,6 +17,7 @@ interface Navigation {
   openClassifyCreate(options?: NavigationOptions): void;
   openEditItem(entityName: string, id: string, options?: NavigationOptions): void;
   openCreateItem(entityName: string, options?: NavigationOptions): void;
+  openSettings(options?: NavigationOptions): void;
 }
 
 interface NavigationOptions {
@@ -31,7 +32,9 @@ The set may be extended. The functions are implemented page by page, so the inte
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `openHome`, `openEntityItemCollection`, `openItem` | PR 2 (the scaffold), needed through PR 3                                                                                                      |
 | `openCreateItem`                                   | PR 3 — the item detail view wires it to the relation popover's existing "create missing target" callback (no separate prop added on the view) |
-| `openClassifyCreate`, `openEditItem`               | The PR that adds the page using it (T041)                                                                                                     |
+| `openClassifyCreate`                               | PR 5 — the sidebar's "Create Item" (T041)                                                                                                     |
+| `openSettings`                                     | PR 5 — an extension to the six functions: the user menu's "Settings" (T037)                                                                   |
+| `openEditItem`                                     | The PR that adds the page using it (T041)                                                                                                     |
 
 The item detail view's relation popover already reports "create missing target" through the feature's own `onRelationItemCreateNew` callback prop. The view wires that callback straight to `navigation.openCreateItem(targetEntityName)` itself; it does not re-expose a separate `onRelationItemCreateNew` (or similarly named) prop upward to its own caller. For the "create missing target" action the view passes `{ openInNewTab: true }`, which keeps today's new-tab behaviour (open question 6, resolved by this option).
 

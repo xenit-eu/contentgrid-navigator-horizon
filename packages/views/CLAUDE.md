@@ -44,16 +44,37 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - The app's real `Navigation`, `RouterNavigationProvider` (backed by `@tanstack/react-router`), lives in
   each app's own `src/routes/-router-navigation-provider.tsx` — not in this package. The leading `-` keeps
   TanStack Router's file-based router from treating it as a route. Views and features never import
-  `@tanstack/react-router`; only `apps/*` may.
+  `@tanstack/react-router`; only `apps/*` and the host code in `src/shells/` may.
 - Every `open*` takes a trailing optional `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default
   `false`). The view decides — the item detail view's "create missing relation target" passes
   `{ openInNewTab: true }` — and a host that can't open tabs may ignore it. The recording fake records `options`
   as the last element of `args` only when it was passed.
+- Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create Item") and
+  `openSettings` (the user menu's "Settings"); `openEditItem` arrives with the page that needs it.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.
 - `@contentgrid/views/recording-navigation` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
+
+## Layout and shells
+
+- `src/layout/` holds the page frames: `PageLayout`, `BreadCrumbsToolBarLayout` and `SideBarLayout`. They take plain
+  props only — `SideBarLayout` gets its routed page as `children`, the active entity, `onOpenHome` / `onOpenEntity` /
+  `onOpenCreate` / `onOpenSettings`, optional `homeHref` / `entityHref` (real `<a href>` links; a plain click still goes
+  through the callback, see `handleNavigationClick`) and an optional `footer`.
+- `src/shells/` is host code and the **only** place in this package that may import `@tanstack/react-router`:
+  `router-shell` (`mountNavigatorApp`, `AppRouterContext`, `useOpenInNewTab`), `auth-shell`, `entity-profile-gate` and
+  `sidebar-shell`. `SidebarShell` wires `SideBarLayout` to the router (active entity, outlet) and to
+  `useViewNavigation()`. `EntityProfileGate` takes `entityName`, `onBackHome` and `children`; `EntityProfileGateRoute`
+  is its `/$entity` route adapter. Each shell is its own `exports` entry (`@contentgrid/views/<name>`). The app's own
+  `Navigation` stays in `apps/*/src/routes/`.
+- `EntityOverviewView` (`entity-overview`) and `NotFoundView` (`not-found`) are the two small views around the
+  features' `EntityCountOverview` and `NotFoundPage`; those take callback props and never read navigation.
+- `useUnsavedChangesGuard` and the create form still use the router from `@contentgrid/features`; where they live is
+  [open question 3](../../specs/005-views-layer/spec.md) and is not decided here.
+- `RightSidePanelLayout` and `EntityIconBadge` stay in `@contentgrid/features/layout`: features import them, and a
+  feature may not import a view.
 
 ## Views
 
