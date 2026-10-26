@@ -47,7 +47,9 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           navigation.openItem(relatedEntityName, relatedItemId)
         }
-        onRelationItemCreateNew={navigation.openCreateItem}
+        onRelationItemCreateNew={(targetEntityName) =>
+          navigation.openCreateItem(targetEntityName, { openInNewTab: true })
+        }
         onMissingRelationTargetClick={(url, field) =>
           setProblemDialog({ kind: "missingRelationTarget", url, field })
         }

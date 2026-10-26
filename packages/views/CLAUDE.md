@@ -39,8 +39,11 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - The app's real `Navigation`, `RouterNavigationProvider` (backed by `@tanstack/react-router`), lives in
   each app's own `src/routes/-router-navigation-provider.tsx` — not in this package. The leading `-` keeps
   TanStack Router's file-based router from treating it as a route. Views and features never import
-  `@tanstack/react-router`; only `apps/*` may. `openCreateItem` opens the entity's create form in a new tab
-  via `@contentgrid/features/router-shell`'s `useOpenInNewTab`.
+  `@tanstack/react-router`; only `apps/*` may.
+- Every `open*` takes a trailing optional `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default
+  `false`). The view decides — the item detail view's "create missing relation target" passes
+  `{ openInNewTab: true }` — and a host that can't open tabs may ignore it. The recording fake records `options`
+  as the last element of `args` only when it was passed.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.

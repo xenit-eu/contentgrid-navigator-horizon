@@ -13,12 +13,6 @@ import { describe, expect, it, vi } from "vitest";
 import { useViewNavigation } from "@contentgrid/views";
 import { RouterNavigationProvider } from "./-router-navigation-provider";
 
-const openCreatePage = vi.hoisted(() => vi.fn());
-vi.mock("@contentgrid/features/router-shell", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/features/router-shell")>();
-  return { ...actual, useOpenInNewTab: () => ({ openCreatePage, openItemPage: vi.fn() }) };
-});
-
 /** Shows the current pathname+search so tests can assert on the route the provider navigated to,
  * without reaching into the router instance directly. */
 function CurrentLocation() {
@@ -36,6 +30,12 @@ function NavigationProbe() {
       </button>
       <button onClick={() => navigation.openItem("invoice", "42")}>open-item</button>
       <button onClick={() => navigation.openCreateItem("invoice")}>open-create</button>
+      <button onClick={() => navigation.openCreateItem("invoice", { openInNewTab: true })}>
+        open-create-new-tab
+      </button>
+      <button onClick={() => navigation.openItem("invoice", "42", { openInNewTab: true })}>
+        open-item-new-tab
+      </button>
       <span data-testid="href-home">{navigation.hrefFor?.home()}</span>
       <span data-testid="href-collection">
         {navigation.hrefFor?.entityItemCollection("invoice")}
@@ -57,7 +57,8 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/" });
 const entityRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity" });
 const itemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/$itemId" });
-const routeTree = rootRoute.addChildren([indexRoute, entityRoute, itemRoute]);
+const createRoute_ = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/~create" });
+const routeTree = rootRoute.addChildren([indexRoute, entityRoute, itemRoute, createRoute_]);
 
 function renderRouter(initialPath = "/") {
   const router = createRouter({
@@ -111,11 +112,38 @@ describe("RouterNavigationProvider", () => {
     );
   });
 
-  it("opens the create page in a new tab through openCreateItem", async () => {
+  it("navigates the current tab to the create page by default", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
     renderRouter("/");
 
     await userEvent.click(await screen.findByText("open-create"));
 
-    expect(openCreatePage).toHaveBeenCalledWith("invoice");
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/invoice/~create"),
+    );
+    expect(windowOpen).not.toHaveBeenCalled();
+    windowOpen.mockRestore();
+  });
+
+  it("opens the create page in a new tab when openInNewTab is set", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-create-new-tab"));
+
+    expect(windowOpen).toHaveBeenCalledWith("/invoice/~create", "_blank", "noopener,noreferrer");
+    expect(screen.getByTestId("location")).toHaveTextContent("/");
+    windowOpen.mockRestore();
+  });
+
+  it("opens an item in a new tab with the current search, without navigating", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderRouter("/invoice?q=acme");
+
+    await userEvent.click(await screen.findByText("open-item-new-tab"));
+
+    expect(windowOpen).toHaveBeenCalledWith("/invoice/42?q=acme", "_blank", "noopener,noreferrer");
+    expect(screen.getByTestId("location")).toHaveTextContent("/invoice?q=acme");
+    windowOpen.mockRestore();
   });
 });

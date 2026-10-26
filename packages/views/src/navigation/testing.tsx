@@ -1,13 +1,25 @@
 import type { ReactNode } from "react";
 import type { Decorator } from "@storybook/react";
 import { NavigationProvider } from "./navigation-context";
-import type { Navigation } from "./navigation-context";
+import type { Navigation, NavigationOptions } from "./navigation-context";
 
+/** `options` is part of `args` only when the caller passed it, so plain calls stay `["invoice", "42"]`. */
 export type NavigationCall =
-  | { method: "openHome"; args: [] }
-  | { method: "openEntityItemCollection"; args: [entityName: string] }
-  | { method: "openItem"; args: [entityName: string, id: string] }
-  | { method: "openCreateItem"; args: [entityName: string] };
+  | { method: "openHome"; args: [] | [options: NavigationOptions] }
+  | {
+      method: "openEntityItemCollection";
+      args: [entityName: string] | [entityName: string, options: NavigationOptions];
+    }
+  | {
+      method: "openItem";
+      args:
+        | [entityName: string, id: string]
+        | [entityName: string, id: string, options: NavigationOptions];
+    }
+  | {
+      method: "openCreateItem";
+      args: [entityName: string] | [entityName: string, options: NavigationOptions];
+    };
 
 export interface RecordingNavigation {
   navigation: Navigation;
@@ -19,17 +31,26 @@ export interface RecordingNavigation {
 export function createRecordingNavigation(): RecordingNavigation {
   const calls: NavigationCall[] = [];
   const navigation: Navigation = {
-    openHome: () => {
-      calls.push({ method: "openHome", args: [] });
+    openHome: (options) => {
+      calls.push({ method: "openHome", args: options ? [options] : [] });
     },
-    openEntityItemCollection: (entityName) => {
-      calls.push({ method: "openEntityItemCollection", args: [entityName] });
+    openEntityItemCollection: (entityName, options) => {
+      calls.push({
+        method: "openEntityItemCollection",
+        args: options ? [entityName, options] : [entityName],
+      });
     },
-    openItem: (entityName, id) => {
-      calls.push({ method: "openItem", args: [entityName, id] });
+    openItem: (entityName, id, options) => {
+      calls.push({
+        method: "openItem",
+        args: options ? [entityName, id, options] : [entityName, id],
+      });
     },
-    openCreateItem: (entityName) => {
-      calls.push({ method: "openCreateItem", args: [entityName] });
+    openCreateItem: (entityName, options) => {
+      calls.push({
+        method: "openCreateItem",
+        args: options ? [entityName, options] : [entityName],
+      });
     },
     hrefFor: {
       home: () => "/",
