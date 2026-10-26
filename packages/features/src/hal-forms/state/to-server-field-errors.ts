@@ -4,10 +4,9 @@ import type { FieldValidationError } from "./field-error";
 /**
  * Groups a validation problem's flat `errors[]` array (from
  * `getValidationFieldErrors(error)`) by `field`, converting each into a `"server"`
- * `FieldValidationError` for `useHalFormsFieldState`'s `externalErrors` option. Entity-level
- * errors (no `field`) are dropped — those never render inline; the caller surfaces them via its
- * own non-field alert path instead. Lives in `hal-forms` rather than a single form so any
- * consumer — not just the create-form path — can reuse it.
+ * `FieldValidationError` for `useHalFormsFieldState`'s `externalErrors` option. Lives in
+ * `hal-forms` rather than a single form so any consumer — not just the create-form path — can
+ * reuse it.
  */
 export function toServerFieldErrors(
   errors: readonly ValidationFieldError[],

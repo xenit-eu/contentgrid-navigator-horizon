@@ -39,7 +39,93 @@ export function createApiClient(tokenSupplier: AuthenticationTokenSupplier): Typ
   return createTypedFetch(hookedFetch);
 }
 
-export function createContentClient(tokenSupplier: AuthenticationTokenSupplier): TypedFetch {
-  const hookedFetch = compose(bearerHook(tokenSupplier), problemDetailsHook)(boundFetch);
-  return createTypedFetch(hookedFetch);
+/** Statuses whose `Response` must have a null body. */
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
+/** Parses `xhr.getAllResponseHeaders()` (CRLF-separated `name: value` lines) into `Headers`. */
+function parseResponseHeaders(raw: string): Headers {
+  const headers = new Headers();
+  for (const line of raw.trim().split(/[\r\n]+/)) {
+    const separator = line.indexOf(":");
+    if (separator > 0) {
+      headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim());
+    }
+  }
+  return headers;
+}
+
+/**
+ * Like fetch, but sends with XMLHttpRequest so it can report upload progress (0–100). Mirrors
+ * fetch's contract: honours `signal` (rejects with an `AbortError` `DOMException`), rejects with
+ * a `TypeError` on a network error or timeout, and keeps every response header the browser
+ * exposes (e.g. the content's new `ETag`).
+ */
+function createUploadProgressFetch(onProgress: (percentage: number) => void): typeof fetch {
+  return async (input, init) => {
+    const request = new Request(input, init);
+    const { signal } = request;
+    signal.throwIfAborted();
+    const body = await request.blob();
+
+    return new Promise<Response>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const abort = () => xhr.abort();
+
+      const settle = (finish: () => void) => {
+        signal.removeEventListener("abort", abort);
+        finish();
+      };
+
+      xhr.open(request.method, request.url);
+      request.headers.forEach((value, name) => xhr.setRequestHeader(name, value));
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+
+      xhr.onload = () =>
+        settle(() => {
+          const responseBody = NULL_BODY_STATUSES.has(xhr.status) ? null : (xhr.response as string);
+          resolve(
+            new Response(responseBody, {
+              status: xhr.status,
+              statusText: xhr.statusText,
+              headers: parseResponseHeaders(xhr.getAllResponseHeaders()),
+            }),
+          );
+        });
+      xhr.onerror = () => settle(() => reject(new TypeError("Network request failed")));
+      xhr.ontimeout = () => settle(() => reject(new TypeError("Network request timed out")));
+      const rejectAborted = () =>
+        settle(() =>
+          reject(signal.reason ?? new DOMException("The upload was aborted", "AbortError")),
+        );
+      xhr.onabort = rejectAborted;
+
+      // Aborted while the body was being read.
+      if (signal.aborted) {
+        rejectAborted();
+        return;
+      }
+      signal.addEventListener("abort", abort);
+      xhr.send(body);
+    });
+  };
+}
+
+/** Client for file content. `withUploadProgress` is the same client with upload progress. */
+export type ContentFetch = TypedFetch & {
+  withUploadProgress(onProgress: (percentage: number) => void): TypedFetch;
+};
+
+export function createContentClient(tokenSupplier: AuthenticationTokenSupplier): ContentFetch {
+  const addAuthAndErrorHandling = compose(bearerHook(tokenSupplier), problemDetailsHook);
+
+  const contentFetch = createTypedFetch(addAuthAndErrorHandling(boundFetch));
+  const withUploadProgress = (onProgress: (percentage: number) => void) =>
+    createTypedFetch(addAuthAndErrorHandling(createUploadProgressFetch(onProgress)));
+
+  return Object.assign(contentFetch, { withUploadProgress });
 }

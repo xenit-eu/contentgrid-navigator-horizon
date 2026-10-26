@@ -6,13 +6,14 @@ import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { cgRels, contentDispositionAttachment } from "../api";
+import { cgRels } from "../api";
 import type { TypedFetch } from "../api/client";
 import { fetchHal } from "../api/hal-client";
 import type {
   EntityInstanceDeleteRequestSpec,
   EntityInstanceUpdateRequestSpec,
 } from "../api/requests";
+import type { FieldValueMap } from "../field-value";
 import { queryKeys } from "../query-keys";
 import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
@@ -20,6 +21,7 @@ import type { ProfileAttribute } from "./attribute-profile";
 import { EntityItemToManyRelation } from "./entity-item-to-many-relation";
 import { EntityItemToOneRelation } from "./entity-item-to-one-relation";
 import type ProfileEntity from "./entity-profile";
+import { UpdateHalFormTemplate } from "./extended-forms/update-form";
 
 const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
 
@@ -42,8 +44,8 @@ const ENTITY_ITEM_STALE_TIME = 30 * 1000; // 30 seconds
  * // Filter user-defined attributes
  * const userAttrs = item.userDefinedAttributes;
  *
- * // Update the entity
- * await item.editEntity({ name: "New Name" });
+ * // Build an update request from the item's `default` template
+ * const request = item.editEntityRequest(values);
  * ```
  */
 export class EntityItem {
@@ -77,13 +79,18 @@ export class EntityItem {
   /**
    * @param halItem - The HAL entity-item resource from the API
    * @param profileEntity - The entity profile providing schema metadata
-   * @param etag - ETag from the response header; pass as `If-Match` on update requests (RFC 9110)
+   * @param etag - ETag from the response header; pass as `If-Match` on update/delete requests to
+   *   this entity item (RFC 9110). It is the entity-item resource's ETag only — its content
+   *   attributes and to-one relations are separate conditional-request resources with their own.
    */
   public constructor(
     public readonly halItem: HalObject<EntityItemShape>,
     public readonly profileEntity: ProfileEntity,
     public readonly etag: string | null = null,
   ) {}
+
+  private _updateTemplate?: UpdateHalFormTemplate | null;
+  private _updateFormValues?: FieldValueMap | null;
 
   public get id(): string {
     return this.halItem.data.id;
@@ -200,29 +207,32 @@ export class EntityItem {
     return this.attributes.find((attr) => attr.value.name === name);
   }
 
+  public get selfLink(): Link {
+    return this.halItem.self;
+  }
+
   /**
-   * The HAL-FORMS "default" template for updating this entity (PATCH operation).
+   * The HAL-FORMS "default" template for updating this entity; its `method` and `contentType`
+   * drive the update request.
    *
    * Returns `null` if the current user lacks update permission or the template is missing.
    * Use this template to build update forms and encode mutation payloads.
    *
    * @returns Update template or null if not available
    */
-  public get selfLink(): Link {
-    return this.halItem.self;
-  }
-
   public get defaultTemplate(): HalFormsTemplate<EntityInstanceUpdateRequestSpec> | null {
     return resolveTemplate(this.halItem.data, "default");
   }
 
   /**
-   * Encode attribute update values into a PATCH Request using the HAL-FORMS codec.
+   * Encode attribute update values into a Request using the HAL-FORMS codec, with the method and
+   * content type of the `default` template. The update replaces the item's values; a property
+   * without a value is left out of the body (the codec cannot send `null`).
    *
    * Returns the Request — callers are responsible for executing it with `apiFetch`.
    * Include an `If-Match` header on the request to prevent concurrent update conflicts (RFC 9110).
    *
-   * @param values - Attribute values to update (partial update via PATCH)
+   * @param values - Attribute values of the update form
    * @returns Request ready to be sent with apiFetch
    */
   public editEntityRequest(values: HalFormValues<EntityInstanceUpdateRequestSpec>): Request {
@@ -242,6 +252,39 @@ export class EntityItem {
    */
   public get canUpdate(): boolean {
     return this.defaultTemplate !== null;
+  }
+
+  /**
+   * The update form (`_templates.default`) with its properties classified. `null` when the user
+   * may not update this item. Prefill values come from `updateFormValues`.
+   */
+  public get updateTemplate(): UpdateHalFormTemplate | null {
+    if (this._updateTemplate === undefined) {
+      const template = this.defaultTemplate;
+      this._updateTemplate =
+        template === null ? null : new UpdateHalFormTemplate(template, this.profileEntity);
+    }
+    return this._updateTemplate;
+  }
+
+  /**
+   * The item's current values as update-form values, keyed by property name: the item body
+   * decoded through the `default` template's codec, for prefilling the update form (the template
+   * carries no values). `null` when the user may not update this item.
+   */
+  public get updateFormValues(): FieldValueMap | null {
+    if (this._updateFormValues === undefined) {
+      const template = this.defaultTemplate;
+      this._updateFormValues =
+        template === null
+          ? null
+          : halFormCodecs.requireCodecFor(template).decode({
+              // The decoded representation is the item's own body, which is always JSON.
+              contentType: "application/json",
+              body: this.halItem.data,
+            }).valueMap;
+    }
+    return this._updateFormValues;
   }
 
   /**
@@ -401,18 +444,28 @@ export class EntityItem {
    * The request is NOT executed here. Use `contentFetch` (not `apiFetch`) to send it —
    * `contentFetch` omits the `Accept: application/hal+json` header.
    *
-   * If-Match is attached only when an ETag is available (omitted when null).
+   * The file goes in a `multipart/form-data` body, which carries its name and type. (A
+   * `Content-Disposition` header would be blocked by the platform's CORS policy.)
+   *
+   * The request is always conditional, on the content's own ETag (from a GET/HEAD/PUT on the
+   * `cg:content` link) — never the entity item's ETag, which is a different resource:
+   * - `contentEtag` given: `If-Match: <contentEtag>` — only replace the file the caller last saw.
+   * - `contentEtag` null (the attribute holds no file): `If-None-Match: *` — only store this if the
+   *   attribute has no file yet.
+   *
+   * Either way, if someone else stored a file in the meantime, the server answers 412 instead of
+   * overwriting it.
    *
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
-   * @param opts - Optional overrides for Content-Type and filename
+   * @param contentEtag - The ETag of the stored content, or null when the attribute holds no file
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
   public uploadContentRequest(
     attributeName: string,
-    file: Blob | File,
-    opts?: { contentType?: string; filename?: string },
+    file: File,
+    contentEtag: string | null,
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -421,28 +474,15 @@ export class EntityItem {
       );
     }
 
-    const contentType =
-      opts?.contentType ??
-      (file instanceof File && file.type ? file.type : "application/octet-stream");
-
-    const filename = opts?.filename ?? (file instanceof File ? file.name : undefined);
-
-    const headers: Record<string, string> = {
-      "Content-Type": contentType,
-    };
-
-    if (filename) {
-      headers["Content-Disposition"] = contentDispositionAttachment(filename);
-    }
-
-    if (this.etag !== null) {
-      headers["If-Match"] = this.etag;
-    }
+    const body = new FormData();
+    body.append("file", file, file.name);
 
     return new Request(link.href, {
       method: "PUT",
-      body: file,
-      headers,
+      body,
+      // A truthiness check, not `=== null`: a missing ETag (`undefined`, e.g. from a caller still
+      // on the old two-argument signature) must never become a literal `If-Match: undefined`.
+      headers: contentEtag ? { "If-Match": contentEtag } : { "If-None-Match": "*" },
     });
   }
 

@@ -1,10 +1,12 @@
-import { type SubmitEvent, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
+  type FieldValue,
   type ProfileEntity,
   getValidationFieldErrors,
+  isValidationProblem,
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
@@ -22,6 +24,7 @@ import {
 } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
 import { CreateEntityItemForm } from "./create-entity-item-form";
+import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
 export interface CreateEntityItemContainerProps {
   readonly profile: ProfileEntity;
@@ -123,7 +126,26 @@ function CreateEntityItemContainerReady({
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
   const { fields, layout } = useMemo(() => resolveHalFormsFields(createTemplate), [createTemplate]);
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldValidationError[]>>({});
-  const formState = useHalFormsFieldState({ fields, externalErrors });
+  // The file attached on the Create Item page goes into the first file field, read once on
+  // mount. Without a file field it is kept for a later create form.
+  const fileFieldName = fields.find((field) => field.kind === "file")?.name;
+  const [initialValues] = useState(() => {
+    const { initialFile } = useCreateEntityItemState.getState();
+    return initialFile && fileFieldName ? { [fileFieldName]: initialFile } : undefined;
+  });
+  const formState = useHalFormsFieldState({ fields, initialValues, externalErrors });
+  const { setValue } = formState;
+  // Removing the file from the file field also drops the attached file from the store, so it
+  // isn't offered again on the next create form. This runs on user edits only, not on a value
+  // effect: the form's own reset after a create clears the field without going through here.
+  const handleFieldChange = useCallback(
+    (name: string, value: FieldValue) => {
+      if (name === fileFieldName && !value)
+        useCreateEntityItemState.getState().setInitialFile(null);
+      setValue(name, value);
+    },
+    [fileFieldName, setValue],
+  );
   const [continuousCreateMode, setContinuousCreateModeState] = useState<boolean>(
     readInitialContinuousCreate,
   );
@@ -169,7 +191,10 @@ function CreateEntityItemContainerReady({
         // "unsaved" anymore, so isDirty (and onDirtyChange) must reflect that even if
         // the caller doesn't navigate away immediately (e.g. an embedding that stays
         // mounted after create instead of redirecting).
-        formState.reset();
+        useCreateEntityItemState.getState().setInitialFile(null);
+        // Reset to an empty baseline, not the values this form was opened with — the initial
+        // file it may have been prefilled with was just used.
+        formState.reset({});
         if (continuousCreateMode) {
           setFormResetCount((count) => count + 1);
         } else {
@@ -182,28 +207,10 @@ function CreateEntityItemContainerReady({
     });
   }
 
-  // A validation problem can contain entity-level errors with no `field` (e.g. a
-  // cross-field constraint) alongside, or instead of, field-scoped ones. Those never
-  // render inline, so they must always fall through to the alert below — checking only
-  // "no field errors at all" left them silently dropped whenever the array was non-empty
-  // but contained an entry with no `field`.
-  //
-  // The same reasoning extends to a field-scoped error whose `field` doesn't match any
-  // rendered field name (e.g. a system/audit field, or any property this form doesn't produce a
-  // field for) — `toServerFieldErrors` buckets it under that field name, but no
-  // `HalFormsFieldRenderer` exists to show it, and it also isn't a `field === undefined` entry,
-  // so without this check it would be dropped by both paths and never reach the user.
-  const knownFieldNames = new Set(fields.map((field) => field.name));
-  const submitFieldErrors = createMutation.isError
-    ? getValidationFieldErrors(createMutation.error)
-    : [];
-  const nonFieldError =
-    createMutation.isError &&
-    (submitFieldErrors.length === 0 ||
-      submitFieldErrors.some(
-        (fieldError) => fieldError.field === undefined || !knownFieldNames.has(fieldError.field),
-      ))
-      ? createMutation.error
+  // A validation problem shows on its fields; every other error goes in the alert.
+  const formAlertError =
+    createMutation.error && !isValidationProblem(createMutation.error)
+      ? toProblemDisplayModel(createMutation.error)
       : undefined;
 
   return (
@@ -212,7 +219,7 @@ function CreateEntityItemContainerReady({
       layout={layout}
       values={formState.values}
       fieldState={formState.fieldState}
-      onFieldChange={formState.setValue}
+      onFieldChange={handleFieldChange}
       onFieldBlur={formState.touchField}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
@@ -223,9 +230,9 @@ function CreateEntityItemContainerReady({
       onContinuousCreateChange={setContinuousCreateMode}
       formResetCount={formResetCount}
       nonFieldErrorAlert={
-        nonFieldError && (
+        formAlertError && (
           <ProblemAlert
-            model={toProblemDisplayModel(nonFieldError)}
+            model={formAlertError}
             onConflictingItemClick={onConflictingItemClick}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onAllowedValuesClick={onAllowedValuesClick}

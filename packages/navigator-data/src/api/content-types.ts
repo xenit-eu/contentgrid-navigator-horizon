@@ -4,28 +4,6 @@ export const CONTENT_TYPE_JSON = "application/json";
 export const CONTENT_TYPE_URI_LIST = "text/uri-list";
 
 /**
- * Builds a Content-Disposition attachment header value with the given filename.
- *
- * - ASCII filenames: emitted as `filename="..."` with only `"` and `\` backslash-escaped
- *   (RFC 6266 quoted-string encoding).
- * - Non-ASCII filenames: emitted as `filename*=UTF-8''<percent-encoded>` (RFC 5987 / RFC 8187
- *   extended notation, using `encodeURIComponent` for percent-encoding).
- *
- * @param filename - The filename to embed in the Content-Disposition header
- * @returns A Content-Disposition header value string
- */
-export function contentDispositionAttachment(filename: string): string {
-  const isAscii = [...filename].every((c) => (c.codePointAt(0) ?? 0) <= 127);
-  if (isAscii) {
-    // RFC 6266 quoted-string: backslash-escape only " and \
-    const escaped = filename.replace(/["\\]/g, (c) => `\\${c}`);
-    return `attachment; filename="${escaped}"`;
-  }
-  // RFC 5987 / RFC 8187 extended notation for non-ASCII filenames
-  return `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
-}
-
-/**
  * Parses a Content-Disposition header value and extracts the filename.
  *
  * Handles both `filename="..."` (quoted) and `filename=...` (unquoted) forms.

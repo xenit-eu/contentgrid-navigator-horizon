@@ -38,8 +38,8 @@ export interface EntityItemContentFocusViewProps {
 - `RightSidePanelLayout` (`@contentgrid/features/layout`, shared with other features) —
   `grid-template-columns: 1fr 360px`, side panel collapsible, fills height (FR-015), hosts
   fullscreen.
-- `ContentPreviewPanel({ entityItem, attributeName, toolbarStart? })` (feature-local) — owns `useContentPreview` and
-  `useDownloadContent`; lazy-loads `PdfViewer`; converts `PreviewSource` + viewer callbacks into the
+- `ContentPreviewPanel({ entityItem, attributeName, toolbarStart? })` (feature-local) — owns `useContentPreview`,
+  `useDownloadContent` and `useUploadContent`; lazy-loads `PdfViewer`; converts `PreviewSource` + viewer callbacks into the
   FR-024 state; Download delivers the original bytes via an object URL and revokes it. `toolbarStart`
   is the view's `ContentAttributeSelector` node — the panel has no attribute-selection logic of its
   own; it forwards that node into the mounted `PdfViewer`'s toolbar `start` slot for the `ready`
@@ -48,8 +48,10 @@ export interface EntityItemContentFocusViewProps {
 - `ContentPreviewFrame` — presentational: `state` prop → skeleton / message / drop zone / viewer; every
   state has a story. Accepts an optional `toolbarStart` node, rendered in a header bar above the
   state body for every state except `ready` (whose mounted viewer already carries it). The "No file"
-  state renders `@contentgrid/ui`'s `FileUploadZone` with a feature-supplied `onFileChange` that is a
-  no-op until the content-upload story wires it.
+  state renders `@contentgrid/ui`'s `FileUploadZone` only when an `onFileChange` is supplied (the panel
+  supplies it when `entityItem.canUploadContent(attributeName)`); dropping a file uploads it and shows
+  the `uploading` state with the percentage sent, and a failed upload shows its problem above the
+  drop zone.
 
 ## Host (app) responsibilities
 
