@@ -20,10 +20,12 @@ import {
 import {
   type CollectionViewState,
   EntityItemCollectionView,
+  preloadEntityItemCollection,
 } from "@contentgrid/views/entity-item-collection";
 
 export const Route = createFileRoute("/_app/$entity/")({
   validateSearch: entitySearchStateValidator,
+  loader: ({ context, params }) => preloadEntityItemCollection(context, params.entity),
   component: EntityItemCollectionPage,
 });
 

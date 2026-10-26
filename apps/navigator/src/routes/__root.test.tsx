@@ -79,6 +79,7 @@ vi.mock("@contentgrid/features/preferences", async (importOriginal) => {
 });
 
 vi.mock("@contentgrid/views/entity-item-collection", () => ({
+  preloadEntityItemCollection: vi.fn(async () => {}),
   EntityItemCollectionView: ({ entityName }: { entityName: string }) => (
     <div data-testid="entity-detail" data-entity={entityName} />
   ),
