@@ -120,6 +120,7 @@ describe("NavigationOptions", () => {
     recording.navigation.openItem("invoice", "42", { openInNewTab: true });
     recording.navigation.openCreateItem("invoice", { openInNewTab: true });
     recording.navigation.openItem("invoice", "43");
+    recording.navigation.openEntityItemCollection("invoice", { restoreState: false });
     recording.navigation.openClassifyCreate({ openInNewTab: true });
     recording.navigation.openSettings();
     expect(recording.calls).toEqual([
@@ -128,6 +129,7 @@ describe("NavigationOptions", () => {
       { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
       { method: "openCreateItem", args: ["invoice", { openInNewTab: true }] },
       { method: "openItem", args: ["invoice", "43"] },
+      { method: "openEntityItemCollection", args: ["invoice", { restoreState: false }] },
       { method: "openClassifyCreate", args: [{ openInNewTab: true }] },
       { method: "openSettings", args: [] },
     ]);
@@ -174,8 +176,10 @@ describe("NavigationOptions", () => {
       ),
     });
     result.current.openItem("invoice", "42", { openInNewTab: true });
+    result.current.openEntityItemCollection("invoice", { restoreState: false });
     expect(host.calls).toEqual([
       { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
+      { method: "openEntityItemCollection", args: ["invoice", { restoreState: false }] },
     ]);
   });
 });

@@ -80,7 +80,7 @@ describe("SidebarShell", () => {
     await userEvent.click(await screen.findByText("Settings"));
 
     expect(recording.calls).toEqual([
-      { method: "openEntityItemCollection", args: ["invoice"] },
+      { method: "openEntityItemCollection", args: ["invoice", { restoreState: false }] },
       { method: "openClassifyCreate", args: [] },
       { method: "openHome", args: [] },
       { method: "openSettings", args: [] },

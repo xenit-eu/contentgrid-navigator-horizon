@@ -48,7 +48,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - Every `open*` takes a trailing optional `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default
   `false`). The view decides — the item detail view's "create missing relation target" passes
   `{ openInNewTab: true }` — and a host that can't open tabs may ignore it. The recording fake records `options`
-  as the last element of `args` only when it was passed.
+  as the last element of `args` only when it was passed. `openEntityItemCollection` also honours
+  `{ restoreState: false }` (default `true`): the sidebar passes it to open a fresh list instead of the remembered one.
 - Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create Item") and
   `openSettings` (the user menu's "Settings"); `openEditItem` arrives with the page that needs it.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —

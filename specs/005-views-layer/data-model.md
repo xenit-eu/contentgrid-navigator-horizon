@@ -77,7 +77,7 @@ Provided by the host through context; only views read it, features get callback 
 | `openSettings()`                       | The application's settings (the user menu's "Settings")      | PR 5 — an extension to the six functions of FR-017                                                       |
 | `openEditItem(entityName, id)`         | An item's edit form                                          | Arrives with the page that uses it                                                                       |
 
-Every function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default `false`), set by the view (see `contracts/navigation-context.md`).
+Every function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean; restoreState?: boolean }`; `openInNewTab` defaults to `false`; `restoreState` applies to `openEntityItemCollection` only and defaults to `true`), set by the view (see `contracts/navigation-context.md`).
 
 ## Preload signature
 

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   RouterProvider,
@@ -10,6 +11,7 @@ import {
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { recallCollectionFilters, rememberCollectionFilters } from "@contentgrid/navigator-data";
 import { useViewNavigation } from "@contentgrid/views";
 import { RouterNavigationProvider } from "./-router-navigation-provider";
 
@@ -27,6 +29,11 @@ function NavigationProbe() {
       <button onClick={() => navigation.openHome()}>open-home</button>
       <button onClick={() => navigation.openEntityItemCollection("invoice")}>
         open-collection
+      </button>
+      <button
+        onClick={() => navigation.openEntityItemCollection("invoice", { restoreState: false })}
+      >
+        open-collection-fresh
       </button>
       <button onClick={() => navigation.openItem("invoice", "42")}>open-item</button>
       <button onClick={() => navigation.openCreateItem("invoice")}>open-create</button>
@@ -74,12 +81,18 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
 ]);
 
+const queryClient = new QueryClient();
+
 function renderRouter(initialPath = "/") {
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("RouterNavigationProvider", () => {
@@ -181,5 +194,17 @@ describe("RouterNavigationProvider", () => {
 
     expect(windowOpen).toHaveBeenCalledWith("/~configuration", "_blank", "noopener,noreferrer");
     windowOpen.mockRestore();
+  });
+
+  it("keeps the list's remembered state when opening a collection, unless restoreState is false", async () => {
+    rememberCollectionFilters(queryClient, "invoice", { q: "acme" });
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-collection"));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/invoice"));
+    expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ q: "acme" });
+
+    await userEvent.click(screen.getByText("open-collection-fresh"));
+    expect(recallCollectionFilters(queryClient, "invoice")).toBeUndefined();
   });
 });
