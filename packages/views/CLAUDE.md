@@ -40,6 +40,9 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - `NavigationProvider` is supplied by the host; `useViewNavigation()` throws in development without one.
 - `ChildNavigationProvider` gives a child view its own navigation object; calls it doesn't override go to the parent's navigation.
+- Every `Navigation` function takes a trailing optional `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default
+  `false`). The view decides; a host that can't open tabs may ignore it. The recording fake records `options` as the last
+  element of `args` only when it was passed.
 - `@contentgrid/views/recording-navigation` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
 

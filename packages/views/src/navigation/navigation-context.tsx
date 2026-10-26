@@ -1,18 +1,25 @@
 import { createContext, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 
+/** Per-call hints a view passes to the host. A host that cannot honour one may ignore it. */
+export interface NavigationOptions {
+  /** Open the destination in a new browser tab instead of the current one. Default `false`. */
+  openInNewTab?: boolean;
+}
+
 /**
  * The one object a host provides for opening things (contract `navigation-context.md`). Views call
  * it instead of the router; features get callback props that their view wires to it. The host
- * decides what happens next.
+ * decides what happens next. Every function takes a trailing optional `NavigationOptions`; the view
+ * decides, the host may ignore.
  *
  * `openClassifyCreate`, `openEditItem` and `openCreateItem` are added with the pages that use them.
  */
 export interface Navigation {
-  openHome(): void;
+  openHome(options?: NavigationOptions): void;
   /** Opens the entity's list, restored as the user left it. */
-  openEntityItemCollection(entityName: string): void;
-  openItem(entityName: string, id: string): void;
+  openEntityItemCollection(entityName: string, options?: NavigationOptions): void;
+  openItem(entityName: string, id: string, options?: NavigationOptions): void;
 }
 
 const NavigationContext = createContext<Navigation | null>(null);
