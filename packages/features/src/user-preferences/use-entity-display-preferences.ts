@@ -24,7 +24,7 @@ export interface UseEntityDisplayPreferencesResult {
  * icon, color, cardStyle, nameAttribute, visibleColumns.
  *
  * Layers, highest priority first:
- * 1. User override (persisted, per-backend) — `entity-display-preferences-store.ts`.
+ * 1. User override (persisted, per-backend) — the store the app provides through `UserPreferencesProvider`.
  * 2. Backend automation default — `useEntityDisplayDefaults()` (currently stubbed to `{}`
  *    pending a backend contract; see that hook's doc comment).
  * 3. `profileEntity.getDefaultPreferences()` heuristic — always present, computed from the
@@ -32,7 +32,7 @@ export interface UseEntityDisplayPreferencesResult {
  *
  * `ProfileEntity` instances are rebuilt on every TanStack Query fetch rather than being a
  * long-lived singleton, so preferences are not stored as a property on the instance —
- * this hook recomputes the merge cheaply from the query cache + Zustand store on every call.
+ * this hook recomputes the merge cheaply from the query cache + the provided Zustand store on every call.
  *
  * Accepts `profileEntity: undefined` (e.g. a relation's target profile that hasn't resolved
  * yet) so callers can call this hook unconditionally, every render, per the Rules of Hooks —

@@ -10,7 +10,12 @@ import {
   createContentClient,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { UserPreferencesProvider, createMemoryStorage, createUserPreferencesStore } from "./index";
+import {
+  USER_PREFERENCES_STORAGE_KEY,
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "./index";
 import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 // The backend part still returns nothing; this stands in for it so the middle layer can be tested.
@@ -153,6 +158,25 @@ describe("useEntityDisplayPreferences", () => {
     rerender();
 
     expect(result.current.preferences.icon).toBe("file-text");
+  });
+
+  it("applies overrides users saved earlier with no configuration screen mounted", () => {
+    // Only the provider and the hook: nothing from `configuration/` is rendered.
+    preferencesStore = createUserPreferencesStore({
+      storage: createMemoryStorage({
+        [USER_PREFERENCES_STORAGE_KEY]: JSON.stringify({
+          state: {
+            overrides: { [PROFILE_URL]: { invoice: { color: "blue", nameAttribute: "id" } } },
+          },
+          version: 0,
+        }),
+      }),
+    });
+
+    const { result } = renderUseEntityDisplayPreferences();
+
+    expect(result.current.preferences.color).toBe("blue");
+    expect(result.current.nameAttribute?.name).toBe("id");
   });
 
   describe("layer priority: user override > backend default > heuristic default", () => {

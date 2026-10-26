@@ -77,6 +77,10 @@ export function createUserPreferencesStore(
       }),
       {
         name: USER_PREFERENCES_STORAGE_KEY,
+        // Shape frozen at v0: blobs saved before this was a factory carry no explicit version.
+        // Any change to the persisted shape must bump this AND add a `migrate`, or zustand
+        // discards what existing users saved.
+        version: 0,
         storage: createJSONStorage(() => storage ?? localStorage),
       },
     ),

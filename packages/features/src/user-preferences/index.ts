@@ -41,10 +41,7 @@ export type {
   CreateUserPreferencesStoreOptions,
   UserPreferencesStoreApi,
 } from "./entity-display-preferences-store";
-export {
-  UserPreferencesProvider,
-  useEntityDisplayPreferencesStore,
-} from "./user-preferences-context";
+export { UserPreferencesProvider } from "./user-preferences-context";
 export type { UserPreferencesProviderProps } from "./user-preferences-context";
 export { resolveEntityCardIcon } from "./resolve-entity-icon";
 export {

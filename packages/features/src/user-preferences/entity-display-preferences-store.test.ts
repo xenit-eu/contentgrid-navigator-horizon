@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   USER_PREFERENCES_STORAGE_KEY,
   createMemoryStorage,
@@ -7,10 +7,6 @@ import {
 
 const PROFILE_URL_A = "https://a.example.com/profile";
 const PROFILE_URL_B = "https://b.example.com/profile";
-
-afterEach(() => {
-  localStorage.clear();
-});
 
 function newStore() {
   return createUserPreferencesStore({ storage: createMemoryStorage() });
@@ -73,19 +69,25 @@ describe("createUserPreferencesStore", () => {
     expect(localStorage.getItem(USER_PREFERENCES_STORAGE_KEY)).toBeNull();
   });
 
-  it("loads overrides persisted by an earlier session", () => {
+  it("hydrates a stored v0 blob (shape frozen: a version bump needs a migrate)", () => {
     const stored = JSON.stringify({
-      state: { overrides: { [PROFILE_URL_A]: { invoice: { color: "blue" } } } },
+      state: {
+        overrides: { [PROFILE_URL_A]: { invoice: { color: "blue", visibleColumns: ["id"] } } },
+      },
       version: 0,
     });
-    const store = createUserPreferencesStore({
-      storage: createMemoryStorage({ [USER_PREFERENCES_STORAGE_KEY]: stored }),
-    });
+    const storage = createMemoryStorage({ [USER_PREFERENCES_STORAGE_KEY]: stored });
 
-    expect(store.getState().overrides[PROFILE_URL_A].invoice).toEqual({ color: "blue" });
+    const store = createUserPreferencesStore({ storage });
+
+    expect(store.getState().overrides[PROFILE_URL_A].invoice).toEqual({
+      color: "blue",
+      visibleColumns: ["id"],
+    });
   });
 
   it("uses localStorage by default", () => {
+    localStorage.clear();
     const store = createUserPreferencesStore();
     store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
 
