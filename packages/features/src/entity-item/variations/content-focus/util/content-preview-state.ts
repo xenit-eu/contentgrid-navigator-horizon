@@ -1,6 +1,6 @@
 /**
  * Data-model.md's "Content preview panel state" — derived (never stored) from
- * `useContentPreview`'s query status × `PreviewSource`, or from the PDF viewer's own callbacks
+ * `useContentPreview`'s query status × `PreviewSource`, or from the viewer's own load-error callbacks
  * (`cannotDisplay`/`protected`/`viewerFailure`). See spec `002-pdf-viewer` FR-024. `uploading` is
  * the one exception: `ContentPreviewPanel` sets it while `useUploadContent` is pending.
  *

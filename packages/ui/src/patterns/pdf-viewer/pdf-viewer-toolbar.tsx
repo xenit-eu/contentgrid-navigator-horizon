@@ -21,7 +21,7 @@ import {
 } from "../../primitives/dropdown-menu";
 import { Input } from "../../primitives/input";
 import { TooltipProvider } from "../../primitives/tooltip";
-import { IconButton } from "./pdf-viewer-icon-button";
+import { ToolbarIconButton } from "../toolbar-icon-button";
 import { type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
 import { PdfViewerSearchPopover } from "./pdf-viewer-search-popover";
 import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
@@ -85,13 +85,13 @@ function PageNavigation({
 
   return (
     <div className="flex items-center gap-1">
-      <IconButton
+      <ToolbarIconButton
         label={labels.previousPage}
         disabled={!ready || page.current <= 1}
         onClick={actions.previousPage}
       >
         <CaretLeftIcon />
-      </IconButton>
+      </ToolbarIconButton>
       <Input
         aria-label={labels.pageNumberInput}
         className="h-8 w-12 px-1 text-center"
@@ -110,13 +110,13 @@ function PageNavigation({
       <span className="text-muted-foreground text-sm whitespace-nowrap" aria-hidden>
         {labels.pageCountSeparator} {page.total}
       </span>
-      <IconButton
+      <ToolbarIconButton
         label={labels.nextPage}
         disabled={!ready || page.current >= page.total}
         onClick={actions.nextPage}
       >
         <CaretRightIcon />
-      </IconButton>
+      </ToolbarIconButton>
     </div>
   );
 }
@@ -134,9 +134,9 @@ function ZoomControls({
 }>) {
   return (
     <div className="flex items-center gap-1">
-      <IconButton label={labels.zoomOut} disabled={!ready} onClick={actions.zoomOut}>
+      <ToolbarIconButton label={labels.zoomOut} disabled={!ready} onClick={actions.zoomOut}>
         <MagnifyingGlassMinusIcon />
-      </IconButton>
+      </ToolbarIconButton>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -165,9 +165,9 @@ function ZoomControls({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <IconButton label={labels.zoomIn} disabled={!ready} onClick={actions.zoomIn}>
+      <ToolbarIconButton label={labels.zoomIn} disabled={!ready} onClick={actions.zoomIn}>
         <MagnifyingGlassPlusIcon />
-      </IconButton>
+      </ToolbarIconButton>
     </div>
   );
 }
@@ -255,23 +255,23 @@ export function PdfViewerToolbar({
           />
         )}
         {showPrint && (
-          <IconButton label={labels.print} disabled={!ready} onClick={actions.print}>
+          <ToolbarIconButton label={labels.print} disabled={!ready} onClick={actions.print}>
             <PrinterIcon />
-          </IconButton>
+          </ToolbarIconButton>
         )}
         {onDownload && (
-          <IconButton label={labels.download} disabled={!ready} onClick={onDownload}>
+          <ToolbarIconButton label={labels.download} disabled={!ready} onClick={onDownload}>
             <DownloadIcon />
-          </IconButton>
+          </ToolbarIconButton>
         )}
         {showFullscreen && (
-          <IconButton
+          <ToolbarIconButton
             label={fullscreen ? labels.exitFullscreen : labels.enterFullscreen}
             disabled={!ready}
             onClick={actions.toggleFullscreen}
           >
             {fullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
-          </IconButton>
+          </ToolbarIconButton>
         )}
         {end}
         <div role="status" aria-live="polite" className="sr-only">

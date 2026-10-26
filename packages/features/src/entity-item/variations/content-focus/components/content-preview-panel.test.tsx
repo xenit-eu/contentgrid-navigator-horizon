@@ -16,7 +16,7 @@
  */
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -359,12 +359,70 @@ describe("ContentPreviewPanel", () => {
     expect(anchorClick).toHaveBeenCalledOnce();
   });
 
-  it("shows previewUnavailable for a non-PDF file with no rendition endpoint configured", async () => {
+  it.each([
+    { filename: "photo.png", mimetype: "image/png", element: "img" },
+    { filename: "dashcam.mp4", mimetype: "video/mp4", element: "video" },
+  ])(
+    "shows a stored $mimetype file as it is, under the attribute selector",
+    async ({ filename, mimetype, element }) => {
+      server.use(
+        createContentDownloadHandler({
+          url: CONTENT_URL,
+          body: new Uint8Array([0x00, 0x01]),
+          contentType: mimetype,
+        }),
+      );
+      const entityItem = makeStubEntityItem({
+        attributeName: "media",
+        metadata: { filename, mimetype, length: 2 },
+      });
+      const { container } = render(
+        <ContentPreviewPanel
+          entityItem={entityItem}
+          attributeName="media"
+          toolbarStart={<span>attribute selector</span>}
+        />,
+        { wrapper: makeWrapper() },
+      );
+
+      await waitFor(() => expect(container.querySelector(element)).not.toBeNull());
+      expect(screen.getByText("attribute selector")).toBeInTheDocument();
+    },
+  );
+
+  it("shows cannotDisplay with Download, and no Retry, when the browser cannot play the file", async () => {
+    server.use(
+      createContentDownloadHandler({
+        url: CONTENT_URL,
+        body: new Uint8Array([0x00]),
+        contentType: "video/x-msvideo",
+      }),
+    );
     const entityItem = makeStubEntityItem({
-      attributeName: "photo",
-      metadata: { filename: "photo.png", mimetype: "image/png", length: 100 },
+      attributeName: "recording",
+      metadata: { filename: "old.avi", mimetype: "video/x-msvideo", length: 1 },
     });
-    render(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />, {
+    const { container } = render(
+      <ContentPreviewPanel entityItem={entityItem} attributeName="recording" />,
+      { wrapper: makeWrapper() },
+    );
+
+    await waitFor(() => expect(container.querySelector("video")).not.toBeNull());
+    fireEvent.error(container.querySelector("video")!);
+
+    expect(
+      await screen.findByText("Your browser can't open this video. You can download it instead."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("shows previewUnavailable for a document with no rendition endpoint configured", async () => {
+    const entityItem = makeStubEntityItem({
+      attributeName: "document",
+      metadata: { filename: "report.docx", mimetype: "application/msword", length: 100 },
+    });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
       wrapper: makeWrapper(),
     });
 
@@ -680,15 +738,15 @@ describe("ContentPreviewPanel", () => {
       }),
     );
     const entityItem = makeStubEntityItem({
-      attributeName: "photo",
-      metadata: { filename: "photo.tiff", mimetype: "image/x-tiff", length: 100 },
+      attributeName: "document",
+      metadata: { filename: "data.mdb", mimetype: "application/x-msaccess", length: 100 },
     });
-    render(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />, {
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />, {
       wrapper: makeWrapper(RENDITION_URI_TEMPLATE),
     });
 
     expect(
-      await screen.findByText("Preview isn't available for image/x-tiff files."),
+      await screen.findByText("Preview isn't available for application/x-msaccess files."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });

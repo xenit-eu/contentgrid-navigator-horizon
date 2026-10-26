@@ -17,13 +17,14 @@
 - Viewing a content attribute whose file is a PDF, on the entity item detail page in the _content-focus_ layout (design mockup page 03).
 - The viewer toolbar at production parity: content-attribute selector, page navigation, zoom, search, print, download, fullscreen.
 - Viewing a content attribute whose file is **not** a PDF **through the PDF rendition** produced by the platform's rendition service, including the pending, unsupported and failed states of that conversion.
+- Viewing a content attribute whose file is an image (`image/*`) or a video (`video/*`) as it is stored: an image element, or a video element with the browser's own controls, under a toolbar with the content-attribute selector and download. Neither is ever sent for conversion (FR-032).
 - Every user-visible loading, empty, denied and error state of the above, each with a download fallback where a file exists.
 
 **Out of scope** (tracked elsewhere or deferred)
 
 - The extraction highlight ("annotation") overlay and everything that produces or consumes it: extract service, classify-create, click-to-fill popover, citation navigation (HZN-6B.x and HZN-6A.4). A follow-up story. The research on it was taken out of this spec at review and stays available in the git history of this branch (commit 579bd325).
 - User-authored annotations: comments, drawing, stamps, redaction, form filling inside the PDF.
-- Native previews of images, video or any non-PDF format that is not converted to PDF (HZN-6A.5, ACC-2906).
+- Native previews of any other format that is not converted to PDF (e.g. audio, plain text), and image variants or video poster frames.
 - Previewing a locally selected file before it is saved (belongs to the content upload / create story; the viewer receives its document as bytes, so it can be reused there).
 - Replacing a file that is already stored: belongs to the edit-entity form. This spec only covers uploading into an attribute that holds no file, from the "No file" state (Story 1, scenario 5).
 - Byte-range / progressive download of large PDFs (explicitly deferred in the roadmap, Phase 6A).
@@ -74,7 +75,7 @@ A user opens an entity item whose content is a Word, Excel, PowerPoint, OpenDocu
 2. **Given** a rendition is displayed, **When** the user activates Download, **Then** the original file (not the rendition) is delivered; **When** the user prints, **Then** the rendition as displayed is printed; the UI indicates that a converted preview is shown.
 3. **Given** the rendition service reports that the file cannot be converted, **Then** the viewer shows "Preview not available" with Download; this is not presented as an error.
 4. **Given** the conversion has not completed within the configured ceiling (default 60 seconds), **Then** the viewer shows "Preview could not be prepared" with Retry and Download, and stops asking the service.
-5. **Given** no rendition service is configured, **When** a non-PDF item opens, **Then** "Preview not available" with Download is shown and no conversion request is made.
+5. **Given** no rendition service is configured, **When** an item opens whose file is neither a PDF, an image nor a video, **Then** "Preview not available" with Download is shown and no conversion request is made.
 6. **Given** a conversion is pending, **When** the user switches attribute or leaves the page, **Then** polling stops immediately.
 7. **Given** a conversion is pending, **Then** no previously displayed document is visible in the viewer area during the wait.
 8. **Given** the content mimetype carries parameters (for example `application/pdf; charset=binary`) or differs in case, **Then** it is still recognised as PDF and shown natively. **Given** the mimetype is missing or a generic binary type, **Then** the item is treated as a conversion candidate when a rendition service is configured, and as "Preview not available" otherwise.
@@ -139,13 +140,13 @@ A user searches for a word inside the document, steps through the matches, and p
 
 **Rendition-backed preview**
 
-- **FR-016**: When the file is not a PDF and a rendition endpoint is configured for the deployment, the system MUST request a PDF rendition of the stored file and display the result as a PDF with every viewer feature.
+- **FR-016**: When the file is neither a PDF, an image nor a video (FR-032) and a rendition endpoint is configured for the deployment, the system MUST request a PDF rendition of the stored file and display the result as a PDF with every viewer feature.
 - **FR-017**: The system MUST treat rendition preparation as asynchronous: accept a "pending" answer, re-check at a fixed interval (default 2 seconds), and stop with a visible failure and a Retry action once a configurable ceiling (default 60 seconds) is exceeded.
 - **FR-018**: The system MUST treat the service's "cannot convert this file" outcome as a normal result shown as "Preview not available" with Download, and any other failure as an error state with Retry and Download.
 - **FR-019**: The system MUST request a rendition only when the content attribute holds a file (its metadata says so and its content link does not answer 404) and MUST identify the source file to the service by that link.
 - **FR-020**: When a rendition is displayed the system MUST indicate that a converted preview is shown, MUST deliver the original file on Download, and MUST print the rendition as displayed.
 - **FR-021**: The system MUST stop polling for a rendition as soon as the viewer is closed, the attribute changes or the item changes.
-- **FR-022**: When no rendition endpoint is configured the system MUST show "Preview not available" with Download for non-PDF files and MUST NOT contact any service.
+- **FR-022**: When no rendition endpoint is configured the system MUST show "Preview not available" with Download for files that need a rendition (FR-016) and MUST NOT contact any service.
 - **FR-023**: The system MUST call the rendition service (the initial request and each poll) with the same authenticated content client it uses to download files, sending the user's access token in the `Authorization` header only. It MUST NOT perform a token exchange itself and MUST NOT call the service unauthenticated; any exchange the service needs to read the source file is the platform's responsibility (TokenMonger).
 
 **States and errors**
@@ -167,13 +168,14 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-029**: The rendition endpoint, the polling interval and the ceiling MUST be deployment configuration; when the endpoint is absent the feature MUST degrade as described in FR-022.
 - **FR-030**: The feature MUST be delivered in the experimental track first and promoted through the documented feature-promotion workflow.
 - **FR-031**: All user-visible text MUST be translatable.
+- **FR-032**: When the file is an image (`image/*`) or a video (`video/*`), the system MUST show the stored file as it is — an image element, or a video element with the browser's own controls — never request a rendition of it, and offer the content-attribute selector and Download beside it. When the browser cannot display it, the system MUST show the "cannot be displayed" state with Download.
 
 ### Key Entities
 
 - **Content attribute**: An attribute of the entity profile that holds a file. Identifies which attributes can be previewed; there may be several per entity.
 - **Content metadata**: What the entity item says about a content attribute's file: whether a file exists, its mimetype, filename and size. Drives the "no file" state and the PDF-versus-rendition decision.
 - **Content link**: The item's pointer to the file bytes for one content attribute. It is the only source of the file's location and the identifier passed to the rendition service. When no file is stored, the link answers 404.
-- **Preview source**: What the viewer is asked to show: a stored PDF, or a rendition of a stored non-PDF file.
+- **Preview source**: What the viewer is asked to show: a stored PDF, image or video, or a rendition of any other stored file.
 - **Rendition job**: The lifecycle of one conversion request: requested → pending → ready, or unsupported, failed, timed out, cancelled.
 
 ## Success Criteria _(mandatory)_

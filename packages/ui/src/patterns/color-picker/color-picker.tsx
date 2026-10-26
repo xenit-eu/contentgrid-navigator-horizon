@@ -99,7 +99,7 @@ export function ColorPicker({ value, onChange, className, children }: Readonly<C
             type="button"
             aria-label={value ? `Color: ${value}` : "Choose color"}
             className={cn(
-              "inline-flex cursor-pointer items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               className,
             )}
           >

@@ -4,7 +4,7 @@
 
 ### Item views (entity-item)
 
-No new props. Both views own edit mode (`useEditMode(item, refetch)`, entity-item/edit/, internal: the version of the shown item being edited, `null` when not editing; a background refetch does not change it, `refresh` moves it to the refetched version; it ends when the view moves to another item and stays closed on coming back) and the item query. Next to the item title they show `EditEntityItemButton`, which renders when the item is not being edited and `item.updateTemplate` is not `null` and has at least one property (spec edge case: nothing to change otherwise). There is no "Attributes" heading. Below, `EditableEntityItemAttributes` (entity-item/attributes/, internal) shows `EntityItemAttributes`, or `EditEntityItemContainer` while editing.
+No new props. Both views own edit mode (`useEditContext(item, refetch)`, entity-item/edit/, internal: the version of the shown item being edited, `null` when not editing; a background refetch does not change it, `refresh` moves it to the refetched version; it ends when the view moves to another item and stays closed on coming back) and the item query. Next to the item title they show `EditEntityItemButton`, which renders when the item is not being edited and `item.updateTemplate` is not `null` and has at least one property (spec edge case: nothing to change otherwise). There is no "Attributes" heading. Below, `EditableEntityItemAttributes` (entity-item/attributes/, internal) shows `EntityItemAttributes`, or `EditEntityItemContainer` while editing.
 
 Both views render the item while one is loaded (`item.data`), not only on `isSuccess`. When a refetch of a loaded item fails, the loaded item and an open edit form with its input stay on screen. `ErrorPage` is only for an item that never loaded (research D15).
 
@@ -35,7 +35,7 @@ Layered like `entity-item-create`:
 
 - While editing, the views pass the edited version as `item`. `EditableEntityItemAttributes` keys `EditEntityItemContainer` by `item.etag`, so the form opens again only when Refresh passes a newer version.
 - `EditEntityItemContainer` owns the unsaved-changes guard and dialog, from its own form state's `isDirty`. It takes `item` only for the form. Fields come from `resolveHalFormsFields(item.updateTemplate)`, prefill from `item.updateFormValues` (empty when `null`), saving from `useUpdateEntityItem(item)`, so a save is conditional on `item`'s ETag. Success toast: `"<Entity> has been successfully updated!"`. Errors: a validation problem → its fields (`toServerFieldErrors`); any other error → `ProblemAlert`; 412 → `ProblemAlert` (`VersionConflictAlert`) whose Refresh calls `onRefresh`, and Save disabled; 404 → Save disabled.
-- The view's `onRefresh` is `useEditMode`'s `refresh`: `item.refetch()`, then the refetched version becomes the edited one. It has a new ETag, so the form opens again on the latest version; the user's unsaved input is not kept.
+- The view's `onRefresh` is `useEditContext`'s `refresh`: `item.refetch()`, then the refetched version becomes the edited one. It has a new ETag, so the form opens again on the latest version; the user's unsaved input is not kept.
 - `EditEntityItemForm` renders the `<form>`, `HalFormsContainer` and Save/Cancel.
 
 ### `useHalFormsFieldState` (hal-forms/state/)

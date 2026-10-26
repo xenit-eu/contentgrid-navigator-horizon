@@ -124,6 +124,7 @@ function makeEntityItem(options: {
   return {
     id: "1",
     etag: null,
+    selfLink: { href: "https://api.example.com/orders/1" },
     attributes: contentAttrs,
     userDefinedAttributes: contentAttrs,
     toOneRelations: [],
@@ -132,6 +133,7 @@ function makeEntityItem(options: {
     modifiedDate: undefined,
     createdBy: undefined,
     modifiedBy: undefined,
+    updateTemplate: null,
     profileEntity,
   } as unknown as EntityItem;
 }
