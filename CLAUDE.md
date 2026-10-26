@@ -34,6 +34,7 @@ Read in this order before writing any code:
    - [`packages/ui/CLAUDE.md`](packages/ui/CLAUDE.md) — shadcn-CLI usage, primitive vs. pattern boundary, forbidden imports.
    - [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md) — HAL hook conventions, ETag pattern, peerDep policy.
    - [`packages/features/CLAUDE.md`](packages/features/CLAUDE.md) — `x-stability` flag mechanism and promotion workflow.
+   - [`packages/views/CLAUDE.md`](packages/views/CLAUDE.md) — views layer between apps and features: navigation context, view props and layer rules.
    - [`apps/navigator/CLAUDE.md`](apps/navigator/CLAUDE.md) — generic track rules (stable features only; gate suspended pre-GA).
    - [`apps/navigator-experimental/CLAUDE.md`](apps/navigator-experimental/CLAUDE.md) — experimental track rules.
 3. **Architecture Decision Records** in [`docs/adr/`](docs/adr/README.md):
