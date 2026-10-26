@@ -2,16 +2,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import {
-  mockSidebarData,
-  preferencesModuleMock,
-  sidebarNavigatorDataMock,
-} from "../test-fixtures/sidebar-harness";
+import { mockSidebarData } from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
-vi.mock("@contentgrid/features/preferences", () => preferencesModuleMock);
+vi.mock("@contentgrid/features/preferences", async () => {
+  const { preferencesModuleMock } = await import("../test-fixtures/sidebar-mocks");
+  return preferencesModuleMock;
+});
 
-vi.mock("@contentgrid/navigator-data", sidebarNavigatorDataMock);
+vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
+  const { sidebarNavigatorDataMock } = await import("../test-fixtures/sidebar-mocks");
+  return sidebarNavigatorDataMock(importOriginal);
+});
 
 function renderLayout(user: unknown, props: Partial<SideBarLayoutProps> = {}) {
   mockSidebarData(user);

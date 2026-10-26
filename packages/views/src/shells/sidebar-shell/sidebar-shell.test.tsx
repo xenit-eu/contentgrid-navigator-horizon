@@ -14,16 +14,18 @@ import {
   RecordingNavigationProvider,
   createRecordingNavigation,
 } from "../../navigation/recording-navigation";
-import {
-  mockSidebarData,
-  preferencesModuleMock,
-  sidebarNavigatorDataMock,
-} from "../../test-fixtures/sidebar-harness";
+import { mockSidebarData } from "../../test-fixtures/sidebar-harness";
 import { SidebarShell } from "./sidebar-shell";
 
-vi.mock("@contentgrid/features/preferences", () => preferencesModuleMock);
+vi.mock("@contentgrid/features/preferences", async () => {
+  const { preferencesModuleMock } = await import("../../test-fixtures/sidebar-mocks");
+  return preferencesModuleMock;
+});
 
-vi.mock("@contentgrid/navigator-data", sidebarNavigatorDataMock);
+vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
+  const { sidebarNavigatorDataMock } = await import("../../test-fixtures/sidebar-mocks");
+  return sidebarNavigatorDataMock(importOriginal);
+});
 
 function renderShell(initialEntry = "/", footer?: ReactNode) {
   mockSidebarData({ profile: { name: "Jane Doe", email: "jane@example.com" } });
