@@ -6,11 +6,21 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { SidebarProvider } from "@contentgrid/ui";
 import { DevAppSelectorLink } from "./dev-app-selector-link";
 
 describe("DevAppSelectorLink", () => {
+  beforeAll(() => {
+    // jsdom has no matchMedia, which the sidebar provider reads.
+    window.matchMedia ??= ((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+  });
+
   it("links to the backend selector", async () => {
     const rootRoute = createRootRoute({
       component: () => (

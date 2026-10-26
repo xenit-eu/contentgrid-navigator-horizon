@@ -5,34 +5,14 @@ import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal
 
 /**
  * What `SideBarLayout` and `SidebarShell` tests share: the one entity the sidebar lists, the
- * module mocks that keep the sidebar off the data layer, and the mocked hook results. A test file
- * still calls `vi.mock` itself (it must be hoisted) and hands it these factories:
- *
- *   vi.mock("@contentgrid/features/preferences", () => preferencesModuleMock);
- *   vi.mock("@contentgrid/navigator-data", sidebarNavigatorDataMock);
+ * and the mocked hook results. The module mocks live in `./sidebar-mocks` (no static import of
+ * `@contentgrid/navigator-data`, so a `vi.mock` factory can load them without a cycle).
  */
 export const invoiceProfile = makeProfileEntity(
   { name: "invoice", title: "Invoice", description: "" },
   "https://example.com/profile/invoices",
   "invoice",
 );
-
-export const preferencesModuleMock = {
-  useEntityDisplayPreferences: () => ({ preferences: {} }),
-  resolveEntityCardIcon: () => () => null,
-};
-
-export async function sidebarNavigatorDataMock(
-  importOriginal: () => Promise<typeof import("@contentgrid/navigator-data")>,
-) {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    useAppAuth: vi.fn(),
-    useLoadedProfileEntities: vi.fn(),
-    useCachedEntityItemCollection: () => ({ data: undefined }),
-  };
-}
 
 /** Sets the signed-in user (`null` for none) and the entities the sidebar lists. */
 export function mockSidebarData(user: unknown, profiles = [invoiceProfile]) {
