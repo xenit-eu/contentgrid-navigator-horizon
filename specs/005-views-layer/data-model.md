@@ -76,6 +76,8 @@ Provided by the host through context; only views read it, features get callback 
 | `openClassifyCreate()`                 | The general create page                                      | Arrives with the page that uses it                                                                       |
 | `openEditItem(entityName, id)`         | An item's edit form                                          | Arrives with the page that uses it                                                                       |
 
+Every function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default `false`), set by the view (see `contracts/navigation-context.md`).
+
 ## Preload signature
 
 Contract: [view-data-loading.md](contracts/view-data-loading.md).
