@@ -34,6 +34,8 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           params: { entity: entityName, itemId: id },
           search: (prev) => prev,
         }).href,
+      classifyCreate: () => router.buildLocation({ to: "/~create", search: {} }).href,
+      settings: () => router.buildLocation({ to: "/~configuration", search: {} }).href,
       createItem: (entityName: string) =>
         router.buildLocation({ to: "/$entity/~create", params: { entity: entityName }, search: {} })
           .href,
@@ -74,6 +76,10 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           () =>
             void navigate({ to: "/$entity/~create", params: { entity: entityName }, search: {} }),
         ),
+      openClassifyCreate: (options) =>
+        open(hrefs.classifyCreate, options, () => void navigate({ to: "/~create", search: {} })),
+      openSettings: (options) =>
+        open(hrefs.settings, options, () => void navigate({ to: "/~configuration", search: {} })),
       hrefFor: {
         home: hrefs.home,
         entityItemCollection: hrefs.entityItemCollection,

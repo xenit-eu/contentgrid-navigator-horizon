@@ -13,7 +13,7 @@ export interface NavigationOptions {
  * decides what happens next. Every `open*` function takes a trailing optional `NavigationOptions`; the
  * view decides, the host may ignore.
  *
- * `openClassifyCreate` and `openEditItem` are added with the pages that use them.
+ * `openEditItem` is added with the page that uses it.
  */
 export interface Navigation {
   openHome(options?: NavigationOptions): void;
@@ -22,6 +22,10 @@ export interface Navigation {
   openItem(entityName: string, id: string, options?: NavigationOptions): void;
   /** Opens the create form for an entity (a missing relation target is opened with `openInNewTab`). */
   openCreateItem(entityName: string, options?: NavigationOptions): void;
+  /** Opens the create page where the user first picks which entity to create (the sidebar's "Create Item"). */
+  openClassifyCreate(options?: NavigationOptions): void;
+  /** Opens the application's settings (the user menu's "Settings"). */
+  openSettings(options?: NavigationOptions): void;
   /**
    * The real address for each `open*` above, when the host has one to give (contract
    * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so
@@ -44,6 +48,8 @@ const noopNavigation: Navigation = {
   openEntityItemCollection: () => {},
   openItem: () => {},
   openCreateItem: () => {},
+  openClassifyCreate: () => {},
+  openSettings: () => {},
 };
 
 export function NavigationProvider({
@@ -91,16 +97,35 @@ export function ChildNavigationProvider({
   children: ReactNode;
 }>) {
   const parent = useViewNavigation();
-  const { openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor } = overrides;
+  const {
+    openHome,
+    openEntityItemCollection,
+    openItem,
+    openCreateItem,
+    openClassifyCreate,
+    openSettings,
+    hrefFor,
+  } = overrides;
   const navigation = useMemo<Navigation>(
     () => ({
       openHome: openHome ?? parent.openHome,
       openEntityItemCollection: openEntityItemCollection ?? parent.openEntityItemCollection,
       openItem: openItem ?? parent.openItem,
       openCreateItem: openCreateItem ?? parent.openCreateItem,
+      openClassifyCreate: openClassifyCreate ?? parent.openClassifyCreate,
+      openSettings: openSettings ?? parent.openSettings,
       hrefFor: hrefFor ?? parent.hrefFor,
     }),
-    [parent, openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor],
+    [
+      parent,
+      openHome,
+      openEntityItemCollection,
+      openItem,
+      openCreateItem,
+      openClassifyCreate,
+      openSettings,
+      hrefFor,
+    ],
   );
   return <NavigationProvider navigation={navigation}>{children}</NavigationProvider>;
 }

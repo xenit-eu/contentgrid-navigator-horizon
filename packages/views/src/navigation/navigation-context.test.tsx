@@ -37,6 +37,8 @@ describe("useViewNavigation", () => {
       result.current.openEntityItemCollection("invoice");
       result.current.openItem("invoice", "1");
       result.current.openCreateItem("invoice");
+      result.current.openClassifyCreate();
+      result.current.openSettings();
     }).not.toThrow();
     error.mockRestore();
     vi.unstubAllEnvs();
@@ -62,6 +64,8 @@ describe("useViewNavigation", () => {
       openEntityItemCollection: vi.fn(),
       openItem: vi.fn(),
       openCreateItem: vi.fn(),
+      openClassifyCreate: vi.fn(),
+      openSettings: vi.fn(),
     };
     render(
       <NavigationProvider navigation={navigation}>
@@ -116,12 +120,16 @@ describe("NavigationOptions", () => {
     recording.navigation.openItem("invoice", "42", { openInNewTab: true });
     recording.navigation.openCreateItem("invoice", { openInNewTab: true });
     recording.navigation.openItem("invoice", "43");
+    recording.navigation.openClassifyCreate({ openInNewTab: true });
+    recording.navigation.openSettings();
     expect(recording.calls).toEqual([
       { method: "openHome", args: [{ openInNewTab: true }] },
       { method: "openEntityItemCollection", args: ["invoice", { openInNewTab: true }] },
       { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
       { method: "openCreateItem", args: ["invoice", { openInNewTab: true }] },
       { method: "openItem", args: ["invoice", "43"] },
+      { method: "openClassifyCreate", args: [{ openInNewTab: true }] },
+      { method: "openSettings", args: [] },
     ]);
   });
 
