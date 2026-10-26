@@ -40,7 +40,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - `NavigationProvider` is supplied by the host; `useViewNavigation()` throws in development without one.
 - `ChildNavigationProvider` gives a child view its own navigation object; calls it doesn't override go to the parent's navigation.
-- `@contentgrid/views/testing` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
+- `@contentgrid/views/recording-navigation` ships `createRecordingNavigation()` and `withRecordingNavigation()` (Storybook decorator)
   for stories and tests. Assert on `calls`, never on the router.
 
 ## Testing

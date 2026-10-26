@@ -7,7 +7,7 @@ import {
   useViewNavigation,
 } from "./navigation-context";
 import type { Navigation } from "./navigation-context";
-import { createRecordingNavigation, withRecordingNavigation } from "./testing";
+import { createRecordingNavigation, withRecordingNavigation } from "./recording-navigation";
 
 function NavButtons() {
   const navigation = useViewNavigation();
