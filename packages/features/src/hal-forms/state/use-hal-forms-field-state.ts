@@ -78,8 +78,10 @@ export interface UseHalFormsFieldState {
     template: HalFormsTemplate<Spec>,
   ): HalFormValues<Spec>;
   /** Resets values/touched/focused/provenance/dismissed-error state back to the initial values
-   * this hook was seeded with. */
-  reset(): void;
+   * this hook was seeded with. Passing `initialValues` replaces that baseline first — e.g. an
+   * empty form after a continuous-create submit, so a value the form was opened with is not
+   * restored. */
+  reset(initialValues?: FieldValueMap): void;
 }
 
 function defaultValueFor(field: HalFormsField): FieldValue {
@@ -112,14 +114,15 @@ function initializeValues(
 }
 
 /**
- * Array-valued fields (`enum`/`autocomplete` with `multiValue`) are always a freshly-built
- * array, so plain `!==` would report a field as dirty forever after it's touched, even once its
- * content matches the initial value again. Mirrors `entity-item-create`'s `valuesEqual`.
+ * Whether two field values are the same. Array-valued fields (`enum`/`autocomplete` with
+ * `multiValue`) are always a freshly-built array and dates a freshly-decoded `Date`, so plain `!==`
+ * would report them as changed even when their content is equal.
  */
 function valuesEqual(a: FieldValue, b: FieldValue): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     return a.length === b.length && a.every((value, index) => value === b[index]);
   }
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
   return a === b;
 }
 
@@ -235,7 +238,10 @@ export function useHalFormsFieldState({
     }, createValues(template));
   }
 
-  function reset() {
+  function reset(nextInitialValues?: FieldValueMap) {
+    if (nextInitialValues) {
+      initialValuesRef.current = initializeValues(fields, nextInitialValues);
+    }
     setValuesState(initialValuesRef.current);
     setTouchedFields(new Set());
     setFocusedFields(new Set());

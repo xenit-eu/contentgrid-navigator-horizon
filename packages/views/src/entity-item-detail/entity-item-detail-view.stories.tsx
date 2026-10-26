@@ -3,7 +3,10 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NavigatorDataProvider } from "@contentgrid/navigator-data";
 import type { TypedFetch } from "@contentgrid/navigator-data";
-import { RecordingNavigationProvider, createRecordingNavigation } from "../navigation/testing";
+import {
+  RecordingNavigationProvider,
+  createRecordingNavigation,
+} from "../navigation/recording-navigation";
 import { PROFILE_URL, createFixtureFetch } from "../test-fixtures/item-detail";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 import { preloadEntityItemDetail } from "./preload";
@@ -22,6 +25,7 @@ function ItemDetailStoryHarness({ children }: Readonly<{ children: ReactNode }>)
   const [recording] = useState(() => createRecordingNavigation());
   const [ready, setReady] = useState(false);
   const apiFetch = fixture.fetch as unknown as TypedFetch;
+  const contentFetch = Object.assign(apiFetch, { withUploadProgress: () => apiFetch });
 
   useEffect(() => {
     void preloadEntityItemDetail(
@@ -41,7 +45,7 @@ function ItemDetailStoryHarness({ children }: Readonly<{ children: ReactNode }>)
         <QueryClientProvider client={queryClient}>
           <NavigatorDataProvider
             apiFetch={apiFetch}
-            contentFetch={apiFetch}
+            contentFetch={contentFetch}
             profileUrl={PROFILE_URL}
           >
             <RecordingNavigationProvider recording={recording}>

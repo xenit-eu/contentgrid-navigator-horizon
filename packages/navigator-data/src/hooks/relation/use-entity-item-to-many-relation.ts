@@ -35,6 +35,12 @@ export type RelationCollectionParams = RelationCollectionByUrl | RelationCollect
 
 export interface UseEntityItemToManyRelationOptions {
   readonly queryOptionsOverride?: Readonly<QueryOptionsOverride<EntityItemCollection, Error>>;
+  /**
+   * Set to `false` to keep the query from fetching, e.g. while a different view of the same
+   * relation is shown. Combined with the hook's own prerequisites — `true` never forces a
+   * fetch the hook couldn't otherwise make. Defaults to `true`.
+   */
+  readonly enabled?: boolean;
 }
 
 function isByUrl(params: RelationCollectionParams | undefined): params is RelationCollectionByUrl {
@@ -164,6 +170,7 @@ export function useEntityItemToManyRelation(
   );
 
   const mainEnabled =
+    options?.enabled !== false &&
     !!targetProfile &&
     !!mainUrl &&
     (!searchMode || (!!searchValues && internalRelationParams !== undefined));

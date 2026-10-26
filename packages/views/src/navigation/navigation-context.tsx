@@ -1,20 +1,27 @@
 import { createContext, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 
+/** Per-call hints a view passes to the host. A host that cannot honour one may ignore it. */
+export interface NavigationOptions {
+  /** Open the destination in a new browser tab instead of the current one. Default `false`. */
+  openInNewTab?: boolean;
+}
+
 /**
  * The one object a host provides for opening things (contract `navigation-context.md`). Views call
  * it instead of the router; features get callback props that their view wires to it. The host
- * decides what happens next.
+ * decides what happens next. Every `open*` function takes a trailing optional `NavigationOptions`; the
+ * view decides, the host may ignore.
  *
  * `openClassifyCreate` and `openEditItem` are added with the pages that use them.
  */
 export interface Navigation {
-  openHome(): void;
+  openHome(options?: NavigationOptions): void;
   /** Opens the entity's list, restored as the user left it. */
-  openEntityItemCollection(entityName: string): void;
-  openItem(entityName: string, id: string): void;
-  /** Opens the create form for a missing relation target (today: a new browser tab). */
-  openCreateItem(entityName: string): void;
+  openEntityItemCollection(entityName: string, options?: NavigationOptions): void;
+  openItem(entityName: string, id: string, options?: NavigationOptions): void;
+  /** Opens the create form for an entity (a missing relation target is opened with `openInNewTab`). */
+  openCreateItem(entityName: string, options?: NavigationOptions): void;
   /**
    * The real address for each `open*` above, when the host has one to give (contract
    * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so

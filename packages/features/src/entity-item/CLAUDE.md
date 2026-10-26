@@ -11,13 +11,20 @@ means in practice.
 ## Scope
 
 `entity-item` renders an entity item's attributes and relations: `EntityItemDetail`,
-`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`.
+`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. The view above owns the item
+query and passes the loaded item plus its `refetch`; edit mode is kept here
+(`edit/use-edit-context.ts`: the version being edited, which a background refetch does not change).
+`EntityItemDetail` shows `EditEntityItemButton` next to the item title, and
+`EditableEntityItemAttributes` shows the attributes or, while editing, the update form (`edit/`). On a
+version conflict the form's Refresh calls the view's `refetch`; the form then opens again on the latest
+version. When a refetch of a loaded item fails, the view keeps the item (and an open edit form) on screen.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
-`EntityItemContentFocusBody`) renders an entity item's content attribute — a PDF, or a non-PDF
-previewed through the platform's PDF rendition service — next to those same attributes and
-relations, with the production viewer toolbar. `EntityItemContentFocusBody` takes an
-already-loaded `entityItem` (its profile is `entityItem.profileEntity`) from the view above it
+`EntityItemContentFocusBody`) renders an entity item's content attribute — a PDF, an image or a
+video as stored, or any other file previewed through the platform's PDF rendition service — next
+to those same attributes and relations, with the production viewer toolbar.
+`EntityItemContentFocusBody` takes an already-loaded `entityItem` (its profile is
+`entityItem.profileEntity`) and its `refetch` from the view above it
 (`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemDetail` for any item
 with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
 in `packages/features/CLAUDE.md`).
@@ -43,9 +50,15 @@ here — both tracks may mount this view.
 entity-item-detail.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
+edit/  (edit-entity-item-container -> edit-entity-item-form;
+        edit-entity-item-button, editable-entity-item, use-edit-context)
+  -> ../../hal-forms (fields, field state), ../../problem-details, ../../unsaved-changes-guard
+  -> @contentgrid/ui, @contentgrid/navigator-data
+
 variations/content-focus/
   body/  (entity-item-content-focus-body.tsx)
-    -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel)
+    -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel,
+                     content-preview-toolbar, image-video-viewer)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
     -> entity-item's own attributes/, relations/, entity-item-detail.tsx — a sibling import
        within the same feature now, not a cross-feature one
@@ -67,13 +80,15 @@ variations/content-focus/
   import. Transformation logic (e.g. picking the default content attribute) lives here, not
   inline in a component.
 - Data access goes through `@contentgrid/navigator-data` hooks only (`useContentPreview`,
-  `useDownloadContent`, `useProfileEntity`, `useEntityItem`) — never a Layer-1 `@contentgrid/*`
+  `useDownloadContent`, `useUploadContent`, `useProfileEntity`, `useEntityItem`) — never a Layer-1 `@contentgrid/*`
   package directly.
 
 ## Deployment requirements (carries through to the app that mounts the content-focus variation)
 
 - **CSP `worker-src blob:`** — the PDF engine (`@contentgrid/ui`'s `pdf-viewer` pattern) creates
   its PDFium worker as a `blob:` module worker (research.md §8.1/§8.2 of spec 002-pdf-viewer).
+- **CSP `img-src blob:` and `media-src blob:`** — a stored image or video is shown through an
+  object URL (`image-video-viewer.tsx`).
 - **CSP `connect-src` must include the rendition service origin** whenever `renditionUri` is
   configured — non-PDF previews poll that origin via `contentFetch` (research.md §8.3).
 - **No CDN**: the PDFium WASM binary is self-hosted (`util/pdfium-wasm-url.ts` imports it as a

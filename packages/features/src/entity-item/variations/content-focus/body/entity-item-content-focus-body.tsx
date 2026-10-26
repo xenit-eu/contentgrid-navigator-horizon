@@ -6,7 +6,9 @@ import {
 } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
 import { RightSidePanelLayout } from "../../../../layout";
-import { EntityItemAttributes } from "../../../attributes/entity-item-attributes";
+import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
+import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
+import { type EditContextRefetch, noRefetch, useEditContext } from "../../../edit/use-edit-context";
 import { EntityItemDetail } from "../../../entity-item-detail";
 import type {
   RelationItemCreateHandler,
@@ -40,6 +42,11 @@ export type EntityItemContentFocusBodyProps = RelationProblemHandlers & {
   readonly onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
   /** Fired from a relation picker's "Create" button with the target entity's profile name. */
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /**
+   * Reloads the item; the view that owns the item query supplies it. After a version conflict the
+   * edit form's Refresh calls it and moves the form onto the latest version.
+   */
+  readonly refetch?: EditContextRefetch;
 };
 
 /**
@@ -53,6 +60,7 @@ export type EntityItemContentFocusBodyProps = RelationProblemHandlers & {
  */
 export function EntityItemContentFocusBody({
   entityItem,
+  refetch = noRefetch,
   onRelationItemClick,
   onRelationItemCreateNew,
   onMissingRelationTargetClick,
@@ -97,6 +105,7 @@ export function EntityItemContentFocusBody({
       entityItem={entityItem}
       attributeName={selectedAttribute}
       onSelectAttribute={setUserSelectedAttribute}
+      refetch={refetch}
       loadedProfiles={loadedProfiles}
       onRelationItemClick={handleRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
@@ -107,6 +116,7 @@ export function EntityItemContentFocusBody({
   ) : (
     <EntityItemDetail
       item={entityItem}
+      refetch={refetch}
       onRelationItemClick={handleRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
       onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -120,6 +130,7 @@ function ContentFocusEntityItemBody({
   entityItem,
   attributeName,
   onSelectAttribute,
+  refetch,
   loadedProfiles,
   onRelationItemClick,
   onRelationItemCreateNew,
@@ -132,6 +143,7 @@ function ContentFocusEntityItemBody({
    * `hasContentAttributes` being true — defensive; should not occur in practice. */
   attributeName: string | undefined;
   onSelectAttribute: (attributeName: string) => void;
+  refetch: EditContextRefetch;
   loadedProfiles: readonly ProfileEntity[];
   /** Adapter already bound to the object-shaped `onRelationItemClick` prop on the outer view —
    * `RelationToOneSection`/`RelationToManySection` (from the stable `entity-item` feature) still
@@ -145,6 +157,8 @@ function ContentFocusEntityItemBody({
     | "onBlindRelationOverwriteClick"
     | "onRequiredRelationClick"
   >) {
+  const editContext = useEditContext(entityItem, refetch);
+
   if (attributeName === undefined) {
     return null;
   }
@@ -157,10 +171,24 @@ function ContentFocusEntityItemBody({
       // body already shows above its attributes/relations (`entity-item-detail.tsx`). `sm` to fit
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
-      sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
+      sidePanelHeader={
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <EntityItemReference item={entityItem} size="sm" />
+          <EditEntityItemButton
+            item={entityItem}
+            isEditing={editContext.isEditing}
+            onEdit={() => editContext.setIsEditing(true)}
+          />
+        </div>
+      }
       sidePanel={
         <div className="space-y-6">
-          <EntityItemAttributes item={entityItem} />
+          <EditableEntityItemAttributes
+            item={editContext.editedItem ?? entityItem}
+            isEditing={editContext.isEditing}
+            onEditingChange={editContext.setIsEditing}
+            onRefresh={() => void editContext.refresh()}
+          />
           {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
             <>
               <Separator />

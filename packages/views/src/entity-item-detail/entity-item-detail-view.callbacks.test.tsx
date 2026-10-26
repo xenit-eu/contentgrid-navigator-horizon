@@ -62,7 +62,9 @@ describe("EntityItemDetailView — feature callbacks", () => {
 
     await userEvent.click(await screen.findByText("relation-create"));
 
-    expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["company"] }]);
+    expect(recording.calls).toEqual([
+      { method: "openCreateItem", args: ["company", { openInNewTab: true }] },
+    ]);
   });
 
   it.each([

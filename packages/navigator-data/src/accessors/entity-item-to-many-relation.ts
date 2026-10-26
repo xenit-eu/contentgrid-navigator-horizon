@@ -1,11 +1,14 @@
+import { infiniteQueryOptions } from "@tanstack/react-query";
 import type { Link } from "@contentgrid/hal";
 import type { HalFormsTemplate } from "@contentgrid/hal-forms";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import { createValues } from "@contentgrid/hal-forms/values";
 import type { TypedFetch } from "../api/client";
+import { fetchHalSlice } from "../api/hal-client";
 import type { RelationDeleteRequestSpec, RelationUpdateRequestSpec } from "../api/requests";
 import { queryKeys } from "../query-keys";
+import type { EntityItemShape } from "../shapes";
 import type { QueryOptionsOverride } from "../utils/query-options-override";
 import type { EntityItem } from "./entity-item";
 import { EntityItemCollection } from "./entity-item-collection";
@@ -60,6 +63,36 @@ export class EntityItemToManyRelation {
       ...base,
       queryKey: queryKeys.toManyRelation.byUrl(relationName, url),
     };
+  }
+
+  /**
+   * Infinite query options factory for a "load more" view of a to-many relation: the first
+   * page is fetched from `url` (the relation href), each further page from the previous
+   * page's HAL `next` link.
+   *
+   * Same page fetching as `EntityItemCollection.infiniteQuery`, but keyed under the
+   * `toManyRelation` namespace (see `fetchQuery`), so relation mutations invalidate it.
+   *
+   * @param apiFetch - Authenticated TypedFetch instance
+   * @param url - The relation href (from the `cg:relation` link on the source item)
+   * @param targetProfileEntity - Profile of the target entity type
+   * @param relationName - Relation name, used for the query key namespace
+   */
+  public static infiniteQuery(
+    apiFetch: TypedFetch,
+    url: string,
+    targetProfileEntity: ProfileEntity,
+    relationName: string,
+  ) {
+    return infiniteQueryOptions({
+      queryKey: queryKeys.toManyRelation.infiniteByUrl(relationName, url),
+      queryFn: async ({ pageParam }) => {
+        const slice = await fetchHalSlice<EntityItemShape>(apiFetch, new Request(pageParam ?? url));
+        return new EntityItemCollection(slice, targetProfileEntity);
+      },
+      getNextPageParam: (lastPage) => lastPage.nextHref ?? undefined,
+      initialPageParam: undefined as string | undefined,
+    });
   }
 
   // ========================================

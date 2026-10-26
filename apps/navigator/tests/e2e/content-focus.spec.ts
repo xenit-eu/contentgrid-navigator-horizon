@@ -27,7 +27,7 @@
  * credentials are required: `apps/navigator-experimental/.env.development` runs its dev server
  * against MSW-mocked HAL data with dev-token auth (`VITE_USE_MOCK_API=true` / `VITE_DEV_TOKEN`,
  * see `apps/navigator-experimental/src/main.tsx`'s `enableMocking()`), never a real backend — so
- * this spec exercises the demo fixtures registered in `apps/navigator-experimental/src/mocks/
+ * this spec exercises the demo fixtures registered in `apps/navigator-experimental/src/local-mock-backend/
  * content-focus-handlers.ts` and `rendition-handlers.ts` (T031) instead of a seeded item on a real
  * ContentGrid application. The original task wording ("log in, open the fixture item with
  * fixtures/twenty-pages.pdf") assumed a real-backend flow; that fixture file is reused here as a
@@ -83,7 +83,7 @@ test.describe("Entity item content-focus view (apps/navigator-experimental)", ()
     await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
     await expect(page.getByRole("link", { name: "doc-1" })).toBeVisible();
 
-    // The stored file is already a PDF (`isPdfMimetype`) — no rendition wait, straight to `ready`.
+    // The stored file is already a PDF — no rendition wait, straight to `ready`.
     await expect(page.getByRole("textbox", { name: "Current page" })).toHaveValue("1", {
       timeout: 15_000,
     });
@@ -161,5 +161,29 @@ test.describe("Entity item content-focus view (apps/navigator-experimental)", ()
       timeout: 15_000,
     });
     await expect(page.getByRole("button", { name: "Retry" })).not.toBeVisible();
+  });
+
+  test("shows a stored image as it is and downloads it", async ({ page }) => {
+    await page.goto(`${EXPERIMENTAL_URL}/document/doc-4`);
+
+    const image = page.getByRole("img", { name: "sample.png" });
+    await expect(image).toBeVisible({ timeout: 15_000 });
+    // Decoded by the browser, not just mounted: a broken image reports a natural width of 0.
+    await expect.poll(() => image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(48);
+    await expect(page.getByText("Converted preview")).not.toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("sample.png");
+  });
+
+  test("plays a stored video with the browser's own controls", async ({ page }) => {
+    await page.goto(`${EXPERIMENTAL_URL}/document/doc-5`);
+
+    const video = page.locator("video");
+    await expect(video).toBeVisible({ timeout: 15_000 });
+    await expect(video).toHaveAttribute("controls", "");
+    await expect(page.getByRole("button", { name: "Download" })).toBeVisible();
   });
 });

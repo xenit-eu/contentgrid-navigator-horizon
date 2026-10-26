@@ -1,6 +1,8 @@
 import { type EntityItem, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
-import { EntityItemAttributes } from "./attributes/entity-item-attributes";
+import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
+import { EditEntityItemButton } from "./edit/edit-entity-item-button";
+import { type EditContextRefetch, noRefetch, useEditContext } from "./edit/use-edit-context";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -21,6 +23,11 @@ export type EntityItemDetailProps = RelationProblemHandlers & {
   readonly onRelationItemClick?: RelationItemClickHandler;
   /** Fired from a relation picker's "Create" button with the target entity's profile name. */
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /**
+   * Reloads the item; the view that owns the item query supplies it. After a version conflict the
+   * edit form's Refresh calls it and moves the form onto the latest version.
+   */
+  readonly refetch?: EditContextRefetch;
 };
 
 /**
@@ -32,6 +39,7 @@ export type EntityItemDetailProps = RelationProblemHandlers & {
  */
 export function EntityItemDetail({
   item,
+  refetch = noRefetch,
   onRelationItemClick,
   onRelationItemCreateNew,
   onMissingRelationTargetClick,
@@ -39,15 +47,26 @@ export function EntityItemDetail({
   onRequiredRelationClick,
 }: Readonly<EntityItemDetailProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
+  const editContext = useEditContext(item, refetch);
 
   return (
     <div className="h-full min-h-0">
-      <div className="p-4">
+      <div className="flex items-center justify-between gap-2 p-4">
         <EntityItemReference item={item} size="lg" />
+        <EditEntityItemButton
+          item={item}
+          isEditing={editContext.isEditing}
+          onEdit={() => editContext.setIsEditing(true)}
+        />
       </div>
 
       <div className="space-y-6 p-4 pt-0">
-        <EntityItemAttributes item={item} />
+        <EditableEntityItemAttributes
+          item={editContext.editedItem ?? item}
+          isEditing={editContext.isEditing}
+          onEditingChange={editContext.setIsEditing}
+          onRefresh={() => void editContext.refresh()}
+        />
 
         {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
           <>

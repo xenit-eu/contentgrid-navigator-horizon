@@ -72,7 +72,7 @@ export const ContentGridProblemType = {
   REQUEST_INVALID_HEADER: `${CONTENTGRID_PROBLEM_PREFIX}invalid-request/invalid-header`,
 
   // ── Version conflict (HTTP 412) ────────────────────────────────────────────
-  /** The `If-Match` / `If-None-Match` version does not match the current one. */
+  /** An `If-Match` ETag is not the current one, or `If-None-Match: *` met an existing resource. */
   UNSATISFIED_VERSION: `${CONTENTGRID_PROBLEM_PREFIX}unsatisfied-version`,
 
   // ── Not found (HTTP 404) ───────────────────────────────────────────────────

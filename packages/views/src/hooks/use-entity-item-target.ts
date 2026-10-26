@@ -29,6 +29,8 @@ export type EntityItemTargetResult =
       readonly status: "success";
       readonly profileEntity: ProfileEntity;
       readonly entityItem: EntityItem;
+      /** Reloads the item; the view hands it to the feature's edit form for a version conflict. */
+      readonly refetch: () => Promise<{ readonly data?: EntityItem; readonly isSuccess: boolean }>;
     };
 
 /**
@@ -47,8 +49,16 @@ export function useEntityItemTarget(target: EntityItemTarget): EntityItemTargetR
   );
 
   if (profile.status !== "success") return profile;
+  // A failed background refetch keeps the loaded item (and an open edit form) on screen.
+  if (item.data) {
+    return {
+      status: "success",
+      profileEntity: profile.profileEntity,
+      entityItem: item.data,
+      refetch: item.refetch,
+    };
+  }
   if (item.isError)
     return { status: "error", error: item.error, profileEntity: profile.profileEntity };
-  if (!item.data) return { status: "pending", profileEntity: profile.profileEntity };
-  return { status: "success", profileEntity: profile.profileEntity, entityItem: item.data };
+  return { status: "pending", profileEntity: profile.profileEntity };
 }

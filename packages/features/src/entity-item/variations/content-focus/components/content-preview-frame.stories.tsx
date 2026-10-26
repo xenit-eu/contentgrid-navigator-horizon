@@ -1,3 +1,4 @@
+import { VideoCameraSlashIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ProblemDisplayModel } from "@contentgrid/navigator-data";
 import { ContentPreviewFrame } from "./content-preview-frame";
@@ -30,7 +31,11 @@ const downloadFailureProblem: ProblemDisplayModel = {
 };
 
 export const NoFile: Story = {
-  args: { state: "noFile" },
+  args: { state: "noFile", onFileChange: () => {} },
+};
+
+export const Uploading: Story = {
+  args: { state: "uploading", uploadProgress: 40 },
 };
 
 export const Loading: Story = {
@@ -91,6 +96,14 @@ export const CouldNotRetrieve: Story = {
 
 export const CannotDisplay: Story = {
   args: { state: "cannotDisplay", onDownload: () => {} },
+};
+
+export const CannotDisplayWithIcon: Story = {
+  args: {
+    state: "cannotDisplay",
+    onDownload: () => {},
+    icon: <VideoCameraSlashIcon aria-hidden />,
+  },
 };
 
 export const Protected: Story = {

@@ -378,7 +378,8 @@ function SidebarGroupLabel({
       data-sidebar="group-label"
       className={cn(
         "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-xs font-medium tracking-wider uppercase outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        // Collapsed, the label slides under the item above it; it must not take that item's clicks.
+        "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
       {...props}
@@ -452,7 +453,11 @@ const sidebarMenuButtonVariants = cva(
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
-        link: "cursor-pointer text-primary underline-offset-4 hover:bg-transparent hover:text-primary hover:underline active:bg-transparent active:text-primary data-[active=true]:border-l-transparent data-[active=true]:bg-transparent data-[active=true]:font-normal data-[active=true]:text-primary data-[active=true]:underline data-[state=open]:hover:bg-transparent data-[state=open]:hover:text-primary",
+        // The sidebar's main action: a soft primary tint with a full frame, distinct from the
+        // active entity row (sidebar accent, left border only). The frame is an outline, which
+        // takes no space, so the icon lines up with the other rows and stays centred collapsed.
+        primary:
+          "cursor-pointer rounded-md bg-primary/10 font-medium text-primary outline-1 -outline-offset-1 outline-solid outline-primary/25 transition-[width,height,padding,color,background-color] hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary",
       },
       size: {
         default: "h-9 text-sm",
