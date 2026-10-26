@@ -26,5 +26,5 @@ export type { ContentPreviewPanelProps } from "./components/content-preview-pane
 export {
   EntityItemContentFocusBody,
   entityItemContentFocusPadding,
-} from "./views/entity-item-content-focus-view";
-export type { EntityItemContentFocusBodyProps } from "./views/entity-item-content-focus-view";
+} from "./body/entity-item-content-focus-body";
+export type { EntityItemContentFocusBodyProps } from "./body/entity-item-content-focus-body";

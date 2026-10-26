@@ -10,7 +10,7 @@ import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
 import { EntityItemReference } from "./variations/entity-item-reference";
 
-export type EntityItemViewProps = RelationProblemHandlers & {
+export type EntityItemDetailProps = RelationProblemHandlers & {
   /** The loaded item (and, through it, its profile). The caller owns loading it. */
   readonly item: EntityItem;
   /**
@@ -30,14 +30,14 @@ export type EntityItemViewProps = RelationProblemHandlers & {
  * are loaded here by following the item's links. All navigation is supplied by the caller through
  * `onRelationItemClick` — this component performs none itself.
  */
-export function EntityItemView({
+export function EntityItemDetail({
   item,
   onRelationItemClick,
   onRelationItemCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<EntityItemViewProps>) {
+}: Readonly<EntityItemDetailProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
   return (

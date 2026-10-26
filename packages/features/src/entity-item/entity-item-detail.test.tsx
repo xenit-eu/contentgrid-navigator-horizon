@@ -1,5 +1,5 @@
 /**
- * Tests for `EntityItemView`: it renders an already-loaded item (no loading of its own, no
+ * Tests for `EntityItemDetail`: it renders an already-loaded item (no loading of its own, no
  * toolbar or page chrome), wires each relation section's callbacks to its own props, and fills
  * the space it is given.
  */
@@ -7,7 +7,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { EntityItemView } from "./entity-item-view";
+import { EntityItemDetail } from "./entity-item-detail";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@contentgrid/navigator-data")>()),
@@ -52,16 +52,16 @@ function makeItem(options: { toOne?: number; toMany?: number }): EntityItem {
   } as unknown as EntityItem;
 }
 
-describe("EntityItemView", () => {
+describe("EntityItemDetail", () => {
   it("renders the item's reference and attributes, and no relations section without relations", () => {
-    render(<EntityItemView item={makeItem({})} />);
+    render(<EntityItemDetail item={makeItem({})} />);
     expect(screen.getByText("reference")).toBeInTheDocument();
     expect(screen.getByText("attributes")).toBeInTheDocument();
     expect(screen.queryByText("Relations")).not.toBeInTheDocument();
   });
 
   it("fills its parent and draws no padding or toolbar of its own", () => {
-    const { container } = render(<EntityItemView item={makeItem({})} />);
+    const { container } = render(<EntityItemDetail item={makeItem({})} />);
     const root = container.firstElementChild as HTMLElement;
     expect(root).toHaveClass("h-full", "min-h-0");
     expect(root.className).not.toMatch(/\bp[xy]?-\d/);
@@ -73,7 +73,7 @@ describe("EntityItemView", () => {
     const onMissingRelationTargetClick = vi.fn();
     const onRequiredRelationClick = vi.fn();
     render(
-      <EntityItemView
+      <EntityItemDetail
         item={makeItem({ toOne: 1, toMany: 1 })}
         onRelationItemClick={onRelationItemClick}
         onRelationItemCreateNew={onRelationItemCreateNew}

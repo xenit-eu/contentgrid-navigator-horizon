@@ -1,2 +1,2 @@
-export { CreateEntityItemView } from "./create-entity-item-view";
-export type { CreateEntityItemViewProps } from "./create-entity-item-view";
+export { CreateEntityItemPanel } from "./create-entity-item-panel";
+export type { CreateEntityItemPanelProps } from "./create-entity-item-panel";

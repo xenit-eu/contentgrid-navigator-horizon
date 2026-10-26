@@ -10,7 +10,7 @@ means in practice.
 
 ## Scope
 
-`entity-item` renders an entity item's attributes and relations: `EntityItemView`,
+`entity-item` renders an entity item's attributes and relations: `EntityItemDetail`,
 `EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
@@ -18,7 +18,7 @@ Its `content-focus` variation (`variations/content-focus/`, public entry point
 previewed through the platform's PDF rendition service — next to those same attributes and
 relations, with the production viewer toolbar. `EntityItemContentFocusBody` takes an
 already-loaded `entityItem` (its profile is `entityItem.profileEntity`) from the view above it
-(`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemView` for any item
+(`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemDetail` for any item
 with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
 in `packages/features/CLAUDE.md`).
 
@@ -34,20 +34,20 @@ importing `EntityItemContentFocusBody` the way `x-stability` prevents importing 
 **Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusBody`
 was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
 both apps' `$entity/$itemId.tsx` item routes, through the item detail view in `packages/views`;
-the view itself falls back to plain `EntityItemView` per item for FR-001. There is no longer an "experimental-only" convention to enforce
+the view itself falls back to plain `EntityItemDetail` per item for FR-001. There is no longer an "experimental-only" convention to enforce
 here — both tracks may mount this view.
 
 ## Layering (spec-001 `feature-layer-imports.md`)
 
 ```
-entity-item-view.tsx, attributes/, relations/
+entity-item-detail.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 variations/content-focus/
-  views/  (entity-item-content-focus-view.tsx)
+  body/  (entity-item-content-focus-body.tsx)
     -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
-    -> entity-item's own attributes/, relations/, entity-item-view.tsx — a sibling import
+    -> entity-item's own attributes/, relations/, entity-item-detail.tsx — a sibling import
        within the same feature now, not a cross-feature one
     -> ../../../layout's `RightSidePanelLayout` (imported the same way as this feature's other
        layouts, `BreadCrumbsToolBarLayout`/`PageLayout`) — moved there from this variation's own
@@ -59,7 +59,7 @@ variations/content-focus/
   util               -> @contentgrid/navigator-data only — no UI, no React components
 ```
 
-- `variations/content-focus/views/entity-item-content-focus-view.tsx` (`EntityItemContentFocusBody`)
+- `variations/content-focus/body/entity-item-content-focus-body.tsx` (`EntityItemContentFocusBody`)
   takes the loaded `entityItem` plus relation callbacks, and no toolbar, breadcrumb or link
   render props: its view loads the main object once and draws the chrome (ADR-018; this
   supersedes the earlier "primitives only" rule of spec `002-pdf-viewer`).

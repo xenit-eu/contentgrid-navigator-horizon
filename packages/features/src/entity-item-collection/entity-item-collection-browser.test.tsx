@@ -1,5 +1,5 @@
 /**
- * Tests for EntityItemCollectionView's `pageUrl` / `filters` reconciliation.
+ * Tests for EntityItemCollectionBrowser's `pageUrl` / `filters` reconciliation.
  *
  * Covers the bug this session fixed: a remembered `pageUrl` carries whichever filters were
  * active when it was fetched, baked into its own query string. If that DIFFERS from the current
@@ -23,7 +23,7 @@ import {
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../test-setup";
 import { useEntityDisplayPreferencesStore } from "../preferences";
-import { EntityItemCollectionView } from "./entity-item-collection-view";
+import { EntityItemCollectionBrowser } from "./entity-item-collection-browser";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile/items`;
@@ -133,7 +133,7 @@ function makeItemProfile(): ProfileEntity {
 }
 
 // A distinguishable ITEM COUNT via `total_items_exact`, so the rendered "N items" subtitle
-// (from EntityItemCollectionView's own `PageTitle`, built from `collection.totalItems`) tells us
+// (from EntityItemCollectionBrowser's own `PageTitle`, built from `collection.totalItems`) tells us
 // unambiguously which response actually got used.
 function collectionBody(itemCount: number) {
   const items = Array.from({ length: itemCount }, (_, i) => ({
@@ -190,10 +190,10 @@ function renderCollectionView(props: {
     );
   }
 
-  return render(<EntityItemCollectionView {...props} />, { wrapper: Wrapper });
+  return render(<EntityItemCollectionBrowser {...props} />, { wrapper: Wrapper });
 }
 
-describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => {
+describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () => {
   it("fetches via searchValues when no pageUrl is given", async () => {
     setupCollectionHandler();
 
@@ -285,7 +285,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
   });
 });
 
-describe("EntityItemCollectionView — Columns selector", () => {
+describe("EntityItemCollectionBrowser — Columns selector", () => {
   afterEach(() => {
     localStorage.clear();
     useEntityDisplayPreferencesStore.setState({ overrides: {} });
@@ -359,7 +359,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
   });
 });
 
-describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
+describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () => {
   it("renders a labeled input for every search property when Filters opens", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();

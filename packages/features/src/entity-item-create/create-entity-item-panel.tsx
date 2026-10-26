@@ -6,7 +6,7 @@ import type { RelationConflictAlertProps, ValidationAlertProps } from "../proble
 import { useUnsavedChangesGuard } from "../unsaved-changes-guard";
 import { CreateEntityItemContainer } from "./create-entity-item-container";
 
-export interface CreateEntityItemViewProps {
+export interface CreateEntityItemPanelProps {
   readonly profile: ProfileEntity;
   /** Fired after the item is created, once any unsaved-changes block has been lifted. */
   readonly onCreated?: (item: EntityItem) => void;
@@ -38,7 +38,7 @@ export interface CreateEntityItemViewProps {
  * supplied by the caller through `onCreated` and `onCancel` — this component
  * performs no navigation itself.
  */
-export function CreateEntityItemView({
+export function CreateEntityItemPanel({
   profile,
   onCreated,
   onCancel,
@@ -50,7 +50,7 @@ export function CreateEntityItemView({
   onExpectedTypeClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<CreateEntityItemViewProps>) {
+}: Readonly<CreateEntityItemPanelProps>) {
   const [isDirty, setIsDirty] = useState(false);
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
 

@@ -4,7 +4,7 @@
  * Architecture note — why this lives under `apps/navigator/tests/e2e/` but does NOT use
  * `./fixtures`'s `login`/`selectSidebarEntity`/`isSmallViewport`, and targets a second app:
  *
- * `EntityItemContentFocusView` (`@contentgrid/features/entity-item`, the `content-focus`
+ * `EntityItemContentFocusBody` (`@contentgrid/features/entity-item`, the `content-focus`
  * variation) is `x-stability: "experimental"` and is mounted only by `apps/navigator-experimental`
  * (`packages/features/src/entity-item/CLAUDE.md`). `apps/navigator` (this app) is the
  * generic, stable-only track — its own `CLAUDE.md` forbids importing experimental features, so

@@ -33,7 +33,7 @@ import {
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
-export interface EntityItemCollectionViewProps {
+export interface EntityItemCollectionBrowserProps {
   readonly profile: ProfileEntity;
   /**
    * URL of the collection page to display — e.g. a cursor page resolved from
@@ -75,7 +75,7 @@ export interface EntityItemCollectionViewProps {
  * by this view; it's fine to remove it or its own `TypeaheadTextFilter` next, but neither is
  * touched here.
  */
-export function EntityItemCollectionView({
+export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
@@ -84,7 +84,7 @@ export function EntityItemCollectionView({
   onFiltersChange,
   currentSort,
   onSortChange,
-}: Readonly<EntityItemCollectionViewProps>) {
+}: Readonly<EntityItemCollectionBrowserProps>) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
     () =>
