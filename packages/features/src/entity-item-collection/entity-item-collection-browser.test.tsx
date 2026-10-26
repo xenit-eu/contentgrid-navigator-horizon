@@ -22,8 +22,18 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../test-setup";
-import { useEntityDisplayPreferencesStore } from "../preferences";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../user-preferences";
 import { EntityItemCollectionBrowser } from "./entity-item-collection-browser";
+
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile/items`;
@@ -179,13 +189,15 @@ function renderBrowser(props: {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }
@@ -288,7 +300,7 @@ describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () 
 describe("EntityItemCollectionBrowser — Columns selector", () => {
   afterEach(() => {
     localStorage.clear();
-    useEntityDisplayPreferencesStore.setState({ overrides: {} });
+    preferencesStore = createTestPreferencesStore();
   });
 
   it("renders a Columns button next to Filters", async () => {
@@ -325,7 +337,7 @@ describe("EntityItemCollectionBrowser — Columns selector", () => {
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
 
-    expect(useEntityDisplayPreferencesStore.getState().overrides).toEqual({});
+    expect(preferencesStore.getState().overrides).toEqual({});
   });
 
   it("resets the local column selection on remount", async () => {

@@ -21,8 +21,15 @@ import {
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../../user-preferences";
 import { relationLayoutForPane, useRelationLayout } from "./relation-layout";
 import { RelationToManySection } from "./relation-to-many-section";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
@@ -250,13 +257,15 @@ function renderSection(
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }

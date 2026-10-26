@@ -1,7 +1,7 @@
 import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { ItemReference } from "@contentgrid/ui";
-import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../../preferences";
+import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../../user-preferences";
 import { AttributeValueRenderer } from "../../attributes/renderers/attribute-value-renderer";
 
 export interface EntityItemReferenceProps {

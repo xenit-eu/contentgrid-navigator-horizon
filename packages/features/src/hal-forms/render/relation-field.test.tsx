@@ -12,9 +12,16 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../../test-setup";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../../user-preferences";
 import type { HalFormsField } from "../model/hal-forms-field";
 import { resolveHalFormsFields } from "../model/resolve-hal-forms-fields";
 import { RelationField } from "./relation-field";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 const API_URL = "https://api.example.com";
 const ROOT_PROFILE_URL = `${API_URL}/profile`;
@@ -186,13 +193,15 @@ function makeWrapper() {
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={ROOT_PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={ROOT_PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }

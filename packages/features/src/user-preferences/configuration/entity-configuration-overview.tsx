@@ -20,8 +20,8 @@ import {
   ThemeSelector,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../../layout";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
 import { useEntityDisplayPreferences } from "../use-entity-display-preferences";
+import { useEntityDisplayPreferencesStore } from "../user-preferences-context";
 
 export interface EntityConfigurationOverviewProps {
   readonly onSelectEntity: (profile: ProfileEntity) => void;

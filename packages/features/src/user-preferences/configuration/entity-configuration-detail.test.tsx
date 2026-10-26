@@ -17,8 +17,14 @@ import {
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { server } from "../../../test-setup";
 import { makeSearchBarWrapper } from "../../test-utils/search-bar-wrapper";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
+import { UserPreferencesProvider, createMemoryStorage, createUserPreferencesStore } from "../index";
 import { EntityConfigurationDetail } from "./entity-configuration-detail";
+
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
@@ -89,13 +95,15 @@ function renderDetail(onClose = vi.fn()) {
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }
@@ -107,7 +115,7 @@ function renderDetail(onClose = vi.fn()) {
 
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  preferencesStore = createTestPreferencesStore();
 });
 
 describe("EntityConfigurationDetail", () => {
@@ -164,10 +172,9 @@ describe("EntityConfigurationDetail", () => {
     await user.click(screen.getByRole("option", { name: /^Invoice Number/ }));
 
     await waitFor(() =>
-      expect(
-        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice
-          ?.subtitleAttribute,
-      ).toBe("invoice_number"),
+      expect(preferencesStore.getState().overrides[PROFILE_URL]?.invoice?.subtitleAttribute).toBe(
+        "invoice_number",
+      ),
     );
   });
 
@@ -192,7 +199,7 @@ describe("EntityConfigurationDetail", () => {
   });
 
   it("persists a visible-columns override for a chosen audit attribute", async () => {
-    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+    preferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
       visibleColumns: [],
     });
     const user = userEvent.setup();
@@ -202,16 +209,16 @@ describe("EntityConfigurationDetail", () => {
     await user.click(screen.getByRole("checkbox", { name: /^Created By/ }));
 
     await waitFor(() =>
-      expect(
-        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns,
-      ).toEqual(["created_by"]),
+      expect(preferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns).toEqual([
+        "created_by",
+      ]),
     );
   });
 
   it("persists a visible-columns override when an option is chosen", async () => {
     // Start from an explicit empty override rather than relying on the heuristic
     // default (which may already mark columns visible), so the checkbox starts unchecked.
-    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+    preferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
       visibleColumns: [],
     });
     const user = userEvent.setup();
@@ -221,9 +228,9 @@ describe("EntityConfigurationDetail", () => {
     await user.click(screen.getByRole("checkbox", { name: /^Invoice Number/ }));
 
     await waitFor(() =>
-      expect(
-        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns,
-      ).toEqual(["invoice_number"]),
+      expect(preferencesStore.getState().overrides[PROFILE_URL]?.invoice?.visibleColumns).toEqual([
+        "invoice_number",
+      ]),
     );
   });
 
@@ -237,9 +244,7 @@ describe("EntityConfigurationDetail", () => {
     await user.click(await screen.findByTitle("Folder"));
 
     await waitFor(() =>
-      expect(
-        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.icon,
-      ).toBe("Folder"),
+      expect(preferencesStore.getState().overrides[PROFILE_URL]?.invoice?.icon).toBe("Folder"),
     );
   });
 
@@ -253,9 +258,9 @@ describe("EntityConfigurationDetail", () => {
     await user.click(screen.getByTitle("Green"));
 
     await waitFor(() =>
-      expect(
-        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.color,
-      ).toBe("oklch(0.55 0.17 155)"),
+      expect(preferencesStore.getState().overrides[PROFILE_URL]?.invoice?.color).toBe(
+        "oklch(0.55 0.17 155)",
+      ),
     );
   });
 });
@@ -298,9 +303,8 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
 
     await waitFor(() => {
       const saved =
-        useEntityDisplayPreferencesStore.getState().overrides[SEARCH_BAR_PROFILE_ROOT_URL]?.[
-          "search-bar"
-        ]?.searchAttributes;
+        preferencesStore.getState().overrides[SEARCH_BAR_PROFILE_ROOT_URL]?.["search-bar"]
+          ?.searchAttributes;
       expect(saved).toBeDefined();
       expect(saved).not.toContain("reference");
       expect(saved).toContain("title");
@@ -309,7 +313,7 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
 
   it("shows nothing checked for an empty list", async () => {
     const user = userEvent.setup();
-    useEntityDisplayPreferencesStore
+    preferencesStore
       .getState()
       .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", { searchAttributes: [] });
     renderSearchBarDetail();
@@ -323,11 +327,9 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
 
   it("checks only the saved names that are searchable attributes", async () => {
     const user = userEvent.setup();
-    useEntityDisplayPreferencesStore
-      .getState()
-      .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", {
-        searchAttributes: ["id", "renamed_away", "title"],
-      });
+    preferencesStore.getState().setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", {
+      searchAttributes: ["id", "renamed_away", "title"],
+    });
     renderSearchBarDetail();
 
     await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));

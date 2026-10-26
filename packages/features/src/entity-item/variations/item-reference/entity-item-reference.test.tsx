@@ -14,8 +14,18 @@ import {
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../../../test-setup";
-import { useEntityDisplayPreferencesStore } from "../../../preferences";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../../../user-preferences";
 import { EntityItemReference, EntityItemReferenceLoading } from "./entity-item-reference";
+
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile/widgets`;
@@ -108,13 +118,15 @@ function makeWrapper() {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }
@@ -136,7 +148,7 @@ async function fetchItems(): Promise<[EntityItem, EntityItem]> {
 
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  preferencesStore = createTestPreferencesStore();
 });
 
 describe("EntityItemReference", () => {
@@ -157,9 +169,7 @@ describe("EntityItemReference", () => {
 
   it("renders the subtitle attribute when one is configured and the item has a value", async () => {
     const [itemA] = await fetchItems();
-    useEntityDisplayPreferencesStore
-      .getState()
-      .setOverride(PROFILE_URL, "widget", { subtitleAttribute: "email" });
+    preferencesStore.getState().setOverride(PROFILE_URL, "widget", { subtitleAttribute: "email" });
 
     render(<EntityItemReference item={itemA} />, { wrapper: makeWrapper() });
 

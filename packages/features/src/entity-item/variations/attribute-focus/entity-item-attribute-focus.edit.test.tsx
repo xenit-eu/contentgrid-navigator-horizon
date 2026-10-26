@@ -23,7 +23,14 @@ import {
   makeAllAttributeItem,
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
 import { server } from "../../../../test-setup";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../../../user-preferences";
 import { EntityItemAttributeFocus } from "./entity-item-attribute-focus";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 const PROFILE_URL = "https://api.example.contentgrid.com/profile";
@@ -62,13 +69,15 @@ function renderItemPage(
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <NavigatorDataProvider
-        apiFetch={createApiClient(noopSupplier)}
-        contentFetch={createContentClient(noopSupplier)}
-        profileUrl={PROFILE_URL}
-      >
-        <RouterProvider router={router} />
-      </NavigatorDataProvider>
+      <UserPreferencesProvider store={preferencesStore}>
+        <NavigatorDataProvider
+          apiFetch={createApiClient(noopSupplier)}
+          contentFetch={createContentClient(noopSupplier)}
+          profileUrl={PROFILE_URL}
+        >
+          <RouterProvider router={router} />
+        </NavigatorDataProvider>
+      </UserPreferencesProvider>
     </QueryClientProvider>,
   );
   return { queryClient, itemRequests: () => itemRequests };

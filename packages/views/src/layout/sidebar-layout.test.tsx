@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockSidebarData } from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
-vi.mock("@contentgrid/features/preferences", async () => {
+vi.mock("@contentgrid/features/user-preferences", async () => {
   const { preferencesModuleMock } = await import("../test-fixtures/sidebar-mocks");
   return preferencesModuleMock;
 });

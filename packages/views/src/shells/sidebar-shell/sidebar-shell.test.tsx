@@ -16,7 +16,7 @@ import {
 import { mockSidebarData } from "../../test-fixtures/sidebar-harness";
 import { SidebarShell } from "./sidebar-shell";
 
-vi.mock("@contentgrid/features/preferences", async () => {
+vi.mock("@contentgrid/features/user-preferences", async () => {
   const { preferencesModuleMock } = await import("../../test-fixtures/sidebar-mocks");
   return preferencesModuleMock;
 });

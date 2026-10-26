@@ -19,7 +19,11 @@ import {
   EntityItemReference,
   TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
 } from "../entity-item";
-import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
+import {
+  type ColumnVisibilityConfig,
+  buildColumns,
+  useColumnVisibility,
+} from "../user-preferences";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;

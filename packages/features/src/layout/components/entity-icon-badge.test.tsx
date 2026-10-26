@@ -10,7 +10,11 @@ import {
   createContentClient,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { useEntityDisplayPreferencesStore } from "../../preferences/entity-display-preferences-store";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../../user-preferences";
 import { EntityIconBadge } from "./entity-icon-badge";
 
 const API_URL = "https://api.example.com";
@@ -63,13 +67,15 @@ function renderEntityIconBadge(props: Omit<Parameters<typeof EntityIconBadge>[0]
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }
@@ -77,9 +83,15 @@ function renderEntityIconBadge(props: Omit<Parameters<typeof EntityIconBadge>[0]
   return render(<EntityIconBadge profile={profile} {...props} />, { wrapper: Wrapper });
 }
 
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
+
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  preferencesStore = createTestPreferencesStore();
 });
 
 describe("EntityIconBadge", () => {
@@ -133,7 +145,7 @@ describe("EntityIconBadge", () => {
   });
 
   it("tints the background with the entity's overridden color", () => {
-    useEntityDisplayPreferencesStore
+    preferencesStore
       .getState()
       .setOverride(PROFILE_URL, "invoice", { color: "oklch(0.55 0.17 155)" });
 

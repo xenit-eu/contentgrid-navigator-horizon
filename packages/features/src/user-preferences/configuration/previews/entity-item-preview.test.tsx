@@ -11,8 +11,11 @@ import {
   createContentClient,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import { UserPreferencesProvider, createMemoryStorage, createUserPreferencesStore } from "../..";
 import { server } from "../../../../test-setup";
 import { EntityItemPreview } from "./entity-item-preview";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile/widgets`;
@@ -68,13 +71,15 @@ function renderPreview(profile: ProfileEntity) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }

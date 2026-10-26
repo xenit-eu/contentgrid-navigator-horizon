@@ -1,70 +1,95 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import {
+  USER_PREFERENCES_STORAGE_KEY,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "./entity-display-preferences-store";
 
 const PROFILE_URL_A = "https://a.example.com/profile";
 const PROFILE_URL_B = "https://b.example.com/profile";
 
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} });
 });
 
-describe("useEntityDisplayPreferencesStore", () => {
+function newStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+describe("createUserPreferencesStore", () => {
   it("starts with no overrides", () => {
-    expect(useEntityDisplayPreferencesStore.getState().overrides).toEqual({});
+    expect(newStore().getState().overrides).toEqual({});
   });
 
-  it("setOverride stores a partial override for one entity on one backend", () => {
-    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL_A, "invoice", {
-      color: "blue",
-    });
+  it("stores a per-backend, per-entity override", () => {
+    const store = newStore();
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
 
-    expect(useEntityDisplayPreferencesStore.getState().overrides).toEqual({
+    expect(store.getState().overrides).toEqual({
       [PROFILE_URL_A]: { invoice: { color: "blue" } },
     });
   });
 
-  it("setOverride merges into an existing override rather than replacing it", () => {
-    const { setOverride } = useEntityDisplayPreferencesStore.getState();
-    setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
-    setOverride(PROFILE_URL_A, "invoice", { icon: "file" });
+  it("merges successive partial overrides for the same entity", () => {
+    const store = newStore();
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { icon: "Receipt" });
 
-    expect(useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL_A].invoice).toEqual({
+    expect(store.getState().overrides[PROFILE_URL_A].invoice).toEqual({
       color: "blue",
-      icon: "file",
+      icon: "Receipt",
     });
   });
 
-  it("scopes overrides per backend — same entity name, different profileUrl", () => {
-    const { setOverride } = useEntityDisplayPreferencesStore.getState();
-    setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
-    setOverride(PROFILE_URL_B, "invoice", { color: "red" });
+  it("keeps backends separate", () => {
+    const store = newStore();
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
+    store.getState().setOverride(PROFILE_URL_B, "invoice", { color: "red" });
 
-    const { overrides } = useEntityDisplayPreferencesStore.getState();
-    expect(overrides[PROFILE_URL_A].invoice.color).toBe("blue");
-    expect(overrides[PROFILE_URL_B].invoice.color).toBe("red");
+    const { overrides } = store.getState();
+    expect(overrides[PROFILE_URL_A].invoice).toEqual({ color: "blue" });
+    expect(overrides[PROFILE_URL_B].invoice).toEqual({ color: "red" });
   });
 
-  it("clearOverride removes all overridden fields for one entity, leaving other entities intact", () => {
-    const { setOverride, clearOverride } = useEntityDisplayPreferencesStore.getState();
-    setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
-    setOverride(PROFILE_URL_A, "customer", { color: "green" });
+  it("clears every override of one entity without touching the others", () => {
+    const store = newStore();
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
+    store.getState().setOverride(PROFILE_URL_A, "customer", { color: "green" });
+    store.getState().clearOverride(PROFILE_URL_A, "invoice");
 
-    clearOverride(PROFILE_URL_A, "invoice");
-
-    const { overrides } = useEntityDisplayPreferencesStore.getState();
+    const { overrides } = store.getState();
     expect(overrides[PROFILE_URL_A].invoice).toBeUndefined();
     expect(overrides[PROFILE_URL_A].customer).toEqual({ color: "green" });
   });
 
-  it("persists overrides to localStorage", () => {
-    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL_A, "invoice", {
-      color: "blue",
+  it("persists to the injected storage under the unchanged key", () => {
+    const storage = createMemoryStorage();
+    const store = createUserPreferencesStore({ storage });
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
+
+    expect(USER_PREFERENCES_STORAGE_KEY).toBe("contentgrid-entity-display-preferences");
+    const raw = storage.getItem(USER_PREFERENCES_STORAGE_KEY) as string;
+    expect(JSON.parse(raw).state.overrides[PROFILE_URL_A].invoice.color).toBe("blue");
+    expect(localStorage.getItem(USER_PREFERENCES_STORAGE_KEY)).toBeNull();
+  });
+
+  it("loads overrides persisted by an earlier session", () => {
+    const stored = JSON.stringify({
+      state: { overrides: { [PROFILE_URL_A]: { invoice: { color: "blue" } } } },
+      version: 0,
+    });
+    const store = createUserPreferencesStore({
+      storage: createMemoryStorage({ [USER_PREFERENCES_STORAGE_KEY]: stored }),
     });
 
-    const raw = localStorage.getItem("contentgrid-entity-display-preferences");
-    expect(raw).not.toBeNull();
-    const parsed = JSON.parse(raw!);
-    expect(parsed.state.overrides[PROFILE_URL_A].invoice.color).toBe("blue");
+    expect(store.getState().overrides[PROFILE_URL_A].invoice).toEqual({ color: "blue" });
+  });
+
+  it("uses localStorage by default", () => {
+    const store = createUserPreferencesStore();
+    store.getState().setOverride(PROFILE_URL_A, "invoice", { color: "blue" });
+
+    const raw = localStorage.getItem(USER_PREFERENCES_STORAGE_KEY);
+    expect(JSON.parse(raw!).state.overrides[PROFILE_URL_A].invoice.color).toBe("blue");
   });
 });

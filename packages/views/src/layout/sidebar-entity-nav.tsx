@@ -2,7 +2,7 @@ import { BracketsSquareIcon, StackIcon } from "@phosphor-icons/react";
 import {
   resolveEntityCardIcon,
   useEntityDisplayPreferences,
-} from "@contentgrid/features/preferences";
+} from "@contentgrid/features/user-preferences";
 import { type ProfileEntity, useCachedEntityItemCollection } from "@contentgrid/navigator-data";
 import {
   SidebarGroup,

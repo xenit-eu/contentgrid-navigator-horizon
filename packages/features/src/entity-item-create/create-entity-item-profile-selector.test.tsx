@@ -18,7 +18,14 @@ import {
   profileRootWithTwoEntitiesHandler,
 } from "@contentgrid/navigator-data/test-fixtures/msw/entity-browser-fixtures";
 import { server } from "../../test-setup";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../user-preferences";
 import { CreateEntityItemProfileSelector } from "./create-entity-item-profile-selector";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
@@ -28,13 +35,15 @@ function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
   );
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigatorDataProvider
-        apiFetch={createApiClient(noopSupplier)}
-        contentFetch={createContentClient(noopSupplier)}
-        profileUrl={PROFILE_URL}
-      >
-        {children}
-      </NavigatorDataProvider>
+      <UserPreferencesProvider store={preferencesStore}>
+        <NavigatorDataProvider
+          apiFetch={createApiClient(noopSupplier)}
+          contentFetch={createContentClient(noopSupplier)}
+          profileUrl={PROFILE_URL}
+        >
+          {children}
+        </NavigatorDataProvider>
+      </UserPreferencesProvider>
     </QueryClientProvider>
   );
 }

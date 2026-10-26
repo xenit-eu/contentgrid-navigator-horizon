@@ -14,7 +14,7 @@ import {
   ThemeSelector,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../../layout";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
+import { useEntityDisplayPreferencesStore } from "../user-preferences-context";
 import { EntityConfigurationDetail } from "./entity-configuration-detail";
 import { type EntityConfigurationOverviewProps } from "./entity-configuration-overview";
 

@@ -12,7 +12,7 @@ import {
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
+import { UserPreferencesProvider, createMemoryStorage, createUserPreferencesStore } from "../index";
 import { EntityConfigurationOverviewTabbed } from "./entity-configuration-overview-tabbed";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
@@ -83,13 +83,15 @@ function renderOverview(onSelectEntity: (profile: ProfileEntity) => void = vi.fn
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }
@@ -99,9 +101,15 @@ function renderOverview(onSelectEntity: (profile: ProfileEntity) => void = vi.fn
   });
 }
 
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
+
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  preferencesStore = createTestPreferencesStore();
   vi.mocked(useLoadedProfileEntities).mockReset();
 });
 

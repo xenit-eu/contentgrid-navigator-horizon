@@ -1,0 +1,44 @@
+import { type ReactNode, useState } from "react";
+import { withThemeByClassName } from "@storybook/addon-themes";
+import type { Preview } from "@storybook/react-vite";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "@contentgrid/features/user-preferences";
+import "../src/storybook.css";
+
+// Stories never persist user preferences: each story gets its own in-memory store.
+function InMemoryUserPreferences({ children }: { children: ReactNode }) {
+  const [store] = useState(() => createUserPreferencesStore({ storage: createMemoryStorage() }));
+  return <UserPreferencesProvider store={store}>{children}</UserPreferencesProvider>;
+}
+
+const preview: Preview = {
+  parameters: {
+    layout: "centered",
+    a11y: {
+      // Mirror the CI axe ruleset: WCAG 2.x A/AA + 2.1 A/AA.
+      config: {
+        runOnly: {
+          type: "tag",
+          values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+        },
+      },
+    },
+  },
+  decorators: [
+    (Story) => (
+      <InMemoryUserPreferences>
+        <Story />
+      </InMemoryUserPreferences>
+    ),
+    withThemeByClassName({
+      themes: { light: "", dark: "dark" },
+      defaultTheme: "light",
+      parentSelector: "html",
+    }),
+  ],
+};
+
+export default preview;

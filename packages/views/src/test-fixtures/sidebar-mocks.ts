@@ -4,7 +4,7 @@ import { vi } from "vitest";
  * Module-mock factories for the sidebar tests, which keep the sidebar off the data layer. A test
  * file calls `vi.mock` itself (it must be hoisted) and loads these lazily:
  *
- *   vi.mock("@contentgrid/features/preferences", async () => (await import(path)).preferencesModuleMock);
+ *   vi.mock("@contentgrid/features/user-preferences", async () => (await import(path)).preferencesModuleMock);
  *   vi.mock("@contentgrid/navigator-data", async (original) =>
  *     (await import(path)).sidebarNavigatorDataMock(original));
  */

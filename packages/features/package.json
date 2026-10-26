@@ -56,9 +56,9 @@
       "import": "./src/search/index.ts",
       "types": "./src/search/index.ts"
     },
-    "./preferences": {
-      "import": "./src/preferences/index.ts",
-      "types": "./src/preferences/index.ts"
+    "./user-preferences": {
+      "import": "./src/user-preferences/index.ts",
+      "types": "./src/user-preferences/index.ts"
     },
     "./entity-item-create": {
       "import": "./src/entity-item-create/index.ts",

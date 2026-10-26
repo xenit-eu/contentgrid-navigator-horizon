@@ -23,8 +23,8 @@ import {
   RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
-import { useEntityDisplayPreferences } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
+import { useEntityDisplayPreferences } from "../../user-preferences";
 import { EntityItemAttributeSummary } from "../variations/attribute-summary/entity-item-attribute-summary";
 import { EntityItemReference } from "../variations/item-reference/entity-item-reference";
 import type {

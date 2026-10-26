@@ -20,7 +20,6 @@ import {
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { EntitySearchBar } from "../entity-search-bar";
 import { type FieldState, resolveHalFormsFields } from "../hal-forms";
-import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
   buildCollectionSearchValues,
   encodeFilterValue,
@@ -31,6 +30,7 @@ import {
   findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
+import { toAttributeOption, useColumnVisibility } from "../user-preferences";
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 

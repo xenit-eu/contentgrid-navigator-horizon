@@ -1,5 +1,5 @@
 /**
- * @contentgrid/features/preferences
+ * @contentgrid/features/user-preferences
  *
  * Entity display preferences: icon, color, cardStyle, nameAttribute, visibleColumns,
  * searchAttributes.
@@ -9,6 +9,9 @@
  *
  * `useEntityDisplayPreferences` is the single entry point for reading and writing these
  * preferences; `useColumnVisibility` is a thin wrapper over it for the collection-view case.
+ *
+ * The store is created by the app at startup (`createUserPreferencesStore`, `localStorage` by
+ * default) and provided with `UserPreferencesProvider`; the hooks throw without one.
  *
  * `EntityConfigurationOverview` + `EntityConfigurationDetail` (`~configuration`,
  * `~configuration/$entity`) are the entry point for users to edit these preferences — an
@@ -29,13 +32,26 @@ export type { ColumnVisibilityConfig } from "./use-column-visibility";
 export { toAttributeOption } from "./attribute-options";
 export { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 export type { UseEntityDisplayPreferencesResult } from "./use-entity-display-preferences";
-export { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+export {
+  createUserPreferencesStore,
+  createMemoryStorage,
+  USER_PREFERENCES_STORAGE_KEY,
+} from "./entity-display-preferences-store";
+export type {
+  CreateUserPreferencesStoreOptions,
+  UserPreferencesStoreApi,
+} from "./entity-display-preferences-store";
+export {
+  UserPreferencesProvider,
+  useEntityDisplayPreferencesStore,
+} from "./user-preferences-context";
+export type { UserPreferencesProviderProps } from "./user-preferences-context";
 export { resolveEntityCardIcon } from "./resolve-entity-icon";
 export {
   EntityConfigurationOverview,
   EntityConfigurationCard,
-} from "./views/entity-configuration-overview";
-export type { EntityConfigurationOverviewProps } from "./views/entity-configuration-overview";
-export { EntityConfigurationOverviewTabbed } from "./views/entity-configuration-overview-tabbed";
-export { EntityConfigurationDetail } from "./views/entity-configuration-detail";
-export type { EntityConfigurationDetailProps } from "./views/entity-configuration-detail";
+} from "./configuration/entity-configuration-overview";
+export type { EntityConfigurationOverviewProps } from "./configuration/entity-configuration-overview";
+export { EntityConfigurationOverviewTabbed } from "./configuration/entity-configuration-overview-tabbed";
+export { EntityConfigurationDetail } from "./configuration/entity-configuration-detail";
+export type { EntityConfigurationDetailProps } from "./configuration/entity-configuration-detail";

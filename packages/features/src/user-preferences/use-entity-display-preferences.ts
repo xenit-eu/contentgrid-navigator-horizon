@@ -6,7 +6,7 @@ import {
   useEntityDisplayDefaults,
   useNavigatorData,
 } from "@contentgrid/navigator-data";
-import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import { useEntityDisplayPreferencesStore } from "./user-preferences-context";
 
 export interface UseEntityDisplayPreferencesResult {
   /** Fully merged preferences: user override > backend default > heuristic default. */

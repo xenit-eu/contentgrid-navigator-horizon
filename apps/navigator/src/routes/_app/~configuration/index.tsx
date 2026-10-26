@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { EntityConfigurationOverview } from "@contentgrid/features/preferences";
+import { EntityConfigurationOverview } from "@contentgrid/features/user-preferences";
 import { PageLayout } from "@contentgrid/views/layout";
 
 export const Route = createFileRoute("/_app/~configuration/")({

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { EntityConfigurationDetail } from "@contentgrid/features/preferences";
+import { EntityConfigurationDetail } from "@contentgrid/features/user-preferences";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,

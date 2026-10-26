@@ -1,16 +1,24 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
+  type EntityDisplayPreferences,
   NavigatorDataProvider,
   createApiClient,
   createContentClient,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import { UserPreferencesProvider, createMemoryStorage, createUserPreferencesStore } from "./index";
 import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
+
+// The backend part still returns nothing; this stands in for it so the middle layer can be tested.
+let backendDefaults: Record<string, Partial<EntityDisplayPreferences>> = {};
+vi.mock("@contentgrid/navigator-data", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@contentgrid/navigator-data")>()),
+  useEntityDisplayDefaults: () => ({ data: backendDefaults }),
+}));
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
@@ -70,13 +78,15 @@ function renderUseEntityDisplayPreferences(profileUrl = PROFILE_URL) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={profileUrl}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={profileUrl}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }
@@ -84,9 +94,16 @@ function renderUseEntityDisplayPreferences(profileUrl = PROFILE_URL) {
   return renderHook(() => useEntityDisplayPreferences(profileEntity), { wrapper: Wrapper });
 }
 
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
+
 afterEach(() => {
   localStorage.clear();
-  useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  preferencesStore = createTestPreferencesStore();
+  backendDefaults = {};
 });
 
 describe("useEntityDisplayPreferences", () => {
@@ -101,7 +118,7 @@ describe("useEntityDisplayPreferences", () => {
   });
 
   it("a user override wins over the heuristic default", () => {
-    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+    preferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
       nameAttribute: "id",
       color: "blue",
     });
@@ -116,7 +133,7 @@ describe("useEntityDisplayPreferences", () => {
   });
 
   it("scopes overrides per backend — the same entity on a different profileUrl is unaffected", () => {
-    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+    preferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
       color: "blue",
     });
 
@@ -136,5 +153,38 @@ describe("useEntityDisplayPreferences", () => {
     rerender();
 
     expect(result.current.preferences.icon).toBe("file-text");
+  });
+
+  describe("layer priority: user override > backend default > heuristic default", () => {
+    it("a backend default wins over the heuristic default", () => {
+      backendDefaults = { invoice: { nameAttribute: "id", color: "green" } };
+
+      const { result } = renderUseEntityDisplayPreferences();
+
+      expect(result.current.preferences.nameAttribute).toBe("id");
+      expect(result.current.preferences.color).toBe("green");
+      // Not set by the backend: the heuristic default shows through.
+      expect(result.current.preferences.visibleColumns).toEqual(["id", "invoice_number"]);
+    });
+
+    it("a user override wins over the backend default, field by field", () => {
+      backendDefaults = { invoice: { nameAttribute: "id", color: "green" } };
+      preferencesStore.getState().setOverride(PROFILE_URL, "invoice", { color: "blue" });
+
+      const { result } = renderUseEntityDisplayPreferences();
+
+      expect(result.current.preferences.color).toBe("blue");
+      // The user did not touch the name attribute, so the backend value still applies.
+      expect(result.current.preferences.nameAttribute).toBe("id");
+    });
+
+    it("still applies user overrides when nothing else supplies a value", () => {
+      preferencesStore.getState().setOverride(PROFILE_URL, "invoice", { color: "blue" });
+
+      const { result } = renderUseEntityDisplayPreferences();
+
+      expect(result.current.preferences.color).toBe("blue");
+      expect(result.current.preferences.icon).toBe("Database");
+    });
   });
 });

@@ -16,7 +16,14 @@ import {
   profileRootHandler,
 } from "@contentgrid/navigator-data/test-fixtures/msw/entity-browser-fixtures";
 import { server } from "../../test-setup";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../user-preferences";
 import { ClassifyCreateEntityItemPanel } from "./classify-create-entity-item-panel";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
@@ -25,13 +32,15 @@ function renderPanel(onSelect = vi.fn()) {
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={createApiClient(noopSupplier)}
-          contentFetch={createContentClient(noopSupplier)}
-          profileUrl={PROFILE_URL}
-        >
-          {children}
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={createApiClient(noopSupplier)}
+            contentFetch={createContentClient(noopSupplier)}
+            profileUrl={PROFILE_URL}
+          >
+            {children}
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }

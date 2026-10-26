@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "@contentgrid/features/user-preferences";
 import { NavigatorDataProvider } from "@contentgrid/navigator-data";
 import type { TypedFetch } from "@contentgrid/navigator-data";
 import {
@@ -7,6 +12,8 @@ import {
   createRecordingNavigation,
 } from "../navigation/recording-navigation";
 import { PROFILE_URL, createFixtureFetch } from "./item-detail";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 /**
  * The provider stack every `EntityItemDetailView` test mounts under: a query client, the
@@ -27,15 +34,17 @@ export function createItemDetailTestHarness(
   function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NavigatorDataProvider
-          apiFetch={apiFetch}
-          contentFetch={contentFetch}
-          profileUrl={PROFILE_URL}
-        >
-          <RecordingNavigationProvider recording={recording}>
-            {children}
-          </RecordingNavigationProvider>
-        </NavigatorDataProvider>
+        <UserPreferencesProvider store={preferencesStore}>
+          <NavigatorDataProvider
+            apiFetch={apiFetch}
+            contentFetch={contentFetch}
+            profileUrl={PROFILE_URL}
+          >
+            <RecordingNavigationProvider recording={recording}>
+              {children}
+            </RecordingNavigationProvider>
+          </NavigatorDataProvider>
+        </UserPreferencesProvider>
       </QueryClientProvider>
     );
   }

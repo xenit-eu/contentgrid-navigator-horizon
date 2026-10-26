@@ -21,10 +21,17 @@ import {
   createContentClient,
 } from "@contentgrid/navigator-data";
 import {
+  UserPreferencesProvider,
+  createMemoryStorage,
+  createUserPreferencesStore,
+} from "../../user-preferences";
+import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
   entityItemVariations,
 } from "./entity-item-auto-variation";
+
+const preferencesStore = createUserPreferencesStore({ storage: createMemoryStorage() });
 
 const PROFILE_URL = "https://api.example.com/profile/order";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
@@ -40,13 +47,15 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
  */
 function renderBody(children: ReactNode) {
   return render(
-    <NavigatorDataProvider
-      apiFetch={createApiClient(noopSupplier)}
-      contentFetch={createContentClient(noopSupplier)}
-      profileUrl={PROFILE_URL}
-    >
-      {children}
-    </NavigatorDataProvider>,
+    <UserPreferencesProvider store={preferencesStore}>
+      <NavigatorDataProvider
+        apiFetch={createApiClient(noopSupplier)}
+        contentFetch={createContentClient(noopSupplier)}
+        profileUrl={PROFILE_URL}
+      >
+        {children}
+      </NavigatorDataProvider>
+    </UserPreferencesProvider>,
   );
 }
 
@@ -234,13 +243,15 @@ describe("EntityItemAutoVariation", () => {
       contentAttrs: [makeContentAttribute("scan", true)],
     });
     rerender(
-      <NavigatorDataProvider
-        apiFetch={createApiClient(noopSupplier)}
-        contentFetch={createContentClient(noopSupplier)}
-        profileUrl={PROFILE_URL}
-      >
-        <EntityItemAutoVariation entityItem={itemB} />
-      </NavigatorDataProvider>,
+      <UserPreferencesProvider store={preferencesStore}>
+        <NavigatorDataProvider
+          apiFetch={createApiClient(noopSupplier)}
+          contentFetch={createContentClient(noopSupplier)}
+          profileUrl={PROFILE_URL}
+        >
+          <EntityItemAutoVariation entityItem={itemB} />
+        </NavigatorDataProvider>
+      </UserPreferencesProvider>,
     );
 
     expect(await screen.findByText("content-preview-panel:scan")).toBeInTheDocument();

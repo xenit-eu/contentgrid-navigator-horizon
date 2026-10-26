@@ -1,6 +1,6 @@
 import { type ProfileEntity } from "@contentgrid/navigator-data";
 import { IconBadge, type IconBadgeProps } from "@contentgrid/ui";
-import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../preferences";
+import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../user-preferences";
 
 export interface EntityIconBadgeProps {
   readonly profile: ProfileEntity;
@@ -18,7 +18,7 @@ export interface EntityIconBadgeProps {
 
 /**
  * An entity's icon badge — icon and color come from that entity's display preferences
- * (`@contentgrid/features/preferences`), so callers only decide the size and what a click
+ * (`@contentgrid/features/user-preferences`), so callers only decide the size and what a click
  * does.
  */
 export function EntityIconBadge({
