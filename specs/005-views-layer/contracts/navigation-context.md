@@ -23,6 +23,8 @@ interface Navigation {
 interface NavigationOptions {
   /** Open the destination in a new browser tab instead of the current one. Default `false`. */
   openInNewTab?: boolean;
+  /** `openEntityItemCollection` only: bring the list back as the user left it. Default `true`; `false` opens a fresh list. */
+  restoreState?: boolean;
 }
 ```
 
@@ -41,7 +43,7 @@ The item detail view's relation popover already reports "create missing target" 
 ## Rules
 
 1. **The caller does not care what happens next.** The app changes the route; the chat may open Navigator; a split view changes a pane.
-2. **`openEntityItemCollection` restores the list as the user left it** (filters, sort order, page). Today the list breadcrumb does this from a session memo in the query cache; the app's implementation keeps doing that, so views need not know how.
+2. **`openEntityItemCollection` restores the list as the user left it** (filters, sort order, page) unless the caller passes `{ restoreState: false }` (default `true`); the sidebar does, to open a fresh list as before the views layer. Today the list breadcrumb does this from a session memo in the query cache; the app's implementation keeps doing that, so views need not know how.
 3. **Only views call it; no router in views or features.** Every click that opens something, including the view's own toolbar breadcrumbs and a click that comes from a feature (reported through a callback prop), is turned by the view into a call on the navigation object. Host code in `packages/views/src/shells/` (router setup only) and the apps — including each app's own `Navigation` implementation, a file under that app's own `src/routes/` (not `packages/views/src/shells/`; see `research.md` §2.7) — MAY use the router.
 4. **One-page-only actions stay props.** For example "after create, go to the new item" remains a normal prop.
 5. **A missing provider is a development-time error**, not a silent no-op.

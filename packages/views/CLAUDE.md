@@ -48,7 +48,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - Every `open*` takes a trailing optional `options?: NavigationOptions` (`{ openInNewTab?: boolean }`, default
   `false`). The view decides — the item detail view's "create missing relation target" passes
   `{ openInNewTab: true }` — and a host that can't open tabs may ignore it. The recording fake records `options`
-  as the last element of `args` only when it was passed.
+  as the last element of `args` only when it was passed. `openEntityItemCollection` also honours
+  `{ restoreState: false }` (default `true`): the sidebar passes it to open a fresh list instead of the remembered one.
 - Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create Item") and
   `openSettings` (the user menu's "Settings"); `openEditItem` arrives with the page that needs it.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
@@ -66,8 +67,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - `src/shells/` is host code and the **only** place in this package that may import `@tanstack/react-router`:
   `router-shell` (`mountNavigatorApp`, `AppRouterContext`, `useOpenInNewTab`), `auth-shell`, `entity-profile-gate` and
   `sidebar-shell`. `SidebarShell` wires `SideBarLayout` to the router (active entity, outlet) and to
-  `useViewNavigation()`. `EntityProfileGate` takes `entityName`, `onBackHome` and `children`; `EntityProfileGateRoute`
-  is its `/$entity` route adapter. Each shell is its own `exports` entry (`@contentgrid/views/<name>`). The app's own
+  `useViewNavigation()`; the app passes its dev-only footer link in through `footer`. `EntityProfileGate` is
+  router-free (`entityName`, `onBackHome`, `children`); each app's `$entity` route files read the param and wire it. Each shell is its own `exports` entry (`@contentgrid/views/<name>`). The app's own
   `Navigation` stays in `apps/*/src/routes/`.
 - `EntityOverviewView` (`entity-overview`) and `NotFoundView` (`not-found`) are the two small views around the
   features' `EntityCountOverview` and `NotFoundPage`; those take callback props and never read navigation.
