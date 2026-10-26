@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RouterProvider,
@@ -9,52 +10,26 @@ import {
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { AppAuthResult } from "@contentgrid/navigator-data";
-import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
-import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import {
   RecordingNavigationProvider,
   createRecordingNavigation,
 } from "../../navigation/recording-navigation";
+import {
+  mockSidebarData,
+  preferencesModuleMock,
+  sidebarNavigatorDataMock,
+} from "../../test-fixtures/sidebar-harness";
 import { SidebarShell } from "./sidebar-shell";
 
-vi.mock("@contentgrid/features/preferences", () => ({
-  useEntityDisplayPreferences: () => ({ preferences: {} }),
-  resolveEntityCardIcon: () => () => null,
-}));
+vi.mock("@contentgrid/features/preferences", () => preferencesModuleMock);
 
-vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
-  return {
-    ...actual,
-    useAppAuth: vi.fn(),
-    useLoadedProfileEntities: vi.fn(),
-    useCachedEntityItemCollection: () => ({ data: undefined }),
-  };
-});
+vi.mock("@contentgrid/navigator-data", sidebarNavigatorDataMock);
 
-const invoice = makeProfileEntity(
-  { name: "invoice", title: "Invoice", description: "" },
-  "https://example.com/profile/invoices",
-  "invoice",
-);
-
-function renderShell(initialEntry = "/") {
-  vi.mocked(useAppAuth).mockReturnValue({
-    auth: {
-      isLoading: false,
-      isAuthenticated: true,
-      user: { profile: { name: "Jane Doe", email: "jane@example.com" } },
-      signoutRedirect: vi.fn(),
-    },
-  } as unknown as AppAuthResult);
-  vi.mocked(useLoadedProfileEntities).mockReturnValue({
-    profiles: [invoice],
-    isLoading: false,
-  } as unknown as ReturnType<typeof useLoadedProfileEntities>);
+function renderShell(initialEntry = "/", footer?: ReactNode) {
+  mockSidebarData({ profile: { name: "Jane Doe", email: "jane@example.com" } });
 
   const recording = createRecordingNavigation();
-  const rootRoute = createRootRoute({ component: SidebarShell });
+  const rootRoute = createRootRoute({ component: () => <SidebarShell footer={footer} /> });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
@@ -119,9 +94,9 @@ describe("SidebarShell", () => {
     );
   });
 
-  it("shows the dev-only App selector link in development", async () => {
-    renderShell();
+  it("renders the footer the app passes in", async () => {
+    renderShell("/", <span>app footer</span>);
 
-    expect(await screen.findByRole("link", { name: "App selector" })).toBeInTheDocument();
+    expect(await screen.findByText("app footer")).toBeInTheDocument();
   });
 });
