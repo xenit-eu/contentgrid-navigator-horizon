@@ -49,7 +49,10 @@ export function EntityCard({
       data-slot="entity-card"
       role={onCardClick ? "button" : undefined}
       tabIndex={onCardClick ? 0 : undefined}
-      className={cn("group relative transition-colors", onCardClick && "hover:border-primary/50")}
+      className={cn(
+        "group relative h-full transition-colors",
+        onCardClick && "hover:border-primary/50",
+      )}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
       onKeyDown={
         onCardClick
@@ -71,6 +74,8 @@ export function EntityCard({
           title={title}
           subtitle={description}
           indentSubtitle={indentSubtitle}
+          clamp
+          className="min-w-0 flex-1"
           icon={
             icon && (
               <span role="presentation" onClick={(event) => event.stopPropagation()}>
@@ -89,7 +94,7 @@ export function EntityCard({
           </div>
         )}
       </CardHeader>
-      {children && <CardContent>{children}</CardContent>}
+      {children && <CardContent className="mt-auto">{children}</CardContent>}
     </Card>
   );
 }
