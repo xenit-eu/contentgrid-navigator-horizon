@@ -87,6 +87,24 @@ sidebar) live in `@contentgrid/views`, not here. Only `RightSidePanelLayout` and
 
 ---
 
+## User preferences
+
+`src/user-preferences/` (`@contentgrid/features/user-preferences`) holds the user's display preferences (icon, colour,
+card style, name attribute, visible columns) for every feature that shows an entity. Features read them only through
+`useEntityDisplayPreferences` / `useColumnVisibility`; the merge is user override > backend default
+(`useEntityDisplayDefaults` in `@contentgrid/navigator-data`, empty until the backend API exists) > heuristic default
+(`ProfileEntity.getDefaultPreferences()`).
+
+- The store is a factory, `createUserPreferencesStore({ storage? })`. The app creates it once at startup (`localStorage`
+  by default, key `contentgrid-entity-display-preferences`) and provides it with `<UserPreferencesProvider store>`.
+- The hooks throw outside a provider, like `useViewNavigation`; there is no fallback store. Tests and stories wrap with
+  a provider over `createMemoryStorage()` (the Storybook preview does this for every story).
+- The configuration screens (`EntityConfigurationOverview`, `...Tabbed`, `...Detail`, in `configuration/`) are optional:
+  an app that mounts none still applies the overrides users already saved.
+- No feature folder is named `views` or ends in `View`; that word belongs to `@contentgrid/views`.
+
+---
+
 ## Promotion workflow
 
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md),

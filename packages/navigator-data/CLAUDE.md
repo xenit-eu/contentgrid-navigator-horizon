@@ -93,7 +93,8 @@ src/hooks/
   item/        # single entity-item queries and item mutations (create/update/delete/content)
   relation/    # relation read queries and relation mutations
   preview/     # content-preview query (useContentPreview) — see Content preview and renditions
-  preferences/ # backend-provided display-preference defaults (useEntityDisplayDefaults)
+  preferences/ # backend-provided display-preference defaults (useEntityDisplayDefaults); the `EntityDisplayPreferences` type lives in accessors/
+               # (the user override store, merge and hooks live in `@contentgrid/features/user-preferences`)
   context.tsx  # NavigatorDataProvider / useNavigatorData
   index.ts     # single public barrel — all hooks re-exported from here
 ```
