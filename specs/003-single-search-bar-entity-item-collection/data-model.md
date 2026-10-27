@@ -258,8 +258,8 @@ model's params:
 
 ```ts
 // packages/navigator-data — EntityDisplayPreferences (zod)
-searchAttributes?: string[];   // attribute names; undefined = all searchable direct attributes,
-                               // [] = none (search off); non-searchable names are ignored
+searchAttributes?: string[];   // attribute names; the heuristic default lists every searchable
+                               // attribute; [] = none (search off); non-searchable names ignored
 ```
 
 - Resolution order: user override → backend default → heuristic (FR-035). The heuristic,

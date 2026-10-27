@@ -275,12 +275,12 @@ the entity configuration page (`packages/features/src/preferences/views/entity-c
   list is taken as is: `[]` includes nothing (search off, FR-036a), and names that are not
   searchable attributes are ignored rather than triggering a fallback to "all".
 - A new `useSearchAttributeInclusion(profileEntity)` in the preferences feature mirrors
-  `useColumnVisibility`. Relation parameters bypass it while at least one attribute is included
-  (FR-036). Filters on excluded attributes
-  that arrive via URL/dialog still apply and still show as chips (FR-037).
+  `useColumnVisibility`. Relation parameters bypass it unless search is off (FR-036, FR-036a).
+  Filters on excluded attributes that arrive via URL/dialog still apply and still show as chips
+  (FR-037).
 - The configuration page gets a second `AttributeMultiSelect` "Searchable attributes" next to
   "Visible columns", listing direct attributes that have at least one search parameter (audit
-  attributes in the "System attributes" group).
+  attributes in the "System attributes" group), checked by the resolved inclusion.
 - The backend layer automatically supplies `searchAttributes` once its stub is replaced; no extra
   work in this feature.
 

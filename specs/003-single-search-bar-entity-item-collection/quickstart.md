@@ -37,13 +37,13 @@ Must include and pass:
 | Area                                               | What is proven                                                                                                                                                                       | Spec                          |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
 | `util/build-search-param-descriptors`              | valueKind/mode per fixture param; relation params typed via target attribute; audit role from constraints, not names                                                                 | FR-007, FR-027                |
-| `util/apply-search-inclusion`                      | excluded attribute drops all its params; relation params dropped only when nothing is included                                                                                       | FR-034–FR-036                 |
+| `util/apply-search-inclusion`                      | excluded attribute drops all its params; relation params dropped only when no direct attribute is included (search off)                                                              | FR-034–FR-036                 |
 | `util/classify-search-input`, `select-param-chips` | text hides numbers; integer shows numbers first; "12.5" hides integer; all-direct hides relations                                                                                    | FR-013, FR-021                |
 | `util/build-active-filter-chips`                   | range pair → one chip; unknown key → unresolved chip; removal keys                                                                                                                   | FR-003, FR-004a, FR-037       |
 | `util/build-quick-filters`                         | one model per attribute; boolean cycle; isActive from any source                                                                                                                     | FR-024–FR-029                 |
 | `util/date-presets`                                | last day/week/month/year bounds; date-only vs datetime; exclusive bound shift                                                                                                        | FR-026                        |
 | `useSearchParamSuggestions` (MSW)                  | one request per direct param; relation = 2 requests with count from current entity; estimated total; error + refetch; no request below min length; no stale result under newer query | FR-014–FR-016, FR-022         |
-| `useSearchAttributeInclusion`                      | user override > backend > default "all"; arrays replace; `[]` → none                                                                                                                 | FR-035                        |
+| `useSearchAttributeInclusion`                      | user override > backend > heuristic list (all searchable, not `id`); arrays replace; `[]` → none                                                                                     | FR-035                        |
 | `filterOptionsByPrefix` (ui)                       | prefix, word-start, case/accent-insensitive                                                                                                                                          | FR-016, FR-030                |
 | ui component tests                                 | Chip mode segment, FilterButton tones + separate clear button, FilterChips overflow, popover keyboard model                                                                          | FR-003–FR-005, FR-023, FR-025 |
 
@@ -87,7 +87,9 @@ Open an entity collection with the model above and check:
    same results. Browser back restores the previous filters.
 7. **Configuration** (US8): on the entity configuration page, untick an attribute under
    "Searchable attributes" → it disappears from selector, popover and quick filters; relation
-   parameters stay; a URL filter on it still shows as a chip.
+   parameters stay; a URL filter on it still shows as a chip. Untick every attribute → the
+   selector, input and quick filters disappear, relation parameters included; the box shows
+   nothing checked and active filters still show as chips.
 8. **Failure paths**: block the API in devtools while typing → per-group error with Retry,
    distinct from "No matches"; other groups unaffected.
 9. **Keyboard only**: complete scenarios 1 and 3 without a mouse.

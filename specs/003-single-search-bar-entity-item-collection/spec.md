@@ -166,7 +166,7 @@ Whatever way a filter was set (the quick filter itself, the advanced filter dial
 
 ### User Story 8 - Choose which attributes take part in search (Priority: P3)
 
-A configuration layer sets which attributes take part in the search surface for an entity, and each user can adjust it in their preferences, the same way visible table columns are chosen. Search parameters that go through a relation are always included while at least one attribute is; excluding every attribute switches search off for that entity.
+A configuration layer sets which attributes take part in the search surface for an entity, and each user can adjust it in their preferences, the same way visible table columns are chosen. By default every searchable attribute is included. Search parameters that go through a relation are always included unless search is off: excluding every searchable attribute of an entity switches search off for it.
 
 **Why this priority**: Large entities can have many searchable attributes; trimming the list keeps the selector and quick-filter row usable. The feature works without it (everything included by default).
 
@@ -178,7 +178,7 @@ A configuration layer sets which attributes take part in the search surface for 
 2. **Given** the configuration layer excludes an attribute, **When** the search surface is shown, **Then** none of that attribute's search parameters appear in the selector, the popover, or the quick-filter row.
 3. **Given** a user preference includes or excludes an attribute, **When** the search surface is shown, **Then** the user preference takes precedence over the configuration layer.
 4. **Given** an attribute is excluded, **When** a filter on it arrives through the page link or advanced filter dialog, **Then** it is still applied and still shown as an active filter chip, so the list state is never hidden.
-5. **Given** a relation-based search parameter and at least one included attribute, **When** the search surface is shown, **Then** the relation-based parameter is included, whatever the configuration or preferences say about individual attributes.
+5. **Given** a relation-based search parameter and search is not switched off (scenario 7), **When** the search surface is shown, **Then** the relation-based parameter is included, whatever the configuration or preferences say about individual attributes.
 6. **Given** the user wants to change which attributes are included, **When** they look for the setting, **Then** they find it in the existing column/display preferences control, next to the visible-columns choice; the search surface itself has no settings control.
 7. **Given** the entity has searchable attributes and the configuration or preference includes none of them (e.g. an empty list), **When** the collection page is shown, **Then** the selector, the search input and the quick-filter row are not shown, relation-based parameters included; active filters arriving through the page link or the advanced filter dialog are still shown as chips.
 8. **Given** a saved list names attributes that are no longer searchable (renamed, removed, or without a search parameter), **When** the search surface and the preferences control are shown, **Then** those names are ignored by both, so the control always shows exactly what the search surface uses.
