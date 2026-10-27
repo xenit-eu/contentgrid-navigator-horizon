@@ -98,13 +98,13 @@ function EntityCardConnected({
       icon={<EntityIconBadge profile={profile} />}
       onCardClick={onSelect}
     >
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <div className="text-2xl font-bold p-0">{collection.data?.totalItems?.count ?? "—"}</div>
-          <p className="text-xs text-muted-foreground">items</p>
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
+          {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
+          <ArrowRightIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
         </div>
-        {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
-        <ArrowRightIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">items</p>
       </div>
     </EntityCard>
   );
