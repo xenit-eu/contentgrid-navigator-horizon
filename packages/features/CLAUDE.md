@@ -70,6 +70,11 @@ Rules:
 
 ## Page layout
 
+Page frames (`PageLayout`, `BreadCrumbsToolBarLayout`, `SideBarLayout`) and the app shells (router, auth, profile gate,
+sidebar) live in `@contentgrid/views`, not here. Only `RightSidePanelLayout` and `EntityIconBadge` remain in
+`src/layout/`, because features use them. Features do not import `@tanstack/react-router` — the one exception is
+`unsaved-changes-guard` (its home is open question 3 of the views spec) and the edit-form tests that exercise it.
+
 ([ADR-018](../../docs/adr/ADR-018-views-layer.md), `specs/005-views-layer/contracts/view-toolbar.md`)
 
 - A feature draws no toolbar, breadcrumbs or page actions, and takes no props for them. The view

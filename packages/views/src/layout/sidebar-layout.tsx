@@ -1,37 +1,52 @@
 import type { ReactNode } from "react";
-import { FilePlusIcon, GearIcon, HouseIcon } from "@phosphor-icons/react";
-import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import { FilePlusIcon, HouseIcon } from "@phosphor-icons/react";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   BrandingHeader,
   Button,
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarInset,
   SidebarLinkButton,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
   ThemeToggle,
   UserMenu,
   useSidebar,
 } from "@contentgrid/ui";
+import { handleNavigationClick } from "../navigation";
 import { SidebarEntityNav } from "./sidebar-entity-nav";
 
 // ---------------------------------------------------------------------------
-// SideBarLayout — pathless layout route component (sidebar + BrandingHeader + Outlet)
+// SideBarLayout — sidebar + BrandingHeader around the routed page
 // ---------------------------------------------------------------------------
-type SideBarLayoutProps = {
-  topChildren?: ReactNode;
-};
+export interface SideBarLayoutProps {
+  /** The routed page. */
+  readonly children: ReactNode;
+  readonly topChildren?: ReactNode;
+  /** The `name` of the entity whose pages are currently shown, highlighted in the sidebar. */
+  readonly activeEntity?: string;
+  readonly onOpenHome: () => void;
+  readonly onOpenEntity: (entityName: string) => void;
+  readonly onOpenCreate: () => void;
+  readonly onOpenSettings: () => void;
+  /** Real addresses, when the host has them: the home and entity links then render as `<a href>`. */
+  readonly homeHref?: string;
+  readonly entityHref?: (entityName: string) => string;
+}
 
-export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
-  const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
-  const navigate = useNavigate();
+export function SideBarLayout({
+  children,
+  topChildren,
+  activeEntity,
+  onOpenHome,
+  onOpenEntity,
+  onOpenCreate,
+  onOpenSettings,
+  homeHref,
+  entityHref,
+}: SideBarLayoutProps) {
   const { auth } = useAppAuth();
   const { profiles: loadedProfiles, isLoading: isLoadingProfiles } = useLoadedProfileEntities();
 
@@ -46,57 +61,36 @@ export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
               <UserMenu
                 name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
                 email={auth.user.profile.email ?? ""}
-                // `as string` bypasses TanStack Router's typed-route check: this shared
-                // feature package can't see either app's generated route tree, but
-                // /~configuration exists in both apps (same pattern as the dev-only "/config"
-                // link below). The user menu keeps the "Settings" label — only the target
-                // route changed when ~settings was retired in favor of ~configuration.
-                onSettingsClick={() => navigate({ to: "/~configuration" as string })}
+                onSettingsClick={onOpenSettings}
                 onLogOut={() => auth.signoutRedirect()}
               />
             )}
           </>
         }
         className="sticky top-0 z-30 shrink-0"
-        onLogoClick={() => navigate({ to: "/" as string })}
+        onLogoClick={onOpenHome}
       />
       <div className="flex min-h-0 w-full flex-1">
         <Sidebar style={{ top: "3.75rem", height: "calc(100svh - 3.75rem)" }} collapsible="icon">
-          <SideBarTopControls />
+          <SideBarTopControls onOpenHome={onOpenHome} homeHref={homeHref} />
           <SidebarContent>
             <SidebarGroup className="pb-0 mb-0">
-              <SidebarCreateItemButton />
+              <SidebarCreateItemButton onOpenCreate={onOpenCreate} />
             </SidebarGroup>
             <SidebarEntityNav
               profiles={loadedProfiles}
               isLoading={isLoadingProfiles}
               activeEntity={activeEntity}
+              onOpenEntity={onOpenEntity}
+              entityHref={entityHref}
             />
           </SidebarContent>
-
-          {import.meta.env.DEV && (
-            <SidebarFooter>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    {/* `as string` bypasses TanStack Router's typed-route check: this shared
-                        feature package can't see either app's generated route tree, but
-                        /config exists in both apps. */}
-                    <Link to={"/config" as string}>
-                      <GearIcon aria-hidden />
-                      <span>App selector</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarFooter>
-          )}
         </Sidebar>
 
         <SidebarInset className="min-h-0 overflow-hidden">
           <div className="min-h-0 flex-1 overflow-auto">
             {topChildren}
-            <Outlet />
+            {children}
           </div>
         </SidebarInset>
       </div>
@@ -107,17 +101,33 @@ export function SideBarLayout({ topChildren }: SideBarLayoutProps) {
 // The mobile sidebar always renders as a full-width Sheet with no icon-only
 // mode, so it's treated the same as "expanded" here — only the desktop
 // `open` state ever switches to the collapsed, icon-stacked layout.
-function SideBarTopControls() {
+function SideBarTopControls({
+  onOpenHome,
+  homeHref,
+}: {
+  readonly onOpenHome: () => void;
+  readonly homeHref?: string;
+}) {
   const { open, isMobile } = useSidebar();
 
-  const home = (
-    <Button asChild variant="ghost" size="icon" className="size-7">
-      <Link to={"/" as string}>
-        <HouseIcon aria-hidden />
-        <span className="sr-only">Home</span>
-      </Link>
-    </Button>
+  const homeContent = (
+    <>
+      <HouseIcon aria-hidden />
+      <span className="sr-only">Home</span>
+    </>
   );
+  const home =
+    homeHref === undefined ? (
+      <Button variant="ghost" size="icon" className="size-7" onClick={onOpenHome}>
+        {homeContent}
+      </Button>
+    ) : (
+      <Button asChild variant="ghost" size="icon" className="size-7">
+        <a href={homeHref} onClick={(event) => handleNavigationClick(event, onOpenHome)}>
+          {homeContent}
+        </a>
+      </Button>
+    );
 
   if (open || isMobile) {
     return (
@@ -136,15 +146,13 @@ function SideBarTopControls() {
   );
 }
 
-function SidebarCreateItemButton() {
-  const navigate = useNavigate();
-
+function SidebarCreateItemButton({ onOpenCreate }: { readonly onOpenCreate: () => void }) {
   return (
     <SidebarLinkButton
       icon={<FilePlusIcon aria-hidden />}
       label="Create Item"
       variant="primary"
-      onClick={() => navigate({ to: "/~create" as string })}
+      onClick={onOpenCreate}
     />
   );
 }

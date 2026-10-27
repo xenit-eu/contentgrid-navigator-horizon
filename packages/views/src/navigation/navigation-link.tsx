@@ -15,6 +15,22 @@ export interface NavigationLinkProps {
 }
 
 /**
+ * Click handler for an `<a href>` that also navigates through the host: a plain, unmodified left
+ * click is turned into `onNavigate()`; every other click (a modifier key, the middle button) is
+ * left for the browser to handle as a normal link click. For anchors that cannot be a
+ * `NavigationLink` because a primitive (`asChild`) must put its own props on the element.
+ */
+export function handleNavigationClick(
+  event: MouseEvent<HTMLAnchorElement>,
+  onNavigate: () => void,
+) {
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  onNavigate();
+}
+
+/**
  * A navigation action that is a real `<a href>` when the host can give one, so cmd/middle-click,
  * "copy link" and screen-reader link semantics all work — falling back to a plain `<button>` when
  * it can't (contract `navigation-context.md`). A plain left click (button 0, no modifier key) on
@@ -36,15 +52,13 @@ export function NavigationLink({
     );
   }
 
-  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
-    if (event.defaultPrevented || event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    onNavigate();
-  }
-
   return (
-    <a href={href} onClick={handleClick} className={className} data-slot={dataSlot}>
+    <a
+      href={href}
+      onClick={(event) => handleNavigationClick(event, onNavigate)}
+      className={className}
+      data-slot={dataSlot}
+    >
       {children}
     </a>
   );

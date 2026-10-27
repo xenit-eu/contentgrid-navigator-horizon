@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import { EntityConfigurationDetail } from "@contentgrid/features/preferences";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
@@ -10,6 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@contentgrid/ui";
+import { BreadCrumbsToolBarLayout } from "@contentgrid/views/layout";
 
 export const Route = createFileRoute("/_app/~configuration/$entity/")({
   component: ConfigurationDetailPage,

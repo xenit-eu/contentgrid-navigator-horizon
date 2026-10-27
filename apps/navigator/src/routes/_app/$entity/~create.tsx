@@ -4,8 +4,6 @@ import {
   CreateEntityItemPanel,
   CreateEntityItemProfileSelector,
 } from "@contentgrid/features/entity-item-create";
-import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
-import { useOpenInNewTab } from "@contentgrid/features/router-shell";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
@@ -14,6 +12,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@contentgrid/ui";
+import { BreadCrumbsToolBarLayout } from "@contentgrid/views/layout";
+import { useOpenInNewTab } from "@contentgrid/views/router-shell";
 
 export const Route = createFileRoute("/_app/$entity/~create")({
   component: RouteComponent,

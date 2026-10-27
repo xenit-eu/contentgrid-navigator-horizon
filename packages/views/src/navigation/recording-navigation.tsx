@@ -19,7 +19,9 @@ export type NavigationCall =
   | {
       method: "openCreateItem";
       args: [entityName: string] | [entityName: string, options: NavigationOptions];
-    };
+    }
+  | { method: "openClassifyCreate"; args: [] | [options: NavigationOptions] }
+  | { method: "openSettings"; args: [] | [options: NavigationOptions] };
 
 export interface RecordingNavigation {
   navigation: Navigation;
@@ -51,6 +53,12 @@ export function createRecordingNavigation(): RecordingNavigation {
         method: "openCreateItem",
         args: options ? [entityName, options] : [entityName],
       });
+    },
+    openClassifyCreate: (options) => {
+      calls.push({ method: "openClassifyCreate", args: options ? [options] : [] });
+    },
+    openSettings: (options) => {
+      calls.push({ method: "openSettings", args: options ? [options] : [] });
     },
     hrefFor: {
       home: () => "/",

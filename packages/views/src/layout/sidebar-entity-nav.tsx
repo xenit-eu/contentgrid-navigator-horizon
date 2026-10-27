@@ -1,5 +1,8 @@
 import { BracketsSquareIcon, StackIcon } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
+import {
+  resolveEntityCardIcon,
+  useEntityDisplayPreferences,
+} from "@contentgrid/features/preferences";
 import { type ProfileEntity, useCachedEntityItemCollection } from "@contentgrid/navigator-data";
 import {
   SidebarGroup,
@@ -11,13 +14,17 @@ import {
   SidebarMenuItem,
   SidebarMenuSkeleton,
 } from "@contentgrid/ui";
-import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
+import { handleNavigationClick } from "../navigation";
 
 interface SidebarEntityNavProps {
   readonly profiles: readonly ProfileEntity[];
   readonly isLoading: boolean;
   /** The `name` of the profile whose collection page is currently active. */
   readonly activeEntity: string | undefined;
+  /** Called when the user opens an entity's collection. */
+  readonly onOpenEntity: (entityName: string) => void;
+  /** The real address of an entity's collection, when the host has one (renders an `<a href>`). */
+  readonly entityHref?: (entityName: string) => string;
 }
 
 /**
@@ -25,7 +32,13 @@ interface SidebarEntityNavProps {
  * the plural name, and — once available — an item count. The count is never
  * fetched from here; see `SidebarEntityNavItem`.
  */
-export function SidebarEntityNav({ profiles, isLoading, activeEntity }: SidebarEntityNavProps) {
+export function SidebarEntityNav({
+  profiles,
+  isLoading,
+  activeEntity,
+  onOpenEntity,
+  entityHref,
+}: SidebarEntityNavProps) {
   return (
     <SidebarGroup className="pt-0">
       <SidebarGroupLabel icon={<StackIcon aria-hidden />}>Entities</SidebarGroupLabel>
@@ -42,6 +55,8 @@ export function SidebarEntityNav({ profiles, isLoading, activeEntity }: SidebarE
                   key={profile.name}
                   profile={profile}
                   isActive={activeEntity === profile.name}
+                  onOpen={() => onOpenEntity(profile.name)}
+                  href={entityHref?.(profile.name)}
                 />
               ))}
         </SidebarMenu>
@@ -53,9 +68,13 @@ export function SidebarEntityNav({ profiles, isLoading, activeEntity }: SidebarE
 function SidebarEntityNavItem({
   profile,
   isActive,
+  onOpen,
+  href,
 }: {
   readonly profile: ProfileEntity;
   readonly isActive: boolean;
+  readonly onOpen: () => void;
+  readonly href: string | undefined;
 }) {
   // Read-only: shows a count only if some other query already cached it
   // (e.g. the user previously opened this entity's collection page). Never
@@ -71,10 +90,25 @@ function SidebarEntityNavItem({
     ? `${profile.pluralName}: ${profile.description}`
     : profile.pluralName;
 
+  const entityContent = (
+    <>
+      {/* Styled directly on the svg (not a wrapping span) — SidebarMenuButton's base
+              classes target `>svg` and `>span:last-child` as direct children; a wrapper
+              would break the `[&>svg]:size-4` sizing rule. Phosphor icons render with
+              `fill="currentColor"`, so `style.color` tints the icon directly. */}
+      <EntityIcon
+        aria-hidden
+        style={preferences.color ? { color: preferences.color } : undefined}
+      />
+      <span>{profile.pluralName}</span>
+    </>
+  );
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        asChild
+        asChild={href !== undefined}
+        onClick={href === undefined ? onOpen : undefined}
         isActive={isActive}
         tooltip={tooltip}
         className="gap-3"
@@ -85,17 +119,13 @@ function SidebarEntityNavItem({
         // is untouched.
         style={isActive && preferences.color ? { borderLeftColor: preferences.color } : undefined}
       >
-        <Link to={"/$entity" as string} params={{ entity: profile.name } as Record<string, string>}>
-          {/* Styled directly on the svg (not a wrapping span) — SidebarMenuButton's base
-              classes target `>svg` and `>span:last-child` as direct children; a wrapper
-              would break the `[&>svg]:size-4` sizing rule. Phosphor icons render with
-              `fill="currentColor"`, so `style.color` tints the icon directly. */}
-          <EntityIcon
-            aria-hidden
-            style={preferences.color ? { color: preferences.color } : undefined}
-          />
-          <span>{profile.pluralName}</span>
-        </Link>
+        {href === undefined ? (
+          entityContent
+        ) : (
+          <a href={href} onClick={(event) => handleNavigationClick(event, onOpen)}>
+            {entityContent}
+          </a>
+        )}
       </SidebarMenuButton>
       <SidebarMenuBadge className="text-sidebar-foreground/50">
         {total !== undefined ? (

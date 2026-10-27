@@ -4,10 +4,10 @@ import {
   EntityItemContentFocusBody,
   entityItemContentFocusPadding,
 } from "@contentgrid/features/entity-item";
-import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
+import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useViewNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
 import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
