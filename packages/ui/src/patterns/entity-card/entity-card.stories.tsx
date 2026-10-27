@@ -168,9 +168,9 @@ export const Grid: Story = {
         >
           <div>
             <div className="text-2xl font-bold">99</div>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-end justify-between gap-2">
               <p className="text-xs text-muted-foreground">items</p>
-              <ArrowRightIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
+              <ArrowRightIcon aria-hidden className="h-6 w-6 text-muted-foreground" />
             </div>
           </div>
         </EntityCard>
