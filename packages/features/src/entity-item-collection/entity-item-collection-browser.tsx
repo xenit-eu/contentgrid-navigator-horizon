@@ -33,7 +33,7 @@ import {
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
-export interface EntityItemCollectionViewProps {
+export interface EntityItemCollectionBrowserProps {
   readonly profile: ProfileEntity;
   /**
    * URL of the collection page to display — e.g. a cursor page resolved from
@@ -61,8 +61,7 @@ export interface EntityItemCollectionViewProps {
  * App-agnostic collection view: fetches the entity's items and renders the filter form, table,
  * and pagination controls. All routing / navigation / page chrome is supplied by the caller
  * through `onEntityItemClick`, `onPageChange`, `onFiltersChange` — this component performs no
- * navigation itself and renders no toolbar/layout (see `EntityItemCollectionSearchView` for
- * that).
+ * navigation itself and renders no toolbar/layout (the view above it draws those).
  *
  * Filters render through `@contentgrid/features/hal-forms`'s generic `HalFormsContainer` rather
  * than the earlier `FilterSidebar` pattern (`@contentgrid/ui`) — `resolveHalFormsFields` derives
@@ -76,7 +75,7 @@ export interface EntityItemCollectionViewProps {
  * by this view; it's fine to remove it or its own `TypeaheadTextFilter` next, but neither is
  * touched here.
  */
-export function EntityItemCollectionView({
+export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
@@ -85,7 +84,7 @@ export function EntityItemCollectionView({
   onFiltersChange,
   currentSort,
   onSortChange,
-}: Readonly<EntityItemCollectionViewProps>) {
+}: Readonly<EntityItemCollectionBrowserProps>) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
     () =>

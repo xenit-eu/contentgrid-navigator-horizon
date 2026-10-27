@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
-import { EntityItemCollectionView as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
+import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
 import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { extractFilterValuesFromCollectionUrl } from "@contentgrid/features/search";

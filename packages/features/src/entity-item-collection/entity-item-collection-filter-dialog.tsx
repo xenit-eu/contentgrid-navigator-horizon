@@ -32,7 +32,7 @@ export interface EntityItemCollectionFilterDialogProps {
 }
 
 /**
- * The `EntityItemCollectionView` filter modal — extracted so the "Filters" header and the
+ * The `EntityItemCollectionBrowser` filter modal — extracted so the "Filters" header and the
  * "Clear all"/"Show N items" footer stay pinned while only the (potentially long, multi-section)
  * `HalFormsContainer` body scrolls. `DialogContent` is capped at `85vh` and laid out as a column
  * (`flex flex-col`, overriding its own default `grid`); the header and footer are `shrink-0` and
@@ -40,7 +40,7 @@ export interface EntityItemCollectionFilterDialogProps {
  * ever grows a scrollbar.
  *
  * Filtering itself is already live — every `HalFormsContainer` field change round-trips through
- * `onChange` to the caller's `onFiltersChange` immediately (see `EntityItemCollectionView`'s own
+ * `onChange` to the caller's `onFiltersChange` immediately (see `EntityItemCollectionBrowser`'s own
  * doc comment). The footer's "Show N items" button doesn't apply anything itself; it just closes
  * the dialog onto results the table is already showing — while `isLoading`, it also shows a
  * spinner, since `totalItems` may still be the previous filters' count at that point.

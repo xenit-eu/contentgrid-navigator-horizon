@@ -90,7 +90,7 @@ function readInitialContinuousCreate(): boolean {
  * Smart component: gates on `profile.createTemplate`, runs `useCreateEntityItem`, and maps
  * server validation errors into server-sourced `FieldValidationError[]` via the `hal-forms`
  * feature. Renders `CreateEntityItemForm` (the `<form>`/chrome-only component) once a create
- * template is available. Rendered by `CreateEntityItemView`, the package's public entry point
+ * template is available. Rendered by `CreateEntityItemPanel`, the package's public entry point
  * for both apps' route files.
  */
 export function CreateEntityItemContainer(props: Readonly<CreateEntityItemContainerProps>) {

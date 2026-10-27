@@ -1,6 +1,6 @@
-export { CreateEntityItemView } from "./create-entity-item-view";
-export type { CreateEntityItemViewProps } from "./create-entity-item-view";
-export { ClassifyCreateEntityItemView } from "./classify-create-entity-item-view";
-export type { ClassifyCreateEntityItemViewProps } from "./classify-create-entity-item-view";
+export { CreateEntityItemPanel } from "./create-entity-item-panel";
+export type { CreateEntityItemPanelProps } from "./create-entity-item-panel";
+export { ClassifyCreateEntityItemPanel } from "./classify-create-entity-item-panel";
+export type { ClassifyCreateEntityItemPanelProps } from "./classify-create-entity-item-panel";
 export { CreateEntityItemProfileSelector } from "./create-entity-item-profile-selector";
 export type { CreateEntityItemProfileSelectorProps } from "./create-entity-item-profile-selector";

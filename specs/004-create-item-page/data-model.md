@@ -15,7 +15,7 @@ No server-side data changes. All shapes below are client-side.
 
 Mapping in features (`CreateEntityItemProfileSelector` / `CreateEntityItemProfileSelectorList`): `ProfileEntity` → `{ name: profile.name, title: profile.title, description: profile.description || undefined, icon: <EntityIconBadge profile={profile} variant="sm" muted /> }`.
 
-## Create item page state (`ClassifyCreateEntityItemView`)
+## Create item page state (`ClassifyCreateEntityItemPanel`)
 
 | Field             | Type                         | Initial     | Transitions                                                                       |
 | ----------------- | ---------------------------- | ----------- | --------------------------------------------------------------------------------- |

@@ -1,5 +1,5 @@
 import { createFileRoute, useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
-import { ClassifyCreateEntityItemView } from "@contentgrid/features/entity-item-create";
+import { ClassifyCreateEntityItemPanel } from "@contentgrid/features/entity-item-create";
 
 export const Route = createFileRoute("/_app/~create")({
   component: ClassifyCreateEntityItemRoute,
@@ -11,7 +11,7 @@ function ClassifyCreateEntityItemRoute() {
   const canGoBack = useCanGoBack();
 
   return (
-    <ClassifyCreateEntityItemView
+    <ClassifyCreateEntityItemPanel
       onSelect={(profile) =>
         go({ to: "/$entity/~create", params: { entity: profile.name }, search: {} })
       }

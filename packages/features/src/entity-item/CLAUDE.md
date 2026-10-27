@@ -10,22 +10,24 @@ means in practice.
 
 ## Scope
 
-`entity-item` renders an entity item's attributes and relations: `EntityItemView`,
-`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. The views own edit mode
-(`edit/use-edit-context.ts`: the version being edited, which a background refetch does not change)
-and the item query: they show `EditEntityItemButton` next to the item
-title, and `EditableEntityItemAttributes` shows the attributes or, while editing, the update form
-(`edit/`). On a version conflict the form's Refresh asks the view to refetch the item; the form then
-opens again on the latest version. When a refetch of a loaded item fails, the views keep the item
-(and an open edit form) on screen.
+`entity-item` renders an entity item's attributes and relations: `EntityItemDetail`,
+`EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. The view above owns the item
+query and passes the loaded item plus its `refetch`; edit mode is kept here
+(`edit/use-edit-context.ts`: the version being edited, which a background refetch does not change).
+`EntityItemDetail` shows `EditEntityItemButton` next to the item title, and
+`EditableEntityItemAttributes` shows the attributes or, while editing, the update form (`edit/`). On a
+version conflict the form's Refresh calls the view's `refetch`; the form then opens again on the latest
+version. When a refetch of a loaded item fails, the view keeps the item (and an open edit form) on screen.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
-`EntityItemContentFocusView`) renders an entity item's content attribute — a PDF, an image or a
+`EntityItemContentFocusBody`) renders an entity item's content attribute — a PDF, an image or a
 video as stored, or any other file previewed through the platform's PDF rendition service — next
 to those same attributes and relations, with the production viewer toolbar.
-`EntityItemContentFocusView` resolves
-`entityName`/`itemId` into a `profileEntity`/`EntityItem` itself and falls back to plain
-`EntityItemView` for any item with no content attributes (FR-001).
+`EntityItemContentFocusBody` takes an already-loaded `entityItem` (its profile is
+`entityItem.profileEntity`) and its `refetch` from the view above it
+(`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemDetail` for any item
+with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
+in `packages/features/CLAUDE.md`).
 
 ## Stability of the content-focus variation
 
@@ -33,21 +35,19 @@ The three-track model (`packages/features/CLAUDE.md`) gates stability per featur
 there is currently no mechanism to flag one variation inside a `stable` feature as
 `experimental`. Folding `content-focus` into `entity-item` accepted that gap knowingly rather than
 inventing a new mechanism for it, and the gap is still there: nothing prevents an app from
-importing `EntityItemContentFocusView` the way `x-stability` prevents importing an actually
+importing `EntityItemContentFocusBody` the way `x-stability` prevents importing an actually
 `experimental`/`candidate` feature.
 
-**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusView`
+**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusBody`
 was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
-both apps' `$entity/$itemId.tsx` item routes — `apps/navigator`'s route mirrors
-`apps/navigator-experimental`'s wiring (same `renderHomeLink`/`renderCollectionLink`/relation
-callbacks); it no longer falls back to plain `EntityItemView` at the route level (the view itself
-still does, per-item, for FR-001). There is no longer an "experimental-only" convention to enforce
+both apps' `$entity/$itemId.tsx` item routes, through the item detail view in `packages/views`;
+the view itself falls back to plain `EntityItemDetail` per item for FR-001. There is no longer an "experimental-only" convention to enforce
 here — both tracks may mount this view.
 
 ## Layering (spec-001 `feature-layer-imports.md`)
 
 ```
-entity-item-view.tsx, attributes/, relations/
+entity-item-detail.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 edit/  (edit-entity-item-container -> edit-entity-item-form;
@@ -56,11 +56,11 @@ edit/  (edit-entity-item-container -> edit-entity-item-form;
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 variations/content-focus/
-  views/  (entity-item-content-focus-view.tsx)
+  body/  (entity-item-content-focus-body.tsx)
     -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel,
                      content-preview-toolbar, image-video-viewer)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
-    -> entity-item's own attributes/, relations/, entity-item-view.tsx — a sibling import
+    -> entity-item's own attributes/, relations/, entity-item-detail.tsx — a sibling import
        within the same feature now, not a cross-feature one
     -> ../../../layout's `RightSidePanelLayout` (imported the same way as this feature's other
        layouts, `BreadCrumbsToolBarLayout`/`PageLayout`) — moved there from this variation's own
@@ -72,9 +72,10 @@ variations/content-focus/
   util               -> @contentgrid/navigator-data only — no UI, no React components
 ```
 
-- `variations/content-focus/views/entity-item-content-focus-view.tsx` takes only `entityName`,
-  `itemId`, `toolbar?`, and relation callbacks (spec `contracts/content-focus-view.md`) — never a
-  resolved `ProfileEntity` or `EntityItem` from its host (Principle VIII).
+- `variations/content-focus/body/entity-item-content-focus-body.tsx` (`EntityItemContentFocusBody`)
+  takes the loaded `entityItem` plus relation callbacks, and no toolbar, breadcrumb or link
+  render props: its view loads the main object once and draws the chrome (ADR-018; this
+  supersedes the earlier "primitives only" rule of spec `002-pdf-viewer`).
 - `variations/content-focus/util/` stays pure: no `useQuery`, no JSX, no `@contentgrid/ui`
   import. Transformation logic (e.g. picking the default content attribute) lives here, not
   inline in a component.

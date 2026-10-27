@@ -64,7 +64,7 @@ function requireBearer(url: string) {
 /**
  * Dev-only demo data for the content-focus feature (spec `002-pdf-viewer`): one "document"
  * entity with a single content attribute (`file`) and one item that already holds a PDF, so
- * `EntityItemContentFocusView` has something to render in this app's dev server without a real
+ * `EntityItemContentFocusBody` has something to render in this app's dev server without a real
  * backend.
  *
  * Registered BEFORE `createDemoHandlers()` in `browser.ts` — this module's own `/profile` root

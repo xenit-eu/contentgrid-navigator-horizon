@@ -1,6 +1,15 @@
 import { useState } from "react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 
+/** Reloads the item: what the edit form's Refresh calls after a version conflict. */
+export type EditContextRefetch = () => Promise<{
+  readonly data?: EntityItem;
+  readonly isSuccess: boolean;
+}>;
+
+/** For a caller that cannot reload the item: Refresh then leaves the form as it is. */
+export const noRefetch: EditContextRefetch = async () => ({ isSuccess: false });
+
 /**
  * Edit mode of the shown `item`. While editing, `editedItem` is the version the form was opened
  * on: a background refetch does not change it, so the user's input stays and a save of an item
@@ -8,10 +17,7 @@ import type { EntityItem } from "@contentgrid/navigator-data";
  * latest version. Edit mode belongs to one item, so it ends when the page moves on to another item
  * and stays closed when the page comes back to it.
  */
-export function useEditContext(
-  item: EntityItem | undefined,
-  refetch: () => Promise<{ readonly data?: EntityItem; readonly isSuccess: boolean }>,
-) {
+export function useEditContext(item: EntityItem | undefined, refetch: EditContextRefetch) {
   const href = item?.selfLink.href;
   const [editedItem, setEditedItem] = useState<EntityItem | null>(null);
   const [shownHref, setShownHref] = useState(href);

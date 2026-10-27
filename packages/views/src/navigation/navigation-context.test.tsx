@@ -69,7 +69,9 @@ describe("useViewNavigation", () => {
       </NavigationProvider>,
     );
     await userEvent.click(screen.getByText("item"));
+    await userEvent.click(screen.getByText("create"));
     expect(navigation.openItem).toHaveBeenCalledWith("invoice", "42");
+    expect(navigation.openCreateItem).toHaveBeenCalledWith("invoice");
   });
 });
 
@@ -184,10 +186,12 @@ describe("ChildNavigationProvider", () => {
     await userEvent.click(screen.getByText("item"));
     await userEvent.click(screen.getByText("list"));
     await userEvent.click(screen.getByText("home"));
+    await userEvent.click(screen.getByText("create"));
     expect(openItem).toHaveBeenCalledWith("invoice", "42");
     expect(host.calls).toEqual([
       { method: "openEntityItemCollection", args: ["invoice"] },
       { method: "openHome", args: [] },
+      { method: "openCreateItem", args: ["invoice"] },
     ]);
   });
 

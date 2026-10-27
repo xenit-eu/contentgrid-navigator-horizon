@@ -15,7 +15,7 @@ import { LoadingPage } from "../app-info-pages";
 import { CreateEntityItemProfileSelectorList } from "./create-entity-item-profile-selector";
 import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
-export interface ClassifyCreateEntityItemViewProps {
+export interface ClassifyCreateEntityItemPanelProps {
   /** Called on "Continue" with the chosen entity; the caller opens its create form. */
   readonly onSelect: (profile: ProfileEntity) => void;
   readonly onCancel: () => void;
@@ -25,10 +25,10 @@ export interface ClassifyCreateEntityItemViewProps {
  * The general "Create Item" page: choose the entity to create and optionally attach a file,
  * which the chosen entity's create form picks up from `useCreateEntityItemState`.
  */
-export function ClassifyCreateEntityItemView({
+export function ClassifyCreateEntityItemPanel({
   onSelect,
   onCancel,
-}: Readonly<ClassifyCreateEntityItemViewProps>) {
+}: Readonly<ClassifyCreateEntityItemPanelProps>) {
   const { profiles: loadedProfiles, isLoading } = useLoadedProfileEntities();
   const profiles = loadedProfiles.filter((profile) => profile.createTemplate !== null);
   const initialFile = useCreateEntityItemState((state) => state.initialFile);
