@@ -3,19 +3,19 @@ import type { ProfileEntity } from "@contentgrid/navigator-data";
 import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface SearchAttributeInclusion {
-  /** The included attribute names, or `"all"` when no layer restricts them. */
+  /** The included attribute names, or `"all"` when there is no list at all (no profile yet). */
   readonly includedAttributes: ReadonlySet<string> | "all";
   readonly isIncluded: (attributeName: string) => boolean;
 }
 
 /**
- * Which attributes take part in the entity search bar (spec 003, FR-034–FR-036), resolved like
- * visible columns: user preference, then backend default, then everything. Search parameters
- * over a relation are not governed by this — the search bar always includes them. A saved list
- * that names none of the entity's current searchable attributes (all renamed or removed, or only
- * attributes without a search parameter such as `id`) falls back to everything, so the search bar
- * is never left with no attribute to search. "Searchable" matches the options the configuration
- * panel offers.
+ * Which attributes take part in the entity search bar (spec 003, FR-034–FR-036a), resolved like
+ * visible columns: user preference, then backend default, then the heuristic default
+ * (`ProfileEntity.getDefaultPreferences()`, which lists every searchable attribute). The winning
+ * list is taken as is, keeping just the names that are searchable attributes of the entity
+ * (renamed or removed names, or `id`, are dropped); an empty result switches search off. The
+ * configuration panel shows this same resolution. Only without a profile is there no list at all,
+ * and then nothing is restricted.
  *
  * Accepts `profileEntity: undefined` — call it unconditionally, every render.
  */
@@ -25,16 +25,13 @@ export function useSearchAttributeInclusion(
   const { preferences } = useEntityDisplayPreferences(profileEntity);
   const searchAttributes = preferences.searchAttributes;
   return useMemo(() => {
-    const known = new Set(
-      [...(profileEntity?.userDefinedAttributes ?? []), ...(profileEntity?.auditAttributes ?? [])]
-        .filter((attribute) => attribute.searchParams.length > 0)
-        .map((attribute) => attribute.name),
-    );
-    const resolves = searchAttributes?.some((name) => known.has(name));
-    if (!searchAttributes || (profileEntity && !resolves)) {
+    if (!searchAttributes) {
       return { includedAttributes: "all", isIncluded: () => true };
     }
-    const included = new Set(searchAttributes);
+    const searchable = new Set(
+      (profileEntity?.searchableAttributes ?? []).map((attribute) => attribute.name),
+    );
+    const included = new Set(searchAttributes.filter((name) => searchable.has(name)));
     return { includedAttributes: included, isIncluded: (name) => included.has(name) };
   }, [searchAttributes, profileEntity]);
 }

@@ -306,4 +306,33 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
       expect(saved).toContain("title");
     });
   });
+
+  it("shows nothing checked for an empty list", async () => {
+    const user = userEvent.setup();
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", { searchAttributes: [] });
+    renderSearchBarDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
+
+    for (const name of [/^Title/, /^Status/, /^Created at/]) {
+      expect(screen.getByRole("checkbox", { name })).not.toBeChecked();
+    }
+  });
+
+  it("checks only the saved names that are searchable attributes", async () => {
+    const user = userEvent.setup();
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", {
+        searchAttributes: ["id", "renamed_away", "title"],
+      });
+    renderSearchBarDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
+
+    expect(screen.getByRole("checkbox", { name: /^Title/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Status/ })).not.toBeChecked();
+  });
 });

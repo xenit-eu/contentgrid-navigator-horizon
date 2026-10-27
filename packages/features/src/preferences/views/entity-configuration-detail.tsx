@@ -16,6 +16,7 @@ import {
 import { EntityIconBadge } from "../../layout";
 import { toAttributeOption } from "../attribute-options";
 import { useEntityDisplayPreferences } from "../use-entity-display-preferences";
+import { useSearchAttributeInclusion } from "../use-search-attribute-inclusion";
 import { EntityCreateFormPreview } from "./previews/entity-create-form-preview";
 import { EntityItemPreview } from "./previews/entity-item-preview";
 import { EntityTablePreview } from "./previews/entity-table-preview";
@@ -65,7 +66,7 @@ export function EntityConfigurationDetail({
   // (e.g. "modified date") — buildColumns() renders a column for any visible audit attribute too.
   const attributeOptions = [...regularOptions, ...systemOptions];
   // Only attributes with at least one search parameter can take part in the search bar; relation
-  // search parameters are not configurable here (always included, spec 003 FR-036).
+  // search parameters are not configurable here (included unless no attribute is, spec 003 FR-036).
   const searchableOptions = [
     ...profile.userDefinedAttributes
       .filter((attribute) => attribute.searchParams.length > 0)
@@ -74,6 +75,11 @@ export function EntityConfigurationDetail({
       .filter((attribute) => attribute.searchParams.length > 0)
       .map((attribute) => toAttributeOption(attribute, true)),
   ];
+  // Checked = what the search bar actually uses, not the raw saved list (FR-035a).
+  const { includedAttributes } = useSearchAttributeInclusion(profile);
+  const searchableValues = searchableOptions
+    .map((option) => option.name)
+    .filter((name) => includedAttributes === "all" || includedAttributes.has(name));
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
 
   const body = (
@@ -143,9 +149,7 @@ export function EntityConfigurationDetail({
             <AttributeMultiSelect
               label="Searchable attributes"
               attributes={searchableOptions}
-              values={
-                preferences.searchAttributes ?? searchableOptions.map((option) => option.name)
-              }
+              values={searchableValues}
               onChange={(names) => setOverride({ searchAttributes: [...names] })}
               placeholder="Choose attributes"
             />

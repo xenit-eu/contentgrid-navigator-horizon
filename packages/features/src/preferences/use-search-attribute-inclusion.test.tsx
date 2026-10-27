@@ -29,10 +29,14 @@ describe("useSearchAttributeInclusion", () => {
     useEntityDisplayPreferencesStore.setState({ overrides: {} });
   });
 
-  it("includes every attribute when no layer restricts them", () => {
+  it("includes every searchable attribute, but not id, through the heuristic default", () => {
     const { result } = render();
-    expect(result.current.includedAttributes).toBe("all");
-    expect(result.current.isIncluded("anything")).toBe(true);
+    expect(result.current.includedAttributes).toEqual(
+      new Set(searchBar.searchableAttributes.map((attribute) => attribute.name)),
+    );
+    expect(result.current.isIncluded("title")).toBe(true);
+    expect(result.current.isIncluded("created_at")).toBe(true);
+    expect(result.current.isIncluded("id")).toBe(false);
   });
 
   it("follows the backend default", () => {
@@ -63,17 +67,24 @@ describe("useSearchAttributeInclusion", () => {
     expect(result.current.isIncluded("reference")).toBe(false);
   });
 
-  it("falls back to every attribute when the list names only attributes without search", () => {
-    backendDefaults.value = { "search-bar": { searchAttributes: ["id"] } };
+  it("includes nothing for an empty list", () => {
+    backendDefaults.value = { "search-bar": { searchAttributes: [] } };
     const { result } = render();
-    expect(result.current.includedAttributes).toBe("all");
-    expect(result.current.isIncluded("title")).toBe(true);
+    expect(result.current.includedAttributes).toEqual(new Set());
+    expect(result.current.isIncluded("title")).toBe(false);
   });
 
-  it("falls back to every attribute when no saved name exists any more", () => {
+  it("includes nothing when the list names only attributes without search", () => {
+    backendDefaults.value = { "search-bar": { searchAttributes: ["id"] } };
+    const { result } = render();
+    expect(result.current.includedAttributes).toEqual(new Set());
+    expect(result.current.isIncluded("id")).toBe(false);
+  });
+
+  it("includes nothing when no saved name exists any more", () => {
     backendDefaults.value = { "search-bar": { searchAttributes: ["renamed_away"] } };
     const { result } = render();
-    expect(result.current.includedAttributes).toBe("all");
-    expect(result.current.isIncluded("title")).toBe(true);
+    expect(result.current.includedAttributes).toEqual(new Set());
+    expect(result.current.isIncluded("title")).toBe(false);
   });
 });
