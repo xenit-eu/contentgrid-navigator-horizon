@@ -121,7 +121,10 @@ same way `infiniteByUrl` stays apart.
 searchAttributes: z.array(z.string()).optional(),
 ```
 
-- `ProfileEntity.getDefaultPreferences()` does **not** set it (undefined = all).
+- `ProfileEntity.searchableAttributes`: user-defined and audit attributes with at least one
+  search parameter (`id` is never one).
+- `ProfileEntity.getDefaultPreferences()` sets it to the names of `searchableAttributes` (the
+  FR-035 default); `[]` = none.
 - Unknown attribute names in a stored value are ignored by the consumer (a renamed attribute must
   not break the bar).
 

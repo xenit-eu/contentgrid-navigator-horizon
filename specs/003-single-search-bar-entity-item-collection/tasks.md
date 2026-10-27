@@ -571,30 +571,32 @@ still shows as a chip (spec US8).
 
 - [x] T070 [P] [US8] Extend the schema tests in `ND/src/accessors/entity-display-preferences.test.ts` (create it if absent):
   - `searchAttributes` accepts `string[]` and rejects non-arrays
-  - `ProfileEntity.getDefaultPreferences()` leaves it `undefined`
+  - `ProfileEntity.getDefaultPreferences()` lists every attribute with a search parameter, `id` excluded
 - [x] T071 [P] [US8] Add `FE/preferences/use-search-attribute-inclusion.test.tsx`:
   - no layers → `"all"`
   - a user override array wins over a backend array
   - a higher-layer array **replaces** a lower one (assert against the real `deepMerge`, research R8)
   - unknown names are ignored by `isIncluded`
+  - `[]`, or a list naming only non-searchable attributes, → an empty set (FR-035, FR-036a)
 - [x] T072 [P] [US8] Add `SB/util/apply-search-inclusion.test.ts`:
   - `"all"` keeps everything
   - a set drops every descriptor of excluded direct attributes, including all range params of that `groupKey`
-  - relation descriptors are never dropped (FR-036)
+  - relation descriptors are kept while at least one attribute is included (FR-036)
+  - an empty set drops every descriptor, relation ones included (FR-036a), unless the entity has no searchable attributes of its own
 - [x] T073 [P] [US8] Extend `FE/preferences/views/entity-configuration-detail.test.tsx`:
   - a "Searchable attributes" multi-select lists direct attributes with at least one search param, audit attributes as system options
   - toggling calls `setOverride({ searchAttributes })`
 
 ### Implementation for User Story 8
 
-- [x] T074 [US8] Add `searchAttributes: z.array(z.string()).optional()` to `entityDisplayPreferencesSchema` in `ND/src/accessors/entity-display-preferences.ts`. Do not set it in `ProfileEntity.getDefaultPreferences()` (`ND/src/accessors/entity-profile.ts`). Make T070 pass.
+- [x] T074 [US8] Add `searchAttributes: z.array(z.string()).optional()` to `entityDisplayPreferencesSchema` in `ND/src/accessors/entity-display-preferences.ts`. Add a `searchableAttributes` getter to `ProfileEntity` and set `searchAttributes` to its names in `ProfileEntity.getDefaultPreferences()` (`ND/src/accessors/entity-profile.ts`). Make T070 pass.
 - [x] T075 [US8] Implement `useSearchAttributeInclusion(profileEntity)` in `FE/preferences/use-search-attribute-inclusion.ts`, returning `{ includedAttributes: ReadonlySet<string> | "all"; isIncluded(name) }` from `useEntityDisplayPreferences`. Export it from `FE/preferences/index.ts`. If T071 shows `deepMerge` concatenating arrays, fix `deepMerge` to replace arrays in the same task and note it in the commit. Make T071 pass.
 - [x] T076 [US8] Implement `applySearchInclusion(descriptors, included)` in `SB/util/apply-search-inclusion.ts`. Make T072 pass.
   - In `useEntitySearchBar`, apply it to the descriptors feeding the selector, the suggestion requests and `buildQuickFilters`.
   - Do **not** apply it to chips (FR-037).
 - [x] T077 [US8] In `FE/preferences/views/entity-configuration-detail.tsx`, add an `AttributeMultiSelect` labelled "Searchable attributes" directly below "Visible columns":
   - options are the direct attributes with `searchParams.length > 0`, built with `toAttributeOption`; audit attributes are passed as `isSystem`
-  - `values` = `preferences.searchAttributes` ?? every option name
+  - `values` = the resolved inclusion: every option name for `"all"`, else the included names
   - `onChange` → `setOverride({ searchAttributes: [...names] })` (FR-035a)
   - Make T073 pass.
 

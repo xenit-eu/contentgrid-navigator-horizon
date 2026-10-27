@@ -156,11 +156,13 @@ function useSearchAttributeInclusion(profileEntity: ProfileEntity | undefined): 
 };
 ```
 
-- Reads `preferences.searchAttributes` from `useEntityDisplayPreferences`; `undefined` → `"all"`.
+- Reads `preferences.searchAttributes` from `useEntityDisplayPreferences`; `undefined` → `"all"`,
+  otherwise the set of listed names that are searchable attributes of the entity (`[]` → empty set,
+  search off, FR-036a).
 - `entity-configuration-detail.tsx`: add an `AttributeMultiSelect` labelled "Searchable
   attributes" under "Visible columns", options = direct attributes with at least one search
-  parameter (audit attributes as system options), `onChange` → `setOverride({ searchAttributes })`
-  (FR-035a).
+  parameter (audit attributes as system options), `values` from the resolved inclusion,
+  `onChange` → `setOverride({ searchAttributes })` (FR-035a).
 
 ---
 
