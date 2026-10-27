@@ -38,7 +38,9 @@ describe("EntityItemCollectionView", () => {
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
-    expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["customer"] }]);
+    expect(recording.calls).toEqual([
+      { method: "openCreateItem", args: ["customer", { openInNewTab: true }] },
+    ]);
   });
 
   it("draws no create action without a create form", async () => {

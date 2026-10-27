@@ -1,6 +1,5 @@
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { type ProfileEntity, useEntityItem } from "@contentgrid/navigator-data";
-import { Button } from "@contentgrid/ui";
 import { EntityItemCollectionBreadcrumbs, EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { EntityItemCollectionView } from "../entity-item-collection";
 import type { CollectionViewState } from "../entity-item-collection";
@@ -8,6 +7,7 @@ import { EntityItemDetailView } from "../entity-item-detail";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { BreadCrumbsToolBarLayout } from "../layout";
 import { ChildNavigationProvider, type Navigation, useViewNavigation } from "../navigation";
+import { CreateItemAction } from "../toolbar";
 import type { ViewProps } from "../types/view";
 
 /**
@@ -73,6 +73,10 @@ export function EntityItemSplitView({
     [navigation, entityName, update, current],
   );
 
+  // The list is ALWAYS controlled by this view (it gets `onStateChange` even when the host passed
+  // none): the view owns the whole state, internal or the host's, so a list change and a
+  // selection change both go through `update` with the full next state. Leaving the list
+  // uncontrolled would give it a private state this view cannot report or restore.
   const panes = (
     <div className="flex h-full min-h-0">
       <div className="h-full min-w-0 flex-1 border-r">
@@ -124,7 +128,6 @@ function SplitToolbar({
   actions: ReactNode;
   children: ReactNode;
 }>) {
-  const navigation = useViewNavigation();
   const result = useProfileEntityTarget({ entityName });
   const profileEntity = result.status === "success" ? result.profileEntity : undefined;
 
@@ -140,13 +143,7 @@ function SplitToolbar({
       }
       actions={
         <>
-          {profileEntity?.createTemplate && (
-            <Button
-              onClick={() => navigation.openCreateItem(profileEntity.name, { openInNewTab: true })}
-            >
-              Create {profileEntity.singularName}
-            </Button>
-          )}
+          <CreateItemAction profileEntity={profileEntity} />
           {actions}
         </>
       }

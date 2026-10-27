@@ -96,5 +96,5 @@ export function createCollectionFixtureFetch(
     }
     return itemFixture.fetch(input);
   };
-  return { fetch: fetchFn, collectionRequests };
+  return { fetch: fetchFn, collectionRequests, itemCounts: itemFixture.counts };
 }

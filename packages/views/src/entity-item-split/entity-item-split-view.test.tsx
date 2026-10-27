@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -88,17 +89,51 @@ describe("EntityItemSplitView", () => {
     expect(recording.calls).toEqual([{ method: "openHome", args: [] }]);
   });
 
-  it("keeps a pane change out of the list pane's state, and each pane's state apart", async () => {
+  it("keeps the selection and the list's state apart: paging leaves the selection, selecting leaves the page", async () => {
+    const { Wrapper, fixture } = setup();
+    const reported: EntityItemSplitViewState[] = [];
+    // A host that echoes every reported state back, as an app writing it to its address would.
+    function EchoHost() {
+      const [state, setState] = useState<EntityItemSplitViewState>({ selectedItemId: "cust-001" });
+      return (
+        <EntityItemSplitView
+          entityName="customer"
+          state={state}
+          onStateChange={(next) => {
+            reported.push(next);
+            setState(next);
+          }}
+        />
+      );
+    }
+    render(<EchoHost />, { wrapper: Wrapper });
+
+    await row("Acme Corp");
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
+    // The list's own payload never carries the selection; the split view adds it.
+    expect(reported.at(-1)).toEqual({
+      selectedItemId: "cust-001",
+      collection: { pageUrl: CUSTOMER_NEXT_PAGE_URL },
+    });
+    expect(currentCrumb()).toHaveTextContent("Acme Corp");
+
+    await userEvent.click((await screen.findAllByText("Globex"))[0]);
+    // A selection change leaves `collection` exactly as it was.
+    expect(reported.at(-1)).toEqual({
+      selectedItemId: "cust-002",
+      collection: { pageUrl: CUSTOMER_NEXT_PAGE_URL },
+    });
+  });
+
+  it("selecting an item requests it once: the toolbar shares the detail pane's cache entry", async () => {
     const { Wrapper, fixture } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await row("Acme Corp"));
     await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
-    // Paging the list afterwards leaves the selection alone.
-    await userEvent.click(screen.getByRole("button", { name: /next/i }));
 
-    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
-    expect(currentCrumb()).toHaveTextContent("Acme Corp");
+    expect(fixture.itemCounts.item).toBe(1);
   });
 });
 

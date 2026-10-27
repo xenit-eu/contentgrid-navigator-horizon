@@ -4,11 +4,11 @@ import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@con
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
 import { extractFilterValuesFromCollectionUrl } from "@contentgrid/features/search";
 import { type ProfileEntity, toProblemDisplayModel } from "@contentgrid/navigator-data";
-import { Button } from "@contentgrid/ui";
 import { EntityItemCollectionBreadcrumbs } from "../breadcrumbs";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useViewNavigation } from "../navigation";
+import { CreateItemAction } from "../toolbar";
 import type { ViewProps } from "../types/view";
 
 /**
@@ -74,7 +74,6 @@ export function EntityItemCollectionView({
   onStateChange,
   ...target
 }: Readonly<EntityItemCollectionViewProps>) {
-  const navigation = useViewNavigation();
   const result = useProfileEntityTarget(
     "collectionUrl" in target ? { url: target.collectionUrl } : target,
   );
@@ -114,11 +113,7 @@ export function EntityItemCollectionView({
       breadcrumbs={<EntityItemCollectionBreadcrumbs profileEntity={profileEntity} />}
       actions={
         <>
-          {profileEntity?.createTemplate && (
-            <Button onClick={() => navigation.openCreateItem(profileEntity.name)}>
-              Create {profileEntity.singularName}
-            </Button>
-          )}
+          <CreateItemAction profileEntity={profileEntity} />
           {toolbar?.actions}
         </>
       }
