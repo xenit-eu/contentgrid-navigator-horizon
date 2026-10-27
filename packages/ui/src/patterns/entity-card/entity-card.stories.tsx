@@ -166,12 +166,12 @@ export const Grid: Story = {
             />
           }
         >
-          <div>
-            <div className="text-2xl font-bold">99</div>
-            <div className="flex items-end justify-between gap-2">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <div className="text-2xl font-bold">99</div>
               <p className="text-xs text-muted-foreground">items</p>
-              <ArrowRightIcon aria-hidden className="h-6 w-6 text-muted-foreground" />
             </div>
+            <ArrowRightIcon aria-hidden className="h-6 w-6 text-muted-foreground" />
           </div>
         </EntityCard>
       ))}
