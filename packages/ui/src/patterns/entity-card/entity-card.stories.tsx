@@ -1,4 +1,4 @@
-import { DatabaseIcon, FileTextIcon, PlusIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, DatabaseIcon, FileTextIcon, PlusIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "storybook/test";
 import { Button } from "../../primitives/button";
@@ -133,6 +133,50 @@ export const NoAction: Story = {
       </>
     ),
   },
+};
+
+const gridCards = [
+  { name: "a", title: "Companies" },
+  { name: "b", title: "Invoices", description: "Outgoing invoices." },
+  {
+    name: "c",
+    title: "Suppliers",
+    description:
+      "Every supplier we buy from, including their contact persons, payment terms, delivery addresses and the full history of purchase orders placed with them.",
+  },
+  { name: "d", title: "No content no relationses", description: "Wrapping title." },
+  { name: "e", title: "Products", description: "Catalogue of products and their prices." },
+  { name: "f", title: "Contracts", description: "Signed agreements with customers." },
+  { name: "g", title: "Shipments" },
+  { name: "h", title: "Warehouses", description: "Where stock is kept." },
+];
+
+/** Regression story: titles, descriptions and count rows must align across a grid row. */
+export const Grid: Story = {
+  args: { name: "grid", title: "Grid" },
+  render: () => (
+    <div className="grid w-[1000px] grid-cols-4 gap-4">
+      {gridCards.map((card, index) => (
+        <EntityCard
+          key={card.name}
+          {...card}
+          icon={
+            <IconBadge
+              icon={index % 2 === 0 ? <DatabaseIcon aria-hidden /> : <FileTextIcon aria-hidden />}
+            />
+          }
+        >
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-2xl font-bold">99</div>
+              <ArrowRightIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-xs text-muted-foreground">items</p>
+          </div>
+        </EntityCard>
+      ))}
+    </div>
+  ),
 };
 
 export const WithInteraction: Story = {
