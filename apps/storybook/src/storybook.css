@@ -1,3 +1,4 @@
 @import "tailwindcss";
 @source "../../../packages/features/src";
+@source "../../../packages/views/src";
 @import "@contentgrid/ui/styles/preset.css";

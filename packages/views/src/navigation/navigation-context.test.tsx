@@ -16,6 +16,7 @@ function NavButtons() {
       <button onClick={() => navigation.openHome()}>home</button>
       <button onClick={() => navigation.openEntityItemCollection("invoice")}>list</button>
       <button onClick={() => navigation.openItem("invoice", "42")}>item</button>
+      <button onClick={() => navigation.openCreateItem("invoice")}>create</button>
     </>
   );
 }
@@ -35,6 +36,7 @@ describe("useViewNavigation", () => {
       result.current.openHome();
       result.current.openEntityItemCollection("invoice");
       result.current.openItem("invoice", "1");
+      result.current.openCreateItem("invoice");
     }).not.toThrow();
     error.mockRestore();
     vi.unstubAllEnvs();
@@ -59,6 +61,7 @@ describe("useViewNavigation", () => {
       openHome: vi.fn(),
       openEntityItemCollection: vi.fn(),
       openItem: vi.fn(),
+      openCreateItem: vi.fn(),
     };
     render(
       <NavigationProvider navigation={navigation}>
@@ -77,10 +80,12 @@ describe("recording navigation", () => {
     render(Decorated(NavButtons, {} as never));
     await userEvent.click(screen.getByText("list"));
     await userEvent.click(screen.getByText("item"));
+    await userEvent.click(screen.getByText("create"));
     await userEvent.click(screen.getByText("home"));
     expect(recording.calls).toEqual([
       { method: "openEntityItemCollection", args: ["invoice"] },
       { method: "openItem", args: ["invoice", "42"] },
+      { method: "openCreateItem", args: ["invoice"] },
       { method: "openHome", args: [] },
     ]);
   });
@@ -90,6 +95,47 @@ describe("recording navigation", () => {
     render(Decorated(NavButtons, {} as never));
     // Would throw without a provider in development.
     await userEvent.click(screen.getByText("home"));
+  });
+
+  it("gives deterministic hrefs, independent of recorded calls", () => {
+    const recording = createRecordingNavigation();
+    expect(recording.navigation.hrefFor?.home()).toBe("/");
+    expect(recording.navigation.hrefFor?.entityItemCollection("invoice")).toBe("/invoice");
+    expect(recording.navigation.hrefFor?.item("invoice", "42")).toBe("/invoice/42");
+    expect(recording.calls).toEqual([]);
+  });
+});
+
+describe("NavigationOptions", () => {
+  it("records options only when the caller passes them", () => {
+    const recording = createRecordingNavigation();
+    recording.navigation.openHome({ openInNewTab: true });
+    recording.navigation.openEntityItemCollection("invoice", { openInNewTab: true });
+    recording.navigation.openItem("invoice", "42", { openInNewTab: true });
+    recording.navigation.openCreateItem("invoice", { openInNewTab: true });
+    recording.navigation.openItem("invoice", "43");
+    expect(recording.calls).toEqual([
+      { method: "openHome", args: [{ openInNewTab: true }] },
+      { method: "openEntityItemCollection", args: ["invoice", { openInNewTab: true }] },
+      { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
+      { method: "openCreateItem", args: ["invoice", { openInNewTab: true }] },
+      { method: "openItem", args: ["invoice", "43"] },
+    ]);
+  });
+
+  it("forwards options through ChildNavigationProvider to the parent", () => {
+    const host = createRecordingNavigation();
+    const { result } = renderHook(() => useViewNavigation(), {
+      wrapper: ({ children }) => (
+        <NavigationProvider navigation={host.navigation}>
+          <ChildNavigationProvider overrides={{}}>{children}</ChildNavigationProvider>
+        </NavigationProvider>
+      ),
+    });
+    result.current.openItem("invoice", "42", { openInNewTab: true });
+    expect(host.calls).toEqual([
+      { method: "openItem", args: ["invoice", "42", { openInNewTab: true }] },
+    ]);
   });
 });
 
@@ -143,6 +189,45 @@ describe("ChildNavigationProvider", () => {
       { method: "openEntityItemCollection", args: ["invoice"] },
       { method: "openHome", args: [] },
     ]);
+  });
+
+  it("falls back to the parent's hrefFor when the child does not override it", () => {
+    const host = createRecordingNavigation();
+    let hrefFor: Navigation["hrefFor"];
+    function ReadHrefFor() {
+      hrefFor = useViewNavigation().hrefFor;
+      return null;
+    }
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ openItem: vi.fn() }}>
+          <ReadHrefFor />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    expect(hrefFor?.item("invoice", "42")).toBe("/invoice/42");
+  });
+
+  it("uses the child's own hrefFor when it overrides one", () => {
+    const host = createRecordingNavigation();
+    const childHrefFor: Navigation["hrefFor"] = {
+      home: () => "#home",
+      entityItemCollection: (entityName) => `#${entityName}`,
+      item: (entityName, id) => `#${entityName}/${id}`,
+    };
+    let hrefFor: Navigation["hrefFor"];
+    function ReadHrefFor() {
+      hrefFor = useViewNavigation().hrefFor;
+      return null;
+    }
+    render(
+      <NavigationProvider navigation={host.navigation}>
+        <ChildNavigationProvider overrides={{ hrefFor: childHrefFor }}>
+          <ReadHrefFor />
+        </ChildNavigationProvider>
+      </NavigationProvider>,
+    );
+    expect(hrefFor?.home()).toBe("#home");
   });
 
   it("falls back to the parent for openItem when it is not overridden", async () => {

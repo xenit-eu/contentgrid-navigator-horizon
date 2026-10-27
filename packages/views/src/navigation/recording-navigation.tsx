@@ -15,6 +15,10 @@ export type NavigationCall =
       args:
         | [entityName: string, id: string]
         | [entityName: string, id: string, options: NavigationOptions];
+    }
+  | {
+      method: "openCreateItem";
+      args: [entityName: string] | [entityName: string, options: NavigationOptions];
     };
 
 export interface RecordingNavigation {
@@ -41,6 +45,17 @@ export function createRecordingNavigation(): RecordingNavigation {
         method: "openItem",
         args: options ? [entityName, id, options] : [entityName, id],
       });
+    },
+    openCreateItem: (entityName, options) => {
+      calls.push({
+        method: "openCreateItem",
+        args: options ? [entityName, options] : [entityName],
+      });
+    },
+    hrefFor: {
+      home: () => "/",
+      entityItemCollection: (entityName) => `/${entityName}`,
+      item: (entityName, id) => `/${entityName}/${id}`,
     },
   };
   return { navigation, calls };

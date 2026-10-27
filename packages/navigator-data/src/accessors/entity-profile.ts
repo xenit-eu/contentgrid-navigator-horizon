@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { HalObject, type Link, type SimpleLink } from "@contentgrid/hal";
+import { HalObject, type Link, SimpleLink } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
@@ -283,6 +283,11 @@ export default class ProfileEntity {
     const template = this.itemLink.template;
     const [idVariable] = template.variables;
     return template.expand({ [idVariable]: entityId });
+  }
+
+  /** {@link describes} for a bare href, for callers that hold a URL rather than a link. */
+  public describesUrl(href: string): boolean {
+    return this.describes(SimpleLink.to(href));
   }
 
   public describes(link: SimpleLink): boolean {
