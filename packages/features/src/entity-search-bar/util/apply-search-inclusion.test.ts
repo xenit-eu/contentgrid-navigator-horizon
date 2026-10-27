@@ -14,19 +14,31 @@ const descriptors = buildSearchParamDescriptors(
 
 describe("applySearchInclusion", () => {
   it("keeps everything when every attribute is included", () => {
-    expect(applySearchInclusion(descriptors, () => true)).toEqual(descriptors);
+    expect(applySearchInclusion(descriptors, "all")).toEqual(descriptors);
   });
 
   it("drops every parameter of an excluded attribute, ranges included", () => {
-    const kept = applySearchInclusion(descriptors, (name) => name !== "quantity").map(
-      (d) => d.name,
-    );
+    const included = new Set(descriptors.map((d) => d.groupKey).filter((n) => n !== "quantity"));
+    const kept = applySearchInclusion(descriptors, included).map((d) => d.name);
     expect(kept.filter((n) => n.startsWith("quantity"))).toEqual([]);
     expect(kept).toContain("amount~gte");
   });
 
-  it("never drops relation parameters", () => {
-    const kept = applySearchInclusion(descriptors, () => false).map((d) => d.name);
-    expect(kept).toEqual(["customer.name~prefix", "owner.email~prefix"]);
+  it("keeps relation parameters while at least one attribute is included", () => {
+    const kept = applySearchInclusion(descriptors, new Set(["title"])).map((d) => d.name);
+    expect(kept.filter((n) => !n.startsWith("title"))).toEqual([
+      "customer.name~prefix",
+      "owner.email~prefix",
+    ]);
+  });
+
+  it("drops everything, relation parameters included, when no attribute is included", () => {
+    expect(applySearchInclusion(descriptors, new Set())).toEqual([]);
+    expect(applySearchInclusion(descriptors, new Set(["renamed_away"]))).toEqual([]);
+  });
+
+  it("keeps relation parameters of an entity without searchable attributes of its own", () => {
+    const relationOnly = descriptors.filter((d) => d.relation !== undefined);
+    expect(applySearchInclusion(relationOnly, new Set())).toEqual(relationOnly);
   });
 });

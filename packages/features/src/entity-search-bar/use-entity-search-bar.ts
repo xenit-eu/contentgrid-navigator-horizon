@@ -71,11 +71,13 @@ export function useEntitySearchBar({
   );
 
   // What the selector, the suggestions and the quick filters offer: the attributes the
-  // configuration / user preference includes, plus every relation parameter (FR-034–FR-036).
-  const { isIncluded } = useSearchAttributeInclusion(profileEntity);
+  // configuration / user preference includes, plus every relation parameter — or nothing at all
+  // when none of the entity's own attributes is included, which hides the main row and the quick
+  // filters (FR-034–FR-036a).
+  const { includedAttributes } = useSearchAttributeInclusion(profileEntity);
   const includedDescriptors = useMemo(
-    () => applySearchInclusion(descriptors, isIncluded),
-    [descriptors, isIncluded],
+    () => applySearchInclusion(descriptors, includedAttributes),
+    [descriptors, includedAttributes],
   );
 
   const setParams = useCallback(

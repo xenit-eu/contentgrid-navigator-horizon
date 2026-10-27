@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  SEARCH_BAR_PROFILE_ROOT_URL,
   makeSearchBarProfiles,
   searchBarHandlers,
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { server } from "../../test-setup";
+import { useEntityDisplayPreferencesStore } from "../preferences/entity-display-preferences-store";
 import { makeSearchBarWrapper } from "../test-utils/search-bar-wrapper";
 import { EntitySearchBar } from "./entity-search-bar";
 
@@ -36,6 +38,9 @@ describe("EntitySearchBar", () => {
   beforeEach(() => {
     server.use(...searchBarHandlers());
   });
+  afterEach(() => {
+    useEntityDisplayPreferencesStore.setState({ overrides: {} });
+  });
 
   it("renders the three rows: chips, selector + input, quick filters", () => {
     renderBar({ "title~prefix": "Al" });
@@ -43,6 +48,18 @@ describe("EntitySearchBar", () => {
     expect(screen.getByRole("combobox", { name: "Search in" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Search" })).toBeInTheDocument();
     expect(quickFilters()).toBeInTheDocument();
+  });
+
+  it("switches search off when no attribute is included, but keeps the active filters", () => {
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", { searchAttributes: [] });
+    renderBar({ "customer.name~prefix": "Ac" });
+
+    expect(screen.getByRole("list", { name: "Active filters" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Search in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Search" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("toolbar", { name: "Quick filters" })).not.toBeInTheDocument();
   });
 
   it("takes no space for the chip row when nothing is filtered", () => {
