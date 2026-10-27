@@ -34,9 +34,20 @@ describe("entityDisplayPreferencesSchema.searchAttributes", () => {
     );
   });
 
-  it("is left unset by the heuristic defaults, meaning every searchable attribute", () => {
-    expect(
-      makeSearchBarProfiles().searchBar.getDefaultPreferences().searchAttributes,
-    ).toBeUndefined();
+  it("is set by the heuristic defaults to every searchable attribute, audit ones included, never id", () => {
+    const { searchBar } = makeSearchBarProfiles();
+    expect(searchBar.getDefaultPreferences().searchAttributes).toEqual([
+      "title",
+      "notes",
+      "reference",
+      "status",
+      "quantity",
+      "amount",
+      "due_date",
+      "received_at",
+      "urgent",
+      "created_at",
+      "modified_at",
+    ]);
   });
 });

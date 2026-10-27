@@ -92,9 +92,13 @@ export default class ProfileEntity {
 
     const icon = this.hasContentAttributes ? "FileText" : "Database";
 
+    // Everything that can be searched; `id` is not among `searchableAttributes`.
+    const searchAttributes = this.searchableAttributes.map((attr) => attr.name);
+
     return {
       visibleColumns,
       nameAttribute,
+      searchAttributes,
       icon,
     };
   }
@@ -247,6 +251,16 @@ export default class ProfileEntity {
       this.modifiedByAttribute,
       this.modifiedAtAttribute,
     ].filter((attr): attr is ProfileAttribute => attr !== undefined);
+  }
+
+  /**
+   * User-defined and audit attributes with at least one search parameter — the attributes that
+   * can take part in the entity search bar. `id` is never one of them.
+   */
+  public get searchableAttributes(): ProfileAttribute[] {
+    return [...this.userDefinedAttributes, ...this.auditAttributes].filter(
+      (attr) => attr.searchParams.length > 0,
+    );
   }
 
   public get auditAttributeNames(): ReadonlySet<string> {
