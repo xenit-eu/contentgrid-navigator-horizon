@@ -62,8 +62,10 @@ interface SearchParamDescriptor {
   `resolveHalFormsFields` / `searchProperties`).
 
 **Inclusion** (`applySearchInclusion`): drop descriptors whose `relation` is undefined and whose
-`groupKey` is not in `searchAttributes` (when `searchAttributes` is defined). Relation
-descriptors are never dropped (FR-036).
+`groupKey` is not included. Relation descriptors are kept unless search is off: when the entity
+has direct-attribute descriptors and none of them is included, every descriptor is dropped,
+which hides the selector, the input and the quick filters (FR-036a). An entity without searchable
+attributes of its own keeps its relation descriptors. Chips are built from all descriptors (FR-037).
 
 ---
 
@@ -256,10 +258,13 @@ model's params:
 
 ```ts
 // packages/navigator-data — EntityDisplayPreferences (zod)
-searchAttributes?: string[];   // attribute names; undefined = all searchable direct attributes
+searchAttributes?: string[];   // attribute names; undefined = all searchable direct attributes,
+                               // [] = none (search off); non-searchable names are ignored
 ```
 
-- Resolution order: user override → backend default → heuristic (heuristic leaves it
-  `undefined`) (FR-035).
+- Resolution order: user override → backend default → heuristic (FR-035). The heuristic,
+  `ProfileEntity.getDefaultPreferences()`, sets it to `profileEntity.searchableAttributes` — every
+  user-defined and audit attribute with at least one search parameter, `id` excluded.
 - An array in a higher layer replaces a lower layer's array (verify `deepMerge`; research R8).
-- Edited on the entity configuration page next to "Visible columns" (FR-035a).
+- Edited on the entity configuration page next to "Visible columns" (FR-035a); the control shows
+  the resolved inclusion, not the raw list, so it never disagrees with the search bar.
