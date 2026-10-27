@@ -171,7 +171,7 @@ export const Grid: Story = {
               <div className="text-2xl font-bold">99</div>
               <p className="text-xs text-muted-foreground">items</p>
             </div>
-            <ArrowRightIcon aria-hidden className="h-6 w-6 text-muted-foreground" />
+            <ArrowRightIcon aria-hidden className="h-5 w-5 text-muted-foreground" />
           </div>
         </EntityCard>
       ))}

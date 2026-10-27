@@ -104,7 +104,7 @@ function EntityCardConnected({
           <p className="text-xs text-muted-foreground">items</p>
         </div>
         {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
-        <ArrowRightIcon aria-hidden className="h-6 w-6 text-muted-foreground" />
+        <ArrowRightIcon aria-hidden className="h-5 w-5 text-muted-foreground" />
       </div>
     </EntityCard>
   );
