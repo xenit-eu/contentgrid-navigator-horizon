@@ -99,12 +99,12 @@ function EntityCardConnected({
       onCardClick={onSelect}
     >
       <div>
+        <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
         <div className="flex items-center justify-between gap-2">
-          <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
+          <p className="text-xs text-muted-foreground">items</p>
           {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
           <ArrowRightIcon aria-hidden className="h-4 w-4 text-muted-foreground" />
         </div>
-        <p className="text-xs text-muted-foreground">items</p>
       </div>
     </EntityCard>
   );
