@@ -6,7 +6,6 @@ import {
   Button,
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarInset,
   SidebarLinkButton,
@@ -28,8 +27,6 @@ export interface SideBarLayoutProps {
   readonly topChildren?: ReactNode;
   /** The `name` of the entity whose pages are currently shown, highlighted in the sidebar. */
   readonly activeEntity?: string;
-  /** Extra sidebar footer content, e.g. a dev-only link. */
-  readonly footer?: ReactNode;
   readonly onOpenHome: () => void;
   readonly onOpenEntity: (entityName: string) => void;
   readonly onOpenCreate: () => void;
@@ -43,7 +40,6 @@ export function SideBarLayout({
   children,
   topChildren,
   activeEntity,
-  footer,
   onOpenHome,
   onOpenEntity,
   onOpenCreate,
@@ -89,8 +85,6 @@ export function SideBarLayout({
               entityHref={entityHref}
             />
           </SidebarContent>
-
-          {footer && <SidebarFooter>{footer}</SidebarFooter>}
         </Sidebar>
 
         <SidebarInset className="min-h-0 overflow-hidden">
