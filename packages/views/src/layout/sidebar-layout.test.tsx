@@ -52,11 +52,6 @@ describe("SideBarLayout", () => {
     expect(screen.getByTestId("page")).toBeInTheDocument();
   });
 
-  it("renders the footer only when given one", () => {
-    renderLayout(null, { footer: <span>dev link</span> });
-    expect(screen.getByText("dev link")).toBeInTheDocument();
-  });
-
   it("opens the entity, create and home actions through its callbacks", async () => {
     const handlers = renderLayout(null);
 

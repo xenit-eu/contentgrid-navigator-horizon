@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RouterProvider,
@@ -27,11 +26,11 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   return sidebarNavigatorDataMock(importOriginal);
 });
 
-function renderShell(initialEntry = "/", footer?: ReactNode) {
+function renderShell(initialEntry = "/") {
   mockSidebarData({ profile: { name: "Jane Doe", email: "jane@example.com" } });
 
   const recording = createRecordingNavigation();
-  const rootRoute = createRootRoute({ component: () => <SidebarShell footer={footer} /> });
+  const rootRoute = createRootRoute({ component: () => <SidebarShell /> });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
@@ -94,11 +93,5 @@ describe("SidebarShell", () => {
       "href",
       "/invoice",
     );
-  });
-
-  it("renders the footer the app passes in", async () => {
-    renderShell("/", <span>app footer</span>);
-
-    expect(await screen.findByText("app footer")).toBeInTheDocument();
   });
 });
