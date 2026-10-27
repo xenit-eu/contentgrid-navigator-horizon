@@ -8,14 +8,7 @@ import { useViewNavigation } from "../../navigation";
  * outlet) and to `useViewNavigation()` (every click that opens something). Host code, so it may
  * use the router; the layout it draws takes plain props only.
  */
-export function SidebarShell({
-  topChildren,
-  footer,
-}: Readonly<{
-  topChildren?: ReactNode;
-  /** Sidebar footer content from the app, e.g. a dev-only link — the app owns its route strings. */
-  footer?: ReactNode;
-}>) {
+export function SidebarShell({ topChildren }: Readonly<{ topChildren?: ReactNode }>) {
   const { entity: activeEntity } = useParams({ strict: false }) as { entity?: string };
   const navigation = useViewNavigation();
   const hrefFor = navigation.hrefFor;
@@ -32,7 +25,6 @@ export function SidebarShell({
       onOpenSettings={() => navigation.openSettings()}
       homeHref={hrefFor?.home()}
       entityHref={hrefFor && ((entityName) => hrefFor.entityItemCollection(entityName))}
-      footer={footer}
     >
       <Outlet />
     </SideBarLayout>
