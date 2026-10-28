@@ -216,9 +216,9 @@ export function SearchSuggestionsPopover({
           className="scrollbar-subtle max-h-[min(24rem,60vh)] overflow-y-auto p-1"
         >
           {chips.length > 0 && (
-            <div
+            <div // NOSONAR: no native-element alternative for an async, custom-styled combobox popup
               id={chipsListboxId}
-              role="listbox" // NOSONAR: no native-element alternative for an async, custom-styled combobox popup
+              role="listbox"
               aria-label={labels?.chips ?? "Search in"}
               aria-orientation="horizontal"
               className="flex flex-wrap gap-1.5 border-b p-1.5 pb-2"
@@ -297,9 +297,9 @@ export function SearchSuggestionsPopover({
                   </div>
                 )}
                 {hasItems && (
-                  <div
+                  <div // NOSONAR: see the chip row above
                     id={groupListboxId(groupIndex)}
-                    role="listbox" // NOSONAR: see the chip row above
+                    role="listbox"
                     aria-labelledby={headerId}
                   >
                     {group.items.map((item) => {
