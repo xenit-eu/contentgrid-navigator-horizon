@@ -19,6 +19,10 @@
   /* Typography */
   --font-sans: var(--font-sans-cg);
 
+  /* Breakpoint — 1200px, from which a page can show two panes side by side (`split:`
+   * utilities). Keep in sync with `SPLIT_BREAKPOINT_QUERY` in hooks/use-media-query.ts. */
+  --breakpoint-split: 75rem;
+
   /* Radius — the shadcn calc-chain derives from --radius (set to 12px / 0.75rem).
    * Resulting values: sm=8px, md=10px, lg=12px, xl=16px, 2xl=20px, 3xl=24px.
    * New components should prefer the explicit --cg-radius-sm/md/lg tokens
