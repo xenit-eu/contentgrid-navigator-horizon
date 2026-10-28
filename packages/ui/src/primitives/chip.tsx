@@ -35,12 +35,12 @@ interface ChipProps {
   readonly className?: string;
 }
 
-// Warning matches StatusPill's "warning" variant (status-pill.tsx).
+// Warning uses the shared warning tokens, with the same surface as StatusPill's "warning" variant.
 const TONE_CLASSES: Record<NonNullable<ChipProps["tone"]>, string> = {
   neutral: "border-border bg-background",
   applied: "border-ring/40 bg-accent",
   warning:
-    "border-[rgba(212,104,42,0.45)] bg-[rgba(212,104,42,0.12)] text-[#A4501F] dark:border-[rgba(232,154,99,0.5)] dark:bg-[rgba(232,154,99,0.18)] dark:text-[#E89A63]",
+    "border-warning/45 bg-warning/12 text-warning-foreground dark:border-warning/50 dark:bg-warning/18",
 };
 
 function Chip({
