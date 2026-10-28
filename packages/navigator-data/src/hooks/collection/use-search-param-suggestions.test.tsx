@@ -2,14 +2,17 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createValues } from "@contentgrid/hal-forms/values";
+import { makeProfileEntity } from "../../../test-fixtures/hal/profile-entity";
 import {
   SEARCH_BAR_COLLECTION_URL,
   SEARCH_BAR_CUSTOMER_COLLECTION_URL,
+  SEARCH_BAR_PROFILE_URL,
   makeSearchBarProfiles,
   searchBarHandlers,
+  searchBarProfileJson,
 } from "../../../test-fixtures/msw/search-bar-fixtures";
 import { server } from "../../../test-setup";
-import ProfileEntity from "../../accessors/entity-profile";
+import type ProfileEntity from "../../accessors/entity-profile";
 import type { SearchHalFormTemplateProperty } from "../../accessors/extended-forms/search-form";
 import { makeQueryClient, makeWrapper } from "../test-utils";
 import {
@@ -42,11 +45,12 @@ function renderSuggestions(props: {
   requests: readonly SearchParamSuggestionRequest[];
   query: string;
   searchValues?: Parameters<typeof useSearchParamSuggestions>[0]["searchValues"];
+  profileEntity?: ProfileEntity;
 }) {
   return renderHook(
     (p: typeof props) =>
       useSearchParamSuggestions({
-        profileEntity: searchBar,
+        profileEntity: p.profileEntity ?? searchBar,
         requests: p.requests,
         query: p.query,
         searchValues: p.searchValues,
@@ -117,21 +121,28 @@ describe("useSearchParamSuggestions", () => {
     expect(countCall?.searchParams.get("customer.name~prefix")).toBe("Ac");
   });
 
-  it("keeps the count when the relation target rejects the value, without throwing", async () => {
+  it("keeps the count when the relation target rejects the value's type, without throwing", async () => {
     server.use(...searchBarHandlers({ resolveTotal: () => 4 }));
-    const original = ProfileEntity.prototype.searchEntityRequest;
-    vi.spyOn(ProfileEntity.prototype, "searchEntityRequest").mockImplementation(function (
-      this: ProfileEntity,
-      values,
-    ) {
-      if (this.name === "customer") throw new Error("target rejects the value");
-      return original.call(this, values);
-    });
+    // The parent template types `customer.name~prefix` as a number, so "42" is coerced to 42;
+    // the customer's own `name~prefix` is text and rejects it with a HalFormValueTypeError.
+    const numberTyped = structuredClone(searchBarProfileJson);
+    const relationProperty = numberTyped._templates.search.properties.find(
+      (p) => p.name === "customer.name~prefix",
+    )!;
+    relationProperty.type = "number";
+    const profileEntity = makeProfileEntity(numberTyped, SEARCH_BAR_PROFILE_URL, "search-bar");
     const requests = recordRequests();
 
     const { result } = renderSuggestions({
-      requests: [request("customer.name~prefix")],
-      query: "Ac",
+      profileEntity,
+      requests: [
+        {
+          searchProperty:
+            profileEntity.searchTemplate!.getSearchPropertyByName("customer.name~prefix")!,
+          withSuggestions: true,
+        },
+      ],
+      query: "42",
     });
 
     await waitFor(() => expect(result.current.results[0]?.status).toBe("success"), {
