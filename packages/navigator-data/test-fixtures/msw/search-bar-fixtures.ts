@@ -36,13 +36,15 @@ type SearchParamType =
   | "less-than"
   | "less-than-or-equal";
 
+type SearchParam = [name: string, title: string, type: SearchParamType];
+
 function attribute(opts: {
   name: string;
   title: string;
   type: string;
   readOnly?: boolean;
   constraints?: Record<string, unknown>[];
-  searchParams?: [name: string, title: string, type: SearchParamType][];
+  searchParams?: SearchParam[];
 }) {
   return {
     name: opts.name,
@@ -62,6 +64,84 @@ function attribute(opts: {
     },
     _links: {},
   };
+}
+
+type ProfileAttributeJson = ReturnType<typeof attribute>;
+
+const BOUNDS = {
+  after: ["After", "greater-than"],
+  before: ["Before", "less-than"],
+  from: ["From", "greater-than-or-equal"],
+  until: ["Until", "less-than-or-equal"],
+  gte: ["Min", "greater-than-or-equal"],
+  lte: ["Max", "less-than-or-equal"],
+} as const satisfies Record<string, readonly [string, SearchParamType]>;
+
+/** Range parameters named and titled the way the backend does: `amount~gte` / "Amount: Min". */
+function boundParams(
+  name: string,
+  title: string,
+  suffixes: (keyof typeof BOUNDS)[],
+): SearchParam[] {
+  return suffixes.map((suffix) => {
+    const [label, type] = BOUNDS[suffix];
+    return [`${name}~${suffix}`, `${title}: ${label}`, type];
+  });
+}
+
+function numberAttribute(name: string, title: string, type: "long" | "double") {
+  return attribute({
+    name,
+    title,
+    type,
+    searchParams: [[name, title, "exact-match"], ...boundParams(name, title, ["gte", "lte"])],
+  });
+}
+
+/** A datetime with all four bounds; `constraint` makes it a read-only audit attribute. */
+function datetimeAttribute(name: string, title: string, constraint?: string) {
+  return attribute({
+    name,
+    title,
+    type: "datetime",
+    readOnly: constraint !== undefined,
+    constraints: constraint === undefined ? [] : [{ type: constraint }],
+    searchParams: boundParams(name, title, ["after", "before", "from", "until"]),
+  });
+}
+
+interface SearchPropertyJson {
+  name: string;
+  prompt?: string;
+  type: string;
+  options?: Record<string, unknown>;
+}
+
+const WIRE_TYPES: Record<string, string> = {
+  string: "text",
+  long: "number",
+  double: "number",
+  date: "date",
+  datetime: "datetime",
+  boolean: "checkbox",
+};
+
+/**
+ * The search template properties for the attributes' own search params, in order: prompt =
+ * the param title, wire type from the attribute type, and allowed values as inline options.
+ */
+function searchProperties(attributes: ProfileAttributeJson[]): SearchPropertyJson[] {
+  return attributes.flatMap((attr) => {
+    const allowedValues = attr._embedded["blueprint:constraint"].find(
+      (constraint) => constraint.type === "allowed-values",
+    )?.values;
+    return attr._embedded["blueprint:search-param"].map(({ name, title }) => ({
+      name,
+      prompt: title,
+      type: WIRE_TYPES[attr.type]!,
+      ...(allowedValues ? { options: { minItems: 0, maxItems: 1, inline: allowedValues } } : {}),
+    }));
+  });
 }
 
 function profileLinks(profileUrl: string, collectionUrl: string, title: string) {
@@ -96,115 +176,79 @@ function toOneRelation(name: string, title: string, targetProfileUrl: string, ta
 
 export const SEARCH_BAR_STATUS_OPTIONS = ["draft", "approved", "rejected"] as const;
 
+const searchBarAttributes = [
+  attribute({ name: "id", title: "ID", type: "string", readOnly: true }),
+  attribute({
+    name: "title",
+    title: "Title",
+    type: "string",
+    searchParams: [
+      ["title", "Title", "exact-match"],
+      ["title~prefix", "Title", "prefix-match"],
+    ],
+  }),
+  attribute({
+    name: "notes",
+    title: "Notes",
+    type: "string",
+    searchParams: [["notes~fts", "Notes", "full-text"]],
+  }),
+  attribute({
+    name: "reference",
+    title: "Reference",
+    type: "string",
+    searchParams: [["reference", "Reference", "exact-match"]],
+  }),
+  attribute({
+    name: "status",
+    title: "Status",
+    type: "string",
+    constraints: [{ type: "allowed-values", values: [...SEARCH_BAR_STATUS_OPTIONS] }],
+    searchParams: [["status", "Status", "exact-match"]],
+  }),
+  numberAttribute("quantity", "Quantity", "long"),
+  numberAttribute("amount", "Amount", "double"),
+  attribute({
+    name: "due_date",
+    title: "Due date",
+    type: "date",
+    searchParams: boundParams("due_date", "Due date", ["from", "until"]),
+  }),
+  datetimeAttribute("received_at", "Received at"),
+  attribute({
+    name: "urgent",
+    title: "Urgent",
+    type: "boolean",
+    searchParams: [["urgent", "Urgent", "exact-match"]],
+  }),
+  datetimeAttribute("created_at", "Created at", "created-date"),
+  datetimeAttribute("modified_at", "Modified at", "modified-date"),
+];
+
+const searchBarSearchProperties: SearchPropertyJson[] = [
+  ...searchProperties(searchBarAttributes),
+  { name: "customer.name~prefix", prompt: "Customer: Name", type: "text" },
+  { name: "owner.email~prefix", prompt: "Owner: Email", type: "text" },
+  {
+    name: "_sort",
+    type: "text",
+    options: {
+      minItems: 0,
+      inline: [
+        { property: "title", direction: "asc", value: "title,asc", prompt: "Title ↑" },
+        { property: "title", direction: "desc", value: "title,desc", prompt: "Title ↓" },
+      ],
+    },
+  },
+];
+
 export const searchBarProfileJson = {
   name: "search-bar",
   title: "Search bar",
   description: "Covers every search-parameter shape the single search bar handles.",
   _links: profileLinks(SEARCH_BAR_PROFILE_URL, SEARCH_BAR_COLLECTION_URL, "Search bar"),
   _embedded: {
-    "blueprint:attribute": [
-      attribute({ name: "id", title: "ID", type: "string", readOnly: true }),
-      attribute({
-        name: "title",
-        title: "Title",
-        type: "string",
-        searchParams: [
-          ["title", "Title", "exact-match"],
-          ["title~prefix", "Title", "prefix-match"],
-        ],
-      }),
-      attribute({
-        name: "notes",
-        title: "Notes",
-        type: "string",
-        searchParams: [["notes~fts", "Notes", "full-text"]],
-      }),
-      attribute({
-        name: "reference",
-        title: "Reference",
-        type: "string",
-        searchParams: [["reference", "Reference", "exact-match"]],
-      }),
-      attribute({
-        name: "status",
-        title: "Status",
-        type: "string",
-        constraints: [{ type: "allowed-values", values: [...SEARCH_BAR_STATUS_OPTIONS] }],
-        searchParams: [["status", "Status", "exact-match"]],
-      }),
-      attribute({
-        name: "quantity",
-        title: "Quantity",
-        type: "long",
-        searchParams: [
-          ["quantity", "Quantity", "exact-match"],
-          ["quantity~gte", "Quantity: Min", "greater-than-or-equal"],
-          ["quantity~lte", "Quantity: Max", "less-than-or-equal"],
-        ],
-      }),
-      attribute({
-        name: "amount",
-        title: "Amount",
-        type: "double",
-        searchParams: [
-          ["amount", "Amount", "exact-match"],
-          ["amount~gte", "Amount: Min", "greater-than-or-equal"],
-          ["amount~lte", "Amount: Max", "less-than-or-equal"],
-        ],
-      }),
-      attribute({
-        name: "due_date",
-        title: "Due date",
-        type: "date",
-        searchParams: [
-          ["due_date~from", "Due date: From", "greater-than-or-equal"],
-          ["due_date~until", "Due date: Until", "less-than-or-equal"],
-        ],
-      }),
-      attribute({
-        name: "received_at",
-        title: "Received at",
-        type: "datetime",
-        searchParams: [
-          ["received_at~after", "Received at: After", "greater-than"],
-          ["received_at~before", "Received at: Before", "less-than"],
-          ["received_at~from", "Received at: From", "greater-than-or-equal"],
-          ["received_at~until", "Received at: Until", "less-than-or-equal"],
-        ],
-      }),
-      attribute({
-        name: "urgent",
-        title: "Urgent",
-        type: "boolean",
-        searchParams: [["urgent", "Urgent", "exact-match"]],
-      }),
-      attribute({
-        name: "created_at",
-        title: "Created at",
-        type: "datetime",
-        readOnly: true,
-        constraints: [{ type: "created-date" }],
-        searchParams: [
-          ["created_at~after", "Created at: After", "greater-than"],
-          ["created_at~before", "Created at: Before", "less-than"],
-          ["created_at~from", "Created at: From", "greater-than-or-equal"],
-          ["created_at~until", "Created at: Until", "less-than-or-equal"],
-        ],
-      }),
-      attribute({
-        name: "modified_at",
-        title: "Modified at",
-        type: "datetime",
-        readOnly: true,
-        constraints: [{ type: "modified-date" }],
-        searchParams: [
-          ["modified_at~after", "Modified at: After", "greater-than"],
-          ["modified_at~before", "Modified at: Before", "less-than"],
-          ["modified_at~from", "Modified at: From", "greater-than-or-equal"],
-          ["modified_at~until", "Modified at: Until", "less-than-or-equal"],
-        ],
-      }),
-    ],
+    "blueprint:attribute": searchBarAttributes,
     "blueprint:relation": [
       toOneRelation("customer", "Customer", SEARCH_BAR_CUSTOMER_PROFILE_URL, "Customer"),
       toOneRelation("owner", "Owner", SEARCH_BAR_OWNER_PROFILE_URL, "Owner"),
@@ -214,52 +258,7 @@ export const searchBarProfileJson = {
     search: {
       method: "GET",
       target: SEARCH_BAR_COLLECTION_URL,
-      properties: [
-        { name: "title", prompt: "Title", type: "text" },
-        { name: "title~prefix", prompt: "Title", type: "text" },
-        { name: "notes~fts", prompt: "Notes", type: "text" },
-        { name: "reference", prompt: "Reference", type: "text" },
-        {
-          name: "status",
-          prompt: "Status",
-          type: "text",
-          options: { minItems: 0, maxItems: 1, inline: [...SEARCH_BAR_STATUS_OPTIONS] },
-        },
-        { name: "quantity", prompt: "Quantity", type: "number" },
-        { name: "quantity~gte", prompt: "Quantity: Min", type: "number" },
-        { name: "quantity~lte", prompt: "Quantity: Max", type: "number" },
-        { name: "amount", prompt: "Amount", type: "number" },
-        { name: "amount~gte", prompt: "Amount: Min", type: "number" },
-        { name: "amount~lte", prompt: "Amount: Max", type: "number" },
-        { name: "due_date~from", prompt: "Due date: From", type: "date" },
-        { name: "due_date~until", prompt: "Due date: Until", type: "date" },
-        { name: "received_at~after", prompt: "Received at: After", type: "datetime" },
-        { name: "received_at~before", prompt: "Received at: Before", type: "datetime" },
-        { name: "received_at~from", prompt: "Received at: From", type: "datetime" },
-        { name: "received_at~until", prompt: "Received at: Until", type: "datetime" },
-        { name: "urgent", prompt: "Urgent", type: "checkbox" },
-        { name: "created_at~after", prompt: "Created at: After", type: "datetime" },
-        { name: "created_at~before", prompt: "Created at: Before", type: "datetime" },
-        { name: "created_at~from", prompt: "Created at: From", type: "datetime" },
-        { name: "created_at~until", prompt: "Created at: Until", type: "datetime" },
-        { name: "modified_at~after", prompt: "Modified at: After", type: "datetime" },
-        { name: "modified_at~before", prompt: "Modified at: Before", type: "datetime" },
-        { name: "modified_at~from", prompt: "Modified at: From", type: "datetime" },
-        { name: "modified_at~until", prompt: "Modified at: Until", type: "datetime" },
-        { name: "customer.name~prefix", prompt: "Customer: Name", type: "text" },
-        { name: "owner.email~prefix", prompt: "Owner: Email", type: "text" },
-        {
-          name: "_sort",
-          type: "text",
-          options: {
-            minItems: 0,
-            inline: [
-              { property: "title", direction: "asc", value: "title,asc", prompt: "Title ↑" },
-              { property: "title", direction: "desc", value: "title,desc", prompt: "Title ↓" },
-            ],
-          },
-        },
-      ],
+      properties: searchBarSearchProperties,
     },
   },
 };
@@ -272,30 +271,26 @@ function simpleTargetProfileJson(opts: {
   attributeName: string;
   attributeTitle: string;
 }) {
+  const attributes = [
+    attribute({ name: "id", title: "ID", type: "string", readOnly: true }),
+    attribute({
+      name: opts.attributeName,
+      title: opts.attributeTitle,
+      type: "string",
+      searchParams: [[`${opts.attributeName}~prefix`, opts.attributeTitle, "prefix-match"]],
+    }),
+  ];
   return {
     name: opts.name,
     title: opts.title,
     description: null,
     _links: profileLinks(opts.profileUrl, opts.collectionUrl, opts.title),
-    _embedded: {
-      "blueprint:attribute": [
-        attribute({ name: "id", title: "ID", type: "string", readOnly: true }),
-        attribute({
-          name: opts.attributeName,
-          title: opts.attributeTitle,
-          type: "string",
-          searchParams: [[`${opts.attributeName}~prefix`, opts.attributeTitle, "prefix-match"]],
-        }),
-      ],
-      "blueprint:relation": [],
-    },
+    _embedded: { "blueprint:attribute": attributes, "blueprint:relation": [] },
     _templates: {
       search: {
         method: "GET",
         target: opts.collectionUrl,
-        properties: [
-          { name: `${opts.attributeName}~prefix`, prompt: opts.attributeTitle, type: "text" },
-        ],
+        properties: searchProperties(attributes),
       },
     },
   };
