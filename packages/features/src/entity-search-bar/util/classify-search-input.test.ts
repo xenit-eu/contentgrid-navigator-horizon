@@ -25,4 +25,9 @@ describe("normaliseNumberInput", () => {
     expect(normaliseNumberInput(" 12,5 ")).toBe("12.5");
     expect(normaliseNumberInput("42")).toBe("42");
   });
+
+  it("adds a missing leading zero, keeping the sign", () => {
+    expect(normaliseNumberInput(".5")).toBe("0.5");
+    expect(normaliseNumberInput("-,5")).toBe("-0.5");
+  });
 });
