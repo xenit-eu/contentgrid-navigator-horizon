@@ -1,6 +1,13 @@
 import { type ReactNode, useRef } from "react";
-import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
-import { Button, FilterChips } from "@contentgrid/ui";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+  Button,
+  FilterChips,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@contentgrid/ui";
 import { AllowedValuesQuickFilter } from "./components/allowed-values-quick-filter";
 import { BooleanQuickFilter } from "./components/boolean-quick-filter";
 import { DateQuickFilter } from "./components/date-quick-filter";
@@ -12,6 +19,7 @@ import { SearchParamSelector } from "./components/search-param-selector";
 import { type EntitySearchBarProps, useEntitySearchBar } from "./use-entity-search-bar";
 
 const UNRESOLVED_FILTER_WARNING = "Not applied by this search form";
+const SEARCH_BUTTON_TOOLTIP = "Apply current value as filter";
 
 export type { EntitySearchBarProps } from "./use-entity-search-bar";
 
@@ -105,16 +113,27 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
           }}
         />
         {/* Same as Enter with nothing highlighted; only useful once a parameter has a value. */}
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={input.submit}
-          disabled={!input.selected || input.value.trim() === ""}
-          className="bg-ring font-semibold text-white shadow-xs hover:bg-ring/85"
-        >
-          <PaperPlaneTiltIcon aria-hidden />
-          Search
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            {/* The wrapper keeps the tooltip working while the button is disabled. */}
+            <TooltipTrigger asChild>
+              <span className="inline-flex">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Search"
+                  onClick={input.submit}
+                  disabled={!input.selected || input.value.trim() === ""}
+                  className="bg-ring text-white shadow-xs hover:bg-ring/85"
+                >
+                  <MagnifyingGlassIcon aria-hidden />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{SEARCH_BUTTON_TOOLTIP}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>,
     );
   }

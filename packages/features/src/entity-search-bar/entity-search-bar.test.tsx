@@ -186,6 +186,13 @@ describe("EntitySearchBar", () => {
     expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Alpha" });
   });
 
+  it("explains the Search button in a tooltip, also while it is disabled", async () => {
+    const user = userEvent.setup();
+    renderBar();
+    await user.hover(screen.getByRole("button", { name: "Search" }).parentElement!);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Apply current value as filter");
+  });
+
   it("returns to All on a second Escape without reopening the suggestions", async () => {
     const user = userEvent.setup();
     renderBar({ "title~prefix": "Al" });

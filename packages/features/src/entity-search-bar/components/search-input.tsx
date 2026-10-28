@@ -1,5 +1,4 @@
 import type { KeyboardEvent, Ref } from "react";
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Input, SearchSuggestionsPopover } from "@contentgrid/ui";
 import type { ParamChipModel, SuggestionGroupModel } from "../util/build-suggestion-models";
 import { paramLabel } from "../util/param-labels";
@@ -79,11 +78,6 @@ export function SearchInput({
         }}
         renderAnchor={(comboboxProps) => (
           <>
-            <MagnifyingGlassIcon
-              size={16}
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
-            />
             <Input
               {...comboboxProps}
               ref={inputRef}
@@ -98,7 +92,6 @@ export function SearchInput({
               onFocus={() => {
                 if (value.trim()) onPopoverOpenChange(true);
               }}
-              className="pl-8"
             />
           </>
         )}
