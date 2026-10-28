@@ -89,16 +89,16 @@ export function SearchableOptionList({
       {visible.length === 0 ? (
         <p className="px-2 py-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
-        <div
+        <div // NOSONAR: no native-element alternative for a filterable, custom-styled list
           id={listboxId}
-          role="listbox" // NOSONAR: no native-element alternative for a filterable, custom-styled list
+          role="listbox"
           aria-label={label}
           className="scrollbar-subtle max-h-60 overflow-y-auto"
         >
           {visible.map((option, index) => {
             const selected = option.value === value;
             return (
-              <div
+              <div // NOSONAR: keyboard selection goes through the combobox input (aria-activedescendant + Arrow/Enter)
                 key={option.value}
                 id={optionId(index)}
                 role="option"
