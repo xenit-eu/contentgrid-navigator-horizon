@@ -207,6 +207,12 @@ BufferSource argument is empty` reaches the console), but
   only when it isn't already wrapped by one (`useAmbientPdfEngineStatus()`
   returns `undefined`) — wrap several `PdfViewer`s in one `PdfEngineProvider`
   to share a single engine/worker instead of creating one per viewer.
+- **A password-protected document asks for its password** (`PdfViewerPasswordForm`): the
+  `protected` phase renders a password input instead of a status message, `useDocumentLifecycle`'s
+  `unlock` reopens the document through the document manager's `retryDocument(id, { password })`,
+  and `passwordRejected` (the engine's `passwordProvided` on a still-protected document) shows
+  that a wrong password was entered. `onLoadError` never reports a protected document; Download
+  stays enabled while it waits for the password.
 - **Search and print (US3) are wired**: `SearchPluginPackage` and
   `PrintPluginPackage` are registered from their `/react` subpaths — the
   print package from `/react` auto-mounts its `PrintFrame` utility (the
@@ -287,15 +293,17 @@ BufferSource argument is empty` reaches the console), but
   `test:visual` and, importantly, from `test:a11y` — a `play()`-bearing story
   races the addon-a11y auto-scan against `AxeBuilder.analyze()`, see
   `apps/storybook/tests/accessibility.spec.ts`). A story that must keep its
-  own `play()` for some other reason should carry that same tag. Four of the
-  visual file's own stories — `Default`/`ToolbarMinimal`/`Invalid`/`JsInPdf`,
-  each individually tagged, not the shared `meta` — mount a real PDFium/WASM
-  engine, so the content area reports `aria-busy="true"` until the first page
-  paints (or, for `Invalid`, until the terminal invalid-document message
-  replaces it); `apps/storybook/tests/visual.spec.ts` waits for that to clear
-  before screenshotting — opt-in per story (not a generic wait) so a
-  permanently-busy loading-state story never times the harness out. The five
-  mocked stories (`Protected`/`EngineFailure`/`SearchOpen`/`SearchNoResults`/
+  own `play()` for some other reason should carry that same tag. Eight of the
+  visual file's own stories — `Default`/`MultiPage`/`SampleForm`/`Landscape`/
+  `ToolbarMinimal`/`Protected`/`Invalid`/`JsInPdf`, each individually tagged
+  `async-content`, not the shared `meta` — mount a real PDFium/WASM engine, so
+  the content area reports `aria-busy="true"` until the first page paints (or,
+  for `Invalid`, until the terminal invalid-document message replaces it; for
+  `Protected`, until the password form replaces it);
+  `apps/storybook/tests/visual.spec.ts` waits for that to clear before
+  screenshotting — opt-in per story (not a generic wait) so a
+  permanently-busy loading-state story never times the harness out. The four
+  mocked stories (`EngineFailure`/`SearchOpen`/`SearchNoResults`/
   `PrintReady`) never render `aria-busy="true"`, so they don't carry the tag.
   `PdfViewerHarness`'s own
   "Loading fixture…" placeholder (`pdf-viewer-story-helpers.tsx`, shown while
