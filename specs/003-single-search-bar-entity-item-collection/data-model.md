@@ -10,13 +10,13 @@ the code is free to name fields differently as long as the contracts hold.
 
 ## 1. Inputs (existing)
 
-| Input                             | Source                                                            | Notes                                                                          |
-| --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `profileEntity`                   | `useProfileEntity` (navigator-data)                               | Memoise `profileEntity.searchTemplate` once per `profileEntity` (research R1). |
-| `fields`, `layout`                | `resolveHalFormsFields(searchTemplate)` (hal-forms)               | Same field set as the advanced dialog.                                         |
-| `filters: Record<string, string>` | route URL (`s.<param>` keys) via `EntityItemCollectionView` props | Single source of truth for active filters.                                     |
-| `searchAttributes?: string[]`     | merged `EntityDisplayPreferences`                                 | Absent → all searchable direct attributes included.                            |
-| target profiles                   | `useProfileEntities`                                              | Needed to type relation parameters (integer vs decimal, allowed values).       |
+| Input                             | Source                                                            | Notes                                                                                               |
+| --------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `profileEntity`                   | `useProfileEntity` (navigator-data)                               | Memoise `profileEntity.searchTemplate` once per `profileEntity` (research R1).                      |
+| `fields`, `layout`                | `resolveHalFormsFields(searchTemplate)` (hal-forms)               | Same field set as the advanced dialog.                                                              |
+| `filters: Record<string, string>` | route URL (`s.<param>` keys) via `EntityItemCollectionView` props | Single source of truth for active filters.                                                          |
+| `searchAttributes?: string[]`     | merged `EntityDisplayPreferences`                                 | Heuristic default: every searchable attribute, not `id`; `[]` → none; non-searchable names ignored. |
+| target profiles                   | `useProfileEntities`                                              | Needed to type relation parameters (integer vs decimal, allowed values).                            |
 
 ---
 
