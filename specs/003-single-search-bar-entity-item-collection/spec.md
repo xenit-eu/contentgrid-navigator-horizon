@@ -49,7 +49,7 @@ A user viewing the list of items for one entity (e.g. all invoices) starts typin
 **Acceptance Scenarios**:
 
 1. **Given** the selector shows "All" (the default) and the input is empty, **When** the user types one character, **Then** the suggestions popover opens.
-2. **Given** the popover is open in "All" mode, **When** suggestions load, **Then** the popover's top row shows one chip per search parameter that matches the input, and the content area shows suggested values grouped under a header per prefix or full-text parameter, with at most 10 values per parameter.
+2. **Given** the popover is open in "All" mode, **When** suggestions load, **Then** the popover's top row shows one chip per search parameter that matches the input, and the content area shows suggested values grouped under a header per prefix, full-text or allowed-values parameter, with at most 10 values per parameter; allowed-values groups list the matching allowed values without a search, so their header shows "?" as the count.
 3. **Given** the input is text that is not a number, **When** the parameter chips are shown, **Then** integer and decimal parameters are left out.
 4. **Given** the input is a number, **When** the parameter chips are shown, **Then** integer and decimal parameters are listed first and text parameters after them; no text parameter is left out.
 5. **Given** a search ran for a parameter, **When** its chip and its group header are shown, **Then** both display the expected number of results for that parameter (exact or estimated, as the platform reports it); **given** no search ran for a parameter (e.g. exact or number parameters in "All" mode), **then** its chip shows "?" as the count.
@@ -68,7 +68,7 @@ The user picks a specific search parameter in the selector (from the dropdown, o
 
 **Acceptance Scenarios**:
 
-1. **Given** the selector is opened, **When** the options are shown, **Then** they contain "All" (default), "All except relations", and every text, integer and decimal search parameter, each with a clear indicator of its search type (prefix, full-text, exact, allowed values, integer, decimal), grouped by relation (the entity's own parameters in one group, then one group per relation).
+1. **Given** the selector is opened, **When** the options are shown, **Then** they contain "All" (default), "All except relations" (when the entity has relation-based parameters), and every text, integer and decimal search parameter, each with a clear indicator of its search type (prefix, full-text, exact, allowed values, integer, decimal), grouped by relation (the entity's own parameters in one group, then one group per relation).
 2. **Given** a prefix or full-text parameter is selected, **When** the user types, **Then** the popover only shows suggestions for that parameter and only searches that parameter.
 3. **Given** an allowed-values parameter is selected, **When** the user types, **Then** the popover lists that parameter's allowed values filtered by prefix on the typed text, without waiting on the server.
 4. **Given** an exact text, integer or decimal parameter is selected, **When** the user types, **Then** no popover opens.
@@ -220,7 +220,7 @@ A configuration layer sets which attributes take part in the search surface for 
 **Search-parameter selector**
 
 - **FR-006**: The main search bar MUST have two columns: a search-parameter selector and a free-text input.
-- **FR-007**: The selector MUST offer "All" (the default), "All except relations", and every text (prefix, full-text, exact, allowed values), integer (exact) and decimal (exact) search parameter of the entity.
+- **FR-007**: The selector MUST offer "All" (the default), "All except relations" (only when the entity has search parameters that go through a relation), and every text (prefix, full-text, exact, allowed values), integer (exact) and decimal (exact) search parameter of the entity.
 - **FR-008**: Each parameter in the selector MUST show a clear indicator of its search type.
 - **FR-009**: Parameters MUST be grouped by relation: the entity's own parameters in one group and one group per relation, labelled with the relation name, when the entity has relations.
 - **FR-010**: After a filter is applied from the main search bar, the selector MUST return to "All".
