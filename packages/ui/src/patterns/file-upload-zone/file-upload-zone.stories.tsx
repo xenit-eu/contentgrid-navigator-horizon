@@ -42,6 +42,33 @@ export const LargeFileSelected: Story = {
   },
 };
 
+/** A single-line empty zone. */
+export const Compact: Story = {
+  args: {
+    file: null,
+    onFileChange: fn(),
+    compact: true,
+  },
+};
+
+/** A selected file, marked as the selected one of several. */
+export const Previewed: Story = {
+  args: {
+    file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
+    onFileChange: fn(),
+    previewed: true,
+  },
+};
+
+/** A selected file with a "Preview file" button. */
+export const WithPreviewButton: Story = {
+  args: {
+    file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
+    onFileChange: fn(),
+    onPreview: fn(),
+  },
+};
+
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
