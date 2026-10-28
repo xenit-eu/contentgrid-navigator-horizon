@@ -1,4 +1,4 @@
-export { needsRendition } from "./content-mimetype";
+export { nativePreviewKind, needsRendition } from "./content-mimetype";
 export { RenditionProtocolError, RenditionTimeoutError, requestRendition } from "./rendition-job";
 export type { RenditionResult, RequestRenditionOptions } from "./rendition-job";
 // DEFAULT_RENDITION_POLL_INTERVAL_MS / DEFAULT_RENDITION_TIMEOUT_MS are deliberately NOT
