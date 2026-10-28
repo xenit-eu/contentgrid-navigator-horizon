@@ -84,10 +84,11 @@ US7 (P2); US6, US8 (P3).
     - `quantity` (long) with `quantity`, `quantity~gte`, `quantity~lte`
     - `amount` (double) with `amount`, `amount~gte`, `amount~lte`
     - `due_date` (type `date`) with `due_date~from`, `due_date~until`
-    - `received_at` (datetime) with `received_at~after`, `received_at~before`
+    - `received_at` (datetime) with `received_at~from`, `received_at~until` and the strict `received_at~after`, `received_at~before`, as the platform now offers both; the search bar uses the inclusive pair
+    - no exact-match param on the datetime attributes, although the recorded profile has one: neither the search bar nor the advanced dialog offers an exact date-and-time search, so this gap is accepted
     - `urgent` (checkbox)
-    - `created_at` (datetime, constraint `created-date`) with `~after` / `~before`
-    - `modified_at` (datetime, constraint `modified-date`) with `~after` / `~before`
+    - `created_at` (datetime, constraint `created-date`) with `~from` / `~until` and `~after` / `~before`
+    - `modified_at` (datetime, constraint `modified-date`) with `~from` / `~until` and `~after` / `~before`
     - `customer.name~prefix`
     - `owner.email~prefix`
     - `_sort`
@@ -363,7 +364,7 @@ two lines, then horizontal scroll (spec US3).
 
 - [x] T045 [P] [US3] Add `SB/util/build-active-filter-chips.test.ts` (data-model.md §6). Cover:
   - one chip per non-range param, with `mode` "prefix" / "full text" / "is" / "one of"
-  - `received_at~after` + `received_at~before` → one chip, id `received_at`, `mode: "between"`, `paramNames` both
+  - `received_at~from` + `received_at~until` → one chip, id `received_at`, `mode: "between"`, `paramNames` both
   - only `quantity~gte` → `mode: "≥"`
   - an allowed value is shown by its option prompt
   - a boolean `"true"` gets `valueIcon` set
@@ -428,7 +429,8 @@ own icons (spec US4).
 
 - [x] T054 [P] [US4] Add `SB/util/date-presets.test.ts`, using a fixed `now` (`2026-10-07T10:00:00` local):
   - last-day / last-week / last-month / last-year starts (−24 h, −7 days, −1 calendar month, −1 calendar year); end = now
-  - datetime model → ISO strings on the `~after` / `~before` params
+  - datetime model → ISO strings on the `~from` / `~until` params; a calendar range runs from the start of its first day to the end of its last day
+  - datetime model with only `~after` / `~before` (older backends) → the same ISO strings, sent as is: an item stamped exactly on a bound is left out (known limitation)
   - date model with `~from` / `~until` → `YYYY-MM-DD` inclusive
   - date model with only `~after` / `~before` → bounds shifted by one day so the range stays inclusive
   - a custom `{from, to}` range uses the same encoding
@@ -494,14 +496,14 @@ then unset (grey), and the list follows (spec US5).
 **Goal**: a quick filter shows the blue outline and × whenever its attribute is filtered,
 whatever set it; × clears every param of that attribute.
 
-**Independent Test**: set `received_at~after` through the advanced filter dialog → the
+**Independent Test**: set `received_at~from` through the advanced filter dialog → the
 `received_at` quick filter turns blue with ×; clicking × removes the filter without opening the
 popover (spec US7).
 
 ### Tests for User Story 7 ⚠️
 
 - [x] T062 [P] [US7] Add `SB/entity-search-bar.test.tsx`, rendering `EntitySearchBar` with MSW `searchBarHandlers`:
-  - with `filters = { "received_at~after": "2026-10-01T00:00:00.000Z" }` the `received_at` button has the active tone and an × labelled "Clear Received at filter"
+  - with `filters = { "received_at~from": "2026-10-01T00:00:00.000Z" }` the `received_at` button has the active tone and an × labelled "Clear Received at filter"
   - clicking × calls `onFiltersChange({})` and opens no popover
   - same for a `quantity~gte` filter and an allowed-value `status` filter
   - boolean keeps the positive / negative tones, not blue

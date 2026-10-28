@@ -156,8 +156,8 @@ FR-025, SC-007) without synchronisation code.
 
 **Decision**
 
-- One chip per active **attribute filter**: parameters of one attribute's range (`~after` +
-  `~before`, `~gte` + `~lte`) merge into a single chip ("Created at · between · 1 Jan – 7 Jan").
+- One chip per active **attribute filter**: parameters of one attribute's range (`~from` +
+  `~until`, `~gte` + `~lte`, or the strict `~after` / `~before` fallback) merge into a single chip ("Created at · between · 1 Jan – 7 Jan").
   Closing it removes all of that attribute's range parameters. Any other parameter is its own
   chip.
 - The chip shows attribute label, a mode label + icon (prefix, full text, exact, one of,

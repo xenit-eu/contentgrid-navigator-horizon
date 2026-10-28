@@ -132,7 +132,8 @@ searchAttributes: z.array(z.string()).optional(),
 
 - New profile fixture `search-bar` (JSON under `packages/navigator-data/test-fixtures/`) with:
   prefix, full-text, exact text, allowed values, integer exact + `~gte`/`~lte`, decimal exact +
-  range, `date` with `~from`/`~until`, `datetime` with `~after`/`~before`, boolean,
+  range, `date` with `~from`/`~until`, `datetime` with `~from`/`~until` next to the older
+  `~after`/`~before` (the inclusive pair is preferred, the strict one is the fallback), boolean,
   `created-date` and `modified-date` constrained attributes, and two relations with prefix
   params.
 - `createListHandler` option to return `total_items_estimate` instead of `total_items_exact`,
