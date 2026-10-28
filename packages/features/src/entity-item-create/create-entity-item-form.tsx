@@ -2,7 +2,7 @@ import { type ReactNode, type SubmitEvent, useEffect, useRef } from "react";
 import type { FieldValue, FieldValueMap } from "@contentgrid/navigator-data";
 import { Button, Label, Switch } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
-import type { HalFormsField, LayoutSchema } from "../hal-forms";
+import type { HalFormsField, HalFormsFilePreview, LayoutSchema } from "../hal-forms";
 import { HalFormsContainer } from "../hal-forms";
 import type { FieldState } from "../hal-forms/state/field-error";
 
@@ -17,8 +17,8 @@ export interface CreateEntityItemFormProps {
   readonly values: FieldValueMap;
   readonly fieldState: Readonly<Record<string, FieldState>>;
   readonly onFieldChange: (name: string, value: FieldValue) => void;
-  /** Forwarded to `HalFormsContainer`'s `onFieldFocus` — kept as passthrough plumbing symmetric with `onFieldBlur` for a future consumer (e.g. a typeahead
-   * field kicking off remote autocomplete on focus), with no current caller. */
+  /** Forwarded to `HalFormsContainer`'s `onFieldFocus` — the container uses it to show a focused
+   * file field in the preview beside the form. */
   readonly onFieldFocus?: (name: string) => void;
   /** Marks a field touched on blur — see `useHalFormsFieldState`'s `touchField`. Shows a
    * required-and-empty field's error as soon as the user leaves it, without waiting for submit. */
@@ -27,6 +27,10 @@ export interface CreateEntityItemFormProps {
   readonly onRelationItemClick?: RelationItemClickHandler;
   /** Fired from a relation picker's "Create" button with the target entity's profile name. */
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /** See `HalFormsContainer`'s `filePreview`. With the preview beside the form, the form fills
+   * the height it is given: only the fields scroll, so the alert above and the actions below stay
+   * in view. */
+  readonly filePreview?: HalFormsFilePreview;
   readonly onSubmit: (event: SubmitEvent) => void;
   readonly isSubmitting: boolean;
   /** Renders a cancel button next to submit when provided. */
@@ -59,6 +63,7 @@ export function CreateEntityItemForm({
   onFieldBlur,
   onRelationItemClick,
   onRelationItemCreateNew,
+  filePreview,
   onSubmit,
   isSubmitting,
   onCancel,
@@ -68,6 +73,7 @@ export function CreateEntityItemForm({
   formResetCount,
 }: Readonly<CreateEntityItemFormProps>) {
   const fieldsContainerRef = useRef<HTMLDivElement>(null);
+  const fillHeight = filePreview?.placement === "beside";
 
   // `formResetCount` starts at 0 and is only bumped after a continuous-create reset (see the
   // container), so this never fires on the form's initial mount — only once a save has
@@ -82,10 +88,19 @@ export function CreateEntityItemForm({
   }, [formResetCount]);
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
+    <form
+      onSubmit={onSubmit}
+      noValidate
+      className={fillHeight ? "space-y-4 split:flex split:min-h-0 split:flex-col" : "space-y-4"}
+    >
       {nonFieldErrorAlert}
 
-      <div ref={fieldsContainerRef}>
+      <div
+        ref={fieldsContainerRef}
+        className={
+          fillHeight ? "scrollbar-subtle split:min-h-0 split:overflow-y-auto split:pr-1" : undefined
+        }
+      >
         <HalFormsContainer
           fields={fields}
           layout={layout}
@@ -95,11 +110,18 @@ export function CreateEntityItemForm({
           onFieldBlur={onFieldBlur}
           onRelationItemClick={onRelationItemClick}
           onRelationItemCreateNew={onRelationItemCreateNew}
+          filePreview={filePreview}
           fieldState={fieldState}
         />
       </div>
 
-      <div className="flex items-center gap-6">
+      <div
+        className={
+          fillHeight
+            ? "flex items-center gap-6 split:border-t split:pt-3"
+            : "flex items-center gap-6"
+        }
+      >
         <div className="flex gap-2">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Creating…" : "Create"}
