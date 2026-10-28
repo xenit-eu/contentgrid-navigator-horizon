@@ -33,10 +33,12 @@ export type { AttributeValueRendererProps } from "./attributes/renderers/attribu
 export {
   pdfiumWasmUrl,
   selectDefaultContentAttribute,
+  ContentAttributeOptionSelector,
   ContentAttributeSelector,
   ContentPreviewFrame,
   ContentPreviewPanel,
   EntityItemContentFocusView,
+  FilePreview,
 } from "./variations/content-focus";
 export type {
   ContentAttributeSelectorProps,

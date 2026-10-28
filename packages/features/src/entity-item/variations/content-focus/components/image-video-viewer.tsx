@@ -15,9 +15,9 @@ const FIT_TO_PANEL_LABEL = "Fit to panel";
 const IMAGE_FALLBACK_ALT = "Content image";
 
 export interface ImageVideoViewerProps {
-  /** The stored image or video, as `useContentPreview` returned it. */
-  readonly source: Extract<PreviewSource, { kind: "image" | "video" }>;
-  /** The stored file's name, used as the image's alt text. */
+  /** The image or video: a stored one as `useContentPreview` returned it, or a picked file. */
+  readonly source: Pick<Extract<PreviewSource, { kind: "image" | "video" }>, "kind" | "blob">;
+  /** The file's name, used as the image's alt text. */
   readonly filename: string | null;
   /** Rendered at the start of the toolbar (e.g. the content attribute selector). */
   readonly toolbarStart?: ReactNode;
@@ -27,7 +27,7 @@ export interface ImageVideoViewerProps {
 }
 
 /**
- * Shows a stored image or video as it is, under a toolbar with the attribute selector and
+ * Shows an image or video as it is, under a toolbar with the attribute selector and
  * Download. An image is shrunk to fit the panel until the user switches it to its actual size; a
  * video plays with the browser's own controls. The element reads the file through an object URL,
  * revoked when the file changes or the preview unmounts.
