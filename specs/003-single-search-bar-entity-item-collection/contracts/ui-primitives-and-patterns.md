@@ -25,9 +25,14 @@ interface ChipProps {
   removable?: boolean;
   onRemove?: () => void;
   removeLabel?: string; // NEW — default `Remove ${field ?? ""} ${label} filter`
+  onClick?: () => void; // NEW — makes the body (field, mode, value) a button
+  clickLabel?: string; // NEW — accessible name of that button
   className?: string;
 }
 ```
+
+- With `onClick`, the body is a `<button data-slot="chip-body">` and the × stays a sibling
+  button (valid HTML, own focus stop); hovering the body darkens the chip's border.
 
 - Existing callers (props without the new fields) render unchanged.
 - The mode segment is always visible (never truncated before the value); the value truncates
@@ -43,7 +48,7 @@ interface ChipProps {
 ```ts
 interface CountIndicatorChipProps {
   count: number | null; // null → "?"
-  isEstimated?: boolean; // → "~" suffix, plus aria-label "about N results"
+  isEstimated?: boolean; // → "~" suffix, plus screen-reader text and title "about N results"
   isLoading?: boolean; // NEW — pulse placeholder, aria-busy
   variant?: "default" | "solid";
 }
@@ -65,7 +70,8 @@ interface SelectionChipProps {
 interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   icon?: ReactNode;
   label: string;
-  tone?: "idle" | "active" | "positive" | "negative"; // grey / blue / green / red outline
+  tone?: "idle" | "active" | "positive" | "negative"; // none / blue / green / red outline
+  showChevron?: boolean; // default true: trailing ▾ hinting at a popover; false for booleans
   onClear?: () => void; // when set and tone !== "idle", renders a separate × button
   clearLabel?: string; // default `Clear ${label} filter`
   ref?: Ref<HTMLButtonElement>; // usable as <PopoverTrigger asChild>
@@ -77,7 +83,8 @@ interface FilterButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>
   "Approved: true"), so a popover trigger keeps its `aria-expanded` semantics.
 - Colour is never the only state signal (spec Assumptions): the feature passes an icon/label
   that reflects the state.
-- Outlines: idle `border-border`, active `border-ring` on `bg-accent`, positive
+- Outlines: idle `border-transparent` (no outline, muted text — reads as text, not a button),
+  active `border-ring` on `bg-accent`, positive
   `border-success-foreground` on `bg-success`, negative `border-destructive` on
   `bg-destructive/10`. The root carries `data-tone`.
 
@@ -100,21 +107,25 @@ interface FilterChipItem {
   modeIcon?: ReactNode;
   value: string;
   valueIcon?: ReactNode;
+  selectable?: boolean; // NEW — clicking the chip calls onSelect
 }
 
 interface FilterChipsProps {
   chips: readonly FilterChipItem[];
   onRemove: (id: string) => void;
+  onSelect?: (id: string) => void; // NEW — e.g. to edit the chip's filter in the search bar
   maxLines?: 1 | 2; // default 2 (FR-005)
+  label?: string; // accessible name of the list, default "Active filters"
   className?: string;
 }
 ```
 
-- Renders `Chip` (`tone="applied"`, `removable`) per item.
+- Renders `Chip` (`tone="applied"`, `removable`) per item; a `selectable` item also gets
+  `onClick` (accessible name `Edit filter ${field} ${mode} ${value}`).
 - Wraps to at most `maxLines` lines; beyond that the row scrolls horizontally. The existing
   `ScrollArea` primitive only mounts a vertical scrollbar, so the row uses native
   `overflow-x-auto` with the `scrollbar-subtle` utility; the wrapping list is sized from the
-  measured chip widths (at least half their total plus the widest chip), so greedy wrapping can
+  measured natural chip widths (at least half their total plus the widest chip), so greedy wrapping can
   never need a third line. Keyboard focus on a chip scrolls it into view.
 - The chips are a `list` (named by `label`, default "Active filters"); each remove button is
   named `Remove filter ${field} ${mode} ${value}`.
@@ -206,8 +217,11 @@ interface SearchSuggestionsPopoverProps {
   only selections and the keys it did not handle.
 - **Keyboard** (FR-023): the input keeps focus. ArrowDown/ArrowUp walk the entries in visual
   order, wrapping — the chip row is one stop above the first item; ArrowLeft/ArrowRight move
-  within the chip row while a chip is highlighted; Enter selects the highlighted entry (with
-  nothing highlighted it goes to `onUnhandledKeyDown`); Escape closes.
+  within the chip row while a chip is highlighted; a group that failed to load contributes its
+  Retry action as a stop; Enter selects the highlighted entry or retries (with nothing
+  highlighted it goes to `onUnhandledKeyDown`); Escape closes. Editing the text, or any closing
+  (also one the caller makes through `open`), drops the highlight, and the highlighted entry is
+  scrolled into view. A polite `role="status"` region announces groups that failed.
 - **ARIA**: the content is a `region` named `listLabel`. The chip row and every group that has
   items are each their own `listbox` (chips: `aria-orientation="horizontal"`; a group: labelled
   by its header) with `role="option"` entries; status text (loading skeleton, "No matches", an
@@ -252,7 +266,9 @@ interface SearchableOptionListProps {
   onValueChange: (value: string) => void;
   searchPlaceholder?: string;
   emptyLabel?: string;
+  label?: string; // accessible name of the list
   autoFocus?: boolean;
+  className?: string;
 }
 ```
 

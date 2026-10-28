@@ -1,36 +1,131 @@
+import type { ReactNode } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
 interface ChipProps {
-  readonly tone?: "neutral" | "applied";
+  /**
+   * `neutral` (outline), `applied` (an active filter) or `warning` (orange, e.g. a filter that is
+   * not applied). Colour is never the only signal — pair `warning` with an icon and a
+   * `description`.
+   */
+  readonly tone?: "neutral" | "applied" | "warning";
   readonly field?: string;
+  /**
+   * How the value is matched, e.g. "starts with", "after", "≥". Rendered as its own segment
+   * between field and value, and never truncated before the value.
+   */
+  readonly mode?: string;
+  readonly modeIcon?: ReactNode;
+  /** The value. */
   readonly label: string;
+  readonly valueIcon?: ReactNode;
+  /** Extra explanation, e.g. why a filter is not applied: a tooltip, and read by screen readers. */
+  readonly description?: string;
   readonly removable?: boolean;
   readonly onRemove?: () => void;
+  /** Accessible name of the remove button; defaults to `Remove ${field} ${label} filter`. */
+  readonly removeLabel?: string;
+  /**
+   * Makes the chip's body (field, mode and value) a button, e.g. to edit the filter. The remove
+   * button stays a separate sibling control.
+   */
+  readonly onClick?: () => void;
+  /** Accessible name of the body button; defaults to its visible text. */
+  readonly clickLabel?: string;
   readonly className?: string;
 }
 
-function Chip({ tone = "neutral", field, label, removable, onRemove, className }: ChipProps) {
+// Warning uses the shared warning tokens, with the same surface as StatusPill's "warning" variant.
+const TONE_CLASSES: Record<NonNullable<ChipProps["tone"]>, string> = {
+  neutral: "border-border bg-background",
+  applied: "border-ring/40 bg-accent",
+  warning:
+    "border-warning/45 bg-warning/12 text-warning-foreground dark:border-warning/50 dark:bg-warning/18",
+};
+
+function Chip({
+  tone = "neutral",
+  field,
+  mode,
+  modeIcon,
+  label,
+  valueIcon,
+  description,
+  removable,
+  onRemove,
+  removeLabel,
+  onClick,
+  clickLabel,
+  className,
+}: ChipProps) {
+  const isWarning = tone === "warning";
+  const body = (
+    <>
+      {field && (
+        <span
+          className={cn(
+            "shrink-0 font-normal",
+            isWarning ? "text-inherit" : "text-muted-foreground",
+          )}
+        >
+          {field}:{" "}
+        </span>
+      )}
+      {mode && (
+        <span
+          data-slot="chip-mode"
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1 rounded-[4px] px-1 text-[11px] font-normal",
+            // On the orange warning surface a darkening overlay drops the text under 4.5:1; a
+            // background-tinted one keeps the segment visible and raises the contrast instead.
+            isWarning ? "bg-background/50 text-inherit" : "bg-foreground/5 text-foreground",
+          )}
+        >
+          {modeIcon}
+          {mode}
+        </span>
+      )}
+      <span className="inline-flex min-w-0 items-center gap-1">
+        {valueIcon}
+        <span className="truncate" title={label}>
+          {label}
+        </span>
+      </span>
+      {description && <span className="sr-only">{description}</span>}
+    </>
+  );
   return (
     <span
       data-slot="chip"
+      data-tone={tone}
+      title={description}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[6px] border text-[12px] font-medium",
-        removable ? "py-1 pl-[10px] pr-[5px]" : "py-1 px-[10px]",
-        tone === "applied"
-          ? "bg-[#E2F3FD] border-[#C4E6F9] text-foreground dark:bg-[rgba(90,196,242,0.16)] dark:border-[#2C5A78]"
-          : "bg-[#FAFDFF] border-[#E3EAF0] text-foreground dark:bg-[#13314A] dark:border-[#335269]",
+        "inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-[6px] border text-[12px] font-medium text-foreground",
+        removable ? "py-1 pr-[5px] pl-[10px]" : "px-[10px] py-1",
+        TONE_CLASSES[tone],
+        onClick && "has-[[data-slot=chip-body]:hover]:border-ring",
         className,
       )}
     >
-      {field && <span className="text-[#3C5667] dark:text-[#9FC4D8] font-normal">{field}: </span>}
-      {label}
+      {onClick ? (
+        <button
+          type="button"
+          data-slot="chip-body"
+          aria-label={clickLabel}
+          onClick={onClick}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-inherit outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {body}
+        </button>
+      ) : (
+        body
+      )}
       {removable && (
         <button
           type="button"
-          aria-label={`Remove ${label} filter`}
+          aria-label={removeLabel ?? `Remove ${field ? `${field} ` : ""}${label} filter`}
           onClick={onRemove}
-          className="text-muted-foreground hover:text-foreground p-0 border-0 bg-transparent flex items-center"
+          className="flex shrink-0 items-center rounded-sm border-0 bg-transparent p-0 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <X size={13} aria-hidden />
         </button>
@@ -40,3 +135,4 @@ function Chip({ tone = "neutral", field, label, removable, onRemove, className }
 }
 
 export { Chip };
+export type { ChipProps };

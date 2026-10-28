@@ -59,6 +59,11 @@
   --color-button-hover: var(--button-hover);
   --color-button-hover-foreground: var(--button-hover-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-border: var(--success-border);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -156,6 +161,11 @@
   --success: rgba(47, 122, 85, 0.1);
   --success-border: rgba(47, 122, 85, 0.35);
   --success-foreground: #266b49;
+  /* Warning — one orange for every warning surface (StatusPill, Chip, Alert, Banner). `--warning`
+   * is the opaque hue: components tint with an opacity modifier (`bg-warning/12`,
+   * `border-warning/30`); `--warning-foreground` is the text colour on those tints. */
+  --warning: #d4682a;
+  --warning-foreground: #a4501f;
   --border: var(--line);
   --input: var(--line);
   --ring: var(--sky);
@@ -232,6 +242,9 @@
   --success: rgba(111, 211, 161, 0.16);
   --success-border: rgba(111, 211, 161, 0.4);
   --success-foreground: #6fd3a1;
+  /* Same orange identity, lifted for dark-bg contrast. */
+  --warning: #e89a63;
+  --warning-foreground: #e89a63;
   --border: var(--dark-line);
   --input: var(--dark-line);
   --ring: var(--dark-accent);

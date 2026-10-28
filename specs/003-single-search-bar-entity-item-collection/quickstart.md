@@ -80,7 +80,7 @@ Open an entity collection with the model above and check:
    as chips; a date range is one chip; close one → list updates at once. Add many filters → two
    lines, then horizontal scroll.
 5. **Quick filters** (US4–US7): date preset "Last week" + Apply → blue outline + ×; × clears.
-   Created/modified show their own icons. Boolean cycles grey → green → red → grey with true/false
+   Created/modified show their own icons. Boolean cycles none → green → red → none (no outline when unset) with true/false
    icons. Number: exact on top, Min/Max side by side, Apply/Clear. Allowed values: typing narrows
    the list instantly. Set a date filter in the advanced dialog → the date quick filter turns blue.
 6. **State** (FR-032): copy the URL, open in a new tab → same chips, same quick-filter states,
