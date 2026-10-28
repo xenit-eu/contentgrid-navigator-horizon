@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
-import { createValues } from "@contentgrid/hal-forms/values";
+import { HalFormValueTypeError, createValues } from "@contentgrid/hal-forms/values";
 import {
   type CollectionTotalCount,
   EntityItemCollection,
@@ -252,7 +252,8 @@ function planRequest(
         value,
       ),
     ).url;
-  } catch {
+  } catch (error) {
+    if (!(error instanceof HalFormValueTypeError)) throw error;
     // `value` was coerced for this parameter's type; the target's own property may reject it.
     // Keep the count and drop the suggestions rather than breaking the caller's render.
     return { name, withSuggestions, countUrl, attributeName: undefined };
