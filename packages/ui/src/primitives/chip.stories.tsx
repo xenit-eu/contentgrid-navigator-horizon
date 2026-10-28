@@ -105,7 +105,7 @@ export const Warning: Story = {
     mode: "is",
     label: "bar",
     tone: "warning",
-    description: "Not a search parameter of this entity — not applied",
+    description: "Not applied by this search form",
     removable: true,
     onRemove: () => {},
   },

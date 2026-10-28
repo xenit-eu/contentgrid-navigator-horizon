@@ -69,7 +69,7 @@ export const WithWarning: Story = {
         field: "foo",
         mode: "is",
         value: "bar",
-        warning: "Not a search parameter of this entity — not applied",
+        warning: "Not applied by this search form",
       },
     ],
   },
