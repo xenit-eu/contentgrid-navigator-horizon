@@ -178,7 +178,8 @@ interface ActiveFilterChipModel {
   valueKind?: SearchValueKind; // with searchType, the component picks the mode icon
   searchType?: ProfileAttributeSearchType;
   booleanValue?: boolean; // the component shows the true/false icon
-  isUnresolved: boolean; // key not in the current template (stale URL) — raw key shown
+  isUnresolved: boolean; // key the search form does not apply (stale URL, hidden property,
+  // superseded bound such as ~after next to ~from) — raw key shown
 }
 ```
 

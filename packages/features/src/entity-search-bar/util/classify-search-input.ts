@@ -23,5 +23,5 @@ export function normaliseNumberInput(raw: string): string {
   return raw
     .trim()
     .replace(",", ".")
-    .replace(/^(-?)\./, "$10.");
+    .replace(/^(-?)\./, (_, sign: string) => `${sign}0.`);
 }

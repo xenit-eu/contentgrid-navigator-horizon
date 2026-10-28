@@ -76,7 +76,7 @@ describe("EntitySearchBar", () => {
     expect(known!.querySelector("[data-slot='chip']")).toHaveAttribute("data-tone", "applied");
     const chip = unknown!.querySelector("[data-slot='chip']");
     expect(chip).toHaveAttribute("data-tone", "warning");
-    expect(chip).toHaveAttribute("title", "Not a search parameter of this entity — not applied");
+    expect(chip).toHaveAttribute("title", "Not applied by this search form");
 
     await user.click(within(unknown!).getByRole("button", { name: "Remove filter foo is bar" }));
     expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Al" });
