@@ -106,10 +106,6 @@ export const CannotDisplayWithIcon: Story = {
   },
 };
 
-export const Protected: Story = {
-  args: { state: "protected", onDownload: () => {} },
-};
-
 export const ViewerFailure: Story = {
   args: {
     state: "viewerFailure",
