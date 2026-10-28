@@ -10,9 +10,19 @@ import {
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  SPLIT_BREAKPOINT_QUERY,
+  useMediaQuery,
+} from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import {
   type FieldValidationError,
+  type HalFormsFilePreview,
   resolveHalFormsFields,
   toServerFieldErrors,
   useHalFormsFieldState,
@@ -23,6 +33,7 @@ import {
   type ValidationAlertProps,
 } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
+import { CreateEntityItemFilePreview } from "./create-entity-item-file-preview";
 import { CreateEntityItemForm } from "./create-entity-item-form";
 import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
@@ -126,9 +137,18 @@ function CreateEntityItemContainerReady({
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
   const { fields, layout } = useMemo(() => resolveHalFormsFields(createTemplate), [createTemplate]);
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldValidationError[]>>({});
+  const fileFields = useMemo(() => fields.filter((field) => field.kind === "file"), [fields]);
   // The file attached on the Create Item page goes into the first file field, read once on
   // mount. Without a file field it is kept for a later create form.
-  const fileFieldName = fields.find((field) => field.kind === "file")?.name;
+  const fileFieldName = fileFields[0]?.name;
+  // The file field shown in the preview: the first one, until the user picks a file in another.
+  const [previewFieldName, setPreviewFieldName] = useState(fileFieldName);
+  // The preview dialog, opened from a file field's preview button on narrow screens.
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const isNarrow = !useMediaQuery(SPLIT_BREAKPOINT_QUERY);
+  // The dialog only exists on narrow screens. Widening the window closes it, so narrowing it again
+  // doesn't reopen a dialog the user never asked for.
+  if (!isNarrow && isPreviewOpen) setIsPreviewOpen(false);
   const [initialValues] = useState(() => {
     const { initialFile } = useCreateEntityItemState.getState();
     return initialFile && fileFieldName ? { [fileFieldName]: initialFile } : undefined;
@@ -142,6 +162,7 @@ function CreateEntityItemContainerReady({
     (name: string, value: FieldValue) => {
       if (name === fileFieldName && !value)
         useCreateEntityItemState.getState().setInitialFile(null);
+      if (value instanceof File) setPreviewFieldName(name);
       setValue(name, value);
     },
     [fileFieldName, setValue],
@@ -195,6 +216,7 @@ function CreateEntityItemContainerReady({
         // Reset to an empty baseline, not the values this form was opened with — the initial
         // file it may have been prefilled with was just used.
         formState.reset({});
+        setPreviewFieldName(fileFieldName);
         if (continuousCreateMode) {
           setFormResetCount((count) => count + 1);
         } else {
@@ -213,7 +235,33 @@ function CreateEntityItemContainerReady({
       ? toProblemDisplayModel(createMutation.error)
       : undefined;
 
-  return (
+  // Focusing a file field shows it in the preview beside the form.
+  const handleFieldFocus = useCallback(
+    (name: string) => {
+      if (fileFields.some((field) => field.name === name)) setPreviewFieldName(name);
+    },
+    [fileFields],
+  );
+
+  const handleFilePreview = useCallback((name: string) => {
+    setPreviewFieldName(name);
+    setIsPreviewOpen(true);
+  }, []);
+
+  // Narrow screens open the preview in a dialog from a file field's "Preview file" button. Wide
+  // screens show it beside the form, highlighting the field it shows unless that is the only file
+  // field, with nothing to tell apart.
+  let filePreview: HalFormsFilePreview | undefined;
+  if (previewFieldName && isNarrow) {
+    filePreview = { placement: "dialog", onOpen: handleFilePreview };
+  } else if (previewFieldName) {
+    filePreview = {
+      placement: "beside",
+      previewedFieldName: fileFields.length > 1 ? previewFieldName : undefined,
+    };
+  }
+
+  const form = (
     <CreateEntityItemForm
       fields={fields}
       layout={layout}
@@ -223,6 +271,8 @@ function CreateEntityItemContainerReady({
       onFieldBlur={formState.touchField}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
+      onFieldFocus={handleFieldFocus}
+      filePreview={filePreview}
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}
@@ -243,5 +293,51 @@ function CreateEntityItemContainerReady({
         )
       }
     />
+  );
+
+  if (!previewFieldName) return form;
+
+  const previewField = fileFields.find((field) => field.name === previewFieldName);
+  const previewFile = formState.values[previewFieldName];
+  // Only one of the dialog and the side panel is mounted, so the file is read and the PDF engine
+  // started once.
+  const preview = (
+    <CreateEntityItemFilePreview
+      fileFields={fileFields}
+      fieldName={previewFieldName}
+      onFieldNameChange={setPreviewFieldName}
+      file={previewFile instanceof File ? previewFile : undefined}
+      onFileChange={
+        previewField?.readOnly
+          ? undefined
+          : (file) => handleFieldChange(previewFieldName, file ?? undefined)
+      }
+    />
+  );
+
+  return (
+    <div className="flex gap-6 split:min-h-0 split:flex-1">
+      <div className="min-w-0 flex-[2] split:flex split:max-w-2xl split:flex-col">{form}</div>
+      {isNarrow ? (
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+          <DialogContent className="flex h-[80vh] flex-col gap-0 p-0 sm:max-w-3xl">
+            <DialogHeader className="border-b p-4">
+              <DialogTitle>Preview file</DialogTitle>
+              <DialogDescription className="sr-only">
+                The file picked in the form, before it is saved.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="min-h-0 flex-1">{preview}</div>
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <aside
+          aria-label="File preview"
+          className="min-w-0 flex-[3] overflow-hidden rounded-md border"
+        >
+          {preview}
+        </aside>
+      )}
+    </div>
   );
 }

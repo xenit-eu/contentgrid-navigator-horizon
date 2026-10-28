@@ -55,7 +55,9 @@ export function CreateEntityItemView({
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
 
   return (
-    <div className="space-y-6">
+    // From the `split:` breakpoint up the view fills the page height, so the form and the file
+    // preview beside it each scroll on their own.
+    <div className="flex flex-col gap-6 split:h-full">
       <PageTitle header="Create" title={profile.singularName} subtitle="" />
       <UnsavedChangesDialog
         open={unsavedChangesGuard.isBlocked}
