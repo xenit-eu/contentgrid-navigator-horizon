@@ -20,6 +20,10 @@ export interface PdfViewerLabels {
   readonly exitFullscreen: string;
   readonly openingDocument: string;
   readonly protectedDocument: string;
+  /** Accessible name of the password input shown for a protected document. */
+  readonly passwordInput: string;
+  readonly passwordSubmit: string;
+  readonly passwordIncorrect: string;
   readonly invalidDocument: string;
   readonly engineError: string;
   /** Template with `{current}` and `{total}` placeholders. */
@@ -56,8 +60,11 @@ export const DEFAULT_PDF_VIEWER_LABELS: PdfViewerLabels = {
   enterFullscreen: "Enter fullscreen",
   exitFullscreen: "Exit fullscreen",
   openingDocument: "Opening document…",
-  protectedDocument: "This document is password protected.",
-  invalidDocument: "This document could not be opened.",
+  protectedDocument: "This document requires a password to open",
+  passwordInput: "Password",
+  passwordSubmit: "Submit",
+  passwordIncorrect: "The password is wrong. Please try again",
+  invalidDocument: "The document is invalid or corrupted",
   engineError: "The PDF viewer failed to start.",
   pageAnnouncement: "Page {current} of {total}",
   zoomAnnouncement: "Zoom {percent}%",
