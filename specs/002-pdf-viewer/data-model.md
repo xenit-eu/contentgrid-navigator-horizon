@@ -22,14 +22,14 @@ cross package boundaries. Platform entities (`ProfileEntity`, `ProfileAttribute`
 
 Discriminated union returned by `useContentPreview` as query data.
 
-| Variant       | Fields                                                                      | Meaning                                                                     |
-| ------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `pdf`         | `bytes: ArrayBuffer`, `filename: string`, `origin: "stored" \| "rendition"` | Displayable PDF; `origin` drives the "converted preview" indicator (FR-020) |
-| `image`       | `blob: Blob`, `etag: string \| null`                                        | The stored image file, shown as it is (FR-032); `etag` is the content's own |
-| `video`       | `blob: Blob`, `etag: string \| null`                                        | The stored video file, shown as it is (FR-032); `etag` is the content's own |
-| `noFile`      | —                                                                           | Attribute holds no file (metadata `null` or link answered 404)              |
-| `unavailable` | `mimetype: string \| null`                                                  | Needs a rendition and no rendition endpoint is configured (FR-022)          |
-| `unsupported` | `mimetype: string \| null`                                                  | Rendition service reported `invalid-conversion` (FR-018)                    |
+| Variant       | Fields                                                                                              | Meaning                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `pdf`         | `bytes: ArrayBuffer`, `filename: string`, `origin: "stored" \| "rendition"`, `etag: string \| null` | Displayable PDF; `origin` drives the "converted preview" indicator (FR-020); `etag` is the stored file's own, `null` for a rendition |
+| `image`       | `blob: Blob`, `etag: string \| null`                                                                | The stored image file, shown as it is (FR-032); `etag` is the content's own                                                          |
+| `video`       | `blob: Blob`, `etag: string \| null`                                                                | The stored video file, shown as it is (FR-032); `etag` is the content's own                                                          |
+| `noFile`      | —                                                                                                   | Attribute holds no file (metadata `null` or link answered 404)                                                                       |
+| `unavailable` | `mimetype: string \| null`                                                                          | Needs a rendition and no rendition endpoint is configured (FR-022)                                                                   |
+| `unsupported` | `mimetype: string \| null`                                                                          | Rendition service reported `invalid-conversion` (FR-018)                                                                             |
 
 Failures are not variants: they reject the query with `ProblemDetailError`, `RenditionTimeoutError`,
 `RenditionProtocolError` or a plain `Error`, surfaced by TanStack Query as `error`.
@@ -108,7 +108,6 @@ Derived, not stored: `query.status × PreviewSource` → one of the FR-024 state
 | `couldNotPrepare`    | `RenditionTimeoutError` or rendition failure                     | yes      | yes   |
 | `couldNotRetrieve`   | download failure (`ProblemDetailError` other than 404)           | yes      | yes   |
 | `cannotDisplay`      | viewer reports `invalid`; an image/video fails to load           | yes      | no    |
-| `protected`          | viewer reports `protected`                                       | yes      | no    |
 | `viewerFailure`      | error boundary caught a viewer exception (FR-025)                | yes      | yes   |
 
 Changing `attributeName` or `entityItem` resets to the new key's state; nothing from the previous key is

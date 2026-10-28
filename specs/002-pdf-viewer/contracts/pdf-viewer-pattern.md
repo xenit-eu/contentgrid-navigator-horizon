@@ -11,7 +11,7 @@ export interface PdfViewerProps {
   readonly initialZoom?: "fit-width" | "fit-page" | number; // default "fit-width"
   readonly onDownload?: () => void; // Download button; absent → button hidden
   readonly onDocumentOpened?: (info: { pageCount: number }) => void;
-  readonly onLoadError?: (error: PdfLoadError) => void; // { kind: "invalid" | "protected" | "engine" }
+  readonly onLoadError?: (error: PdfLoadError) => void; // { kind: "invalid" | "engine" }; a protected document asks for its password instead
   readonly fullscreenTarget?: RefObject<HTMLElement>; // element to make fullscreen; default: viewer root
   readonly labels?: Partial<PdfViewerLabels>; // all user-visible strings, translatable
   readonly className?: string;
