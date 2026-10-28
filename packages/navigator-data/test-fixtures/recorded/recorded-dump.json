@@ -23232,6 +23232,16 @@
                 "type": "datetime"
               },
               {
+                "name": "created_at~from",
+                "prompt": "Created at: From",
+                "type": "datetime"
+              },
+              {
+                "name": "created_at~until",
+                "prompt": "Created at: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "last_modified_at",
                 "prompt": "Last modified at",
                 "type": "datetime"
@@ -23244,6 +23254,16 @@
               {
                 "name": "last_modified_at~before",
                 "prompt": "Last modified at: Before",
+                "type": "datetime"
+              },
+              {
+                "name": "last_modified_at~from",
+                "prompt": "Last modified at: From",
+                "type": "datetime"
+              },
+              {
+                "name": "last_modified_at~until",
+                "prompt": "Last modified at: Until",
                 "type": "datetime"
               },
               {
@@ -23305,6 +23325,16 @@
               {
                 "name": "datetime_example~before",
                 "prompt": "Datetime example: Before",
+                "type": "datetime"
+              },
+              {
+                "name": "datetime_example~from",
+                "prompt": "Datetime example: From",
+                "type": "datetime"
+              },
+              {
+                "name": "datetime_example~until",
+                "prompt": "Datetime example: Until",
                 "type": "datetime"
               },
               {
@@ -23538,6 +23568,16 @@
                     "name": "created_at~before",
                     "title": "Created at: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "created_at~from",
+                    "title": "Created at: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "created_at~until",
+                    "title": "Created at: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -23588,6 +23628,16 @@
                     "name": "last_modified_at~before",
                     "title": "Last modified at: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "last_modified_at~from",
+                    "title": "Last modified at: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "last_modified_at~until",
+                    "title": "Last modified at: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -23722,6 +23772,16 @@
                     "name": "datetime_example~before",
                     "title": "Datetime example: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "datetime_example~from",
+                    "title": "Datetime example: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "datetime_example~until",
+                    "title": "Datetime example: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -24694,6 +24754,16 @@
                 "type": "datetime"
               },
               {
+                "name": "orders.order_date~from",
+                "prompt": "Orders: Order date: From",
+                "type": "datetime"
+              },
+              {
+                "name": "orders.order_date~until",
+                "prompt": "Orders: Order date: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "_sort",
                 "options": {
                   "inline": [
@@ -25236,6 +25306,16 @@
                 "type": "datetime"
               },
               {
+                "name": "order_date~from",
+                "prompt": "Order date: From",
+                "type": "datetime"
+              },
+              {
+                "name": "order_date~until",
+                "prompt": "Order date: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "customer.customer_id~prefix",
                 "prompt": "Customer: Customer id",
                 "type": "text"
@@ -25413,6 +25493,16 @@
                     "name": "order_date~before",
                     "title": "Order date: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "order_date~from",
+                    "title": "Order date: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "order_date~until",
+                    "title": "Order date: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -25631,6 +25721,16 @@
                 "type": "datetime"
               },
               {
+                "name": "date_of_birth~from",
+                "prompt": "Date of birth: From",
+                "type": "datetime"
+              },
+              {
+                "name": "date_of_birth~until",
+                "prompt": "Date of birth: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "address",
                 "prompt": "Address",
                 "type": "text"
@@ -25743,6 +25843,16 @@
               {
                 "name": "friends.date_of_birth~before",
                 "prompt": "Friends: Date of birth: Before",
+                "type": "datetime"
+              },
+              {
+                "name": "friends.date_of_birth~from",
+                "prompt": "Friends: Date of birth: From",
+                "type": "datetime"
+              },
+              {
+                "name": "friends.date_of_birth~until",
+                "prompt": "Friends: Date of birth: Until",
                 "type": "datetime"
               },
               {
@@ -26060,6 +26170,16 @@
                     "name": "date_of_birth~before",
                     "title": "Date of birth: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "date_of_birth~from",
+                    "title": "Date of birth: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "date_of_birth~until",
+                    "title": "Date of birth: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -26402,6 +26522,16 @@
                 "type": "datetime"
               },
               {
+                "name": "release_date~from",
+                "prompt": "Release date: From",
+                "type": "datetime"
+              },
+              {
+                "name": "release_date~until",
+                "prompt": "Release date: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "order.order_id",
                 "prompt": "Order: Order id",
                 "type": "text"
@@ -26424,6 +26554,16 @@
               {
                 "name": "order.order_date~before",
                 "prompt": "Order: Order date: Before",
+                "type": "datetime"
+              },
+              {
+                "name": "order.order_date~from",
+                "prompt": "Order: Order date: From",
+                "type": "datetime"
+              },
+              {
+                "name": "order.order_date~until",
+                "prompt": "Order: Order date: Until",
                 "type": "datetime"
               },
               {
@@ -26760,6 +26900,16 @@
                     "name": "release_date~before",
                     "title": "Release date: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "release_date~from",
+                    "title": "Release date: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "release_date~until",
+                    "title": "Release date: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -27116,6 +27266,16 @@
                 "type": "datetime"
               },
               {
+                "name": "created_at~from",
+                "prompt": "Created at: From",
+                "type": "datetime"
+              },
+              {
+                "name": "created_at~until",
+                "prompt": "Created at: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "last_modified_at",
                 "prompt": "Last modified at",
                 "type": "datetime"
@@ -27128,6 +27288,16 @@
               {
                 "name": "last_modified_at~before",
                 "prompt": "Last modified at: Before",
+                "type": "datetime"
+              },
+              {
+                "name": "last_modified_at~from",
+                "prompt": "Last modified at: From",
+                "type": "datetime"
+              },
+              {
+                "name": "last_modified_at~until",
+                "prompt": "Last modified at: Until",
                 "type": "datetime"
               },
               {
@@ -27214,6 +27384,16 @@
                     "name": "created_at~before",
                     "title": "Created at: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "created_at~from",
+                    "title": "Created at: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "created_at~until",
+                    "title": "Created at: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -27264,6 +27444,16 @@
                     "name": "last_modified_at~before",
                     "title": "Last modified at: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "last_modified_at~from",
+                    "title": "Last modified at: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "last_modified_at~until",
+                    "title": "Last modified at: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -27366,6 +27556,16 @@
                 "type": "datetime"
               },
               {
+                "name": "created_at~from",
+                "prompt": "Created at: From",
+                "type": "datetime"
+              },
+              {
+                "name": "created_at~until",
+                "prompt": "Created at: Until",
+                "type": "datetime"
+              },
+              {
                 "name": "last_modified_at",
                 "prompt": "Last modified at",
                 "type": "datetime"
@@ -27378,6 +27578,16 @@
               {
                 "name": "last_modified_at~before",
                 "prompt": "Last modified at: Before",
+                "type": "datetime"
+              },
+              {
+                "name": "last_modified_at~from",
+                "prompt": "Last modified at: From",
+                "type": "datetime"
+              },
+              {
+                "name": "last_modified_at~until",
+                "prompt": "Last modified at: Until",
                 "type": "datetime"
               },
               {
@@ -27464,6 +27674,16 @@
                     "name": "created_at~before",
                     "title": "Created at: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "created_at~from",
+                    "title": "Created at: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "created_at~until",
+                    "title": "Created at: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
@@ -27514,6 +27734,16 @@
                     "name": "last_modified_at~before",
                     "title": "Last modified at: Before",
                     "type": "less-than"
+                  },
+                  {
+                    "name": "last_modified_at~from",
+                    "title": "Last modified at: From",
+                    "type": "greater-than-or-equal"
+                  },
+                  {
+                    "name": "last_modified_at~until",
+                    "title": "Last modified at: Until",
+                    "type": "less-than-or-equal"
                   }
                 ],
                 "blueprint:attribute": []
