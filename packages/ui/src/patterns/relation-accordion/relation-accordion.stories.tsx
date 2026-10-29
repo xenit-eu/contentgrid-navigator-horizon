@@ -30,6 +30,20 @@ export const NoActions: Story = {
   },
 };
 
+export const Rows: Story = {
+  args: {
+    title: "Invoices",
+    variant: "row",
+    children: <p className="text-sm text-muted-foreground">Three linked invoices go here.</p>,
+  },
+  render: (args) => (
+    <div className="rounded-xl border">
+      <RelationAccordion {...args} />
+      <RelationAccordion {...args} title="Suppliers" />
+    </div>
+  ),
+};
+
 export const CollapseInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
