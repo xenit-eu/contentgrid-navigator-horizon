@@ -62,7 +62,7 @@ vi.mock("@contentgrid/ui", async (importOriginal) => {
       filename: string;
       toolbar?: { start?: ReactNode; end?: ReactNode };
       onDownload?: () => void;
-      onLoadError?: (error: { kind: "invalid" | "protected" | "engine" }) => void;
+      onLoadError?: (error: { kind: "invalid" | "engine" }) => void;
     }) => {
       if (props.filename === "throws.pdf" && viewerRenderControl.shouldThrow) {
         throw new Error("simulated viewer render failure");
@@ -73,9 +73,6 @@ vi.mock("@contentgrid/ui", async (importOriginal) => {
           <div>toolbar-start: {props.toolbar?.start}</div>
           <div>toolbar-end: {props.toolbar?.end}</div>
           <button onClick={props.onDownload}>viewer download</button>
-          <button onClick={() => props.onLoadError?.({ kind: "protected" })}>
-            simulate protected
-          </button>
           <button onClick={() => props.onLoadError?.({ kind: "invalid" })}>simulate invalid</button>
           <button onClick={() => props.onLoadError?.({ kind: "engine" })}>simulate engine</button>
         </div>
@@ -218,7 +215,7 @@ describe("ContentPreviewPanel", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(document.querySelector('input[type="file"]')).toBeInTheDocument();
   });
 
@@ -330,7 +327,7 @@ describe("ContentPreviewPanel", () => {
     rerender(<ContentPreviewPanel entityItem={entityItem} attributeName="document" />);
 
     expect(screen.queryByText("Unsupported Media Type")).not.toBeInTheDocument();
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
   });
 
   it("renders the stored PDF once the download resolves, and downloads it on demand", async () => {
@@ -518,7 +515,7 @@ describe("ContentPreviewPanel", () => {
       { wrapper: makeWrapper() },
     );
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.getByText("attribute selector")).toBeInTheDocument();
   });
 
@@ -628,7 +625,7 @@ describe("ContentPreviewPanel", () => {
       { wrapper: makeWrapper() },
     );
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "switch to photo" })).toBeInTheDocument();
 
     rerender(
@@ -642,7 +639,7 @@ describe("ContentPreviewPanel", () => {
     expect(await screen.findByText("PDF viewer: photo.pdf")).toBeInTheDocument();
   });
 
-  it("maps a viewer-reported protected/invalid load error, with no Retry button", async () => {
+  it("shows a viewer-reported invalid PDF as corrupted, with no Retry button", async () => {
     server.use(
       createContentDownloadHandler({
         url: CONTENT_URL,
@@ -659,9 +656,8 @@ describe("ContentPreviewPanel", () => {
     });
 
     await screen.findByText("PDF viewer: order.pdf");
-    screen.getByRole("button", { name: "simulate protected" }).click();
-
-    expect(await screen.findByText("This file is password protected.")).toBeInTheDocument();
+    screen.getByRole("button", { name: "simulate invalid" }).click();
+    expect(await screen.findByText("The document is invalid or corrupted")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 

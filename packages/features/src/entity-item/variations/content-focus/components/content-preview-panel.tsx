@@ -1,6 +1,5 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ImageBrokenIcon, VideoCameraSlashIcon } from "@phosphor-icons/react";
 import {
   type EntityItem,
   needsRendition,
@@ -9,39 +8,22 @@ import {
   useDownloadContent,
   useUploadContent,
 } from "@contentgrid/navigator-data";
-import { Badge, PdfEngineProvider, PdfViewerErrorBoundary } from "@contentgrid/ui";
-import type { PdfLoadError, PdfViewerToolbarOptions } from "@contentgrid/ui";
+import { Badge } from "@contentgrid/ui";
+import type { PdfViewerToolbarOptions } from "@contentgrid/ui";
 import { getContentAttributeMetadata } from "../util/content-attribute-metadata";
 import type { ViewerLoadErrorKind } from "../util/derive-content-preview-state";
 import { deriveContentPreviewState } from "../util/derive-content-preview-state";
-import { pdfiumWasmUrl } from "../util/pdfium-wasm-url";
-import { ContentPreviewFrame, type ContentPreviewFrameLabels } from "./content-preview-frame";
+import { buildPreviewUnavailableMessage } from "../util/preview-unavailable-message";
+import {
+  ContentPreviewFrame,
+  type ContentPreviewFrameLabels,
+  cannotDisplayMessageAndIcon,
+} from "./content-preview-frame";
 import { ImageVideoViewer } from "./image-video-viewer";
-
-/**
- * Lazy import of `@contentgrid/ui`'s `PdfViewer` — its dependency (the PDFium/WASM engine, ~4.4
- * MB) only loads when a stored/converted PDF is actually about to be shown, not on every
- * content-focus page mount (research.md §8.2 of spec 002-pdf-viewer). `React.lazy` requires a
- * default export, so the named export is remapped here.
- */
-const LazyPdfViewer = lazy(() =>
-  import("@contentgrid/ui").then((module) => ({ default: module.PdfViewer })),
-);
+import { PdfPreview } from "./pdf-preview";
+import { saveBlobAsFile } from "./save-blob-as-file";
 
 const FALLBACK_FILENAME = "document.pdf";
-
-/** `previewUnavailable`'s message names the actual file type instead of a generic "this file
- * type" whenever the mimetype is known (`PreviewSource.unavailable`/`.unsupported.mimetype`). */
-function buildPreviewUnavailableMessage(mimetype: string | null | undefined): string {
-  return mimetype
-    ? `Preview isn't available for ${mimetype} files.`
-    : "Preview isn't available for this file type.";
-}
-
-/** `cannotDisplay`'s message for a stored image or video names which of the two it is. */
-function buildCannotDisplayMessage(kind: "image" | "video"): string {
-  return `Your browser can't open this ${kind}. You can download it instead.`;
-}
 
 export interface ContentPreviewPanelProps {
   readonly entityItem: EntityItem;
@@ -56,21 +38,10 @@ export interface ContentPreviewPanelProps {
   readonly toolbarStart?: ReactNode;
 }
 
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 /**
  * Owns `useContentPreview` + `useDownloadContent` + `useUploadContent` for one content attribute
  * and renders the matching `ContentPreviewFrame` state (data-model.md's "Content preview panel state", FR-024).
- * Lazy-loads `@contentgrid/ui`'s `PdfViewer` — wrapped in `PdfViewerErrorBoundary` (catches a
- * render-time exception → `viewerFailure`) and its own `PdfEngineProvider` (self-hosted
- * `wasmUrl`) — only once a displayable PDF (stored or converted) is available. A stored image or
+ * A displayable PDF (stored or converted) is shown by `PdfPreview`. A stored image or
  * video is shown by `ImageVideoViewer` instead; one the browser cannot display reports
  * `cannotDisplay`, like an invalid PDF.
  */
@@ -97,10 +68,6 @@ export function ContentPreviewPanel({
     }
   }
   const [viewerLoadErrorKind, setViewerLoadErrorKind] = useState<ViewerLoadErrorKind | null>(null);
-  // Bumped on every Retry so the viewer/engine subtree's `key` changes, forcing a full remount —
-  // an "engine" load error (`PdfEngineProvider`) needs a fresh engine attempt, not just a
-  // re-render with the same `bytes`, which retrying otherwise would not produce.
-  const [retryToken, setRetryToken] = useState(0);
 
   // A new attribute/item (or a re-upload bumping the ETag) means nothing from the previous
   // selection should keep showing as belonging to the new one (FR-006) — including a
@@ -128,10 +95,7 @@ export function ContentPreviewPanel({
   function handleDownload(): void {
     downloadMutation.mutate(undefined, {
       onSuccess: (download) => {
-        triggerDownload(
-          download.blob,
-          download.filename ?? metadata?.filename ?? FALLBACK_FILENAME,
-        );
+        saveBlobAsFile(download.blob, download.filename ?? metadata?.filename ?? FALLBACK_FILENAME);
       },
     });
   }
@@ -146,7 +110,6 @@ export function ContentPreviewPanel({
 
   function handleRetry(): void {
     setViewerLoadErrorKind(null);
-    setRetryToken((token) => token + 1);
     void query.refetch();
   }
 
@@ -179,46 +142,16 @@ export function ContentPreviewPanel({
     };
 
     return (
-      <ContentPreviewFrame state="ready">
-        <PdfViewerErrorBoundary
-          fallback={(error, reset) => (
-            <ContentPreviewFrame
-              state="viewerFailure"
-              problem={toProblemDisplayModel(error)}
-              onDownload={handleDownload}
-              toolbarStart={toolbarStart}
-              onRetry={() => {
-                // `reset()` clears the boundary's own caught-error state — without it, the
-                // boundary keeps rendering this fallback forever, no matter how many times
-                // `handleRetry()` below remounts the subtree underneath it (bumping
-                // `retryToken`/refetching): the boundary's `render()` checks its own `state.error`
-                // before ever reaching its children, so a fresh subtree never gets a chance to
-                // render until the boundary itself is told the error is cleared.
-                handleRetry();
-                reset();
-              }}
-            />
-          )}
-        >
-          <PdfEngineProvider
-            key={`${attributeName}:${entityItem.etag ?? ""}:${retryToken}`}
-            wasmUrl={pdfiumWasmUrl}
-          >
-            <Suspense
-              fallback={<ContentPreviewFrame state="loading" onDownload={handleDownload} />}
-            >
-              <LazyPdfViewer
-                bytes={previewSource.bytes}
-                filename={previewSource.filename}
-                wasmUrl={pdfiumWasmUrl}
-                toolbar={toolbar}
-                onDownload={handleDownload}
-                onLoadError={(error: PdfLoadError) => setViewerLoadErrorKind(error.kind)}
-              />
-            </Suspense>
-          </PdfEngineProvider>
-        </PdfViewerErrorBoundary>
-      </ContentPreviewFrame>
+      <PdfPreview
+        // A different file gets a fresh viewer, so it never shows the previous file's failure.
+        key={`${attributeName}:${previewSource.etag ?? ""}`}
+        bytes={previewSource.bytes}
+        filename={previewSource.filename}
+        toolbar={toolbar}
+        onDownload={handleDownload}
+        onRetry={handleRetry}
+        onLoadError={(error) => setViewerLoadErrorKind(error.kind)}
+      />
     );
   }
 
@@ -244,12 +177,8 @@ export function ContentPreviewPanel({
   let frameIcon: ReactNode;
   if (state === "previewUnavailable") {
     frameLabels = { previewUnavailableMessage: buildPreviewUnavailableMessage(mimetype) };
-  } else if (state === "cannotDisplay" && previewSource?.kind === "image") {
-    frameLabels = { cannotDisplayMessage: buildCannotDisplayMessage("image") };
-    frameIcon = <ImageBrokenIcon aria-hidden />;
-  } else if (state === "cannotDisplay" && previewSource?.kind === "video") {
-    frameLabels = { cannotDisplayMessage: buildCannotDisplayMessage("video") };
-    frameIcon = <VideoCameraSlashIcon aria-hidden />;
+  } else if (state === "cannotDisplay") {
+    ({ labels: frameLabels, icon: frameIcon } = cannotDisplayMessageAndIcon(previewSource?.kind));
   }
 
   return (

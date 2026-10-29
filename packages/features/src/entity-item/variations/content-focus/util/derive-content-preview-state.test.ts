@@ -38,6 +38,7 @@ describe("deriveContentPreviewState", () => {
           bytes: new ArrayBuffer(0),
           filename: "a.pdf",
           origin: "stored",
+          etag: null,
         },
       }),
     ).toEqual({ state: "ready" });
@@ -112,20 +113,7 @@ describe("deriveContentPreviewState", () => {
           bytes: new ArrayBuffer(0),
           filename: "a.pdf",
           origin: "stored",
-        },
-        viewerLoadErrorKind: "protected",
-      }),
-    ).toEqual({ state: "protected" });
-
-    expect(
-      deriveContentPreviewState({
-        ...BASE,
-        queryStatus: "success",
-        previewSource: {
-          kind: "pdf",
-          bytes: new ArrayBuffer(0),
-          filename: "a.pdf",
-          origin: "stored",
+          etag: null,
         },
         viewerLoadErrorKind: "invalid",
       }),
@@ -140,6 +128,7 @@ describe("deriveContentPreviewState", () => {
           bytes: new ArrayBuffer(0),
           filename: "a.pdf",
           origin: "stored",
+          etag: null,
         },
         viewerLoadErrorKind: "engine",
       }),

@@ -38,6 +38,9 @@ export type PreviewSource =
       readonly filename: string;
       /** Drives the "converted preview" indicator (FR-020) — never inferred from mimetype. */
       readonly origin: "stored" | "rendition";
+      /** The stored file's own ETag (from the download response); null for a rendition, whose
+       * responses don't carry it. */
+      readonly etag: string | null;
     }
   /** The stored image or video file, shown as it is (no rendition). */
   | {
@@ -139,6 +142,7 @@ export function useContentPreview(
               bytes: await response.arrayBuffer(),
               filename: metadata.filename ?? FALLBACK_FILENAME,
               origin: "stored",
+              etag: response.headers.get("ETag"),
             };
           }
           return {
@@ -174,6 +178,7 @@ export function useContentPreview(
         bytes: rendition.bytes,
         filename: metadata.filename ?? FALLBACK_FILENAME,
         origin: "rendition",
+        etag: null,
       };
     },
     enabled: options?.enabled,

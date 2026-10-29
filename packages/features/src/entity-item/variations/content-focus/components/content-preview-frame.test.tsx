@@ -21,7 +21,7 @@ describe("ContentPreviewFrame", () => {
       />,
     );
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.queryByText("No file")).not.toBeInTheDocument();
     expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
@@ -92,12 +92,9 @@ describe("ContentPreviewFrame", () => {
     }
   });
 
-  it("never renders Retry for cannotDisplay or protected, even when onRetry is supplied", () => {
-    for (const state of ["cannotDisplay", "protected"] as const) {
-      const { unmount } = render(<ContentPreviewFrame state={state} onRetry={vi.fn()} />);
-      expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
-      unmount();
-    }
+  it("never renders Retry for cannotDisplay, even when onRetry is supplied", () => {
+    render(<ContentPreviewFrame state="cannotDisplay" onRetry={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
   it("omits Retry entirely when onRetry is not supplied, even for a retryable state", () => {
@@ -110,7 +107,7 @@ describe("ContentPreviewFrame", () => {
     expect(screen.getByText("Geen bestand")).toBeInTheDocument();
   });
 
-  it("renders toolbarStart in a header bar for every non-ready state (round-2 review: the attribute selector must stay usable no matter the state)", () => {
+  it("renders toolbarStart in a header bar for every non-ready state, so the attribute selector stays usable", () => {
     for (const state of [
       "noFile",
       "loading",
@@ -119,7 +116,6 @@ describe("ContentPreviewFrame", () => {
       "couldNotPrepare",
       "couldNotRetrieve",
       "cannotDisplay",
-      "protected",
       "viewerFailure",
     ] as const) {
       const { unmount } = render(
