@@ -1,7 +1,7 @@
 /**
  * @contentgrid/features/preferences
  *
- * Entity display preferences: icon, color, cardStyle, nameAttribute, visibleColumns.
+ * Entity display preferences: icon, color, cardStyle, nameAttribute, visibleColumns, itemLayout.
  * Three layers, highest priority first — user override (persisted, per-backend) > backend
  * automation default (currently stubbed, see `useEntityDisplayDefaults` in
  * `@contentgrid/navigator-data`) > heuristic default (`ProfileEntity.getDefaultPreferences()`).

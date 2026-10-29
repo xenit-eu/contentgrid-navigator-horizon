@@ -10,6 +10,15 @@ import { z } from "zod/v4";
  * backend-defaults and user-override layers only ever know attribute names — resolving to a
  * `ProfileAttribute` happens once, after merging, in the composed hook.
  */
+/**
+ * How an item page lays out the item: `"content"` puts its content attribute in focus, with the
+ * other sections in a side panel (only for an entity with content attributes); `"stacked"` lists
+ * the sections in one column; `"columns"` puts the relations next to the attributes.
+ */
+export const entityItemLayoutSchema = z.enum(["content", "stacked", "columns"]);
+
+export type EntityItemLayout = z.infer<typeof entityItemLayoutSchema>;
+
 export const entityDisplayPreferencesSchema = z.object({
   nameAttribute: z.string().optional(),
   subtitleAttribute: z.string().optional(),
@@ -17,6 +26,7 @@ export const entityDisplayPreferencesSchema = z.object({
   icon: z.string().optional(),
   color: z.string().optional(),
   cardStyle: z.string().optional(),
+  itemLayout: entityItemLayoutSchema.optional(),
 });
 
 export type EntityDisplayPreferences = z.infer<typeof entityDisplayPreferencesSchema>;

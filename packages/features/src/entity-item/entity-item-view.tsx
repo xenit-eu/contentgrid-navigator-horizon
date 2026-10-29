@@ -9,7 +9,11 @@ import { EntityCard } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useEditContext } from "./edit/use-edit-context";
-import { EntityItemSections, useEntityItemSectionsState } from "./entity-item-sections";
+import {
+  EntityItemSections,
+  type EntityItemSectionsProps,
+  useEntityItemSectionsState,
+} from "./entity-item-sections";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -60,6 +64,8 @@ export type EntityItemViewProps = EntityItemIdentity &
     readonly onRelationItemClick?: RelationItemClickHandler;
     /** Fired from a relation picker's "Create" button with the target entity's profile name. */
     readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+    /** How the attribute, relation and audit sections are laid out; see {@link EntityItemSectionsProps}. */
+    readonly sectionsLayout?: EntityItemSectionsProps["layout"];
   };
 
 /**
@@ -80,6 +86,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
     onMissingRelationTargetClick,
     onBlindRelationOverwriteClick,
     onRequiredRelationClick,
+    sectionsLayout,
   } = props;
 
   const item = useEntityItem(
@@ -97,7 +104,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
         flushContent
         heading={
           item.data ? (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <EntityItemReference item={item.data} size="lg" />
               <EntityItemRelationSummary item={item.data} onRelationClick={sections.reveal} />
             </div>
@@ -111,6 +118,7 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
             item={item.data}
             profiles={loadedProfiles}
             state={sections}
+            layout={sectionsLayout}
             editedItem={editContext.editedItem}
             onEditingChange={editContext.setIsEditing}
             onRefresh={() => void editContext.refresh()}

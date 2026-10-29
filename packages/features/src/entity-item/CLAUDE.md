@@ -25,7 +25,10 @@ video as stored, or any other file previewed through the platform's PDF renditio
 to those same attributes and relations, with the production viewer toolbar.
 `EntityItemContentFocusView` resolves
 `entityName`/`itemId` into a `profileEntity`/`EntityItem` itself and falls back to plain
-`EntityItemView` for any item with no content attributes (FR-001).
+`EntityItemView` for any item with no content attributes (FR-001), or when the entity's
+`itemLayout` display preference (`~configuration/$entity`) is `"stacked"` or `"columns"` rather
+than `"content"` — those pick `EntityItemSections`' layout. `"content"` is the default, and only
+an option, for an entity with content attributes; without one the default is `"columns"`.
 
 ## Stability of the content-focus variation
 

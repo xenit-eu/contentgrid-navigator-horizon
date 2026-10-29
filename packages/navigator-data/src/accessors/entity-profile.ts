@@ -91,11 +91,13 @@ export default class ProfileEntity {
     const nameAttribute = textAttribute?.name ?? "id";
 
     const icon = this.hasContentAttributes ? "FileText" : "Database";
+    const itemLayout = this.hasContentAttributes ? "content" : "columns";
 
     return {
       visibleColumns,
       nameAttribute,
       icon,
+      itemLayout,
     };
   }
 

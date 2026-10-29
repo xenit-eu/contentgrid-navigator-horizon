@@ -16,6 +16,7 @@ import {
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
+import { useEntityDisplayPreferences } from "../../../../preferences";
 import { useEditContext } from "../../../edit/use-edit-context";
 import { EntityItemSections, useEntityItemSectionsState } from "../../../entity-item-sections";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
@@ -84,7 +85,8 @@ function resolveToolbar(
  * `contracts/content-focus-view.md`): resolves `entityName`/`itemId` into a `profileEntity` +
  * `EntityItem` itself — the host supplies only primitives and callbacks (Principle VIII). FR-001:
  * an entity with no content attributes falls back to the existing (stable) `EntityItemView` body;
- * one that has them renders the PDF/content preview beside the item's attributes and relations.
+ * one that has them renders the PDF/content preview beside the item's attributes and relations,
+ * unless the entity's `itemLayout` display preference picks a sections layout instead.
  */
 export function EntityItemContentFocusView(props: Readonly<EntityItemContentFocusViewProps>) {
   const { entityName } = props;
@@ -117,6 +119,11 @@ function EntityItemContentFocusViewBody({
   const item = useEntityItem({ profileEntity, entityId: itemId });
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const editContext = useEditContext(item.data, item.refetch);
+  // The entity's `itemLayout` preference picks the layout; content focus needs a content
+  // attribute, so an entity without one gets the side-by-side sections instead.
+  const { itemLayout } = useEntityDisplayPreferences(profileEntity).preferences;
+  const contentFocus = itemLayout === "content" && profileEntity.hasContentAttributes;
+  const sectionsLayout = itemLayout === "stacked" ? "stacked" : "columns";
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -191,7 +198,7 @@ function EntityItemContentFocusViewBody({
       {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
       {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
       {item.data &&
-        (profileEntity.hasContentAttributes ? (
+        (contentFocus ? (
           <ContentFocusEntityItemBody
             entityItem={item.data}
             attributeName={selectedAttribute}
@@ -211,6 +218,7 @@ function EntityItemContentFocusViewBody({
             profile={profileEntity}
             itemId={itemId}
             toolbar={false}
+            sectionsLayout={sectionsLayout}
             onRelationItemClick={handleRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -221,13 +229,13 @@ function EntityItemContentFocusViewBody({
     </>
   );
 
-  // When the content-focus body is what renders (profileEntity.hasContentAttributes), the
+  // When the content-focus body is what renders (`contentFocus`), the
   // preview panel should run edge to edge rather than sit inside the standard page gutters —
   // drop the horizontal padding, and the top vertical padding too (the toolbar strip above
   // already has its own bottom padding, so a top gutter here would just double that gap) —
   // keeping only the bottom gutter for breathing room at the end of the scroll region. The
   // EntityItemView fallback body keeps the standard padding on both axes.
-  const contentPadding = profileEntity.hasContentAttributes ? "bottom" : true;
+  const contentPadding = contentFocus ? "bottom" : true;
 
   if (resolvedToolbar === false) {
     return <PageLayout padded={contentPadding}>{content}</PageLayout>;

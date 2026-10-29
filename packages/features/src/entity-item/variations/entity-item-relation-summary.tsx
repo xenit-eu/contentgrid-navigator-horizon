@@ -28,7 +28,8 @@ export function EntityItemRelationSummary({
   return (
     <ul
       aria-label="Relations"
-      className={["flex flex-wrap gap-1", className].filter(Boolean).join(" ")}
+      // Pulled left by the entries' own padding, so the first count lines up with what's above it.
+      className={["-ml-1.5 flex flex-wrap gap-1", className].filter(Boolean).join(" ")}
     >
       {item.toOneRelations.map((relation) => (
         <li key={relation.name}>

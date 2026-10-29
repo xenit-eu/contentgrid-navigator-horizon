@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { ClockCounterClockwiseIcon, ListBulletsIcon } from "@phosphor-icons/react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { RelationAccordion } from "@contentgrid/ui";
+import { RelationAccordion, ResizableSplitLayout } from "@contentgrid/ui";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EntityItemAuditTrail, hasAuditTrail } from "./attributes/entity-item-attributes";
 import { EditEntityItemButton } from "./edit/edit-entity-item-button";
@@ -15,6 +15,8 @@ import { RelationToOneSection } from "./relations/relation-to-one-section";
 
 const ATTRIBUTES_SECTION = "attributes";
 const AUDIT_SECTION = "audit";
+/** Narrower than this (in pixels), the `"columns"` layout keeps a single column. */
+const COLUMNS_MIN_WIDTH = 720;
 
 export interface EntityItemSectionsState {
   /** Open state for a section, keyed by `"attributes"`, `"audit"` or a relation's name. */
@@ -70,12 +72,19 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
   readonly onRefresh: () => void;
   readonly onRelationItemClick?: RelationItemClickHandler;
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /**
+   * `"stacked"` (default) lists every section in one column. `"columns"` puts the relations in a
+   * second, resizable column next to the attributes and audit trail, when the sections are at
+   * least `COLUMNS_MIN_WIDTH` wide; narrower, and for an item without relations, it keeps the
+   * single column.
+   */
+  readonly layout?: "stacked" | "columns";
 };
 
 /**
- * The item's attributes, each of its relations and its audit trail as a flat list of collapsible
- * rows, meant to sit edge to edge inside one surrounding card or panel. Attributes, to-one
- * relations and the audit trail start expanded, to-many relations collapsed.
+ * The item's attributes, each of its relations and its audit trail as collapsible rows, meant to
+ * sit edge to edge inside one surrounding card or panel. Attributes, to-one relations and the
+ * audit trail start expanded, to-many relations collapsed.
  */
 export function EntityItemSections({
   item,
@@ -89,39 +98,42 @@ export function EntityItemSections({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  layout = "stacked",
 }: Readonly<EntityItemSectionsProps>) {
   const attributesOpen = state.openProps(ATTRIBUTES_SECTION, true);
-  return (
-    <div>
-      <RelationAccordion
-        title={
-          <span className="inline-flex items-center gap-2">
-            <ListBulletsIcon className="size-4 text-muted-foreground" aria-hidden />
-            Attributes
-          </span>
-        }
-        variant="row"
-        actions={
-          <EditEntityItemButton
-            item={item}
-            isEditing={editedItem !== null}
-            onEdit={() => {
-              // The form opens inside this section, so make sure it is expanded.
-              attributesOpen.onOpenChange(true);
-              onEditingChange(true);
-            }}
-          />
-        }
-        {...attributesOpen}
-      >
-        <EditableEntityItemAttributes
-          item={editedItem ?? item}
+  const attributes = (
+    <RelationAccordion
+      title={
+        <span className="inline-flex items-center gap-2">
+          <ListBulletsIcon className="size-4 text-muted-foreground" aria-hidden />
+          Attributes
+        </span>
+      }
+      variant="row"
+      actions={
+        <EditEntityItemButton
+          item={item}
           isEditing={editedItem !== null}
-          onEditingChange={onEditingChange}
-          onRefresh={onRefresh}
-          auditTrail={false}
+          onEdit={() => {
+            // The form opens inside this section, so make sure it is expanded.
+            attributesOpen.onOpenChange(true);
+            onEditingChange(true);
+          }}
         />
-      </RelationAccordion>
+      }
+      {...attributesOpen}
+    >
+      <EditableEntityItemAttributes
+        item={editedItem ?? item}
+        isEditing={editedItem !== null}
+        onEditingChange={onEditingChange}
+        onRefresh={onRefresh}
+        auditTrail={false}
+      />
+    </RelationAccordion>
+  );
+  const relations = (
+    <>
       {item.toOneRelations.map((rel) => (
         <section key={rel.name} ref={state.sectionRef(rel.name)} className="scroll-mt-4">
           <RelationToOneSection
@@ -151,20 +163,86 @@ export function EntityItemSections({
           />
         </section>
       ))}
-      {hasAuditTrail(item) && (
-        <RelationAccordion
-          title={
-            <span className="inline-flex items-center gap-2">
-              <ClockCounterClockwiseIcon className="size-4 text-muted-foreground" aria-hidden />
-              Audit
-            </span>
-          }
-          variant="row"
-          {...state.openProps(AUDIT_SECTION, true)}
-        >
-          <EntityItemAuditTrail item={item} />
-        </RelationAccordion>
-      )}
+    </>
+  );
+  const audit = hasAuditTrail(item) && (
+    <RelationAccordion
+      title={
+        <span className="inline-flex items-center gap-2">
+          <ClockCounterClockwiseIcon className="size-4 text-muted-foreground" aria-hidden />
+          Audit
+        </span>
+      }
+      variant="row"
+      {...state.openProps(AUDIT_SECTION, true)}
+    >
+      <EntityItemAuditTrail item={item} />
+    </RelationAccordion>
+  );
+
+  const hasRelations = item.toOneRelations.length > 0 || item.toManyRelations.length > 0;
+  if (layout === "columns" && hasRelations) {
+    return (
+      <EntityItemSectionColumns
+        left={
+          <>
+            {attributes}
+            {audit}
+          </>
+        }
+        right={relations}
+      />
+    );
+  }
+  return (
+    <div>
+      {attributes}
+      {relations}
+      {audit}
     </div>
   );
+}
+
+/**
+ * `left` and `right` side by side with a drag handle between them, or `left` above `right` when
+ * there is too little room. The split layout's own stacked mode isn't used: it splits a fixed
+ * height, while these sections grow with their content. Crossing the width threshold remounts
+ * the sections.
+ */
+function EntityItemSectionColumns({
+  left,
+  right,
+}: Readonly<{ left: ReactNode; right: ReactNode }>) {
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState<number | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (!element) return;
+    const measure = () => setWidth(element.getBoundingClientRect().width);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+
+  // Renders nothing until measured (before the first paint), so it never shows the wrong layout.
+  let content: ReactNode = null;
+  if (width !== undefined && width >= COLUMNS_MIN_WIDTH) {
+    content = (
+      <ResizableSplitLayout
+        left={left}
+        right={right}
+        minLeftSize={320}
+        minRightSize={320}
+        handleLabel="Resize relations"
+      />
+    );
+  } else if (width !== undefined) {
+    content = (
+      <>
+        {left}
+        {right}
+      </>
+    );
+  }
+  return <div ref={setElement}>{content}</div>;
 }

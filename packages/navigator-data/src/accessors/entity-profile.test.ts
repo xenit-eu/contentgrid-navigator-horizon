@@ -144,6 +144,7 @@ describe("ProfileEntity — getDefaultPreferences", () => {
     expect(prefs.nameAttribute).toBe("id");
     expect(prefs.visibleColumns).toEqual(["id"]);
     expect(prefs.icon).toBe("Database");
+    expect(prefs.itemLayout).toBe("columns");
   });
 
   it("prefers the first string attribute as the name attribute", () => {

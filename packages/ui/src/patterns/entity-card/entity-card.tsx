@@ -28,8 +28,8 @@ interface EntityCardBaseProps {
   onCardClick?: (name: string) => void;
 
   indentSubtitle?: boolean;
-  /** Renders `children` edge to edge — no horizontal padding, no bottom gutter — e.g. for a
-   * list of full-width rows that should run to the card's border. */
+  /** Renders `children` edge to edge — no horizontal padding, no bottom gutter, and a tighter
+   * header — e.g. for a list of full-width rows that should run to the card's border. */
   flushContent?: boolean;
 }
 
@@ -70,7 +70,7 @@ export function EntityCard({
       className={cn(
         "group relative transition-colors",
         onCardClick && "cursor-pointer hover:border-primary/50",
-        flushContent && children && "overflow-hidden pb-0",
+        flushContent && children && "gap-3 overflow-hidden pt-4 pb-0",
       )}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
       onKeyDown={
