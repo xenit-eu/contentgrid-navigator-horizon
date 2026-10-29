@@ -11,7 +11,7 @@ import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harnes
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
 vi.mock("@contentgrid/features/entity-item", () => ({
-  entityItemDetailPadding: () => true,
+  useEntityItemDetailPadding: () => true,
   // The breadcrumbs draw the loaded item with it.
   EntityItemReference: () => <span>item-reference</span>,
   EntityItemAutoVariation: (props: {

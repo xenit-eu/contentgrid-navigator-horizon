@@ -30,8 +30,13 @@ variations/
 `EntityItemAutoVariation` is what the view mounts. It takes `entityItem`, an optional
 `variation` (`"auto"` by default) and everything in `EntityItemVariationProps` except `item`. For
 `"auto"` it renders `content-focus` when the entity has content attributes and `attribute-focus`
-otherwise (FR-001); `resolveEntityItemVariation()` tells you which. `entityItemDetailPadding()`
-gives the view the matching page padding (content focus runs edge to edge).
+otherwise (FR-001), unless the entity's `itemLayout` display preference (`~configuration/$entity`)
+is `"stacked"` or `"columns"` rather than `"content"`: then it renders `attribute-focus`, which
+lays out `EntityItemSections` with that layout. `"content"` is the default, and only an option,
+for an entity with content attributes; without one the default is `"columns"`.
+`resolveEntityItemVariation()` tells you which variation renders. `useEntityItemDetailPadding()`
+(or `entityItemDetailPadding()` given the `itemLayout`) gives the view the matching page padding
+(content focus runs edge to edge).
 
 Every variation takes `EntityItemVariationProps`:
 

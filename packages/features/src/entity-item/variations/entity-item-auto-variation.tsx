@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
-import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
+import type { EntityItem, EntityItemLayout, ProfileEntity } from "@contentgrid/navigator-data";
+import { useEntityDisplayPreferences } from "../../preferences";
 import { EntityItemAttributeFocus } from "./attribute-focus/entity-item-attribute-focus";
 import { EntityItemContentFocus } from "./content-focus/entity-item-content-focus";
 import type { EntityItemVariationProps } from "./entity-item-variation-props";
@@ -24,16 +25,20 @@ export const entityItemVariations = Object.keys(
 /**
  * The variation that renders for `profileEntity`: `variation` when it names one, otherwise
  * (`"auto"`) content focus for an entity with content attributes and attribute focus for one
- * without (FR-001).
+ * without (FR-001). The entity's `itemLayout` display preference, when given, can turn content
+ * focus off: only `"content"` picks it, and only for an entity with content attributes.
  */
 export function resolveEntityItemVariation(
   profileEntity: ProfileEntity,
   variation: EntityItemVariation | "auto" = "auto",
+  itemLayout?: EntityItemLayout,
 ): EntityItemVariation {
   if (variation !== "auto") {
     return variation;
   }
-  return profileEntity.hasContentAttributes ? "content-focus" : "attribute-focus";
+  const contentFocus =
+    profileEntity.hasContentAttributes && (itemLayout === undefined || itemLayout === "content");
+  return contentFocus ? "content-focus" : "attribute-focus";
 }
 
 /**
@@ -47,8 +52,23 @@ export function resolveEntityItemVariation(
 export function entityItemDetailPadding(
   profileEntity: ProfileEntity,
   variation: EntityItemVariation | "auto" = "auto",
+  itemLayout?: EntityItemLayout,
 ): true | "bottom" {
-  return resolveEntityItemVariation(profileEntity, variation) === "content-focus" ? "bottom" : true;
+  return resolveEntityItemVariation(profileEntity, variation, itemLayout) === "content-focus"
+    ? "bottom"
+    : true;
+}
+
+/**
+ * {@link entityItemDetailPadding} for `profileEntity` with its `itemLayout` display preference
+ * applied; the standard padding while the profile is not known yet.
+ */
+export function useEntityItemDetailPadding(
+  profileEntity: ProfileEntity | undefined,
+  variation: EntityItemVariation | "auto" = "auto",
+): true | "bottom" {
+  const { itemLayout } = useEntityDisplayPreferences(profileEntity).preferences;
+  return profileEntity ? entityItemDetailPadding(profileEntity, variation, itemLayout) : true;
 }
 
 export type EntityItemAutoVariationProps = Omit<
@@ -71,7 +91,8 @@ export type EntityItemAutoVariationProps = Omit<
  * App-agnostic item detail for an already-loaded `entityItem`, with no toolbar, page layout or
  * loading/error state of its own — the view above it (`@contentgrid/views/entity-item-detail`)
  * resolved the item and draws those. Renders the variation named by `variation`, or picks one from
- * the item's profile (see {@link resolveEntityItemVariation}).
+ * the item's profile and its `itemLayout` display preference (see
+ * {@link resolveEntityItemVariation}).
  */
 export function EntityItemAutoVariation({
   entityItem,
@@ -79,8 +100,11 @@ export function EntityItemAutoVariation({
   onRelationItemClick,
   ...props
 }: Readonly<EntityItemAutoVariationProps>) {
+  const { itemLayout } = useEntityDisplayPreferences(entityItem.profileEntity).preferences;
   const Variation =
-    ENTITY_ITEM_VARIATIONS[resolveEntityItemVariation(entityItem.profileEntity, variation)];
+    ENTITY_ITEM_VARIATIONS[
+      resolveEntityItemVariation(entityItem.profileEntity, variation, itemLayout)
+    ];
 
   return (
     <Variation
