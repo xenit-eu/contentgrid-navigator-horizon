@@ -2,12 +2,15 @@ import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CloudArrowUpIcon as CloudArrowUp,
+  EyeIcon as Eye,
   UploadSimpleIcon as UploadSimple,
   XIcon as X,
 } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
-import { Button } from "../../primitives/button";
+import { buttonVariants } from "../../primitives/button";
+import { TooltipProvider } from "../../primitives/tooltip";
+import { ToolbarIconButton } from "../toolbar-icon-button";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -19,6 +22,85 @@ function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   const size = bytes / Math.pow(1024, i);
   return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function dropZoneStateClassName(isDragActive: boolean, previewed: boolean): string {
+  if (isDragActive) return "border-primary bg-primary/10";
+  if (previewed) return "border-solid border-primary bg-selected";
+  return "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5";
+}
+
+// ---------------------------------------------------------------------------
+// Selected file
+// ---------------------------------------------------------------------------
+
+interface SelectedFileProps {
+  file: File;
+  disabled: boolean;
+  previewed: boolean;
+  onPreview?: () => void;
+  onRemove: () => void;
+}
+
+function SelectedFile({
+  file,
+  disabled,
+  previewed,
+  onPreview,
+  onRemove,
+}: Readonly<SelectedFileProps>) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const isImage = file.type.startsWith("image/");
+
+  // Image preview URL lifecycle
+  useEffect(() => {
+    if (!file.type.startsWith("image/")) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return (
+    <div
+      aria-current={previewed || undefined}
+      className={cn(
+        "flex items-center gap-3 rounded-md border p-3",
+        previewed && "border-primary bg-selected",
+      )}
+    >
+      {previewUrl && isImage ? (
+        <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
+      ) : (
+        <UploadSimple className="h-5 w-5 text-muted-foreground" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm font-medium">{file.name}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+          {file.type && (
+            <Badge variant="outline" className="text-xs shrink-0">
+              {file.type}
+            </Badge>
+          )}
+        </div>
+      </div>
+      <TooltipProvider>
+        {onPreview && (
+          <ToolbarIconButton label="Preview file" onClick={onPreview}>
+            <Eye className="h-4 w-4" />
+          </ToolbarIconButton>
+        )}
+        {!disabled && (
+          <ToolbarIconButton label="Remove file" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </ToolbarIconButton>
+        )}
+      </TooltipProvider>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -43,6 +125,14 @@ export interface FileUploadZoneProps {
   "aria-describedby"?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  /** Opens the file's preview; a selected file gets a "Preview file" button that calls it. */
+  onPreview?: () => void;
+  /** Marks the zone as the selected one of several, e.g. the one whose file is shown elsewhere. */
+  previewed?: boolean;
+  /** Shrinks the empty drop zone to a single line, as tall as a text input. */
+  compact?: boolean;
+  /** Makes the empty drop zone fill its container. */
+  fill?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,12 +149,15 @@ export function FileUploadZone({
   "aria-describedby": ariaDescribedBy,
   onFocus,
   onBlur,
+  onPreview,
+  previewed = false,
+  compact = false,
+  fill = false,
 }: Readonly<FileUploadZoneProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLButtonElement>(null);
   const focusDropZoneRef = useRef(false);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Build the accept string for the hidden file input
   const acceptString = accept ? Object.keys(accept).join(",") : undefined;
@@ -74,17 +167,6 @@ export function FileUploadZone({
     const shouldFocus = focusDropZoneRef.current;
     focusDropZoneRef.current = false;
     if (!file && shouldFocus) dropZoneRef.current?.focus();
-  }, [file]);
-
-  // Image preview URL lifecycle
-  useEffect(() => {
-    if (!file?.type.startsWith("image/")) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
   }, [file]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLButtonElement>) => {
@@ -120,41 +202,17 @@ export function FileUploadZone({
   // File selected view
   // -------------------------------------------------------------------------
   if (file) {
-    const isImage = file.type.startsWith("image/");
-
     return (
-      <div className="flex items-center gap-3 rounded-md border p-3">
-        {previewUrl && isImage ? (
-          <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
-        ) : (
-          <UploadSimple className="h-5 w-5 text-muted-foreground" />
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-medium">{file.name}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-            {file.type && (
-              <Badge variant="outline" className="text-xs shrink-0">
-                {file.type}
-              </Badge>
-            )}
-          </div>
-        </div>
-        {!disabled && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              focusDropZoneRef.current = true;
-              onFileChange(null);
-            }}
-            type="button"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Remove file</span>
-          </Button>
-        )}
-      </div>
+      <SelectedFile
+        file={file}
+        disabled={disabled}
+        previewed={previewed}
+        onPreview={onPreview}
+        onRemove={() => {
+          focusDropZoneRef.current = true;
+          onFileChange(null);
+        }}
+      />
     );
   }
 
@@ -179,6 +237,7 @@ export function FileUploadZone({
         disabled={disabled}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
+        aria-current={previewed || undefined}
         // Without a preventDefault'ed dragover the browser refuses the drop.
         onDragOver={disabled ? undefined : handleDragOver}
         onDragLeave={handleDragLeave}
@@ -188,21 +247,38 @@ export function FileUploadZone({
         onBlur={onBlur}
         className={cn(
           "flex w-full flex-col disabled:cursor-not-allowed disabled:opacity-50 items-center gap-1 rounded-lg border border-dashed px-6 py-7 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isDragActive
-            ? "border-primary bg-primary/10"
-            : "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5",
+          dropZoneStateClassName(isDragActive, previewed),
+          compact && "h-9 flex-row gap-2 rounded-md py-0 pr-1.5 pl-3",
+          fill && "h-full justify-center border-2",
         )}
       >
-        <CloudArrowUp className="mb-1 size-7 text-primary" aria-hidden />
-        <p className="text-sm font-semibold text-foreground">
-          {isDragActive ? "Release to attach" : "Drop a file here"}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          or{" "}
-          <span className="font-medium text-primary underline underline-offset-2">
-            choose one from your device
-          </span>
-        </p>
+        <CloudArrowUp
+          className={cn("mb-1 size-7 text-primary", fill && "size-10", compact && "mb-0 size-4")}
+          aria-hidden
+        />
+        {compact ? (
+          <>
+            <span className="text-sm text-muted-foreground">
+              {isDragActive ? "Release to attach" : "No file chosen"}
+            </span>
+            {/* Looks like a button; the whole field is the real button. */}
+            <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "ml-auto")}>
+              Choose file
+            </span>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-foreground">
+              {isDragActive ? "Release to attach" : "Drop a file here"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              or{" "}
+              <span className="font-medium text-primary underline underline-offset-2">
+                choose one from your device
+              </span>
+            </p>
+          </>
+        )}
       </button>
     </>
   );
