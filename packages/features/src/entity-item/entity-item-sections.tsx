@@ -1,7 +1,7 @@
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ClockCounterClockwiseIcon, ListBulletsIcon } from "@phosphor-icons/react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { RelationAccordion, ResizableSplitLayout } from "@contentgrid/ui";
+import { RelationAccordion } from "@contentgrid/ui";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EntityItemAuditTrail, hasAuditTrail } from "./attributes/entity-item-attributes";
 import { CancelEditEntityItemButton, EditEntityItemButton } from "./edit/edit-entity-item-button";
@@ -18,8 +18,6 @@ const ATTRIBUTES_SECTION = "attributes";
 const AUDIT_SECTION = "audit";
 /** Relation names are customer-defined, so their keys are prefixed to never match a built-in one. */
 const relationSection = (relationName: string) => `relation:${relationName}`;
-/** Narrower than this (in pixels), the `"columns"` layout keeps a single column. */
-const COLUMNS_MIN_WIDTH = 720;
 
 export interface EntityItemSectionsState {
   /** Open state for a section, keyed by `"attributes"`, `"audit"` or `relationSection(name)`. */
@@ -85,12 +83,16 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
    */
   readonly allowEdit?: boolean;
   /**
-   * `"stacked"` (default) lists every section in one column. `"columns"` puts the relations in a
-   * second, resizable column next to the attributes and audit trail, when the sections are at
-   * least `COLUMNS_MIN_WIDTH` wide; narrower, and for an item without relations, it keeps the
-   * single column.
+   * Which sections to render: `"all"` (default) lists attributes, relations and audit trail in
+   * one column; `"details"` only the attributes and audit trail, and `"relations"` only the
+   * relations — for a layout that shows the relations apart, e.g. in a side panel.
    */
-  readonly layout?: "stacked" | "columns";
+  readonly show?: "all" | "details" | "relations";
+  /**
+   * `"row"` (default) renders each relation as a full-width row inside the surrounding card;
+   * `"card"` as a card of its own, spaced apart — for relations shown outside that card.
+   */
+  readonly relationVariant?: "row" | "card";
 };
 
 /**
@@ -110,7 +112,8 @@ export function EntityItemSections({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-  layout = "stacked",
+  show = "all",
+  relationVariant = "row",
   allowEdit = true,
 }: Readonly<EntityItemSectionsProps>) {
   const isEditing = editedItem !== null;
@@ -170,7 +173,7 @@ export function EntityItemSections({
           <RelationToOneSection
             relation={rel}
             profiles={profiles}
-            variant="row"
+            variant={relationVariant}
             {...state.openProps(relationSection(rel.name), true)}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
@@ -188,7 +191,7 @@ export function EntityItemSections({
           <RelationToManySection
             relation={rel}
             profiles={profiles}
-            variant="row"
+            variant={relationVariant}
             {...state.openProps(relationSection(rel.name), false)}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
@@ -215,20 +218,16 @@ export function EntityItemSections({
     </RelationAccordion>
   );
 
-  const hasRelations = item.toOneRelations.length > 0 || item.toManyRelations.length > 0;
-  if (layout === "columns" && hasRelations) {
+  if (show === "details") {
     return (
-      <EntityItemSectionColumns
-        left={
-          <>
-            {attributes}
-            {audit}
-          </>
-        }
-        right={relations}
-        keepLayout={isEditing}
-      />
+      <div>
+        {attributes}
+        {audit}
+      </div>
     );
+  }
+  if (show === "relations") {
+    return <div className={relationVariant === "card" ? "space-y-4" : undefined}>{relations}</div>;
   }
   return (
     <div>
@@ -239,52 +238,7 @@ export function EntityItemSections({
   );
 }
 
-/**
- * `left` and `right` side by side with a drag handle between them, or `left` above `right` when
- * there is too little room. The split layout's own stacked mode isn't used: it splits a fixed
- * height, while these sections grow with their content. Crossing the width threshold remounts
- * the sections, so while `keepLayout` is set (an open update form, whose unsaved values would be
- * lost) the current layout stays until it is cleared.
- */
-function EntityItemSectionColumns({
-  left,
-  right,
-  keepLayout,
-}: Readonly<{ left: ReactNode; right: ReactNode; keepLayout: boolean }>) {
-  const [element, setElement] = useState<HTMLDivElement | null>(null);
-  const [wide, setWide] = useState<boolean | undefined>(undefined);
-  useLayoutEffect(() => {
-    if (!element) return;
-    const measure = () => {
-      const fits = element.getBoundingClientRect().width >= COLUMNS_MIN_WIDTH;
-      setWide((current) => (keepLayout && current !== undefined ? current : fits));
-    };
-    measure();
-    if (keepLayout) return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [element, keepLayout]);
-
-  // Renders nothing until measured (before the first paint), so it never shows the wrong layout.
-  let content: ReactNode = null;
-  if (wide) {
-    content = (
-      <ResizableSplitLayout
-        left={left}
-        right={right}
-        minLeftSize={320}
-        minRightSize={320}
-        handleLabel="Resize relations"
-      />
-    );
-  } else if (wide === false) {
-    content = (
-      <>
-        {left}
-        {right}
-      </>
-    );
-  }
-  return <div ref={setElement}>{content}</div>;
+/** Whether the item has any relation, i.e. whether `show="relations"` renders anything. */
+export function hasEntityItemRelations(item: EntityItem): boolean {
+  return item.toOneRelations.length > 0 || item.toManyRelations.length > 0;
 }

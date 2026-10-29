@@ -1,3 +1,4 @@
+import { type ReactNode, createContext, createElement, useContext } from "react";
 import { type PaneWidth, usePaneWidth } from "@contentgrid/ui";
 
 /** Pane width (px) from which a to-many relation shows its full record table. */
@@ -51,7 +52,25 @@ export function relationLayoutForPane(pane: PaneWidth | undefined): RelationLayo
   };
 }
 
-/** `relationLayoutForPane` for the pane the calling component is rendered in. */
+/** The most compact layout: a stack of item references, a to-one's reference only. */
+const COMPACT_LAYOUT = relationLayoutForPane({ side: "right", width: 0 });
+
+const CompactRelationLayoutContext = createContext(false);
+
+/**
+ * Shows the relation sections inside it in the compact layout, whatever pane they sit in — for
+ * a narrow column that isn't a resizable pane, so `usePaneWidth()` can't tell its width.
+ */
+export function CompactRelationLayout({ children }: Readonly<{ children: ReactNode }>) {
+  return createElement(CompactRelationLayoutContext.Provider, { value: true }, children);
+}
+
+/**
+ * `relationLayoutForPane` for the pane the calling component is rendered in, or the compact
+ * layout inside {@link CompactRelationLayout}.
+ */
 export function useRelationLayout(): RelationLayout {
-  return relationLayoutForPane(usePaneWidth());
+  const compact = useContext(CompactRelationLayoutContext);
+  const paneLayout = relationLayoutForPane(usePaneWidth());
+  return compact ? COMPACT_LAYOUT : paneLayout;
 }
