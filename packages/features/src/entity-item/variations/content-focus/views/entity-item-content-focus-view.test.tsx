@@ -19,6 +19,7 @@ import {
   type AuthenticationTokenSupplier,
   type EntityItem,
   EntityItemAttributeContent,
+  type EntityItemLayout,
   NavigatorDataProvider,
   type ProfileAttribute,
   type ProfileEntity,
@@ -87,8 +88,14 @@ function makeProfileAttribute(name: string): ProfileAttribute {
 function makeProfile(options: {
   hasContentAttributes: boolean;
   contentAttributeNames?: readonly string[];
+  /** Defaults to the real heuristic's: content focus for an entity with content attributes. */
+  itemLayout?: EntityItemLayout;
 }): ProfileEntity {
-  const { hasContentAttributes, contentAttributeNames = [] } = options;
+  const {
+    hasContentAttributes,
+    contentAttributeNames = [],
+    itemLayout = hasContentAttributes ? "content" : "stacked",
+  } = options;
   const attributes = contentAttributeNames.map((name) => makeProfileAttribute(name));
   return {
     name: "order",
@@ -99,9 +106,9 @@ function makeProfile(options: {
     // `EntityItemView`'s `EntityItemReference` header (stable `entity-item` feature) calls
     // `useEntityDisplayPreferences`, which unconditionally calls `getDefaultPreferences()` on
     // whatever profile it's handed — this fake profile has no real heuristic to run, so it
-    // stubs the method with an empty (all-optional) result rather than reimplementing
-    // `ProfileEntity.getDefaultPreferences()`'s real name/icon-inference logic here.
-    getDefaultPreferences: () => ({}),
+    // stubs the method with only the `itemLayout` the view branches on, rather than
+    // reimplementing `ProfileEntity.getDefaultPreferences()`'s real name/icon-inference logic here.
+    getDefaultPreferences: () => ({ itemLayout }),
   } as unknown as ProfileEntity;
 }
 
@@ -158,6 +165,24 @@ describe("EntityItemContentFocusView", () => {
 
     // EntityItemView's own item-reference header (`data-slot="item-reference"`), rendered by its
     // "toolbar={false}" body.
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
+  });
+
+  it("renders the EntityItemView body for an entity with content attributes whose item layout is not content focus", () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document"],
+      itemLayout: "stacked",
+    });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+    mockHooks(profile, item);
+
+    const { container } = renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+
     expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });

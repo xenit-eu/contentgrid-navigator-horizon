@@ -220,6 +220,31 @@ describe("EntityConfigurationDetail", () => {
     );
   });
 
+  it("offers no content-focus item layout for an entity without content attributes", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    expect(screen.getByRole("combobox", { name: "Item layout" })).toHaveTextContent("Stacked");
+    await user.click(screen.getByRole("combobox", { name: "Item layout" }));
+
+    expect(screen.getByRole("option", { name: "Side by side" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Content focus" })).not.toBeInTheDocument();
+  });
+
+  it("persists an item-layout override when a layout is chosen", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+
+    await user.click(screen.getByRole("combobox", { name: "Item layout" }));
+    await user.click(screen.getByRole("option", { name: "Side by side" }));
+
+    await waitFor(() =>
+      expect(
+        useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.itemLayout,
+      ).toBe("columns"),
+    );
+  });
+
   it("persists an icon override when a new icon is chosen", async () => {
     const user = userEvent.setup();
     renderDetail();

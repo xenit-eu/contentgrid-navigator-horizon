@@ -1,4 +1,4 @@
-import { PencilSimpleIcon } from "@phosphor-icons/react";
+import { PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { Button, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@contentgrid/ui";
 import { isEditableEntityItem } from "./editable-entity-item";
@@ -28,6 +28,32 @@ export function EditEntityItemButton({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">Edit</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+/**
+ * Leaves edit mode, in the Edit button's place while the update form is open: an X on an outlined
+ * rounded box, with a tooltip.
+ */
+export function CancelEditEntityItemButton({ onCancel }: Readonly<{ onCancel: () => void }>) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="Cancel edit"
+            onClick={onCancel}
+            className="size-7 rounded-md"
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Cancel edit</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

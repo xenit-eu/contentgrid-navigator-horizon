@@ -13,16 +13,13 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Separator,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
-import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
+import { useEntityDisplayPreferences } from "../../../../preferences";
 import { useEditContext } from "../../../edit/use-edit-context";
+import { EntityItemSections, useEntityItemSectionsState } from "../../../entity-item-sections";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
-import { RelationToManySection } from "../../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
@@ -88,7 +85,8 @@ function resolveToolbar(
  * `contracts/content-focus-view.md`): resolves `entityName`/`itemId` into a `profileEntity` +
  * `EntityItem` itself — the host supplies only primitives and callbacks (Principle VIII). FR-001:
  * an entity with no content attributes falls back to the existing (stable) `EntityItemView` body;
- * one that has them renders the PDF/content preview beside the item's attributes and relations.
+ * one that has them renders the PDF/content preview beside the item's attributes and relations,
+ * unless the entity's `itemLayout` display preference picks a sections layout instead.
  */
 export function EntityItemContentFocusView(props: Readonly<EntityItemContentFocusViewProps>) {
   const { entityName } = props;
@@ -121,6 +119,11 @@ function EntityItemContentFocusViewBody({
   const item = useEntityItem({ profileEntity, entityId: itemId });
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const editContext = useEditContext(item.data, item.refetch);
+  // The entity's `itemLayout` preference picks the layout; content focus needs a content
+  // attribute, so an entity without one gets the side-by-side sections instead.
+  const { itemLayout } = useEntityDisplayPreferences(profileEntity).preferences;
+  const contentFocus = itemLayout === "content" && profileEntity.hasContentAttributes;
+  const sectionsLayout = itemLayout === "columns" ? "columns" : "stacked";
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -195,7 +198,7 @@ function EntityItemContentFocusViewBody({
       {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
       {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
       {item.data &&
-        (profileEntity.hasContentAttributes ? (
+        (contentFocus ? (
           <ContentFocusEntityItemBody
             entityItem={item.data}
             attributeName={selectedAttribute}
@@ -215,6 +218,7 @@ function EntityItemContentFocusViewBody({
             profile={profileEntity}
             itemId={itemId}
             toolbar={false}
+            sectionsLayout={sectionsLayout}
             onRelationItemClick={handleRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -225,13 +229,13 @@ function EntityItemContentFocusViewBody({
     </>
   );
 
-  // When the content-focus body is what renders (profileEntity.hasContentAttributes), the
+  // When the content-focus body is what renders (`contentFocus`), the
   // preview panel should run edge to edge rather than sit inside the standard page gutters —
   // drop the horizontal padding, and the top vertical padding too (the toolbar strip above
   // already has its own bottom padding, so a top gutter here would just double that gap) —
   // keeping only the bottom gutter for breathing room at the end of the scroll region. The
   // EntityItemView fallback body keeps the standard padding on both axes.
-  const contentPadding = profileEntity.hasContentAttributes ? "bottom" : true;
+  const contentPadding = contentFocus ? "bottom" : true;
 
   if (resolvedToolbar === false) {
     return <PageLayout padded={contentPadding}>{content}</PageLayout>;
@@ -284,6 +288,8 @@ function ContentFocusEntityItemBody({
     | "onBlindRelationOverwriteClick"
     | "onRequiredRelationClick"
   >) {
+  const sections = useEntityItemSectionsState();
+
   if (attributeName === undefined) {
     return null;
   }
@@ -296,56 +302,22 @@ function ContentFocusEntityItemBody({
       // body already shows above its attributes/relations (`entity-item-view.tsx`). `sm` to fit
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
-      sidePanelHeader={
-        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-          <EntityItemReference item={entityItem} size="sm" />
-          <EditEntityItemButton
-            item={entityItem}
-            isEditing={editedItem !== null}
-            onEdit={() => onEditingChange(true)}
-          />
-        </div>
-      }
+      sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
+      sidePanelPadded={false}
       sidePanel={
-        <div className="space-y-6">
-          <EditableEntityItemAttributes
-            item={editedItem ?? entityItem}
-            isEditing={editedItem !== null}
-            onEditingChange={onEditingChange}
-            onRefresh={onRefresh}
-          />
-          {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {entityItem.toOneRelations.map((relation) => (
-                  <RelationToOneSection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {entityItem.toManyRelations.map((relation) => (
-                  <RelationToManySection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <EntityItemSections
+          item={entityItem}
+          profiles={loadedProfiles}
+          state={sections}
+          editedItem={editedItem}
+          onEditingChange={onEditingChange}
+          onRefresh={onRefresh}
+          onRelationItemClick={onRelationItemClick}
+          onRelationItemCreateNew={onRelationItemCreateNew}
+          onMissingRelationTargetClick={onMissingRelationTargetClick}
+          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onRequiredRelationClick={onRequiredRelationClick}
+        />
       }
     >
       <ContentPreviewPanel
