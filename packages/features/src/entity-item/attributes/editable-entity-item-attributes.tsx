@@ -1,5 +1,9 @@
+import type { Ref } from "react";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { EditEntityItemContainer } from "../edit/edit-entity-item-container";
+import {
+  EditEntityItemContainer,
+  type EditEntityItemFormHandle,
+} from "../edit/edit-entity-item-container";
 import { isEditableEntityItem } from "../edit/editable-entity-item";
 import { EntityItemAttributes } from "./entity-item-attributes";
 
@@ -13,6 +17,8 @@ interface EditableEntityItemAttributesProps {
   readonly onRefresh: () => void;
   /** Passed to {@link EntityItemAttributes} when not editing. */
   readonly auditTrail?: boolean;
+  /** Handle to the update form while editing, e.g. to cancel it from outside. */
+  readonly editFormRef?: Ref<EditEntityItemFormHandle>;
 }
 
 /**
@@ -25,6 +31,7 @@ export function EditableEntityItemAttributes({
   onEditingChange,
   onRefresh,
   auditTrail,
+  editFormRef,
 }: Readonly<EditableEntityItemAttributesProps>) {
   if (isEditing && isEditableEntityItem(item)) {
     return (
@@ -33,6 +40,7 @@ export function EditableEntityItemAttributes({
         item={item}
         onClose={() => onEditingChange(false)}
         onRefresh={onRefresh}
+        ref={editFormRef}
       />
     );
   }

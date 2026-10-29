@@ -1,3 +1,4 @@
+import { type Ref, useImperativeHandle } from "react";
 import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,10 +22,23 @@ vi.mock("@contentgrid/ui", async (importOriginal) => {
   };
 });
 
+const cancelEditForm = vi.fn();
+
+function MockEditableEntityItemAttributes({
+  item,
+  isEditing,
+  editFormRef,
+}: {
+  item: EntityItem;
+  isEditing: boolean;
+  editFormRef?: Ref<{ cancel: () => void }>;
+}) {
+  useImperativeHandle(editFormRef, () => ({ cancel: cancelEditForm }));
+  return <div>{isEditing ? `editing ${item.id}` : `attributes ${item.id}`}</div>;
+}
+
 vi.mock("./attributes/editable-entity-item-attributes", () => ({
-  EditableEntityItemAttributes: ({ item, isEditing }: { item: EntityItem; isEditing: boolean }) => (
-    <div>{isEditing ? `editing ${item.id}` : `attributes ${item.id}`}</div>
-  ),
+  EditableEntityItemAttributes: MockEditableEntityItemAttributes,
 }));
 
 vi.mock("./attributes/entity-item-attributes", () => ({
@@ -39,6 +53,11 @@ vi.mock("./edit/edit-entity-item-button", () => ({
         Edit
       </button>
     ),
+  CancelEditEntityItemButton: ({ onCancel }: { onCancel: () => void }) => (
+    <button type="button" onClick={onCancel}>
+      Cancel edit
+    </button>
+  ),
 }));
 
 vi.mock("./relations/relation-to-one-section", () => ({
@@ -179,6 +198,16 @@ describe("EntityItemSections", () => {
 
     expect(screen.getByText("editing item-1-v1")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("puts a cancel button in the Edit button's place, which cancels the update form", async () => {
+    const user = userEvent.setup();
+    cancelEditForm.mockClear();
+    render(<Harness item={makeItem()} editedItem={makeItem({ id: "item-1-v1" })} />);
+
+    await user.click(screen.getByRole("button", { name: "Cancel edit" }));
+
+    expect(cancelEditForm).toHaveBeenCalledOnce();
   });
 
   it("columns: puts the relations next to attributes and audit when wide enough", () => {
