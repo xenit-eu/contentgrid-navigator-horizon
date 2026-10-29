@@ -42,6 +42,7 @@ export {
   entityItemDetailPadding,
   entityItemVariations,
   resolveEntityItemVariation,
+  useEntityItemDetailPadding,
 } from "./variations/entity-item-auto-variation";
 export type {
   EntityItemAutoVariationProps,

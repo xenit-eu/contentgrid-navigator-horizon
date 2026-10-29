@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
-import { type ProfileEntity } from "@contentgrid/navigator-data";
+import { type EntityItemLayout, type ProfileEntity } from "@contentgrid/navigator-data";
 import {
   AttributeMultiSelect,
   AttributeSelect,
@@ -10,6 +10,11 @@ import {
   EntityCard,
   IconPicker,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   TabLink,
   TabbedLayout,
 } from "@contentgrid/ui";
@@ -46,9 +51,16 @@ const PREVIEW_TABS = [
   },
 ] as const;
 
+const ITEM_LAYOUT_LABELS: Record<EntityItemLayout, string> = {
+  content: "Content focus",
+  stacked: "Stacked",
+  columns: "Side by side",
+};
+
 /**
  * Per-entity configuration detail page (`~configuration/$entity`). Currently color, icon,
- * and name-attribute — intentionally sparse; more configuration will land here over time.
+ * name/subtitle attributes, visible columns and item layout — intentionally sparse; more
+ * configuration will land here over time.
  */
 export function EntityConfigurationDetail({
   profile,
@@ -80,6 +92,11 @@ export function EntityConfigurationDetail({
   const searchableValues = searchableOptions
     .map((option) => option.name)
     .filter((name) => includedAttributes === "all" || includedAttributes.has(name));
+  // Content focus shows a content attribute, so it is only offered when the entity has one.
+  const itemLayoutId = useId();
+  const itemLayouts = (Object.keys(ITEM_LAYOUT_LABELS) as EntityItemLayout[]).filter(
+    (layout) => layout !== "content" || profile.hasContentAttributes,
+  );
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
 
   const body = (
@@ -136,6 +153,27 @@ export function EntityConfigurationDetail({
             onSelect={(attribute) => setOverride({ subtitleAttribute: attribute.name })}
             placeholder="Choose attribute"
           />
+
+          <div className="space-y-1.5">
+            <Label htmlFor={itemLayoutId}>Item layout</Label>
+            <Select
+              value={preferences.itemLayout}
+              onValueChange={(itemLayout) =>
+                setOverride({ itemLayout: itemLayout as EntityItemLayout })
+              }
+            >
+              <SelectTrigger id={itemLayoutId} className="w-full">
+                <SelectValue placeholder="Choose layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemLayouts.map((layout) => (
+                  <SelectItem key={layout} value={layout}>
+                    {ITEM_LAYOUT_LABELS[layout]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <AttributeMultiSelect
             label="Visible columns"
