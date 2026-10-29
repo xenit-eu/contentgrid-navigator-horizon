@@ -9,6 +9,9 @@ import { AttributeValueRenderer } from "./renderers/attribute-value-renderer";
 
 export interface EntityItemAttributesProps {
   readonly item: EntityItem;
+  /** Shows the created/modified timeline below the attributes. Turn off when the caller renders
+   * {@link EntityItemAuditTrail} elsewhere. Defaults to `true`. */
+  readonly auditTrail?: boolean;
 }
 
 function isBooleanAttribute(attr: EntityItemAttribute): boolean {
@@ -47,15 +50,17 @@ function AuditTimelineEntry({
 }
 
 /**
- * Renders an entity item's user-defined attributes: audit trail up top as a
- * two-entry timeline (created date + creator, then modified date +
- * modifier), boolean attributes as a row of chips below that, then a simple
- * label/value table for every attribute — booleans included, rendered via
- * `AttributeValueRenderer`'s `"table"` variant (plain "True"/"False"/"—" text
- * there). Purely presentational: it reads the resolved `EntityItem` accessor
+ * Renders an entity item's user-defined attributes: boolean attributes as a
+ * row of chips, then a simple label/value table for every attribute —
+ * booleans included, rendered via `AttributeValueRenderer`'s `"table"`
+ * variant (plain "True"/"False"/"—" text there) — then, unless `auditTrail`
+ * is off, the {@link EntityItemAuditTrail} timeline. Purely presentational: it reads the resolved `EntityItem` accessor
  * and renders it — it fetches nothing itself.
  */
-export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProps>) {
+export function EntityItemAttributes({
+  item,
+  auditTrail = true,
+}: Readonly<EntityItemAttributesProps>) {
   const profile = item.profileEntity;
 
   const attributes = item.userDefinedAttributes
@@ -71,10 +76,6 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
       attr.value.kind === AttributeKind.PLAIN &&
       attr.value.value !== null,
   );
-  const createdAttrs = [item.createdDate, item.createdBy].filter(isDefined);
-  const modifiedAttrs = [item.modifiedDate, item.modifiedBy].filter(isDefined);
-  const timelineEntries = [createdAttrs, modifiedAttrs].filter((attrs) => attrs.length > 0);
-
   return (
     <div className="space-y-4">
       {booleanAttributes.length > 0 && (
@@ -98,17 +99,39 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
           </TableBody>
         </Table>
       )}
-      {timelineEntries.length > 0 && (
-        <div className="">
-          {timelineEntries.map((attrs, index) => (
-            <AuditTimelineEntry
-              key={attrs[0].value.name}
-              attrs={attrs}
-              isLast={index === timelineEntries.length - 1}
-            />
-          ))}
-        </div>
-      )}
+      {auditTrail && <EntityItemAuditTrail item={item} />}
+    </div>
+  );
+}
+
+function auditTimelineEntries(item: EntityItem): EntityItemAttribute[][] {
+  const createdAttrs = [item.createdDate, item.createdBy].filter(isDefined);
+  const modifiedAttrs = [item.modifiedDate, item.modifiedBy].filter(isDefined);
+  return [createdAttrs, modifiedAttrs].filter((attrs) => attrs.length > 0);
+}
+
+/** Whether the item has any audit attributes for {@link EntityItemAuditTrail} to show. */
+export function hasAuditTrail(item: EntityItem): boolean {
+  return auditTimelineEntries(item).length > 0;
+}
+
+/**
+ * The item's audit trail as a two-entry timeline: created date + creator, then modified date +
+ * modifier. Renders nothing when the item has no audit attributes.
+ */
+export function EntityItemAuditTrail({ item }: Readonly<{ item: EntityItem }>) {
+  const timelineEntries = auditTimelineEntries(item);
+  if (timelineEntries.length === 0) return null;
+
+  return (
+    <div>
+      {timelineEntries.map((attrs, index) => (
+        <AuditTimelineEntry
+          key={attrs[0].value.name}
+          attrs={attrs}
+          isLast={index === timelineEntries.length - 1}
+        />
+      ))}
     </div>
   );
 }

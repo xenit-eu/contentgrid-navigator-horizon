@@ -47,7 +47,7 @@ here — both tracks may mount this view.
 ## Layering (spec-001 `feature-layer-imports.md`)
 
 ```
-entity-item-view.tsx, attributes/, relations/
+entity-item-view.tsx, entity-item-sections.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 edit/  (edit-entity-item-container -> edit-entity-item-form;
@@ -60,7 +60,7 @@ variations/content-focus/
     -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel,
                      content-preview-toolbar, image-video-viewer)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
-    -> entity-item's own attributes/, relations/, entity-item-view.tsx — a sibling import
+    -> entity-item's own entity-item-sections.tsx, entity-item-view.tsx — a sibling import
        within the same feature now, not a cross-feature one
     -> ../../../layout's `RightSidePanelLayout` (imported the same way as this feature's other
        layouts, `BreadCrumbsToolBarLayout`/`PageLayout`) — moved there from this variation's own

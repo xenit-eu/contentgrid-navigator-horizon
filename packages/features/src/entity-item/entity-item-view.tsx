@@ -5,23 +5,21 @@ import {
   useEntityItem,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { Separator } from "@contentgrid/ui";
+import { EntityCard } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
-import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
-import { EditEntityItemButton } from "./edit/edit-entity-item-button";
 import { useEditContext } from "./edit/use-edit-context";
+import { EntityItemSections, useEntityItemSectionsState } from "./entity-item-sections";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
 } from "./relations/relation-handlers";
-import { RelationToManySection } from "./relations/relation-to-many-section";
-import { RelationToOneSection } from "./relations/relation-to-one-section";
 import {
   EntityItemReference,
   EntityItemReferenceLoading,
 } from "./variations/entity-item-reference";
+import { EntityItemRelationSummary } from "./variations/entity-item-relation-summary";
 
 /** Identify the item by its already-known profile and id. */
 export interface EntityItemViewByProfile {
@@ -90,70 +88,45 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const editContext = useEditContext(item.data, item.refetch);
 
+  const sections = useEntityItemSectionsState();
+
   const content = (
     <>
-      <div className="flex items-center justify-between gap-2 p-4">
-        {item.data ? (
-          <>
-            <EntityItemReference item={item.data} size="lg" />
-            <EditEntityItemButton
-              item={item.data}
-              isEditing={editContext.isEditing}
-              onEdit={() => editContext.setIsEditing(true)}
-            />
-          </>
-        ) : (
-          <EntityItemReferenceLoading size="lg" />
+      <EntityCard
+        name={item.data?.id ?? ""}
+        flushContent
+        heading={
+          item.data ? (
+            <div className="space-y-2">
+              <EntityItemReference item={item.data} size="lg" />
+              <EntityItemRelationSummary item={item.data} onRelationClick={sections.reveal} />
+            </div>
+          ) : (
+            <EntityItemReferenceLoading size="lg" />
+          )
+        }
+      >
+        {item.data && (
+          <EntityItemSections
+            item={item.data}
+            profiles={loadedProfiles}
+            state={sections}
+            editedItem={editContext.editedItem}
+            onEditingChange={editContext.setIsEditing}
+            onRefresh={() => void editContext.refresh()}
+            onRelationItemClick={onRelationItemClick}
+            onRelationItemCreateNew={onRelationItemCreateNew}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
+          />
         )}
-      </div>
+      </EntityCard>
 
       {item.isPending && <LoadingPage />}
 
       {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
       {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
-
-      {item.data && (
-        <div className="space-y-6 p-4 pt-0">
-          <EditableEntityItemAttributes
-            item={editContext.editedItem ?? item.data}
-            isEditing={editContext.isEditing}
-            onEditingChange={editContext.setIsEditing}
-            onRefresh={() => void editContext.refresh()}
-          />
-
-          {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {item.data.toOneRelations.map((rel) => (
-                  <RelationToOneSection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {item.data.toManyRelations.map((rel) => (
-                  <RelationToManySection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </>
   );
 

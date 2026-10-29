@@ -39,6 +39,7 @@ import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
+  RelationSectionDisplayProps,
 } from "./relation-handlers";
 import { RelationItemSearchDialog } from "./relation-item-search-dialog";
 import { RelationItemStack } from "./relation-item-stack";
@@ -52,12 +53,16 @@ export function RelationToManySection({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  variant,
+  open,
+  onOpenChange,
 }: Readonly<{
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
 }> &
+  RelationSectionDisplayProps &
   Pick<
     RelationProblemHandlers,
     "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
@@ -109,7 +114,13 @@ export function RelationToManySection({
   // `addError` is shown inside the link dialog, which stays open until linking succeeds.
   const mutationError = clearError ?? unlinkError ?? deleteError;
   const [addOpen, setAddOpen] = useState(false);
-  const [accordionOpen, setAccordionOpen] = useState(false);
+  // Collapsed by default unless the caller controls it through `open`/`onOpenChange`.
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const accordionOpen = open ?? uncontrolledOpen;
+  function setAccordionOpen(next: boolean) {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  }
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
 
@@ -150,6 +161,7 @@ export function RelationToManySection({
   return (
     <>
       <RelationAccordion
+        variant={variant}
         open={accordionOpen}
         onOpenChange={setAccordionOpen}
         title={

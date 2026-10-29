@@ -43,11 +43,14 @@ export interface RightSidePanelLayoutProps {
    * When `false` the panel keeps its default size; the show/hide toggle still works. Defaults to `true`.
    */
   readonly resizable?: boolean;
+  /** Pads the side panel's body. Turn off for content that runs edge to edge, such as a list of
+   * full-width rows. Defaults to `true`. */
+  readonly sidePanelPadded?: boolean;
 }
 
 /**
  * Generic two-region layout: main content on the left, a collapsible side panel on the right,
- * 360px wide by default, split by a draggable handle (`ResizableSplitLayout`), so descendants of
+ * 400px wide by default, split by a draggable handle (`ResizableSplitLayout`), so descendants of
  * either region can read their region's current width via `usePaneWidth()` from
  * `@contentgrid/ui`. Dragging the panel below its minimum size collapses it to the rail, same as
  * the toggle. When the layout itself (not the viewport) is narrower than 800px, the panel moves
@@ -77,6 +80,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
       sidePanelHeader,
       defaultSidePanelOpen = true,
       resizable = true,
+      sidePanelPadded = true,
     },
     ref,
   ) {
@@ -122,7 +126,15 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
                 <TooltipContent side="bottom">{toggleLabel}</TooltipContent>
               </Tooltip>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto p-3">{sidePanel}</div>
+            <div
+              className={
+                sidePanelPadded
+                  ? "min-h-0 flex-1 overflow-auto p-3"
+                  : "min-h-0 flex-1 overflow-auto"
+              }
+            >
+              {sidePanel}
+            </div>
           </>
         ) : (
           <Tooltip>
@@ -161,7 +173,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
           <ResizableSplitLayout
             left={<div className="h-full min-h-0 min-w-0 overflow-hidden">{children}</div>}
             right={sidePanelRegion}
-            defaultRightSize={initiallyOpen ? 360 : RAIL_WIDTH}
+            defaultRightSize={initiallyOpen ? 400 : RAIL_WIDTH}
             minRightSize={360}
             maxRightSize="60"
             minLeftSize={320}

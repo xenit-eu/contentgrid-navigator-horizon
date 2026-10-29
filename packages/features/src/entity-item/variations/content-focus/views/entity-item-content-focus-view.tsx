@@ -13,16 +13,12 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Separator,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
-import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
-import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
 import { useEditContext } from "../../../edit/use-edit-context";
+import { EntityItemSections, useEntityItemSectionsState } from "../../../entity-item-sections";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
-import { RelationToManySection } from "../../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
@@ -284,6 +280,8 @@ function ContentFocusEntityItemBody({
     | "onBlindRelationOverwriteClick"
     | "onRequiredRelationClick"
   >) {
+  const sections = useEntityItemSectionsState();
+
   if (attributeName === undefined) {
     return null;
   }
@@ -296,56 +294,22 @@ function ContentFocusEntityItemBody({
       // body already shows above its attributes/relations (`entity-item-view.tsx`). `sm` to fit
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
-      sidePanelHeader={
-        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-          <EntityItemReference item={entityItem} size="sm" />
-          <EditEntityItemButton
-            item={entityItem}
-            isEditing={editedItem !== null}
-            onEdit={() => onEditingChange(true)}
-          />
-        </div>
-      }
+      sidePanelHeader={<EntityItemReference item={entityItem} size="sm" />}
+      sidePanelPadded={false}
       sidePanel={
-        <div className="space-y-6">
-          <EditableEntityItemAttributes
-            item={editedItem ?? entityItem}
-            isEditing={editedItem !== null}
-            onEditingChange={onEditingChange}
-            onRefresh={onRefresh}
-          />
-          {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {entityItem.toOneRelations.map((relation) => (
-                  <RelationToOneSection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {entityItem.toManyRelations.map((relation) => (
-                  <RelationToManySection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <EntityItemSections
+          item={entityItem}
+          profiles={loadedProfiles}
+          state={sections}
+          editedItem={editedItem}
+          onEditingChange={onEditingChange}
+          onRefresh={onRefresh}
+          onRelationItemClick={onRelationItemClick}
+          onRelationItemCreateNew={onRelationItemCreateNew}
+          onMissingRelationTargetClick={onMissingRelationTargetClick}
+          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onRequiredRelationClick={onRequiredRelationClick}
+        />
       }
     >
       <ContentPreviewPanel
