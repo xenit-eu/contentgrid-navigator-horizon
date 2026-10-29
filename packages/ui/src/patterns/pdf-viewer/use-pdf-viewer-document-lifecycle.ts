@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDocumentState } from "@embedpdf/core/react";
 import { PdfErrorCode, ignore } from "@embedpdf/models";
 import { useDocumentManagerCapability } from "@embedpdf/plugin-document-manager/react";
@@ -15,6 +15,10 @@ export interface UseDocumentLifecycleOptions {
 export interface DocumentLifecycleState {
   readonly documentId: string | null;
   readonly documentState: PdfDocumentPhase;
+  /** True when the document is still `protected` after a password was tried: it was wrong. */
+  readonly passwordRejected: boolean;
+  /** Reopens a `protected` document with `password`. */
+  readonly unlock: (password: string) => void;
 }
 
 /**
@@ -39,9 +43,7 @@ export function useDocumentLifecycle({
   const [documentId, setDocumentId] = useState<string | null>(null);
   // "opening" is set the moment `openDocumentBuffer` is called, not only
   // once a document id comes back — the open call itself can take a beat.
-  const [localPhase, setLocalPhase] = useState<"idle" | "opening" | "invalid" | "protected">(
-    "idle",
-  );
+  const [localPhase, setLocalPhase] = useState<"idle" | "opening" | "invalid">("idle");
 
   const rawDocumentState = useDocumentState(documentId);
 
@@ -76,9 +78,11 @@ export function useDocumentLifecycle({
         openedDocumentId = response.documentId;
         setDocumentId(response.documentId);
       },
-      (error) => {
+      // The open task resolves with the document id before the engine reads the file, so a
+      // password error arrives in the document state below; a rejected open is never one.
+      () => {
         if (cancelled) return;
-        setLocalPhase(error.reason.code === PdfErrorCode.Password ? "protected" : "invalid");
+        setLocalPhase("invalid");
       },
     );
 
@@ -91,7 +95,7 @@ export function useDocumentLifecycle({
   }, [documentManager, bytes, filename]);
 
   const documentState: PdfDocumentPhase = useMemo(() => {
-    if (localPhase === "invalid" || localPhase === "protected") return localPhase;
+    if (localPhase === "invalid") return localPhase;
     if (!documentId) return localPhase;
     if (!rawDocumentState) return "opening";
     switch (rawDocumentState.status) {
@@ -106,5 +110,17 @@ export function useDocumentLifecycle({
     }
   }, [localPhase, documentId, rawDocumentState]);
 
-  return { documentId, documentState };
+  const passwordRejected =
+    documentState === "protected" && rawDocumentState?.passwordProvided === true;
+
+  const unlock = useCallback(
+    (password: string) => {
+      // A `protected` document always has an id, so this only guards the type.
+      if (!documentManager || !documentId) return;
+      documentManager.retryDocument(documentId, { password }).wait(ignore, ignore);
+    },
+    [documentManager, documentId],
+  );
+
+  return { documentId, documentState, passwordRejected, unlock };
 }
