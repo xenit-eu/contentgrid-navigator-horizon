@@ -1,26 +1,14 @@
 import { type Ref, useImperativeHandle } from "react";
 import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import {
   EntityItemSections,
   type EntityItemSectionsProps,
+  hasEntityItemRelations,
   useEntityItemSectionsState,
 } from "./entity-item-sections";
-
-vi.mock("@contentgrid/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/ui")>();
-  return {
-    ...actual,
-    ResizableSplitLayout: ({ left, right }: { left: React.ReactNode; right: React.ReactNode }) => (
-      <div data-testid="split">
-        <div data-testid="split-left">{left}</div>
-        <div data-testid="split-right">{right}</div>
-      </div>
-    ),
-  };
-});
 
 const cancelEditForm = vi.fn();
 
@@ -61,15 +49,27 @@ vi.mock("./edit/edit-entity-item-button", () => ({
 }));
 
 vi.mock("./relations/relation-to-one-section", () => ({
-  RelationToOneSection: ({ relation, open }: { relation: { name: string }; open: boolean }) => (
-    <div>{`to-one ${relation.name} ${open ? "open" : "closed"}`}</div>
-  ),
+  RelationToOneSection: ({
+    relation,
+    open,
+    variant,
+  }: {
+    relation: { name: string };
+    open: boolean;
+    variant: string;
+  }) => <div data-variant={variant}>{`to-one ${relation.name} ${open ? "open" : "closed"}`}</div>,
 }));
 
 vi.mock("./relations/relation-to-many-section", () => ({
-  RelationToManySection: ({ relation, open }: { relation: { name: string }; open: boolean }) => (
-    <div>{`to-many ${relation.name} ${open ? "open" : "closed"}`}</div>
-  ),
+  RelationToManySection: ({
+    relation,
+    open,
+    variant,
+  }: {
+    relation: { name: string };
+    open: boolean;
+    variant: string;
+  }) => <div data-variant={variant}>{`to-many ${relation.name} ${open ? "open" : "closed"}`}</div>,
 }));
 
 function makeItem(
@@ -97,46 +97,6 @@ function Harness(props: Partial<Omit<EntityItemSectionsProps, "state">> & { item
   );
 }
 
-let widthSpy: ReturnType<typeof vi.spyOn> | undefined;
-function mockWidth(width: number) {
-  widthSpy = vi
-    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-    .mockReturnValue({ width } as DOMRect);
-}
-
-// Captures the observer callbacks, so a test can report a resize; jsdom never does.
-let resizeCallbacks: (() => void)[] = [];
-function resize(width: number) {
-  widthSpy?.mockRestore();
-  mockWidth(width);
-  act(() => resizeCallbacks.forEach((callback) => callback()));
-}
-
-beforeEach(() => {
-  resizeCallbacks = [];
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      private readonly callback: () => void;
-      constructor(callback: () => void) {
-        this.callback = callback;
-      }
-      observe() {
-        resizeCallbacks.push(this.callback);
-      }
-      disconnect() {
-        resizeCallbacks = resizeCallbacks.filter((callback) => callback !== this.callback);
-      }
-    },
-  );
-});
-
-afterEach(() => {
-  widthSpy?.mockRestore();
-  widthSpy = undefined;
-  vi.unstubAllGlobals();
-});
-
 describe("EntityItemSections", () => {
   it("stacks attributes, relations and audit, with to-one open and to-many collapsed", () => {
     render(<Harness item={makeItem({ toOne: ["customer"], toMany: ["invoices"], audit: true })} />);
@@ -145,7 +105,6 @@ describe("EntityItemSections", () => {
     expect(screen.getByText("to-one customer open")).toBeInTheDocument();
     expect(screen.getByText("to-many invoices closed")).toBeInTheDocument();
     expect(screen.getByText("audit trail")).toBeInTheDocument();
-    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
   });
 
   it("leaves out the audit section when the item has no audit trail", () => {
@@ -210,53 +169,44 @@ describe("EntityItemSections", () => {
     expect(cancelEditForm).toHaveBeenCalledOnce();
   });
 
-  it("columns: puts the relations next to attributes and audit when wide enough", () => {
-    mockWidth(1000);
-    render(<Harness item={makeItem({ toOne: ["customer"], audit: true })} layout="columns" />);
+  it("show=details renders only the attributes and audit trail", () => {
+    render(<Harness item={makeItem({ toOne: ["customer"], audit: true })} show="details" />);
 
-    expect(screen.getByTestId("split-left")).toHaveTextContent("attributes item-1");
-    expect(screen.getByTestId("split-left")).toHaveTextContent("audit trail");
-    expect(screen.getByTestId("split-right")).toHaveTextContent("to-one customer open");
-  });
-
-  it("columns: keeps a single column when too narrow", () => {
-    mockWidth(500);
-    render(<Harness item={makeItem({ toOne: ["customer"] })} layout="columns" />);
-
-    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
-    expect(screen.getByText("to-one customer open")).toBeInTheDocument();
-  });
-
-  it("columns: switches layout when resized across the threshold", () => {
-    mockWidth(1000);
-    render(<Harness item={makeItem({ toOne: ["customer"] })} layout="columns" />);
-    expect(screen.getByTestId("split")).toBeInTheDocument();
-
-    resize(500);
-    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
-  });
-
-  it("columns: holds the layout while editing and catches up afterwards", () => {
-    mockWidth(1000);
-    const item = makeItem({ toOne: ["customer"] });
-    const { rerender } = render(
-      <Harness item={item} editedItem={makeItem({ id: "item-1-v1" })} layout="columns" />,
-    );
-    expect(screen.getByTestId("split")).toBeInTheDocument();
-
-    resize(500);
-    expect(screen.getByTestId("split")).toBeInTheDocument();
-
-    rerender(<Harness item={item} editedItem={null} layout="columns" />);
-    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
-  });
-
-  it("columns: keeps a single column for an item without relations", () => {
-    mockWidth(1000);
-    render(<Harness item={makeItem()} layout="columns" />);
-
-    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
     expect(screen.getByText("attributes item-1")).toBeInTheDocument();
+    expect(screen.getByText("audit trail")).toBeInTheDocument();
+    expect(screen.queryByText("to-one customer open")).not.toBeInTheDocument();
+  });
+
+  it("renders relations as rows by default, or as cards of their own", () => {
+    const { rerender } = render(<Harness item={makeItem({ toOne: ["customer"] })} />);
+    expect(screen.getByText("to-one customer open")).toHaveAttribute("data-variant", "row");
+
+    rerender(
+      <Harness item={makeItem({ toOne: ["customer"] })} show="relations" relationVariant="card" />,
+    );
+    expect(screen.getByText("to-one customer open")).toHaveAttribute("data-variant", "card");
+  });
+
+  it("show=relations renders only the relations", () => {
+    render(
+      <Harness
+        item={makeItem({ toOne: ["customer"], toMany: ["invoices"], audit: true })}
+        show="relations"
+      />,
+    );
+
+    expect(screen.getByText("to-one customer open")).toBeInTheDocument();
+    expect(screen.getByText("to-many invoices closed")).toBeInTheDocument();
+    expect(screen.queryByText("attributes item-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("audit trail")).not.toBeInTheDocument();
+  });
+});
+
+describe("hasEntityItemRelations", () => {
+  it("is true when the item has a to-one or to-many relation", () => {
+    expect(hasEntityItemRelations(makeItem())).toBe(false);
+    expect(hasEntityItemRelations(makeItem({ toOne: ["customer"] }))).toBe(true);
+    expect(hasEntityItemRelations(makeItem({ toMany: ["invoices"] }))).toBe(true);
   });
 });
 
