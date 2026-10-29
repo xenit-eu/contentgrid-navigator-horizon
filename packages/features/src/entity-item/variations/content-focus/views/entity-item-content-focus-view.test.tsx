@@ -94,7 +94,7 @@ function makeProfile(options: {
   const {
     hasContentAttributes,
     contentAttributeNames = [],
-    itemLayout = hasContentAttributes ? "content" : "columns",
+    itemLayout = hasContentAttributes ? "content" : "stacked",
   } = options;
   const attributes = contentAttributeNames.map((name) => makeProfileAttribute(name));
   return {

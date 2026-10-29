@@ -28,7 +28,7 @@ to those same attributes and relations, with the production viewer toolbar.
 `EntityItemView` for any item with no content attributes (FR-001), or when the entity's
 `itemLayout` display preference (`~configuration/$entity`) is `"stacked"` or `"columns"` rather
 than `"content"` — those pick `EntityItemSections`' layout. `"content"` is the default, and only
-an option, for an entity with content attributes; without one the default is `"columns"`.
+an option, for an entity with content attributes; without one the default is `"stacked"`.
 
 ## Stability of the content-focus variation
 

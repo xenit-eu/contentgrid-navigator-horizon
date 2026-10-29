@@ -224,10 +224,10 @@ describe("EntityConfigurationDetail", () => {
     const user = userEvent.setup();
     renderDetail();
 
-    expect(screen.getByRole("combobox", { name: "Item layout" })).toHaveTextContent("Side by side");
+    expect(screen.getByRole("combobox", { name: "Item layout" })).toHaveTextContent("Stacked");
     await user.click(screen.getByRole("combobox", { name: "Item layout" }));
 
-    expect(screen.getByRole("option", { name: "Stacked" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Side by side" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Content focus" })).not.toBeInTheDocument();
   });
 
@@ -236,12 +236,12 @@ describe("EntityConfigurationDetail", () => {
     renderDetail();
 
     await user.click(screen.getByRole("combobox", { name: "Item layout" }));
-    await user.click(screen.getByRole("option", { name: "Stacked" }));
+    await user.click(screen.getByRole("option", { name: "Side by side" }));
 
     await waitFor(() =>
       expect(
         useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL]?.invoice?.itemLayout,
-      ).toBe("stacked"),
+      ).toBe("columns"),
     );
   });
 

@@ -123,7 +123,7 @@ function EntityItemContentFocusViewBody({
   // attribute, so an entity without one gets the side-by-side sections instead.
   const { itemLayout } = useEntityDisplayPreferences(profileEntity).preferences;
   const contentFocus = itemLayout === "content" && profileEntity.hasContentAttributes;
-  const sectionsLayout = itemLayout === "stacked" ? "stacked" : "columns";
+  const sectionsLayout = itemLayout === "columns" ? "columns" : "stacked";
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
