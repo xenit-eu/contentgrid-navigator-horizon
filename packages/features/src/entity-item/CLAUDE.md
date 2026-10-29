@@ -33,7 +33,7 @@ variations/
 otherwise (FR-001), unless the entity's `itemLayout` display preference (`~configuration/$entity`)
 is `"stacked"` or `"columns"` rather than `"content"`: then it renders `attribute-focus`, which
 lays out `EntityItemSections` with that layout. `"content"` is the default, and only an option,
-for an entity with content attributes; without one the default is `"columns"`.
+for an entity with content attributes; without one the default is `"stacked"`.
 `resolveEntityItemVariation()` tells you which variation renders. `useEntityItemDetailPadding()`
 (or `entityItemDetailPadding()` given the `itemLayout`) gives the view the matching page padding
 (content focus runs edge to edge).

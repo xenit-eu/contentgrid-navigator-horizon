@@ -144,7 +144,7 @@ describe("ProfileEntity — getDefaultPreferences", () => {
     expect(prefs.nameAttribute).toBe("id");
     expect(prefs.visibleColumns).toEqual(["id"]);
     expect(prefs.icon).toBe("Database");
-    expect(prefs.itemLayout).toBe("columns");
+    expect(prefs.itemLayout).toBe("stacked");
   });
 
   it("lists no search attributes when nothing has a search parameter", () => {
