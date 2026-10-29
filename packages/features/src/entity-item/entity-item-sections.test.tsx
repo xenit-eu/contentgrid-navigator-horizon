@@ -1,6 +1,6 @@
 import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import {
   EntityItemSections,
@@ -85,9 +85,37 @@ function mockWidth(width: number) {
     .mockReturnValue({ width } as DOMRect);
 }
 
+// Captures the observer callbacks, so a test can report a resize; jsdom never does.
+let resizeCallbacks: (() => void)[] = [];
+function resize(width: number) {
+  widthSpy?.mockRestore();
+  mockWidth(width);
+  act(() => resizeCallbacks.forEach((callback) => callback()));
+}
+
+beforeEach(() => {
+  resizeCallbacks = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      private readonly callback: () => void;
+      constructor(callback: () => void) {
+        this.callback = callback;
+      }
+      observe() {
+        resizeCallbacks.push(this.callback);
+      }
+      disconnect() {
+        resizeCallbacks = resizeCallbacks.filter((callback) => callback !== this.callback);
+      }
+    },
+  );
+});
+
 afterEach(() => {
   widthSpy?.mockRestore();
   widthSpy = undefined;
+  vi.unstubAllGlobals();
 });
 
 describe("EntityItemSections", () => {
@@ -127,6 +155,25 @@ describe("EntityItemSections", () => {
     expect(screen.getByText("attributes item-1")).toBeInTheDocument();
   });
 
+  it("keeps the attributes section open while editing", async () => {
+    const user = userEvent.setup();
+    render(<Harness item={makeItem()} editedItem={makeItem({ id: "item-1-v1" })} />);
+
+    await user.click(screen.getByRole("button", { name: "Attributes" }));
+
+    expect(screen.getByText("editing item-1-v1")).toBeInTheDocument();
+  });
+
+  it("keeps a relation's open state apart from a built-in section of the same name", async () => {
+    const user = userEvent.setup();
+    render(<Harness item={makeItem({ toOne: ["attributes"] })} />);
+
+    await user.click(screen.getByRole("button", { name: "Attributes" }));
+
+    expect(screen.queryByText("attributes item-1")).not.toBeInTheDocument();
+    expect(screen.getByText("to-one attributes open")).toBeInTheDocument();
+  });
+
   it("shows the edited version while editing", () => {
     render(<Harness item={makeItem()} editedItem={makeItem({ id: "item-1-v1" })} />);
 
@@ -151,6 +198,30 @@ describe("EntityItemSections", () => {
     expect(screen.getByText("to-one customer open")).toBeInTheDocument();
   });
 
+  it("columns: switches layout when resized across the threshold", () => {
+    mockWidth(1000);
+    render(<Harness item={makeItem({ toOne: ["customer"] })} layout="columns" />);
+    expect(screen.getByTestId("split")).toBeInTheDocument();
+
+    resize(500);
+    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
+  });
+
+  it("columns: holds the layout while editing and catches up afterwards", () => {
+    mockWidth(1000);
+    const item = makeItem({ toOne: ["customer"] });
+    const { rerender } = render(
+      <Harness item={item} editedItem={makeItem({ id: "item-1-v1" })} layout="columns" />,
+    );
+    expect(screen.getByTestId("split")).toBeInTheDocument();
+
+    resize(500);
+    expect(screen.getByTestId("split")).toBeInTheDocument();
+
+    rerender(<Harness item={item} editedItem={null} layout="columns" />);
+    expect(screen.queryByTestId("split")).not.toBeInTheDocument();
+  });
+
   it("columns: keeps a single column for an item without relations", () => {
     mockWidth(1000);
     render(<Harness item={makeItem()} layout="columns" />);
@@ -169,7 +240,7 @@ describe("useEntityItemSectionsState", () => {
     expect(result.current.openProps("invoices", false).open).toBe(true);
   });
 
-  it("reveal expands a section and scrolls its element into view", () => {
+  it("revealRelation expands a relation's section and scrolls its element into view", () => {
     const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
       callback(0);
       return 0;
@@ -179,16 +250,16 @@ describe("useEntityItemSectionsState", () => {
     element.scrollIntoView = scrollIntoView;
     const { result } = renderHook(() => useEntityItemSectionsState());
 
-    act(() => result.current.sectionRef("invoices")(element));
-    act(() => result.current.reveal("invoices"));
+    act(() => result.current.sectionRef("relation:invoices")(element));
+    act(() => result.current.revealRelation("invoices"));
 
-    expect(result.current.openProps("invoices", false).open).toBe(true);
+    expect(result.current.openProps("relation:invoices", false).open).toBe(true);
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
 
     // An unregistered section is opened without scrolling.
     scrollIntoView.mockClear();
-    act(() => result.current.sectionRef("invoices")(null));
-    act(() => result.current.reveal("invoices"));
+    act(() => result.current.sectionRef("relation:invoices")(null));
+    act(() => result.current.revealRelation("invoices"));
     expect(scrollIntoView).not.toHaveBeenCalled();
     rafSpy.mockRestore();
   });

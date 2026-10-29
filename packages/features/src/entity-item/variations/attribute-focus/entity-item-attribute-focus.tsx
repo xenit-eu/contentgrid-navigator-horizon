@@ -42,7 +42,7 @@ export function EntityItemAttributeFocus({
         heading={
           <div className="space-y-1">
             <EntityItemReference item={item} size="lg" />
-            <EntityItemRelationSummary item={item} onRelationClick={sections.reveal} />
+            <EntityItemRelationSummary item={item} onRelationClick={sections.revealRelation} />
           </div>
         }
         action={
