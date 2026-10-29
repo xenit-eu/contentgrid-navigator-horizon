@@ -4,7 +4,8 @@ import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { RelationAccordion, ResizableSplitLayout } from "@contentgrid/ui";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EntityItemAuditTrail, hasAuditTrail } from "./attributes/entity-item-attributes";
-import { EditEntityItemButton } from "./edit/edit-entity-item-button";
+import { CancelEditEntityItemButton, EditEntityItemButton } from "./edit/edit-entity-item-button";
+import type { EditEntityItemFormHandle } from "./edit/edit-entity-item-container";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -113,6 +114,7 @@ export function EntityItemSections({
   allowEdit = true,
 }: Readonly<EntityItemSectionsProps>) {
   const isEditing = editedItem !== null;
+  const editFormRef = useRef<EditEntityItemFormHandle>(null);
   const attributesOpen = state.openProps(ATTRIBUTES_SECTION, true);
   const attributes = (
     <RelationAccordion
@@ -124,16 +126,20 @@ export function EntityItemSections({
       }
       variant="row"
       actions={
-        allowEdit && (
-          <EditEntityItemButton
-            item={item}
-            isEditing={isEditing}
-            onEdit={() => {
-              // The form opens inside this section, so make sure it is expanded.
-              attributesOpen.onOpenChange(true);
-              onEditingChange(true);
-            }}
-          />
+        isEditing ? (
+          <CancelEditEntityItemButton onCancel={() => editFormRef.current?.cancel()} />
+        ) : (
+          allowEdit && (
+            <EditEntityItemButton
+              item={item}
+              isEditing={false}
+              onEdit={() => {
+                // The form opens inside this section, so make sure it is expanded.
+                attributesOpen.onOpenChange(true);
+                onEditingChange(true);
+              }}
+            />
+          )
         )
       }
       open={attributesOpen.open}
@@ -149,6 +155,7 @@ export function EntityItemSections({
         onEditingChange={onEditingChange}
         onRefresh={onRefresh}
         auditTrail={false}
+        editFormRef={editFormRef}
       />
     </RelationAccordion>
   );
