@@ -103,8 +103,8 @@ A user searches for a word inside the document, steps through the matches, and p
 
 - The byte request returns 404: the attribute holds no file; treated as the "No file" state, not as a system failure.
 - The byte request returns 401/403/5xx or a problem-details body: an error state with the problem title and a Retry action; Download stays available.
-- Corrupt or truncated PDF: "This file cannot be displayed" with Download.
-- Password-protected PDF: a "Protected document" state with Download; the viewer never tries to bypass the protection.
+- Corrupt or truncated PDF: "The document is invalid or corrupted" with Download.
+- Password-protected PDF: the viewer asks for the password and opens the document with it, saying so when the password is wrong; Download stays available. The viewer never tries to bypass the protection.
 - Zero-page or extremely long (hundreds of pages) PDF: no crash; navigation still works; pages render lazily.
 - Mimetype with parameters or different casing; missing or generic mimetype (see Story 2, scenario 8).
 - Rendition service answers "pending" forever (a known production incident): the ceiling ends the wait visibly.
@@ -151,7 +151,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 **States and errors**
 
-- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area when the user may upload); uploading (with the percentage sent); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; protected document; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed.
+- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area when the user may upload); uploading (with the percentage sent); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed. A password-protected PDF is not a separate state: the viewer asks for its password.
 - **FR-025**: A failure inside the embedded document renderer MUST be contained to the viewer area; the rest of the detail page MUST remain usable.
 
 **Security**
