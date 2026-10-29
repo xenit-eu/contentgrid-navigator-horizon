@@ -106,7 +106,10 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
           item.data ? (
             <div className="space-y-1">
               <EntityItemReference item={item.data} size="lg" />
-              <EntityItemRelationSummary item={item.data} onRelationClick={sections.reveal} />
+              <EntityItemRelationSummary
+                item={item.data}
+                onRelationClick={sections.revealRelation}
+              />
             </div>
           ) : (
             <EntityItemReferenceLoading size="lg" />
