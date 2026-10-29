@@ -11,6 +11,8 @@ interface EditableEntityItemAttributesProps {
   readonly onEditingChange: (isEditing: boolean) => void;
   /** Reloads the item after a version conflict and passes the latest version back down. */
   readonly onRefresh: () => void;
+  /** Passed to {@link EntityItemAttributes} when not editing. */
+  readonly auditTrail?: boolean;
 }
 
 /**
@@ -22,6 +24,7 @@ export function EditableEntityItemAttributes({
   isEditing,
   onEditingChange,
   onRefresh,
+  auditTrail,
 }: Readonly<EditableEntityItemAttributesProps>) {
   if (isEditing && isEditableEntityItem(item)) {
     return (
@@ -33,5 +36,5 @@ export function EditableEntityItemAttributes({
       />
     );
   }
-  return <EntityItemAttributes item={item} />;
+  return <EntityItemAttributes item={item} auditTrail={auditTrail} />;
 }

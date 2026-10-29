@@ -1,19 +1,18 @@
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
-import { Separator } from "@contentgrid/ui";
-import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
-import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
-import { RelationToManySection } from "../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../relations/relation-to-one-section";
+import { EntityCard } from "@contentgrid/ui";
+import { EntityItemSections, useEntityItemSectionsState } from "../../entity-item-sections";
 import { useEntityItemContext } from "../../use-entity-item-context";
+import { EntityItemRelationSummary } from "../entity-item-relation-summary";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 
 /**
- * App-agnostic item detail: renders an already-loaded item's attributes and relations. It draws
- * no toolbar or page chrome and fills whatever space its parent gives it (`h-full min-h-0`, no
- * outer padding); the view above it owns loading, the toolbar and padding. Relations and content
- * are loaded here by following the item's links. All navigation is supplied by the caller through
- * `onRelationItemClick` — this component performs none itself.
+ * App-agnostic item detail: renders an already-loaded item's attributes, relations and audit trail
+ * as collapsible sections in one card. It draws no toolbar or page chrome and fills whatever space
+ * its parent gives it (`h-full min-h-0`, no outer padding); the view above it owns loading, the
+ * toolbar and padding. Relations and content are loaded here by following the item's links. All
+ * navigation is supplied by the caller through `onRelationItemClick` — this component performs
+ * none itself.
  */
 export function EntityItemAttributeFocus({
   item,
@@ -28,63 +27,42 @@ export function EntityItemAttributeFocus({
 }: Readonly<EntityItemVariationProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
+  const sections = useEntityItemSectionsState();
 
   return (
     <div className="h-full min-h-0">
-      <div className="flex items-center justify-between gap-2 p-4">
-        <EntityItemReference item={item} size="lg" />
-        <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
-          {actions}
-          {allowEdit && (
-            <EditEntityItemButton
-              item={item}
-              isEditing={itemContext.isEditing}
-              onEdit={() => itemContext.setIsEditing(true)}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-6 p-4 pt-0">
-        <EditableEntityItemAttributes
-          item={itemContext.shownItem}
-          isEditing={itemContext.isEditing}
+      <EntityCard
+        name={item.id}
+        flushContent
+        heading={
+          <div className="space-y-2">
+            <EntityItemReference item={item} size="lg" />
+            <EntityItemRelationSummary item={item} onRelationClick={sections.reveal} />
+          </div>
+        }
+        action={
+          actions && (
+            <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
+              {actions}
+            </div>
+          )
+        }
+      >
+        <EntityItemSections
+          item={item}
+          profiles={loadedProfiles}
+          state={sections}
+          editedItem={itemContext.editedItem}
           onEditingChange={itemContext.setIsEditing}
           onRefresh={() => void itemContext.refresh()}
+          allowEdit={allowEdit}
+          onRelationItemClick={onRelationItemClick}
+          onRelationItemCreateNew={onRelationItemCreateNew}
+          onMissingRelationTargetClick={onMissingRelationTargetClick}
+          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onRequiredRelationClick={onRequiredRelationClick}
         />
-
-        {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Relations</h2>
-              {item.toOneRelations.map((rel) => (
-                <RelationToOneSection
-                  key={rel.name}
-                  relation={rel}
-                  profiles={loadedProfiles}
-                  onItemClick={onRelationItemClick}
-                  onCreateNew={onRelationItemCreateNew}
-                  onMissingRelationTargetClick={onMissingRelationTargetClick}
-                  onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                />
-              ))}
-              {item.toManyRelations.map((rel) => (
-                <RelationToManySection
-                  key={rel.name}
-                  relation={rel}
-                  profiles={loadedProfiles}
-                  onItemClick={onRelationItemClick}
-                  onCreateNew={onRelationItemCreateNew}
-                  onMissingRelationTargetClick={onMissingRelationTargetClick}
-                  onRequiredRelationClick={onRequiredRelationClick}
-                  onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      </EntityCard>
     </div>
   );
 }

@@ -162,3 +162,22 @@ export const WithInteraction: Story = {
     await expect(args.onCardClick).toHaveBeenCalledWith("invoice");
   },
 };
+
+export const WithHeadingAndFlushContent: Story = {
+  args: {
+    name: "invoice-42",
+    heading: (
+      <div className="space-y-1">
+        <p className="text-lg font-semibold">Invoice #42</p>
+        <p className="text-xs text-muted-foreground">3 suppliers · 1 customer</p>
+      </div>
+    ),
+    flushContent: true,
+    children: (
+      <ul>
+        <li className="border-t px-6 py-3 text-sm font-semibold">Attributes</li>
+        <li className="border-t px-6 py-3 text-sm font-semibold">Suppliers</li>
+      </ul>
+    ),
+  },
+};

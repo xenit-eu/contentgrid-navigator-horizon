@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
-import { Separator } from "@contentgrid/ui";
 import { RightSidePanelLayout } from "../../../layout";
-import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
-import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
-import { RelationToManySection } from "../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../relations/relation-to-one-section";
+import { EntityItemSections, useEntityItemSectionsState } from "../../entity-item-sections";
 import { useEntityItemContext } from "../../use-entity-item-context";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
@@ -34,6 +30,7 @@ export function EntityItemContentFocus({
   const { profileEntity } = item;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
+  const sections = useEntityItemSectionsState();
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -77,58 +74,29 @@ export function EntityItemContentFocus({
       sidePanelHeader={
         <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
           <EntityItemReference item={item} size="sm" />
-          <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
-            {actions}
-            {allowEdit && (
-              <EditEntityItemButton
-                item={item}
-                isEditing={itemContext.isEditing}
-                onEdit={() => itemContext.setIsEditing(true)}
-              />
-            )}
-          </div>
-        </div>
-      }
-      sidePanel={
-        <div className="space-y-6">
-          <EditableEntityItemAttributes
-            item={itemContext.shownItem}
-            isEditing={itemContext.isEditing}
-            onEditingChange={itemContext.setIsEditing}
-            onRefresh={() => void itemContext.refresh()}
-          />
-          {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {item.toOneRelations.map((relation) => (
-                  <RelationToOneSection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {item.toManyRelations.map((relation) => (
-                  <RelationToManySection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
+          {actions && (
+            <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
+              {actions}
+            </div>
           )}
         </div>
+      }
+      sidePanelPadded={false}
+      sidePanel={
+        <EntityItemSections
+          item={item}
+          profiles={loadedProfiles}
+          state={sections}
+          editedItem={itemContext.editedItem}
+          onEditingChange={itemContext.setIsEditing}
+          onRefresh={() => void itemContext.refresh()}
+          allowEdit={allowEdit}
+          onRelationItemClick={onRelationItemClick}
+          onRelationItemCreateNew={onRelationItemCreateNew}
+          onMissingRelationTargetClick={onMissingRelationTargetClick}
+          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+          onRequiredRelationClick={onRequiredRelationClick}
+        />
       }
     >
       <ContentPreviewPanel
