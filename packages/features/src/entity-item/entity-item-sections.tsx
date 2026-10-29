@@ -15,19 +15,21 @@ import { RelationToOneSection } from "./relations/relation-to-one-section";
 
 const ATTRIBUTES_SECTION = "attributes";
 const AUDIT_SECTION = "audit";
+/** Relation names are customer-defined, so their keys are prefixed to never match a built-in one. */
+const relationSection = (relationName: string) => `relation:${relationName}`;
 /** Narrower than this (in pixels), the `"columns"` layout keeps a single column. */
 const COLUMNS_MIN_WIDTH = 720;
 
 export interface EntityItemSectionsState {
-  /** Open state for a section, keyed by `"attributes"`, `"audit"` or a relation's name. */
+  /** Open state for a section, keyed by `"attributes"`, `"audit"` or `relationSection(name)`. */
   readonly openProps: (
     section: string,
     defaultOpen: boolean,
   ) => { open: boolean; onOpenChange: (open: boolean) => void };
   /** Registers a section's element, so `reveal` can scroll to it. */
   readonly sectionRef: (section: string) => (element: HTMLElement | null) => void;
-  /** Expands a section and scrolls it into view — e.g. from `EntityItemRelationSummary`. */
-  readonly reveal: (section: string) => void;
+  /** Expands a relation's section and scrolls it into view — e.g. from `EntityItemRelationSummary`. */
+  readonly revealRelation: (relationName: string) => void;
 }
 
 /**
@@ -52,7 +54,8 @@ export function useEntityItemSectionsState(): EntityItemSectionsState {
       if (element) elements.current.set(section, element);
       else elements.current.delete(section);
     },
-    reveal: (section) => {
+    revealRelation: (relationName) => {
+      const section = relationSection(relationName);
       setOpen(section, true);
       requestAnimationFrame(() =>
         elements.current.get(section)?.scrollIntoView?.({ behavior: "smooth", block: "start" }),
@@ -76,17 +79,17 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
   readonly onRelationItemClick?: RelationItemClickHandler;
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
   /**
+   * Whether to show the edit button in the Attributes header (default `true`). The button still
+   * only shows when the item has an update template.
+   */
+  readonly allowEdit?: boolean;
+  /**
    * `"stacked"` (default) lists every section in one column. `"columns"` puts the relations in a
    * second, resizable column next to the attributes and audit trail, when the sections are at
    * least `COLUMNS_MIN_WIDTH` wide; narrower, and for an item without relations, it keeps the
    * single column.
    */
   readonly layout?: "stacked" | "columns";
-  /**
-   * Whether to show the edit button in the Attributes header (default `true`). The button still
-   * only shows when the item has an update template.
-   */
-  readonly allowEdit?: boolean;
 };
 
 /**
@@ -109,6 +112,7 @@ export function EntityItemSections({
   layout = "stacked",
   allowEdit = true,
 }: Readonly<EntityItemSectionsProps>) {
+  const isEditing = editedItem !== null;
   const attributesOpen = state.openProps(ATTRIBUTES_SECTION, true);
   const attributes = (
     <RelationAccordion
@@ -123,7 +127,7 @@ export function EntityItemSections({
         allowEdit && (
           <EditEntityItemButton
             item={item}
-            isEditing={editedItem !== null}
+            isEditing={isEditing}
             onEdit={() => {
               // The form opens inside this section, so make sure it is expanded.
               attributesOpen.onOpenChange(true);
@@ -132,11 +136,16 @@ export function EntityItemSections({
           />
         )
       }
-      {...attributesOpen}
+      open={attributesOpen.open}
+      // Collapsing would unmount the update form and drop its unsaved values, so the section
+      // stays open while editing.
+      onOpenChange={(open) => {
+        if (open || !isEditing) attributesOpen.onOpenChange(open);
+      }}
     >
       <EditableEntityItemAttributes
         item={editedItem ?? item}
-        isEditing={editedItem !== null}
+        isEditing={isEditing}
         onEditingChange={onEditingChange}
         onRefresh={onRefresh}
         auditTrail={false}
@@ -146,12 +155,16 @@ export function EntityItemSections({
   const relations = (
     <>
       {item.toOneRelations.map((rel) => (
-        <section key={rel.name} ref={state.sectionRef(rel.name)} className="scroll-mt-4">
+        <section
+          key={rel.name}
+          ref={state.sectionRef(relationSection(rel.name))}
+          className="scroll-mt-4"
+        >
           <RelationToOneSection
             relation={rel}
             profiles={profiles}
             variant="row"
-            {...state.openProps(rel.name, true)}
+            {...state.openProps(relationSection(rel.name), true)}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -160,12 +173,16 @@ export function EntityItemSections({
         </section>
       ))}
       {item.toManyRelations.map((rel) => (
-        <section key={rel.name} ref={state.sectionRef(rel.name)} className="scroll-mt-4">
+        <section
+          key={rel.name}
+          ref={state.sectionRef(relationSection(rel.name))}
+          className="scroll-mt-4"
+        >
           <RelationToManySection
             relation={rel}
             profiles={profiles}
             variant="row"
-            {...state.openProps(rel.name, false)}
+            {...state.openProps(relationSection(rel.name), false)}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -202,6 +219,7 @@ export function EntityItemSections({
           </>
         }
         right={relations}
+        keepLayout={isEditing}
       />
     );
   }
@@ -218,26 +236,32 @@ export function EntityItemSections({
  * `left` and `right` side by side with a drag handle between them, or `left` above `right` when
  * there is too little room. The split layout's own stacked mode isn't used: it splits a fixed
  * height, while these sections grow with their content. Crossing the width threshold remounts
- * the sections.
+ * the sections, so while `keepLayout` is set (an open update form, whose unsaved values would be
+ * lost) the current layout stays until it is cleared.
  */
 function EntityItemSectionColumns({
   left,
   right,
-}: Readonly<{ left: ReactNode; right: ReactNode }>) {
+  keepLayout,
+}: Readonly<{ left: ReactNode; right: ReactNode; keepLayout: boolean }>) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState<number | undefined>(undefined);
+  const [wide, setWide] = useState<boolean | undefined>(undefined);
   useLayoutEffect(() => {
     if (!element) return;
-    const measure = () => setWidth(element.getBoundingClientRect().width);
+    const measure = () => {
+      const fits = element.getBoundingClientRect().width >= COLUMNS_MIN_WIDTH;
+      setWide((current) => (keepLayout && current !== undefined ? current : fits));
+    };
     measure();
+    if (keepLayout) return;
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [element]);
+  }, [element, keepLayout]);
 
   // Renders nothing until measured (before the first paint), so it never shows the wrong layout.
   let content: ReactNode = null;
-  if (width !== undefined && width >= COLUMNS_MIN_WIDTH) {
+  if (wide) {
     content = (
       <ResizableSplitLayout
         left={left}
@@ -247,7 +271,7 @@ function EntityItemSectionColumns({
         handleLabel="Resize relations"
       />
     );
-  } else if (width !== undefined) {
+  } else if (wide === false) {
     content = (
       <>
         {left}
