@@ -4,14 +4,14 @@
 
 **Status**: Draft
 
-**Input**: Show the file picked in a create form's file field before the item is created. On a wide screen the preview sits beside the form; on a narrow screen it opens in a dialog. The preview handles every kind of PDF, including a password-protected one, and images and videos as they are.
+**Input**: Show the file picked in a create form's file field before the item is created. When the view has room, the preview sits beside the form; otherwise it opens in a dialog. The preview handles every kind of PDF, including a password-protected one, and images and videos as they are.
 
 ## Scope
 
 **In scope**
 
 - Previewing the file picked in any file field of an entity's create form, before anything is uploaded.
-- A side-by-side layout on wide screens (preview beside the form) and a preview dialog on narrow screens.
+- A side-by-side layout when the view is wide (preview beside the form) and a preview dialog when it is narrow. The width is the view's own, the page minus the sidebar, so opening or closing the sidebar can move the preview.
 - Choosing which file field the preview shows when the form has several.
 - Dropping a file on the empty preview to fill the previewed file field.
 - Opening a password-protected PDF by entering its password, in every PDF preview (the create form and the content-focus item page).
@@ -26,15 +26,15 @@
 
 ### User Story 1 - See the picked file next to the form (Priority: P1)
 
-A user on a wide screen opens a create form with a file field and picks a PDF. The PDF shows beside the form while they fill in the other fields.
+A user with a wide view opens a create form with a file field and picks a PDF. The PDF shows beside the form while they fill in the other fields.
 
 **Why this priority**: Filling in an item's fields usually means reading them off its document; without the preview the user has to open the file elsewhere.
 
-**Independent Test**: On a screen at least 1200 px wide, open a create form with one file field, pick a PDF: it renders in the panel beside the form, and the form's own fields stay usable.
+**Independent Test**: With the view at least 880 px wide, open a create form with one file field, pick a PDF: it renders in the panel beside the form, and the form's own fields stay usable.
 
 **Acceptance Scenarios**:
 
-1. **Given** a screen at least 1200 px wide and a create form with a file field, **Then** a file preview area is shown beside the form, previewing the first file field.
+1. **Given** a view at least 880 px wide and a create form with a file field, **Then** a file preview area is shown beside the form, previewing the first file field.
 2. **Given** no file is picked in the previewed field, **Then** the preview area is a drop zone filling the area; **When** the user drops a file on it, **Then** the file goes into the previewed field and is shown.
 3. **Given** the previewed field is read-only, **Then** the empty preview shows "No file" without a drop zone.
 4. **Given** the preview is beside the form, **Then** each file field's empty drop zone is a single line ("No file chosen", **Choose file**), since the preview is the large drop area, and no file field shows a "Preview file" button.
@@ -68,30 +68,30 @@ A create form has several file fields. The preview follows the field the user is
 
 **Why this priority**: Only some entities have several file fields; with one, the preview never needs switching.
 
-**Independent Test**: On a wide screen, open a create form with two file fields: the preview starts on the first; picking a file in the second switches the preview to it.
+**Independent Test**: With a wide view, open a create form with two file fields: the preview starts on the first; picking a file in the second switches the preview to it.
 
 **Acceptance Scenarios**:
 
 1. **Given** several file fields, **Then** the preview's toolbar offers a selector listing them by label, with the previewed one selected; **When** the user chooses another, **Then** the preview shows that field.
 2. **When** the user picks a file in a file field, **Then** the preview switches to that field.
-3. **When** the user focuses a file field on a wide screen, **Then** the preview switches to that field.
-4. **Given** several file fields on a wide screen, **Then** the previewed field is highlighted in the form; with one file field there is nothing to tell apart and no highlight.
+3. **When** the user focuses a file field with a wide view, **Then** the preview switches to that field.
+4. **Given** several file fields with a wide view, **Then** the previewed field is highlighted in the form; with one file field there is nothing to tell apart and no highlight.
 
 ---
 
-### User Story 4 - Preview on a narrow screen (Priority: P2)
+### User Story 4 - Preview in a narrow view (Priority: P2)
 
-On a screen narrower than 1200 px there is no room beside the form, so a picked file gets a **Preview file** button that opens the preview in a dialog.
+When the view is narrower than 880 px there is no room beside the form, so a picked file gets a **Preview file** button that opens the preview in a dialog.
 
-**Why this priority**: Narrow screens still need the preview, but it must not squeeze the form.
+**Why this priority**: Narrow views still need the preview, but it must not squeeze the form.
 
-**Independent Test**: On a screen narrower than 1200 px, pick a file in the second of two file fields and press its **Preview file** button: a dialog opens previewing that field.
+**Independent Test**: With the view narrower than 880 px, pick a file in the second of two file fields and press its **Preview file** button: a dialog opens previewing that field.
 
 **Acceptance Scenarios**:
 
-1. **Given** a screen narrower than 1200 px, **Then** no preview is shown beside the form, and each file field with a picked file shows a **Preview file** button.
+1. **Given** a view narrower than 880 px, **Then** no preview is shown beside the form, and each file field with a picked file shows a **Preview file** button.
 2. **When** the user presses a field's **Preview file** button, **Then** a "Preview file" dialog opens previewing that field, with the same selector and behaviour as Stories 2 and 3.
-3. **Given** the dialog is open, **When** the window is widened past 1200 px, **Then** the dialog closes and the preview is shown beside the form; narrowing the window again does not reopen it.
+3. **Given** the dialog is open, **When** the view widens past 880 px (a wider window, or the sidebar closed), **Then** the dialog closes and the preview is shown beside the form; narrowing the view again does not reopen it.
 
 ---
 
@@ -103,7 +103,7 @@ On a screen narrower than 1200 px there is no room beside the form, so a picked 
 - Continuous-create mode, after a successful create → the form resets and the preview returns to the first file field.
 - An empty preview that offers a drop zone shows no "No file" caption, as the drop zone already says there is no file; this holds for every content preview, the content-focus item page included. The caption shows only where the user cannot upload.
 - The user picks a different file in the previewed field → the preview starts over for the new file; nothing from the previous file (an error, a password) carries over.
-- The window is resized across 1200 px → only one preview (beside the form or in the dialog) exists at a time, so the file is read and the PDF engine started once.
+- The view is resized across 880 px → only one preview (beside the form or in the dialog) exists at a time, so the file is read and the PDF engine started once.
 
 ## Requirements _(mandatory)_
 
@@ -111,10 +111,10 @@ On a screen narrower than 1200 px there is no room beside the form, so a picked 
 
 **Layout**
 
-- **FR-001**: From a viewport width of 1200 px, a create form with at least one file field MUST show its file preview beside the form; below it, the preview MUST only be reachable through a **Preview file** dialog.
+- **FR-001**: From a view width of 880 px, a create form with at least one file field MUST show its file preview beside the form; below it, the preview MUST only be reachable through a **Preview file** dialog.
 - **FR-002**: Beside the form, only the form's fields MUST scroll; its alert and actions stay in view.
 - **FR-003**: Beside the form, the file fields' empty drop zones MUST be a single line, and the previewed field MUST be highlighted when there are several file fields.
-- **FR-004**: The preview dialog MUST close when the viewport widens past 1200 px and MUST NOT reopen on its own.
+- **FR-004**: The preview dialog MUST close when the view widens past 880 px and MUST NOT reopen on its own.
 
 **Previewed field**
 
@@ -140,14 +140,14 @@ On a screen narrower than 1200 px there is no room beside the form, so a picked 
 
 ### Measurable Outcomes
 
-- **SC-001**: On a wide screen, a picked PDF is visible beside the form without any extra action (0 clicks after picking).
+- **SC-001**: With a wide view, a picked PDF is visible beside the form without any extra action (0 clicks after picking).
 - **SC-002**: No request is sent to the server by the preview before the form is submitted (0 requests).
 - **SC-003**: A password-protected PDF can be opened in the preview by entering its password, on both the create form and the content-focus item page.
 - **SC-004**: Each outcome in Story 2 shows its own message in 100 % of test runs.
 
 ## Assumptions
 
-- Below 1200 px the preview moves into a dialog.
+- Below a view width of 880 px the preview moves into a dialog. With the sidebar open, that is a window of about 1200 px.
 - A protected PDF shows "This document requires a password to open"; a wrong password shows "The password is wrong. Please try again".
 
 ### Dependencies and references
