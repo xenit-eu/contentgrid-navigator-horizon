@@ -101,6 +101,14 @@ describe("RecordDataTable — table actions", () => {
     expect(screen.getByRole("button", { name: /export/i })).toBeInTheDocument();
   });
 
+  it("renders tableActions in the actions column's header cell when there is one", () => {
+    renderTable({ showActionsColumn: true, tableActions: <button type="button">Export</button> });
+    const headerCells = screen.getAllByRole("columnheader");
+    expect(headerCells[headerCells.length - 1]).toContainElement(
+      screen.getByRole("button", { name: /export/i }),
+    );
+  });
+
   it("does not render a table actions region when tableActions is absent", () => {
     renderTable();
     expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
