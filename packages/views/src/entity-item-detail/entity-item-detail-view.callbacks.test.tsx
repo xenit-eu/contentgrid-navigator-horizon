@@ -2,7 +2,7 @@
  * The view's wiring of the item feature's callbacks. `EntityItemAutoVariation` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
  * view does with them: relation clicks and "create" go to the navigation object, relation
- * problems open the dialog.
+ * problems open the dialog, and a finished delete opens the item's collection.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -20,6 +20,7 @@ vi.mock("@contentgrid/features/entity-item", () => ({
     onMissingRelationTargetClick?: (url: string, field?: string) => void;
     onBlindRelationOverwriteClick?: (info: { existingItem?: string; newItem?: string }) => void;
     onRequiredRelationClick?: (affectedRelation: string) => void;
+    onDeleted?: () => void;
   }) => (
     <div>
       <button onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}>
@@ -37,6 +38,7 @@ vi.mock("@contentgrid/features/entity-item", () => ({
         blind
       </button>
       <button onClick={() => props.onRequiredRelationClick?.("owner")}>required</button>
+      <button onClick={() => props.onDeleted?.()}>deleted</button>
     </div>
   ),
 }));
@@ -65,6 +67,15 @@ describe("EntityItemDetailView — feature callbacks", () => {
     expect(recording.calls).toEqual([
       { method: "openCreateItem", args: ["company", { openInNewTab: true }] },
     ]);
+  });
+
+  it("opens the item's collection after the item is deleted", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByText("deleted"));
+
+    expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
   });
 
   it.each([
