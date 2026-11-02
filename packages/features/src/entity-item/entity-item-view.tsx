@@ -5,19 +5,17 @@ import {
   useEntityItem,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { Separator } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "./edit/edit-entity-item-button";
 import { useEditContext } from "./edit/use-edit-context";
+import { EntityItemRelations } from "./relations/entity-item-relations";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
 } from "./relations/relation-handlers";
-import { RelationToManySection } from "./relations/relation-to-many-section";
-import { RelationToOneSection } from "./relations/relation-to-one-section";
 import {
   EntityItemReference,
   EntityItemReferenceLoading,
@@ -121,37 +119,15 @@ export function EntityItemView(props: Readonly<EntityItemViewProps>) {
             onRefresh={() => void editContext.refresh()}
           />
 
-          {(item.data.toOneRelations.length > 0 || item.data.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {item.data.toOneRelations.map((rel) => (
-                  <RelationToOneSection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {item.data.toManyRelations.map((rel) => (
-                  <RelationToManySection
-                    key={rel.name}
-                    relation={rel}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+          <EntityItemRelations
+            item={item.data}
+            profiles={loadedProfiles}
+            onItemClick={onRelationItemClick}
+            onCreateNew={onRelationItemCreateNew}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
+          />
         </div>
       )}
     </>
