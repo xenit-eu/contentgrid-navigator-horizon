@@ -13,7 +13,7 @@ export interface AttributeValueRendererProps {
   /**
    * Wrap onto multiple lines instead of truncating with an ellipsis. Only
    * applied to renderers whose props support it — passing it through has no
-   * effect on kinds that don't (content, unknown, boolean, number).
+   * effect on kinds that don't (unknown, boolean, number).
    */
   readonly wrap?: boolean;
   /**
@@ -46,7 +46,7 @@ export function AttributeValueRenderer({
   const components = defaultAttributeRendererComponents;
 
   if (attr.value.kind === AttributeKind.CONTENT) {
-    return <components.content metadata={attr.value.metadata} />;
+    return <components.content metadata={attr.value.metadata} wrap={wrap} />;
   }
   if (attr.value.kind === AttributeKind.NESTED) {
     return null;

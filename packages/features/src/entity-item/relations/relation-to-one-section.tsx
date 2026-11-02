@@ -42,11 +42,14 @@ export function RelationToOneSection({
   onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
+  allowEdit = true,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
+  /** `false` hides Link and Unlink, even when the relation allows them. Defaults to `true`. */
+  allowEdit?: boolean;
 }> &
   Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
   const linkedItem = useEntityItemToOneRelation(relation);
@@ -73,34 +76,38 @@ export function RelationToOneSection({
       title={title}
       actions={
         <>
-          {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isSetting}
-                onClick={() => setLinkOpen(true)}
-              >
-                Link
-              </Button>
-              <RelationItemSearchDialog
-                multiple={false}
-                targetProfile={targetProfile}
-                open={linkOpen}
-                onOpenChange={(open) => {
-                  setLinkOpen(open);
-                  if (!open) resetSetRelation();
-                }}
-                isLinking={isSetting}
-                linkError={setError}
-                onSelect={(item) =>
-                  setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
-                }
-                onCreateNew={onCreateNew}
-              />
-            </>
-          )}
-          {relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
+          {allowEdit &&
+            relation.canSet &&
+            targetProfile &&
+            linkedItem.isSuccess &&
+            linkedItem.data === null && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isSetting}
+                  onClick={() => setLinkOpen(true)}
+                >
+                  Link
+                </Button>
+                <RelationItemSearchDialog
+                  multiple={false}
+                  targetProfile={targetProfile}
+                  open={linkOpen}
+                  onOpenChange={(open) => {
+                    setLinkOpen(open);
+                    if (!open) resetSetRelation();
+                  }}
+                  isLinking={isSetting}
+                  linkError={setError}
+                  onSelect={(item) =>
+                    setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
+                  }
+                  onCreateNew={onCreateNew}
+                />
+              </>
+            )}
+          {allowEdit && relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -148,7 +155,9 @@ export function RelationToOneSection({
         <LinkedItem
           item={linkedItem.data}
           layout={layout}
-          onClick={(item) => onItemClick?.(item.profileEntity.name, item.id)}
+          onClick={
+            onItemClick ? (item) => onItemClick(item.profileEntity.name, item.id) : undefined
+          }
         />
       )}
     </RelationAccordion>
@@ -164,7 +173,7 @@ function LinkedItem({
   item,
   layout,
   onClick,
-}: Readonly<{ item: EntityItem; layout: RelationLayout; onClick: (item: EntityItem) => void }>) {
+}: Readonly<{ item: EntityItem; layout: RelationLayout; onClick?: (item: EntityItem) => void }>) {
   const { nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(item.profileEntity);
   const columns = layout.toOneSummaryColumns;
   const shownByReference = [nameAttribute?.name, subtitleAttribute?.name].filter(
@@ -176,7 +185,7 @@ function LinkedItem({
       <EntityItemReference
         item={item}
         size="default"
-        onClick={() => onClick(item)}
+        onClick={onClick ? () => onClick(item) : undefined}
         className="p-1"
       />
       {columns !== 0 && (

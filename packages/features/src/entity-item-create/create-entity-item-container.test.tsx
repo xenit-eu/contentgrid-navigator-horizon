@@ -619,7 +619,7 @@ describe("CreateEntityItemContainer", () => {
       renderForm();
 
       const preview = await screen.findByRole("complementary", { name: "File preview" });
-      expect(within(preview).getByText("No file")).toBeInTheDocument();
+      expect(within(preview).getByText("No file uploaded yet")).toBeInTheDocument();
       expect(within(preview).queryByText(/Drop a file here/)).not.toBeInTheDocument();
     });
 

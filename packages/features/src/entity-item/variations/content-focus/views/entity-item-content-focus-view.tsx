@@ -13,7 +13,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Separator,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../../../../app-info-pages";
 import { BreadCrumbsToolBarLayout, PageLayout, RightSidePanelLayout } from "../../../../layout";
@@ -21,8 +20,7 @@ import { EditableEntityItemAttributes } from "../../../attributes/editable-entit
 import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
 import { useEditContext } from "../../../edit/use-edit-context";
 import { EntityItemView, type EntityItemViewProps } from "../../../entity-item-view";
-import { RelationToManySection } from "../../../relations/relation-to-many-section";
-import { RelationToOneSection } from "../../../relations/relation-to-one-section";
+import { EntityItemRelations } from "../../../relations/entity-item-relations";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
@@ -314,37 +312,15 @@ function ContentFocusEntityItemBody({
             onEditingChange={onEditingChange}
             onRefresh={onRefresh}
           />
-          {(entityItem.toOneRelations.length > 0 || entityItem.toManyRelations.length > 0) && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Relations</h2>
-                {entityItem.toOneRelations.map((relation) => (
-                  <RelationToOneSection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-                {entityItem.toManyRelations.map((relation) => (
-                  <RelationToManySection
-                    key={relation.name}
-                    relation={relation}
-                    profiles={loadedProfiles}
-                    onItemClick={onRelationItemClick}
-                    onCreateNew={onRelationItemCreateNew}
-                    onMissingRelationTargetClick={onMissingRelationTargetClick}
-                    onRequiredRelationClick={onRequiredRelationClick}
-                    onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+          <EntityItemRelations
+            item={entityItem}
+            profiles={loadedProfiles}
+            onItemClick={onRelationItemClick}
+            onCreateNew={onRelationItemCreateNew}
+            onMissingRelationTargetClick={onMissingRelationTargetClick}
+            onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
+            onRequiredRelationClick={onRequiredRelationClick}
+          />
         </div>
       }
     >

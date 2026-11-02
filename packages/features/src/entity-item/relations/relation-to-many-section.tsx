@@ -52,11 +52,17 @@ export function RelationToManySection({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  allowEdit = true,
 }: Readonly<{
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
+  /**
+   * `false` hides Link, Unlink, Unlink all and Delete, even when the relation or item allows them.
+   * Defaults to `true`.
+   */
+  allowEdit?: boolean;
 }> &
   Pick<
     RelationProblemHandlers,
@@ -114,12 +120,12 @@ export function RelationToManySection({
   const title = relation.profileRelation.title ?? relation.name;
 
   const total = current.firstPage?.totalItems;
-  const canUnlinkAll = relation.canClear && (current.firstPage?.items.length ?? 0) > 0;
+  const canUnlinkAll = allowEdit && relation.canClear && (current.firstPage?.items.length ?? 0) > 0;
   const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
 
   /** Unlink/delete controls for one linked item, shared by the table rows and the stack. */
   function renderItemActions(item: EntityItem) {
-    if (!targetProfile) return null;
+    if (!targetProfile || !allowEdit) return null;
     const noun = targetProfile.singularName.toLowerCase();
     return (
       <>
@@ -166,7 +172,7 @@ export function RelationToManySection({
         }
         actions={
           <>
-            {relation.canAdd && targetProfile && (
+            {allowEdit && relation.canAdd && targetProfile && (
               <>
                 <Button
                   variant="outline"
@@ -243,15 +249,19 @@ export function RelationToManySection({
             profile={targetProfile}
             collection={collection.data}
             className="max-h-80"
-            onEntityItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+            onEntityItemClick={
+              onItemClick ? (item) => onItemClick(targetProfile.name, item.id) : undefined
+            }
             onPageChange={setPageUrl}
             renderRowActions={(item) => (
               <>
-                <RecordRowAction
-                  label="Details"
-                  icon={<Eye className="size-4" aria-hidden />}
-                  onClick={() => onItemClick?.(targetProfile.name, item.id)}
-                />
+                {onItemClick && (
+                  <RecordRowAction
+                    label="Details"
+                    icon={<Eye className="size-4" aria-hidden />}
+                    onClick={() => onItemClick(targetProfile.name, item.id)}
+                  />
+                )}
                 {renderItemActions(item)}
               </>
             )}
@@ -266,7 +276,9 @@ export function RelationToManySection({
               hasNextPage={loadedPages.hasNextPage}
               isFetchingNextPage={loadedPages.isFetchingNextPage}
               fetchNextPage={() => void loadedPages.fetchNextPage()}
-              onItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+              onItemClick={
+                onItemClick ? (item) => onItemClick(targetProfile.name, item.id) : undefined
+              }
               renderItemActions={renderItemActions}
             />
           )}
