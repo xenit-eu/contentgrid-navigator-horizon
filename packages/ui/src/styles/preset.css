@@ -54,6 +54,8 @@
   --color-primary-hover: color-mix(in oklab, var(--primary) 80%, black);
   --color-hover: var(--hover);
   --color-selected: var(--selected);
+  --color-table-row: var(--table-row);
+  --color-table-header: var(--table-header);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -149,6 +151,10 @@
      8% keeps muted text on a selected row above 4.5:1 contrast. */
   --hover: color-mix(in oklab, var(--primary) 3%, var(--background));
   --selected: color-mix(in oklab, var(--sky) 8%, var(--background));
+  /* Opaque table row and header fills, so a sticky cell hides what scrolls under it. Not
+     repeated under .dark: both mix theme tokens, which .dark overrides on the same <html> element. */
+  --table-row: color-mix(in oklab, var(--card) 50%, var(--background));
+  --table-header: color-mix(in oklab, var(--muted) 70%, var(--background));
   /* Hover fill for outline/ghost buttons. */
   --button-hover: var(--sky-extract);
   --button-hover-foreground: #000000;

@@ -1,5 +1,9 @@
 import { type ReactNode, useState } from "react";
-import { DotsThreeIcon as DotsThree } from "@phosphor-icons/react";
+import {
+  DotsThreeIcon as DotsThree,
+  FunnelIcon as Funnel,
+  SlidersHorizontalIcon as SlidersHorizontal,
+} from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
 import { Button } from "../../primitives/button";
@@ -104,6 +108,27 @@ export const WithTableActions: Story = {
       <Button variant="outline" size="sm">
         Export
       </Button>
+    ),
+    children: buildRows(),
+  },
+};
+
+// With an actions column, the table actions sit in its header cell instead of a bar above.
+export const WithTableActionsInActionsColumn: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    showActionsColumn: true,
+    tableActions: (
+      <>
+        <Button variant="ghost" size="icon-sm" aria-label="Columns">
+          <SlidersHorizontal aria-hidden />
+        </Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Filters">
+          <Funnel aria-hidden />
+        </Button>
+      </>
     ),
     children: buildRows(),
   },

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   ArrowDownIcon as ArrowDown,
   ArrowUpIcon as ArrowUp,
@@ -37,6 +38,8 @@ export interface RecordTableHeaderProps {
   onSort?: (option: RecordTableSortOption | undefined) => void;
   /** Reserves a trailing header cell to match a row-level actions column */
   showActionsColumn?: boolean;
+  /** Content of that trailing header cell, e.g. icon buttons acting on the whole table */
+  actions?: ReactNode;
   /** Checked state of the "select all" checkbox — `"indeterminate"` when some but not all rows are selected */
   selectionState?: boolean | "indeterminate";
   /** Called when the "select all" checkbox is toggled */
@@ -67,6 +70,7 @@ function RecordTableHeader({
   currentSort,
   onSort,
   showActionsColumn,
+  actions,
   selectionState = false,
   onSelectAll,
   className,
@@ -86,7 +90,7 @@ function RecordTableHeader({
             // Matches RecordTableRow's `w-fit min-w-full`: without it this row's background
             // stays clamped to the (unscrolled) container width instead of growing to match the
             // rows' actual overflow width, desyncing the frozen-header scrollLeft trick visually.
-            "grid w-fit min-w-full items-center gap-3 px-4 py-2 border-b border-border bg-muted/70",
+            "grid w-fit min-w-full items-center gap-3 px-4 py-2 border-b border-border bg-table-header",
           )}
         >
           {onSelectAll && (
@@ -129,7 +133,14 @@ function RecordTableHeader({
               </div>
             );
           })}
-          {showActionsColumn && <div role="columnheader" className="sticky right-0 bg-muted/70" />}
+          {showActionsColumn && (
+            <div
+              role="columnheader"
+              className="sticky right-0 flex items-center justify-end gap-1 bg-table-header"
+            >
+              {actions}
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>

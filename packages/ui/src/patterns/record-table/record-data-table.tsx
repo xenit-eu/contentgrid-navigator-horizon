@@ -34,6 +34,7 @@ export interface RecordDataTableProps {
    */
   footerContent?: ReactNode;
 
+  /** Shown in the actions column's header cell when there is one, otherwise above the table. */
   tableActions?: ReactNode;
 
   /** Reserves a trailing column for row-level actions */
@@ -106,7 +107,7 @@ function RecordDataTable({
 
   return (
     <div className={cn("flex min-h-0 flex-col gap-2", className)}>
-      {tableActions && (
+      {tableActions && !showActionsColumn && (
         <div className="flex shrink-0 items-center justify-end gap-2">{tableActions}</div>
       )}
 
@@ -135,6 +136,7 @@ function RecordDataTable({
               currentSort={currentSort}
               onSort={onSort}
               showActionsColumn={showActionsColumn}
+              actions={showActionsColumn ? tableActions : undefined}
               selectionState={selectionState}
               onSelectAll={onSelectAll}
             />
