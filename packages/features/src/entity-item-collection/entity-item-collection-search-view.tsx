@@ -32,7 +32,7 @@ export interface EntityItemCollectionSearchViewProps {
   readonly breadcrumbs?: ReactNode;
   /** Actions / buttons shown at the end of the toolbar (only when `toolbar` is true). */
   readonly actions?: ReactNode;
-  /** Fired when an entity item row is clicked; receives the item id. */
+  /** Passed to `EntityItemCollectionView`; see its `onEntityItemClick`. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
   EntityItem,
@@ -13,11 +13,22 @@ import {
   AttributeMultiSelectContent,
   Badge,
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
   PageTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
   type RecordTableSortOption,
+  ResizableSplitLayout,
+  SPLIT_BREAKPOINT_QUERY,
+  type SplitPaneHandle,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useMediaQuery,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { type FieldState, type HalFormsField, resolveHalFormsFields } from "../hal-forms";
@@ -32,6 +43,7 @@ import {
 } from "../search/filter-properties";
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
+import { EntityItemPreviewPane } from "./entity-item-preview-pane";
 
 export interface EntityItemCollectionViewProps {
   readonly profile: ProfileEntity;
@@ -40,7 +52,11 @@ export interface EntityItemCollectionViewProps {
    * a next/prev link. When omitted the first (default) page is fetched.
    */
   readonly pageUrl?: string;
-  /** Fired when an entity item row is clicked; receives the item id. */
+  /**
+   * Opens an item's own page; a row's View action calls it. A row click previews the row
+   * instead — in a side pane on a wide screen, a dialog on a narrow one. Without it, rows can't
+   * be clicked.
+   */
   readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
    * Fired when the user paginates; receives the target page's href
@@ -56,6 +72,9 @@ export interface EntityItemCollectionViewProps {
   /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
   readonly onSortChange?: (sort: string | undefined) => void;
 }
+
+/** Size the side pane opens at. */
+const PREVIEW_PANE_SIZE = "45%";
 
 /**
  * App-agnostic collection view: fetches the entity's items and renders the filter form, table,
@@ -86,6 +105,36 @@ export function EntityItemCollectionView({
   currentSort,
   onSortChange,
 }: Readonly<EntityItemCollectionViewProps>) {
+  const isWide = useMediaQuery(SPLIT_BREAKPOINT_QUERY);
+  const [previewedItem, setPreviewedItem] = useState<EntityItem | null>(null);
+  const paneRef = useRef<SplitPaneHandle>(null);
+
+  // Crossing the breakpoint closes the preview rather than moving it between pane and dialog.
+  const [previewIsWide, setPreviewIsWide] = useState(isWide);
+  if (previewIsWide !== isWide) {
+    setPreviewIsWide(isWide);
+    setPreviewedItem(null);
+  }
+  const isPaneOpen = previewedItem !== null;
+
+  function handleEntityItemClick(item: EntityItem) {
+    setPreviewedItem(item);
+    if (paneRef.current?.isCollapsed()) {
+      paneRef.current.resize(PREVIEW_PANE_SIZE);
+    }
+  }
+
+  function closePane() {
+    setPreviewedItem(null);
+    paneRef.current?.collapse();
+  }
+
+  function handleEntityItemDeleted(item: EntityItem) {
+    if (item.selfLink.href === previewedItem?.selfLink.href) {
+      closePane();
+    }
+  }
+
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
     () =>
@@ -275,9 +324,95 @@ export function EntityItemCollectionView({
 
   const itemCountTitle = `${collection.data?.totalItems?.count ?? "-"} items ${collection.data?.totalItems?.isEstimated ? "(estimated)" : ""}`;
 
+  const table = (
+    <>
+      {collection.isPending && <LoadingPage />}
+
+      {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
+
+      {collection.isSuccess && (
+        <EntityItemCollectionTable
+          className="h-full"
+          profile={profile}
+          collection={collection.data}
+          onEntityItemClick={onEntityItemClick && handleEntityItemClick}
+          onEntityItemOpen={onEntityItemClick}
+          // Highlights the previewed row. Without `onSelectionChange` the table shows no checkboxes,
+          // so this is the only selection there is.
+          selectedIds={previewedItem ? new Set([previewedItem.id]) : undefined}
+          onEntityItemDeleted={handleEntityItemDeleted}
+          onPageChange={onPageChange}
+          currentSort={currentSort}
+          onSort={handleSort}
+          visibleColumnNames={localVisibleColumns}
+          forcedVisibleColumnNames={activelyFilteredAttributeNames}
+          tableActions={
+            (attributeOptions.length > 0 || fields.length > 0) && (
+              <>
+                {attributeOptions.length > 0 && (
+                  <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon-sm" aria-label="Columns">
+                            <SlidersHorizontalIcon aria-hidden />
+                          </Button>
+                        </PopoverTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Columns</TooltipContent>
+                    </Tooltip>
+                    <PopoverContent className="w-72 p-1" align="end">
+                      <AttributeMultiSelectContent
+                        attributes={attributeOptions}
+                        values={localVisibleColumns}
+                        onChange={setLocalVisibleColumns}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+                {fields.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="relative"
+                        aria-label={
+                          activeFilterCount > 0
+                            ? `Filters (${activeFilterCount} active)`
+                            : "Filters"
+                        }
+                        onClick={() => setFiltersOpen(true)}
+                      >
+                        <Funnel aria-hidden />
+                        {activeFilterCount > 0 && (
+                          <Badge
+                            className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1"
+                            aria-hidden
+                          >
+                            {activeFilterCount}
+                          </Badge>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Filters</TooltipContent>
+                  </Tooltip>
+                )}
+              </>
+            )
+          }
+        />
+      )}
+    </>
+  );
+
+  const previewPane = previewedItem && (
+    <EntityItemPreviewPane profile={profile} entityItem={previewedItem} onClose={closePane} />
+  );
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 p-4">
+    <div className="flex h-full min-h-0 flex-col p-4">
+      <div className="shrink-0 pb-4">
         <PageTitle
           header={"Entity Collection"}
           icon={<EntityIconBadge profile={profile} />}
@@ -286,57 +421,46 @@ export function EntityItemCollectionView({
         />
       </div>
 
-      <div className="min-h-0 flex-1 px-4 pb-4">
-        {collection.isPending && <LoadingPage />}
-
-        {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
-
-        {collection.isSuccess && (
-          <EntityItemCollectionTable
-            className="h-full"
-            profile={profile}
-            collection={collection.data}
-            onEntityItemClick={onEntityItemClick}
-            onPageChange={onPageChange}
-            currentSort={currentSort}
-            onSort={handleSort}
-            visibleColumnNames={localVisibleColumns}
-            forcedVisibleColumnNames={activelyFilteredAttributeNames}
-            tableActions={
-              (attributeOptions.length > 0 || fields.length > 0) && (
-                <>
-                  {attributeOptions.length > 0 && (
-                    <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline">
-                          <SlidersHorizontalIcon aria-hidden />
-                          Columns
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 p-1" align="end">
-                        <AttributeMultiSelectContent
-                          attributes={attributeOptions}
-                          values={localVisibleColumns}
-                          onChange={setLocalVisibleColumns}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                  {fields.length > 0 && (
-                    <Button variant="outline" onClick={() => setFiltersOpen(true)}>
-                      <Funnel aria-hidden />
-                      Filters
-                      {activeFilterCount > 0 && (
-                        <Badge variant="secondary">{activeFilterCount}</Badge>
-                      )}
-                    </Button>
-                  )}
-                </>
-              )
-            }
+      <div className="min-h-0 flex-1">
+        {isWide ? (
+          // The pane runs beside the table only, so the two share a top and bottom edge.
+          // Its panel is always there, collapsed while no row is open, so opening it never
+          // remounts the table.
+          <ResizableSplitLayout
+            left={table}
+            right={previewPane}
+            defaultRightSize={0}
+            minLeftSize={320}
+            minRightSize={360}
+            rightCollapsible
+            rightCollapsedSize={0}
+            rightPanelRef={paneRef}
+            // Dragging the pane shut closes it like its Close button.
+            onRightCollapsedChange={(collapsed) => collapsed && setPreviewedItem(null)}
+            resizable={isPaneOpen}
+            handleLabel="Resize preview"
+            handleClassName="mx-2"
           />
+        ) : (
+          table
         )}
       </div>
+
+      {!isWide && (
+        <Dialog open={isPaneOpen} onOpenChange={(open) => !open && setPreviewedItem(null)}>
+          {/* The pane draws the border and its own Close button. */}
+          <DialogContent
+            showCloseButton={false}
+            className="flex h-[80vh] flex-col gap-0 border-0 p-0 sm:max-w-3xl"
+          >
+            <DialogTitle className="sr-only">{`${profile.singularName} preview`}</DialogTitle>
+            <DialogDescription className="sr-only">
+              The item's preview and details.
+            </DialogDescription>
+            {previewPane}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {fields.length > 0 && (
         <EntityItemCollectionFilterDialog

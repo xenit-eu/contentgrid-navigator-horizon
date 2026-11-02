@@ -73,7 +73,9 @@ variations/content-focus/
   resolved `ProfileEntity` or `EntityItem` from its host (Principle VIII).
 - `entity-item-create` previews a picked file with `FilePreview`, `ContentPreviewFrame` and
   `ContentAttributeOptionSelector`, imported from this feature's `index.ts` — never from
-  `variations/content-focus/` directly.
+  `variations/content-focus/` directly. `entity-item-collection`'s preview pane
+  likewise imports what it shows (the content preview with `allowUpload={false}`, the
+  attributes, the relations) only through `index.ts`.
 - `variations/content-focus/util/` stays pure: no `useQuery`, no JSX, no `@contentgrid/ui`
   import. Transformation logic (e.g. picking the default content attribute) lives here, not
   inline in a component.
