@@ -60,6 +60,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         onRequiredRelationClick={(affectedRelation) =>
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name) }
       />
     );
   } else {
