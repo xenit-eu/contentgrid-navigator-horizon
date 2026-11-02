@@ -36,7 +36,7 @@ A user with a wide view opens a create form with a file field and picks a PDF. T
 
 1. **Given** a view at least 880 px wide and a create form with a file field, **Then** a file preview area is shown beside the form, previewing the first file field.
 2. **Given** no file is picked in the previewed field, **Then** the preview area is a drop zone filling the area; **When** the user drops a file on it, **Then** the file goes into the previewed field and is shown.
-3. **Given** the previewed field is read-only, **Then** the empty preview shows "No file" without a drop zone.
+3. **Given** the previewed field is read-only, **Then** the empty preview shows "No file uploaded yet" without a drop zone.
 4. **Given** the preview is beside the form, **Then** each file field's empty drop zone is a single line ("No file chosen", **Choose file**), since the preview is the large drop area, and no file field shows a "Preview file" button.
 5. **Given** the form is taller than the page, **Then** only the fields scroll; the error alert above them and the **Create** / **Cancel** actions below stay in view, and the preview scrolls on its own.
 
