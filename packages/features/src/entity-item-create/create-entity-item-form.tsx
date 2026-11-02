@@ -91,14 +91,20 @@ export function CreateEntityItemForm({
     <form
       onSubmit={onSubmit}
       noValidate
-      className={fillHeight ? "space-y-4 split:flex split:min-h-0 split:flex-col" : "space-y-4"}
+      className={
+        fillHeight
+          ? "space-y-4 @side-by-side:flex @side-by-side:min-h-0 @side-by-side:flex-col"
+          : "space-y-4"
+      }
     >
       {nonFieldErrorAlert}
 
       <div
         ref={fieldsContainerRef}
         className={
-          fillHeight ? "scrollbar-subtle split:min-h-0 split:overflow-y-auto split:pr-1" : undefined
+          fillHeight
+            ? "scrollbar-subtle @side-by-side:min-h-0 @side-by-side:overflow-y-auto @side-by-side:pr-1"
+            : undefined
         }
       >
         <HalFormsContainer
@@ -118,7 +124,7 @@ export function CreateEntityItemForm({
       <div
         className={
           fillHeight
-            ? "flex items-center gap-6 split:border-t split:pt-3"
+            ? "flex items-center gap-6 @side-by-side:border-t @side-by-side:pt-3"
             : "flex items-center gap-6"
         }
       >
