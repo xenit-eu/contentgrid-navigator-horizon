@@ -113,11 +113,21 @@ pnpm --filter navigator preview
 pnpm --filter navigator-experimental preview
 ```
 
-ESLint (`lint`) and Prettier (`format` / `format:check`) scripts exist in every package and run in CI, and visual-regression tests exist for `packages/ui` (see [Testing](#testing)). There are no unit or integration `test` scripts yet — the root `pnpm test` and `pnpm test:e2e` are `--if-present` pass-throughs that currently match nothing; those land as the migration progresses.
+ESLint (`lint`) and Prettier (`format` / `format:check`) scripts exist in every package and run in CI, and visual-regression tests exist for `packages/ui` (see [Testing](#testing)).
 
 ---
 
 ## Testing
+
+### Unit/component tests
+
+```bash
+# Run tests:
+pnpm test
+
+# Or, re-run on every change:
+pnpm test:watch
+```
 
 ### Visual regression (`packages/ui`)
 
@@ -161,5 +171,4 @@ This is the internal preview track. It runs on a separate port and is deployed t
 
 - **Stability gate suspended pre-GA.** The ESLint rule that enforces the `stable`-only boundary in `apps/navigator` is wired but currently configured to allow all tiers while the product is pre-GA (see [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md)); the CI bundle audit (HZN-1.9) that would backstop it is still not implemented. The `stable`-only boundary is restored at production go-live.
 - **`packages/features/` is populated.** Feature modules already live under `packages/features/src/` (e.g. `entity-item`, `search`, `dashboard`), each carrying an `x-stability` flag per ADR-006.
-- **No unit/integration tests yet.** Lint, formatting, and visual-regression (`packages/ui`) checks run in CI, but no unit or integration `test` scripts are implemented — `pnpm test` and `pnpm test:e2e` are `--if-present` pass-throughs that currently match nothing. These land as the migration phases proceed.
 - **Custom track not scaffolded.** `apps/<customer>/` directories do not exist yet. Custom-track scaffolding is deferred to Phase 8 (ADR-010, ADR-013).
