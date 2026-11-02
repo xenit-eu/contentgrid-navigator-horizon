@@ -183,22 +183,22 @@ describe("EntityItemCollectionTable", () => {
     expect(onEntityItemClick.mock.calls[0][0].id).toBe("1");
   });
 
-  it("calls onEntityItemClick when the row's View action is used", async () => {
-    const user = userEvent.setup();
+  it("renders the View action only when there is an onEntityItemOpen", async () => {
     const { profile, collection, Wrapper } = await fetchCollection();
-    const onEntityItemClick = vi.fn();
-    render(
+    const { rerender } = render(
+      <EntityItemCollectionTable profile={profile} collection={collection} />,
+      { wrapper: Wrapper },
+    );
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+
+    rerender(
       <EntityItemCollectionTable
         profile={profile}
         collection={collection}
-        onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={vi.fn()}
       />,
-      { wrapper: Wrapper },
     );
-
-    const viewButtons = screen.getAllByRole("button", { name: "View" });
-    await user.click(viewButtons[0]);
-    expect(onEntityItemClick).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole("button", { name: "View" })).toHaveLength(2);
   });
 
   it("only renders the Delete action for items the user is permitted to delete (ABAC)", async () => {

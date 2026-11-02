@@ -9,12 +9,13 @@
  */
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
+  type EntityItem,
   NavigatorDataProvider,
   type ProfileEntity,
   createApiClient,
@@ -171,6 +172,7 @@ function renderCollectionView(props: {
   pageUrl?: string;
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
+  onEntityItemClick?: (item: EntityItem) => void;
 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
@@ -453,5 +455,213 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     await user.click(screen.getByRole("button", { name: /clear all/i }));
 
     expect(onFiltersChange).toHaveBeenCalledWith({});
+  });
+});
+
+describe("EntityItemCollectionView — side pane", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Returns a function that moves the screen across the breakpoint, as a window resize would.
+  function setScreenWide(wide: boolean) {
+    let matches = wide;
+    const listeners = new Set<() => void>();
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          get matches() {
+            return matches;
+          },
+          media: query,
+          addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+          removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+        }) as unknown as MediaQueryList,
+    );
+    return (nextWide: boolean) => {
+      matches = nextWide;
+      listeners.forEach((listener) => listener());
+    };
+  }
+
+  // The item profile plus a content attribute: an object with embedded attributes.
+  function makeProfileWithContent(): ProfileEntity {
+    const document = {
+      name: "document",
+      title: "Document",
+      type: "object",
+      description: "",
+      readOnly: false,
+      required: false,
+      _embedded: {
+        "blueprint:constraint": [],
+        "blueprint:search-param": [],
+        "blueprint:attribute": [
+          {
+            name: "filename",
+            title: "Filename",
+            type: "string",
+            description: "",
+            readOnly: false,
+            required: false,
+            _embedded: {
+              "blueprint:constraint": [],
+              "blueprint:search-param": [],
+              "blueprint:attribute": [],
+            },
+            _links: {},
+          },
+        ],
+      },
+      _links: {},
+    };
+    const json = {
+      ...itemProfileJson,
+      _embedded: {
+        ...itemProfileJson._embedded,
+        "blueprint:attribute": [...itemProfileJson._embedded["blueprint:attribute"], document],
+      },
+    };
+    return makeProfileEntity(json, PROFILE_URL, "item");
+  }
+
+  // Both items may be deleted, so either row's Delete action can be used.
+  function setupDeletableCollection(onDelete: () => void) {
+    const items = ["item-0", "item-1"].map((id) => ({
+      id,
+      code: id,
+      _links: { self: { href: `${COLLECTION_URL}/${id}` } },
+      _templates: {
+        delete: { method: "DELETE", target: `${COLLECTION_URL}/${id}`, properties: [] },
+      },
+    }));
+    server.use(
+      http.get(COLLECTION_URL, () =>
+        HttpResponse.json({
+          _embedded: { item: items },
+          _links: { self: { href: COLLECTION_URL } },
+          page: { size: 2, total_items_exact: 2 },
+        }),
+      ),
+      http.delete(`${COLLECTION_URL}/:id`, () => {
+        onDelete();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+  }
+
+  async function deleteRow(user: ReturnType<typeof userEvent.setup>, index: number) {
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[index]);
+    // The open confirm dialog hides the rest of the page, so its button is the only "Delete".
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+  }
+
+  it("previews the row in a dialog when the screen is narrow", async () => {
+    setScreenWide(false);
+    setupCollectionHandler();
+    const onEntityItemClick = vi.fn();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), onEntityItemClick });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getAllByRole("row")[1]);
+
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the preview rather than moving it into a dialog when the screen narrows", async () => {
+    const setWide = setScreenWide(true);
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), onEntityItemClick: vi.fn() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getAllByRole("row")[1]);
+    act(() => setWide(false));
+
+    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("previews the row in the side pane when the screen is wide; View still opens the page", async () => {
+    setScreenWide(true);
+    setupCollectionHandler();
+    const onEntityItemClick = vi.fn();
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), onEntityItemClick });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getAllByRole("row")[1]);
+
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+    // Without content attributes the pane shows only the details, so it has no tabs.
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "View" })[0]);
+    expect(onEntityItemClick).toHaveBeenCalledOnce();
+  });
+
+  it("offers Preview and Details tabs in the pane for an entity with a content attribute", async () => {
+    setScreenWide(true);
+    const body = collectionBody(2);
+    // A content attribute without a file: `null`, with the attribute's cg:content link.
+    const items = body._embedded.item.map((item) => ({
+      ...item,
+      document: null,
+      _links: {
+        ...item._links,
+        "https://contentgrid.cloud/rels/contentgrid/content": [
+          { href: `${item._links.self.href}/document`, name: "document" },
+        ],
+      },
+    }));
+    server.use(
+      http.get(COLLECTION_URL, () => HttpResponse.json({ ...body, _embedded: { item: items } })),
+    );
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeProfileWithContent(), onEntityItemClick: vi.fn() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getAllByRole("row")[1]);
+
+    expect(screen.getByRole("tab", { name: /preview/i })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /details/i })).toBeInTheDocument();
+    expect(await screen.findByText("No file uploaded yet")).toBeInTheDocument();
+  });
+
+  it("closes the pane when the previewed item is deleted", async () => {
+    setScreenWide(true);
+    let deleteCount = 0;
+    setupDeletableCollection(() => deleteCount++);
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), onEntityItemClick: vi.fn() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getAllByRole("row")[1]);
+    await deleteRow(user, 0);
+
+    await waitFor(() => expect(deleteCount).toBe(1));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("keeps the pane open when a different item is deleted", async () => {
+    setScreenWide(true);
+    let deleteCount = 0;
+    setupDeletableCollection(() => deleteCount++);
+    const user = userEvent.setup();
+    renderCollectionView({ profile: makeItemProfile(), onEntityItemClick: vi.fn() });
+
+    await screen.findByText((text) => text.startsWith("2 items"));
+    await user.click(screen.getAllByRole("row")[1]);
+    await deleteRow(user, 1);
+
+    await waitFor(() => expect(deleteCount).toBe(1));
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 });

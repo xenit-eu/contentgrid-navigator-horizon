@@ -7,8 +7,8 @@ import {
   useDeleteEntityItem,
 } from "@contentgrid/navigator-data";
 import {
-  Button,
   RecordDataTable,
+  RecordRowAction,
   RecordRowConfirmAction,
   type RecordTableCell,
   RecordTableRow,
@@ -24,8 +24,10 @@ import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
   readonly collection: EntityItemCollection;
-  /** Fired when a row (entity item) is clicked, or the row's View action is used; receives the item. */
+  /** Fired when a row (entity item) is clicked; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** Called by the default View row action; receives that row's item. */
+  readonly onEntityItemOpen?: (item: EntityItem) => void;
   /**
    * Fired when the user navigates to another page; receives the target page's
    * href (`collection.nextHref` / `collection.prevHref`). Absent = pagination
@@ -60,6 +62,8 @@ export interface EntityItemCollectionTableProps {
   readonly selectedIds?: ReadonlySet<string>;
   /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
+  /** Fired after the default Delete action has deleted an item; receives that item. */
+  readonly onEntityItemDeleted?: (item: EntityItem) => void;
   /** Replaces the default per-row View/Delete actions (e.g. a relation's Unlink). */
   readonly renderRowActions?: (item: EntityItem) => ReactNode;
   /** `false` renders no actions column (e.g. in the relation picker). Defaults to `true`. */
@@ -112,6 +116,8 @@ export function EntityItemCollectionTable({
   className,
   selectedIds = EMPTY_SELECTION,
   onSelectionChange,
+  onEntityItemOpen,
+  onEntityItemDeleted,
   renderRowActions,
   showRowActions = true,
   paginated = true,
@@ -231,17 +237,13 @@ export function EntityItemCollectionTable({
                   renderRowActions(item)
                 ) : (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEntityItemClick?.(item);
-                      }}
-                    >
-                      <Eye className="size-4" aria-hidden />
-                      <span className="sr-only">View</span>
-                    </Button>
+                    {onEntityItemOpen && (
+                      <RecordRowAction
+                        label="View"
+                        icon={<Eye className="size-4" aria-hidden />}
+                        onClick={() => onEntityItemOpen(item)}
+                      />
+                    )}
                     {item.canDelete && (
                       <RecordRowConfirmAction
                         label="Delete"
@@ -249,7 +251,11 @@ export function EntityItemCollectionTable({
                         title="Delete item"
                         description={`Are you sure you want to delete this ${profile.singularName.toLowerCase()}? This action cannot be undone.`}
                         disabled={deleteMutation.isPending}
-                        onConfirm={() => deleteMutation.mutate(item)}
+                        onConfirm={() =>
+                          deleteMutation.mutate(item, {
+                            onSuccess: () => onEntityItemDeleted?.(item),
+                          })
+                        }
                       />
                     )}
                   </>
