@@ -36,4 +36,9 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    * has an update template.
    */
   readonly allowEdit?: boolean;
+  /**
+   * Fired after the item was deleted. The delete button only shows when this is passed and the
+   * item has a delete template; the caller decides where to go next.
+   */
+  readonly onDeleted?: () => void;
 };
