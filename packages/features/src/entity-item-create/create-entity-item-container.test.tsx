@@ -491,38 +491,47 @@ describe("CreateEntityItemContainer", () => {
       return within(container).getByRole("combobox");
     }
 
-    // The test setup's `matchMedia` stub always reports a narrow screen. This one reports `wide`,
-    // and `resize` changes it the way resizing the window would.
-    const narrowMatchMedia = window.matchMedia;
-    function stubScreen(wide: boolean) {
-      let matches = wide;
-      type ChangeListener = (event: { matches: boolean }) => void;
-      const listeners = new Set<ChangeListener>();
-      vi.stubGlobal("matchMedia", (query: string) => ({
-        ...narrowMatchMedia(query),
-        // A getter, like the browser's: `matches` is read from the same object after a resize.
-        get matches() {
-          return matches;
+    // jsdom lays nothing out, so every element is 0 px wide and the view is narrow. This makes the
+    // view `wide` (at least `--container-side-by-side`) or not, and `resize` changes it the way
+    // resizing the window or closing the sidebar would.
+    function stubViewWidth(wide: boolean) {
+      let width = wide ? 880 : 879;
+      const callbacks = new Set<ResizeObserverCallback>();
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(private readonly callback: ResizeObserverCallback) {}
+          observe() {
+            callbacks.add(this.callback);
+          }
+          unobserve() {}
+          disconnect() {
+            callbacks.delete(this.callback);
+          }
         },
-        addEventListener: (_type: string, listener: ChangeListener) => listeners.add(listener),
-        removeEventListener: (_type: string, listener: ChangeListener) =>
-          listeners.delete(listener),
-      }));
+      );
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
+      // jsdom has no default font size in pixels, as a browser has.
+      document.documentElement.style.fontSize = "16px";
+      document.documentElement.style.setProperty("--container-side-by-side", "55rem");
       return {
         resize(toWide: boolean) {
-          matches = toWide;
-          act(() => listeners.forEach((listener) => listener({ matches })));
+          width = toWide ? 880 : 879;
+          act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
         },
       };
     }
 
     afterEach(() => {
       vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      document.documentElement.style.removeProperty("font-size");
+      document.documentElement.style.removeProperty("--container-side-by-side");
     });
 
     it("switches the preview to the file field the user picks a file in", async () => {
       const user = userEvent.setup();
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
       renderForm();
 
@@ -539,7 +548,7 @@ describe("CreateEntityItemContainer", () => {
 
     it("shows a PDF that can no longer be read as a file that can't be displayed", async () => {
       const user = userEvent.setup();
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
       renderForm();
 
@@ -553,7 +562,7 @@ describe("CreateEntityItemContainer", () => {
 
     it("previews the first file field again after a continuous-create reset", async () => {
       const user = userEvent.setup();
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(
         profileRootHandler(),
         invoiceProfileHandler(TWO_FILES_CREATE_FORM),
@@ -574,7 +583,7 @@ describe("CreateEntityItemContainer", () => {
 
     it("switches the preview to the file field the user focuses", async () => {
       const user = userEvent.setup();
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
       renderForm();
 
@@ -585,7 +594,7 @@ describe("CreateEntityItemContainer", () => {
     });
 
     it("highlights the previewed one of several file fields", async () => {
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
       renderForm();
 
@@ -594,7 +603,7 @@ describe("CreateEntityItemContainer", () => {
     });
 
     it("doesn't highlight a form's only file field", async () => {
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(
         profileRootHandler(),
         invoiceProfileHandler({
@@ -608,7 +617,7 @@ describe("CreateEntityItemContainer", () => {
     });
 
     it("shows a read-only file field's empty preview without a drop zone", async () => {
-      stubScreen(true);
+      stubViewWidth(true);
       server.use(
         profileRootHandler(),
         invoiceProfileHandler({
@@ -625,12 +634,12 @@ describe("CreateEntityItemContainer", () => {
 
     it("opens the preview dialog on the file field whose preview button was clicked", async () => {
       const user = userEvent.setup();
-      stubScreen(false);
+      stubViewWidth(false);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
       renderForm();
 
       await screen.findByLabelText("Attachment");
-      // On a narrow screen the preview is only in the dialog, not also hidden beside the form.
+      // In a narrow view the preview is only in the dialog, not also hidden beside the form.
       expect(screen.queryByRole("complementary", { name: "File preview" })).not.toBeInTheDocument();
       await user.upload(fileInput(1), textFile());
       await user.click(screen.getByRole("button", { name: "Preview file" }));
@@ -642,9 +651,9 @@ describe("CreateEntityItemContainer", () => {
       ).toBeInTheDocument();
     });
 
-    it("closes the preview dialog when the window widens, and doesn't reopen it on narrowing", async () => {
+    it("closes the preview dialog when the view widens, and doesn't reopen it on narrowing", async () => {
       const user = userEvent.setup();
-      const screenWidth = stubScreen(false);
+      const viewWidth = stubViewWidth(false);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
       renderForm();
 
@@ -653,11 +662,11 @@ describe("CreateEntityItemContainer", () => {
       await user.click(screen.getByRole("button", { name: "Preview file" }));
       expect(screen.getByRole("dialog", { name: "Preview file" })).toBeInTheDocument();
 
-      screenWidth.resize(true);
+      viewWidth.resize(true);
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByRole("complementary", { name: "File preview" })).toBeInTheDocument();
 
-      screenWidth.resize(false);
+      viewWidth.resize(false);
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
