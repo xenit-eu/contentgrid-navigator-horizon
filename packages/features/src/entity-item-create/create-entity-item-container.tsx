@@ -1,4 +1,4 @@
-import { type SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
@@ -16,8 +16,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  SPLIT_BREAKPOINT_QUERY,
-  useMediaQuery,
+  useContainerWidthAtLeast,
 } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import {
@@ -143,11 +142,13 @@ function CreateEntityItemContainerReady({
   const fileFieldName = fileFields[0]?.name;
   // The file field shown in the preview: the first one, until the user picks a file in another.
   const [previewFieldName, setPreviewFieldName] = useState(fileFieldName);
-  // The preview dialog, opened from a file field's preview button on narrow screens.
+  // The preview dialog, opened from a file field's preview button when the view is narrow.
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const isNarrow = !useMediaQuery(SPLIT_BREAKPOINT_QUERY);
-  // The dialog only exists on narrow screens. Widening the window closes it, so narrowing it again
-  // doesn't reopen a dialog the user never asked for.
+  // The view's own width, not the window's, so opening or closing the sidebar counts.
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const isNarrow = !useContainerWidthAtLeast(layoutRef, "side-by-side");
+  // The dialog only exists while the view is narrow. Widening the view closes it, so narrowing it
+  // again doesn't reopen a dialog the user never asked for.
   if (!isNarrow && isPreviewOpen) setIsPreviewOpen(false);
   const [initialValues] = useState(() => {
     const { initialFile } = useCreateEntityItemState.getState();
@@ -316,28 +317,34 @@ function CreateEntityItemContainerReady({
   );
 
   return (
-    <div className="flex gap-6 split:min-h-0 split:flex-1">
-      <div className="min-w-0 flex-[2] split:flex split:max-w-2xl split:flex-col">{form}</div>
-      {isNarrow ? (
-        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-          <DialogContent className="flex h-[80vh] flex-col gap-0 p-0 sm:max-w-3xl">
-            <DialogHeader className="border-b p-4">
-              <DialogTitle>Preview file</DialogTitle>
-              <DialogDescription className="sr-only">
-                The file picked in the form, before it is saved.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="min-h-0 flex-1">{preview}</div>
-          </DialogContent>
-        </Dialog>
-      ) : (
-        <aside
-          aria-label="File preview"
-          className="min-w-0 flex-[3] overflow-hidden rounded-md border"
-        >
-          {preview}
-        </aside>
-      )}
+    // The `@container` the `@side-by-side:` classes below measure. A container query can't size the
+    // container itself, so its full height when wide comes from `isNarrow`.
+    <div ref={layoutRef} className={isNarrow ? "@container" : "@container h-full"}>
+      <div className="flex gap-6 @side-by-side:h-full">
+        <div className="min-w-0 flex-[2] @side-by-side:flex @side-by-side:max-w-2xl @side-by-side:flex-col">
+          {form}
+        </div>
+        {isNarrow ? (
+          <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+            <DialogContent className="flex h-[80vh] flex-col gap-0 p-0 sm:max-w-3xl">
+              <DialogHeader className="border-b p-4">
+                <DialogTitle>Preview file</DialogTitle>
+                <DialogDescription className="sr-only">
+                  The file picked in the form, before it is saved.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="min-h-0 flex-1">{preview}</div>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <aside
+            aria-label="File preview"
+            className="min-w-0 flex-[3] overflow-hidden rounded-md border"
+          >
+            {preview}
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

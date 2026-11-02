@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { PageTitle, UnsavedChangesDialog } from "@contentgrid/ui";
+import { UnsavedChangesDialog } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import type { RelationConflictAlertProps, ValidationAlertProps } from "../problem-details";
 import { useUnsavedChangesGuard } from "../unsaved-changes-guard";
@@ -31,7 +31,7 @@ export interface CreateEntityItemViewProps {
 }
 
 /**
- * App-agnostic create-item content: title, unsaved-changes guard, and
+ * App-agnostic create-item content: unsaved-changes guard and
  * `CreateEntityItemContainer`. No page chrome of its own — the caller wraps this
  * in whatever layout (e.g. `BreadCrumbsToolBarLayout`) the route needs, and
  * that layout owns the surrounding padding. All routing / navigation is
@@ -55,10 +55,7 @@ export function CreateEntityItemView({
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
 
   return (
-    // From the `split:` breakpoint up the view fills the page height, so the form and the file
-    // preview beside it each scroll on their own.
-    <div className="flex flex-col gap-6 split:h-full">
-      <PageTitle header="Create" title={profile.singularName} subtitle="" />
+    <>
       <UnsavedChangesDialog
         open={unsavedChangesGuard.isBlocked}
         onConfirm={unsavedChangesGuard.confirmNavigation}
@@ -80,6 +77,6 @@ export function CreateEntityItemView({
         onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
         onRequiredRelationClick={onRequiredRelationClick}
       />
-    </div>
+    </>
   );
 }
