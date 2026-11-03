@@ -2,11 +2,13 @@ import { PlusIcon as Plus } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type ProfileEntity,
+  toProblemDisplayModel,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { Button, EntityCard, Skeleton } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
+import { ProblemAlert } from "../problem-details";
 
 // ---------------------------------------------------------------------------
 // EntityOverviewPage — index route component (grid of entity cards)
@@ -29,7 +31,13 @@ export function EntityCountOverview() {
 function EntityOverview({
   onSelectEntity,
 }: Readonly<{ onSelectEntity: (profile: ProfileEntity) => void }>) {
-  const { profiles: loadedProfiles, isLoading } = useLoadedProfileEntities();
+  const { profiles: loadedProfiles, isLoading, error } = useLoadedProfileEntities();
+
+  if (error) {
+    return (
+      <ProblemAlert model={toProblemDisplayModel(error)} className="text-sm max-w-3xl mx-auto" />
+    );
+  }
 
   if (isLoading) {
     return (

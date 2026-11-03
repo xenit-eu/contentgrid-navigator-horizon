@@ -20,10 +20,10 @@ version conflict the form's Refresh calls the view's `refetch`; the form then op
 version. When a refetch of a loaded item fails, the view keeps the item (and an open edit form) on screen.
 
 Its `content-focus` variation (`variations/content-focus/`, public entry point
-`EntityItemContentFocusBody`) renders an entity item's content attribute — a PDF, an image or a
+`EntityItemDetailBody`) renders an entity item's content attribute — a PDF, an image or a
 video as stored, or any other file previewed through the platform's PDF rendition service — next
 to those same attributes and relations, with the production viewer toolbar.
-`EntityItemContentFocusBody` takes an already-loaded `entityItem` (its profile is
+`EntityItemDetailBody` takes an already-loaded `entityItem` (its profile is
 `entityItem.profileEntity`) and its `refetch` from the view above it
 (`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemDetail` for any item
 with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
@@ -35,10 +35,10 @@ The three-track model (`packages/features/CLAUDE.md`) gates stability per featur
 there is currently no mechanism to flag one variation inside a `stable` feature as
 `experimental`. Folding `content-focus` into `entity-item` accepted that gap knowingly rather than
 inventing a new mechanism for it, and the gap is still there: nothing prevents an app from
-importing `EntityItemContentFocusBody` the way `x-stability` prevents importing an actually
+importing `EntityItemDetailBody` the way `x-stability` prevents importing an actually
 `experimental`/`candidate` feature.
 
-**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemContentFocusBody`
+**Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemDetailBody`
 was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
 both apps' `$entity/$itemId.tsx` item routes, through the item detail view in `packages/views`;
 the view itself falls back to plain `EntityItemDetail` per item for FR-001. There is no longer an "experimental-only" convention to enforce
@@ -56,7 +56,7 @@ edit/  (edit-entity-item-container -> edit-entity-item-form;
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 variations/content-focus/
-  body/  (entity-item-content-focus-body.tsx)
+  body/  (entity-item-detail-body.tsx)
     -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel,
                      content-preview-toolbar, image-video-viewer)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
@@ -72,7 +72,7 @@ variations/content-focus/
   util               -> @contentgrid/navigator-data only — no UI, no React components
 ```
 
-- `variations/content-focus/body/entity-item-content-focus-body.tsx` (`EntityItemContentFocusBody`)
+- `variations/content-focus/body/entity-item-detail-body.tsx` (`EntityItemDetailBody`)
   takes the loaded `entityItem` plus relation callbacks, and no toolbar, breadcrumb or link
   render props: its view loads the main object once and draws the chrome (ADR-018; this
   supersedes the earlier "primitives only" rule of spec `002-pdf-viewer`).

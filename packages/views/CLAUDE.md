@@ -61,7 +61,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   `{ entityName, itemId }` or by `{ itemUrl }`. The view resolves the target itself with `useEntityItemTarget`
   (`src/hooks/`), which finds the profile by name or through `describesUrl`, never by reading the name from the
   link. Both modes share `useEntityItem`'s cache key. The view draws the loading, error and not-found states and
-  the toolbar, then hands the loaded `entityItem` to `EntityItemContentFocusBody` from
+  the toolbar, then hands the loaded `entityItem` to `EntityItemDetailBody` from
   `@contentgrid/features/entity-item`. The toolbar is drawn from the `EntityItemTargetResult` in every state,
   each crumb as soon as it is known. `ViewProps`/`ViewToolbarConfiguration` live in `src/types/view.tsx`;
   `EntityItemTarget`/`EntityItemTargetResult` next to the hook. The relation-problem dialog lives in the view; relation

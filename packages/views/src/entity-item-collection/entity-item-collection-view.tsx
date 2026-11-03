@@ -115,9 +115,7 @@ export function EntityItemCollectionView({
       actions={
         <>
           {profileEntity?.createTemplate && (
-            <Button
-              onClick={() => navigation.openCreateItem(profileEntity.name, { openInNewTab: true })}
-            >
+            <Button onClick={() => navigation.openCreateItem(profileEntity.name)}>
               Create {profileEntity.singularName}
             </Button>
           )}

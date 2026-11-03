@@ -1,5 +1,5 @@
 /**
- * Tests for `EntityItemContentFocusBody`'s own orchestration logic: the FR-001 layout branch,
+ * Tests for `EntityItemDetailBody`'s own orchestration logic: the FR-001 layout branch,
  * default content-attribute selection and attribute-selector switching, for an already-loaded
  * profile and item (the view above it owns loading, the toolbar and padding). `ContentPreviewPanel` and
  * `ContentAttributeSelector` are mocked too, for the same reason (T027's own test already covers
@@ -20,7 +20,7 @@ import {
   createApiClient,
   createContentClient,
 } from "@contentgrid/navigator-data";
-import { EntityItemContentFocusBody } from "./entity-item-content-focus-body";
+import { EntityItemDetailBody } from "./entity-item-detail-body";
 
 const PROFILE_URL = "https://api.example.com/profile/order";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
@@ -30,7 +30,7 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
  * mocked below): `EntityItemDetail`'s `EntityItemReference` header (stable `entity-item` feature)
  * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
  * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
- * pattern as `entity-item/variations/entity-item-reference.test.tsx`. `EntityItemContentFocusBody`
+ * pattern as `entity-item/variations/entity-item-reference.test.tsx`. `EntityItemDetailBody`
  * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
  * needed here either.
  */
@@ -138,12 +138,12 @@ function makeEntityItem(options: {
   } as unknown as EntityItem;
 }
 
-describe("EntityItemContentFocusBody", () => {
+describe("EntityItemDetailBody", () => {
   it("renders the existing EntityItemDetail body when the entity has no content attributes (FR-001)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderBody(<EntityItemContentFocusBody entityItem={item} />);
+    const { container } = renderBody(<EntityItemDetailBody entityItem={item} />);
 
     // EntityItemDetail's own item-reference header (`data-slot="item-reference"`) — it draws no
     // toolbar itself, so this always renders.
@@ -164,7 +164,7 @@ describe("EntityItemContentFocusBody", () => {
       ],
     });
 
-    renderBody(<EntityItemContentFocusBody entityItem={item} />);
+    renderBody(<EntityItemDetailBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
     expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
@@ -180,7 +180,7 @@ describe("EntityItemContentFocusBody", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderBody(<EntityItemContentFocusBody entityItem={item} />);
+    renderBody(<EntityItemDetailBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
   });
@@ -195,7 +195,7 @@ describe("EntityItemContentFocusBody", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderBody(<EntityItemContentFocusBody entityItem={item} />);
+    renderBody(<EntityItemDetailBody entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
 
@@ -214,7 +214,7 @@ describe("EntityItemContentFocusBody", () => {
       profileEntity: profileA,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    const { rerender } = renderBody(<EntityItemContentFocusBody entityItem={itemA} />);
+    const { rerender } = renderBody(<EntityItemDetailBody entityItem={itemA} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
@@ -235,7 +235,7 @@ describe("EntityItemContentFocusBody", () => {
         contentFetch={createContentClient(noopSupplier)}
         profileUrl={PROFILE_URL}
       >
-        <EntityItemContentFocusBody entityItem={itemB} />
+        <EntityItemDetailBody entityItem={itemB} />
       </NavigatorDataProvider>,
     );
 
@@ -259,7 +259,7 @@ describe("EntityItemContentFocusBody", () => {
     const onRelationItemClick = vi.fn();
 
     renderBody(
-      <EntityItemContentFocusBody entityItem={item} onRelationItemClick={onRelationItemClick} />,
+      <EntityItemDetailBody entityItem={item} onRelationItemClick={onRelationItemClick} />,
     );
 
     expect(await screen.findByText("many-relation")).toBeInTheDocument();
@@ -271,7 +271,7 @@ describe("EntityItemContentFocusBody", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderBody(<EntityItemContentFocusBody entityItem={item} />);
+    const { container } = renderBody(<EntityItemDetailBody entityItem={item} />);
 
     const root = container.firstElementChild as HTMLElement;
     expect(root).toHaveClass("h-full", "min-h-0");

@@ -22,7 +22,7 @@ import { ContentPreviewPanel } from "../components/content-preview-panel";
 import { selectDefaultContentAttribute } from "../util/select-default-content-attribute";
 
 /**
- * Content padding for whatever wraps {@link EntityItemContentFocusBody}. When the content-focus
+ * Content padding for whatever wraps {@link EntityItemDetailBody}. When the content-focus
  * body is what renders (`profileEntity.hasContentAttributes`), the preview panel should run edge
  * to edge rather than sit inside the standard page gutters — drop the horizontal padding, and the
  * top vertical padding too (the toolbar strip above already has its own bottom padding, so a top
@@ -30,11 +30,11 @@ import { selectDefaultContentAttribute } from "../util/select-default-content-at
  * the end of the scroll region. The `EntityItemDetail` fallback body keeps the standard padding on
  * both axes.
  */
-export function entityItemContentFocusPadding(profileEntity: ProfileEntity): true | "bottom" {
+export function entityItemDetailPadding(profileEntity: ProfileEntity): true | "bottom" {
   return profileEntity.hasContentAttributes ? "bottom" : true;
 }
 
-export type EntityItemContentFocusBodyProps = RelationProblemHandlers & {
+export type EntityItemDetailBodyProps = RelationProblemHandlers & {
   /** The already-loaded item; its profile is `entityItem.profileEntity`. */
   readonly entityItem: EntityItem;
   /** Fired when the user clicks through to a related entity item, from either a to-one or
@@ -58,7 +58,7 @@ export type EntityItemContentFocusBodyProps = RelationProblemHandlers & {
  * preview beside the item's attributes and relations. The preview and relations load their own
  * follow-up data by following the item's links.
  */
-export function EntityItemContentFocusBody({
+export function EntityItemDetailBody({
   entityItem,
   refetch = noRefetch,
   onRelationItemClick,
@@ -66,7 +66,7 @@ export function EntityItemContentFocusBody({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<EntityItemContentFocusBodyProps>) {
+}: Readonly<EntityItemDetailBodyProps>) {
   const { profileEntity } = entityItem;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
 
@@ -151,7 +151,7 @@ function ContentFocusEntityItemBody({
   onRelationItemClick: (relatedEntityName: string, relatedItemId: string) => void;
 }> &
   Pick<
-    EntityItemContentFocusBodyProps,
+    EntityItemDetailBodyProps,
     | "onRelationItemCreateNew"
     | "onMissingRelationTargetClick"
     | "onBlindRelationOverwriteClick"

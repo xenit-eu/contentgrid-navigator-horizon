@@ -29,8 +29,8 @@ export {
   ContentAttributeSelector,
   ContentPreviewFrame,
   ContentPreviewPanel,
-  EntityItemContentFocusBody,
-  entityItemContentFocusPadding,
+  EntityItemDetailBody,
+  entityItemDetailPadding,
 } from "./variations/content-focus";
 export type {
   ContentAttributeSelectorProps,
@@ -38,5 +38,5 @@ export type {
   ContentPreviewFrameProps,
   ContentPreviewFrameLabels,
   ContentPreviewPanelProps,
-  EntityItemContentFocusBodyProps,
+  EntityItemDetailBodyProps,
 } from "./variations/content-focus";

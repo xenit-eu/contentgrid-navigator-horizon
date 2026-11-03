@@ -1,5 +1,5 @@
 /**
- * The view's wiring of the item feature's callbacks. `EntityItemContentFocusBody` is stubbed to
+ * The view's wiring of the item feature's callbacks. `EntityItemDetailBody` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
  * view does with them: relation clicks and "create" go to the navigation object, relation
  * problems open the dialog.
@@ -11,10 +11,10 @@ import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harnes
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
 vi.mock("@contentgrid/features/entity-item", () => ({
-  entityItemContentFocusPadding: () => true,
+  entityItemDetailPadding: () => true,
   // The breadcrumbs draw the loaded item with it.
   EntityItemReference: () => <span>item-reference</span>,
-  EntityItemContentFocusBody: (props: {
+  EntityItemDetailBody: (props: {
     onRelationItemClick?: (target: { entityName: string; itemId: string }) => void;
     onRelationItemCreateNew?: (entityName: string) => void;
     onMissingRelationTargetClick?: (url: string, field?: string) => void;
