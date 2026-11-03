@@ -156,12 +156,12 @@ function EntityItemContentFocusViewBody({
       {/* A failed background refetch keeps the loaded item (and an open edit form) on screen. */}
       {item.isError && !item.data && <ErrorPage model={toProblemDisplayModel(item.error)} />}
       {item.data && (
-        <EntityItemContentFocusBody entityItem={item.data} refetch={item.refetch} {...handlers} />
+        <EntityItemDetailBody entityItem={item.data} refetch={item.refetch} {...handlers} />
       )}
     </>
   );
 
-  const contentPadding = entityItemContentFocusPadding(profileEntity);
+  const contentPadding = entityItemDetailPadding(profileEntity);
 
   if (resolvedToolbar === false) {
     return <PageLayout padded={contentPadding}>{content}</PageLayout>;
@@ -178,7 +178,7 @@ function EntityItemContentFocusViewBody({
 }
 
 /**
- * Content padding for whatever wraps {@link EntityItemContentFocusBody}. When the content-focus
+ * Content padding for whatever wraps {@link EntityItemDetailBody}. When the content-focus
  * body is what renders (`profileEntity.hasContentAttributes`), the preview panel should run edge
  * to edge rather than sit inside the standard page gutters — drop the horizontal padding, and the
  * top vertical padding too (the toolbar strip above already has its own bottom padding, so a top
@@ -186,7 +186,7 @@ function EntityItemContentFocusViewBody({
  * the end of the scroll region. The `EntityItemView` fallback body keeps the standard padding on
  * both axes.
  */
-export function entityItemContentFocusPadding(profileEntity: ProfileEntity): true | "bottom" {
+export function entityItemDetailPadding(profileEntity: ProfileEntity): true | "bottom" {
   return profileEntity.hasContentAttributes ? "bottom" : true;
 }
 
@@ -195,7 +195,7 @@ type EditContextRefetch = Parameters<typeof useEditContext>[1];
 // Without a `refetch` the edit form's Refresh has nothing to reload, so it leaves the form as is.
 const noRefetch: EditContextRefetch = async () => ({ isSuccess: false });
 
-export type EntityItemContentFocusBodyProps = Pick<
+export type EntityItemDetailBodyProps = Pick<
   EntityItemContentFocusViewProps,
   | "onRelationItemClick"
   | "onRelationItemCreateNew"
@@ -218,7 +218,7 @@ export type EntityItemContentFocusBodyProps = Pick<
  * entity with no content attributes falls back to the existing (stable) `EntityItemView` body;
  * one that has them renders the PDF/content preview beside the item's attributes and relations.
  */
-export function EntityItemContentFocusBody({
+export function EntityItemDetailBody({
   entityItem,
   refetch = noRefetch,
   onRelationItemClick,
@@ -226,7 +226,7 @@ export function EntityItemContentFocusBody({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<EntityItemContentFocusBodyProps>) {
+}: Readonly<EntityItemDetailBodyProps>) {
   const { profileEntity } = entityItem;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const editContext = useEditContext(entityItem, refetch);

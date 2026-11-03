@@ -1,9 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
-import {
-  EntityItemContentFocusBody,
-  entityItemContentFocusPadding,
-} from "@contentgrid/features/entity-item";
+import { EntityItemDetailBody, entityItemDetailPadding } from "@contentgrid/features/entity-item";
 import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
@@ -42,7 +39,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
     content = <ErrorPage model={toProblemDisplayModel(result.error)} />;
   } else if (result.status === "success") {
     content = (
-      <EntityItemContentFocusBody
+      <EntityItemDetailBody
         entityItem={result.entityItem}
         refetch={result.refetch}
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
@@ -67,7 +64,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   }
 
   const profileEntity = result.status === "not-found" ? undefined : result.profileEntity;
-  const contentPadding = profileEntity ? entityItemContentFocusPadding(profileEntity) : true;
+  const contentPadding = profileEntity ? entityItemDetailPadding(profileEntity) : true;
 
   if (toolbar === false) {
     return (

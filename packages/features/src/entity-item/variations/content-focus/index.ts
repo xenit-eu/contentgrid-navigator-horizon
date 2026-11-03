@@ -24,12 +24,12 @@ export type {
 export { ContentPreviewPanel } from "./components/content-preview-panel";
 export type { ContentPreviewPanelProps } from "./components/content-preview-panel";
 export {
-  EntityItemContentFocusBody,
+  EntityItemDetailBody,
   EntityItemContentFocusView,
-  entityItemContentFocusPadding,
+  entityItemDetailPadding,
 } from "./views/entity-item-content-focus-view";
 export type {
-  EntityItemContentFocusBodyProps,
+  EntityItemDetailBodyProps,
   EntityItemContentFocusViewProps,
   ViewToolbarConfiguration,
   ViewToolbarOptions,
