@@ -11,6 +11,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../../test-setup";
 import { createApiClient } from "../../api/client";
+import { isProblemWithStatus } from "../../api/problem-details";
 import { BASE, PROFILE_URL, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
 import {
   ensureProfileEntity,
@@ -266,6 +267,17 @@ describe("useLoadedProfileEntities", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.profiles.map((p) => p.name).sort()).toEqual(["customer", "invoice"]);
+  });
+
+  it("exposes the profile root error instead of reading as an empty profile", async () => {
+    server.use(http.get(PROFILE_URL, () => new HttpResponse(null, { status: 401 })));
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useLoadedProfileEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.profiles).toEqual([]);
+    expect(isProblemWithStatus(result.current.error, 401)).toBe(true);
   });
 });
 
