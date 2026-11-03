@@ -27,9 +27,14 @@ import { EntityItemReference } from "../variations/entity-item-reference";
 export interface DeleteEntityItemButtonProps {
   readonly item: EntityItem;
   readonly onDeleted: () => void;
+  readonly label?: string;
 }
 
-export function DeleteEntityItemButton({ item, onDeleted }: Readonly<DeleteEntityItemButtonProps>) {
+export function DeleteEntityItemButton({
+  item,
+  onDeleted,
+  label,
+}: Readonly<DeleteEntityItemButtonProps>) {
   const [open, setOpen] = useState(false);
   const deleteMutation = useDeleteEntityItem({ mutationOptions: { onSuccess: onDeleted } });
   // Stays busy after success too: the host is navigating away, the item is gone.
@@ -55,19 +60,26 @@ export function DeleteEntityItemButton({ item, onDeleted }: Readonly<DeleteEntit
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <TooltipProvider>
-        <Tooltip>
+        <Tooltip open={label ? false : undefined}>
           <TooltipTrigger asChild>
             <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon-sm"
-                aria-label="Delete"
-                className="size-7 rounded-md"
-                // No onclick, that's what the wrapping AlertDialogTrigger is for
-              >
-                <TrashIcon className="size-3.5" />
-              </Button>
+              // No onclick, that's what the wrapping AlertDialogTrigger is for
+              {label ? (
+                <Button type="button" variant="destructive" size="sm">
+                  <TrashIcon />
+                  {label}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon-sm"
+                  aria-label="Delete"
+                  className="size-7 rounded-md"
+                >
+                  <TrashIcon className="size-3.5" />
+                </Button>
+              )}
             </AlertDialogTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom">Delete</TooltipContent>
