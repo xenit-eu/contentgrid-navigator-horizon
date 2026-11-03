@@ -70,6 +70,7 @@ export function useProfileEntities(options?: UseProfileEntitiesOptions) {
 export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
   readonly profiles: readonly ProfileEntity[];
   readonly isLoading: boolean;
+  readonly error: Error | null;
 } {
   const { apiFetch, profileUrl } = useNavigatorData();
   const rootQuery = useQuery(profileRootQuery(apiFetch, profileUrl));
@@ -77,6 +78,7 @@ export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
   return {
     profiles: results.filter((r) => r.data).map((r) => r.data as ProfileEntity),
     isLoading: isAnyProfileLoading(rootQuery.isPending, results),
+    error: rootQuery.error,
   };
 }
 
