@@ -33,7 +33,7 @@ vi.mock("../item-reference/entity-item-reference", () => ({
   EntityItemReference: () => <div>reference</div>,
 }));
 
-vi.mock("../entity-item-relation-summary", () => ({
+vi.mock("../../relations/relation-summary", () => ({
   EntityItemRelationSummary: () => null,
 }));
 

@@ -7,8 +7,8 @@ import {
   hasEntityItemRelations,
 } from "../../entity-item-sections";
 import { CompactRelationLayout } from "../../relations/relation-layout";
+import { EntityItemRelationSummary } from "../../relations/relation-summary";
 import { useEntityItemContext } from "../../use-entity-item-context";
-import { EntityItemRelationSummary } from "../entity-item-relation-summary";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 

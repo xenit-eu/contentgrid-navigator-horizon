@@ -24,7 +24,7 @@ vi.mock("../../attributes/entity-item-attributes", () => ({
   EntityItemAuditTrail: () => <div>audit</div>,
   hasAuditTrail: () => false,
 }));
-vi.mock("../entity-item-relation-summary", () => ({
+vi.mock("../../relations/relation-summary", () => ({
   EntityItemRelationSummary: () => null,
 }));
 vi.mock("../item-reference/entity-item-reference", () => ({

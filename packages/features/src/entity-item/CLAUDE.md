@@ -13,12 +13,11 @@ draws a toolbar or page chrome (see "Page layout" in `packages/features/CLAUDE.m
 use-entity-item-context.ts   item context hook (item, refetch, edit mode)
 entity-item-sections.tsx     attributes, relations and audit trail as collapsible sections
 attributes/                  attribute list, editable attributes, value renderers
-relations/                   to-one / to-many relation sections, relation picker
+relations/                   to-one / to-many relation sections, relation picker, relation summary
 edit/                        edit button, update form
 variations/
   entity-item-variation-props.ts   props every variation takes
   entity-item-auto-variation.tsx   picks and renders a variation
-  entity-item-relation-summary.tsx relation titles and counts under the item's title
   attribute-focus/   EntityItemAttributeFocus — sections in one card
   content-focus/     EntityItemContentFocus — content preview + sections side panel
   attribute-summary/ EntityItemAttributeSummary — compact label/value grid (relation cards)

@@ -8,7 +8,7 @@ import {
   useEntityItemToManyRelation,
   useEntityItemToOneRelation,
 } from "@contentgrid/navigator-data";
-import { EntityItemRelationSummary } from "./entity-item-relation-summary";
+import { EntityItemRelationSummary } from "./relation-summary";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
