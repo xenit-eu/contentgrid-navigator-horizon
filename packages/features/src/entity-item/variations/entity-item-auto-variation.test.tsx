@@ -1,6 +1,6 @@
 /**
- * Tests for `EntityItemDetailBody`'s own orchestration logic: the FR-001 layout branch,
- * default content-attribute selection and attribute-selector switching, for an already-loaded
+ * Tests for `EntityItemAutoVariation`'s own orchestration logic: the FR-001 layout branch, an
+ * explicitly chosen variation, default content-attribute selection and attribute-selector switching, for an already-loaded
  * profile and item (the view above it owns loading, the toolbar and padding). `ContentPreviewPanel` and
  * `ContentAttributeSelector` are mocked too, for the same reason (T027's own test already covers
  * the panel's real `useContentPreview` integration) and to avoid driving a Radix `Select`
@@ -20,7 +20,11 @@ import {
   createApiClient,
   createContentClient,
 } from "@contentgrid/navigator-data";
-import { EntityItemDetailBody } from "./entity-item-detail-body";
+import {
+  EntityItemAutoVariation,
+  entityItemDetailPadding,
+  entityItemVariations,
+} from "./entity-item-auto-variation";
 
 const PROFILE_URL = "https://api.example.com/profile/order";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
@@ -30,7 +34,7 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
  * mocked below): `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature)
  * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
  * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
- * pattern as `entity-item/variations/item-reference/entity-item-reference.test.tsx`. `EntityItemDetailBody`
+ * pattern as `entity-item/variations/item-reference/entity-item-reference.test.tsx`. `EntityItemAutoVariation`
  * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
  * needed here either.
  */
@@ -54,7 +58,7 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   };
 });
 
-vi.mock("../components/content-preview-panel", () => ({
+vi.mock("./content-focus/components/content-preview-panel", () => ({
   ContentPreviewPanel: (props: { attributeName: string; toolbarStart?: ReactNode }) => (
     <div>
       <div>content-preview-panel:{props.attributeName}</div>
@@ -63,16 +67,16 @@ vi.mock("../components/content-preview-panel", () => ({
   ),
 }));
 
-vi.mock("../../../relations/relation-to-one-section", () => ({
+vi.mock("../relations/relation-to-one-section", () => ({
   RelationToOneSection: (props: { onItemClick?: (entity: string, id: string) => void }) => (
     <button onClick={() => props.onItemClick?.("company", "c-1")}>one-relation</button>
   ),
 }));
-vi.mock("../../../relations/relation-to-many-section", () => ({
+vi.mock("../relations/relation-to-many-section", () => ({
   RelationToManySection: () => <div>many-relation</div>,
 }));
 
-vi.mock("../components/content-attribute-selector", () => ({
+vi.mock("./content-focus/components/content-attribute-selector", () => ({
   ContentAttributeSelector: (props: { value: string; onChange: (name: string) => void }) => (
     <button type="button" onClick={() => props.onChange("receipt")}>
       switch to receipt (currently {props.value})
@@ -138,12 +142,12 @@ function makeEntityItem(options: {
   } as unknown as EntityItem;
 }
 
-describe("EntityItemDetailBody", () => {
+describe("EntityItemAutoVariation", () => {
   it("renders the existing EntityItemAttributeFocus body when the entity has no content attributes (FR-001)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderBody(<EntityItemDetailBody entityItem={item} />);
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     // EntityItemAttributeFocus's own item-reference header (`data-slot="item-reference"`) — it draws no
     // toolbar itself, so this always renders.
@@ -164,7 +168,7 @@ describe("EntityItemDetailBody", () => {
       ],
     });
 
-    renderBody(<EntityItemDetailBody entityItem={item} />);
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
     expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
@@ -180,7 +184,7 @@ describe("EntityItemDetailBody", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderBody(<EntityItemDetailBody entityItem={item} />);
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
   });
@@ -195,7 +199,7 @@ describe("EntityItemDetailBody", () => {
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
 
-    renderBody(<EntityItemDetailBody entityItem={item} />);
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
 
@@ -214,7 +218,7 @@ describe("EntityItemDetailBody", () => {
       profileEntity: profileA,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    const { rerender } = renderBody(<EntityItemDetailBody entityItem={itemA} />);
+    const { rerender } = renderBody(<EntityItemAutoVariation entityItem={itemA} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
@@ -235,7 +239,7 @@ describe("EntityItemDetailBody", () => {
         contentFetch={createContentClient(noopSupplier)}
         profileUrl={PROFILE_URL}
       >
-        <EntityItemDetailBody entityItem={itemB} />
+        <EntityItemAutoVariation entityItem={itemB} />
       </NavigatorDataProvider>,
     );
 
@@ -259,7 +263,7 @@ describe("EntityItemDetailBody", () => {
     const onRelationItemClick = vi.fn();
 
     renderBody(
-      <EntityItemDetailBody entityItem={item} onRelationItemClick={onRelationItemClick} />,
+      <EntityItemAutoVariation entityItem={item} onRelationItemClick={onRelationItemClick} />,
     );
 
     expect(await screen.findByText("many-relation")).toBeInTheDocument();
@@ -271,10 +275,40 @@ describe("EntityItemDetailBody", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
-    const { container } = renderBody(<EntityItemDetailBody entityItem={item} />);
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     const root = container.firstElementChild as HTMLElement;
     expect(root).toHaveClass("h-full", "min-h-0");
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+  it("renders the variation it is given, whatever the entity's content attributes", async () => {
+    const withContent = makeEntityItem({
+      profileEntity: makeProfile({
+        hasContentAttributes: true,
+        contentAttributeNames: ["document"],
+      }),
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    const { container } = renderBody(
+      <EntityItemAutoVariation entityItem={withContent} variation="attribute-focus" />,
+    );
+
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
+  });
+
+  it("lists every variation by name", () => {
+    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus"]);
+  });
+
+  it("pads content focus only at the bottom, and attribute focus on both axes", () => {
+    const withContent = makeProfile({ hasContentAttributes: true });
+    const withoutContent = makeProfile({ hasContentAttributes: false });
+
+    expect(entityItemDetailPadding(withContent)).toBe("bottom");
+    expect(entityItemDetailPadding(withoutContent)).toBe(true);
+    expect(entityItemDetailPadding(withContent, "attribute-focus")).toBe(true);
+    expect(entityItemDetailPadding(withoutContent, "content-focus")).toBe("bottom");
   });
 });

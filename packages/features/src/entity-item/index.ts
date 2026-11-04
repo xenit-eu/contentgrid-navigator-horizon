@@ -1,5 +1,4 @@
 export { EntityItemAttributeFocus } from "./variations/attribute-focus/entity-item-attribute-focus";
-export type { EntityItemAttributeFocusProps } from "./variations/attribute-focus/entity-item-attribute-focus";
 export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
@@ -29,8 +28,7 @@ export {
   ContentAttributeSelector,
   ContentPreviewFrame,
   ContentPreviewPanel,
-  EntityItemDetailBody,
-  entityItemDetailPadding,
+  EntityItemContentFocus,
 } from "./variations/content-focus";
 export type {
   ContentAttributeSelectorProps,
@@ -38,5 +36,15 @@ export type {
   ContentPreviewFrameProps,
   ContentPreviewFrameLabels,
   ContentPreviewPanelProps,
-  EntityItemDetailBodyProps,
 } from "./variations/content-focus";
+export {
+  EntityItemAutoVariation,
+  entityItemDetailPadding,
+  entityItemVariations,
+  resolveEntityItemVariation,
+} from "./variations/entity-item-auto-variation";
+export type {
+  EntityItemAutoVariationProps,
+  EntityItemVariation,
+} from "./variations/entity-item-auto-variation";
+export type { EntityItemVariationProps } from "./variations/entity-item-variation-props";

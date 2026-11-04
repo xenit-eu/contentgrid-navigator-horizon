@@ -1,34 +1,12 @@
-import { type EntityItem, useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
 import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
-import { type EditContextRefetch, noRefetch, useEditContext } from "../../edit/use-edit-context";
-import type {
-  RelationItemClickHandler,
-  RelationItemCreateHandler,
-  RelationProblemHandlers,
-} from "../../relations/relation-handlers";
 import { RelationToManySection } from "../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../relations/relation-to-one-section";
+import { useEntityItemContext } from "../../use-entity-item-context";
+import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
-
-export type EntityItemAttributeFocusProps = RelationProblemHandlers & {
-  /** The loaded item (and, through it, its profile). The caller owns loading it. */
-  readonly item: EntityItem;
-  /**
-   * Fired when the user clicks through to a related entity item, from
-   * either a to-one or to-many relation section; receives the target
-   * entity's profile name and the item's id.
-   */
-  readonly onRelationItemClick?: RelationItemClickHandler;
-  /** Fired from a relation picker's "Create" button with the target entity's profile name. */
-  readonly onRelationItemCreateNew?: RelationItemCreateHandler;
-  /**
-   * Reloads the item; the view that owns the item query supplies it. After a version conflict the
-   * edit form's Refresh calls it and moves the form onto the latest version.
-   */
-  readonly refetch?: EditContextRefetch;
-};
 
 /**
  * App-agnostic item detail: renders an already-loaded item's attributes and relations. It draws
@@ -39,15 +17,15 @@ export type EntityItemAttributeFocusProps = RelationProblemHandlers & {
  */
 export function EntityItemAttributeFocus({
   item,
-  refetch = noRefetch,
+  refetch,
   onRelationItemClick,
   onRelationItemCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<EntityItemAttributeFocusProps>) {
+}: Readonly<EntityItemVariationProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const editContext = useEditContext(item, refetch);
+  const itemContext = useEntityItemContext(item, refetch);
 
   return (
     <div className="h-full min-h-0">
@@ -55,17 +33,17 @@ export function EntityItemAttributeFocus({
         <EntityItemReference item={item} size="lg" />
         <EditEntityItemButton
           item={item}
-          isEditing={editContext.isEditing}
-          onEdit={() => editContext.setIsEditing(true)}
+          isEditing={itemContext.isEditing}
+          onEdit={() => itemContext.setIsEditing(true)}
         />
       </div>
 
       <div className="space-y-6 p-4 pt-0">
         <EditableEntityItemAttributes
-          item={editContext.editedItem ?? item}
-          isEditing={editContext.isEditing}
-          onEditingChange={editContext.setIsEditing}
-          onRefresh={() => void editContext.refresh()}
+          item={itemContext.shownItem}
+          isEditing={itemContext.isEditing}
+          onEditingChange={itemContext.setIsEditing}
+          onRefresh={() => void itemContext.refresh()}
         />
 
         {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
