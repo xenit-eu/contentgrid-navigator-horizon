@@ -41,7 +41,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | V. Deny-by-default ABAC              | Pass   | Entities gated on `createTemplate`; drop zone gated on `canUploadContent`; 412 not auto-retried.                                                                                    |
 | VI. Authentication                   | Pass   | Upload uses `contentFetch` (bearer header), unchanged.                                                                                                                              |
 | VII. Supply chain                    | Pass   | No dependency, lockfile or workflow changes.                                                                                                                                        |
-| VIII. View-owned data loading        | Pass   | `ClassifyCreateEntityItemView` and `ContentPreviewPanel` own their hooks; routes only render and navigate.                                                                          |
+| VIII. View-owned data loading        | Pass   | `ClassifyCreateEntityItemPanel` and `ContentPreviewPanel` own their hooks; routes only render and navigate.                                                                         |
 
 Re-check after Phase 1: still passes — contracts add no data imports to `ui` and no data loading to apps.
 
@@ -59,7 +59,7 @@ specs/004-create-item-page/
 ├── checklists/requirements.md
 └── contracts/
     ├── icon-badge-option-picker-pattern.md
-    ├── classify-create-entity-item-view.md
+    ├── classify-create-entity-item-panel.md
     └── content-upload-empty-attribute.md
 ```
 
@@ -75,13 +75,13 @@ packages/ui/src/patterns/icon-badge-option-picker/   # renamed from entity-selec
 packages/ui/src/primitives/sidebar.tsx   # `primary` sidebar menu button variant
 
 packages/features/src/entity-item-create/
-├── classify-create-entity-item-view.tsx           # NEW
-├── classify-create-entity-item-view.test.tsx      # NEW
+├── classify-create-entity-item-panel.tsx           # NEW
+├── classify-create-entity-item-panel.test.tsx      # NEW
 ├── state/create-entity-item-state.ts       # NEW
 ├── create-entity-item-profile-selector.tsx               # NEW: toolbar entity switch (US4) and the page's entity list
 ├── create-entity-item-container.tsx         # prefill from pending file; clear on create/remove
 ├── create-entity-item-container.test.tsx
-└── index.ts                       # export ClassifyCreateEntityItemView
+└── index.ts                       # export ClassifyCreateEntityItemPanel
 
 packages/features/src/hal-forms/state/
 ├── use-hal-forms-field-state.ts       # reset(initialValues?) replaces the baseline; no arg = unchanged
@@ -113,7 +113,7 @@ apps/navigator/tests/e2e/fixtures.ts, navigator.spec.ts  # e2e
 
 1. **ui** — extend `ProfileEntitySelector` and rename it `IconBadgeOptionPicker` per contract; update tests and stories; re-baseline snapshots. (US1, FR-011–013)
 2. **features** — pending-create-file store; `CreateEntityItemProfileSelector(List)` wrappers. (FR-008)
-3. **features** — `ClassifyCreateEntityItemView` (creatable entities filtered inline, D11) + tests; export from `entity-item-create`. (US1, US2 page part)
+3. **features** — `ClassifyCreateEntityItemPanel` (creatable entities filtered inline, D11) + tests; export from `entity-item-create`. (US1, US2 page part)
 4. **features** — create container prefill, clear on successful create / file removed + tests. (US2; the container test renders the real create form, with its `FileRenderer`, and asserts the prefilled file is sent in the create request)
 5. **features + apps** — `CreateEntityItemProfileSelector` (creatable entities filtered inline, D11); add it to the `$entity/~create` toolbar in both apps and key the form on `profile.name`. (US4, FR-020–021)
 6. **apps + sidebar** — `~create` routes in both apps, regenerate route trees, sidebar button (`primary` sidebar variant). (FR-001, FR-004, FR-005)

@@ -151,7 +151,7 @@ function attributeHalFormsField(prop: FormAttributeProperty): HalFormsField {
  * behavior, so this isn't an opt-in the way it is for a create-form field (see
  * `applyAutocompleteOverride`) — it's the direct analog of what the property already does
  * today. `searchContext` carries everything `useTypeahead` needs — the caller (e.g.
- * `entity-item-collection-view.tsx`) reads it off the field rather than re-deriving the same
+ * `entity-item-collection-browser.tsx`) reads it off the field rather than re-deriving the same
  * `SearchHalFormTemplateProperty`/`ProfileEntity` lookup itself; that caller still owns the
  * actual `useTypeahead` call (see `HalFormsFieldRenderer`'s doc comment for why this render layer
  * never fetches anything itself).

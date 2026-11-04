@@ -1,5 +1,5 @@
 /**
- * Tests for EntityItemCollectionView's `pageUrl` / `filters` reconciliation.
+ * Tests for EntityItemCollectionBrowser's `pageUrl` / `filters` reconciliation.
  *
  * Covers the bug this session fixed: a remembered `pageUrl` carries whichever filters were
  * active when it was fetched, baked into its own query string. If that DIFFERS from the current
@@ -23,7 +23,7 @@ import {
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { server } from "../../test-setup";
 import { useEntityDisplayPreferencesStore } from "../preferences";
-import { EntityItemCollectionView } from "./entity-item-collection-view";
+import { EntityItemCollectionBrowser } from "./entity-item-collection-browser";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile/items`;
@@ -133,7 +133,7 @@ function makeItemProfile(): ProfileEntity {
 }
 
 // A distinguishable ITEM COUNT via `total_items_exact`, so the rendered "N items" subtitle
-// (from EntityItemCollectionView's own `PageTitle`, built from `collection.totalItems`) tells us
+// (from EntityItemCollectionBrowser's own `PageTitle`, built from `collection.totalItems`) tells us
 // unambiguously which response actually got used.
 function collectionBody(itemCount: number) {
   const items = Array.from({ length: itemCount }, (_, i) => ({
@@ -166,7 +166,7 @@ function setupCollectionHandler(onRequest?: (url: URL) => void) {
   );
 }
 
-function renderCollectionView(props: {
+function renderBrowser(props: {
   profile: ProfileEntity;
   pageUrl?: string;
   filters?: Record<string, string>;
@@ -190,14 +190,14 @@ function renderCollectionView(props: {
     );
   }
 
-  return render(<EntityItemCollectionView {...props} />, { wrapper: Wrapper });
+  return render(<EntityItemCollectionBrowser {...props} />, { wrapper: Wrapper });
 }
 
-describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => {
+describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () => {
   it("fetches via searchValues when no pageUrl is given", async () => {
     setupCollectionHandler();
 
-    renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
+    renderBrowser({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
     expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
   });
@@ -206,7 +206,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     const onRequest = vi.fn();
     setupCollectionHandler(onRequest);
 
-    renderCollectionView({
+    renderBrowser({
       profile: makeItemProfile(),
       pageUrl: `${COLLECTION_URL}?code~prefix=abc&_cursor=page2token`,
       filters: { "code~prefix": "abc" },
@@ -222,7 +222,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     const onRequest = vi.fn();
     setupCollectionHandler(onRequest);
 
-    renderCollectionView({
+    renderBrowser({
       profile: makeItemProfile(),
       // What FilterSidebar.encodeDateInputValue produces from the datetime-local input (no
       // milliseconds) — the raw sidebar string never round-trips byte-for-byte through the
@@ -240,7 +240,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     const onRequest = vi.fn();
     setupCollectionHandler(onRequest);
 
-    renderCollectionView({
+    renderBrowser({
       profile: makeItemProfile(),
       // What the user typed into the sidebar input; the HAL-FORMS encoder re-serializes the
       // coerced `number` via `"" + value`, which normalizes "10.50" down to "10.5".
@@ -257,7 +257,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
     const onRequest = vi.fn();
     setupCollectionHandler(onRequest);
 
-    renderCollectionView({
+    renderBrowser({
       profile: makeItemProfile(),
       // Encodes a different filter value ("zzz") than what's actually active ("abc") — e.g. a
       // stale QueryClient memo, a deep link, or browser back/forward across a filter change.
@@ -275,7 +275,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
   it("uses pageUrl as-is when filters is omitted and pageUrl encodes no filters", async () => {
     setupCollectionHandler();
 
-    renderCollectionView({
+    renderBrowser({
       profile: makeItemProfile(),
       pageUrl: `${COLLECTION_URL}?_cursor=page2token`,
       // filters omitted entirely — defaults to {}, which matches what this pageUrl encodes (none).
@@ -285,7 +285,7 @@ describe("EntityItemCollectionView — pageUrl / filters reconciliation", () => 
   });
 });
 
-describe("EntityItemCollectionView — Columns selector", () => {
+describe("EntityItemCollectionBrowser — Columns selector", () => {
   afterEach(() => {
     localStorage.clear();
     useEntityDisplayPreferencesStore.setState({ overrides: {} });
@@ -293,7 +293,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
 
   it("renders a Columns button next to Filters", async () => {
     setupCollectionHandler();
-    renderCollectionView({ profile: makeItemProfile() });
+    renderBrowser({ profile: makeItemProfile() });
 
     await screen.findByText((text) => text.startsWith("2 items"));
 
@@ -304,7 +304,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
   it("hides a column in the table when it's unchecked in the Columns popover", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile() });
+    renderBrowser({ profile: makeItemProfile() });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
@@ -318,7 +318,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
   it("does not write the toggle to persisted preferences", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile() });
+    renderBrowser({ profile: makeItemProfile() });
 
     await screen.findByText((text) => text.startsWith("2 items"));
 
@@ -331,7 +331,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
   it("resets the local column selection on remount", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    const { unmount } = renderCollectionView({ profile: makeItemProfile() });
+    const { unmount } = renderBrowser({ profile: makeItemProfile() });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /columns/i }));
@@ -339,7 +339,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
     expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
     unmount();
 
-    renderCollectionView({ profile: makeItemProfile() });
+    renderBrowser({ profile: makeItemProfile() });
     await screen.findByText((text) => text.startsWith("2 items"));
 
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
@@ -348,7 +348,7 @@ describe("EntityItemCollectionView — Columns selector", () => {
   it("keeps an actively-filtered column visible even when unchecked in the picker", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
+    renderBrowser({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
     await screen.findByText((text) => text.startsWith("2 items"));
 
@@ -359,11 +359,11 @@ describe("EntityItemCollectionView — Columns selector", () => {
   });
 });
 
-describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
+describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () => {
   it("renders a labeled input for every search property when Filters opens", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile() });
+    renderBrowser({ profile: makeItemProfile() });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
@@ -376,7 +376,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
   it("renders the prefix-match search property as an autocomplete combobox", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile() });
+    renderBrowser({ profile: makeItemProfile() });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
@@ -388,7 +388,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     setupCollectionHandler();
     const user = userEvent.setup();
     const onFiltersChange = vi.fn();
-    renderCollectionView({ profile: makeItemProfile(), onFiltersChange });
+    renderBrowser({ profile: makeItemProfile(), onFiltersChange });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
@@ -407,7 +407,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     setupCollectionHandler();
     const user = userEvent.setup();
     const onFiltersChange = vi.fn();
-    renderCollectionView({ profile: makeItemProfile(), onFiltersChange });
+    renderBrowser({ profile: makeItemProfile(), onFiltersChange });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
@@ -419,7 +419,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
   it("shows an already-applied filter's value pre-filled in its input", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile(), filters: { amount: "42" } });
+    renderBrowser({ profile: makeItemProfile(), filters: { amount: "42" } });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
@@ -430,7 +430,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
   it("shows an invalid-value error for a non-numeric value already applied to a number filter", async () => {
     setupCollectionHandler();
     const user = userEvent.setup();
-    renderCollectionView({ profile: makeItemProfile(), filters: { amount: "not-a-number" } });
+    renderBrowser({ profile: makeItemProfile(), filters: { amount: "not-a-number" } });
 
     await screen.findByText((text) => text.startsWith("2 items"));
     await user.click(screen.getByRole("button", { name: /filters/i }));
@@ -442,7 +442,7 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     setupCollectionHandler();
     const user = userEvent.setup();
     const onFiltersChange = vi.fn();
-    renderCollectionView({
+    renderBrowser({
       profile: makeItemProfile(),
       filters: { amount: "42" },
       onFiltersChange,

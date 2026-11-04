@@ -1,6 +1,8 @@
 /**
- * Hand-built HAL responses and a fetch over them, for the item detail view's tests and story.
- * One entity (`customer`) with `id` and `name`, one item, no relations or content.
+ * Hand-built HAL responses and a fetch over them, for the item detail view's tests and story
+ * (also reused as the base `customer` entity by `../test-fixtures/collection.ts` for the
+ * collection view's own tests). One entity (`customer`) with `id` and `name`, one item, no
+ * relations or content.
  */
 export const API = "https://api.example.com";
 export const PROFILE_URL = `${API}/profile`;

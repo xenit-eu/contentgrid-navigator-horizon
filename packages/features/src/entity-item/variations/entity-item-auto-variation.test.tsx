@@ -1,12 +1,7 @@
 /**
- * Tests for `EntityItemContentFocusView`'s own orchestration logic: the FR-001 layout branch,
- * default content-attribute selection, attribute-selector switching, and the default breadcrumb
- * trail's app-owned routing (Principle VIII: the view derives crumb LABELS from data it
- * resolved, but knows no routes of its own — clicking a crumb fires a plain callback the host
- * supplies; an omitted callback renders that crumb as plain text). `useProfileEntity`/
- * `useEntityItem` are mocked directly — the real HAL round trip they perform is already covered
- * by navigator-data's own hook tests (ADR-014); this view's job is choosing what to render from
- * their results, not re-proving the fetch itself. `ContentPreviewPanel` and
+ * Tests for `EntityItemAutoVariation`'s own orchestration logic: the FR-001 layout branch, an
+ * explicitly chosen variation, default content-attribute selection and attribute-selector switching, for an already-loaded
+ * profile and item (the view above it owns loading, the toolbar and padding). `ContentPreviewPanel` and
  * `ContentAttributeSelector` are mocked too, for the same reason (T027's own test already covers
  * the panel's real `useContentPreview` integration) and to avoid driving a Radix `Select`
  * popup through jsdom, which this repo has no established pattern for
@@ -24,24 +19,26 @@ import {
   type ProfileEntity,
   createApiClient,
   createContentClient,
-  useEntityItem,
-  useProfileEntity,
 } from "@contentgrid/navigator-data";
-import { EntityItemContentFocusView } from "./entity-item-content-focus-view";
+import {
+  EntityItemAutoVariation,
+  entityItemDetailPadding,
+  entityItemVariations,
+} from "./entity-item-auto-variation";
 
 const PROFILE_URL = "https://api.example.com/profile/order";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
 /**
- * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useProfileEntity`/
- * `useEntityItem` are mocked below): `EntityItemView`'s `EntityItemReference` header (stable
- * `entity-item` feature) calls `useEntityDisplayPreferences`, which reads `useNavigatorData()`
- * directly, so any render of the FR-001 fallback body needs a provider in scope even though no
- * real fetch ever happens — same pattern as `entity-item/variations/entity-item-reference.test.tsx`.
- * No router context is needed here (unlike an earlier version of this test) — the view no
- * longer renders a `Link`; its default breadcrumbs are plain buttons/text driven by props.
+ * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useLoadedProfileEntities` is
+ * mocked below): `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature)
+ * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
+ * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
+ * pattern as `entity-item/variations/item-reference/entity-item-reference.test.tsx`. `EntityItemAutoVariation`
+ * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
+ * needed here either.
  */
-function renderView(children: ReactNode) {
+function renderBody(children: ReactNode) {
   return render(
     <NavigatorDataProvider
       apiFetch={createApiClient(noopSupplier)}
@@ -57,13 +54,11 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
   return {
     ...actual,
-    useProfileEntity: vi.fn(),
-    useEntityItem: vi.fn(),
     useLoadedProfileEntities: vi.fn(() => ({ profiles: [] })),
   };
 });
 
-vi.mock("../components/content-preview-panel", () => ({
+vi.mock("./content-focus/components/content-preview-panel", () => ({
   ContentPreviewPanel: (props: { attributeName: string; toolbarStart?: ReactNode }) => (
     <div>
       <div>content-preview-panel:{props.attributeName}</div>
@@ -72,7 +67,16 @@ vi.mock("../components/content-preview-panel", () => ({
   ),
 }));
 
-vi.mock("../components/content-attribute-selector", () => ({
+vi.mock("../relations/relation-to-one-section", () => ({
+  RelationToOneSection: (props: { onItemClick?: (entity: string, id: string) => void }) => (
+    <button onClick={() => props.onItemClick?.("company", "c-1")}>one-relation</button>
+  ),
+}));
+vi.mock("../relations/relation-to-many-section", () => ({
+  RelationToManySection: () => <div>many-relation</div>,
+}));
+
+vi.mock("./content-focus/components/content-attribute-selector", () => ({
   ContentAttributeSelector: (props: { value: string; onChange: (name: string) => void }) => (
     <button type="button" onClick={() => props.onChange("receipt")}>
       switch to receipt (currently {props.value})
@@ -96,7 +100,7 @@ function makeProfile(options: {
     hasContentAttributes,
     attributes,
     userDefinedAttributes: attributes,
-    // `EntityItemView`'s `EntityItemReference` header (stable `entity-item` feature) calls
+    // `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature) calls
     // `useEntityDisplayPreferences`, which unconditionally calls `getDefaultPreferences()` on
     // whatever profile it's handed — this fake profile has no real heuristic to run, so it
     // stubs the method with an empty (all-optional) result rather than reimplementing
@@ -138,26 +142,15 @@ function makeEntityItem(options: {
   } as unknown as EntityItem;
 }
 
-function mockHooks(profileEntity: ProfileEntity, item: EntityItem) {
-  vi.mocked(useProfileEntity).mockReturnValue({ data: profileEntity } as never);
-  vi.mocked(useEntityItem).mockReturnValue({
-    data: item,
-    isPending: false,
-    isError: false,
-    isSuccess: true,
-  } as never);
-}
-
-describe("EntityItemContentFocusView", () => {
-  it("renders the existing EntityItemView body when the entity has no content attributes (FR-001)", () => {
+describe("EntityItemAutoVariation", () => {
+  it("renders the existing EntityItemAttributeFocus body when the entity has no content attributes (FR-001)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
-    mockHooks(profile, item);
 
-    const { container } = renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
 
-    // EntityItemView's own item-reference header (`data-slot="item-reference"`), rendered by its
-    // "toolbar={false}" body.
+    // EntityItemAttributeFocus's own item-reference header (`data-slot="item-reference"`) — it draws no
+    // toolbar itself, so this always renders.
     expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });
@@ -174,9 +167,8 @@ describe("EntityItemContentFocusView", () => {
         makeContentAttribute("receipt", true),
       ],
     });
-    mockHooks(profile, item);
 
-    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
     expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
@@ -191,9 +183,8 @@ describe("EntityItemContentFocusView", () => {
       profileEntity: profile,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    mockHooks(profile, item);
 
-    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
   });
@@ -207,9 +198,8 @@ describe("EntityItemContentFocusView", () => {
       profileEntity: profile,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    mockHooks(profile, item);
 
-    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
 
@@ -228,11 +218,7 @@ describe("EntityItemContentFocusView", () => {
       profileEntity: profileA,
       contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
     });
-    mockHooks(profileA, itemA);
-
-    const { rerender } = renderView(
-      <EntityItemContentFocusView entityName="document" itemId="1" />,
-    );
+    const { rerender } = renderBody(<EntityItemAutoVariation entityItem={itemA} />);
 
     expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
@@ -247,15 +233,13 @@ describe("EntityItemContentFocusView", () => {
       profileEntity: profileB,
       contentAttrs: [makeContentAttribute("scan", true)],
     });
-    mockHooks(profileB, itemB);
-
     rerender(
       <NavigatorDataProvider
         apiFetch={createApiClient(noopSupplier)}
         contentFetch={createContentClient(noopSupplier)}
         profileUrl={PROFILE_URL}
       >
-        <EntityItemContentFocusView entityName="invoice" itemId="1" />
+        <EntityItemAutoVariation entityItem={itemB} />
       </NavigatorDataProvider>,
     );
 
@@ -263,52 +247,88 @@ describe("EntityItemContentFocusView", () => {
     expect(screen.queryByText("content-preview-panel:receipt")).not.toBeInTheDocument();
   });
 
-  it("builds default breadcrumb LABELS from the profile (Home / plural name / item id) when the host supplies none", () => {
-    const profile = makeProfile({ hasContentAttributes: false });
-    const item = makeEntityItem({ profileEntity: profile });
-    mockHooks(profile, item);
+  it("lists the item's relations beside the preview and reports a relation click with entity and id", async () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document"],
+    });
+    const item = {
+      ...makeEntityItem({
+        profileEntity: profile,
+        contentAttrs: [makeContentAttribute("document", true)],
+      }),
+      toOneRelations: [{ name: "owner" }],
+      toManyRelations: [{ name: "lines" }],
+    } as unknown as EntityItem;
+    const onRelationItemClick = vi.fn();
 
-    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    renderBody(
+      <EntityItemAutoVariation entityItem={item} onRelationItemClick={onRelationItemClick} />,
+    );
 
-    // The plural display title from the profile, not the raw entityName ("order").
-    expect(screen.getByText("Home")).toBeInTheDocument();
-    expect(screen.getByText("Orders")).toBeInTheDocument();
-    // `BreadcrumbPage` renders the current page as `role="link"` too (ui-library convention) —
-    // scoped by that role, not `getByText`, since the item id ("1") also appears in
-    // `EntityItemView`'s own `<h1>` heading below.
-    expect(screen.getByRole("link", { name: "1" })).toBeInTheDocument();
+    expect(await screen.findByText("many-relation")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("one-relation"));
+    expect(onRelationItemClick).toHaveBeenCalledWith({ entityName: "company", itemId: "c-1" });
   });
 
-  it("renders Home/collection crumbs as plain, non-interactive text when no link renderers are supplied (Principle VIII: the view has no route knowledge of its own)", () => {
+  it("fills its parent and draws no toolbar or padding of its own", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
-    mockHooks(profile, item);
 
-    renderView(<EntityItemContentFocusView entityName="order" itemId="1" />);
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
 
-    expect(screen.queryByRole("button", { name: "Home" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Orders" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
+    const root = container.firstElementChild as HTMLElement;
+    expect(root).toHaveClass("h-full", "min-h-0");
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+  it("renders the variation it is given, whatever the entity's content attributes", async () => {
+    const withContent = makeEntityItem({
+      profileEntity: makeProfile({
+        hasContentAttributes: true,
+        contentAttributeNames: ["document"],
+      }),
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    const { container } = renderBody(
+      <EntityItemAutoVariation entityItem={withContent} variation="attribute-focus" />,
+    );
+
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });
 
-  it("renders Home/collection crumbs as real links via the host-supplied renderHomeLink/renderCollectionLink (e.g. wrapping the host's own router Link, never a plain onClick button)", () => {
-    const profile = makeProfile({ hasContentAttributes: false });
-    const item = makeEntityItem({ profileEntity: profile });
-    mockHooks(profile, item);
+  it("lists every variation by name", () => {
+    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus"]);
+  });
 
-    renderView(
-      <EntityItemContentFocusView
-        entityName="order"
-        itemId="1"
-        renderHomeLink={(label) => <a href="/home">{label}</a>}
-        renderCollectionLink={(entityName, label) => <a href={`/${entityName}`}>{label}</a>}
+  it("pads content focus only at the bottom, and attribute focus on both axes", () => {
+    const withContent = makeProfile({ hasContentAttributes: true });
+    const withoutContent = makeProfile({ hasContentAttributes: false });
+
+    expect(entityItemDetailPadding(withContent)).toBe("bottom");
+    expect(entityItemDetailPadding(withoutContent)).toBe(true);
+    expect(entityItemDetailPadding(withContent, "attribute-focus")).toBe(true);
+    expect(entityItemDetailPadding(withoutContent, "content-focus")).toBe("bottom");
+  });
+
+  it("passes the given actions on to the variation it renders", async () => {
+    const item = makeEntityItem({
+      profileEntity: makeProfile({
+        hasContentAttributes: true,
+        contentAttributeNames: ["document"],
+      }),
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    renderBody(
+      <EntityItemAutoVariation
+        entityItem={item}
+        actions={<button type="button">extra action</button>}
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/home");
-    const collectionLink = screen.getByRole("link", { name: "Orders" });
-    // Called with the profile's `name` (routing identifier), not the displayed `pluralName`.
-    expect(collectionLink).toHaveAttribute("href", "/order");
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "extra action" })).toBeInTheDocument();
   });
 });

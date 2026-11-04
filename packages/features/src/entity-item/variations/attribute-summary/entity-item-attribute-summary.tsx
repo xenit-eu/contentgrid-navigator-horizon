@@ -1,5 +1,5 @@
 import { AttributeKind, type EntityItem } from "@contentgrid/navigator-data";
-import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
+import { AttributeValueRenderer } from "../../attributes/renderers/attribute-value-renderer";
 
 const DEFAULT_SUMMARY_ATTRIBUTE_COUNT = 4;
 

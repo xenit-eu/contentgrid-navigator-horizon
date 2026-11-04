@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
+  CreateEntityItemPanel,
   CreateEntityItemProfileSelector,
-  CreateEntityItemView,
 } from "@contentgrid/features/entity-item-create";
 import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
 import { useOpenInNewTab } from "@contentgrid/features/router-shell";
@@ -78,7 +78,7 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
       }
     >
       {/* Keyed on the entity: switching entity keeps this route mounted, the form must not. */}
-      <CreateEntityItemView
+      <CreateEntityItemPanel
         key={profile.name}
         profile={profile}
         onCreated={(item) =>

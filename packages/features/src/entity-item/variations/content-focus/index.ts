@@ -6,10 +6,12 @@
  * `apps/navigator` (ACC-2902 content-focus promotion); both apps mount it now (see
  * `packages/features/src/entity-item/CLAUDE.md` for scope and history).
  *
- * `EntityItemContentFocusView` is the public entry point (contract
- * `contracts/content-focus-view.md`) — an app mounts it with `entityName`/`itemId`/`toolbar`/
- * relation callbacks only, per Principle VIII. The rest of the exports below are its building
- * blocks, exported for their own stories/tests.
+ * `EntityItemContentFocus` is the public entry point (contract
+ * `contracts/content-focus-view.md`); `EntityItemAutoVariation` (`../entity-item-auto-variation.tsx`)
+ * renders it for an item with content attributes. The view above
+ * (`@contentgrid/views/entity-item-detail`) resolves the `entityItem` and hands it in; neither draws
+ * chrome of its own, per Principle VIII. The rest of the exports below are its building blocks,
+ * exported for their own stories/tests.
  */
 export { pdfiumWasmUrl } from "./util/pdfium-wasm-url";
 export { selectDefaultContentAttribute } from "./util/select-default-content-attribute";
@@ -23,14 +25,4 @@ export type {
 } from "./components/content-preview-frame";
 export { ContentPreviewPanel } from "./components/content-preview-panel";
 export type { ContentPreviewPanelProps } from "./components/content-preview-panel";
-export {
-  EntityItemDetailBody,
-  EntityItemContentFocusView,
-  entityItemDetailPadding,
-} from "./views/entity-item-content-focus-view";
-export type {
-  EntityItemDetailBodyProps,
-  EntityItemContentFocusViewProps,
-  ViewToolbarConfiguration,
-  ViewToolbarOptions,
-} from "./views/entity-item-content-focus-view";
+export { EntityItemContentFocus } from "./entity-item-content-focus";

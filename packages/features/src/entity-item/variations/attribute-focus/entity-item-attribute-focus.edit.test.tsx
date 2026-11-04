@@ -12,22 +12,39 @@ import { describe, expect, it } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
+  type ProfileEntity,
   createApiClient,
   createContentClient,
+  useEntityItem,
 } from "@contentgrid/navigator-data";
 import {
   ALL_ATTRIBUTE_ITEM_URL,
   allAttributeItemBodyWith,
   makeAllAttributeItem,
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
-import { server } from "../../test-setup";
-import { EntityItemView } from "./entity-item-view";
+import { server } from "../../../../test-setup";
+import { EntityItemAttributeFocus } from "./entity-item-attribute-focus";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 const PROFILE_URL = "https://api.example.contentgrid.com/profile";
 
+/** Stands in for the view that owns the item query and hands `EntityItemAttributeFocus` its refetch. */
+function ItemHost({
+  profileEntity,
+  itemId,
+  allowEdit,
+}: Readonly<{ profileEntity: ProfileEntity; itemId: string; allowEdit?: boolean }>) {
+  const item = useEntityItem({ profileEntity, entityId: itemId });
+  return item.data ? (
+    <EntityItemAttributeFocus item={item.data} refetch={item.refetch} allowEdit={allowEdit} />
+  ) : null;
+}
+
 /** Renders the item page for the `all-attribute` fixture item; `item` answers each item GET. */
-function renderItemPage(item: (request: number) => Response) {
+function renderItemPage(
+  item: (request: number) => Response,
+  options: { allowEdit?: boolean } = {},
+) {
   const { id, profileEntity } = makeAllAttributeItem();
   let itemRequests = 0;
   server.use(
@@ -37,7 +54,9 @@ function renderItemPage(item: (request: number) => Response) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createRouter({
     routeTree: createRootRoute({
-      component: () => <EntityItemView profile={profileEntity} itemId={id} />,
+      component: () => (
+        <ItemHost profileEntity={profileEntity} itemId={id} allowEdit={options.allowEdit} />
+      ),
     }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
@@ -55,7 +74,17 @@ function renderItemPage(item: (request: number) => Response) {
   return { queryClient, itemRequests: () => itemRequests };
 }
 
-describe("EntityItemView", () => {
+describe("EntityItemAttributeFocus editing", () => {
+  it("shows no edit button when editing is not allowed", async () => {
+    renderItemPage(
+      () => HttpResponse.json(allAttributeItemBodyWith(), { headers: { ETag: '"v1"' } }),
+      { allowEdit: false },
+    );
+
+    expect((await screen.findAllByText("Test string")).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
   it("keeps an open edit form and its input when a background refetch fails", async () => {
     const user = userEvent.setup();
     const page = renderItemPage((request) =>

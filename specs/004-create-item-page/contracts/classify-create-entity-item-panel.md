@@ -2,12 +2,12 @@
 
 **Requirements**: FR-001 – FR-010, FR-020, FR-021
 
-## `ClassifyCreateEntityItemView` (`@contentgrid/features/entity-item-create`)
+## `ClassifyCreateEntityItemPanel` (`@contentgrid/features/entity-item-create`)
 
-**File**: `packages/features/src/entity-item-create/classify-create-entity-item-view.tsx`
+**File**: `packages/features/src/entity-item-create/classify-create-entity-item-panel.tsx`
 
 ```ts
-export interface ClassifyCreateEntityItemViewProps {
+export interface ClassifyCreateEntityItemPanelProps {
   /** Called on Continue with the chosen entity; the caller opens its create form. */
   readonly onSelect: (profile: ProfileEntity) => void;
   readonly onCancel: () => void;
@@ -76,10 +76,10 @@ export interface CreateEntityItemProfileSelectorProps {
 }
 ```
 
-- Same entity list as `ClassifyCreateEntityItemView` (`useLoadedProfileEntities()` filtered inline on `createTemplate`), rendered as a compact `IconBadgeOptionPicker` (`size="sm"`, small icon badges) with the current entity selected.
+- Same entity list as `ClassifyCreateEntityItemPanel` (`useLoadedProfileEntities()` filtered inline on `createTemplate`), rendered as a compact `IconBadgeOptionPicker` (`size="sm"`, small icon badges) with the current entity selected.
 - Route: passed to `BreadCrumbsToolBarLayout`'s `actions`; `onSelect` → `navigate({ to: "/$entity/~create", params: { entity: profile.name }, search: {} })`.
-- Route renders `<CreateEntityItemView key={profile.name} … />` so the form resets on switch.
-- Unsaved changes: handled by the existing `useUnsavedChangesGuard` in `CreateEntityItemView` — no new code.
+- Route renders `<CreateEntityItemPanel key={profile.name} … />` so the form resets on switch.
+- Unsaved changes: handled by the existing `useUnsavedChangesGuard` in `CreateEntityItemPanel` — no new code.
 
 ## Sidebar
 
@@ -87,6 +87,6 @@ export interface CreateEntityItemProfileSelectorProps {
 
 ## Tests
 
-- `classify-create-entity-item-view.test.tsx`: lists only entities with a create template; Continue disabled until an entity is chosen, then opens it; empty state.
+- `classify-create-entity-item-panel.test.tsx`: lists only entities with a create template; Continue disabled until an entity is chosen, then opens it; empty state.
 - `create-entity-item-container.test.tsx`: pending file fills the first file field; no file field → no value and store untouched; successful create clears the store; clearing the file field clears the store.
 - e2e (`apps/navigator/tests/e2e/navigator.spec.ts`): point `goToClassifyCreateInstancePage` at `/~create`; sidebar → choose entity → Continue → create form shown; switch entity from the toolbar.

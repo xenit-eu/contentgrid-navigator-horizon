@@ -54,7 +54,7 @@ export interface HalFormsFieldRendererProps {
  * run `useTypeahead` (`@contentgrid/navigator-data`). This mirrors `packages/ui`'s own
  * `AutocompleteRenderer` (plain scalar props, no fetching) one layer up: the render layer stays
  * purely presentational regardless of whether it's rendering a create form or a search form: the
- * search page owns its `useTypeahead` call (exactly as `entity-item-collection-view.tsx` already
+ * search page owns its `useTypeahead` call (exactly as `entity-item-collection-browser.tsx` already
  * does today) and passes the live results in, rather than this generic renderer reaching out to
  * fetch them itself.
  *

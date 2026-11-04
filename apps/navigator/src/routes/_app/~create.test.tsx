@@ -73,7 +73,7 @@ vi.mock("@contentgrid/features/entity-item-collection", () => ({
 }));
 
 vi.mock("@contentgrid/features/entity-item-create", () => ({
-  ClassifyCreateEntityItemView: (props: {
+  ClassifyCreateEntityItemPanel: (props: {
     onSelect: (profile: ProfileEntity) => void;
     onCancel: () => void;
   }) => (
@@ -82,7 +82,7 @@ vi.mock("@contentgrid/features/entity-item-create", () => ({
       <button onClick={props.onCancel}>Cancel</button>
     </div>
   ),
-  CreateEntityItemView: () => <div data-testid="create-form" />,
+  CreateEntityItemPanel: () => <div data-testid="create-form" />,
   CreateEntityItemProfileSelector: () => null,
 }));
 

@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { Button } from "@contentgrid/ui";
-import { EntityItemReference } from "../variations/entity-item-reference";
+import { EntityItemReference } from "../variations/item-reference/entity-item-reference";
 
 /** How many more items each "Load more" click reveals (and how many show at first). */
 export const RELATION_ITEM_STACK_STEP = 5;
