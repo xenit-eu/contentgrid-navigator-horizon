@@ -143,7 +143,7 @@ function buildCollectionSearchValues(
 ): HalFormValues<SearchRequestSpec>; // what the view builds inline today
 ```
 
-`EntityItemCollectionView` and `EntitySearchBar` both import them (one copy, Principle VIII).
+`EntityItemCollectionBrowser` and `EntitySearchBar` both import them (one copy, Principle VIII).
 
 ---
 
@@ -169,7 +169,7 @@ function useSearchAttributeInclusion(profileEntity: ProfileEntity | undefined): 
 
 ## 4. `entity-item-collection` integration
 
-- `EntityItemCollectionView` renders
+- `EntityItemCollectionBrowser` renders
   `<EntitySearchBar profileEntity filters onFiltersChange currentSort actions />` as the first row
   of the view, above the table, so it stays usable while the table is loading or shows an error.
 - The page title block (heading, entity icon, "N items" subtitle) is removed (FR-001a): the

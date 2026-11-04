@@ -25,7 +25,7 @@ The work splits into three layers:
    and one new preference field.
 3. **`packages/features`**: a new `entity-search-bar` feature that derives everything from
    `resolveHalFormsFields` through pure `util/` functions, and is mounted inside
-   `EntityItemCollectionView`.
+   `EntityItemCollectionBrowser`.
 
 See [research.md](research.md) for the decisions and [contracts/](contracts/) for the interfaces.
 
@@ -159,7 +159,7 @@ packages/features/
     ├── search/filter-field-values.ts                    # NEW (moved from the collection view)
     ├── preferences/use-search-attribute-inclusion.ts    # NEW
     ├── preferences/views/entity-configuration-detail.tsx # EXTEND: "Searchable attributes"
-    └── entity-item-collection/entity-item-collection-view.tsx # EXTEND: mount EntitySearchBar; use moved helpers
+    └── entity-item-collection/entity-item-collection-browser.tsx # EXTEND: mount EntitySearchBar; use moved helpers
 ```
 
 **Structure Decision**: Keep the existing monorepo layout. Each concern goes to the layer that

@@ -137,7 +137,7 @@ without changing its contract.
 
 - Filters live in the URL as `s.<searchPropertyName>=<string>` (`packages/features/src/search/filter-url-state.ts`),
   owned by the route `apps/navigator/src/routes/_app/$entity/index.tsx` and passed to
-  `EntityItemCollectionView` as `filters: Record<string, string>` + `onFiltersChange`.
+  `EntityItemCollectionBrowser` as `filters: Record<string, string>` + `onFiltersChange`.
 - The view already converts between URL strings and typed values (`coerceFilterValue`,
   `encodeFilterValue`) and renders the advanced dialog from the same `filters`.
 
