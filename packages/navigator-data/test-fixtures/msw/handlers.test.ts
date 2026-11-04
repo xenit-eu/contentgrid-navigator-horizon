@@ -103,6 +103,41 @@ describe("createListHandler", () => {
 
     expect(body.page).toEqual({ size: 3, total_items_exact: 3 });
   });
+
+  it("emits an estimated total instead of an exact one when totals is 'estimate'", async () => {
+    server.use(
+      createListHandler({
+        url: "https://test-application.eu-west-1.contentgrid.app/invoices",
+        items: sampleInvoiceItems,
+        totals: "estimate",
+      }),
+    );
+
+    const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices");
+    const body = await res.json();
+
+    expect(body.page).toEqual({ size: 3, total_items_estimate: 3 });
+  });
+
+  it("answers the total per request with resolveTotal", async () => {
+    server.use(
+      createListHandler({
+        url: "https://test-application.eu-west-1.contentgrid.app/invoices",
+        items: sampleInvoiceItems,
+        resolveTotal: (url) => (url.searchParams.get("number~prefix") === "A" ? 42 : 0),
+      }),
+    );
+
+    const matching = await fetch(
+      "https://test-application.eu-west-1.contentgrid.app/invoices?number~prefix=A",
+    );
+    const other = await fetch(
+      "https://test-application.eu-west-1.contentgrid.app/invoices?number~prefix=B",
+    );
+
+    expect((await matching.json()).page).toEqual({ size: 3, total_items_exact: 42 });
+    expect((await other.json()).page).toEqual({ size: 3, total_items_exact: 0 });
+  });
 });
 
 describe("createProfileHandler", () => {

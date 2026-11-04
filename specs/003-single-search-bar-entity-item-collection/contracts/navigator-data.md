@@ -85,8 +85,11 @@ function useSearchParamSuggestions(options: UseSearchParamSuggestionsOptions): {
   - relation param: an extra request on the target entity with only
     `targetParam = query` (as `useTypeahead` does) — suggestions from it, count still from the
     current entity.
-- Values for number-typed params are coerced (via the codec's type rules); a query that cannot be
-  coerced for a param makes that result `idle` without a request.
+- Values for number-typed params must be a plain decimal (`-?digits`, optionally a `.` or locale
+  `,` decimal part — not `1e3`, `0x1A` or `1,000.5`); a query that cannot be coerced for a param
+  makes that result `idle` without a request (but `loading` while the debounce is pending).
+- Every idle request has its own query key; a superseded request is aborted (TanStack `signal`).
+- A relation param whose target profile is still loading reports `loading`, not `success`.
 - Query keys: `queryKeys.searchParamSuggestions.byUrl(profileEntity, url)` (new, under the
   per-entity prefix so existing invalidation covers it). `staleTime` 30 s, `gcTime` 60 s,
   `retry: 0`, no `placeholderData` (stale results never shown under a newer input — FR-022).
