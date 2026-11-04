@@ -17,7 +17,7 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => ({
 vi.mock("../../attributes/entity-item-attributes", () => ({
   EntityItemAttributes: () => <div>attributes</div>,
 }));
-vi.mock("../entity-item-reference", () => ({
+vi.mock("../item-reference/entity-item-reference", () => ({
   EntityItemReference: () => <div>reference</div>,
 }));
 vi.mock("../../relations/relation-to-one-section", () => ({

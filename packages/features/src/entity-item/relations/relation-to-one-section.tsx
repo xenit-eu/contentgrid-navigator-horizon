@@ -26,7 +26,7 @@ import {
 import { useEntityDisplayPreferences } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
 import { EntityItemAttributeSummary } from "../variations/attribute-summary/entity-item-attribute-summary";
-import { EntityItemReference } from "../variations/entity-item-reference";
+import { EntityItemReference } from "../variations/item-reference/entity-item-reference";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,

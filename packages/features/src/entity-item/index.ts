@@ -13,11 +13,11 @@ export { EntityItemAttributeSummary } from "./variations/attribute-summary/entit
 export {
   EntityItemReference,
   EntityItemReferenceLoading,
-} from "./variations/entity-item-reference";
+} from "./variations/item-reference/entity-item-reference";
 export type {
   EntityItemReferenceProps,
   EntityItemReferenceLoadingProps,
-} from "./variations/entity-item-reference";
+} from "./variations/item-reference/entity-item-reference";
 export {
   AttributeValueRenderer,
   TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,

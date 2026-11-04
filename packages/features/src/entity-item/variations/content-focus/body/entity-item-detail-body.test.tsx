@@ -30,7 +30,7 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
  * mocked below): `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature)
  * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
  * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
- * pattern as `entity-item/variations/entity-item-reference.test.tsx`. `EntityItemDetailBody`
+ * pattern as `entity-item/variations/item-reference/entity-item-reference.test.tsx`. `EntityItemDetailBody`
  * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
  * needed here either.
  */

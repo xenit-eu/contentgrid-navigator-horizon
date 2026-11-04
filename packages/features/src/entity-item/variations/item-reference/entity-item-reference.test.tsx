@@ -13,8 +13,8 @@ import {
   useEntityItemCollection,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { server } from "../../../test-setup";
-import { useEntityDisplayPreferencesStore } from "../../preferences";
+import { server } from "../../../../test-setup";
+import { useEntityDisplayPreferencesStore } from "../../../preferences";
 import { EntityItemReference, EntityItemReferenceLoading } from "./entity-item-reference";
 
 const API_URL = "https://api.example.com";

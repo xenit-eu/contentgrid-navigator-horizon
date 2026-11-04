@@ -16,7 +16,7 @@ import type {
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
 import { EntityItemAttributeFocus } from "../../attribute-focus/entity-item-attribute-focus";
-import { EntityItemReference } from "../../entity-item-reference";
+import { EntityItemReference } from "../../item-reference/entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
 import { selectDefaultContentAttribute } from "../util/select-default-content-attribute";

@@ -10,7 +10,7 @@ import type {
 } from "../../relations/relation-handlers";
 import { RelationToManySection } from "../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../relations/relation-to-one-section";
-import { EntityItemReference } from "../entity-item-reference";
+import { EntityItemReference } from "../item-reference/entity-item-reference";
 
 export type EntityItemAttributeFocusProps = RelationProblemHandlers & {
   /** The loaded item (and, through it, its profile). The caller owns loading it. */
