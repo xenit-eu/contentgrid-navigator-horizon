@@ -14,11 +14,6 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => ({
   useLoadedProfileEntities: () => ({ profiles: [], isLoading: false }),
 }));
 
-vi.mock("../../../preferences", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../preferences")>()),
-  useEntityDisplayPreferences: () => ({ preferences: {} }),
-}));
-
 vi.mock("../../attributes/entity-item-attributes", () => ({
   EntityItemAttributes: () => <div>attributes</div>,
   EntityItemAuditTrail: () => <div>audit</div>,

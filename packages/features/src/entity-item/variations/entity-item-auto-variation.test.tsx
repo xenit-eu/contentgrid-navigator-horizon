@@ -25,6 +25,7 @@ import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
   entityItemVariations,
+  resolveEntityItemVariation,
 } from "./entity-item-auto-variation";
 
 const PROFILE_URL = "https://api.example.com/profile/order";
@@ -323,7 +324,7 @@ describe("EntityItemAutoVariation", () => {
   });
 
   it("lists every variation by name", () => {
-    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus"]);
+    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus", "side-by-side"]);
   });
 
   it("pads content focus only at the bottom, and attribute focus on both axes", () => {
@@ -339,6 +340,21 @@ describe("EntityItemAutoVariation", () => {
     expect(entityItemDetailPadding(withContent, "auto", "content")).toBe("bottom");
     expect(entityItemDetailPadding(withoutContent, "auto", "content")).toBe(true);
     expect(entityItemDetailPadding(withContent, "content-focus", "columns")).toBe("bottom");
+    expect(entityItemDetailPadding(withContent, "auto", "columns")).toBe(true);
+  });
+
+  it("picks the variation from the item layout preference for auto", () => {
+    const withContent = makeProfile({ hasContentAttributes: true });
+    const withoutContent = makeProfile({ hasContentAttributes: false });
+
+    expect(resolveEntityItemVariation(withContent, "auto", "content")).toBe("content-focus");
+    expect(resolveEntityItemVariation(withContent, "auto", "stacked")).toBe("attribute-focus");
+    expect(resolveEntityItemVariation(withContent, "auto", "columns")).toBe("side-by-side");
+    expect(resolveEntityItemVariation(withoutContent, "auto", "columns")).toBe("side-by-side");
+    expect(resolveEntityItemVariation(withoutContent, "auto", "content")).toBe("attribute-focus");
+    expect(resolveEntityItemVariation(withContent, "attribute-focus", "columns")).toBe(
+      "attribute-focus",
+    );
   });
 
   it("passes the given actions on to the variation it renders", async () => {

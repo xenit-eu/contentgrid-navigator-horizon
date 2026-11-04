@@ -4,6 +4,7 @@ import { useEntityDisplayPreferences } from "../../preferences";
 import { EntityItemAttributeFocus } from "./attribute-focus/entity-item-attribute-focus";
 import { EntityItemContentFocus } from "./content-focus/entity-item-content-focus";
 import type { EntityItemVariationProps } from "./entity-item-variation-props";
+import { EntityItemSideBySide } from "./side-by-side/entity-item-side-by-side";
 
 /**
  * Every item detail variation `EntityItemAutoVariation` can render, by name. Add a new variation
@@ -12,6 +13,7 @@ import type { EntityItemVariationProps } from "./entity-item-variation-props";
 const ENTITY_ITEM_VARIATIONS = {
   "attribute-focus": EntityItemAttributeFocus,
   "content-focus": EntityItemContentFocus,
+  "side-by-side": EntityItemSideBySide,
 } as const satisfies Record<string, ComponentType<EntityItemVariationProps>>;
 
 /** The name of an item detail variation. */
@@ -25,8 +27,9 @@ export const entityItemVariations = Object.keys(
 /**
  * The variation that renders for `profileEntity`: `variation` when it names one, otherwise
  * (`"auto"`) content focus for an entity with content attributes and attribute focus for one
- * without (FR-001). The entity's `itemLayout` display preference, when given, can turn content
- * focus off: only `"content"` picks it, and only for an entity with content attributes.
+ * without (FR-001). The entity's `itemLayout` display preference, when given, overrides that:
+ * `"content"` picks content focus (only for an entity with content attributes), `"stacked"`
+ * attribute focus and `"columns"` side by side.
  */
 export function resolveEntityItemVariation(
   profileEntity: ProfileEntity,
@@ -35,6 +38,9 @@ export function resolveEntityItemVariation(
 ): EntityItemVariation {
   if (variation !== "auto") {
     return variation;
+  }
+  if (itemLayout === "columns") {
+    return "side-by-side";
   }
   const contentFocus =
     profileEntity.hasContentAttributes && (itemLayout === undefined || itemLayout === "content");
@@ -46,8 +52,8 @@ export function resolveEntityItemVariation(
  * renders, the preview panel should run edge to edge rather than sit inside the standard page
  * gutters — drop the horizontal padding, and the top vertical padding too (the toolbar strip above
  * already has its own bottom padding, so a top gutter here would just double that gap) — keeping
- * only the bottom gutter for breathing room at the end of the scroll region. Attribute focus keeps
- * the standard padding on both axes.
+ * only the bottom gutter for breathing room at the end of the scroll region. The other variations
+ * keep the standard padding on both axes.
  */
 export function entityItemDetailPadding(
   profileEntity: ProfileEntity,
