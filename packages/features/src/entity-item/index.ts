@@ -1,5 +1,5 @@
-export { EntityItemDetail } from "./variations/attribute-focus/entity-item-detail";
-export type { EntityItemDetailProps } from "./variations/attribute-focus/entity-item-detail";
+export { EntityItemAttributeFocus } from "./variations/attribute-focus/entity-item-attribute-focus";
+export type { EntityItemAttributeFocusProps } from "./variations/attribute-focus/entity-item-attribute-focus";
 export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";

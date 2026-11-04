@@ -12,7 +12,7 @@ import { RelationToManySection } from "../../relations/relation-to-many-section"
 import { RelationToOneSection } from "../../relations/relation-to-one-section";
 import { EntityItemReference } from "../entity-item-reference";
 
-export type EntityItemDetailProps = RelationProblemHandlers & {
+export type EntityItemAttributeFocusProps = RelationProblemHandlers & {
   /** The loaded item (and, through it, its profile). The caller owns loading it. */
   readonly item: EntityItem;
   /**
@@ -37,7 +37,7 @@ export type EntityItemDetailProps = RelationProblemHandlers & {
  * are loaded here by following the item's links. All navigation is supplied by the caller through
  * `onRelationItemClick` — this component performs none itself.
  */
-export function EntityItemDetail({
+export function EntityItemAttributeFocus({
   item,
   refetch = noRefetch,
   onRelationItemClick,
@@ -45,7 +45,7 @@ export function EntityItemDetail({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
-}: Readonly<EntityItemDetailProps>) {
+}: Readonly<EntityItemAttributeFocusProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const editContext = useEditContext(item, refetch);
 

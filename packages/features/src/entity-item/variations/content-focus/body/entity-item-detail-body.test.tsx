@@ -27,7 +27,7 @@ const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
 /**
  * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useLoadedProfileEntities` is
- * mocked below): `EntityItemDetail`'s `EntityItemReference` header (stable `entity-item` feature)
+ * mocked below): `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature)
  * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
  * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
  * pattern as `entity-item/variations/entity-item-reference.test.tsx`. `EntityItemDetailBody`
@@ -96,7 +96,7 @@ function makeProfile(options: {
     hasContentAttributes,
     attributes,
     userDefinedAttributes: attributes,
-    // `EntityItemDetail`'s `EntityItemReference` header (stable `entity-item` feature) calls
+    // `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature) calls
     // `useEntityDisplayPreferences`, which unconditionally calls `getDefaultPreferences()` on
     // whatever profile it's handed — this fake profile has no real heuristic to run, so it
     // stubs the method with an empty (all-optional) result rather than reimplementing
@@ -139,13 +139,13 @@ function makeEntityItem(options: {
 }
 
 describe("EntityItemDetailBody", () => {
-  it("renders the existing EntityItemDetail body when the entity has no content attributes (FR-001)", () => {
+  it("renders the existing EntityItemAttributeFocus body when the entity has no content attributes (FR-001)", () => {
     const profile = makeProfile({ hasContentAttributes: false });
     const item = makeEntityItem({ profileEntity: profile });
 
     const { container } = renderBody(<EntityItemDetailBody entityItem={item} />);
 
-    // EntityItemDetail's own item-reference header (`data-slot="item-reference"`) — it draws no
+    // EntityItemAttributeFocus's own item-reference header (`data-slot="item-reference"`) — it draws no
     // toolbar itself, so this always renders.
     expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();

@@ -10,11 +10,11 @@ means in practice.
 
 ## Scope
 
-`entity-item` renders an entity item's attributes and relations: `EntityItemDetail`,
+`entity-item` renders an entity item's attributes and relations: `EntityItemAttributeFocus`,
 `EntityItemAttributes`, `RelationToOneSection`, `RelationToManySection`. The view above owns the item
 query and passes the loaded item plus its `refetch`; edit mode is kept here
 (`edit/use-edit-context.ts`: the version being edited, which a background refetch does not change).
-`EntityItemDetail` shows `EditEntityItemButton` next to the item title, and
+`EntityItemAttributeFocus` shows `EditEntityItemButton` next to the item title, and
 `EditableEntityItemAttributes` shows the attributes or, while editing, the update form (`edit/`). On a
 version conflict the form's Refresh calls the view's `refetch`; the form then opens again on the latest
 version. When a refetch of a loaded item fails, the view keeps the item (and an open edit form) on screen.
@@ -25,7 +25,7 @@ video as stored, or any other file previewed through the platform's PDF renditio
 to those same attributes and relations, with the production viewer toolbar.
 `EntityItemDetailBody` takes an already-loaded `entityItem` (its profile is
 `entityItem.profileEntity`) and its `refetch` from the view above it
-(`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemDetail` for any item
+(`@contentgrid/views/entity-item-detail`) and falls back to plain `EntityItemAttributeFocus` for any item
 with no content attributes (FR-001). Neither draws a toolbar or page chrome (see "Page layout"
 in `packages/features/CLAUDE.md`).
 
@@ -41,13 +41,13 @@ importing `EntityItemDetailBody` the way `x-stability` prevents importing an act
 **Promoted to the generic track (ACC-2902 content-focus promotion).** `EntityItemDetailBody`
 was proved out in `apps/navigator-experimental` first (spec `002-pdf-viewer`) and is now mounted by
 both apps' `$entity/$itemId.tsx` item routes, through the item detail view in `packages/views`;
-the view itself falls back to plain `EntityItemDetail` per item for FR-001. There is no longer an "experimental-only" convention to enforce
+the view itself falls back to plain `EntityItemAttributeFocus` per item for FR-001. There is no longer an "experimental-only" convention to enforce
 here — both tracks may mount this view.
 
 ## Layering (spec-001 `feature-layer-imports.md`)
 
 ```
-entity-item-detail.tsx, attributes/, relations/
+variations/attribute-focus/entity-item-attribute-focus.tsx, attributes/, relations/
   -> @contentgrid/ui, @contentgrid/navigator-data
 
 edit/  (edit-entity-item-container -> edit-entity-item-form;
@@ -60,7 +60,7 @@ variations/content-focus/
     -> components/  (content-attribute-selector, content-preview-frame, content-preview-panel,
                      content-preview-toolbar, image-video-viewer)
     -> util/  (select-default-content-attribute, pdfium-wasm-url)
-    -> entity-item's own attributes/, relations/, entity-item-detail.tsx — a sibling import
+    -> entity-item's own attributes/, relations/, attribute-focus/entity-item-attribute-focus.tsx — a sibling import
        within the same feature now, not a cross-feature one
     -> ../../../layout's `RightSidePanelLayout` (imported the same way as this feature's other
        layouts, `BreadCrumbsToolBarLayout`/`PageLayout`) — moved there from this variation's own

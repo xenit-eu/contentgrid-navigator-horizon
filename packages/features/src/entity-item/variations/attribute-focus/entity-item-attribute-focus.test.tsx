@@ -1,5 +1,5 @@
 /**
- * Tests for `EntityItemDetail`: it renders an already-loaded item (no loading of its own, no
+ * Tests for `EntityItemAttributeFocus`: it renders an already-loaded item (no loading of its own, no
  * toolbar or page chrome), wires each relation section's callbacks to its own props, and fills
  * the space it is given.
  */
@@ -7,20 +7,20 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { EntityItemDetail } from "./entity-item-detail";
+import { EntityItemAttributeFocus } from "./entity-item-attribute-focus";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@contentgrid/navigator-data")>()),
   useLoadedProfileEntities: () => ({ profiles: [], isLoading: false }),
 }));
 
-vi.mock("./attributes/entity-item-attributes", () => ({
+vi.mock("../../attributes/entity-item-attributes", () => ({
   EntityItemAttributes: () => <div>attributes</div>,
 }));
-vi.mock("./variations/entity-item-reference", () => ({
+vi.mock("../entity-item-reference", () => ({
   EntityItemReference: () => <div>reference</div>,
 }));
-vi.mock("./relations/relation-to-one-section", () => ({
+vi.mock("../../relations/relation-to-one-section", () => ({
   RelationToOneSection: (props: {
     relation: { name: string };
     onItemClick?: (entity: string, id: string) => void;
@@ -34,7 +34,7 @@ vi.mock("./relations/relation-to-one-section", () => ({
     </div>
   ),
 }));
-vi.mock("./relations/relation-to-many-section", () => ({
+vi.mock("../../relations/relation-to-many-section", () => ({
   RelationToManySection: (props: {
     relation: { name: string };
     onRequiredRelationClick?: (relation: string) => void;
@@ -54,16 +54,16 @@ function makeItem(options: { toOne?: number; toMany?: number }): EntityItem {
   } as unknown as EntityItem;
 }
 
-describe("EntityItemDetail", () => {
+describe("EntityItemAttributeFocus", () => {
   it("renders the item's reference and attributes, and no relations section without relations", () => {
-    render(<EntityItemDetail item={makeItem({})} />);
+    render(<EntityItemAttributeFocus item={makeItem({})} />);
     expect(screen.getByText("reference")).toBeInTheDocument();
     expect(screen.getByText("attributes")).toBeInTheDocument();
     expect(screen.queryByText("Relations")).not.toBeInTheDocument();
   });
 
   it("fills its parent and draws no padding or toolbar of its own", () => {
-    const { container } = render(<EntityItemDetail item={makeItem({})} />);
+    const { container } = render(<EntityItemAttributeFocus item={makeItem({})} />);
     const root = container.firstElementChild as HTMLElement;
     expect(root).toHaveClass("h-full", "min-h-0");
     expect(root.className).not.toMatch(/\bp[xy]?-\d/);
@@ -75,7 +75,7 @@ describe("EntityItemDetail", () => {
     const onMissingRelationTargetClick = vi.fn();
     const onRequiredRelationClick = vi.fn();
     render(
-      <EntityItemDetail
+      <EntityItemAttributeFocus
         item={makeItem({ toOne: 1, toMany: 1 })}
         onRelationItemClick={onRelationItemClick}
         onRelationItemCreateNew={onRelationItemCreateNew}

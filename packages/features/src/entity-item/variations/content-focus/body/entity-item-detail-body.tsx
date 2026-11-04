@@ -15,7 +15,7 @@ import type {
 } from "../../../relations/relation-handlers";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
-import { EntityItemDetail } from "../../attribute-focus/entity-item-detail";
+import { EntityItemAttributeFocus } from "../../attribute-focus/entity-item-attribute-focus";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
@@ -27,7 +27,7 @@ import { selectDefaultContentAttribute } from "../util/select-default-content-at
  * to edge rather than sit inside the standard page gutters — drop the horizontal padding, and the
  * top vertical padding too (the toolbar strip above already has its own bottom padding, so a top
  * gutter here would just double that gap) — keeping only the bottom gutter for breathing room at
- * the end of the scroll region. The `EntityItemDetail` fallback body keeps the standard padding on
+ * the end of the scroll region. The `EntityItemAttributeFocus` fallback body keeps the standard padding on
  * both axes.
  */
 export function entityItemDetailPadding(profileEntity: ProfileEntity): true | "bottom" {
@@ -54,7 +54,7 @@ export type EntityItemDetailBodyProps = RelationProblemHandlers & {
  * `contracts/content-focus-view.md`) for an already-loaded `entityItem`, with no toolbar, page
  * layout or loading/error state of its own — the view above it (`@contentgrid/views/entity-item-
  * detail`) resolved the item and draws those. FR-001: an entity with no content attributes falls
- * back to the existing (stable) `EntityItemDetail` body; one that has them renders the PDF/content
+ * back to the existing (stable) `EntityItemAttributeFocus` body; one that has them renders the PDF/content
  * preview beside the item's attributes and relations. The preview and relations load their own
  * follow-up data by following the item's links.
  */
@@ -114,7 +114,7 @@ export function EntityItemDetailBody({
       onRequiredRelationClick={onRequiredRelationClick}
     />
   ) : (
-    <EntityItemDetail
+    <EntityItemAttributeFocus
       item={entityItem}
       refetch={refetch}
       onRelationItemClick={handleRelationItemClick}
@@ -167,8 +167,8 @@ function ContentFocusEntityItemBody({
     <RightSidePanelLayout
       sidePanelTitle="Details"
       // Round-2 review: show which item this panel belongs to (icon, name, subtitle) instead of
-      // a generic "Details" label — same reference row `EntityItemDetail`'s own attribute-focus
-      // body already shows above its attributes/relations (`entity-item-detail.tsx`). `sm` to fit
+      // a generic "Details" label — same reference row `EntityItemAttributeFocus`'s own attribute-focus
+      // body already shows above its attributes/relations (`entity-item-attribute-focus.tsx`). `sm` to fit
       // the panel's compact header bar; `sidePanelTitle` above still supplies the accessible name
       // for the collapse/expand button.
       sidePanelHeader={
