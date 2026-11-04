@@ -1,16 +1,16 @@
 import { type EntityItem, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
-import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
-import { EditEntityItemButton } from "./edit/edit-entity-item-button";
-import { type EditContextRefetch, noRefetch, useEditContext } from "./edit/use-edit-context";
+import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
+import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
+import { type EditContextRefetch, noRefetch, useEditContext } from "../../edit/use-edit-context";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
-} from "./relations/relation-handlers";
-import { RelationToManySection } from "./relations/relation-to-many-section";
-import { RelationToOneSection } from "./relations/relation-to-one-section";
-import { EntityItemReference } from "./variations/entity-item-reference";
+} from "../../relations/relation-handlers";
+import { RelationToManySection } from "../../relations/relation-to-many-section";
+import { RelationToOneSection } from "../../relations/relation-to-one-section";
+import { EntityItemReference } from "../entity-item-reference";
 
 export type EntityItemDetailProps = RelationProblemHandlers & {
   /** The loaded item (and, through it, its profile). The caller owns loading it. */

@@ -22,8 +22,8 @@ import {
   allAttributeItemBodyWith,
   makeAllAttributeItem,
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
-import { server } from "../../test-setup";
-import { EntityItemDetail } from "./entity-item-detail";
+import { server } from "../../../../test-setup";
+import { EntityItemDetail } from "../../entity-item-detail";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 const PROFILE_URL = "https://api.example.contentgrid.com/profile";

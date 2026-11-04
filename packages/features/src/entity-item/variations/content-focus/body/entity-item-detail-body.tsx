@@ -9,13 +9,13 @@ import { RightSidePanelLayout } from "../../../../layout";
 import { EditableEntityItemAttributes } from "../../../attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "../../../edit/edit-entity-item-button";
 import { type EditContextRefetch, noRefetch, useEditContext } from "../../../edit/use-edit-context";
-import { EntityItemDetail } from "../../../entity-item-detail";
 import type {
   RelationItemCreateHandler,
   RelationProblemHandlers,
 } from "../../../relations/relation-handlers";
 import { RelationToManySection } from "../../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../../relations/relation-to-one-section";
+import { EntityItemDetail } from "../../attribute-focus/entity-item-detail";
 import { EntityItemReference } from "../../entity-item-reference";
 import { ContentAttributeSelector } from "../components/content-attribute-selector";
 import { ContentPreviewPanel } from "../components/content-preview-panel";
