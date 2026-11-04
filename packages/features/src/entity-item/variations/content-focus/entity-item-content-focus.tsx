@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { RightSidePanelLayout } from "../../../layout";
-import { EntityItemSections, useEntityItemSectionsState } from "../../entity-item-sections";
+import { EntityItemSections } from "../../entity-item-sections";
 import { useEntityItemContext } from "../../use-entity-item-context";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
@@ -30,7 +30,6 @@ export function EntityItemContentFocus({
   const { profileEntity } = item;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
-  const sections = useEntityItemSectionsState();
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -86,7 +85,7 @@ export function EntityItemContentFocus({
         <EntityItemSections
           item={item}
           profiles={loadedProfiles}
-          state={sections}
+          state={itemContext.sections}
           editedItem={itemContext.editedItem}
           onEditingChange={itemContext.setIsEditing}
           onRefresh={() => void itemContext.refresh()}

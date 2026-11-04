@@ -52,7 +52,7 @@ Every variation takes `EntityItemVariationProps`:
 
 1. Create `variations/<name>/entity-item-<name>.tsx` exporting `EntityItem<Name>`, typed
    `Readonly<EntityItemVariationProps>`. Root `h-full min-h-0`, no outer padding.
-2. Call `useEntityItemContext(item, refetch)` for edit mode, render `actions` next to
+2. Call `useEntityItemContext(item, refetch)` for edit mode and section state, render `actions` next to
    `EditEntityItemButton`, and render that button only when `allowEdit` is true.
 3. Register it in `ENTITY_ITEM_VARIATIONS` in `entity-item-auto-variation.tsx` (the
    `satisfies` check fails if its props don't match). Update `resolveEntityItemVariation` if
@@ -71,6 +71,8 @@ the shown item. It returns:
   page comes back to it
 - `refresh` — refetches and moves the open form onto the latest version (the form's Refresh after
   a 412)
+- `sections` — open/closed state of the collapsible sections; pass it to `EntityItemSections` as
+  `state`, and use its `revealRelation` to expand and scroll to a relation (the relation summary)
 
 While editing, a background refetch does not change `shownItem`, so the user's input stays and a
 save of a stale version is refused (412). `noRefetch` is the default when the caller can't reload.

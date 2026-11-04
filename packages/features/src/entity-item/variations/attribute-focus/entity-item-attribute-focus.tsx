@@ -5,7 +5,6 @@ import {
   EntityItemSections,
   type EntityItemSectionsProps,
   hasEntityItemRelations,
-  useEntityItemSectionsState,
 } from "../../entity-item-sections";
 import { CompactRelationLayout } from "../../relations/relation-layout";
 import { useEntityItemContext } from "../../use-entity-item-context";
@@ -39,12 +38,11 @@ export function EntityItemAttributeFocus({
 }: Readonly<EntityItemVariationProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
-  const sections = useEntityItemSectionsState();
   const { itemLayout } = useEntityDisplayPreferences(item.profileEntity).preferences;
 
   const sectionProps: Omit<EntityItemSectionsProps, "item"> = {
     profiles: loadedProfiles,
-    state: sections,
+    state: itemContext.sections,
     editedItem: itemContext.editedItem,
     onEditingChange: itemContext.setIsEditing,
     onRefresh: () => void itemContext.refresh(),
@@ -64,7 +62,10 @@ export function EntityItemAttributeFocus({
       heading={
         <div className="space-y-1">
           <EntityItemReference item={item} size="lg" />
-          <EntityItemRelationSummary item={item} onRelationClick={sections.revealRelation} />
+          <EntityItemRelationSummary
+            item={item}
+            onRelationClick={itemContext.sections.revealRelation}
+          />
         </div>
       }
       action={
