@@ -31,4 +31,9 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    * button. The caller owns what they do.
    */
   readonly actions?: ReactNode;
+  /**
+   * Whether to show the edit button (default `true`). The button still only shows when the item
+   * has an update template.
+   */
+  readonly allowEdit?: boolean;
 };

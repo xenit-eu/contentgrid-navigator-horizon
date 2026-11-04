@@ -29,6 +29,7 @@ export function EntityItemContentFocus({
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
   actions,
+  allowEdit = true,
 }: Readonly<EntityItemVariationProps>) {
   const { profileEntity } = item;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
@@ -78,11 +79,13 @@ export function EntityItemContentFocus({
           <EntityItemReference item={item} size="sm" />
           <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
             {actions}
-            <EditEntityItemButton
-              item={item}
-              isEditing={itemContext.isEditing}
-              onEdit={() => itemContext.setIsEditing(true)}
-            />
+            {allowEdit && (
+              <EditEntityItemButton
+                item={item}
+                isEditing={itemContext.isEditing}
+                onEdit={() => itemContext.setIsEditing(true)}
+              />
+            )}
           </div>
         </div>
       }
