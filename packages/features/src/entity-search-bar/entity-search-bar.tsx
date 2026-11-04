@@ -93,6 +93,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
         />
         <SearchInput
           inputRef={inputRef}
+          label={props.profileEntity.title ? `Search ${props.profileEntity.title}` : undefined}
           value={input.value}
           onValueChange={input.setValue}
           error={input.error}
@@ -122,7 +123,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
                   type="button"
                   variant="secondary"
                   size="icon"
-                  aria-label="Search"
+                  aria-label="Apply search"
                   onClick={input.submit}
                   disabled={!input.selected || input.value.trim() === ""}
                   className="bg-ring text-white shadow-xs hover:bg-ring/85"

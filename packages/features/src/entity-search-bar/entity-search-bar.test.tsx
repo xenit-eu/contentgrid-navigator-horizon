@@ -13,6 +13,7 @@ import { makeSearchBarWrapper } from "../test-utils/search-bar-wrapper";
 import { EntitySearchBar } from "./entity-search-bar";
 
 const { searchBar } = makeSearchBarProfiles();
+const SEARCH_INPUT = `Search ${searchBar.title}`;
 
 function renderBar(filters: Record<string, string> = {}, actions?: ReactNode) {
   const onFiltersChange = vi.fn();
@@ -46,8 +47,15 @@ describe("EntitySearchBar", () => {
     renderBar({ "title~prefix": "Al" });
     expect(screen.getByRole("list", { name: "Active filters" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Search in" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Search" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: SEARCH_INPUT })).toBeInTheDocument();
     expect(quickFilters()).toBeInTheDocument();
+  });
+
+  it("names the input after the entity it searches, apart from the Apply search button", () => {
+    renderBar();
+    expect(searchBar.title).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: SEARCH_INPUT })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply search" })).toBeInTheDocument();
   });
 
   it("switches search off when no attribute is included, but keeps the active filters", () => {
@@ -58,7 +66,7 @@ describe("EntitySearchBar", () => {
 
     expect(screen.getByRole("list", { name: "Active filters" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Search in" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "Search" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: SEARCH_INPUT })).not.toBeInTheDocument();
     expect(screen.queryByRole("toolbar", { name: "Quick filters" })).not.toBeInTheDocument();
   });
 
@@ -133,7 +141,7 @@ describe("EntitySearchBar", () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar({ "title~prefix": "Al", urgent: "true" });
     await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Al" }));
-    const input = screen.getByRole("combobox", { name: "Search" });
+    const input = screen.getByRole("combobox", { name: SEARCH_INPUT });
     expect(input).toHaveValue("Al");
     expect(input).toHaveFocus();
     expect(screen.getByRole("combobox", { name: "Search in" })).toHaveTextContent("Title");
@@ -146,7 +154,7 @@ describe("EntitySearchBar", () => {
     const user = userEvent.setup();
     renderBar({ status: "approved" });
     await user.click(screen.getByRole("button", { name: /^Edit filter Status/ }));
-    expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("approved");
+    expect(screen.getByRole("combobox", { name: SEARCH_INPUT })).toHaveValue("approved");
     expect(screen.getByRole("combobox", { name: "Search in" })).toHaveTextContent("Status");
   });
 
@@ -178,10 +186,10 @@ describe("EntitySearchBar", () => {
   it("applies the typed value with the Search button, like Enter", async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar({ "title~prefix": "Al" });
-    const search = screen.getByRole("button", { name: "Search" });
+    const search = screen.getByRole("button", { name: "Apply search" });
     expect(search).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Al" }));
-    await user.type(screen.getByRole("combobox", { name: "Search" }), "pha");
+    await user.type(screen.getByRole("combobox", { name: SEARCH_INPUT }), "pha");
     await user.click(search);
     expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Alpha" });
   });
@@ -189,7 +197,7 @@ describe("EntitySearchBar", () => {
   it("explains the Search button in a tooltip, also while it is disabled", async () => {
     const user = userEvent.setup();
     renderBar();
-    await user.hover(screen.getByRole("button", { name: "Search" }).parentElement!);
+    await user.hover(screen.getByRole("button", { name: "Apply search" }).parentElement!);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Apply current value as filter");
   });
 
@@ -197,7 +205,7 @@ describe("EntitySearchBar", () => {
     const user = userEvent.setup();
     renderBar({ "title~prefix": "Al" });
     await user.click(screen.getByRole("button", { name: "Edit filter Title starts with Al" }));
-    const input = screen.getByRole("combobox", { name: "Search" });
+    const input = screen.getByRole("combobox", { name: SEARCH_INPUT });
     await user.keyboard("{Escape}");
     expect(screen.getByRole("combobox", { name: "Search in" })).toHaveTextContent("All");
     expect(input).toHaveAttribute("aria-expanded", "false");
@@ -206,13 +214,13 @@ describe("EntitySearchBar", () => {
   it("applies a suggestion picked from the popover", async () => {
     const user = userEvent.setup();
     const { onFiltersChange } = renderBar();
-    await user.type(screen.getByRole("combobox", { name: "Search" }), "Al");
+    await user.type(screen.getByRole("combobox", { name: SEARCH_INPUT }), "Al");
     const option = await screen.findByRole("option", { name: "Alpha invoice" }, { timeout: 3000 });
     await user.click(option);
     await waitFor(() =>
       expect(onFiltersChange).toHaveBeenCalledWith({ "title~prefix": "Alpha invoice" }),
     );
-    expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: SEARCH_INPUT })).toHaveValue("");
   });
 
   it("puts the page's actions right of the quick filters, outside the scrolling toolbar", () => {

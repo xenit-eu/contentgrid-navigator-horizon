@@ -128,8 +128,10 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
   apply the input is cleared and the mode reset to `all`.
 - "All except relations" is only offered when the entity has relation parameters.
 - A "Search" button right of the input does what Enter does with nothing highlighted
-  (`input.submit`); it is disabled until a parameter is selected and has a value. Paper-plane
-  icon; solid sky (`bg-ring`, white semibold text).
+  (`input.submit`); it is disabled until a parameter is selected and has a value. Icon-only
+  magnifying glass with a tooltip; solid sky (`bg-ring`, white icon). Accessible names differ
+  so a screen reader does not hear "Search" twice: the input is "Search {entity title}", the
+  button "Apply search".
 - Clicking an applied-filter chip edits it where it can be set: a single selectable parameter
   (text, allowed values, exact number) is selected in the main bar with its value in the input
   (focused; the filter stays applied until Enter replaces it); otherwise the rendered quick

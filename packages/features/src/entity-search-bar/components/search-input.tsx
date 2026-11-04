@@ -1,4 +1,4 @@
-import type { KeyboardEvent, Ref } from "react";
+import { type KeyboardEvent, type Ref, useId } from "react";
 import { Input, SearchSuggestionsPopover } from "@contentgrid/ui";
 import type { ParamChipModel, SuggestionGroupModel } from "../util/build-suggestion-models";
 import { paramLabel } from "../util/param-labels";
@@ -19,6 +19,8 @@ export interface SearchInputProps {
   /** Keys the popover did not handle, other than Enter (e.g. Escape on a closed popover). */
   readonly onOtherKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   readonly placeholder?: string;
+  /** Accessible name of the input, e.g. "Search Invoice"; distinct from the Search button's. */
+  readonly label?: string;
   readonly error?: string;
   /** The text input, e.g. to focus it when an applied filter is loaded for editing. */
   readonly inputRef?: Ref<HTMLInputElement>;
@@ -41,10 +43,12 @@ export function SearchInput({
   onSubmit,
   onOtherKeyDown,
   placeholder = "Search…",
+  label = "Search",
   error,
   inputRef,
 }: Readonly<SearchInputProps>) {
-  const errorId = "entity-search-bar-input-error";
+  // Unique per bar: several bars can share a page (e.g. the configuration previews).
+  const errorId = useId();
   return (
     <div className="min-w-0 flex-1">
       <SearchSuggestionsPopover
@@ -82,7 +86,7 @@ export function SearchInput({
               {...comboboxProps}
               ref={inputRef}
               type="text"
-              aria-label="Search"
+              aria-label={label}
               autoComplete="off"
               placeholder={placeholder}
               value={value}
