@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import type {
   RelationItemClickHandler,
@@ -25,4 +26,9 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    * edit form's Refresh calls it and moves the form onto the latest version.
    */
   readonly refetch?: EntityItemRefetch;
+  /**
+   * Extra actions for the item (e.g. buttons), drawn in the item's header next to the edit
+   * button. The caller owns what they do.
+   */
+  readonly actions?: ReactNode;
 };

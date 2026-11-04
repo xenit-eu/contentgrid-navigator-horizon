@@ -311,4 +311,24 @@ describe("EntityItemAutoVariation", () => {
     expect(entityItemDetailPadding(withContent, "attribute-focus")).toBe(true);
     expect(entityItemDetailPadding(withoutContent, "content-focus")).toBe("bottom");
   });
+
+  it("passes the given actions on to the variation it renders", async () => {
+    const item = makeEntityItem({
+      profileEntity: makeProfile({
+        hasContentAttributes: true,
+        contentAttributeNames: ["document"],
+      }),
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    renderBody(
+      <EntityItemAutoVariation
+        entityItem={item}
+        actions={<button type="button">extra action</button>}
+      />,
+    );
+
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "extra action" })).toBeInTheDocument();
+  });
 });

@@ -95,4 +95,14 @@ describe("EntityItemAttributeFocus", () => {
     expect(onMissingRelationTargetClick).toHaveBeenCalledWith("https://x");
     expect(onRequiredRelationClick).toHaveBeenCalledWith("lines");
   });
+
+  it("draws the given actions in the item header", () => {
+    render(
+      <EntityItemAttributeFocus
+        item={makeItem({})}
+        actions={<button type="button">extra action</button>}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "extra action" })).toBeInTheDocument();
+  });
 });

@@ -23,6 +23,7 @@ export function EntityItemAttributeFocus({
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
+  actions,
 }: Readonly<EntityItemVariationProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
@@ -31,11 +32,14 @@ export function EntityItemAttributeFocus({
     <div className="h-full min-h-0">
       <div className="flex items-center justify-between gap-2 p-4">
         <EntityItemReference item={item} size="lg" />
-        <EditEntityItemButton
-          item={item}
-          isEditing={itemContext.isEditing}
-          onEdit={() => itemContext.setIsEditing(true)}
-        />
+        <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
+          {actions}
+          <EditEntityItemButton
+            item={item}
+            isEditing={itemContext.isEditing}
+            onEdit={() => itemContext.setIsEditing(true)}
+          />
+        </div>
       </div>
 
       <div className="space-y-6 p-4 pt-0">
