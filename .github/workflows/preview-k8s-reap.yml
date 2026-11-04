@@ -1,0 +1,73 @@
+name: reap-previews
+
+# One-off / on-demand cleanup of PR previews in the frontend-pr namespace whose PR is no longer open.
+# Safety net for when the per-PR cleanup workflow (preview-k8s-cleanup.yml) does not run.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Actually delete resources (unchecked = dry run, only lists what would be deleted)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: reap-previews
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reap-previews:
+    name: Reap orphaned previews
+    runs-on: ubuntu-latest
+    # pull-requests: read is needed to list the open PRs that must keep their preview.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: PR Preview - Kubectl install
+        uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5
+        with:
+          version: "v1.30.5"
+
+      - name: PR Preview - Kubernetes context
+        uses: azure/k8s-set-context@8698eba2499e9012f0d5085f8798077cce4bc526 # v5
+        with:
+          method: kubeconfig
+          kubeconfig: "${{ secrets.PREVIEW_KUBECONFIG }}"
+
+      - name: Delete previews of PRs that are no longer open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+          NS=frontend-pr
+          DRY=--dry-run=client
+          if [ "$APPLY" = "true" ]; then DRY=--dry-run=none; fi
+          echo "Mode: $DRY"
+
+          open_prs=$(gh pr list -R "$REPO" --state open -L 1000 --json number -q '.[].number' | sort -u)
+
+          resources=$(kubectl get deploy,svc,ingress -n "$NS" -o name \
+            | grep -E '/preview-pr-[0-9]+-hz-(navigator|experimental)$' || true)
+
+          kept=0
+          deleted=0
+          for res in $resources; do
+            pr=$(sed -E 's#.*/preview-pr-([0-9]+)-hz-.*#\1#' <<<"$res")
+            if grep -qx "$pr" <<<"$open_prs"; then
+              echo "keep   $res (PR #$pr open)"
+              kept=$((kept + 1))
+            else
+              echo "delete $res (PR #$pr not open)"
+              kubectl delete -n "$NS" "$res" --ignore-not-found "$DRY"
+              deleted=$((deleted + 1))
+            fi
+          done
+
+          echo "### Preview reaper ($DRY)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- kept: $kept" >> "$GITHUB_STEP_SUMMARY"
+          echo "- deleted: $deleted" >> "$GITHUB_STEP_SUMMARY"
