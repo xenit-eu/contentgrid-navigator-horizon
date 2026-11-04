@@ -93,6 +93,19 @@ describe("FilterChips", () => {
     expect(screen.queryByRole("button", { name: /^Edit filter Received at/ })).toBeNull();
   });
 
+  it("keeps the warning of a selectable chip as the edit button's description", () => {
+    render(
+      <FilterChips
+        chips={[{ ...chips[0]!, selectable: true, warning: "Not applied by this search form" }]}
+        onRemove={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Edit filter Title starts with Alpha" }),
+    ).toHaveAccessibleDescription("Not applied by this search form");
+  });
+
   it("sizes the list from the chips' natural widths so they fit on two lines", () => {
     const widths = [600, 350, 600, 350, 600];
     const many = widths.map((_, i) => ({ id: `c${i}`, field: "F", mode: "is", value: `v${i}` }));

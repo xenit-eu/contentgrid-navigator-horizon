@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { XIcon as X } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 
@@ -59,6 +59,10 @@ function Chip({
   className,
 }: ChipProps) {
   const isWarning = tone === "warning";
+  const descriptionId = useId();
+  // A clickable body is named by `clickLabel`, which would hide a description inside it; there it
+  // becomes the button's accessible description instead.
+  const describesButton = onClick !== undefined && description !== undefined;
   const body = (
     <>
       {field && (
@@ -91,7 +95,7 @@ function Chip({
           {label}
         </span>
       </span>
-      {description && <span className="sr-only">{description}</span>}
+      {description && !describesButton && <span className="sr-only">{description}</span>}
     </>
   );
   return (
@@ -112,6 +116,7 @@ function Chip({
           type="button"
           data-slot="chip-body"
           aria-label={clickLabel}
+          aria-describedby={describesButton ? descriptionId : undefined}
           onClick={onClick}
           className="inline-flex min-w-0 items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-inherit outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
@@ -119,6 +124,11 @@ function Chip({
         </button>
       ) : (
         body
+      )}
+      {describesButton && (
+        <span id={descriptionId} className="sr-only">
+          {description}
+        </span>
       )}
       {removable && (
         <button

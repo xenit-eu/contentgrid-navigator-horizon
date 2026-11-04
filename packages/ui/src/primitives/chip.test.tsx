@@ -103,4 +103,25 @@ describe("Chip with a search mode", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(onRemove).not.toHaveBeenCalled();
   });
+
+  it("announces the description of a clickable warning chip as the button's description", () => {
+    render(
+      <Chip
+        tone="warning"
+        field="Title"
+        label="Alpha"
+        description="Not applied by this search form"
+        onClick={() => {}}
+        clickLabel="Edit Title filter"
+      />,
+    );
+    const body = screen.getByRole("button", { name: "Edit Title filter" });
+    expect(body).toHaveAccessibleDescription("Not applied by this search form");
+  });
+
+  it("reads the description once when a clickable chip has no clickLabel", () => {
+    render(<Chip tone="warning" label="Alpha" description="Not applied" onClick={() => {}} />);
+    const body = screen.getByRole("button", { name: "Alpha" });
+    expect(body).toHaveAccessibleDescription("Not applied");
+  });
 });
