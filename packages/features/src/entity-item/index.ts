@@ -9,7 +9,7 @@ export type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
 } from "./relations/relation-handlers";
-export { EntityItemAttributeSummary } from "./variations/entity-item-attribute-summary";
+export { EntityItemAttributeSummary } from "./variations/attribute-summary/entity-item-attribute-summary";
 export {
   EntityItemReference,
   EntityItemReferenceLoading,

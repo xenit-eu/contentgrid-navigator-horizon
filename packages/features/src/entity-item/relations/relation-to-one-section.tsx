@@ -25,7 +25,7 @@ import {
 } from "@contentgrid/ui";
 import { useEntityDisplayPreferences } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
-import { EntityItemAttributeSummary } from "../variations/entity-item-attribute-summary";
+import { EntityItemAttributeSummary } from "../variations/attribute-summary/entity-item-attribute-summary";
 import { EntityItemReference } from "../variations/entity-item-reference";
 import type {
   RelationItemClickHandler,
