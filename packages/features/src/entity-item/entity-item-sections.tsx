@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { ClockCounterClockwiseIcon, ListBulletsIcon } from "@phosphor-icons/react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
 import { RelationAccordion } from "@contentgrid/ui";
@@ -13,59 +13,14 @@ import type {
 } from "./relations/relation-handlers";
 import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
+import { type EntityItemSectionsState, relationSection } from "./use-entity-item-context";
 
 const ATTRIBUTES_SECTION = "attributes";
 const AUDIT_SECTION = "audit";
-/** Relation names are customer-defined, so their keys are prefixed to never match a built-in one. */
-const relationSection = (relationName: string) => `relation:${relationName}`;
-
-export interface EntityItemSectionsState {
-  /** Open state for a section, keyed by `"attributes"`, `"audit"` or `relationSection(name)`. */
-  readonly openProps: (
-    section: string,
-    defaultOpen: boolean,
-  ) => { open: boolean; onOpenChange: (open: boolean) => void };
-  /** Registers a section's element, so `reveal` can scroll to it. */
-  readonly sectionRef: (section: string) => (element: HTMLElement | null) => void;
-  /** Expands a relation's section and scrolls it into view — e.g. from `EntityItemRelationSummary`. */
-  readonly revealRelation: (relationName: string) => void;
-}
-
-/**
- * Open/closed state for {@link EntityItemSections}, kept by the caller so something outside the
- * sections (the relation summary under the item's title) can expand and scroll to one of them.
- */
-export function useEntityItemSectionsState(): EntityItemSectionsState {
-  // Only sections the user has toggled are stored; the rest use their default.
-  const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
-  const elements = useRef(new Map<string, HTMLElement>());
-
-  function setOpen(section: string, open: boolean) {
-    setToggled((prev) => new Map(prev).set(section, open));
-  }
-
-  return {
-    openProps: (section, defaultOpen) => ({
-      open: toggled.get(section) ?? defaultOpen,
-      onOpenChange: (open) => setOpen(section, open),
-    }),
-    sectionRef: (section) => (element) => {
-      if (element) elements.current.set(section, element);
-      else elements.current.delete(section);
-    },
-    revealRelation: (relationName) => {
-      const section = relationSection(relationName);
-      setOpen(section, true);
-      requestAnimationFrame(() =>
-        elements.current.get(section)?.scrollIntoView?.({ behavior: "smooth", block: "start" }),
-      );
-    },
-  };
-}
-
 export type EntityItemSectionsProps = RelationProblemHandlers & {
   readonly item: EntityItem;
   readonly profiles: readonly ProfileEntity[];
+  /** The sections' open state: `useEntityItemContext`'s `sections`. */
   readonly state: EntityItemSectionsState;
   /**
    * The version the update form was opened on; `null` when not editing (see

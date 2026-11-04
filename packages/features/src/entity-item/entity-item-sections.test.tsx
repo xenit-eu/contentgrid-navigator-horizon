@@ -1,5 +1,5 @@
 import { type Ref, useImperativeHandle } from "react";
-import { act, render, renderHook, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
@@ -7,8 +7,8 @@ import {
   EntityItemSections,
   type EntityItemSectionsProps,
   hasEntityItemRelations,
-  useEntityItemSectionsState,
 } from "./entity-item-sections";
+import { useEntityItemContext } from "./use-entity-item-context";
 
 const cancelEditForm = vi.fn();
 
@@ -77,6 +77,7 @@ function makeItem(
 ): EntityItem {
   return {
     id: overrides.id ?? "item-1",
+    selfLink: { href: `https://api.example.com/items/${overrides.id ?? "item-1"}` },
     audit: overrides.audit ?? false,
     toOneRelations: (overrides.toOne ?? []).map((name) => ({ name })),
     toManyRelations: (overrides.toMany ?? []).map((name) => ({ name })),
@@ -84,7 +85,7 @@ function makeItem(
 }
 
 function Harness(props: Partial<Omit<EntityItemSectionsProps, "state">> & { item: EntityItem }) {
-  const state = useEntityItemSectionsState();
+  const state = useEntityItemContext(props.item).sections;
   return (
     <EntityItemSections
       profiles={[]}
@@ -207,39 +208,5 @@ describe("hasEntityItemRelations", () => {
     expect(hasEntityItemRelations(makeItem())).toBe(false);
     expect(hasEntityItemRelations(makeItem({ toOne: ["customer"] }))).toBe(true);
     expect(hasEntityItemRelations(makeItem({ toMany: ["invoices"] }))).toBe(true);
-  });
-});
-
-describe("useEntityItemSectionsState", () => {
-  it("uses the default until a section is toggled", () => {
-    const { result } = renderHook(() => useEntityItemSectionsState());
-
-    expect(result.current.openProps("invoices", false).open).toBe(false);
-    act(() => result.current.openProps("invoices", false).onOpenChange(true));
-    expect(result.current.openProps("invoices", false).open).toBe(true);
-  });
-
-  it("revealRelation expands a relation's section and scrolls its element into view", () => {
-    const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      callback(0);
-      return 0;
-    });
-    const element = document.createElement("section");
-    const scrollIntoView = vi.fn();
-    element.scrollIntoView = scrollIntoView;
-    const { result } = renderHook(() => useEntityItemSectionsState());
-
-    act(() => result.current.sectionRef("relation:invoices")(element));
-    act(() => result.current.revealRelation("invoices"));
-
-    expect(result.current.openProps("relation:invoices", false).open).toBe(true);
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
-
-    // An unregistered section is opened without scrolling.
-    scrollIntoView.mockClear();
-    act(() => result.current.sectionRef("relation:invoices")(null));
-    act(() => result.current.revealRelation("invoices"));
-    expect(scrollIntoView).not.toHaveBeenCalled();
-    rafSpy.mockRestore();
   });
 });
