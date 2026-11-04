@@ -1,9 +1,10 @@
 name: cleanup
 
 on:
-  # DANGER: pull_request_target also runs from forks, don't checkout the code!
-  # We need pull_request_target instead of pull_request, since it also needs to run for closed PRs with merge conflicts.
-  pull_request_target:
+  # pull_request_target is blocked by an org-level Actions policy.
+  # Caveat: GitHub does not run pull_request workflows for PRs with merge conflicts,
+  # so a PR closed while conflicting will not have its preview cleaned up.
+  pull_request:
     types:
       - closed
 
