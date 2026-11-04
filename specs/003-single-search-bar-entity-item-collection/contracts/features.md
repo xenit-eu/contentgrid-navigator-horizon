@@ -37,12 +37,12 @@ function EntitySearchBar(props: EntitySearchBarProps): JSX.Element | null;
 ### Internal layout (not exported)
 
 ```text
-entity-search-bar/
+entity-search-bar/                        # (the search-bar MSW wrapper is src/test-utils/search-bar-wrapper.tsx)
 ├── package.json
 ├── index.ts
 ├── entity-search-bar.tsx                 # composes the three rows; orchestration only
 ├── use-entity-search-bar.ts              # the view-model hook (below)
-├── test-utils.tsx                        # query client + provider wired to the search-bar MSW fixture
+├── test-utils.tsx                        # test harness for controlled quick-filter popovers
 ├── components/
 │   ├── search-param-selector.tsx         # GroupedSelect wrapper (icon-only below `sm`)
 │   ├── search-input.tsx                  # input + SearchSuggestionsPopover; Enter submits, other keys forwarded
@@ -66,12 +66,12 @@ entity-search-bar/
     ├── param-labels.ts                   # parameter display name and type hint
     ├── build-active-filter-chips.ts      # data-model §6
     ├── format-filter-value.ts            # value formatting for chips
-    ├── build-quick-filters.ts            # data-model §7 (the one exhaustive switch on valueKind)
+    ├── build-quick-filters.ts            # data-model §7 (quick-filter type per valueKind)
     └── date-presets.ts                   # data-model §8 (+ encode / decode of date bounds)
 ```
 
 Each `util/*.ts` is pure and has a sibling `*.test.ts`. The models in `util/` carry no
-`ReactNode`s: components choose icons from `valueKind` / `mode` / `auditRole` / boolean value
+`ReactNode`s: components choose icons from `valueKind` / `searchType` / `auditRole` / boolean value
 (`components/search-icons.tsx`).
 
 ### `useEntitySearchBar` (internal view-model)
@@ -85,6 +85,8 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
 
   chips: readonly ActiveFilterChipModel[];
   removeChip: (id: string) => void;
+  chipTargets: ReadonlyMap<string, ChipTarget>; // clickable chips and where they edit
+  editChip: (id: string) => ChipTarget | undefined;
 
   selectorGroups: readonly SelectorGroupModel[];
   input: {
@@ -108,6 +110,8 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
   applyQuickFilter: (groupKey: string, values: Record<string, string | undefined>) => void;
   clearQuickFilter: (groupKey: string) => void;
   cycleBoolean: (groupKey: string) => void;
+  openQuickFilter: string | undefined; // group key of the open quick-filter popover
+  setOpenQuickFilter: (groupKey: string | undefined) => void;
   fieldsFor: (groupKey: string) => readonly HalFormsField[]; // memoised per attribute
 };
 ```
@@ -123,6 +127,17 @@ function useEntitySearchBar(props: EntitySearchBarProps): {
   keys whose value is `undefined` or `""`) and calls `onFiltersChange` once; after a main-bar
   apply the input is cleared and the mode reset to `all`.
 - "All except relations" is only offered when the entity has relation parameters.
+- A "Search" button right of the input does what Enter does with nothing highlighted
+  (`input.submit`); it is disabled until a parameter is selected and has a value. Icon-only
+  magnifying glass with a tooltip; solid sky (`bg-ring`, white icon). Accessible names differ
+  so a screen reader does not hear "Search" twice: the input is "Search {entity title}", the
+  button "Apply search".
+- Clicking an applied-filter chip edits it where it can be set: a single selectable parameter
+  (text, allowed values, exact number) is selected in the main bar with its value in the input
+  (focused; the filter stays applied until Enter replaces it); otherwise the rendered quick
+  filter covering all its parameters opens (range and date chips), scrolled into view. Boolean
+  chips (no popover) and chips with neither target are not clickable. The quick-filter popovers
+  are controlled by `openQuickFilter` for this; the date draft resets on every opening.
 
 ## 2. `search` feature (move, no behaviour change)
 
@@ -143,7 +158,7 @@ function buildCollectionSearchValues(
 ): HalFormValues<SearchRequestSpec>; // what the view builds inline today
 ```
 
-`EntityItemCollectionView` and `EntitySearchBar` both import them (one copy, Principle VIII).
+`EntityItemCollectionBrowser` and `EntitySearchBar` both import them (one copy, Principle VIII).
 
 ---
 
@@ -169,7 +184,7 @@ function useSearchAttributeInclusion(profileEntity: ProfileEntity | undefined): 
 
 ## 4. `entity-item-collection` integration
 
-- `EntityItemCollectionView` renders
+- `EntityItemCollectionBrowser` renders
   `<EntitySearchBar profileEntity filters onFiltersChange currentSort actions />` as the first row
   of the view, above the table, so it stays usable while the table is loading or shows an error.
 - The page title block (heading, entity icon, "N items" subtitle) is removed (FR-001a): the

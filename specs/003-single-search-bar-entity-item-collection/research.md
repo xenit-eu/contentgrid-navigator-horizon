@@ -57,7 +57,9 @@ duplicate the hal-forms redundancy rules and drift from the dialog); classifying
 
 ## R2. Search-parameter classification
 
-**Decision**: Each descriptor gets a `valueKind` and a `mode`:
+**Decision**: Each descriptor gets a `valueKind`, plus the template property's `searchType` and
+range `bound` (amended: the feature-local `mode` copy of the search type was dropped, see
+data-model.md §2). The table's `mode` column names the search type / bound for reading:
 
 | Source                             | `valueKind`         | `mode`                        | In selector | In popover                         | Quick filter            |
 | ---------------------------------- | ------------------- | ----------------------------- | ----------- | ---------------------------------- | ----------------------- |
@@ -137,7 +139,7 @@ without changing its contract.
 
 - Filters live in the URL as `s.<searchPropertyName>=<string>` (`packages/features/src/search/filter-url-state.ts`),
   owned by the route `apps/navigator/src/routes/_app/$entity/index.tsx` and passed to
-  `EntityItemCollectionView` as `filters: Record<string, string>` + `onFiltersChange`.
+  `EntityItemCollectionBrowser` as `filters: Record<string, string>` + `onFiltersChange`.
 - The view already converts between URL strings and typed values (`coerceFilterValue`,
   `encodeFilterValue`) and renders the advanced dialog from the same `filters`.
 
