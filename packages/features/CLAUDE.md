@@ -36,7 +36,7 @@ spec 005 FR-028 / FR-035)
 
 Feature directories carry **no** `x-stability` field. The tag moved to the views in
 `packages/views/src/*` (each view's `package.json`; see [`packages/views/CLAUDE.md`](../views/CLAUDE.md#stability)),
-and `@contentgrid/no-unstable-features` resolves it for `@contentgrid/views/<view>` imports. A feature
+and `@contentgrid/no-unstable-views` resolves it for `@contentgrid/views/<view>` imports. A feature
 is as stable as the views that use it; a stable view that needs an experimental feature gets an
 experimental copy of the view (provisional pending spec open question 1).
 
@@ -44,7 +44,7 @@ experimental copy of the view (provisional pending spec open question 1).
   A feature directory needs a `package.json` only for something else (e.g. a name or description).
 - Apps import features only through views (layer rule L1,
   [`layer-lint-rules.md`](../../specs/005-views-layer/contracts/layer-lint-rules.md)). The few features no
-  view wraps yet are listed in `APPS_FEATURE_IMPORTS_PENDING_VIEW` (`packages/eslint-config/rules/layers.ts`);
+  view wraps yet are listed in `PENDING_VIEW_FEATURES` in each app's `eslint.config.js` (both identical; empty at go-live);
   those imports are not stability-checked, since a feature has no tag.
 - Features never import `@contentgrid/views` (L4) or the router (L2; the exemption is listed in the
   `ROUTER_EXEMPT` constant of `packages/features/eslint.config.js`).

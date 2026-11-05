@@ -113,7 +113,7 @@ packages/features/src/
 ├── shells/                        # moved out (PR 5)
 └── user-preferences/              # merge, hook, store with storage option; reorganised from preferences/ (deferred, not in this series)
 
-packages/eslint-config/rules/      # layer rules; no-unstable-features checks views (PR 7)
+packages/eslint-config/rules/      # layer rules; no-unstable-views checks views (PR 7)
 
 apps/navigator/src/routes/, apps/navigator-experimental/src/routes/
 ├── -router-navigation-provider.tsx  # each app's own Navigation implementation; file-route-ignored, not in packages/views/src/shells/ (research.md §2.7) (PR 3, 5)
