@@ -14,6 +14,13 @@ export const entityDisplayPreferencesSchema = z.object({
   nameAttribute: z.string().optional(),
   subtitleAttribute: z.string().optional(),
   visibleColumns: z.array(z.string()).optional(),
+  /**
+   * Names of the attributes that take part in the entity search bar (spec 003, FR-034–FR-036a).
+   * The heuristic default lists every searchable attribute (`ProfileEntity.searchableAttributes`);
+   * a list is taken as is, so `[]` switches search off. Search parameters over a relation are not
+   * listed here — they follow whether search is on.
+   */
+  searchAttributes: z.array(z.string()).optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
   cardStyle: z.string().optional(),

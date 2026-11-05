@@ -42,7 +42,10 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
     `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
-    reused across multiple tracks or apps.
+    reused across multiple tracks or apps. Documented exception: the search and filter
+    building blocks below (spec 003) live here although the entity search bar is their only
+    consumer today — they are domain-free and meant for the advanced filter dialog and the
+    relation pickers next; move one into its feature if that reuse does not happen.
 
 ---
 
@@ -312,6 +315,31 @@ BufferSource argument is empty` reaches the console), but
   generated in this change): `Patterns/PdfViewer` — `Default`,
   `ToolbarMinimal`, `Protected`, `Invalid`, `EngineFailure`, `JsInPdf`,
   `SearchOpen`, `SearchNoResults`, `PrintReady`.
+
+---
+
+## Search and filter building blocks
+
+Domain-free pieces used by the entity search bar (spec
+`specs/003-single-search-bar-entity-item-collection/`, contract
+`contracts/ui-primitives-and-patterns.md`), reusable for any filtered list:
+
+- **Primitives**: `FilterButton` (filter trigger with idle / active / positive / negative
+  outlines and a sibling × to clear; works as `<PopoverTrigger asChild>`), plus `Chip` (now with
+  a visible `mode` segment, icons and an optional clickable body), `CountIndicatorChip` (`isLoading`) and `SelectionChip`
+  (`icon` / `trailing`). `--success*` tokens are mapped into `@theme` (`bg-success`,
+  `border-success-foreground`, …).
+- **Patterns**: `FilterChips` (removable chips, optionally `selectable` via `onSelect`, at most two
+  lines then horizontal scroll),
+  `GroupedSelect`, `SearchSuggestionsPopover` (chip row + grouped suggestions, owns the combobox
+  keyboard model via `renderAnchor`), `DateRangeFilter` (range calendar + presets), and
+  `SearchableOptionList`. `filterOptionsByPrefix` (`src/lib/filter-options.ts`) is the shared
+  client-side prefix filter.
+- **ARIA lesson from the axe audit**: a `listbox` may only contain options and groups — keep
+  loading / empty / error text outside it (the popover renders one listbox per group with
+  results), and don't put buttons inside one (`nested-interactive`).
+- **Horizontal scrolling**: `ScrollArea` only mounts a vertical scrollbar; these rows use native
+  `overflow-x-auto` with the `scrollbar-subtle` utility.
 
 ---
 

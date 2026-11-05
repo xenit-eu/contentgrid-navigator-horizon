@@ -1,0 +1,334 @@
+/**
+ * Tests for `EntityItemAutoVariation`'s own orchestration logic: the FR-001 layout branch, an
+ * explicitly chosen variation, default content-attribute selection and attribute-selector switching, for an already-loaded
+ * profile and item (the view above it owns loading, the toolbar and padding). `ContentPreviewPanel` and
+ * `ContentAttributeSelector` are mocked too, for the same reason (T027's own test already covers
+ * the panel's real `useContentPreview` integration) and to avoid driving a Radix `Select`
+ * popup through jsdom, which this repo has no established pattern for
+ * (`packages/ui/src/primitives/select.test.tsx` never opens the popup either).
+ */
+import type { ReactNode } from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import {
+  type AuthenticationTokenSupplier,
+  type EntityItem,
+  EntityItemAttributeContent,
+  NavigatorDataProvider,
+  type ProfileAttribute,
+  type ProfileEntity,
+  createApiClient,
+  createContentClient,
+} from "@contentgrid/navigator-data";
+import {
+  EntityItemAutoVariation,
+  entityItemDetailPadding,
+  entityItemVariations,
+} from "./entity-item-auto-variation";
+
+const PROFILE_URL = "https://api.example.com/profile/order";
+const noopSupplier: AuthenticationTokenSupplier = async () => null;
+
+/**
+ * Wraps in a real `NavigatorDataProvider` (no MSW/network involved — `useLoadedProfileEntities` is
+ * mocked below): `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature)
+ * calls `useEntityDisplayPreferences`, which reads `useNavigatorData()` directly, so any render of
+ * the FR-001 fallback body needs a provider in scope even though no real fetch ever happens — same
+ * pattern as `entity-item/variations/item-reference/entity-item-reference.test.tsx`. `EntityItemAutoVariation`
+ * draws no toolbar or breadcrumbs of its own (the view above it does), so no router context is
+ * needed here either.
+ */
+function renderBody(children: ReactNode) {
+  return render(
+    <NavigatorDataProvider
+      apiFetch={createApiClient(noopSupplier)}
+      contentFetch={createContentClient(noopSupplier)}
+      profileUrl={PROFILE_URL}
+    >
+      {children}
+    </NavigatorDataProvider>,
+  );
+}
+
+vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
+  return {
+    ...actual,
+    useLoadedProfileEntities: vi.fn(() => ({ profiles: [] })),
+  };
+});
+
+vi.mock("./content-focus/components/content-preview-panel", () => ({
+  ContentPreviewPanel: (props: { attributeName: string; toolbarStart?: ReactNode }) => (
+    <div>
+      <div>content-preview-panel:{props.attributeName}</div>
+      {props.toolbarStart}
+    </div>
+  ),
+}));
+
+vi.mock("../relations/relation-to-one-section", () => ({
+  RelationToOneSection: (props: { onItemClick?: (entity: string, id: string) => void }) => (
+    <button onClick={() => props.onItemClick?.("company", "c-1")}>one-relation</button>
+  ),
+}));
+vi.mock("../relations/relation-to-many-section", () => ({
+  RelationToManySection: () => <div>many-relation</div>,
+}));
+
+vi.mock("./content-focus/components/content-attribute-selector", () => ({
+  ContentAttributeSelector: (props: { value: string; onChange: (name: string) => void }) => (
+    <button type="button" onClick={() => props.onChange("receipt")}>
+      switch to receipt (currently {props.value})
+    </button>
+  ),
+}));
+
+function makeProfileAttribute(name: string): ProfileAttribute {
+  return { name, title: null, isContent: true } as unknown as ProfileAttribute;
+}
+
+function makeProfile(options: {
+  hasContentAttributes: boolean;
+  contentAttributeNames?: readonly string[];
+}): ProfileEntity {
+  const { hasContentAttributes, contentAttributeNames = [] } = options;
+  const attributes = contentAttributeNames.map((name) => makeProfileAttribute(name));
+  return {
+    name: "order",
+    pluralName: "Orders",
+    hasContentAttributes,
+    attributes,
+    userDefinedAttributes: attributes,
+    // `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature) calls
+    // `useEntityDisplayPreferences`, which unconditionally calls `getDefaultPreferences()` on
+    // whatever profile it's handed — this fake profile has no real heuristic to run, so it
+    // stubs the method with an empty (all-optional) result rather than reimplementing
+    // `ProfileEntity.getDefaultPreferences()`'s real name/icon-inference logic here.
+    getDefaultPreferences: () => ({}),
+  } as unknown as ProfileEntity;
+}
+
+function makeContentAttribute(name: string, hasFile: boolean) {
+  return {
+    value: new EntityItemAttributeContent(
+      name,
+      hasFile ? { filename: `${name}.pdf`, length: 1, mimetype: "application/pdf" } : null,
+      { href: `https://api.example.com/orders/1/${name}` } as never,
+    ),
+    profileAttribute: makeProfileAttribute(name),
+  };
+}
+
+function makeEntityItem(options: {
+  profileEntity: ProfileEntity;
+  contentAttrs?: readonly ReturnType<typeof makeContentAttribute>[];
+}): EntityItem {
+  const { profileEntity, contentAttrs = [] } = options;
+  return {
+    id: "1",
+    etag: null,
+    selfLink: { href: "https://api.example.com/orders/1" },
+    attributes: contentAttrs,
+    userDefinedAttributes: contentAttrs,
+    toOneRelations: [],
+    toManyRelations: [],
+    createdDate: undefined,
+    modifiedDate: undefined,
+    createdBy: undefined,
+    modifiedBy: undefined,
+    updateTemplate: null,
+    profileEntity,
+  } as unknown as EntityItem;
+}
+
+describe("EntityItemAutoVariation", () => {
+  it("renders the existing EntityItemAttributeFocus body when the entity has no content attributes (FR-001)", () => {
+    const profile = makeProfile({ hasContentAttributes: false });
+    const item = makeEntityItem({ profileEntity: profile });
+
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
+
+    // EntityItemAttributeFocus's own item-reference header (`data-slot="item-reference"`) — it draws no
+    // toolbar itself, so this always renders.
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
+  });
+
+  it("renders the content-focus layout, defaulting to the first content attribute that holds a file", async () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document", "receipt"],
+    });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [
+        makeContentAttribute("document", false),
+        makeContentAttribute("receipt", true),
+      ],
+    });
+
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
+
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+    expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
+  });
+
+  it("prefers the earlier content attribute in profile order when both hold a file", async () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document", "receipt"],
+    });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
+    });
+
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
+
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+  });
+
+  it("switches the previewed attribute when the selector fires onChange, resetting the panel", async () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document", "receipt"],
+    });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
+    });
+
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
+
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
+
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+    expect(screen.queryByText("content-preview-panel:document")).not.toBeInTheDocument();
+  });
+
+  it("resets and re-validates the selected attribute when the entity changes, not just the item id (e.g. navigating /document/1 -> /invoice/1 with the same itemId)", async () => {
+    const profileA = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document", "receipt"],
+    });
+    const itemA = makeEntityItem({
+      profileEntity: profileA,
+      contentAttrs: [makeContentAttribute("document", true), makeContentAttribute("receipt", true)],
+    });
+    const { rerender } = renderBody(<EntityItemAutoVariation entityItem={itemA} />);
+
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /switch to receipt/ }));
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+
+    // Navigate to a different entity — same itemId ("1") — whose content attributes don't
+    // include "receipt" at all. Without resetting/validating on entity change (not just itemId),
+    // this would try to preview a "receipt" attribute that doesn't exist on this entity, which
+    // `useContentPreview` throws synchronously for in real usage.
+    const profileB = makeProfile({ hasContentAttributes: true, contentAttributeNames: ["scan"] });
+    const itemB = makeEntityItem({
+      profileEntity: profileB,
+      contentAttrs: [makeContentAttribute("scan", true)],
+    });
+    rerender(
+      <NavigatorDataProvider
+        apiFetch={createApiClient(noopSupplier)}
+        contentFetch={createContentClient(noopSupplier)}
+        profileUrl={PROFILE_URL}
+      >
+        <EntityItemAutoVariation entityItem={itemB} />
+      </NavigatorDataProvider>,
+    );
+
+    expect(await screen.findByText("content-preview-panel:scan")).toBeInTheDocument();
+    expect(screen.queryByText("content-preview-panel:receipt")).not.toBeInTheDocument();
+  });
+
+  it("lists the item's relations beside the preview and reports a relation click with entity and id", async () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document"],
+    });
+    const item = {
+      ...makeEntityItem({
+        profileEntity: profile,
+        contentAttrs: [makeContentAttribute("document", true)],
+      }),
+      toOneRelations: [{ name: "owner" }],
+      toManyRelations: [{ name: "lines" }],
+    } as unknown as EntityItem;
+    const onRelationItemClick = vi.fn();
+
+    renderBody(
+      <EntityItemAutoVariation entityItem={item} onRelationItemClick={onRelationItemClick} />,
+    );
+
+    expect(await screen.findByText("many-relation")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("one-relation"));
+    expect(onRelationItemClick).toHaveBeenCalledWith({ entityName: "company", itemId: "c-1" });
+  });
+
+  it("fills its parent and draws no toolbar or padding of its own", () => {
+    const profile = makeProfile({ hasContentAttributes: false });
+    const item = makeEntityItem({ profileEntity: profile });
+
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root).toHaveClass("h-full", "min-h-0");
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+  it("renders the variation it is given, whatever the entity's content attributes", async () => {
+    const withContent = makeEntityItem({
+      profileEntity: makeProfile({
+        hasContentAttributes: true,
+        contentAttributeNames: ["document"],
+      }),
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    const { container } = renderBody(
+      <EntityItemAutoVariation entityItem={withContent} variation="attribute-focus" />,
+    );
+
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
+  });
+
+  it("lists every variation by name", () => {
+    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus"]);
+  });
+
+  it("pads content focus only at the bottom, and attribute focus on both axes", () => {
+    const withContent = makeProfile({ hasContentAttributes: true });
+    const withoutContent = makeProfile({ hasContentAttributes: false });
+
+    expect(entityItemDetailPadding(withContent)).toBe("bottom");
+    expect(entityItemDetailPadding(withoutContent)).toBe(true);
+    expect(entityItemDetailPadding(withContent, "attribute-focus")).toBe(true);
+    expect(entityItemDetailPadding(withoutContent, "content-focus")).toBe("bottom");
+  });
+
+  it("passes the given actions on to the variation it renders", async () => {
+    const item = makeEntityItem({
+      profileEntity: makeProfile({
+        hasContentAttributes: true,
+        contentAttributeNames: ["document"],
+      }),
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    renderBody(
+      <EntityItemAutoVariation
+        entityItem={item}
+        actions={<button type="button">extra action</button>}
+      />,
+    );
+
+    expect(await screen.findByText("content-preview-panel:document")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "extra action" })).toBeInTheDocument();
+  });
+});

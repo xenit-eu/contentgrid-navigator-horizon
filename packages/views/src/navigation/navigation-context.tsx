@@ -10,16 +10,30 @@ export interface NavigationOptions {
 /**
  * The one object a host provides for opening things (contract `navigation-context.md`). Views call
  * it instead of the router; features get callback props that their view wires to it. The host
- * decides what happens next. Every function takes a trailing optional `NavigationOptions`; the view
- * decides, the host may ignore.
+ * decides what happens next. Every `open*` function takes a trailing optional `NavigationOptions`; the
+ * view decides, the host may ignore.
  *
- * `openClassifyCreate`, `openEditItem` and `openCreateItem` are added with the pages that use them.
+ * `openClassifyCreate` and `openEditItem` are added with the pages that use them.
  */
 export interface Navigation {
   openHome(options?: NavigationOptions): void;
   /** Opens the entity's list, restored as the user left it. */
   openEntityItemCollection(entityName: string, options?: NavigationOptions): void;
   openItem(entityName: string, id: string, options?: NavigationOptions): void;
+  /** Opens the create form for an entity (a missing relation target is opened with `openInNewTab`). */
+  openCreateItem(entityName: string, options?: NavigationOptions): void;
+  /**
+   * The real address for each `open*` above, when the host has one to give (contract
+   * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so
+   * cmd/middle-click, copy link and screen-reader link semantics work — while a plain click still
+   * goes through the matching `open*` function. A host with nothing to link to (a chat panel, a
+   * split-view pane) simply omits it; views fall back to a button then. See `NavigationLink`.
+   */
+  hrefFor?: {
+    home(): string;
+    entityItemCollection(entityName: string): string;
+    item(entityName: string, id: string): string;
+  };
 }
 
 const NavigationContext = createContext<Navigation | null>(null);
@@ -29,6 +43,7 @@ const noopNavigation: Navigation = {
   openHome: () => {},
   openEntityItemCollection: () => {},
   openItem: () => {},
+  openCreateItem: () => {},
 };
 
 export function NavigationProvider({
@@ -76,14 +91,16 @@ export function ChildNavigationProvider({
   children: ReactNode;
 }>) {
   const parent = useViewNavigation();
-  const { openHome, openEntityItemCollection, openItem } = overrides;
+  const { openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor } = overrides;
   const navigation = useMemo<Navigation>(
     () => ({
       openHome: openHome ?? parent.openHome,
       openEntityItemCollection: openEntityItemCollection ?? parent.openEntityItemCollection,
       openItem: openItem ?? parent.openItem,
+      openCreateItem: openCreateItem ?? parent.openCreateItem,
+      hrefFor: hrefFor ?? parent.hrefFor,
     }),
-    [parent, openHome, openEntityItemCollection, openItem],
+    [parent, openHome, openEntityItemCollection, openItem, openCreateItem, hrefFor],
   );
   return <NavigationProvider navigation={navigation}>{children}</NavigationProvider>;
 }

@@ -146,6 +146,16 @@ describe("ProfileEntity — getDefaultPreferences", () => {
     expect(prefs.icon).toBe("Database");
   });
 
+  it("lists no search attributes when nothing has a search parameter", () => {
+    const prefs = makeProfileEntity({
+      attributes: [
+        { name: "id", type: "string" },
+        { name: "title", type: "string" },
+      ],
+    }).getDefaultPreferences();
+    expect(prefs.searchAttributes).toEqual([]);
+  });
+
   it("prefers the first string attribute as the name attribute", () => {
     const prefs = makeProfileEntity({
       attributes: [

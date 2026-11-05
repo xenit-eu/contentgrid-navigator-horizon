@@ -28,7 +28,7 @@ export function EntityItemCollectionEmptyState({
       {canCreate && (
         <Button variant="outline" className="mt-3" onClick={onCreateItem}>
           <PlusIcon aria-hidden />
-          Create {profile.title}
+          Create {profile.singularName}
         </Button>
       )}
     </div>
