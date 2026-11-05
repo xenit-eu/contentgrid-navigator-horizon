@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -256,6 +257,37 @@ describe("EntityItemCollectionView state changes", () => {
     await userEvent.type(combobox, "acme");
     act(() => {
       fireEvent.keyDown(combobox, { key: "Enter" });
+      fireEvent.click(next);
+    });
+
+    expect(onStateChange).toHaveBeenLastCalledWith({
+      filters: { "name~prefix": "acme" },
+      pageUrl: CUSTOMER_NEXT_PAGE_URL,
+    });
+  });
+
+  it("keeps both changes across an unrelated re-render when controlled with no state yet", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    const view = (activeItemId: string) => (
+      <EntityItemCollectionView
+        entityName="customer"
+        onStateChange={onStateChange}
+        activeItemId={activeItemId}
+      />
+    );
+    const { rerender } = render(view("a"), { wrapper: Wrapper });
+
+    await findFirstItem();
+    const next = screen.getByRole("button", { name: /next/i });
+    await userEvent.click(screen.getByRole("button", { name: /filters/i }));
+    const combobox = screen.getByRole("combobox", { name: /Name/ });
+    await userEvent.type(combobox, "acme");
+    act(() => {
+      fireEvent.keyDown(combobox, { key: "Enter" });
+      // The host re-renders for an unrelated reason between the two updates; `state` is still
+      // undefined, so the default must keep its identity.
+      flushSync(() => rerender(view("b")));
       fireEvent.click(next);
     });
 

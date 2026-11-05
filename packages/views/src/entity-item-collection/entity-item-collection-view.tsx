@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
@@ -64,6 +64,9 @@ function initialStateForLink(profileEntity: ProfileEntity, url: string): Collect
   return { filters: extractFilterValuesFromCollectionUrl(fields, url), pageUrl: url };
 }
 
+/** Shared by every render, so a host-controlled list's default has a stable identity. */
+const EMPTY_COLLECTION_STATE: CollectionViewState = {};
+
 /**
  * One entity's list: filters, table and pagination, under a Home, collection breadcrumb toolbar
  * with a create action when the profile allows creating. Resolves the target's profile itself
@@ -82,6 +85,18 @@ export function EntityItemCollectionView({
     "collectionUrl" in target ? { url: target.collectionUrl } : target,
   );
 
+  const loadedProfileEntity = result.status === "success" ? result.profileEntity : undefined;
+  const collectionUrl = "collectionUrl" in target ? target.collectionUrl : undefined;
+  // Stable between renders: the view's state hook treats a new default reference as the host
+  // having answered, which would drop a pending same-tick change.
+  const defaultState = useMemo(
+    () =>
+      loadedProfileEntity && collectionUrl !== undefined
+        ? initialStateForLink(loadedProfileEntity, collectionUrl)
+        : EMPTY_COLLECTION_STATE,
+    [loadedProfileEntity, collectionUrl],
+  );
+
   let content: ReactNode;
   if (result.status === "not-found") {
     content = <ErrorPage model={toProblemDisplayModel(describeTarget(target))} />;
@@ -95,12 +110,7 @@ export function EntityItemCollectionView({
       <CollectionBody
         key={`${result.profileEntity.name}|${"collectionUrl" in target ? target.collectionUrl : ""}`}
         profileEntity={result.profileEntity}
-        initialState={
-          state ??
-          ("collectionUrl" in target
-            ? initialStateForLink(result.profileEntity, target.collectionUrl)
-            : {})
-        }
+        initialState={state ?? defaultState}
         state={state}
         onStateChange={onStateChange}
         activeItemId={activeItemId}
