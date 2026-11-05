@@ -197,9 +197,9 @@ function EntityItemCollectionRoute({ entityName }: Readonly<{ entityName: string
     void go({
       to: "/$entity",
       params: { entity: entityName },
-      // The full mirrored state is written over `prev`, not only the keys that changed: `prev` can
-      // be a pending, uncommitted location (a navigation still loading), and a diff would leak its
-      // other keys into this one.
+      // The mirrored keys (filters, sort, item) are always written from state, never inherited from
+      // `prev`: `prev` can be a pending, uncommitted location (a navigation still loading), and
+      // diffing against it would leak its stale values into this one. Other keys pass through.
       search: (prev) =>
         applyItemToSearchState(
           applySortToSearchState(

@@ -204,7 +204,7 @@ test("result table document preview @slow", async ({
 
   // A row click selects the item: the list stays and the read-only preview opens beside it
   // (`?item=<id>`). The clicks are scoped to the list pane; the preview has its own attribute table.
-  const list = page.getByRole("region", { name: "List" });
+  const list = page.getByRole("region", { name: "Collection" });
 
   // @embedpdf uses the same data-testid attributes as react-pdf-viewer
   await list.getByRole("row", { name: "metadata.png [4.08 KB]" }).click();
@@ -266,7 +266,7 @@ test("Test details no content", async ({ page, login, selectSidebarEntity }) => 
   await selectSidebarEntity(ENTITY.EMPLOYEE);
 
   // Row click → preview pane beside the list → Open goes to the full detail page.
-  const list = page.getByRole("region", { name: "List" });
+  const list = page.getByRole("region", { name: "Collection" });
   await list.getByRole("row", { name: "Beatrix" }).click();
   await page.getByRole("region", { name: "Preview" }).getByRole("link", { name: "Open" }).click();
 
@@ -292,7 +292,7 @@ test("Test details with content @slow", async ({ page, login, selectSidebarEntit
   await selectSidebarEntity(ENTITY.ORDER);
 
   // Row click → preview pane beside the list → Open goes to the full detail page.
-  const list = page.getByRole("region", { name: "List" });
+  const list = page.getByRole("region", { name: "Collection" });
   await list.getByRole("row", { name: "testdocx.docx [4.26 KB]" }).click();
   await page.getByRole("region", { name: "Preview" }).getByRole("link", { name: "Open" }).click();
 

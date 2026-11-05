@@ -138,7 +138,7 @@ function SplitBody({
       <div
         ref={listRef}
         role="region"
-        aria-label="List"
+        aria-label="Collection"
         tabIndex={-1}
         className={`h-full min-w-0 flex-1 border-r outline-none ${selected ? "hidden lg:block" : ""}`}
       >

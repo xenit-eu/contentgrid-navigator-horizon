@@ -26,6 +26,7 @@ const pageTwoItem = {
 // The item name shows in its row; once selected it shows in the breadcrumb too.
 const row = async (name: string) => (await screen.findAllByText(name))[0];
 const currentCrumb = () => document.querySelector("[aria-current='page']");
+const collectionPane = () => screen.getByRole("region", { name: "Collection" });
 const previewPane = () => screen.getByRole("region", { name: "Preview" });
 // The preview pane's own header (item reference) names the selected item.
 const previewShows = (name: string) =>
@@ -70,6 +71,7 @@ describe("EntityItemSplitView", () => {
     expect(
       within(screen.getByRole("navigation", { name: /breadcrumb/i })).queryByText("Acme Corp"),
     ).toBeNull();
+    expect(collectionPane()).toBeInTheDocument();
     // The preview keeps its own header with the item and its Open / Close actions.
     expect(within(previewPane()).getByRole("link", { name: "Open" })).toBeInTheDocument();
     expect(

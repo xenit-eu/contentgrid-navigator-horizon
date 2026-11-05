@@ -18,9 +18,9 @@ export const DOCUMENT_ITEM_URL = `${DOCUMENT_COLLECTION_URL}/doc-001`;
 export const DOCUMENT_ITEM_2_URL = `${DOCUMENT_COLLECTION_URL}/doc-002`;
 export const DOCUMENT_FILE_URL = `${DOCUMENT_ITEM_URL}/file`;
 
-/** The bytes of a 1x1 transparent PNG, so the browser (stories) can really draw the preview. */
+/** The bytes of a 64x48 PNG (blue field, yellow disc, red block), so the browser (stories) can really draw the preview. */
 const PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAIAAAAuKetIAAAAoUlEQVR42u3YUQ2AMAxF0SrhGxHThDBEoAQlfIGCQdpH2mU3eQLuSfaz2rLtQ88AAAAAAAAAAJ1dxzoY4Cnury7gNf0PhqXUCw2WVa8yWGK9xGC59XGDpdcHDRMDhPURAwAAAGrUuw08IQAApgVoDWdrvs0NUBnc9QKA5EeWDIj/ifMBwatECUDkLlQF4L7M1QI4bqOlAV8GAAAAAAAAeHcDXOJJ911+SSAAAAAASUVORK5CYII=";
 
 const subAttribute = (name: string, title: string, type: string) => ({
   name,
@@ -90,7 +90,7 @@ const contentCuries = [
 export const documentItemBody = {
   id: "doc-001",
   title: "Quarterly report",
-  file: { filename: "report.png", mimetype: "image/png", length: 70 },
+  file: { filename: "report.png", mimetype: "image/png", length: 218 },
   _links: {
     self: { href: DOCUMENT_ITEM_URL },
     "cg:content": [{ href: DOCUMENT_FILE_URL, name: "file" }],
