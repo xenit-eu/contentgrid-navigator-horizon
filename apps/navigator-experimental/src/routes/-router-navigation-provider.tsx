@@ -21,7 +21,7 @@ function withoutItemParam(prev: Record<string, unknown>): Record<string, unknown
  * The app's navigation object for views: every `open*` becomes a route change. The collection is
  * opened with an empty search, not `(prev) => prev`: filters are not carried in other pages' URLs
  * — the list restores its earlier filters and page position from the QueryClient-remembered page
- * href instead (see the list route's memo wiring). `hrefFor` builds the same destinations
+ * href instead (see `EntityItemCollectionRoute` in `routes/_app/$entity/index.tsx`). `hrefFor` builds the same destinations
  * with the router's own `router.buildLocation(...).href`, so breadcrumbs can render real `<a href>`
  * elements (cmd/middle-click, copy link, screen-reader link semantics) instead of buttons.
  * Every `open*` honours `options.openInNewTab` by opening the same destination href with

@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+  useRouterState,
+  useSearch,
+} from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   applyFiltersToSearchState,
@@ -31,7 +37,9 @@ const ITEM_PARAM = "item";
 /**
  * The previewed item's id from the URL. The router parses a hand-written `?item=42` into the
  * number 42 (our own links quote the string, so it round-trips), and `entitySearchStateValidator`
- * does not strip it from the merged search, so numbers are read back as their digits.
+ * does not strip it from the merged search, so numbers are read back as their digits. Hand-written
+ * ids that do not survive a number round-trip (`1e3`, `42.0`, anything above 2^53, leading zeros)
+ * are not supported; ContentGrid ids are UUIDs, which stay strings.
  */
 function itemFromSearch(search: Record<string, unknown>): string | undefined {
   const value = search[ITEM_PARAM];
@@ -46,10 +54,24 @@ export const Route = createFileRoute("/_app/$entity/")({
   // The list's profile is a cache hit behind the profile gate (the `$entity` parent route's
   // `beforeLoad` loads the same one); kept so the route follows the view-data-loading contract.
   // With an `item`, the split's preload also fills the cache with that item for the preview pane.
-  loader: ({ context, params, deps }) =>
-    deps.item === undefined
-      ? preloadEntityItemCollection(context, params.entity)
-      : preloadEntityItemSplit(context, params.entity, deps.item),
+  loader: ({ context, params, deps, cause }) => {
+    const preload =
+      deps.item === undefined
+        ? preloadEntityItemCollection(context, params.entity)
+        : preloadEntityItemSplit(context, params.entity, deps.item);
+    // On "stay" (this match re-runs because the user selected or closed an item) the view is
+    // already mounted and shows its own loading state, and the selection is mirrored locally, so
+    // the navigation must not wait for the preview's fetch before it commits the URL. The preload
+    // still fills the cache. Entering the route (a deep link, a link from elsewhere) and hover
+    // preloads return it, so a deep link loads the item and the list together. Both preload
+    // functions resolve and never reject, so dropping the promise leaves nothing unhandled; the
+    // catch is a safety net.
+    if (cause === "stay") {
+      preload.catch(() => {});
+      return;
+    }
+    return preload;
+  },
   component: EntityItemCollectionPage,
 });
 
@@ -125,30 +147,40 @@ function EntityItemCollectionRoute({ entityName }: Readonly<{ entityName: string
     });
   }, [urlFilters, urlSort, collection, go, entityName]);
 
-  // After mount the URL is authoritative: back/forward between two searches, or a link opened
-  // while already here, shows that search from its first page.
-  const lastUrlSearchRef = useRef({ urlFilters, urlSort });
+  // After mount the URL is authoritative: back/forward between two searches or items, or a link
+  // opened while already here, shows that search from its first page and that item. It re-syncs
+  // on every committed router load, by value, not only when the URL values change identity: a
+  // navigation superseded before it commits (Back during a pending load) leaves the URL where it
+  // was while the mirrored state moved on, and no URL value changes to tell us. It waits for the
+  // router to be idle so a still-pending navigation of ours is not undone by an earlier commit.
+  const loadedAt = useRouterState({ select: (s) => s.loadedAt });
+  const routerIdle = useRouterState({ select: (s) => s.status === "idle" });
+  const lastSyncRef = useRef({ urlFilters, urlSort, urlItem, loadedAt });
   useEffect(() => {
-    const last = lastUrlSearchRef.current;
-    if (last.urlFilters === urlFilters && last.urlSort === urlSort) return;
-    lastUrlSearchRef.current = { urlFilters, urlSort };
-    setState((current) =>
-      sameSearch(current.collection, urlFilters, urlSort)
-        ? current
-        : {
-            ...current,
-            collection: { filters: urlFilters, sort: urlSort, pageUrl: undefined },
-          },
-    );
-  }, [urlFilters, urlSort]);
-
-  // Likewise for the previewed item: back/forward over a selection, or a link with another
-  // `item`, moves the preview. A no-op when the change came from this page (already mirrored).
-  useEffect(() => {
-    setState((current) =>
-      current.selectedItemId === urlItem ? current : { ...current, selectedItemId: urlItem },
-    );
-  }, [urlItem]);
+    if (!routerIdle) return;
+    const last = lastSyncRef.current;
+    if (
+      last.urlFilters === urlFilters &&
+      last.urlSort === urlSort &&
+      last.urlItem === urlItem &&
+      last.loadedAt === loadedAt
+    ) {
+      return;
+    }
+    lastSyncRef.current = { urlFilters, urlSort, urlItem, loadedAt };
+    setState((current) => {
+      const searchInSync = sameSearch(current.collection, urlFilters, urlSort);
+      const itemInSync = current.selectedItemId === urlItem;
+      if (searchInSync && itemInSync) return current;
+      return {
+        // The page only resets when the search itself differs.
+        collection: searchInSync
+          ? current.collection
+          : { filters: urlFilters, sort: urlSort, pageUrl: undefined },
+        selectedItemId: urlItem,
+      };
+    });
+  }, [urlFilters, urlSort, urlItem, loadedAt, routerIdle]);
 
   function handleStateChange(next: EntityItemSplitViewState) {
     setState(next);

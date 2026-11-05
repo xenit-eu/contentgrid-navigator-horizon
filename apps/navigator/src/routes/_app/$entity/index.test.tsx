@@ -522,3 +522,74 @@ describe("EntityItemCollectionRoute — previewed item in the URL", () => {
     await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent(""));
   });
 });
+
+describe("EntityItemCollectionRoute — slow item preloads", () => {
+  afterEach(() => {
+    // `vi.clearAllMocks` keeps implementations; put the instant stub back for the other tests.
+    preloadEntityItemSplit.mockReset();
+    preloadEntityItemSplit.mockImplementation(async () => {});
+  });
+
+  function slowPreloads(ms: number) {
+    preloadEntityItemSplit.mockImplementation(() => new Promise<void>((r) => setTimeout(r, ms)));
+  }
+
+  it("settles on the URL's item when Back supersedes a selection that is still loading", async () => {
+    slowPreloads(150);
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    expect(await screen.findByTestId("selected")).toHaveTextContent("i-42");
+
+    await user.click(screen.getByText("select-43"));
+    act(() => router.history.back());
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ item: "i-42" }));
+    await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent("i-42"), {
+      timeout: 2000,
+    });
+    // Nothing flips it again afterwards.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.getByTestId("selected")).toHaveTextContent("i-42");
+    expect(router.state.location.search).toEqual({ item: "i-42" });
+  });
+
+  it("settles on the URL's item and filters when Back supersedes a selection and a filter change", async () => {
+    slowPreloads(150);
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    expect(await screen.findByTestId("selected")).toHaveTextContent("i-42");
+
+    await user.click(screen.getByText("select-43"));
+    await user.click(screen.getByText("change-filters"));
+    expect(screen.getByTestId("filters")).toHaveTextContent('{"status":"closed"}');
+    // Back past both pushed entries, to the deep link's own.
+    act(() => router.history.go(-2));
+
+    await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent("i-42"), {
+      timeout: 2000,
+    });
+    await waitFor(() => expect(screen.getByTestId("filters")).toHaveTextContent("{}"));
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.getByTestId("selected")).toHaveTextContent("i-42");
+    expect(screen.getByTestId("filters")).toHaveTextContent("{}");
+    expect(router.state.location.search).toEqual({ item: "i-42" });
+  });
+
+  it("commits a selection's URL while the item's preload is still pending", async () => {
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice");
+    await screen.findByTestId("filters");
+    preloadEntityItemSplit.mockImplementation(() => pending);
+
+    await user.click(screen.getByText("select-42"));
+
+    // `resolvedLocation` is the committed one; `location` is already the requested one.
+    await waitFor(() => expect(router.state.resolvedLocation?.search).toEqual({ item: "i-42" }));
+    expect(preloadEntityItemSplit).toHaveBeenCalledWith(expect.anything(), "invoice", "i-42");
+    finish();
+  });
+});
