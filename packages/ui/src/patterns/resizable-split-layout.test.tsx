@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResizableSplitLayout, usePaneWidth, useSplitLayoutWidths } from "./resizable-split-layout";
 
@@ -94,6 +94,69 @@ describe("ResizableSplitLayout", () => {
       expect(screen.getByText("left:500")).toBeInTheDocument();
       expect(screen.getByText("right:500")).toBeInTheDocument();
       expect(onWidthsChange).toHaveBeenLastCalledWith({ left: 500, right: 500 });
+    });
+
+    it("stacks the panes without a handle when resizableStacked is false", () => {
+      mockLayoutWidth(500);
+      render(
+        <ResizableSplitLayout
+          left={<WidthProbe />}
+          right={<WidthProbe />}
+          handleLabel="Resize"
+          stackBelow={800}
+          resizableStacked={false}
+        />,
+      );
+
+      expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+      expect(screen.getByText("left:500")).toBeInTheDocument();
+      expect(screen.getByText("right:500")).toBeInTheDocument();
+    });
+
+    it("switches between a plain stack and the split as the layout crosses the threshold", () => {
+      let width = 500;
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() =>
+        DOMRect.fromRect({ width, height: 400 }),
+      );
+      const observers: ResizeObserverCallback[] = [];
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(callback: ResizeObserverCallback) {
+            observers.push(callback);
+          }
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        },
+      );
+      const resizeTo = (next: number) => {
+        width = next;
+        act(() => {
+          for (const callback of observers) callback([], {} as ResizeObserver);
+        });
+      };
+
+      render(
+        <ResizableSplitLayout
+          left="Left"
+          right="Right"
+          handleLabel="Resize"
+          stackBelow={800}
+          resizableStacked={false}
+        />,
+      );
+      expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+
+      resizeTo(1000);
+      expect(screen.getByRole("separator", { name: "Resize" })).toHaveAttribute(
+        "aria-orientation",
+        "vertical",
+      );
+
+      resizeTo(500);
+      expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+      vi.unstubAllGlobals();
     });
 
     it("keeps the panes side by side from the threshold up", () => {
