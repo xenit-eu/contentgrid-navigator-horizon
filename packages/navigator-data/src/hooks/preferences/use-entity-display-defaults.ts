@@ -7,7 +7,7 @@ export interface UseEntityDisplayDefaultsResult {
 /**
  * Backend-provided default display preferences (icon/color/cardStyle/etc.) per entity,
  * written by an external automation. This is the middle layer of
- * `useEntityDisplayPreferences` (packages/features/src/preferences), between the
+ * `useEntityDisplayPreferences` (packages/features/src/user-preferences), between the
  * `ProfileEntity.getDefaultPreferences()` heuristic and the user's own overrides.
  *
  * TODO(backend contract): no link relation or response shape has been defined for this

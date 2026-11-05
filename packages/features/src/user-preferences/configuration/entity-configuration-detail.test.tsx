@@ -271,7 +271,7 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
   function renderSearchBarDetail() {
     server.use(...searchBarHandlers());
     return render(<EntityConfigurationDetail profile={searchBar} onClose={vi.fn()} />, {
-      wrapper: makeSearchBarWrapper(),
+      wrapper: makeSearchBarWrapper(preferencesStore),
     });
   }
 

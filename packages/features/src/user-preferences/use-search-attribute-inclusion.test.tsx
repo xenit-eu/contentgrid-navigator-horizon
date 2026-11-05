@@ -5,8 +5,14 @@ import {
   makeSearchBarProfiles,
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { makeSearchBarWrapper } from "../test-utils/search-bar-wrapper";
-import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import { createMemoryStorage, createUserPreferencesStore } from "./index";
 import { useSearchAttributeInclusion } from "./use-search-attribute-inclusion";
+
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
 
 const backendDefaults = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
 
@@ -19,14 +25,14 @@ const { searchBar } = makeSearchBarProfiles();
 
 function render() {
   return renderHook(() => useSearchAttributeInclusion(searchBar), {
-    wrapper: makeSearchBarWrapper(),
+    wrapper: makeSearchBarWrapper(preferencesStore),
   });
 }
 
 describe("useSearchAttributeInclusion", () => {
   afterEach(() => {
     backendDefaults.value = {};
-    useEntityDisplayPreferencesStore.setState({ overrides: {} });
+    preferencesStore = createTestPreferencesStore();
   });
 
   it("includes every searchable attribute, but not id, through the heuristic default", () => {
@@ -50,11 +56,9 @@ describe("useSearchAttributeInclusion", () => {
     backendDefaults.value = { "search-bar": { searchAttributes: ["title", "status"] } };
     const { result } = render();
     act(() =>
-      useEntityDisplayPreferencesStore
-        .getState()
-        .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", {
-          searchAttributes: ["reference"],
-        }),
+      preferencesStore.getState().setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", {
+        searchAttributes: ["reference"],
+      }),
     );
     expect(result.current.includedAttributes).toEqual(new Set(["reference"]));
     expect(result.current.isIncluded("title")).toBe(false);

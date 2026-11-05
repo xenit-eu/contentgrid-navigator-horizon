@@ -7,8 +7,8 @@ import {
   useSearchParamSuggestions,
 } from "@contentgrid/navigator-data";
 import { type HalFormsField, resolveHalFormsFields } from "../hal-forms";
-import { useSearchAttributeInclusion } from "../preferences/use-search-attribute-inclusion";
 import { buildCollectionSearchValues } from "../search/filter-field-values";
+import { useSearchAttributeInclusion } from "../user-preferences/use-search-attribute-inclusion";
 import { applyParamPatch } from "./util/apply-param-patch";
 import { applySearchInclusion } from "./util/apply-search-inclusion";
 import { buildActiveFilterChips } from "./util/build-active-filter-chips";

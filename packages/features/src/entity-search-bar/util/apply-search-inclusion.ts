@@ -1,4 +1,4 @@
-import type { SearchAttributeInclusion } from "../../preferences/use-search-attribute-inclusion";
+import type { SearchAttributeInclusion } from "../../user-preferences/use-search-attribute-inclusion";
 import type { SearchParamDescriptor } from "./types";
 
 /**

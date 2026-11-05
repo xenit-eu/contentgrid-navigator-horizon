@@ -187,7 +187,7 @@ search-parameter selector with a suggestions popover, and quick filters. `x-stab
 - **Inclusion**: `searchAttributes` in `EntityDisplayPreferences` (edited next to "Visible
   columns") limits the selector, suggestions and quick filters; chips always show every active
   filter, and relation parameters are always included. Import `useSearchAttributeInclusion` by
-  file path (`../preferences/use-search-attribute-inclusion`), not through `../preferences` —
+  file path (`../user-preferences/use-search-attribute-inclusion`), not through `../user-preferences` —
   the preferences previews import the collection view, which imports this feature.
 
 ---

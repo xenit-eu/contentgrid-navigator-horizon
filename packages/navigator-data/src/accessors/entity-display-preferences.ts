@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 /**
  * Growable schema: adding a new field here is the only change needed to support a new
  * preference kind end-to-end — the merge in `useEntityDisplayPreferences`
- * (packages/features/src/preferences) is field-name-agnostic (uses `deepMerge`, not a
+ * (packages/features/src/user-preferences) is field-name-agnostic (uses `deepMerge`, not a
  * per-field switch), so no other plumbing changes are required.
  *
  * `nameAttribute` holds the attribute NAME (not a resolved `ProfileAttribute`) because the

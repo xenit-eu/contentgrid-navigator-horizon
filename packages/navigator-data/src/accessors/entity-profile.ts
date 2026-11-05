@@ -69,7 +69,7 @@ export default class ProfileEntity {
 
   /**
    * Create default preferences based on the profile schema. This is the lowest-priority
-   * layer of `useEntityDisplayPreferences` (see packages/features/src/preferences) — backend
+   * layer of `useEntityDisplayPreferences` (see packages/features/src/user-preferences) — backend
    * automation defaults and user overrides take precedence when present. Every field here is
    * always populated (never `undefined`), so consumers never need a further fallback for the
    * "nothing configured yet" case.

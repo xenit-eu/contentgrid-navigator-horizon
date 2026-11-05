@@ -8,16 +8,22 @@ import {
   searchBarHandlers,
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
 import { server } from "../../test-setup";
-import { useEntityDisplayPreferencesStore } from "../preferences/entity-display-preferences-store";
 import { makeSearchBarWrapper } from "../test-utils/search-bar-wrapper";
+import { createMemoryStorage, createUserPreferencesStore } from "../user-preferences";
 import { EntitySearchBar } from "./entity-search-bar";
+
+function createTestPreferencesStore() {
+  return createUserPreferencesStore({ storage: createMemoryStorage() });
+}
+
+let preferencesStore = createTestPreferencesStore();
 
 const { searchBar } = makeSearchBarProfiles();
 const SEARCH_INPUT = `Search ${searchBar.title}`;
 
 function renderBar(filters: Record<string, string> = {}, actions?: ReactNode) {
   const onFiltersChange = vi.fn();
-  const Wrapper = makeSearchBarWrapper();
+  const Wrapper = makeSearchBarWrapper(preferencesStore);
   render(
     <Wrapper>
       <EntitySearchBar
@@ -40,7 +46,7 @@ describe("EntitySearchBar", () => {
     server.use(...searchBarHandlers());
   });
   afterEach(() => {
-    useEntityDisplayPreferencesStore.setState({ overrides: {} });
+    preferencesStore = createTestPreferencesStore();
   });
 
   it("renders the three rows: chips, selector + input, quick filters", () => {
@@ -59,7 +65,7 @@ describe("EntitySearchBar", () => {
   });
 
   it("switches search off when no attribute is included, but keeps the active filters", () => {
-    useEntityDisplayPreferencesStore
+    preferencesStore
       .getState()
       .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", { searchAttributes: [] });
     renderBar({ "customer.name~prefix": "Ac" });

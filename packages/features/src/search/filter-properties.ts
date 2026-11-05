@@ -102,7 +102,7 @@ export function extractFilterValuesFromCollectionUrl(
  * Attribute names the user is actively filtering/searching on right now, suitable for
  * force-including as visible table columns. Only DIRECT (non-relation-traversal) properties
  * qualify — a relation-traversal property's `groupKey` is `"relation.attribute"`, which doesn't
- * correspond to a column `buildColumns` (packages/features/src/preferences) can render on the
+ * correspond to a column `buildColumns` (packages/features/src/user-preferences) can render on the
  * current entity, so any property with `isOverRelation` set is excluded here rather than left
  * for the caller to filter out.
  *
