@@ -143,7 +143,9 @@ A contributor imports from the wrong layer. Lint fails with a message that names
 
 ---
 
-### User Story 7 - Preferences available to every feature (Priority: P3)
+### User Story 7 - Preferences available to every feature (Priority: P3) — DEFERRED
+
+> Deferred by product decision: not part of the views stack; the work is parked on branch `ACC-3216-user-preferences-parked` pending product decisions (open question 4).
 
 A user's display choices (icon, colour, card style, name attribute, visible columns) apply wherever a feature reads them, and an app can choose where they are stored.
 
@@ -223,11 +225,11 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 - **FR-028**: The stability tag MUST live on views, not on features. When a stable view needs an experimental feature, an experimental copy of the view MUST be made; a stable view MUST NOT contain an experimental view.
 - **FR-029**: The generic app's stability gate MUST stay suspended until go-live.
 
-**Preferences**
+**Preferences** _(FR-030 to FR-032 deferred: not part of this series; parked on `ACC-3216-user-preferences-parked`)_
 
-- **FR-030**: Display preferences MUST be read through one hook in the `user-preferences` feature, merging in priority order: the user's own changes, the backend's values (loaded from `navigator-data`, which keeps the type and the backend part it already has), then a default worked out from the profile.
-- **FR-031**: The preference store MUST be created by the app at startup, with the storage location configurable (the browser's local storage by default).
-- **FR-032**: An app that does not offer preference screens MUST still apply changes users already made.
+- **FR-030** _(deferred)_: Display preferences MUST be read through one hook in the `user-preferences` feature, merging in priority order: the user's own changes, the backend's values (loaded from `navigator-data`, which keeps the type and the backend part it already has), then a default worked out from the profile.
+- **FR-031** _(deferred)_: The preference store MUST be created by the app at startup, with the storage location configurable (the browser's local storage by default).
+- **FR-032** _(deferred)_: An app that does not offer preference screens MUST still apply changes users already made.
 - **FR-033**: Views MUST NOT pass preferences down; features read them through the hook.
 
 **Enforcement and migration**
