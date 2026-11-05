@@ -175,7 +175,7 @@ function FieldSectionRows({
 }: Readonly<{ rows: readonly FieldRow[] } & FieldListProps>) {
   // More space between fields than inside one, so each help text reads as part of its own field.
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {rows.map((row, index) => (
         <FieldRowLayout key={index} row={row} {...fieldListProps} />
       ))}
