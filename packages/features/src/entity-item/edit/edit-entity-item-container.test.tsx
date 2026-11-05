@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RouterProvider,
@@ -5,7 +6,7 @@ import {
   createRootRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -23,7 +24,10 @@ import {
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
 import { Toaster } from "@contentgrid/ui";
 import { server } from "../../../test-setup";
-import { EditEntityItemContainer } from "./edit-entity-item-container";
+import {
+  EditEntityItemContainer,
+  type EditEntityItemFormHandle,
+} from "./edit-entity-item-container";
 import type { EditableEntityItem } from "./editable-entity-item";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
@@ -38,7 +42,15 @@ function problem(status: number, body: Record<string, unknown>) {
 /** Renders inside a router, which the form's unsaved-changes guard needs. */
 async function renderForm(
   item: EntityItem,
-  { onClose = vi.fn(), onRefresh = vi.fn() }: { onClose?: () => void; onRefresh?: () => void } = {},
+  {
+    onClose = vi.fn(),
+    onRefresh = vi.fn(),
+    ref,
+  }: {
+    onClose?: () => void;
+    onRefresh?: () => void;
+    ref?: React.Ref<EditEntityItemFormHandle>;
+  } = {},
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createRouter({
@@ -48,6 +60,7 @@ async function renderForm(
           item={item as EditableEntityItem}
           onClose={onClose}
           onRefresh={onRefresh}
+          ref={ref}
         />
       ),
     }),
@@ -171,5 +184,28 @@ describe("EditEntityItemContainer", () => {
 
     expect(await screen.findByText("Entity item not found")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("cancel() closes an unchanged form straight away", async () => {
+    const onClose = vi.fn();
+    const ref = createRef<EditEntityItemFormHandle>();
+    await renderForm(makeAllAttributeItem({}, '"v1"'), { onClose, ref });
+
+    act(() => ref.current?.cancel());
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("cancel() asks for confirmation when there are unsaved changes", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const ref = createRef<EditEntityItemFormHandle>();
+    await renderForm(makeAllAttributeItem({}, '"v1"'), { onClose, ref });
+
+    await user.type(screen.getByLabelText("Text"), " changed");
+    act(() => ref.current?.cancel());
+
+    expect(await screen.findByText("Leave without saving?")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

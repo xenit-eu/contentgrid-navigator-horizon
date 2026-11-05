@@ -1,4 +1,4 @@
-import { type SubmitEvent, useMemo, useState } from "react";
+import { type Ref, type SubmitEvent, useImperativeHandle, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   getValidationFieldErrors,
@@ -15,6 +15,12 @@ import { useUnsavedChangesGuard } from "../../unsaved-changes-guard";
 import { EditEntityItemForm } from "./edit-entity-item-form";
 import type { EditableEntityItem } from "./editable-entity-item";
 
+/** Lets a control outside the form (e.g. a cancel button in a section header) cancel it. */
+export interface EditEntityItemFormHandle {
+  /** Same as the form's Cancel: asks for confirmation first when there are unsaved changes. */
+  readonly cancel: () => void;
+}
+
 interface EditEntityItemContainerProps {
   readonly item: EditableEntityItem;
   /** Leaves edit mode: after the save, once the item has been reloaded, or on Cancel (confirmed
@@ -22,6 +28,7 @@ interface EditEntityItemContainerProps {
   readonly onClose: () => void;
   /** Fired from a version conflict's Refresh: the caller reloads the item and passes it back down. */
   readonly onRefresh: () => void;
+  readonly ref?: Ref<EditEntityItemFormHandle>;
 }
 
 /**
@@ -33,6 +40,7 @@ export function EditEntityItemContainer({
   item,
   onClose,
   onRefresh,
+  ref,
 }: Readonly<EditEntityItemContainerProps>) {
   const { updateTemplate } = item;
   const updateMutation = useUpdateEntityItem(item, {
@@ -54,6 +62,8 @@ export function EditEntityItemContainer({
 
   const unsavedChangesGuard = useUnsavedChangesGuard(formState.isDirty);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const cancel = () => (formState.isDirty ? setIsConfirmingCancel(true) : onClose());
+  useImperativeHandle(ref, () => ({ cancel }));
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -94,7 +104,7 @@ export function EditEntityItemContainer({
           !isProblemWithStatus(updateMutation.error, 404) &&
           !isProblemWithStatus(updateMutation.error, 412)
         }
-        onCancel={() => (formState.isDirty ? setIsConfirmingCancel(true) : onClose())}
+        onCancel={cancel}
         nonFieldErrorAlert={
           formAlertError && <ProblemAlert model={formAlertError} onRetryClick={onRefresh} />
         }

@@ -14,6 +14,7 @@ import {
   type AuthenticationTokenSupplier,
   type EntityItem,
   EntityItemAttributeContent,
+  type EntityItemLayout,
   NavigatorDataProvider,
   type ProfileAttribute,
   type ProfileEntity,
@@ -24,6 +25,7 @@ import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
   entityItemVariations,
+  resolveEntityItemVariation,
 } from "./entity-item-auto-variation";
 
 const PROFILE_URL = "https://api.example.com/profile/order";
@@ -91,8 +93,14 @@ function makeProfileAttribute(name: string): ProfileAttribute {
 function makeProfile(options: {
   hasContentAttributes: boolean;
   contentAttributeNames?: readonly string[];
+  /** Defaults to the real heuristic's: content focus for an entity with content attributes. */
+  itemLayout?: EntityItemLayout;
 }): ProfileEntity {
-  const { hasContentAttributes, contentAttributeNames = [] } = options;
+  const {
+    hasContentAttributes,
+    contentAttributeNames = [],
+    itemLayout = hasContentAttributes ? "content" : "stacked",
+  } = options;
   const attributes = contentAttributeNames.map((name) => makeProfileAttribute(name));
   return {
     name: "order",
@@ -103,9 +111,9 @@ function makeProfile(options: {
     // `EntityItemAttributeFocus`'s `EntityItemReference` header (stable `entity-item` feature) calls
     // `useEntityDisplayPreferences`, which unconditionally calls `getDefaultPreferences()` on
     // whatever profile it's handed — this fake profile has no real heuristic to run, so it
-    // stubs the method with an empty (all-optional) result rather than reimplementing
-    // `ProfileEntity.getDefaultPreferences()`'s real name/icon-inference logic here.
-    getDefaultPreferences: () => ({}),
+    // stubs the method with only the `itemLayout` the view branches on, rather than
+    // reimplementing `ProfileEntity.getDefaultPreferences()`'s real name/icon-inference logic here.
+    getDefaultPreferences: () => ({ itemLayout }),
   } as unknown as ProfileEntity;
 }
 
@@ -151,6 +159,23 @@ describe("EntityItemAutoVariation", () => {
 
     // EntityItemAttributeFocus's own item-reference header (`data-slot="item-reference"`) — it draws no
     // toolbar itself, so this always renders.
+    expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
+  });
+
+  it("renders the EntityItemAttributeFocus body for an entity with content attributes whose item layout is not content focus", () => {
+    const profile = makeProfile({
+      hasContentAttributes: true,
+      contentAttributeNames: ["document"],
+      itemLayout: "stacked",
+    });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("document", true)],
+    });
+
+    const { container } = renderBody(<EntityItemAutoVariation entityItem={item} />);
+
     expect(container.querySelector('[data-slot="item-reference"]')).not.toBeNull();
     expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });
@@ -299,7 +324,7 @@ describe("EntityItemAutoVariation", () => {
   });
 
   it("lists every variation by name", () => {
-    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus"]);
+    expect(entityItemVariations).toEqual(["attribute-focus", "content-focus", "side-by-side"]);
   });
 
   it("pads content focus only at the bottom, and attribute focus on both axes", () => {
@@ -310,6 +335,26 @@ describe("EntityItemAutoVariation", () => {
     expect(entityItemDetailPadding(withoutContent)).toBe(true);
     expect(entityItemDetailPadding(withContent, "attribute-focus")).toBe(true);
     expect(entityItemDetailPadding(withoutContent, "content-focus")).toBe("bottom");
+    // The `itemLayout` preference turns content focus off for "auto" only.
+    expect(entityItemDetailPadding(withContent, "auto", "stacked")).toBe(true);
+    expect(entityItemDetailPadding(withContent, "auto", "content")).toBe("bottom");
+    expect(entityItemDetailPadding(withoutContent, "auto", "content")).toBe(true);
+    expect(entityItemDetailPadding(withContent, "content-focus", "columns")).toBe("bottom");
+    expect(entityItemDetailPadding(withContent, "auto", "columns")).toBe(true);
+  });
+
+  it("picks the variation from the item layout preference for auto", () => {
+    const withContent = makeProfile({ hasContentAttributes: true });
+    const withoutContent = makeProfile({ hasContentAttributes: false });
+
+    expect(resolveEntityItemVariation(withContent, "auto", "content")).toBe("content-focus");
+    expect(resolveEntityItemVariation(withContent, "auto", "stacked")).toBe("attribute-focus");
+    expect(resolveEntityItemVariation(withContent, "auto", "columns")).toBe("side-by-side");
+    expect(resolveEntityItemVariation(withoutContent, "auto", "columns")).toBe("side-by-side");
+    expect(resolveEntityItemVariation(withoutContent, "auto", "content")).toBe("attribute-focus");
+    expect(resolveEntityItemVariation(withContent, "attribute-focus", "columns")).toBe(
+      "attribute-focus",
+    );
   });
 
   it("passes the given actions on to the variation it renders", async () => {
