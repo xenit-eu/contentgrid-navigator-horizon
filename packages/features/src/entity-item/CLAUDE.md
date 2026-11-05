@@ -10,7 +10,8 @@ draws a toolbar or page chrome (see "Page layout" in `packages/features/CLAUDE.m
 ## Layout
 
 ```
-use-entity-item-context.ts   item context hook (item, refetch, edit mode)
+use-entity-item-context.ts   item context hook (item, refetch, edit mode, section state)
+use-entity-item-section-props.ts  EntityItemSections props for a variation
 entity-item-sections.tsx     attributes, relations and audit trail as collapsible sections
 attributes/                  attribute list, editable attributes, value renderers
 relations/                   to-one / to-many relation sections, relation picker, relation summary
@@ -58,8 +59,10 @@ Every variation takes `EntityItemVariationProps`:
 
 1. Create `variations/<name>/entity-item-<name>.tsx` exporting `EntityItem<Name>`, typed
    `Readonly<EntityItemVariationProps>`. Root `h-full min-h-0`, no outer padding.
-2. Call `useEntityItemContext(item, refetch)` for edit mode and section state, render `actions` next to
-   `EditEntityItemButton`, and render that button only when `allowEdit` is true.
+2. Call `useEntityItemSectionProps(props)` (everything but `actions`) and spread the result onto
+   each `EntityItemSections` you render: it wires `useEntityItemContext` (edit mode, refresh,
+   section state), the loaded profiles, `allowEdit` and the relation handlers. Render `actions`
+   in the item's header.
 3. Register it in `ENTITY_ITEM_VARIATIONS` in `entity-item-auto-variation.tsx` (the
    `satisfies` check fails if its props don't match). Update `resolveEntityItemVariation` if
    `"auto"` should pick it.

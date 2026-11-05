@@ -1,7 +1,6 @@
-import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { EntityItemSections } from "../../entity-item-sections";
 import { EntityItemRelationSummary } from "../../relations/relation-summary";
-import { useEntityItemContext } from "../../use-entity-item-context";
+import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemCard } from "../item-card/entity-item-card";
 
@@ -14,14 +13,11 @@ import { EntityItemCard } from "../item-card/entity-item-card";
  * `onRelationItemClick` — this component performs none itself.
  */
 export function EntityItemAttributeFocus({
-  item,
-  refetch,
   actions,
-  allowEdit = true,
-  ...relationHandlers
+  ...props
 }: Readonly<EntityItemVariationProps>) {
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
+  const { item } = props;
+  const sectionProps = useEntityItemSectionProps(props);
 
   return (
     <div className="h-full min-h-0">
@@ -31,20 +27,11 @@ export function EntityItemAttributeFocus({
         summary={
           <EntityItemRelationSummary
             item={item}
-            onRelationClick={itemContext.sections.revealRelation}
+            onRelationClick={sectionProps.state.revealRelation}
           />
         }
       >
-        <EntityItemSections
-          item={item}
-          profiles={loadedProfiles}
-          state={itemContext.sections}
-          editedItem={itemContext.editedItem}
-          onEditingChange={itemContext.setIsEditing}
-          onRefresh={() => void itemContext.refresh()}
-          allowEdit={allowEdit}
-          {...relationHandlers}
-        />
+        <EntityItemSections {...sectionProps} />
       </EntityItemCard>
     </div>
   );
