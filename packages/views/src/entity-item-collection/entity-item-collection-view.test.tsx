@@ -1,7 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { flushSync } from "react-dom";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CUSTOMER_NEXT_PAGE_URL, createCollectionFixtureFetch } from "../test-fixtures/collection";
+import {
+  CUSTOMER_NEXT_PAGE_URL,
+  SUPPLIER_COLLECTION_URL,
+  createCollectionFixtureFetch,
+} from "../test-fixtures/collection";
 import { CUSTOMER_COLLECTION_URL } from "../test-fixtures/item-detail";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
@@ -38,7 +43,9 @@ describe("EntityItemCollectionView", () => {
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
-    expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["customer"] }]);
+    expect(recording.calls).toEqual([
+      { method: "openCreateItem", args: ["customer", { openInNewTab: true }] },
+    ]);
   });
 
   it("draws no create action without a create form", async () => {
@@ -151,5 +158,165 @@ describe("EntityItemCollectionView state", () => {
     expect(onStateChange).toHaveBeenCalledWith({ filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL });
     // The host did not apply it, so the view keeps showing the state it was given.
     expect(fixture.collectionRequests).not.toContain(CUSTOMER_NEXT_PAGE_URL);
+  });
+
+  it("applies a sort change when uncontrolled", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+
+    await waitFor(() =>
+      expect(fixture.collectionRequests.some((url) => url.includes("_sort=name"))).toBe(true),
+    );
+  });
+
+  it("reports a sort change once, with the sort and the page reset, when controlled", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({
+      filters: {},
+      sort: "name,asc",
+      pageUrl: undefined,
+    });
+  });
+});
+
+describe("EntityItemCollectionView state changes", () => {
+  const typeFilter = async (value: string) => {
+    await userEvent.click(screen.getByRole("button", { name: /filters/i }));
+    await userEvent.type(screen.getByRole("combobox", { name: /Name/ }), `${value}{Enter}`);
+  };
+
+  it("resets the page when a filter changes (controlled)", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await findFirstItem();
+    await typeFilter("acme");
+
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({
+      filters: { "name~prefix": "acme" },
+      pageUrl: undefined,
+    });
+  });
+
+  it("resets the page when a filter changes (uncontrolled)", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
+    await typeFilter("acme");
+
+    // Back on page 1 of the new search, not on the old page link.
+    await waitFor(() => expect(fixture.collectionRequests.at(-1)).toContain("name%7Eprefix=acme"));
+    expect(fixture.collectionRequests.at(-1)).not.toContain("_cursor");
+  });
+
+  it("keeps both changes when a filter and a page change arrive in the same tick (controlled)", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: {} }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await findFirstItem();
+    const next = screen.getByRole("button", { name: /next/i });
+    await userEvent.click(screen.getByRole("button", { name: /filters/i }));
+    const combobox = screen.getByRole("combobox", { name: /Name/ });
+    await userEvent.type(combobox, "acme");
+    act(() => {
+      fireEvent.keyDown(combobox, { key: "Enter" });
+      fireEvent.click(next);
+    });
+
+    expect(onStateChange).toHaveBeenLastCalledWith({
+      filters: { "name~prefix": "acme" },
+      pageUrl: CUSTOMER_NEXT_PAGE_URL,
+    });
+  });
+
+  it("keeps both changes across an unrelated re-render when controlled with no state yet", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    const view = (activeItemId: string) => (
+      <EntityItemCollectionView
+        entityName="customer"
+        onStateChange={onStateChange}
+        activeItemId={activeItemId}
+      />
+    );
+    const { rerender } = render(view("a"), { wrapper: Wrapper });
+
+    await findFirstItem();
+    const next = screen.getByRole("button", { name: /next/i });
+    await userEvent.click(screen.getByRole("button", { name: /filters/i }));
+    const combobox = screen.getByRole("combobox", { name: /Name/ });
+    await userEvent.type(combobox, "acme");
+    act(() => {
+      fireEvent.keyDown(combobox, { key: "Enter" });
+      // The host re-renders for an unrelated reason between the two updates; `state` is still
+      // undefined, so the default must keep its identity.
+      flushSync(() => rerender(view("b")));
+      fireEvent.click(next);
+    });
+
+    expect(onStateChange).toHaveBeenLastCalledWith({
+      filters: { "name~prefix": "acme" },
+      pageUrl: CUSTOMER_NEXT_PAGE_URL,
+    });
+  });
+
+  it("does not leak state to another entity", async () => {
+    const fixture = createCollectionFixtureFetch();
+    const { Wrapper } = createItemDetailTestHarness({ fetchFn: fixture.fetch });
+
+    // Every profile loads up front, so the switch below has no pending or not-found step that
+    // would unmount the body whether or not it is keyed.
+    const { rerender } = render(<EntityItemCollectionView entityName="customer" />, {
+      wrapper: Wrapper,
+    });
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
+
+    rerender(<EntityItemCollectionView entityName="supplier" />);
+    await screen.findAllByText("Initech Supplies");
+
+    // The supplier list was fetched from its own collection, with nothing carried over.
+    expect(fixture.collectionRequests.at(-1)).toBe(SUPPLIER_COLLECTION_URL);
+    expect(
+      fixture.collectionRequests.filter((url) => url.startsWith(SUPPLIER_COLLECTION_URL)),
+    ).toEqual([SUPPLIER_COLLECTION_URL]);
   });
 });
