@@ -8,7 +8,10 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
  * - Two updates in the same tick build on each other, so the second does not drop the first. The
  *   value reported to a controlled host is remembered as the "previous" state until the host
  *   re-renders us with a new state (it has then applied, adjusted or rejected the change, and its
- *   props are the truth again) or, if it never re-renders, until the end of the current microtask checkpoint.
+ *   props are the truth again) or, otherwise (no re-render, or a re-render with the same state),
+ *   until the end of the current microtask checkpoint. "New state" means a new reference: a host
+ *   that rebuilds an equal state object or default on every render makes every re-render count as
+ *   its answer, so pass stable defaults.
  * - A controlled host may ignore a change; updates then build on the state it last rendered us with.
  * - Known limit: a host that applies a change only in a later macrotask, and gets a second update
  *   from another tick before that, sees the second update built on its last rendered props.

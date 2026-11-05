@@ -26,8 +26,8 @@ describe("useControllableState", () => {
     expect(onStateChange).toHaveBeenNthCalledWith(2, { a: 1, b: 2 });
   });
 
-  // Also covers the documented limit: an update in a later macrotask, before the host re-renders,
-  // builds on the last rendered props.
+  // Also covers the documented limit: an update in a later macrotask (a timer, not just a
+  // microtask), before the host re-renders, builds on the last rendered props.
   it("does not keep a change the host ignored after the tick", async () => {
     const onStateChange = vi.fn();
     const { result } = renderHook(() =>
@@ -36,7 +36,7 @@ describe("useControllableState", () => {
 
     act(() => result.current[1]((previous) => ({ ...previous, a: 1 })));
     await act(async () => {
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
     act(() => result.current[1]((previous) => ({ ...previous, b: 2 })));
 
