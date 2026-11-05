@@ -61,7 +61,7 @@ interface CollectionViewState {
 
 ### Composite view state (split views)
 
-A parent view's state holds each child's state under that child's own key, so panes do not overwrite each other: `{ [childKey]: ChildState }`. How the app writes this to the address is open question 2.
+A parent view's state holds each child's state under that child's own key, so panes do not overwrite each other: `{ [childKey]: ChildState }`. How the app writes this to the address is open question 2. The split view's own state is `{ collection?: CollectionViewState; selectedItemId?: string }`: the list's state sits under its key, and the selection sits beside it because the item detail child has no state of its own, so there is nothing to prefix for it.
 
 ## Navigation object
 
