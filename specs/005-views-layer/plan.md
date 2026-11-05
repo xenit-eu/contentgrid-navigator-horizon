@@ -16,7 +16,7 @@ Add `packages/views` between the apps and `packages/features`. The app reads the
 
 **Storage**: none new; display preferences keep their browser storage by default, with the storage becoming configurable (PR 8).
 
-**Testing**: Vitest + Testing Library; MSW-backed hook tests (ADR-014); Storybook stories with Playwright visual snapshots in a fixed-size box (ADR-009); the existing Playwright e2e suite must pass unchanged.
+**Testing**: Vitest + Testing Library; MSW-backed hook tests (ADR-014); Storybook stories with Playwright visual snapshots in a fixed-size box (ADR-009); the existing Playwright e2e suite passes after each migrated page (a flow the product owner changed is updated in the same PR: list row → preview → Open, PR 6).
 
 **Target Platform**: evergreen browsers.
 

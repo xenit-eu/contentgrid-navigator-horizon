@@ -260,7 +260,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 - **SC-005**: A list and detail split view lets a user switch items in the right pane without leaving the list page (only the `item` param changes) and with one toolbar.
 - **SC-006** _(from rule 4 and ADR-009)_: Every view and feature story has a visual snapshot in a fixed-size box showing no overflow outside the box.
 - **SC-007**: No feature imports the router; the lint check fails on a deliberate violation of each layer rule.
-- **SC-008** _(assumption)_: The existing end-to-end suite passes unchanged after each migrated page.
+- **SC-008** _(assumption)_: The existing end-to-end suite passes after each migrated page; a flow the product owner changed is updated in the same PR (list row → preview → Open, PR 6).
 
 ## Open questions
 
