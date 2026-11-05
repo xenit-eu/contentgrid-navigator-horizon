@@ -26,7 +26,7 @@ Naive options — env-toggled feature flags, long-lived branches, separate forks
 | Experimental | `apps/navigator-experimental` | internal-only (auth-gated preview env, never a public URL) | `stable` + `candidate` + `experimental`   |
 | Custom       | `apps/<customer>/`            | per-customer (private repo per ADR-013)                    | declared per-app via `customer.config.ts` |
 
-**Features live in `packages/features/<name>/` and carry a `x-stability` flag in their `package.json`:**
+**Features live in `packages/features/<name>/` and carry a `x-stability` flag in their `package.json`** _(amended by [ADR-018](ADR-018-views-layer.md): the flag now lives on views, in `packages/views/src/<view>/package.json`; features carry none. Read "feature" below as "view" for gating and promotion):_
 
 ```
 experimental → candidate → stable
@@ -100,13 +100,16 @@ ceremony is a cost with no matching benefit.
 
 **What stays in place:**
 
-- The `x-stability` field is still required on every feature directory's `package.json`, and
-  only the three documented values (`experimental` | `candidate` | `stable`) are allowed.
+- The `x-stability` field is still required, now on every view's `package.json` (ADR-018 moved it
+  from the feature directories to `packages/views`), and only the three documented values
+  (`experimental` | `candidate` | `stable`) are allowed.
 - The ESLint rule (`@contentgrid/no-unstable-features`, wired in
   `apps/navigator/eslint.config.js`) stays enabled — it still catches an invalid/typo
   `x-stability` value. Only its `allowedStability` option changed, from `["stable"]` to
   `["experimental", "candidate", "stable"]`.
-- The rule's implementation, tests, and fixtures in `packages/eslint-config` are untouched.
+- The rule's implementation, tests, and fixtures in `packages/eslint-config` are untouched by
+  this amendment. (Spec 005 later changed the rule to resolve `@contentgrid/views/<view>` instead of
+  features; the options and the suspension are unchanged.)
 
 **What this changes in practice:** `packages/features/CLAUDE.md`, `apps/navigator/CLAUDE.md`,
 and `apps/navigator-experimental/CLAUDE.md` note the suspension; the promotion workflow they
@@ -115,10 +118,11 @@ describe does not need to run pre-GA, since there is nothing to gate.
 **Go-live re-enablement step:** when Navigator goes live in production,
 
 1. restore `allowedStability: ["stable"]` in `apps/navigator/eslint.config.js`;
-2. resume the promotion-PR workflow in `packages/features/CLAUDE.md` for any feature still
-   below `stable`;
-3. audit `packages/features/src/*` for features that shipped straight to `stable` pre-GA and
-   confirm each one still belongs there under normal review.
+2. resume the promotion-PR workflow (see `apps/navigator-experimental/CLAUDE.md`) for any
+   **view** still below `stable`;
+3. audit `packages/views/src/*` for views that shipped straight to `stable` pre-GA and
+   confirm each one still belongs there under normal review. (Features carry no tag; they are
+   as stable as the views that use them.)
 
 ---
 
