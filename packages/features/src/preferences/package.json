@@ -1,7 +1,6 @@
 {
   "name": "@contentgrid/features-preferences",
   "version": "0.0.1",
-  "x-stability": "stable",
   "private": true,
   "description": "Preferences management feature - handles user customization of entity views"
 }

@@ -33,8 +33,30 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   ensure helpers, never rejects, and returns while the API client is absent
   ([contract](../../specs/005-views-layer/contracts/view-data-loading.md)).
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
-- Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (tag moves here
-  in a later PR).
+- Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (see [Stability](#stability)).
+
+## Stability
+
+The `x-stability` tag (`experimental` | `candidate` | `stable`) lives on views, not on features
+(FR-028, [ADR-018](../../docs/adr/ADR-018-views-layer.md)).
+
+- Every `exports` entry other than the root barrel resolves to a directory whose `package.json` carries
+  `x-stability` (`src/<view>/package.json`, `src/shells/<shell>/package.json`, and `src/navigation/package.json` for
+  `recording-navigation`). `src/stability.test.ts` fails if an entry has no valid tag. Support folders that are not
+  an entry (`breadcrumbs/`, `toolbar/`, `hooks/`, …) carry none.
+- `@contentgrid/no-unstable-features` reads that tag for `@contentgrid/views/<entry>` imports and checks it against
+  the app's `allowedStability`. It does not look at feature imports (features carry no tag); the root barrel
+  `@contentgrid/views` is untagged and ignored. The generic app's gate stays at all three tiers pre-GA.
+- `@contentgrid/view-stability-order` (layer rule L5) fails a view that imports a less stable view
+  (experimental < candidate < stable), including re-exports. Today every view is `stable`.
+- A stable view that needs an experimental feature gets an experimental copy of the view — **provisional**, pending
+  spec open question 1.
+
+## Layer lint rules
+
+Configured per package from `@contentgrid/eslint-config/layers`
+([contract](../../specs/005-views-layer/contracts/layer-lint-rules.md)). Here: L2 (no `@tanstack/react-router` outside
+`src/shells/`) and L5. Features, `ui` and `navigator-data` may not import this package at all (L4).
 
 ## Navigation
 

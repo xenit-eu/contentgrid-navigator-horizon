@@ -1,6 +1,6 @@
 # packages/features/src/entity-item — CLAUDE.md
 
-Feature: `entity-item` · `x-stability: "stable"` — mounted by both apps through
+Feature: `entity-item` — mounted by both apps through
 `@contentgrid/views/entity-item-detail`.
 
 Renders one already-loaded entity item: its attributes, relations and (when it has them) content.
