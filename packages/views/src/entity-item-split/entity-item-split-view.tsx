@@ -1,9 +1,10 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { type ProfileEntity, useEntityItem } from "@contentgrid/navigator-data";
 import { EntityItemCollectionBreadcrumbs, EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { EntityItemCollectionView } from "../entity-item-collection";
 import type { CollectionViewState } from "../entity-item-collection";
 import { EntityItemDetailView } from "../entity-item-detail";
+import { useControllableState } from "../hooks/use-controllable-state";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { BreadCrumbsToolBarLayout } from "../layout";
 import { ChildNavigationProvider, type Navigation, useViewNavigation } from "../navigation";
@@ -60,27 +61,14 @@ function SplitBody({
   onStateChange,
 }: Readonly<EntityItemSplitViewProps>) {
   const navigation = useViewNavigation();
-  const [internalState, setInternalState] = useState<EntityItemSplitViewState>(
-    state ?? EMPTY_STATE,
-  );
-  const current = onStateChange ? (state ?? EMPTY_STATE) : internalState;
-
-  // The callbacks below read the latest state and host callback through this ref, so the
-  // overrides handed to `ChildNavigationProvider` stay referentially stable (its contract) and
-  // do not change on every selection, page or host re-render.
-  const latest = useRef({ current, onStateChange });
-  useEffect(() => {
-    latest.current = { current, onStateChange };
+  const [current, update] = useControllableState({
+    state,
+    onStateChange,
+    defaultState: state ?? EMPTY_STATE,
   });
 
-  // Writes the next state into the ref before reporting it, so a second change in the same tick
-  // builds on the first instead of on the stale render-time state.
-  const update = useCallback((next: EntityItemSplitViewState): void => {
-    latest.current = { ...latest.current, current: next };
-    if (latest.current.onStateChange) latest.current.onStateChange(next);
-    else setInternalState(next);
-  }, []);
-
+  // `update` is stable, so the overrides handed to `ChildNavigationProvider` stay referentially
+  // stable (its contract) and do not change on every selection, page or host re-render.
   const listNavigation = useMemo<Partial<Navigation>>(
     () => ({
       openItem: (itemEntityName, id, options) => {
@@ -88,7 +76,7 @@ function SplitBody({
         if (options?.openInNewTab || itemEntityName !== entityName) {
           navigation.openItem(itemEntityName, id, options);
         } else {
-          update({ ...latest.current.current, selectedItemId: id });
+          update((previous) => ({ ...previous, selectedItemId: id }));
         }
       },
     }),
@@ -96,7 +84,7 @@ function SplitBody({
   );
 
   const onCollectionChange = useCallback(
-    (collection: CollectionViewState): void => update({ ...latest.current.current, collection }),
+    (collection: CollectionViewState): void => update((previous) => ({ ...previous, collection })),
     [update],
   );
 

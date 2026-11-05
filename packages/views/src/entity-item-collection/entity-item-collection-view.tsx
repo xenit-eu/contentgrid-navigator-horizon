@@ -1,10 +1,11 @@
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
 import { extractFilterValuesFromCollectionUrl } from "@contentgrid/features/search";
 import { type ProfileEntity, toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemCollectionBreadcrumbs } from "../breadcrumbs";
+import { useControllableState } from "../hooks/use-controllable-state";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useViewNavigation } from "../navigation";
@@ -141,15 +142,13 @@ function CollectionBody({
   activeItemId: string | undefined;
 }>) {
   const navigation = useViewNavigation();
-  const [internalState, setInternalState] = useState(initialState);
   // Controlled with no `state` yet still starts from `initialState` (the target link's own page
   // and filters) rather than an empty state, the same way the uncontrolled branch does.
-  const current = onStateChange ? (state ?? initialState) : internalState;
-
-  function update(next: CollectionViewState): void {
-    if (onStateChange) onStateChange(next);
-    else setInternalState(next);
-  }
+  const [current, update] = useControllableState({
+    state,
+    onStateChange,
+    defaultState: initialState,
+  });
 
   return (
     <EntityItemCollectionFeature
@@ -160,9 +159,11 @@ function CollectionBody({
       activeItemId={activeItemId}
       // A page link belongs to the search that produced it, so a new filter or sort starts over
       // at page 1.
-      onFiltersChange={(filters) => update({ ...current, filters, pageUrl: undefined })}
-      onSortChange={(sort) => update({ ...current, sort, pageUrl: undefined })}
-      onPageChange={(pageUrl) => update({ ...current, pageUrl })}
+      onFiltersChange={(filters) =>
+        update((previous) => ({ ...previous, filters, pageUrl: undefined }))
+      }
+      onSortChange={(sort) => update((previous) => ({ ...previous, sort, pageUrl: undefined }))}
+      onPageChange={(pageUrl) => update((previous) => ({ ...previous, pageUrl }))}
       onEntityItemClick={(item) => navigation.openItem(profileEntity.name, item.id)}
     />
   );

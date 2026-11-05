@@ -269,6 +269,28 @@ describe("EntityItemSplitView state", () => {
     await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
   });
 
+  it("does not build on a change the host ignored when the next change arrives in a later tick", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemSplitView
+        entityName="customer"
+        state={{ collection: { filters: {} } }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await userEvent.click(await row("Globex"));
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(onStateChange).toHaveBeenCalledTimes(2);
+    // The host ignored the selection, so the page change must not carry it.
+    expect(onStateChange).toHaveBeenLastCalledWith({
+      collection: { filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL },
+    });
+  });
+
   it("reports both changes in the second onStateChange when they arrive in the same tick (controlled)", async () => {
     const { Wrapper } = setup();
     const onStateChange = vi.fn();
