@@ -7,7 +7,7 @@ import {
 
 /**
  * The item-detail fixture's `customer` entity, extended for the collection view: a search
- * template with one filter (`name~prefix`), a create form, and a collection page of two items
+ * template with one filter (`name~prefix`) and one sort option (`name,asc`), a create form, and a collection page of two items
  * with a next link. Every collection request is recorded in `collectionRequests`.
  */
 export const CUSTOMER_NEXT_PAGE_URL = `${CUSTOMER_COLLECTION_URL}?_cursor=page2`;

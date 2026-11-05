@@ -1,7 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CUSTOMER_NEXT_PAGE_URL, createCollectionFixtureFetch } from "../test-fixtures/collection";
+import {
+  CUSTOMER_NEXT_PAGE_URL,
+  createCollectionFixtureFetch,
+  customerCollectionBody,
+} from "../test-fixtures/collection";
 import { CUSTOMER_COLLECTION_URL } from "../test-fixtures/item-detail";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
@@ -188,5 +192,110 @@ describe("EntityItemCollectionView state", () => {
       sort: "name,asc",
       pageUrl: undefined,
     });
+  });
+});
+
+describe("EntityItemCollectionView state changes", () => {
+  const typeFilter = async (value: string) => {
+    await userEvent.click(screen.getByRole("button", { name: /filters/i }));
+    await userEvent.type(screen.getByRole("combobox", { name: /Name/ }), `${value}{Enter}`);
+  };
+
+  it("resets the page when a filter changes (controlled)", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await findFirstItem();
+    await typeFilter("acme");
+
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({
+      filters: { "name~prefix": "acme" },
+      pageUrl: undefined,
+    });
+  });
+
+  it("resets the page when a filter changes (uncontrolled)", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
+    await typeFilter("acme");
+
+    // Back on page 1 of the new search, not on the old page link.
+    await waitFor(() => expect(fixture.collectionRequests.at(-1)).toContain("name%7Eprefix=acme"));
+    expect(fixture.collectionRequests.at(-1)).not.toContain("_cursor");
+  });
+
+  it("keeps both changes when a filter and a page change arrive in the same tick (controlled)", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: {} }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await findFirstItem();
+    const next = screen.getByRole("button", { name: /next/i });
+    await userEvent.click(screen.getByRole("button", { name: /filters/i }));
+    const combobox = screen.getByRole("combobox", { name: /Name/ });
+    await userEvent.type(combobox, "acme");
+    act(() => {
+      fireEvent.keyDown(combobox, { key: "Enter" });
+      fireEvent.click(next);
+    });
+
+    expect(onStateChange).toHaveBeenLastCalledWith({
+      filters: { "name~prefix": "acme" },
+      pageUrl: CUSTOMER_NEXT_PAGE_URL,
+    });
+  });
+
+  it("does not leak state to another entity", async () => {
+    const fixture = createCollectionFixtureFetch();
+    const pageTwoItem = {
+      id: "cust-099",
+      name: "Page two item",
+      _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-099` } },
+    };
+    const fetchFn = async (input: Request | string | URL): Promise<Response> => {
+      if ((input instanceof Request ? input.url : String(input)) !== CUSTOMER_NEXT_PAGE_URL) {
+        return fixture.fetch(input);
+      }
+      const body = { ...customerCollectionBody, _embedded: { item: [pageTwoItem] } };
+      return new Response(JSON.stringify(body), {
+        headers: { "Content-Type": "application/hal+json" },
+      });
+    };
+    const { Wrapper } = createItemDetailTestHarness({ fetchFn });
+    const { rerender } = render(<EntityItemCollectionView entityName="customer" />, {
+      wrapper: Wrapper,
+    });
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await screen.findAllByText("Page two item");
+
+    rerender(<EntityItemCollectionView entityName="invoice" />);
+    await waitFor(() => expect(screen.queryByText("Page two item")).not.toBeInTheDocument());
+
+    rerender(<EntityItemCollectionView entityName="customer" />);
+    // Back on the first page, not on the old entity's page.
+    await findFirstItem();
+    expect(screen.queryByText("Page two item")).not.toBeInTheDocument();
   });
 });
