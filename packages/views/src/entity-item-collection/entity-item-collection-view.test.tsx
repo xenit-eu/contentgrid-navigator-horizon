@@ -154,4 +154,39 @@ describe("EntityItemCollectionView state", () => {
     // The host did not apply it, so the view keeps showing the state it was given.
     expect(fixture.collectionRequests).not.toContain(CUSTOMER_NEXT_PAGE_URL);
   });
+
+  it("applies a sort change when uncontrolled", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+
+    await waitFor(() =>
+      expect(fixture.collectionRequests.some((url) => url.includes("_sort=name"))).toBe(true),
+    );
+  });
+
+  it("reports a sort change once, with the sort and the page reset, when controlled", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await findFirstItem();
+    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({
+      filters: {},
+      sort: "name,asc",
+      pageUrl: undefined,
+    });
+  });
 });

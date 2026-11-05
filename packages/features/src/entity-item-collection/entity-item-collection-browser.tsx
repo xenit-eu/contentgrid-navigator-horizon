@@ -226,11 +226,11 @@ export function EntityItemCollectionBrowser({
     setActiveTypeaheadField(undefined);
   }
 
-  // A sort change invalidates whatever page cursor was in flight the same way a filter change
-  // does — hand pagination back to page one via the same callback.
+  // Pagination reset is the caller's responsibility here, as for a filter change: the caller
+  // clears its own page cursor in `onSortChange` — calling `onPageChange` too would race with that
+  // (both next states are built from the same render-time state, so the second drops the first).
   function handleSort(option: RecordTableSortOption | undefined) {
     onSortChange?.(option?.value);
-    onPageChange?.(undefined);
   }
 
   // `HalFormsContainer`'s widgets work with typed `FieldValue`s; `filters` (this view's own

@@ -31,7 +31,17 @@ export const searchableCustomerProfileBody = {
     search: {
       method: "GET",
       target: CUSTOMER_COLLECTION_URL,
-      properties: [{ name: "name~prefix", type: "text" }],
+      properties: [
+        { name: "name~prefix", type: "text" },
+        {
+          name: "_sort",
+          type: "text",
+          options: {
+            minItems: 0,
+            inline: [{ property: "name", direction: "asc", value: "name,asc", prompt: "Name A→Z" }],
+          },
+        },
+      ],
     },
     "create-form": {
       method: "POST",
