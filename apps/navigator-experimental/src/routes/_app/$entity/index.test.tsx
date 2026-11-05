@@ -119,11 +119,13 @@ function renderEntityRoute(queryClient: QueryClient, initialPath = "/invoice") {
 
 describe("EntityItemCollectionRoute — loader", () => {
   it("preloads the entity's collection view with the router context", async () => {
-    renderEntityRoute(new QueryClient(), "/invoice");
+    const queryClient = new QueryClient();
+    renderEntityRoute(queryClient, "/invoice");
     await screen.findByTestId("entity-detail");
 
+    // The router context the app was created with: the same QueryClient, the API client still absent.
     expect(preloadEntityItemCollection).toHaveBeenCalledWith(
-      expect.objectContaining({ queryClient: expect.anything() }),
+      expect.objectContaining({ queryClient, apiFetch: null, profileUrl: null }),
       "invoice",
     );
   });
