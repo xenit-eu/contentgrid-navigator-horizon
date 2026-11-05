@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type ProfileEntity, useEntityItem } from "@contentgrid/navigator-data";
 import { EntityItemCollectionBreadcrumbs, EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { EntityItemCollectionView } from "../entity-item-collection";
@@ -40,24 +40,43 @@ export type EntityItemSplitViewProps = ViewProps & {
  * (a state change, not a route change); every other call, and everything the detail pane opens
  * (e.g. a relation's item), goes to the parent's navigation. The children do not know they are
  * side by side. The view has no address scheme: the host reads and writes `state`.
+ *
+ * What leaves the split (spec open question 2, no route yet): a delete or edit in the detail pane
+ * and the Collection breadcrumb inside the split go through the parent's navigation, so the host
+ * decides where they land; the split does not clear its own selection after them.
  */
-export function EntityItemSplitView({
+export function EntityItemSplitView({ entityName, ...rest }: Readonly<EntityItemSplitViewProps>) {
+  // Keyed by entity, so internal selection, filters, sort and page never carry over to another
+  // entity's split (the collection view does the same for its own state).
+  return <SplitBody key={entityName} entityName={entityName} {...rest} />;
+}
+
+const EMPTY_STATE: EntityItemSplitViewState = {};
+
+function SplitBody({
   entityName,
   toolbar,
   state,
   onStateChange,
 }: Readonly<EntityItemSplitViewProps>) {
   const navigation = useViewNavigation();
-  const [internalState, setInternalState] = useState<EntityItemSplitViewState>(state ?? {});
-  const current = onStateChange ? (state ?? {}) : internalState;
-
-  const update = useCallback(
-    (next: EntityItemSplitViewState): void => {
-      if (onStateChange) onStateChange(next);
-      else setInternalState(next);
-    },
-    [onStateChange],
+  const [internalState, setInternalState] = useState<EntityItemSplitViewState>(
+    state ?? EMPTY_STATE,
   );
+  const current = onStateChange ? (state ?? EMPTY_STATE) : internalState;
+
+  // The callbacks below read the latest state and host callback through this ref, so the
+  // overrides handed to `ChildNavigationProvider` stay referentially stable (its contract) and
+  // do not change on every selection, page or host re-render.
+  const latest = useRef({ current, onStateChange });
+  useEffect(() => {
+    latest.current = { current, onStateChange };
+  });
+
+  const update = useCallback((next: EntityItemSplitViewState): void => {
+    if (latest.current.onStateChange) latest.current.onStateChange(next);
+    else setInternalState(next);
+  }, []);
 
   const listNavigation = useMemo<Partial<Navigation>>(
     () => ({
@@ -66,11 +85,16 @@ export function EntityItemSplitView({
         if (options?.openInNewTab || itemEntityName !== entityName) {
           navigation.openItem(itemEntityName, id, options);
         } else {
-          update({ ...current, selectedItemId: id });
+          update({ ...latest.current.current, selectedItemId: id });
         }
       },
     }),
-    [navigation, entityName, update, current],
+    [navigation, entityName, update],
+  );
+
+  const onCollectionChange = useCallback(
+    (collection: CollectionViewState): void => update({ ...latest.current.current, collection }),
+    [update],
   );
 
   // The list is ALWAYS controlled by this view (it gets `onStateChange` even when the host passed
@@ -85,7 +109,8 @@ export function EntityItemSplitView({
             entityName={entityName}
             toolbar={false}
             state={current.collection}
-            onStateChange={(collection) => update({ ...current, collection })}
+            onStateChange={onCollectionChange}
+            activeItemId={current.selectedItemId}
           />
         </ChildNavigationProvider>
       </div>

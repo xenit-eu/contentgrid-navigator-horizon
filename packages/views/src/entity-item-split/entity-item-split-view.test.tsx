@@ -2,7 +2,12 @@ import { useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CUSTOMER_NEXT_PAGE_URL, createCollectionFixtureFetch } from "../test-fixtures/collection";
+import {
+  CUSTOMER_NEXT_PAGE_URL,
+  createCollectionFixtureFetch,
+  customerCollectionBody,
+} from "../test-fixtures/collection";
+import { CUSTOMER_COLLECTION_URL } from "../test-fixtures/item-detail";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemSplitView, type EntityItemSplitViewState } from "./entity-item-split-view";
 
@@ -10,6 +15,12 @@ function setup(options?: Parameters<typeof createCollectionFixtureFetch>[0]) {
   const fixture = createCollectionFixtureFetch(options);
   return { ...createItemDetailTestHarness({ fetchFn: fixture.fetch }), fixture };
 }
+
+const pageTwoItem = {
+  id: "cust-099",
+  name: "Page two item",
+  _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-099` } },
+};
 
 // The item name shows in its row; once selected it shows in the breadcrumb too.
 const row = async (name: string) => (await screen.findAllByText(name))[0];
@@ -137,6 +148,23 @@ describe("EntityItemSplitView", () => {
   });
 });
 
+describe("EntityItemSplitView active row", () => {
+  it("marks the selected item's row as current and no other", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    expect(document.querySelector("[role='row'][aria-current='true']")).toBeNull();
+    await userEvent.click(await row("Acme Corp"));
+
+    await waitFor(() =>
+      expect(document.querySelectorAll("[role='row'][aria-current='true']")).toHaveLength(1),
+    );
+    const marked = document.querySelector("[role='row'][aria-current='true']");
+    expect(marked).toHaveTextContent("Acme Corp");
+    expect(marked).not.toHaveTextContent("Globex");
+  });
+});
+
 describe("EntityItemSplitView state", () => {
   it("starts from a given state without onStateChange and keeps its own afterwards", async () => {
     const { Wrapper } = setup();
@@ -203,5 +231,42 @@ describe("EntityItemSplitView state", () => {
     );
 
     await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
+  });
+});
+
+describe("EntityItemSplitView entity change", () => {
+  it("resets the selection and the page when the entity name changes", async () => {
+    const fixture = createCollectionFixtureFetch();
+    // The second page lists another item, so which page is shown is visible.
+    const fetchFn = async (input: Request | string | URL): Promise<Response> => {
+      if ((input instanceof Request ? input.url : String(input)) !== CUSTOMER_NEXT_PAGE_URL) {
+        return fixture.fetch(input);
+      }
+      const body = { ...customerCollectionBody, _embedded: { item: [pageTwoItem] } };
+      return new Response(JSON.stringify(body), {
+        headers: { "Content-Type": "application/hal+json" },
+      });
+    };
+    const { Wrapper } = createItemDetailTestHarness({ fetchFn });
+    const { rerender } = render(<EntityItemSplitView entityName="customer" />, {
+      wrapper: Wrapper,
+    });
+
+    await userEvent.click(await row("Acme Corp"));
+    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await row("Page two item");
+
+    rerender(<EntityItemSplitView entityName="invoice" />);
+    // The old item is gone from the detail pane and the toolbar.
+    expect(await screen.findByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
+
+    rerender(<EntityItemSplitView entityName="customer" />);
+    // Back on the first page with nothing selected, not on the old entity's page and item.
+    await row("Acme Corp");
+    expect(screen.queryByText("Page two item")).not.toBeInTheDocument();
+    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(document.querySelector("[role='row'][aria-current='true']")).toBeNull();
   });
 });

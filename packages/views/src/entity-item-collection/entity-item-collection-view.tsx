@@ -42,6 +42,8 @@ export type EntityItemCollectionViewProps = ViewProps &
     readonly state?: CollectionViewState;
     /** Called with the full next state on every change. */
     readonly onStateChange?: (state: CollectionViewState) => void;
+    /** The item shown elsewhere (e.g. a split view's detail pane); its row is marked current. */
+    readonly activeItemId?: string;
   };
 
 function describeTarget(target: EntityItemCollectionTarget): string {
@@ -72,6 +74,7 @@ export function EntityItemCollectionView({
   toolbar,
   state,
   onStateChange,
+  activeItemId,
   ...target
 }: Readonly<EntityItemCollectionViewProps>) {
   const result = useProfileEntityTarget(
@@ -99,6 +102,7 @@ export function EntityItemCollectionView({
         }
         state={state}
         onStateChange={onStateChange}
+        activeItemId={activeItemId}
       />
     );
   }
@@ -128,11 +132,13 @@ function CollectionBody({
   initialState,
   state,
   onStateChange,
+  activeItemId,
 }: Readonly<{
   profileEntity: ProfileEntity;
   initialState: CollectionViewState;
   state: CollectionViewState | undefined;
   onStateChange: ((state: CollectionViewState) => void) | undefined;
+  activeItemId: string | undefined;
 }>) {
   const navigation = useViewNavigation();
   const [internalState, setInternalState] = useState(initialState);
@@ -151,6 +157,7 @@ function CollectionBody({
       filters={current.filters}
       currentSort={current.sort}
       pageUrl={current.pageUrl}
+      activeItemId={activeItemId}
       // A page link belongs to the search that produced it, so a new filter or sort starts over
       // at page 1.
       onFiltersChange={(filters) => update({ ...current, filters, pageUrl: undefined })}
