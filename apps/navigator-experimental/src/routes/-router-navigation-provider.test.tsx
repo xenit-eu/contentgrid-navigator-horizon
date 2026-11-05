@@ -43,6 +43,9 @@ function NavigationProbe() {
       <button onClick={() => navigation.openItem("invoice", "42", { openInNewTab: true })}>
         open-item-new-tab
       </button>
+      <button onClick={() => navigation.openItem("invoice", "42", { openInFullPage: true })}>
+        open-item-full-page
+      </button>
       <button onClick={() => navigation.openClassifyCreate()}>open-classify-create</button>
       <button onClick={() => navigation.openSettings()}>open-settings</button>
       <button onClick={() => navigation.openSettings({ openInNewTab: true })}>
@@ -152,6 +155,15 @@ describe("RouterNavigationProvider", () => {
     await userEvent.click(screen.getByText("open-item-new-tab"));
     expect(windowOpen).toHaveBeenCalledWith("/invoice/42?q=acme", "_blank", "noopener,noreferrer");
     windowOpen.mockRestore();
+  });
+
+  it("opens a row's Open action (openInFullPage) on the detail page, without the previewed `item`", async () => {
+    renderRouter("/invoice?q=acme&item=7");
+
+    await userEvent.click(await screen.findByText("open-item-full-page"));
+
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/invoice/42"));
+    expect(screen.getByTestId("location")).not.toHaveTextContent("item=");
   });
 
   it("opens the collection without the previewed `item`, so a fresh list shows no preview", async () => {

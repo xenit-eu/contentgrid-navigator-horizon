@@ -39,10 +39,12 @@ export type EntityItemSplitViewProps = ViewProps & {
  *
  * A row click always selects the item (a state change of this view, not a navigation), whatever the screen
  * size; opening it in a new tab, or an item of another entity, goes to the parent's navigation.
- * The layout is responsive in CSS only: from the `lg` breakpoint up the panes sit side by side;
- * below it the preview takes the full width while an item is selected (the list is hidden) and
- * the preview's Close shows the list again. The preview's Open goes to the parent's navigation
- * (the full detail view, leaving the split), and so does everything else but the row click. The
+ * The preview pane exists only while an item is selected: without a selection the list takes the
+ * full width. With one, the layout is responsive in CSS only: from the `lg` breakpoint up the panes
+ * sit side by side; below it the preview takes the full width (the list is hidden, still mounted)
+ * and the preview's Close brings the full-width list back. The preview's Open, and the list's row
+ * Open action (`openInFullPage`), go to the parent's navigation (the full detail view, leaving the
+ * split), and so does everything else but the row click. The
  * children do not know they are side by side. The view has no address scheme: the host reads and
  * writes `state` (the apps' list route maps `selectedItemId` to `?item=<id>`, one history entry per
  * selection, and `collection` to `s.*`, `sort` and the remembered page).
@@ -85,8 +87,9 @@ function SplitBody({
   const listNavigation = useMemo<Partial<Navigation>>(
     () => ({
       openItem: (itemEntityName, id, options) => {
-        // A new-tab request, or an item of another entity, is not a pane change.
-        if (options?.openInNewTab || itemEntityName !== entityName) {
+        // A new-tab request, an item of another entity, or the row's Open action (`openInFullPage`)
+        // is not a pane change: the parent opens it.
+        if (options?.openInNewTab || options?.openInFullPage || itemEntityName !== entityName) {
           navigation.openItem(itemEntityName, id, options);
         } else {
           focusPreviewOnSelect.current = true;
@@ -132,15 +135,17 @@ function SplitBody({
   // selection change both go through `update` with the full next state. Leaving the list
   // uncontrolled would give it a private state this view cannot report or restore.
   const selected = current.selectedItemId !== undefined;
+  // Without a selection the list takes the whole width (a single column, no preview pane at all);
+  // with one, two columns from `lg` and, below it, the preview alone (the list is hidden, not
+  // unmounted, so its state and scroll survive both ways).
   const panes = (
-    <div className="flex h-full min-h-0">
-      {/* Below `lg` the list gives way to the preview of a selected item. */}
+    <div className={`grid h-full min-h-0 grid-cols-1 ${selected ? "lg:grid-cols-2" : ""}`}>
       <div
         ref={listRef}
         role="region"
         aria-label="Collection"
         tabIndex={-1}
-        className={`h-full min-w-0 flex-1 border-r outline-none ${selected ? "hidden lg:block" : ""}`}
+        className={`h-full min-h-0 min-w-0 outline-none ${selected ? "hidden border-r lg:block" : ""}`}
       >
         <ChildNavigationProvider overrides={listNavigation}>
           <EntityItemCollectionView
@@ -152,24 +157,22 @@ function SplitBody({
           />
         </ChildNavigationProvider>
       </div>
-      <div
-        ref={previewRef}
-        role="region"
-        aria-label="Preview"
-        tabIndex={-1}
-        className={`h-full min-w-0 flex-1 outline-none ${selected ? "" : "hidden lg:block"}`}
-      >
-        {current.selectedItemId === undefined ? (
-          <p className="p-6 text-sm text-muted-foreground">Select an item to preview it.</p>
-        ) : (
+      {current.selectedItemId !== undefined && (
+        <div
+          ref={previewRef}
+          role="region"
+          aria-label="Preview"
+          tabIndex={-1}
+          className="h-full min-h-0 min-w-0 outline-none"
+        >
           <EntityItemPreviewView
             key={current.selectedItemId}
             entityName={entityName}
             itemId={current.selectedItemId}
             onClose={closePreview}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 

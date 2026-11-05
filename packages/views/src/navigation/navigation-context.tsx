@@ -10,6 +10,12 @@ export interface NavigationOptions {
    * Default `true`; pass `false` to open a fresh list, e.g. from the sidebar.
    */
   restoreState?: boolean;
+  /**
+   * For `openItem`: go to the item's full detail page, even when the caller sits inside a split
+   * view whose parent would otherwise only show the item in a pane (the list's row click selects;
+   * its row **Open** action asks for the full page). A host with no panes ignores it. Default `false`.
+   */
+  openInFullPage?: boolean;
 }
 
 /**

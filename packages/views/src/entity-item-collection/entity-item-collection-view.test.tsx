@@ -38,6 +38,30 @@ describe("EntityItemCollectionView", () => {
     expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
   });
 
+  it("opens an item's full page from the row's Open link, a real link to the item", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+    await findFirstItem();
+
+    const open = screen.getAllByRole("link", { name: "Open" })[0];
+    expect(open).toHaveAttribute("href", "/customer/cust-001");
+    await userEvent.click(open);
+
+    expect(recording.calls).toEqual([
+      { method: "openItem", args: ["customer", "cust-001", { openInFullPage: true }] },
+    ]);
+  });
+
+  it("leaves a modified click on the row's Open link to the browser, and does not select the row", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+    await findFirstItem();
+
+    fireEvent.click(screen.getAllByRole("link", { name: "Open" })[0], { metaKey: true });
+
+    expect(recording.calls).toEqual([]);
+  });
+
   it("offers create only when the profile has a create form", async () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });

@@ -49,7 +49,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   `false`). The view decides — the item detail view's "create missing relation target" passes
   `{ openInNewTab: true }` — and a host that can't open tabs may ignore it. The recording fake records `options`
   as the last element of `args` only when it was passed. `openEntityItemCollection` also honours
-  `{ restoreState: false }` (default `true`): the sidebar passes it to open a fresh list instead of the remembered one.
+  `{ restoreState: false }` (default `true`): the sidebar passes it to open a fresh list instead of the remembered one. `openItem` also takes `{ openInFullPage: true }`: the detail page even from a child inside a split view (the collection view's row **Open** action passes it; a host with no panes ignores it).
 - Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create Item") and
   `openSettings` (the user menu's "Settings"); `openEditItem` arrives with the page that needs it.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
@@ -114,11 +114,13 @@ itemId, onClose? })`, a read-only preview of one item for the split view's right
   State is `EntityItemSplitViewState { collection?: CollectionViewState; selectedItemId?: string }`, controlled or
   internal like the collection view; the list's state sits under its own `collection` key, the selection beside it
   because the preview has no state. Only the list gets a `ChildNavigationProvider`: its `openItem` selects the item
-  in the preview pane (no route change of its own, on every screen size; the host maps the selection to the address), unless it asks for a new tab or names another entity,
+  in the preview pane (no route change of its own, on every screen size; the host maps the selection to the address), unless it asks for a new tab, for the full page (`openInFullPage`, the row's Open action) or names another entity,
   and every other call goes to the parent's navigation. The preview is not wrapped: its Open leaves the split for
   the full detail view through the parent, and its Close clears `selectedItemId` through the controllable state.
-  Layout is CSS only: side by side from the `lg` breakpoint; below it the preview takes the full width while an
-  item is selected (the list is hidden, not unmounted) and Close shows the list again.
+  Layout is CSS only (a grid): the preview pane exists only while an item is selected, so without a selection the
+  list takes the full width (no placeholder); with one, two columns from the `lg` breakpoint, and below it the
+  preview takes the full width (the list is hidden, not unmounted) and Close brings the full-width list back.
+  The list's row **Open** action (an `<a href>` through `hrefFor`) goes to the detail page via `openInFullPage`.
   `preloadEntityItemSplit(ctx, entityName, itemId?)` starts `preloadEntityItemCollection` and
   `preloadEntityItemPreview` together (the preview keeps its own preload because contract rule 5 has parents call each child's); the view has no address scheme: each app's list route maps `selectedItemId` to `?item=<id>` (a push per selection) and `collection` to `s.*`/`sort`/the page memo. The preview keeps its own pane header (item reference, Open, Close). Focus: after Close it returns to the closed
   item's row (the list container as fallback); after a selection it moves to the preview pane (`role=region`, `aria-label="Preview"`)

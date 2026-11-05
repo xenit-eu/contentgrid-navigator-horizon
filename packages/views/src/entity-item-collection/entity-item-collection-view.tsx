@@ -174,7 +174,13 @@ function CollectionBody({
       }
       onSortChange={(sort) => update((previous) => ({ ...previous, sort, pageUrl: undefined }))}
       onPageChange={(pageUrl) => update((previous) => ({ ...previous, pageUrl }))}
+      // A row click opens the item the way the host sees fit (a split view's pane shows it); the
+      // row's Open action always goes to the full detail page, hence `openInFullPage`.
       onEntityItemClick={(item) => navigation.openItem(profileEntity.name, item.id)}
+      onEntityItemOpen={(item) =>
+        navigation.openItem(profileEntity.name, item.id, { openInFullPage: true })
+      }
+      entityItemHref={(item) => navigation.hrefFor?.item(profileEntity.name, item.id)}
     />
   );
 }

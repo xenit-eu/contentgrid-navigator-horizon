@@ -71,10 +71,11 @@ const meta = {
     docs: {
       description: {
         component:
-          "A list next to a read-only preview of the selected item (its content when it has a file, otherwise its attributes). " +
-          "A row click selects the item, a state change of the view itself. From the `lg` breakpoint up the panes sit side by side; " +
-          "below it the preview takes the full width while an item is selected, and Close shows the list again. " +
-          "Open in the preview goes to the parent's navigation, i.e. the full detail view. " +
+          "A list that, once an item is selected, sits next to a read-only preview of it (its content when it has a file, otherwise its attributes). " +
+          "Without a selection the list takes the full width and there is no preview pane. " +
+          "A row click selects the item, a state change of the view itself. From the `lg` breakpoint up the panes then sit side by side; " +
+          "below it the preview takes the full width, and Close shows the full-width list again. " +
+          "Open in the preview, and the Open action on a row, go to the parent's navigation, i.e. the full detail view. " +
           "The apps' list route renders this view and keeps the selection in the URL as `?item=<id>`.",
       },
     },
@@ -89,11 +90,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** No selection: the list takes the full width, with no preview pane. */
 export const Default: Story = {
   args: { entityName },
 };
 
-/** The right pane shows the read-only preview of the selected item, with Open and Close. */
+/** With a selection the right pane shows the read-only preview of the selected item, with Open and Close. */
 export const ItemSelected: Story = {
   args: { entityName, state: { selectedItemId: "cust-001" } },
 };

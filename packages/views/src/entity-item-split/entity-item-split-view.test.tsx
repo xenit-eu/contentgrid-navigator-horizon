@@ -33,12 +33,13 @@ const previewShows = (name: string) =>
   waitFor(() => expect(within(previewPane()).getAllByText(name).length).toBeGreaterThan(0));
 
 describe("EntityItemSplitView", () => {
-  it("shows the list and an empty preview pane under one Home, collection toolbar", async () => {
+  it("shows only the list, full width, under one Home, collection toolbar while nothing is selected", async () => {
     const { Wrapper } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await row("Acme Corp");
-    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument();
+    expect(collectionPane()).not.toHaveClass("hidden");
     expect(screen.getAllByRole("link", { name: "Home" })).toHaveLength(1);
     expect(currentCrumb()).toHaveTextContent("Customers");
   });
@@ -53,7 +54,6 @@ describe("EntityItemSplitView", () => {
     await userEvent.click(await row("Globex"));
     await previewShows("Globex");
 
-    expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument();
     expect(recording.calls.filter((call) => call.method === "openItem")).toEqual([]);
   });
 
@@ -211,7 +211,7 @@ describe("EntityItemSplitView state", () => {
       selectedItemId: "cust-002",
     });
     // Controlled: nothing changes until the host echoes the state back.
-    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument();
   });
 
   it("reports a list change under the collection key and keeps the selection", async () => {
@@ -375,7 +375,7 @@ describe("EntityItemSplitView entity change", () => {
     rerender(<EntityItemSplitView entityName="supplier" />);
     // The old item is gone from the preview pane and the toolbar; the supplier's own list shows.
     await row("Initech Supplies");
-    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument();
     expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
     expect(fixture.collectionRequests.at(-1)).toBe(SUPPLIER_COLLECTION_URL);
 
@@ -383,7 +383,7 @@ describe("EntityItemSplitView entity change", () => {
     // Back on the first page with nothing selected, not on the old entity's page and item.
     await row("Acme Corp");
     expect(screen.queryByText("Page two item")).not.toBeInTheDocument();
-    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument();
     expect(document.querySelector("[role='row'][aria-current='true']")).toBeNull();
   });
 });
@@ -402,7 +402,7 @@ describe("EntityItemSplitView preview pane", () => {
 
     // The list's table and the preview's attribute table.
     await waitFor(() => expect(screen.getAllByRole("table")).toHaveLength(2));
-    expect(screen.getByRole("link", { name: "Open" })).toBeInTheDocument();
+    expect(within(previewPane()).getByRole("link", { name: "Open" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /edit|delete/i })).not.toBeInTheDocument();
     expect(recording.calls.filter((call) => call.method === "openItem")).toEqual([]);
   });
@@ -424,15 +424,16 @@ describe("EntityItemSplitView preview pane", () => {
     expect(onStateChange).toHaveBeenCalledWith({ selectedItemId: undefined });
   });
 
-  it("returns to the empty pane when Close is clicked (uncontrolled)", async () => {
+  it("removes the preview pane and returns to the full-width list when Close is clicked (uncontrolled)", async () => {
     const { Wrapper } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await selectAcme());
 
     await waitFor(() =>
-      expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument(),
+      expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument(),
     );
+    expect(collectionPane()).not.toHaveClass("hidden");
     expect(document.querySelector("[role='row'][aria-current='true']")).toBeNull();
   });
 
@@ -442,29 +443,67 @@ describe("EntityItemSplitView preview pane", () => {
       wrapper: Wrapper,
     });
 
-    await userEvent.click(await screen.findByRole("link", { name: "Open" }));
+    await userEvent.click(
+      await within(await screen.findByRole("region", { name: "Preview" })).findByRole("link", {
+        name: "Open",
+      }),
+    );
 
     expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-002"] }]);
-    expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument();
+    expect(previewPane()).toBeInTheDocument();
   });
 
-  it("lays out responsively: below lg the list is hidden while an item is selected", async () => {
+  it("lays out in one column without a selection, in two from lg with one, and keeps the list mounted", async () => {
     const { Wrapper } = setup();
     render(<EntityItemSplitView entityName="customer" toolbar={false} />, { wrapper: Wrapper });
     await row("Acme Corp");
-    const listPane = () => document.querySelector("[role='row']")?.closest(".border-r");
-    const previewPane = () =>
-      screen.queryByText("Select an item to preview it.")?.parentElement ??
-      screen.getByRole("button", { name: "Close preview" }).closest(".flex-1");
+    const grid = () => collectionPane().parentElement;
+    const listTable = screen.getAllByRole("table")[0];
 
-    // Nothing selected: the list shows at every width, the empty preview pane only from lg.
-    expect(listPane()).not.toHaveClass("hidden");
-    expect(previewPane()).toHaveClass("hidden", "lg:block");
+    // Nothing selected: the list alone, at every width.
+    expect(grid()).not.toHaveClass("lg:grid-cols-2");
+    expect(collectionPane()).not.toHaveClass("hidden");
 
     await selectAcme();
 
-    expect(listPane()).toHaveClass("hidden", "lg:block");
+    // Selected: side by side from lg; below it the list gives way to the preview (hidden, mounted).
+    expect(grid()).toHaveClass("grid-cols-1", "lg:grid-cols-2");
+    expect(collectionPane()).toHaveClass("hidden", "lg:block");
     expect(previewPane()).not.toHaveClass("hidden");
+    expect(collectionPane()).toContainElement(listTable);
+
+    await userEvent.click(screen.getByRole("button", { name: "Close preview" }));
+
+    // Closed: the same list element is back at full width.
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Preview" })).toBeNull());
+    expect(collectionPane()).toContainElement(listTable);
+    expect(collectionPane()).not.toHaveClass("hidden");
+  });
+
+  it("sends a row's Open action to the parent's openItem (the detail page), not to the preview", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+    await row("Acme Corp");
+
+    await userEvent.click(screen.getAllByRole("link", { name: "Open" })[0]);
+
+    expect(recording.calls).toEqual([
+      { method: "openItem", args: ["customer", "cust-001", { openInFullPage: true }] },
+    ]);
+    expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument();
+  });
+
+  it("leaves a modified click on a row's Open link to the browser", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+    await row("Acme Corp");
+
+    const open = screen.getAllByRole("link", { name: "Open" })[0];
+    expect(open).toHaveAttribute("href", "/customer/cust-001");
+    fireEvent.click(open, { ctrlKey: true });
+
+    expect(recording.calls).toEqual([]);
+    expect(screen.queryByRole("region", { name: "Preview" })).not.toBeInTheDocument();
   });
 });
 
@@ -504,7 +543,7 @@ describe("EntityItemSplitView focus", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Close preview" }));
 
-    await waitFor(() => expect(document.activeElement).toBe(document.querySelector(".border-r")));
+    await waitFor(() => expect(document.activeElement).toBe(collectionPane()));
   });
 
   it("moves focus to the preview pane on select when the list is hidden (narrow)", async () => {
