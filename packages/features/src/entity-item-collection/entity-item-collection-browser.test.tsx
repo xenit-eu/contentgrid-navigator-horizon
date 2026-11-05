@@ -475,14 +475,15 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     name: `No ${profile.pluralName} found`,
   });
 
-  it("shows the empty state instead of the table on an unfiltered first page", async () => {
+  it("shows the empty state instead of the search bar and table on an unfiltered first page", async () => {
     setupEmptyCollectionHandler();
     const profile = makeItemProfile();
 
-    renderBrowser({ profile });
+    renderBrowser({ profile, onFiltersChange: vi.fn() });
 
     expect(await screen.findByRole("heading", emptyStateHeading(profile))).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Filters/ })).not.toBeInTheDocument();
   });
 
   it("offers create in the empty state when the profile has a create form", async () => {

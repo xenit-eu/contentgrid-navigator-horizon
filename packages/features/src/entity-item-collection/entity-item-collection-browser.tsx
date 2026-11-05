@@ -307,8 +307,9 @@ export function EntityItemCollectionBrowser({
     </>
   );
 
-  // Start screen only for an unfiltered first page with no items; a filtered search keeps the
-  // table so its filters stay reachable. Placeholder data is the previous search's result, so it
+  // Start screen only for an unfiltered first page with no items; it replaces the search bar and
+  // the table, as there is nothing to search, filter or sort. A filtered search keeps both so its
+  // filters stay reachable. Placeholder data is the previous search's result, so it
   // can't tell whether this search is empty.
   const isEmptyCollection =
     collection.isSuccess &&
@@ -319,7 +320,7 @@ export function EntityItemCollectionBrowser({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {onFiltersChange && (
+      {onFiltersChange && !isEmptyCollection && (
         <EntitySearchBar
           className="shrink-0 p-4"
           profileEntity={profile}
