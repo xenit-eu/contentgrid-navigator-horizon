@@ -15,6 +15,11 @@ interface RuleOptions {
 
 const VALID_STABILITY_LEVELS = new Set<string>(["experimental", "candidate", "stable"]);
 
+// The stability tag lives on views (ADR-018, FR-028/FR-035); features carry none, so only
+// `@contentgrid/views/<entry>` imports are resolved.
+const VIEWS_PACKAGE = "@contentgrid/views";
+const VIEWS_PREFIX = `${VIEWS_PACKAGE}/`;
+
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://contentgrid.com/eslint-rules/${name}`,
 );
@@ -102,12 +107,12 @@ function resolveStability(pkgDir: string, subpath: string): StabilityResult {
   return null;
 }
 
-export const rule = createRule<[RuleOptions], "unstableFeature" | "invalidStability">({
+export const rule = createRule<[RuleOptions], "unstableView" | "invalidStability">({
   name: "no-unstable-features",
   meta: {
     type: "problem",
     docs: {
-      description: "Disallow importing features below the allowed stability level",
+      description: "Disallow importing views below the allowed stability level",
     },
     schema: [
       {
@@ -124,10 +129,10 @@ export const rule = createRule<[RuleOptions], "unstableFeature" | "invalidStabil
       },
     ],
     messages: {
-      unstableFeature:
-        "Feature '{{feature}}' has x-stability '{{stability}}' which is not allowed here. Allowed: {{allowed}}.",
+      unstableView:
+        "View '{{view}}' has x-stability '{{stability}}' which is not allowed here. Allowed: {{allowed}}.",
       invalidStability:
-        "Feature '{{feature}}' has an invalid x-stability value '{{rawValue}}'. Expected one of: experimental, candidate, stable.",
+        "View '{{view}}' has an invalid x-stability value '{{rawValue}}'. Expected one of: experimental, candidate, stable.",
     },
   },
   defaultOptions: [{ allowedStability: ["stable"] }],
@@ -138,13 +143,13 @@ export const rule = createRule<[RuleOptions], "unstableFeature" | "invalidStabil
       ImportDeclaration(node) {
         const source = node.source.value;
 
-        if (!source.startsWith("@contentgrid/features/")) return;
+        if (!source.startsWith(VIEWS_PREFIX)) return;
 
-        const subpath = source.slice("@contentgrid/features/".length);
+        const subpath = source.slice(VIEWS_PREFIX.length);
         if (!subpath) return;
 
         const currentFile = context.filename;
-        const pkgDir = findPackageDir(dirname(currentFile), "@contentgrid/features");
+        const pkgDir = findPackageDir(dirname(currentFile), VIEWS_PACKAGE);
         if (!pkgDir) return;
 
         const result = resolveStability(pkgDir, subpath);
@@ -154,7 +159,7 @@ export const rule = createRule<[RuleOptions], "unstableFeature" | "invalidStabil
           context.report({
             node,
             messageId: "invalidStability",
-            data: { feature: source, rawValue: result.rawValue },
+            data: { view: source, rawValue: result.rawValue },
           });
           return;
         }
@@ -162,9 +167,9 @@ export const rule = createRule<[RuleOptions], "unstableFeature" | "invalidStabil
         if (!allowedStability.includes(result.stability)) {
           context.report({
             node,
-            messageId: "unstableFeature",
+            messageId: "unstableView",
             data: {
-              feature: source,
+              view: source,
               stability: result.stability,
               allowed: allowedStability.join(", "),
             },

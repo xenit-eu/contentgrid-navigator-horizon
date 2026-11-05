@@ -11,55 +11,67 @@ const tester = new RuleTester({
 });
 
 // Filename inside __fixtures__/fake-app so the rule resolves
-// @contentgrid/features via __fixtures__/node_modules/ without touching
-// the real packages/features/ package
+// @contentgrid/views via __fixtures__/node_modules/ without touching
+// the real packages/views/ package
 const fixturesDir = new URL("./__fixtures__/fake-app/index.ts", import.meta.url).pathname;
 
 tester.run("no-unstable-features", rule, {
   valid: [
     {
-      name: "stable feature is allowed",
-      code: 'import "@contentgrid/features/stable-feature";',
+      name: "stable view is allowed",
+      code: 'import "@contentgrid/views/stable-view";',
       filename: fixturesDir,
       options: [{ allowedStability: ["stable"] }],
     },
     {
-      name: "experimental feature is allowed when all tiers permitted",
-      code: 'import "@contentgrid/features/experimental-feature";',
+      name: "experimental view is allowed when all tiers permitted",
+      code: 'import "@contentgrid/views/experimental-view";',
       filename: fixturesDir,
       options: [{ allowedStability: ["experimental", "candidate", "stable"] }],
     },
     {
-      name: "candidate feature is allowed when all tiers permitted",
-      code: 'import "@contentgrid/features/candidate-feature";',
+      name: "candidate view is allowed when all tiers permitted",
+      code: 'import "@contentgrid/views/candidate-view";',
       filename: fixturesDir,
       options: [{ allowedStability: ["experimental", "candidate", "stable"] }],
     },
     {
-      name: "non-features imports are always ignored",
+      name: "non-view imports are always ignored",
       code: 'import { Button } from "@contentgrid/ui";',
+      filename: fixturesDir,
+      options: [{ allowedStability: ["stable"] }],
+    },
+    {
+      name: "feature imports are not stability-checked (the tag lives on views, features carry none)",
+      code: 'import "@contentgrid/features/experimental-view";',
+      filename: fixturesDir,
+      options: [{ allowedStability: ["stable"] }],
+    },
+    {
+      name: "the views root barrel has no tag and is ignored",
+      code: 'import { NavigatorApp } from "@contentgrid/views";',
       filename: fixturesDir,
       options: [{ allowedStability: ["stable"] }],
     },
   ],
   invalid: [
     {
-      name: "experimental feature is blocked when only stable allowed",
-      code: 'import "@contentgrid/features/experimental-feature";',
+      name: "experimental view is blocked when only stable allowed",
+      code: 'import "@contentgrid/views/experimental-view";',
       filename: fixturesDir,
       options: [{ allowedStability: ["stable"] }],
-      errors: [{ messageId: "unstableFeature" }],
+      errors: [{ messageId: "unstableView" }],
     },
     {
-      name: "candidate feature is blocked when only stable allowed",
-      code: 'import "@contentgrid/features/candidate-feature";',
+      name: "candidate view is blocked when only stable allowed",
+      code: 'import "@contentgrid/views/candidate-view";',
       filename: fixturesDir,
       options: [{ allowedStability: ["stable"] }],
-      errors: [{ messageId: "unstableFeature" }],
+      errors: [{ messageId: "unstableView" }],
     },
     {
-      name: "invalid x-stability value reports invalidStability not unstableFeature",
-      code: 'import "@contentgrid/features/typo-feature";',
+      name: "invalid x-stability value reports invalidStability not unstableView",
+      code: 'import "@contentgrid/views/typo-view";',
       filename: fixturesDir,
       options: [{ allowedStability: ["stable"] }],
       errors: [{ messageId: "invalidStability" }],
