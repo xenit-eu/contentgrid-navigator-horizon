@@ -33,6 +33,7 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
   // Only sections the user has toggled are stored; the rest use their default.
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
   const elements = useRef(new Map<string, HTMLElement>());
+  const refs = useRef(new Map<string, (element: HTMLElement | null) => void>());
 
   function setOpen(section: string, open: boolean) {
     setToggled((prev) => new Map(prev).set(section, open));
@@ -43,9 +44,17 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
       open: toggled.get(section) ?? defaultOpen,
       onOpenChange: (open) => setOpen(section, open),
     }),
-    sectionRef: (section) => (element) => {
-      if (element) elements.current.set(section, element);
-      else elements.current.delete(section);
+    sectionRef: (section) => {
+      // One stable callback per section, so React doesn't detach and re-attach it every render.
+      let ref = refs.current.get(section);
+      if (!ref) {
+        ref = (element) => {
+          if (element) elements.current.set(section, element);
+          else elements.current.delete(section);
+        };
+        refs.current.set(section, ref);
+      }
+      return ref;
     },
     revealRelation: (relationName) => {
       const section = relationSection(relationName);

@@ -57,4 +57,14 @@ describe("useEntityItemContext sections", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
     rafSpy.mockRestore();
   });
+
+  it("sectionRef returns the same callback for a section across renders", () => {
+    const { result, rerender } = renderHook(
+      () => useEntityItemContext(makeAllAttributeItem()).sections,
+    );
+    const first = result.current.sectionRef("attributes");
+    rerender();
+    expect(result.current.sectionRef("attributes")).toBe(first);
+    expect(result.current.sectionRef("audit")).not.toBe(first);
+  });
 });
