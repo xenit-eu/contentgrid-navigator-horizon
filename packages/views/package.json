@@ -24,6 +24,10 @@
       "import": "./src/entity-item-split/index.ts",
       "types": "./src/entity-item-split/index.ts"
     },
+    "./entity-item-preview": {
+      "import": "./src/entity-item-preview/index.ts",
+      "types": "./src/entity-item-preview/index.ts"
+    },
     "./layout": {
       "import": "./src/layout/index.ts",
       "types": "./src/layout/index.ts"
