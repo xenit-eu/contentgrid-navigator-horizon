@@ -1,12 +1,13 @@
 /**
- * Tests for EntityItemCollectionRoute's filters/pageUrl memo wiring — the piece that sits
- * between the URL and the views' EntityItemCollectionView (itself covered by
- * packages/views/src/entity-item-collection/entity-item-collection-view.test.tsx).
+ * Tests for the list route, which renders the split view — the piece that sits between the URL
+ * (filters, sort, previewed `item`) and the views' EntityItemSplitView (itself covered by
+ * packages/views/src/entity-item-split/).
  *
  * The view is mocked to a data-capturing stub (same technique as
  * ../../__root.test.tsx) so these tests isolate the route's own state/effects — recalling from
- * the QueryClient memos, syncing the URL, and writing back on a real filter change — without
- * re-exercising the view's own pageUrl/filters reconciliation.
+ * the QueryClient memos, syncing the URL, pushing a history entry per selection, and writing back
+ * on a real filter change — without re-exercising the view's own reconciliation. The real router,
+ * route tree and navigation provider are used.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -15,7 +16,7 @@ import {
   createMemoryHistory,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppAuthResult } from "@contentgrid/navigator-data";
@@ -49,7 +50,10 @@ beforeAll(() => {
   }
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 // Same mock stack as ../../__root.test.tsx: AuthShell/SideBarLayout are the real, unmocked
 // components — they're exercised through mocks of what THEY depend on, so the real
@@ -104,45 +108,106 @@ beforeEach(() => {
   vi.mocked(useAppAuth).mockReturnValue(makeAuthResult());
 });
 
-// Captures the state EntityItemCollectionRoute hands the view, and exposes buttons that report
-// the same state changes a real filter edit or next-page click in the view would.
+// The split view is a stub that shows the state the route hands it and has buttons that report
+// the same changes a real filter edit, next-page click, row click or Close would. "open-item"
+// goes through the view navigation, like the preview pane's Open.
 const preloadEntityItemCollection = vi.hoisted(() => vi.fn(async () => {}));
+const preloadEntityItemSplit = vi.hoisted(() => vi.fn(async () => {}));
+
+interface StubState {
+  collection?: { filters?: Record<string, string>; sort?: string; pageUrl?: string };
+  selectedItemId?: string;
+}
 
 vi.mock("@contentgrid/views/entity-item-collection", () => ({
   preloadEntityItemCollection,
-  EntityItemCollectionView: (props: {
-    state?: { filters?: Record<string, string>; sort?: string; pageUrl?: string };
-    onStateChange?: (state: {
-      filters?: Record<string, string>;
-      sort?: string;
-      pageUrl?: string;
-    }) => void;
-  }) => (
-    <div>
-      <div data-testid="filters">{JSON.stringify(props.state?.filters ?? null)}</div>
-      <div data-testid="pageUrl">{props.state?.pageUrl ?? ""}</div>
-      <button
-        onClick={() =>
-          props.onStateChange?.({
-            ...props.state,
-            filters: { status: "closed" },
-            pageUrl: undefined,
-          })
-        }
-      >
-        change-filters
-      </button>
-      <button
-        onClick={() =>
-          props.onStateChange?.({
-            ...props.state,
-            pageUrl: "https://api.example.com/invoices?status=open&_cursor=next",
-          })
-        }
-      >
-        go-next-page
-      </button>
-    </div>
+}));
+
+vi.mock("@contentgrid/views/entity-item-split", async () => {
+  const { useViewNavigation } = await import("@contentgrid/views");
+  return {
+    preloadEntityItemSplit,
+    EntityItemSplitView: (props: {
+      entityName: string;
+      state?: StubState;
+      onStateChange?: (state: StubState) => void;
+    }) => {
+      const navigation = useViewNavigation();
+      const state = props.state;
+      return (
+        <div>
+          <div data-testid="entity">{props.entityName}</div>
+          <div data-testid="filters">{JSON.stringify(state?.collection?.filters ?? null)}</div>
+          <div data-testid="sort">{state?.collection?.sort ?? ""}</div>
+          <div data-testid="pageUrl">{state?.collection?.pageUrl ?? ""}</div>
+          <div data-testid="selected">{state?.selectedItemId ?? ""}</div>
+          <button
+            onClick={() =>
+              props.onStateChange?.({
+                ...state,
+                collection: {
+                  ...state?.collection,
+                  filters: { status: "closed" },
+                  pageUrl: undefined,
+                },
+              })
+            }
+          >
+            change-filters
+          </button>
+          <button
+            onClick={() =>
+              props.onStateChange?.({
+                ...state,
+                collection: {
+                  ...state?.collection,
+                  pageUrl: "https://api.example.com/invoices?status=open&_cursor=next",
+                },
+              })
+            }
+          >
+            go-next-page
+          </button>
+          <button onClick={() => props.onStateChange?.({ ...state, selectedItemId: "i-42" })}>
+            select-42
+          </button>
+          <button onClick={() => props.onStateChange?.({ ...state, selectedItemId: "i-43" })}>
+            select-43
+          </button>
+          <button onClick={() => props.onStateChange?.({ ...state, selectedItemId: undefined })}>
+            close
+          </button>
+          <button
+            onClick={() =>
+              props.onStateChange?.({
+                collection: {
+                  ...state?.collection,
+                  filters: { status: "closed" },
+                  pageUrl: undefined,
+                },
+                selectedItemId: "i-44",
+              })
+            }
+          >
+            filter-and-select
+          </button>
+          <button
+            onClick={() =>
+              state?.selectedItemId && navigation.openItem(props.entityName, state.selectedItemId)
+            }
+          >
+            open-item
+          </button>
+        </div>
+      );
+    },
+  };
+});
+
+vi.mock("@contentgrid/views/entity-item-detail", () => ({
+  preloadEntityItemDetail: async () => {},
+  EntityItemDetailView: (props: { entityName: string; itemId: string }) => (
+    <div data-testid="detail">{`${props.entityName}/${props.itemId}`}</div>
   ),
 }));
 
@@ -162,8 +227,8 @@ function renderEntityRoute(queryClient: QueryClient, initialPath = "/invoice") {
   return { ...view, router };
 }
 
-describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
-  it("preloads the entity's collection view in its loader, with the router context", async () => {
+describe("EntityItemCollectionRoute — split view wiring", () => {
+  it("preloads the entity's collection view in its loader when no item is selected", async () => {
     const queryClient = new QueryClient();
     renderEntityRoute(queryClient, "/invoice");
     await screen.findByTestId("filters");
@@ -172,6 +237,32 @@ describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
     expect(preloadEntityItemCollection).toHaveBeenCalledWith(
       expect.objectContaining({ queryClient, apiFetch: null, profileUrl: null }),
       "invoice",
+    );
+    expect(preloadEntityItemSplit).not.toHaveBeenCalled();
+  });
+
+  it("preloads the split view with the item in its loader when `item` is set", async () => {
+    const queryClient = new QueryClient();
+    renderEntityRoute(queryClient, "/invoice?item=i-42");
+    await screen.findByTestId("filters");
+
+    expect(preloadEntityItemSplit).toHaveBeenCalledWith(
+      expect.objectContaining({ queryClient, apiFetch: null, profileUrl: null }),
+      "invoice",
+      "i-42",
+    );
+    expect(preloadEntityItemCollection).not.toHaveBeenCalled();
+  });
+
+  it("preloads the newly selected item when the selection changes", async () => {
+    const user = userEvent.setup();
+    renderEntityRoute(new QueryClient(), "/invoice");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("select-42"));
+
+    await waitFor(() =>
+      expect(preloadEntityItemSplit).toHaveBeenCalledWith(expect.anything(), "invoice", "i-42"),
     );
   });
 
@@ -255,5 +346,179 @@ describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
       ),
     );
     expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ status: "open" });
+  });
+});
+
+describe("EntityItemCollectionRoute — previewed item in the URL", () => {
+  it("shows the item of a deep link `?item=` as selected", async () => {
+    renderEntityRoute(new QueryClient(), "/invoice?item=123");
+
+    expect(await screen.findByTestId("selected")).toHaveTextContent("123");
+  });
+
+  it('reads a hand-written numeric `?item=42` back as the id "42", in the view and the loader', async () => {
+    renderEntityRoute(new QueryClient(), "/invoice?item=42");
+
+    expect(await screen.findByTestId("selected")).toHaveTextContent("42");
+    expect(preloadEntityItemSplit).toHaveBeenCalledWith(expect.anything(), "invoice", "42");
+  });
+
+  it("shows nothing selected on a URL without `item`", async () => {
+    renderEntityRoute(new QueryClient(), "/invoice");
+
+    await screen.findByTestId("filters");
+    expect(screen.getByTestId("selected")).toHaveTextContent("");
+  });
+
+  it("a selection shows at once and pushes `item=<id>`; Back removes it again", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("select-42"));
+
+    // The view's state is mirrored synchronously, ahead of the router's async navigation.
+    expect(screen.getByTestId("selected")).toHaveTextContent("i-42");
+    await waitFor(() => expect(router.state.location.search).toEqual({ item: "i-42" }));
+
+    act(() => router.history.back());
+
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent(""));
+  });
+
+  it("each selection is its own history entry: Back returns to the previous selection", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("select-42"));
+    await waitFor(() => expect(router.state.location.search).toEqual({ item: "i-42" }));
+    await user.click(screen.getByText("select-43"));
+    await waitFor(() => expect(router.state.location.search).toEqual({ item: "i-43" }));
+
+    act(() => router.history.back());
+
+    await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent("i-42"));
+    expect(router.state.location.search).toEqual({ item: "i-42" });
+  });
+
+  it("Close removes `item` (pushing, so Back brings the preview back)", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("close"));
+
+    expect(screen.getByTestId("selected")).toHaveTextContent("");
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+
+    act(() => router.history.back());
+
+    await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent("i-42"));
+    expect(router.state.location.search).toEqual({ item: "i-42" });
+  });
+
+  it("Open goes to the item's detail page, without carrying `item` along", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("open-item"));
+
+    expect(await screen.findByTestId("detail")).toHaveTextContent("invoice/i-42");
+    expect(router.state.location.pathname).toBe("/invoice/i-42");
+    expect(router.state.location.search).toEqual({});
+  });
+
+  it("keeps the filters and sort in the URL when an item is selected, and the item when they change", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(
+      new QueryClient(),
+      "/invoice?s.status=open&sort=date,desc",
+    );
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("select-42"));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        "s.status": "open",
+        sort: "date,desc",
+        item: "i-42",
+      }),
+    );
+
+    await user.click(screen.getByText("change-filters"));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        "s.status": "closed",
+        sort: "date,desc",
+        item: "i-42",
+      }),
+    );
+    expect(screen.getByTestId("selected")).toHaveTextContent("i-42");
+  });
+
+  it("a change to both the search and the selection is one navigation", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("filter-and-select"));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ "s.status": "closed", item: "i-44" }),
+    );
+
+    // One Back undoes both.
+    act(() => router.history.back());
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+  });
+
+  it("does not put the page position in the URL when a page is opened with an item selected", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    await screen.findByTestId("filters");
+
+    await user.click(screen.getByText("go-next-page"));
+
+    await waitFor(() => expect(screen.getByTestId("pageUrl")).not.toHaveTextContent(""));
+    expect(router.state.location.search).toEqual({ item: "i-42" });
+  });
+
+  it("drops the selection on an entity switch", async () => {
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    expect(await screen.findByTestId("selected")).toHaveTextContent("i-42");
+
+    await act(() => router.navigate({ to: "/$entity", params: { entity: "order" }, search: {} }));
+
+    await waitFor(() => expect(screen.getByTestId("entity")).toHaveTextContent("order"));
+    expect(screen.getByTestId("selected")).toHaveTextContent("");
+  });
+
+  it("a clean list URL shows no selection, and the memo neither stores nor restores `item`", async () => {
+    const queryClient = new QueryClient();
+    rememberCollectionFilters(queryClient, "invoice", { status: "open" });
+    const { router } = renderEntityRoute(queryClient, "/invoice?s.status=open&item=i-42");
+    expect(await screen.findByTestId("selected")).toHaveTextContent("i-42");
+
+    // Away and back, the way a breadcrumb or the sidebar does: an empty search.
+    await act(() => router.navigate({ to: "/$entity", params: { entity: "order" }, search: {} }));
+    await waitFor(() => expect(screen.getByTestId("entity")).toHaveTextContent("order"));
+    await act(() => router.navigate({ to: "/$entity", params: { entity: "invoice" }, search: {} }));
+
+    await waitFor(() => expect(screen.getByTestId("entity")).toHaveTextContent("invoice"));
+    expect(screen.getByTestId("filters")).toHaveTextContent('{"status":"open"}');
+    expect(screen.getByTestId("selected")).toHaveTextContent("");
+    // The restored filters are written back; the selection is not.
+    await waitFor(() => expect(router.state.location.search).toEqual({ "s.status": "open" }));
+  });
+
+  it("a clean list URL on the same entity clears the selection", async () => {
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    expect(await screen.findByTestId("selected")).toHaveTextContent("i-42");
+
+    await act(() => router.navigate({ to: "/$entity", params: { entity: "invoice" }, search: {} }));
+
+    await waitFor(() => expect(screen.getByTestId("selected")).toHaveTextContent(""));
   });
 });

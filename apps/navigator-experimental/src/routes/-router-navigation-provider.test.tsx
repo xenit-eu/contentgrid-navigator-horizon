@@ -139,6 +139,30 @@ describe("RouterNavigationProvider", () => {
     );
   });
 
+  it("opens an item without the list's previewed `item`, which is not the detail page's", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderRouter("/invoice?q=acme&item=7");
+
+    await userEvent.click(await screen.findByText("open-item"));
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/invoice/42?q=acme"),
+    );
+    expect(screen.getByTestId("location")).not.toHaveTextContent("item=");
+
+    await userEvent.click(screen.getByText("open-item-new-tab"));
+    expect(windowOpen).toHaveBeenCalledWith("/invoice/42?q=acme", "_blank", "noopener,noreferrer");
+    windowOpen.mockRestore();
+  });
+
+  it("opens the collection without the previewed `item`, so a fresh list shows no preview", async () => {
+    renderRouter("/invoice?item=7");
+
+    await userEvent.click(await screen.findByText("open-collection"));
+
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/invoice"));
+    expect(screen.getByTestId("location")).not.toHaveTextContent("item=");
+  });
+
   it("navigates the current tab to the create page by default", async () => {
     const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
     renderRouter("/");

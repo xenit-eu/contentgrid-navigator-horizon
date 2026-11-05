@@ -10,10 +10,18 @@ import type { Navigation, NavigationOptions } from "@contentgrid/views";
 import { NavigationProvider } from "@contentgrid/views";
 
 /**
+ * An item's detail page keeps the list's other search params, but not `item`: that is the list
+ * route's own "previewed item" param, and the detail page is the item itself.
+ */
+function withoutItemParam(prev: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== "item"));
+}
+
+/**
  * The app's navigation object for views: every `open*` becomes a route change. The collection is
  * opened with an empty search, not `(prev) => prev`: filters are not carried in other pages' URLs
  * — the list restores its earlier filters and page position from the QueryClient-remembered page
- * href instead (see the list route's `onEntityItemClick`). `hrefFor` builds the same destinations
+ * href instead (see the list route's memo wiring). `hrefFor` builds the same destinations
  * with the router's own `router.buildLocation(...).href`, so breadcrumbs can render real `<a href>`
  * elements (cmd/middle-click, copy link, screen-reader link semantics) instead of buttons.
  * Every `open*` honours `options.openInNewTab` by opening the same destination href with
@@ -39,7 +47,7 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
         router.buildLocation({
           to: "/$entity/$itemId",
           params: { entity: entityName, itemId: id },
-          search: (prev) => prev,
+          search: withoutItemParam,
         }).href,
       classifyCreate: () => router.buildLocation({ to: "/~create", search: {} }).href,
       settings: () => router.buildLocation({ to: "/~configuration", search: {} }).href,
@@ -81,7 +89,7 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
             void navigate({
               to: "/$entity/$itemId",
               params: { entity: entityName, itemId: id },
-              search: (prev) => prev,
+              search: withoutItemParam,
             }),
         ),
       openCreateItem: (entityName, options) =>
