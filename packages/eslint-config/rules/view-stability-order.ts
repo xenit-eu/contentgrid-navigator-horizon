@@ -10,7 +10,12 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
  * The importing file's view and the imported view are each identified by the nearest
  * `package.json` with an `x-stability` field, walking up from the file (or the resolved
  * relative import) and stopping at the package root (the first `package.json` with a `name`).
- * Files or imports with no tag in between (support folders such as `breadcrumbs/`) are ignored.
+ *
+ * An imported directory with no tag (support folders such as `breadcrumbs/`) is not a view and
+ * is ignored. An importing file with no tag is treated as `stable`, the strictest level: the root
+ * barrel `src/index.ts` and untagged support folders must not re-export or import a less stable
+ * view unchecked. This rule is only enabled inside `packages/views`, so "untagged importer"
+ * always means "untagged code in the views package".
  */
 
 type StabilityLevel = "experimental" | "candidate" | "stable";
@@ -21,8 +26,6 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://contentgrid.com/eslint-rules/${name}`,
 );
 
-const tagCache = new Map<string, StabilityLevel | null>();
-
 function readJson(file: string): Record<string, unknown> | null {
   try {
     return JSON.parse(readFileSync(file, "utf-8")) as Record<string, unknown>;
@@ -31,8 +34,9 @@ function readJson(file: string): Record<string, unknown> | null {
   }
 }
 
+// Not cached: a lint run reads a handful of tiny package.json files per file, and a cache keyed on
+// the directory would serve stale tags in editors after a tag is edited.
 function stabilityOfDir(startDir: string): StabilityLevel | null {
-  if (tagCache.has(startDir)) return tagCache.get(startDir)!;
   let result: StabilityLevel | null = null;
   let dir = startDir;
   for (let i = 0; i < 20; i++) {
@@ -49,7 +53,6 @@ function stabilityOfDir(startDir: string): StabilityLevel | null {
     if (parent === dir) break;
     dir = parent;
   }
-  tagCache.set(startDir, result);
   return result;
 }
 
@@ -78,16 +81,17 @@ export const rule = createRule<[], "lessStableView">({
   defaultOptions: [],
   create(context) {
     const importerDir = dirname(context.filename);
-    const importer = stabilityOfDir(importerDir);
+    const importer: StabilityLevel = stabilityOfDir(importerDir) ?? "stable";
 
     const check = (
       node:
         | TSESTree.ImportDeclaration
         | TSESTree.ExportNamedDeclaration
-        | TSESTree.ExportAllDeclaration,
+        | TSESTree.ExportAllDeclaration
+        | TSESTree.ImportExpression,
+      source: unknown,
     ) => {
-      const source = node.source?.value;
-      if (!importer || typeof source !== "string") return;
+      if (typeof source !== "string") return;
       if (!source.startsWith(".") && !isAbsolute(source)) return;
       const imported = stabilityOfDir(directoryOf(resolve(importerDir, source)));
       if (!imported || RANK[imported] >= RANK[importer]) return;
@@ -100,13 +104,16 @@ export const rule = createRule<[], "lessStableView">({
 
     return {
       ImportDeclaration(node) {
-        check(node);
+        check(node, node.source.value);
       },
       ExportNamedDeclaration(node) {
-        check(node);
+        check(node, node.source?.value);
       },
       ExportAllDeclaration(node) {
-        check(node);
+        check(node, node.source.value);
+      },
+      ImportExpression(node) {
+        check(node, node.source.type === "Literal" ? node.source.value : undefined);
       },
     };
   },
