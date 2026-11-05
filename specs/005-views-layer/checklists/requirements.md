@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Items still open by design: five of the six Open questions in `spec.md` (question 5 is resolved). They do not block PRs 2–6; PR 6 marks its address scheme provisional, PR 5 leaves the unsaved-changes guard in place, PR 7 does not decide the preferences questions, and PR 8 marks the experimental-copy convention provisional.
+- Items still open by design: four of the six Open questions in `spec.md` (questions 2 and 5 are resolved). They do not block PRs 2–6; PR 6 wires the product owner's address scheme for the split (question 2), PR 5 leaves the unsaved-changes guard in place, PR 7 does not decide the preferences questions, and PR 8 marks the experimental-copy convention provisional.
 - Points found while writing, for review: (1) the design lists six navigation functions, of which the first PRs need three; (2) "apps import only views" cannot mean literally nothing else, since apps bootstrap with the data and UI packages; (3) the router-setup code in the shells is router-bound, so "features never import the router" needs it to leave the features package first; (4) the design's navigation list includes functions whose pages are on other branches.
 - Review path: human review of `spec.md`, ADR-018 and the constitution amendment in the pull request, then PR 2.

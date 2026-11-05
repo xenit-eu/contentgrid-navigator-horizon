@@ -72,10 +72,10 @@ const meta = {
       description: {
         component:
           "A list next to a read-only preview of the selected item (its content when it has a file, otherwise its attributes). " +
-          "A row click selects the item, a state change and not a route change. From the `lg` breakpoint up the panes sit side by side; " +
+          "A row click selects the item, a state change of the view itself. From the `lg` breakpoint up the panes sit side by side; " +
           "below it the preview takes the full width while an item is selected, and Close shows the list again. " +
           "Open in the preview goes to the parent's navigation, i.e. the full detail view. " +
-          "Open question 2 (two panes, one URL) is still open, so there is no route yet.",
+          "The apps' list route renders this view and keeps the selection in the URL as `?item=<id>`.",
       },
     },
   },

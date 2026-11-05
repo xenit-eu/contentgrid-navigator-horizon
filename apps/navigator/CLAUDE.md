@@ -57,6 +57,10 @@ Routes are file-based (TanStack Router, ADR-005). `routeTree.gen.ts` is
 generated automatically by `@tanstack/router-plugin` during `dev` and `build` —
 never edit it manually.
 
+The `/$entity` list route (`src/routes/_app/$entity/index.tsx`) renders the split view (list + read-only
+preview) in this app: filters and sort in `s.*`/`sort`, the previewed item in `?item=<id>` (one history entry per
+selection); Open in the preview goes to `/$entity/$itemId`.
+
 ---
 
 ## What this app is NOT

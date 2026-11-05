@@ -37,14 +37,15 @@ export type EntityItemSplitViewProps = ViewProps & {
  * itself (Home, collection; the collection is the current location). The preview keeps its own
  * small pane header with the item and its Open and Close actions; the list draws none.
  *
- * A row click always selects the item (a state change, not a route change), whatever the screen
+ * A row click always selects the item (a state change of this view, not a navigation), whatever the screen
  * size; opening it in a new tab, or an item of another entity, goes to the parent's navigation.
  * The layout is responsive in CSS only: from the `lg` breakpoint up the panes sit side by side;
  * below it the preview takes the full width while an item is selected (the list is hidden) and
  * the preview's Close shows the list again. The preview's Open goes to the parent's navigation
  * (the full detail view, leaving the split), and so does everything else but the row click. The
  * children do not know they are side by side. The view has no address scheme: the host reads and
- * writes `state`.
+ * writes `state` (the apps' list route maps `selectedItemId` to `?item=<id>`, one history entry per
+ * selection, and `collection` to `s.*`, `sort` and the remembered page).
  *
  * Focus: after Close it returns to the row of the closed item (the list container when that row
  * is gone); after a selection it moves to the preview pane only when the list is hidden (below

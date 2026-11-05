@@ -96,15 +96,16 @@ A user sees a list on the left and a read-only preview of the selected item on t
 
 **Why this priority**: It is the reason views must contain views and fill the space they get. It depends on stories 1 and 2.
 
-**Independent Test**: Open the split view, select two items in turn: the preview pane follows, the route does not change, and one toolbar is shown.
+**Independent Test**: Open an entity's list, select two items in turn: the preview pane follows, the page stays the list (only `item=<id>` in its address changes, one history entry per selection), and one toolbar is shown.
 
 **Acceptance Scenarios**:
 
-1. **Given** the split view, **When** the user selects an item in the list, **Then** the preview pane shows that item and the screen does not navigate.
+1. **Given** the split view, **When** the user selects an item in the list, **Then** the preview pane shows that item and the screen does not leave the list page; the address gains `item=<id>` and each selection adds a history entry (open question 2, decided).
 2. **Given** the list and the detail views also work as pages on their own, **Then** the split view is made of those views, not of a copy.
 3. **Given** the split view, **Then** one breadcrumb toolbar (Home › collection) shows for both panes and the list draws none; the preview pane keeps a small pane header with the item name and its Open/Close actions, which is not a breadcrumb toolbar.
-4. **Given** each pane has its own filters, sort and page, **Then** a change in one pane does not overwrite the other's (the address format is an open question).
-5. **Given** the route starts loading, **Then** the data of both panes starts loading in one go.
+4. **Given** each pane has its own filters, sort and page, **Then** a change in one pane does not overwrite the other's: the list's filters and sort live in `s.*` and `sort`, the selection in `item` (open question 2, decided).
+5. **Given** the route starts loading, **Then** the data of both panes starts loading in one go: with `item` in the address, the list's and the preview's data.
+6. **Given** a link with `?item=<id>`, **When** the page opens, **Then** the split shows with that item previewed; **When** the user goes Back, **Then** the previous selection (or none) shows; **When** the user chooses Open in the preview, **Then** the item's full detail page opens.
 
 ---
 
@@ -195,7 +196,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 - **FR-012**: A view MUST accept an optional state and an optional change notification. Without a change notification, the view MUST keep its state itself and MUST still function correctly with neither passed.
 - **FR-013**: An app MUST read its address into view state and write state changes back to the address, and MUST be the only layer that knows the address format. A frontend address MUST NOT be accepted as one of a view's identifying props.
 - **FR-014**: The collection view state MUST hold filters keyed by the search template's field names, an optional sort and an optional page value that is the opaque page key. Requests MUST be built through the search template; no address or sort string is built or parsed by hand.
-- **FR-015**: A parent view MUST store each child's state under its own prefix so two panes do not overwrite each other; the exact scheme is an open question.
+- **FR-015**: A parent view MUST store each child's state under its own key so two panes do not overwrite each other. The scheme for the split view is decided (open question 2): the list's filters and sort in `s.*` and `sort`, the selected item in `item`.
 
 **Navigation**
 
@@ -256,18 +257,17 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 - **SC-002** _(assumption: a measurable form of the design's rule 1)_: The migrated route files contain only the mapping from the address to the view's props and state; none keeps filter, sort, page or dialog logic.
 - **SC-003**: Opening the same item by name and by link results in one request for the item — true at the view level from PR 3; a production host that exercises the link mode is still to be built (User Story 3).
 - **SC-004**: A user can return from an item to its list through the breadcrumb and see the same filters, sort order and page as before, in every case that works today.
-- **SC-005**: A list and detail split view lets a user switch items in the right pane with no route change and with one toolbar.
+- **SC-005**: A list and detail split view lets a user switch items in the right pane without leaving the list page (only the `item` param changes) and with one toolbar.
 - **SC-006** _(from rule 4 and ADR-009)_: Every view and feature story has a visual snapshot in a fixed-size box showing no overflow outside the box.
 - **SC-007**: No feature imports the router; the lint check fails on a deliberate violation of each layer rule.
 - **SC-008** _(assumption)_: The existing end-to-end suite passes unchanged after each migrated page.
 
 ## Open questions
 
-These stay open. A team meeting settles them; none is decided here — except question 5, resolved by what PR 3 actually built, and question 6, resolved during review.
+These stay open. A team meeting settles them; none is decided here — except question 5, resolved by what PR 3 actually built, question 6, resolved during review, and question 2, decided by the product owner.
 
 1. **Experimental copies and unfinished features.** How do we keep an experimental copy of a view up to date with fixes to the original? And once features carry no stability tag, what stops someone from putting an unfinished feature in a stable view?
-2. **Two panes, one address.** Each pane has its own filters, sort and page. Proposal: child views report changes to their parent through the change notification (FR-012), and the app writes them to the address with a prefix per pane. Not yet agreed. The split view built in PR 6 leaves the address to the host;
-   _Proposal from the product owner (2026-11-05), for the team — not yet agreed:_ the split opens from the list on every screen size (a row click selects, it never navigates), with a responsive layout (side by side from `lg`, the preview full width below it). The URL is the list route's params, unchanged, plus `item=<id>`; each selection pushes a history entry; the preview pane's own state (which file, which PDF page) stays out of the URL; the full detail view opens through the preview's Open.
+2. **Two panes, one address.** _Decided by the product owner (2026-11-05)._ The list page is the split view, in both apps: `/$entity?s.<field>=…&sort=…&item=<itemId>`. A row click always selects the item and shows the read-only preview, on every screen size (no breakpoint- or content-dependent navigation); the layout is responsive in CSS only (side by side from `lg`, the preview full width below it). Each selection pushes a history entry, so Back returns to the previous selection or to none; Close removes `item` (also a push); the preview's Open goes to the full detail page `/$entity/$itemId`. Filters and sort stay in the URL as before (`s.*`, `sort`); the page position stays out of it (remembered per entity, as before), and so does the preview pane's own state (which file, which PDF page). A deep link with `?item=<id>` opens the split with that item previewed. The remembered list state never includes `item`: a clean list URL shows no selection. Only the list's own state has an address; the preview pane has none, so no per-pane prefix is needed (the earlier proposal of a prefix per pane is dropped). The split view itself keeps no address scheme: the app maps `item` to `selectedItemId` and the other params to `collection` (FR-013).
 3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useViewNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. Not yet agreed. To keep this series small, the guard stays where it is for now; that is a sequencing choice, not an answer.
 4. **Preferences.** (a) A list setting a user changed, such as visible columns, replaces the backend's list as a whole, so a column the backend adds later never shows for that user; a reset per setting is needed, not only "reset all". (b) Can the backend lock a preference so users cannot change it? (c) Will user preferences move to the server so they follow the user across devices? (d) _Resolved during review:_ the store moves into its own `user-preferences` feature in `packages/features`, not into the data layer, so no new peer dependency arises — `packages/features` already depends on the state library.
 5. **Filters in a link** _(added during spec writing, not from the design review; it comes from the design's "open point" under rule 2)_ — _Resolved as of PR 3_: a `collectionUrl` target starts the view at the link's own page, with the filter values the link carries for the search template's own fields extracted into the view's initial state, so the filter form shows them as active; fields the template does not have are not extracted. This is not cursor-decoding — it reads declared search parameters by the template's own field names, never the opaque page key.
