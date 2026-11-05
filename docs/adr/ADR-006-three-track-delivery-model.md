@@ -103,13 +103,14 @@ ceremony is a cost with no matching benefit.
 - The `x-stability` field is still required, now on every view's `package.json` (ADR-018 moved it
   from the feature directories to `packages/views`), and only the three documented values
   (`experimental` | `candidate` | `stable`) are allowed.
-- The ESLint rule (`@contentgrid/no-unstable-features`, wired in
+- The ESLint rule (`@contentgrid/no-unstable-views`, wired in
   `apps/navigator/eslint.config.js`) stays enabled — it still catches an invalid/typo
   `x-stability` value. Only its `allowedStability` option changed, from `["stable"]` to
   `["experimental", "candidate", "stable"]`.
 - The rule's implementation, tests, and fixtures in `packages/eslint-config` are untouched by
   this amendment. (Spec 005 later changed the rule to resolve `@contentgrid/views/<view>` instead of
-  features; the options and the suspension are unchanged.)
+  features and renamed it from `no-unstable-features` to `no-unstable-views`; the options and the
+  suspension are unchanged.)
 
 **What this changes in practice:** `packages/features/CLAUDE.md`, `apps/navigator/CLAUDE.md`,
 and `apps/navigator-experimental/CLAUDE.md` note the suspension; the promotion workflow they
@@ -123,6 +124,9 @@ describe does not need to run pre-GA, since there is nothing to gate.
 3. audit `packages/views/src/*` for views that shipped straight to `stable` pre-GA and
    confirm each one still belongs there under normal review. (Features carry no tag; they are
    as stable as the views that use them.)
+4. confirm the apps' L1 allowlist (`PENDING_VIEW_FEATURES` in each app's `eslint.config.js`) is
+   empty, or that each remaining feature has been audited and the exception is deliberate
+   (spec 005 T063).
 
 ---
 

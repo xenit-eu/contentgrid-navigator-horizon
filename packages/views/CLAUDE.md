@@ -44,11 +44,15 @@ The `x-stability` tag (`experimental` | `candidate` | `stable`) lives on views, 
   `x-stability` (`src/<view>/package.json`, `src/shells/<shell>/package.json`, and `src/navigation/package.json` for
   `recording-navigation`). `src/stability.test.ts` fails if an entry has no valid tag. Support folders that are not
   an entry (`breadcrumbs/`, `toolbar/`, `hooks/`, …) carry none.
-- `@contentgrid/no-unstable-features` reads that tag for `@contentgrid/views/<entry>` imports and checks it against
+- `@contentgrid/no-unstable-views` reads that tag for `@contentgrid/views/<entry>` imports and checks it against
   the app's `allowedStability`. It does not look at feature imports (features carry no tag); the root barrel
   `@contentgrid/views` is untagged and ignored. The generic app's gate stays at all three tiers pre-GA.
 - `@contentgrid/view-stability-order` (layer rule L5) fails a view that imports a less stable view
-  (experimental < candidate < stable), including re-exports. Today every view is `stable`.
+  (experimental < candidate < stable), including re-exports and dynamic `import()`. Code in `packages/views/src` that carries no tag (support folders, the
+  root barrel) counts as `stable`, so it cannot import or re-export a less stable view. The root barrel
+  (`src/index.ts`) exports navigation infrastructure only, never a view; `src/stability.test.ts` enforces it. Views import
+  their siblings relatively (`../entity-item-detail`) because a package self-reference (`@contentgrid/views/...`) does not
+  resolve under `tsc`. Today every view is `stable`.
 - A stable view that needs an experimental feature gets an experimental copy of the view — **provisional**, pending
   spec open question 1.
 
