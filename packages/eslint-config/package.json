@@ -6,7 +6,9 @@
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
-    "./rules/no-unstable-features": "./dist/rules/no-unstable-features.js"
+    "./rules/no-unstable-features": "./dist/rules/no-unstable-features.js",
+    "./rules/view-stability-order": "./dist/rules/view-stability-order.js",
+    "./layers": "./dist/rules/layers.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

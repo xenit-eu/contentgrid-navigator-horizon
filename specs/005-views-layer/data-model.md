@@ -109,4 +109,4 @@ The `EntityDisplayPreferences` type and the backend part already live in `@conte
 
 ## Stability tag
 
-Today: `x-stability` in each feature directory's `package.json`. After PR 8: `x-stability` in each view's `package.json`; features carry none. Values stay `experimental | candidate | stable`.
+Today: `x-stability` in each feature directory's `package.json`. After PR 7 of the stack: `x-stability` in each view's `package.json`; features carry none. Values stay `experimental | candidate | stable`.

@@ -1,7 +1,10 @@
 import baseConfig from "@contentgrid/eslint-config";
+import { navigatorDataLayerConfig } from "@contentgrid/eslint-config/layers";
 
 export default [
   ...baseConfig,
+  // L4: navigator-data never imports views.
+  ...navigatorDataLayerConfig(),
   {
     // Standalone Node CLIs (recorder/sanitiser): Node globals and console output are intended.
     files: ["test-fixtures/recorded/scripts/**/*.mjs"],
