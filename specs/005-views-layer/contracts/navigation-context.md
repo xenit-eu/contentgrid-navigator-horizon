@@ -25,6 +25,8 @@ interface NavigationOptions {
   openInNewTab?: boolean;
   /** `openEntityItemCollection` only: bring the list back as the user left it. Default `true`; `false` opens a fresh list. */
   restoreState?: boolean;
+  /** `openItem` only: go to the full detail page even from a child inside a split view, whose parent would otherwise show the item in a pane (the list's row "Open" action). Default `false`; a host with no panes ignores it. */
+  openInFullPage?: boolean;
 }
 ```
 
@@ -47,7 +49,7 @@ The item detail view's relation popover already reports "create missing target" 
 3. **Only views call it; no router in views or features.** Every click that opens something, including the view's own toolbar breadcrumbs and a click that comes from a feature (reported through a callback prop), is turned by the view into a call on the navigation object. Host code in `packages/views/src/shells/` (router setup only) and the apps — including each app's own `Navigation` implementation, a file under that app's own `src/routes/` (not `packages/views/src/shells/`; see `research.md` §2.7) — MAY use the router.
 4. **One-page-only actions stay props.** For example "after create, go to the new item" remains a normal prop.
 5. **A missing provider is a development-time error**, not a silent no-op.
-6. **Children get their own navigation.** A parent view wraps each child in its own provider. When the child calls `openItem`, the parent decides: for the list in a split view it shows that item in the other pane and does not call the route. Children do not know they are side by side.
+6. **Children get their own navigation.** A parent view wraps each child in its own provider. When the child calls `openItem`, the parent decides: for the list in a split view it shows that item in the other pane and does not call the route, unless the call passes `{ openInFullPage: true }` (the row's Open action) or `openInNewTab`, which go to the parent's navigation, i.e. the detail page. Children do not know they are side by side.
 7. **Guarding leaving is open.** A function to guard leaving with unsaved changes is proposed (open question 3) and is not part of this contract yet.
 8. **Every `open*` takes the same optional options object.** `openInNewTab` defaults to `false`. The view decides it, for example from a feature callback, or because the action is "create missing related item", which keeps today's new-tab behaviour by passing `{ openInNewTab: true }` to `openCreateItem`. A host that cannot open tabs (chat panel, split view parent) MAY treat it as a hint.
 
