@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from "@contentgrid/ui";
 import { ProblemAlert } from "../../problem-details";
-import { EntityItemReference } from "../variations/entity-item-reference";
+import { EntityItemReference } from "../variations/item-reference/entity-item-reference";
 
 export interface DeleteEntityItemButtonProps {
   readonly item: EntityItem;
@@ -63,7 +63,7 @@ export function DeleteEntityItemButton({
         <Tooltip open={label ? false : undefined}>
           <TooltipTrigger asChild>
             <AlertDialogTrigger asChild>
-              // No onclick, that's what the wrapping AlertDialogTrigger is for
+              {/* No onclick, that's what the wrapping AlertDialogTrigger is for */}
               {label ? (
                 <Button type="button" variant="destructive" size="sm">
                   <TrashIcon />
