@@ -137,6 +137,8 @@ function SplitBody({
       {/* Below `lg` the list gives way to the preview of a selected item. */}
       <div
         ref={listRef}
+        role="region"
+        aria-label="List"
         tabIndex={-1}
         className={`h-full min-w-0 flex-1 border-r outline-none ${selected ? "hidden lg:block" : ""}`}
       >

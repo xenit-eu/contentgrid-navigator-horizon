@@ -203,10 +203,11 @@ test("result table document preview @slow", async ({
   await selectSidebarEntity(ENTITY.ORDER);
 
   // A row click selects the item: the list stays and the read-only preview opens beside it
-  // (`?item=<id>`). The clicks target list rows by role; the preview has its own attribute table.
+  // (`?item=<id>`). The clicks are scoped to the list pane; the preview has its own attribute table.
+  const list = page.getByRole("region", { name: "List" });
 
   // @embedpdf uses the same data-testid attributes as react-pdf-viewer
-  await page.getByRole("row", { name: "metadata.png [4.08 KB]" }).click();
+  await list.getByRole("row", { name: "metadata.png [4.08 KB]" }).click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
   await page.getByRole("combobox").filter({ hasText: "Document" }).click();
@@ -217,7 +218,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Document" }).click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
-  await page.getByRole("row", { name: "Bob.pdf [330.1 KB]" }).click();
+  await list.getByRole("row", { name: "Bob.pdf [330.1 KB]" }).click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Document" }).click();
@@ -228,7 +229,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.locator("#root")).toContainText("No file present.");
 
-  await page.getByRole("row", { name: "testdocx.docx [4.26 KB]" }).click();
+  await list.getByRole("row", { name: "testdocx.docx [4.26 KB]" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Receipt" }).click();
@@ -237,7 +238,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
 
-  await page.getByRole("row", { name: "Bob_broken.pdf [330.1 KB]" }).click();
+  await list.getByRole("row", { name: "Bob_broken.pdf [330.1 KB]" }).click();
   await page.locator('[role="combobox"]').filter({ hasText: "Receipt" }).click();
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
@@ -246,7 +247,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Document" }).click();
   await expect(page.getByText("The document is invalid or corrupted")).toBeVisible();
 
-  await page.getByRole("row", { name: "Bob_protected.pdf [330.46 KB]" }).click();
+  await list.getByRole("row", { name: "Bob_protected.pdf [330.46 KB]" }).click();
   await expect(page.getByTestId("core__viewer")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Document" }).click();
@@ -265,7 +266,8 @@ test("Test details no content", async ({ page, login, selectSidebarEntity }) => 
   await selectSidebarEntity(ENTITY.EMPLOYEE);
 
   // Row click → preview pane beside the list → Open goes to the full detail page.
-  await page.getByRole("row", { name: "Beatrix" }).click();
+  const list = page.getByRole("region", { name: "List" });
+  await list.getByRole("row", { name: "Beatrix" }).click();
   await page.getByRole("region", { name: "Preview" }).getByRole("link", { name: "Open" }).click();
 
   await page.getByRole("tab", { name: "Managed orders" }).click();
@@ -290,7 +292,8 @@ test("Test details with content @slow", async ({ page, login, selectSidebarEntit
   await selectSidebarEntity(ENTITY.ORDER);
 
   // Row click → preview pane beside the list → Open goes to the full detail page.
-  await page.getByRole("row", { name: "testdocx.docx [4.26 KB]" }).click();
+  const list = page.getByRole("region", { name: "List" });
+  await list.getByRole("row", { name: "testdocx.docx [4.26 KB]" }).click();
   await page.getByRole("region", { name: "Preview" }).getByRole("link", { name: "Open" }).click();
 
   await page.getByRole("button", { name: "Edit" }).click();
