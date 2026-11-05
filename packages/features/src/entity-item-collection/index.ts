@@ -10,6 +10,8 @@ export { EntityItemCountLabel } from "./entity-item-count-label";
 export type { EntityItemCountLabelProps } from "./entity-item-count-label";
 export {
   useEntityItemCollectionSearch,
+  useEntityItemToManyRelationSearch,
   type EntityItemCollectionSearch,
   type EntityItemCollectionSearchOptions,
+  type EntityItemToManyRelationSearchOptions,
 } from "./use-entity-item-collection-search";
