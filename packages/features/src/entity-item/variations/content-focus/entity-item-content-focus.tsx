@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { RightSidePanelLayout } from "../../../layout";
 import { EntityItemSections } from "../../entity-item-sections";
-import { useEntityItemContext } from "../../use-entity-item-context";
+import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 import { ContentAttributeSelector } from "./components/content-attribute-selector";
@@ -16,20 +15,10 @@ import { selectDefaultContentAttribute } from "./util/select-default-content-att
  * of its own. The preview and relations load their own follow-up data by following the item's
  * links. Renders nothing when the item's profile has no content attributes.
  */
-export function EntityItemContentFocus({
-  item,
-  refetch,
-  onRelationItemClick,
-  onRelationItemCreateNew,
-  onMissingRelationTargetClick,
-  onBlindRelationOverwriteClick,
-  onRequiredRelationClick,
-  actions,
-  allowEdit = true,
-}: Readonly<EntityItemVariationProps>) {
+export function EntityItemContentFocus({ actions, ...props }: Readonly<EntityItemVariationProps>) {
+  const { item } = props;
   const { profileEntity } = item;
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
+  const sectionProps = useEntityItemSectionProps(props);
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -81,22 +70,7 @@ export function EntityItemContentFocus({
         </div>
       }
       sidePanelPadded={false}
-      sidePanel={
-        <EntityItemSections
-          item={item}
-          profiles={loadedProfiles}
-          state={itemContext.sections}
-          editedItem={itemContext.editedItem}
-          onEditingChange={itemContext.setIsEditing}
-          onRefresh={() => void itemContext.refresh()}
-          allowEdit={allowEdit}
-          onRelationItemClick={onRelationItemClick}
-          onRelationItemCreateNew={onRelationItemCreateNew}
-          onMissingRelationTargetClick={onMissingRelationTargetClick}
-          onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-          onRequiredRelationClick={onRequiredRelationClick}
-        />
-      }
+      sidePanel={<EntityItemSections {...sectionProps} />}
     >
       <ContentPreviewPanel
         entityItem={item}

@@ -1,11 +1,6 @@
-import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { ResizableSplitLayout } from "@contentgrid/ui";
-import {
-  EntityItemSections,
-  type EntityItemSectionsProps,
-  hasEntityItemRelations,
-} from "../../entity-item-sections";
-import { useEntityItemContext } from "../../use-entity-item-context";
+import { EntityItemSections, hasEntityItemRelations } from "../../entity-item-sections";
+import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemCard } from "../item-card/entity-item-card";
 
@@ -22,31 +17,15 @@ const STACK_BELOW = 768;
  * the single card. Like the other variations it draws no toolbar or page chrome
  * (`h-full min-h-0`, no outer padding) and performs no navigation of its own.
  */
-export function EntityItemSideBySide({
-  item,
-  refetch,
-  actions,
-  allowEdit = true,
-  ...relationHandlers
-}: Readonly<EntityItemVariationProps>) {
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
-
-  const sectionProps: Omit<EntityItemSectionsProps, "item"> = {
-    profiles: loadedProfiles,
-    state: itemContext.sections,
-    editedItem: itemContext.editedItem,
-    onEditingChange: itemContext.setIsEditing,
-    onRefresh: () => void itemContext.refresh(),
-    allowEdit,
-    ...relationHandlers,
-  };
+export function EntityItemSideBySide({ actions, ...props }: Readonly<EntityItemVariationProps>) {
+  const { item } = props;
+  const sectionProps = useEntityItemSectionProps(props);
 
   if (!hasEntityItemRelations(item)) {
     return (
       <div className="h-full min-h-0">
         <EntityItemCard item={item} actions={actions}>
-          <EntityItemSections item={item} {...sectionProps} />
+          <EntityItemSections {...sectionProps} />
         </EntityItemCard>
       </div>
     );
@@ -59,7 +38,7 @@ export function EntityItemSideBySide({
         left={
           <div className="h-full min-h-0 overflow-auto">
             <EntityItemCard item={item} actions={actions}>
-              <EntityItemSections item={item} {...sectionProps} show="details" />
+              <EntityItemSections {...sectionProps} show="details" />
             </EntityItemCard>
           </div>
         }
@@ -68,12 +47,7 @@ export function EntityItemSideBySide({
             aria-label="Relations"
             className="h-full min-h-0 overflow-auto group-data-[stacked]:mt-4"
           >
-            <EntityItemSections
-              item={item}
-              {...sectionProps}
-              show="relations"
-              relationVariant="card"
-            />
+            <EntityItemSections {...sectionProps} show="relations" relationVariant="card" />
           </section>
         }
         defaultRightSize={384}
