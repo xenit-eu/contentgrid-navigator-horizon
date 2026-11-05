@@ -3,7 +3,7 @@ import { type ProfileEntity, useEntityItem } from "@contentgrid/navigator-data";
 import { EntityItemCollectionBreadcrumbs, EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { EntityItemCollectionView } from "../entity-item-collection";
 import type { CollectionViewState } from "../entity-item-collection";
-import { EntityItemDetailView } from "../entity-item-detail";
+import { EntityItemPreviewView } from "../entity-item-preview";
 import { useControllableState } from "../hooks/use-controllable-state";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { BreadCrumbsToolBarLayout } from "../layout";
@@ -13,13 +13,13 @@ import type { ViewProps } from "../types/view";
 
 /**
  * The split view's state, as plain data the host may own or leave to the view. `collection` is the
- * list child's own state under its own key (contract `view-props-and-state.md` rule 8); the detail
+ * list child's own state under its own key (contract `view-props-and-state.md` rule 8); the preview
  * child has no state of its own, so the selection lives next to it on the split view itself.
  */
 export interface EntityItemSplitViewState {
   /** The list pane's filters, sort and page. */
   readonly collection?: CollectionViewState;
-  /** The item shown in the detail pane. `undefined` shows nothing selected. */
+  /** The item shown in the preview pane. `undefined` shows nothing selected. */
   readonly selectedItemId?: string;
 }
 
@@ -33,18 +33,18 @@ export type EntityItemSplitViewProps = ViewProps & {
 };
 
 /**
- * An entity's list next to the detail of the selected item. It is made of the collection view and
- * the item detail view, both with their toolbar off, under one toolbar the split view draws itself
+ * An entity's list next to a read-only preview of the selected item. It is made of the collection
+ * view (toolbar off) and the item preview view, under one toolbar the split view draws itself
  * (Home, collection and, once one is selected, item).
  *
- * Each child gets its own navigation: the list's `openItem` selects the item in the detail pane
- * (a state change, not a route change); every other call, and everything the detail pane opens
- * (e.g. a relation's item), goes to the parent's navigation. The children do not know they are
- * side by side. The view has no address scheme: the host reads and writes `state`.
- *
- * What leaves the split (spec open question 2, no route yet): a delete or edit in the detail pane
- * and the Collection breadcrumb inside the split go through the parent's navigation, so the host
- * decides where they land; the split does not clear its own selection after them.
+ * A row click always selects the item (a state change, not a route change), whatever the screen
+ * size; opening it in a new tab, or an item of another entity, goes to the parent's navigation.
+ * The layout is responsive in CSS only: from the `lg` breakpoint up the panes sit side by side;
+ * below it the preview takes the full width while an item is selected (the list is hidden) and
+ * the preview's Close shows the list again. The preview's Open goes to the parent's navigation
+ * (the full detail view, leaving the split), and so does everything else but the row click. The
+ * children do not know they are side by side. The view has no address scheme: the host reads and
+ * writes `state`.
  */
 export function EntityItemSplitView({ entityName, ...rest }: Readonly<EntityItemSplitViewProps>) {
   // Keyed by entity, so internal selection, filters, sort and page never carry over to another
@@ -83,6 +83,11 @@ function SplitBody({
     [navigation, entityName, update],
   );
 
+  const closePreview = useCallback(
+    (): void => update((previous) => ({ ...previous, selectedItemId: undefined })),
+    [update],
+  );
+
   const onCollectionChange = useCallback(
     (collection: CollectionViewState): void => update((previous) => ({ ...previous, collection })),
     [update],
@@ -92,9 +97,11 @@ function SplitBody({
   // none): the view owns the whole state, internal or the host's, so a list change and a
   // selection change both go through `update` with the full next state. Leaving the list
   // uncontrolled would give it a private state this view cannot report or restore.
+  const selected = current.selectedItemId !== undefined;
   const panes = (
     <div className="flex h-full min-h-0">
-      <div className="h-full min-w-0 flex-1 border-r">
+      {/* Below `lg` the list gives way to the preview of a selected item. */}
+      <div className={`h-full min-w-0 flex-1 border-r ${selected ? "hidden lg:block" : ""}`}>
         <ChildNavigationProvider overrides={listNavigation}>
           <EntityItemCollectionView
             entityName={entityName}
@@ -105,15 +112,15 @@ function SplitBody({
           />
         </ChildNavigationProvider>
       </div>
-      <div className="h-full min-w-0 flex-1">
+      <div className={`h-full min-w-0 flex-1 ${selected ? "" : "hidden lg:block"}`}>
         {current.selectedItemId === undefined ? (
-          <p className="p-6 text-sm text-muted-foreground">Select an item to see its details.</p>
+          <p className="p-6 text-sm text-muted-foreground">Select an item to preview it.</p>
         ) : (
-          <EntityItemDetailView
+          <EntityItemPreviewView
             key={current.selectedItemId}
             entityName={entityName}
             itemId={current.selectedItemId}
-            toolbar={false}
+            onClose={closePreview}
           />
         )}
       </div>

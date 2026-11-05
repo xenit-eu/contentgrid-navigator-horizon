@@ -24,14 +24,14 @@ vi.mock("../entity-item-collection", () => ({
 }));
 
 describe("EntityItemSplitView per-child navigation", () => {
-  it("shows an item of the same entity in the detail pane instead of navigating", async () => {
+  it("shows an item of the same entity in the preview pane instead of navigating", async () => {
     const { Wrapper, recording } = createItemDetailTestHarness();
     render(<EntityItemSplitView entityName="customer" toolbar={false} />, { wrapper: Wrapper });
 
     await userEvent.click(screen.getByRole("button", { name: "same entity" }));
 
     expect(recording.calls).toEqual([]);
-    expect(screen.queryByText("Select an item to see its details.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument();
   });
 
   it("delegates a new-tab request, another entity's item and every other call to the parent", async () => {
@@ -47,6 +47,6 @@ describe("EntityItemSplitView per-child navigation", () => {
       { method: "openItem", args: ["invoice", "inv-1"] },
       { method: "openEntityItemCollection", args: ["customer"] },
     ]);
-    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
   });
 });

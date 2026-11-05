@@ -43,7 +43,7 @@ export type EntityItemCollectionViewProps = ViewProps &
     readonly state?: CollectionViewState;
     /** Called with the full next state on every change. */
     readonly onStateChange?: (state: CollectionViewState) => void;
-    /** The item shown elsewhere (e.g. a split view's detail pane); its row is marked current. */
+    /** The item shown elsewhere (e.g. a split view's preview pane); its row is marked current. */
     readonly activeItemId?: string;
   };
 

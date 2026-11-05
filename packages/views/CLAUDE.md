@@ -96,20 +96,33 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
   collection, plus a create action gated on `profileEntity.createTemplate`.
 
+- `@contentgrid/views/entity-item-preview` (`x-stability: stable`): `EntityItemPreviewView(ViewProps & { entityName,
+itemId, onClose? })`, a read-only preview of one item for the split view's right pane. It loads the item like the
+  detail view (`useEntityItemTarget`), then hands it to `EntityItemPreview` from `@contentgrid/features/entity-item`:
+  the item's content when it holds a file (the content-focus preview panel and attribute selector, `readOnly`: no
+  upload drop zone), otherwise its attributes. No edit, delete or relation controls. The toolbar (hidden by
+  `toolbar={false}`) is the item reference, the host's `toolbar.actions`, **Open** (`navigation.openItem`, a real
+  `<a href>` through `NavigationLink` when `hrefFor` gives one, so modified clicks open a new tab) and **Close**,
+  drawn only when `onClose` is given: the view has no state, the host decides what closing means. Own loading,
+  error and not-found states. `preloadEntityItemPreview(ctx, entityName, itemId)` fills the same cache entries as
+  `preloadEntityItemDetail`.
+
 - `@contentgrid/views/entity-item-split` (`x-stability: stable`, no route yet — spec open question 2):
-  `EntityItemSplitView({ entityName, toolbar?, state?, onStateChange? })` places `EntityItemCollectionView` and
-  `EntityItemDetailView`, both with `toolbar={false}`, side by side under one toolbar it draws itself (Home ›
+  `EntityItemSplitView({ entityName, toolbar?, state?, onStateChange? })` places `EntityItemCollectionView`
+  (`toolbar={false}`) and `EntityItemPreviewView` side by side under one toolbar it draws itself (Home ›
   collection, then the selected item; a create action gated on `createTemplate`; the host's `toolbar.actions`).
   State is `EntityItemSplitViewState { collection?: CollectionViewState; selectedItemId?: string }`, controlled or
   internal like the collection view; the list's state sits under its own `collection` key, the selection beside it
-  because the detail view has no state. Only the list gets a `ChildNavigationProvider`: its `openItem` selects the
-  item in the detail pane (no route change), unless it asks for a new tab or names another entity, and every other
-  call goes to the parent's navigation. The detail pane is not wrapped: what it opens (a relation's item) leaves the
-  split through the parent. `preloadEntityItemSplit(ctx, entityName, itemId?)` starts `preloadEntityItemCollection`
-  and `preloadEntityItemDetail` together; the view has no address scheme. Leaving the split: a delete or edit in the
-  detail pane and the toolbar's Collection crumb go through the parent's navigation and leave the split; the
-  split does not clear or reroute its own selection after them (kept as is until open question 2 is settled).
-  The list marks the selected row `aria-current="true"` (`activeItemId` on the collection view and feature).
+  because the preview has no state. Only the list gets a `ChildNavigationProvider`: its `openItem` selects the item
+  in the preview pane (no route change, on every screen size), unless it asks for a new tab or names another entity,
+  and every other call goes to the parent's navigation. The preview is not wrapped: its Open leaves the split for
+  the full detail view through the parent, and its Close clears `selectedItemId` through the controllable state.
+  Layout is CSS only: side by side from the `lg` breakpoint; below it the preview takes the full width while an
+  item is selected (the list is hidden, not unmounted) and Close shows the list again.
+  `preloadEntityItemSplit(ctx, entityName, itemId?)` starts `preloadEntityItemCollection` and
+  `preloadEntityItemPreview` together; the view has no address scheme. The toolbar's Collection crumb goes through
+  the parent's navigation and leaves the split (kept as is until open question 2 is settled). The list marks the
+  selected row `aria-current="true"` (`activeItemId` on the collection view and feature).
 
 ## Breadcrumbs
 

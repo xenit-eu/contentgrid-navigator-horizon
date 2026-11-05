@@ -28,17 +28,17 @@ const row = async (name: string) => (await screen.findAllByText(name))[0];
 const currentCrumb = () => document.querySelector("[aria-current='page']");
 
 describe("EntityItemSplitView", () => {
-  it("shows the list and an empty detail pane under one Home, collection toolbar", async () => {
+  it("shows the list and an empty preview pane under one Home, collection toolbar", async () => {
     const { Wrapper } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await row("Acme Corp");
-    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Home" })).toHaveLength(1);
     expect(currentCrumb()).toHaveTextContent("Customers");
   });
 
-  it("shows the selected item in the detail pane without calling the route-level openItem", async () => {
+  it("shows the selected item in the preview pane without calling the route-level openItem", async () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
@@ -48,7 +48,7 @@ describe("EntityItemSplitView", () => {
     await userEvent.click(await row("Globex"));
     await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
 
-    expect(screen.queryByText("Select an item to see its details.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument();
     expect(recording.calls.filter((call) => call.method === "openItem")).toEqual([]);
   });
 
@@ -70,7 +70,7 @@ describe("EntityItemSplitView", () => {
     await userEvent.click(await row("Acme Corp"));
 
     await waitFor(() =>
-      expect(screen.queryByText("Select an item to see its details.")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument(),
     );
     expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
   });
@@ -138,7 +138,7 @@ describe("EntityItemSplitView", () => {
     });
   });
 
-  it("selecting an item requests it once: the toolbar shares the detail pane's cache entry", async () => {
+  it("selecting an item requests it once: the toolbar shares the preview pane's cache entry", async () => {
     const { Wrapper, fixture } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
@@ -195,7 +195,7 @@ describe("EntityItemSplitView state", () => {
       selectedItemId: "cust-002",
     });
     // Controlled: nothing changes until the host echoes the state back.
-    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
   });
 
   it("reports a list change under the collection key and keeps the selection", async () => {
@@ -318,7 +318,7 @@ describe("EntityItemSplitView state", () => {
     });
   });
 
-  it("shows the selected item of a controlled state in the detail pane", async () => {
+  it("shows the selected item of a controlled state in the preview pane", async () => {
     const { Wrapper } = setup();
     render(
       <EntityItemSplitView
@@ -357,9 +357,9 @@ describe("EntityItemSplitView entity change", () => {
     await row("Page two item");
 
     rerender(<EntityItemSplitView entityName="supplier" />);
-    // The old item is gone from the detail pane and the toolbar; the supplier's own list shows.
+    // The old item is gone from the preview pane and the toolbar; the supplier's own list shows.
     await row("Initech Supplies");
-    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
     expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
     expect(fixture.collectionRequests.at(-1)).toBe(SUPPLIER_COLLECTION_URL);
 
@@ -367,7 +367,87 @@ describe("EntityItemSplitView entity change", () => {
     // Back on the first page with nothing selected, not on the old entity's page and item.
     await row("Acme Corp");
     expect(screen.queryByText("Page two item")).not.toBeInTheDocument();
-    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
+    expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument();
     expect(document.querySelector("[role='row'][aria-current='true']")).toBeNull();
+  });
+});
+
+describe("EntityItemSplitView preview pane", () => {
+  const selectAcme = async () => {
+    await userEvent.click(await row("Acme Corp"));
+    return screen.findByRole("button", { name: "Close preview" });
+  };
+
+  it("shows the read-only preview of the selected item, always selecting on a row click", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    await selectAcme();
+
+    // The list's table and the preview's attribute table.
+    await waitFor(() => expect(screen.getAllByRole("table")).toHaveLength(2));
+    expect(screen.getByRole("link", { name: "Open" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /edit|delete/i })).not.toBeInTheDocument();
+    expect(recording.calls.filter((call) => call.method === "openItem")).toEqual([]);
+  });
+
+  it("clears the selection on Close, reporting it to a controlling host", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemSplitView
+        entityName="customer"
+        state={{ selectedItemId: "cust-001" }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Close preview" }));
+
+    expect(onStateChange).toHaveBeenCalledWith({ selectedItemId: undefined });
+  });
+
+  it("returns to the empty pane when Close is clicked (uncontrolled)", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    await userEvent.click(await selectAcme());
+
+    await waitFor(() =>
+      expect(screen.getByText("Select an item to preview it.")).toBeInTheDocument(),
+    );
+    expect(document.querySelector("[role='row'][aria-current='true']")).toBeNull();
+  });
+
+  it("opens the full detail view through the parent's navigation, leaving the selection alone", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemSplitView entityName="customer" state={{ selectedItemId: "cust-002" }} />, {
+      wrapper: Wrapper,
+    });
+
+    await userEvent.click(await screen.findByRole("link", { name: "Open" }));
+
+    expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-002"] }]);
+    expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument();
+  });
+
+  it("lays out responsively: below lg the list is hidden while an item is selected", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" toolbar={false} />, { wrapper: Wrapper });
+    await row("Acme Corp");
+    const listPane = () => document.querySelector("[role='row']")?.closest(".border-r");
+    const previewPane = () =>
+      screen.queryByText("Select an item to preview it.")?.parentElement ??
+      screen.getByRole("button", { name: "Close preview" }).closest(".flex-1");
+
+    // Nothing selected: the list shows at every width, the empty preview pane only from lg.
+    expect(listPane()).not.toHaveClass("hidden");
+    expect(previewPane()).toHaveClass("hidden", "lg:block");
+
+    await selectAcme();
+
+    expect(listPane()).toHaveClass("hidden", "lg:block");
+    expect(previewPane()).not.toHaveClass("hidden");
   });
 });

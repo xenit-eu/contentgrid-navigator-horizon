@@ -1,5 +1,5 @@
 import { preloadEntityItemCollection } from "../entity-item-collection/preload";
-import { preloadEntityItemDetail } from "../entity-item-detail/preload";
+import { preloadEntityItemPreview } from "../entity-item-preview/preload";
 import type { AppRouterContext } from "../shells/router-shell";
 
 /**
@@ -14,6 +14,6 @@ export async function preloadEntityItemSplit(
 ): Promise<void> {
   await Promise.all([
     preloadEntityItemCollection(ctx, entityName),
-    itemId === undefined ? undefined : preloadEntityItemDetail(ctx, entityName, itemId),
+    itemId === undefined ? undefined : preloadEntityItemPreview(ctx, entityName, itemId),
   ]);
 }

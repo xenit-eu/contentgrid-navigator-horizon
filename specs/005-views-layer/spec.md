@@ -92,15 +92,15 @@ A host that only has a link from the API (for example the chat assistant) shows 
 
 ### User Story 4 - A list and its detail side by side (Priority: P2)
 
-A user sees a list on the left and the selected item on the right, in one screen. Selecting another item in the list changes the right pane without leaving the screen.
+A user sees a list on the left and a read-only preview of the selected item on the right (its content when it has a file, otherwise its attributes), in one screen. Selecting another item in the list changes the right pane without leaving the screen; the full detail view opens from the preview.
 
 **Why this priority**: It is the reason views must contain views and fill the space they get. It depends on stories 1 and 2.
 
-**Independent Test**: Open the split view, select two items in turn: the detail pane follows, the route does not change, and one toolbar is shown.
+**Independent Test**: Open the split view, select two items in turn: the preview pane follows, the route does not change, and one toolbar is shown.
 
 **Acceptance Scenarios**:
 
-1. **Given** the split view, **When** the user selects an item in the list, **Then** the detail pane shows that item and the screen does not navigate.
+1. **Given** the split view, **When** the user selects an item in the list, **Then** the preview pane shows that item and the screen does not navigate.
 2. **Given** the list and the detail views also work as pages on their own, **Then** the split view is made of those views, not of a copy.
 3. **Given** the split view, **Then** one toolbar shows for both panes, and the children do not draw their own.
 4. **Given** each pane has its own filters, sort and page, **Then** a change in one pane does not overwrite the other's (the address format is an open question).
@@ -267,6 +267,7 @@ These stay open. A team meeting settles them; none is decided here — except qu
 
 1. **Experimental copies and unfinished features.** How do we keep an experimental copy of a view up to date with fixes to the original? And once features carry no stability tag, what stops someone from putting an unfinished feature in a stable view?
 2. **Two panes, one address.** Each pane has its own filters, sort and page. Proposal: child views report changes to their parent through the change notification (FR-012), and the app writes them to the address with a prefix per pane. Not yet agreed. The split view built in PR 6 leaves the address to the host; one follow-up it exposes: its toolbar's Collection breadcrumb calls the parent's `openEntityItemCollection` and so leaves the split, rather than deselecting the item.
+   _Proposal from the product owner (2026-11-05), for the team — not yet agreed:_ the split opens from the list on every screen size (a row click selects, it never navigates), with a responsive layout (side by side from `lg`, the preview full width below it). The URL is the list route's params, unchanged, plus `item=<id>`; each selection pushes a history entry; the preview pane's own state (which file, which PDF page) stays out of the URL; the full detail view opens through the preview's Open.
 3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useViewNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. Not yet agreed. To keep this series small, the guard stays where it is for now; that is a sequencing choice, not an answer.
 4. **Preferences.** (a) A list setting a user changed, such as visible columns, replaces the backend's list as a whole, so a column the backend adds later never shows for that user; a reset per setting is needed, not only "reset all". (b) Can the backend lock a preference so users cannot change it? (c) Will user preferences move to the server so they follow the user across devices? (d) _Resolved during review:_ the store moves into its own `user-preferences` feature in `packages/features`, not into the data layer, so no new peer dependency arises — `packages/features` already depends on the state library.
 5. **Filters in a link** _(added during spec writing, not from the design review; it comes from the design's "open point" under rule 2)_ — _Resolved as of PR 3_: a `collectionUrl` target starts the view at the link's own page, with the filter values the link carries for the search template's own fields extracted into the view's initial state, so the filter form shows them as active; fields the template does not have are not extracted. This is not cursor-decoding — it reads declared search parameters by the template's own field names, never the opaque page key.

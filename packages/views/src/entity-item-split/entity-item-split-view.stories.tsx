@@ -71,9 +71,11 @@ const meta = {
     docs: {
       description: {
         component:
-          "A list next to the detail of the selected item. Selecting a row changes state, not the route. " +
-          "Open question 2 (two panes, one URL) is still open, so there is no route yet: a delete or edit in the " +
-          "detail pane and the toolbar's Collection crumb go through the parent's navigation and leave the split.",
+          "A list next to a read-only preview of the selected item (its content when it has a file, otherwise its attributes). " +
+          "A row click selects the item, a state change and not a route change. From the `lg` breakpoint up the panes sit side by side; " +
+          "below it the preview takes the full width while an item is selected, and Close shows the list again. " +
+          "Open in the preview goes to the parent's navigation, i.e. the full detail view. " +
+          "Open question 2 (two panes, one URL) is still open, so there is no route yet.",
       },
     },
   },
@@ -91,6 +93,7 @@ export const Default: Story = {
   args: { entityName },
 };
 
+/** The right pane shows the read-only preview of the selected item, with Open and Close. */
 export const ItemSelected: Story = {
   args: { entityName, state: { selectedItemId: "cust-001" } },
 };
