@@ -63,6 +63,20 @@ describe("SelectionChip", () => {
     expect(btn?.className).toContain("px-[10px]");
     expect(btn?.className).toContain("text-[12px]");
   });
+
+  it("joined chips drop their shared rounding and the selected one sits on top", () => {
+    render(
+      <>
+        <SelectionChip label="Yes" joined="start" selected />
+        <SelectionChip label="No" joined="end" />
+      </>,
+    );
+    const yes = screen.getByRole("button", { name: "Yes" });
+    const no = screen.getByRole("button", { name: "No" });
+    expect(yes).toHaveClass("rounded-r-none", "z-10");
+    expect(no).toHaveClass("rounded-l-none");
+    expect(no).not.toHaveClass("z-10");
+  });
 });
 
 describe("SelectionChip slots", () => {

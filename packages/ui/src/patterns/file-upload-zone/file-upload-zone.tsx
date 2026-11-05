@@ -187,10 +187,10 @@ export function FileUploadZone({
         onFocus={onFocus}
         onBlur={onBlur}
         className={cn(
-          "flex w-full flex-col disabled:cursor-not-allowed disabled:opacity-50 items-center gap-1 rounded-lg border border-dashed px-6 py-7 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-invalid:border-destructive",
+          "flex w-full flex-col disabled:cursor-not-allowed disabled:opacity-50 items-center gap-1 rounded-lg border border-dashed px-6 py-7 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isDragActive
             ? "border-primary bg-primary/10"
-            : "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5",
+            : "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5 aria-invalid:border-destructive",
         )}
       >
         <CloudArrowUp className="mb-1 size-7 text-primary" aria-hidden />
