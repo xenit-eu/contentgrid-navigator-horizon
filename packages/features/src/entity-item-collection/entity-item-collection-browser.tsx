@@ -43,6 +43,10 @@ export interface EntityItemCollectionBrowserProps {
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** Fired when a row's Open action is used (the item's full page); the action shows only when given. */
+  readonly onEntityItemOpen?: (item: EntityItem) => void;
+  /** The real address of an item's full page: makes the Open action an `<a href>`. */
+  readonly entityItemHref?: (item: EntityItem) => string | undefined;
   /** The item shown elsewhere (e.g. a preview pane); its row is marked `aria-current`. */
   readonly activeItemId?: string;
   /**
@@ -82,6 +86,8 @@ export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
+  onEntityItemOpen,
+  entityItemHref,
   activeItemId,
   onPageChange,
   filters = {},
@@ -330,6 +336,8 @@ export function EntityItemCollectionBrowser({
             profile={profile}
             collection={collection.data}
             onEntityItemClick={onEntityItemClick}
+            onEntityItemOpen={onEntityItemOpen}
+            entityItemHref={entityItemHref}
             activeItemId={activeItemId}
             onPageChange={onPageChange}
             currentSort={currentSort}

@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from "react";
-import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon as ArrowSquareOut, TrashIcon as Trash } from "@phosphor-icons/react";
 import {
   type EntityItem,
   type EntityItemCollection,
@@ -13,6 +13,10 @@ import {
   type RecordTableCell,
   RecordTableRow,
   type RecordTableSortOption,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@contentgrid/ui";
 import {
   AttributeValueRenderer,
@@ -24,8 +28,19 @@ import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
   readonly collection: EntityItemCollection;
-  /** Fired when a row (entity item) is clicked, or the row's View action is used; receives the item. */
+  /** Fired when a row (entity item) is clicked; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /**
+   * Fired when the row's **Open** action is used (the item's full page, as opposed to a row click,
+   * which the host may use for a preview). Absent = no Open action is rendered.
+   */
+  readonly onEntityItemOpen?: (item: EntityItem) => void;
+  /**
+   * The real address of an item's full page. When given, the Open action is an `<a href>`: a plain
+   * click calls `onEntityItemOpen` (default prevented); a modified or middle click is left to the
+   * browser (new tab).
+   */
+  readonly entityItemHref?: (item: EntityItem) => string | undefined;
   /** The item shown elsewhere (e.g. a preview pane); its row is marked `aria-current` and tinted. */
   readonly activeItemId?: string;
   /**
@@ -62,7 +77,7 @@ export interface EntityItemCollectionTableProps {
   readonly selectedIds?: ReadonlySet<string>;
   /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
-  /** Replaces the default per-row View/Delete actions (e.g. a relation's Unlink). */
+  /** Replaces the default per-row Open/Delete actions (e.g. a relation's Unlink). */
   readonly renderRowActions?: (item: EntityItem) => ReactNode;
   /** `false` renders no actions column (e.g. in the relation picker). Defaults to `true`. */
   readonly showRowActions?: boolean;
@@ -105,6 +120,8 @@ export function EntityItemCollectionTable({
   profile,
   collection,
   onEntityItemClick,
+  onEntityItemOpen,
+  entityItemHref,
   activeItemId,
   onPageChange,
   currentSort,
@@ -235,17 +252,12 @@ export function EntityItemCollectionTable({
                   renderRowActions(item)
                 ) : (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEntityItemClick?.(item);
-                      }}
-                    >
-                      <Eye className="size-4" aria-hidden />
-                      <span className="sr-only">View</span>
-                    </Button>
+                    {onEntityItemOpen && (
+                      <OpenRowAction
+                        href={entityItemHref?.(item)}
+                        onOpen={() => onEntityItemOpen(item)}
+                      />
+                    )}
                     {item.canDelete && (
                       <RecordRowConfirmAction
                         label="Delete"
@@ -264,5 +276,59 @@ export function EntityItemCollectionTable({
         })}
       </RecordDataTable>
     </>
+  );
+}
+
+/**
+ * The row's Open action: an icon button with an "Open" tooltip and accessible name, like Delete next
+ * to it. With an `href` it is a real link — a plain click calls `onOpen`, a modified or middle click
+ * is left to the browser. It never reaches the row's own click handler.
+ */
+function OpenRowAction({
+  href,
+  onOpen,
+}: Readonly<{ href: string | undefined; onOpen: () => void }>) {
+  const icon = (
+    <>
+      <ArrowSquareOut className="size-4" aria-hidden />
+      <span className="sr-only">Open</span>
+    </>
+  );
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {href === undefined ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpen();
+              }}
+            >
+              {icon}
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon-sm" asChild>
+              <a
+                href={href}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (event.button !== 0 || event.metaKey || event.ctrlKey) return;
+                  if (event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  onOpen();
+                }}
+              >
+                {icon}
+              </a>
+            </Button>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>Open</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

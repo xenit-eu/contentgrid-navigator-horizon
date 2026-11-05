@@ -29,6 +29,16 @@ by subdirectory path.
 
 ---
 
+## Collection table row actions
+
+`EntityItemCollectionTable` (and the `entity-item-collection` browser around it) report row interactions through
+callbacks; it never navigates. A row click calls `onEntityItemClick` (the host may preview the item). The default
+row actions are **Open** and Delete, each an icon button with a tooltip: Open (`ArrowSquareOutIcon`) is drawn only when
+`onEntityItemOpen` is given and is a real `<a href>` when `entityItemHref` gives an address (a plain click calls
+`onEntityItemOpen`; modified and middle clicks are left to the browser); it never triggers the row click.
+
+---
+
 ## x-stability flag
 
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md))

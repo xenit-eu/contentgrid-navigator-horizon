@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, renderHook, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -204,22 +204,78 @@ describe("EntityItemCollectionTable", () => {
     expect(onEntityItemClick.mock.calls[0][0].id).toBe("1");
   });
 
-  it("calls onEntityItemClick when the row's View action is used", async () => {
+  it("renders an Open action with a tooltip and accessible name only when onEntityItemOpen is given", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const { rerender } = render(
+      <EntityItemCollectionTable profile={profile} collection={collection} />,
+      { wrapper: Wrapper },
+    );
+    expect(screen.queryByRole("button", { name: "Open" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+
+    rerender(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onEntityItemOpen={vi.fn()}
+      />,
+    );
+    const openButtons = screen.getAllByRole("button", { name: "Open" });
+    expect(openButtons).toHaveLength(collection.items.length);
+
+    await user.hover(openButtons[0]);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Open");
+  });
+
+  it("calls onEntityItemOpen, not onEntityItemClick, when the row's Open action is used", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();
     const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
     render(
       <EntityItemCollectionTable
         profile={profile}
         collection={collection}
         onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
       />,
       { wrapper: Wrapper },
     );
 
-    const viewButtons = screen.getAllByRole("button", { name: "View" });
-    await user.click(viewButtons[0]);
-    expect(onEntityItemClick).toHaveBeenCalledOnce();
+    await user.click(screen.getAllByRole("button", { name: "Open" })[0]);
+
+    expect(onEntityItemOpen).toHaveBeenCalledOnce();
+    expect(onEntityItemOpen.mock.calls[0][0].id).toBe("1");
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
+  it("renders Open as a link when an href is given: a plain click opens, a modified click is left to the browser", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
+        entityItemHref={(item) => `/widget/${item.id}`}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const links = screen.getAllByRole("link", { name: "Open" });
+    expect(links[0]).toHaveAttribute("href", "/widget/1");
+
+    fireEvent.click(links[0], { ctrlKey: true });
+    fireEvent.click(links[0], { button: 1 });
+    expect(onEntityItemOpen).not.toHaveBeenCalled();
+
+    await user.click(links[0]);
+    expect(onEntityItemOpen).toHaveBeenCalledOnce();
+    expect(onEntityItemClick).not.toHaveBeenCalled();
   });
 
   it("only renders the Delete action for items the user is permitted to delete (ABAC)", async () => {
