@@ -3,9 +3,11 @@ import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/rea
 import type { UseQueryResult } from "@tanstack/react-query";
 import {
   type EntityItemCollection,
+  type EntityItemToManyRelation,
   type FieldValue,
   type ProfileEntity,
   useEntityItemCollection,
+  useEntityItemToManyRelation,
   useTypeahead,
 } from "@contentgrid/navigator-data";
 import {
@@ -44,6 +46,11 @@ export interface EntityItemCollectionSearchOptions {
   /** Currently active sort value, e.g. `"name,asc"`. */
   readonly currentSort?: string;
   readonly onSortChange?: (sort: string | undefined) => void;
+  /**
+   * Hidden params that narrow the filters' typeahead to a subset of the collection (e.g. a
+   * to-many relation's `internalRelationParams`). Omitted = the whole collection.
+   */
+  readonly scopeParams?: Readonly<Record<string, string>>;
 }
 
 export interface EntityItemCollectionSearch {
@@ -60,6 +67,8 @@ export interface EntityItemCollectionSearch {
     readonly visibleColumnNames: readonly string[];
     readonly forcedVisibleColumnNames: readonly string[];
   };
+  /** The scope the search runs in; pass it to `EntitySearchBar` so its suggestions match. */
+  readonly scopeParams?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -80,6 +89,43 @@ export function useEntityItemCollectionSearch(
   return controls.withCollection(collection);
 }
 
+export interface EntityItemToManyRelationSearchOptions extends EntityItemCollectionSearchOptions {
+  /** The to-many relation whose linked items are listed; `profile` is its target profile. */
+  readonly relation: EntityItemToManyRelation;
+  /** `false` keeps the relation query from fetching (e.g. while another layout is shown). */
+  readonly enabled?: boolean;
+}
+
+/**
+ * `useEntityItemCollectionSearch` for the items linked through a to-many relation: the same
+ * search bar, Columns and Filters, but searching only within the relation (the relation-scoped
+ * search of `useEntityItemToManyRelation`). Without filters or sort it lists the relation's own
+ * link, so it shares its cache with the relation's other views.
+ */
+export function useEntityItemToManyRelationSearch({
+  relation,
+  enabled,
+  ...options
+}: EntityItemToManyRelationSearchOptions): EntityItemCollectionSearch {
+  // The relation's unfiltered first page (shared cache with the relation's other views) carries
+  // the `_internal_*` params that scope a search to the linked items; suggestions use them too.
+  const firstPage = useEntityItemToManyRelation(relation, undefined, { enabled }).data;
+  const scopeParams = useMemo(() => firstPage?.internalRelationParams, [firstPage]);
+  const controls = useCollectionSearchControls({ ...options, scopeParams });
+  const filters = options.filters ?? EMPTY_FILTERS;
+  const isSearching = Object.values(filters).some(Boolean) || options.currentSort !== undefined;
+  const collection = useEntityItemToManyRelation(
+    relation,
+    controls.effectivePageUrl
+      ? { url: controls.effectivePageUrl }
+      : isSearching
+        ? { searchValues: controls.searchValues }
+        : undefined,
+    { enabled },
+  );
+  return controls.withCollection(collection);
+}
+
 /**
  * Everything but the fetch: the search values and page for the current filters/sort, and a
  * `withCollection` that builds the toolbar, filters modal and table props once the caller has
@@ -93,6 +139,7 @@ function useCollectionSearchControls({
   onFiltersChange,
   currentSort,
   onSortChange,
+  scopeParams,
 }: EntityItemCollectionSearchOptions) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
@@ -192,6 +239,7 @@ function useCollectionSearchControls({
       ? searchTemplate?.getSearchPropertyByName(activeTypeaheadField)
       : undefined,
     searchValues,
+    scopeParams,
     // No artificial minimum — suggestions should appear as soon as the user types anything.
     minLength: 1,
   });
@@ -331,6 +379,7 @@ function useCollectionSearchControls({
       visibleColumnNames: localVisibleColumns,
       forcedVisibleColumnNames: activelyFilteredAttributeNames,
     },
+    scopeParams,
   });
 
   return { searchValues, effectivePageUrl, withCollection };

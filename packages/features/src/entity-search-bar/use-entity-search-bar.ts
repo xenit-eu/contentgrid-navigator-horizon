@@ -33,6 +33,11 @@ export interface EntitySearchBarProps {
   readonly onFiltersChange: (next: Record<string, string>) => void;
   /** The collection's sort, so suggestion pages follow the list's own order. */
   readonly currentSort?: string;
+  /**
+   * Hidden params that narrow the suggestions and counts to a subset of the collection — e.g. a
+   * to-many relation's `internalRelationParams`, when the bar searches a relation's linked items.
+   */
+  readonly scopeParams?: Readonly<Record<string, string>>;
   readonly className?: string;
   /**
    * The page's own controls (e.g. Columns, Filters), shown right-aligned on the quick-filter
@@ -54,6 +59,7 @@ export function useEntitySearchBar({
   filters,
   onFiltersChange,
   currentSort,
+  scopeParams,
 }: EntitySearchBarProps) {
   // `profileEntity.searchTemplate` builds a new object on every access; resolve it once per
   // profile so everything memoised on it stays stable across renders.
@@ -152,6 +158,7 @@ export function useEntitySearchBar({
     requests: popoverOpen ? requests : NO_REQUESTS,
     query,
     searchValues,
+    scopeParams,
   });
 
   const { chips: paramChips, groups } = useMemo(
