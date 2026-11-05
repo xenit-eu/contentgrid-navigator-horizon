@@ -70,7 +70,7 @@ export function EntityCard({
       className={cn(
         "group relative transition-colors",
         onCardClick && "cursor-pointer hover:border-primary/50",
-        flushContent && children && "gap-3 overflow-hidden pt-4 pb-0",
+        flushContent && children && "gap-1 overflow-hidden pt-4 pb-0",
       )}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
       onKeyDown={
