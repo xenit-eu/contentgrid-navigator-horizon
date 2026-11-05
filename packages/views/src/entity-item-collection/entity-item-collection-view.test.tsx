@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   CUSTOMER_NEXT_PAGE_URL,
+  SUPPLIER_COLLECTION_URL,
   createCollectionFixtureFetch,
-  customerCollectionBody,
 } from "../test-fixtures/collection";
 import { CUSTOMER_COLLECTION_URL } from "../test-fixtures/item-detail";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
@@ -267,35 +267,24 @@ describe("EntityItemCollectionView state changes", () => {
 
   it("does not leak state to another entity", async () => {
     const fixture = createCollectionFixtureFetch();
-    const pageTwoItem = {
-      id: "cust-099",
-      name: "Page two item",
-      _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-099` } },
-    };
-    const fetchFn = async (input: Request | string | URL): Promise<Response> => {
-      if ((input instanceof Request ? input.url : String(input)) !== CUSTOMER_NEXT_PAGE_URL) {
-        return fixture.fetch(input);
-      }
-      const body = { ...customerCollectionBody, _embedded: { item: [pageTwoItem] } };
-      return new Response(JSON.stringify(body), {
-        headers: { "Content-Type": "application/hal+json" },
-      });
-    };
-    const { Wrapper } = createItemDetailTestHarness({ fetchFn });
+    const { Wrapper } = createItemDetailTestHarness({ fetchFn: fixture.fetch });
+
+    // Every profile loads up front, so the switch below has no pending or not-found step that
+    // would unmount the body whether or not it is keyed.
     const { rerender } = render(<EntityItemCollectionView entityName="customer" />, {
       wrapper: Wrapper,
     });
-
     await findFirstItem();
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
-    await screen.findAllByText("Page two item");
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
 
-    rerender(<EntityItemCollectionView entityName="invoice" />);
-    await waitFor(() => expect(screen.queryByText("Page two item")).not.toBeInTheDocument());
+    rerender(<EntityItemCollectionView entityName="supplier" />);
+    await screen.findAllByText("Initech Supplies");
 
-    rerender(<EntityItemCollectionView entityName="customer" />);
-    // Back on the first page, not on the old entity's page.
-    await findFirstItem();
-    expect(screen.queryByText("Page two item")).not.toBeInTheDocument();
+    // The supplier list was fetched from its own collection, with nothing carried over.
+    expect(fixture.collectionRequests.at(-1)).toBe(SUPPLIER_COLLECTION_URL);
+    expect(
+      fixture.collectionRequests.filter((url) => url.startsWith(SUPPLIER_COLLECTION_URL)),
+    ).toEqual([SUPPLIER_COLLECTION_URL]);
   });
 });

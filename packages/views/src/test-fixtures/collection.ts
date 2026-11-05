@@ -1,8 +1,11 @@
 import {
+  API,
   CUSTOMER_COLLECTION_URL,
   CUSTOMER_PROFILE_URL,
+  PROFILE_URL,
   createFixtureFetch,
   customerProfileBody,
+  profileRootBody,
 } from "./item-detail";
 
 /**
@@ -74,10 +77,59 @@ export const customerCollectionBody = {
   page: { size: 2, total_items_exact: 2 },
 };
 
+export const SUPPLIER_PROFILE_URL = `${API}/profile/suppliers`;
+export const SUPPLIER_COLLECTION_URL = `${API}/suppliers`;
+
+/** A second entity, so tests can switch from `customer` to another entity that really exists. */
+export const supplierProfileBody = {
+  ...customerProfileBody,
+  name: "supplier",
+  title: "Supplier",
+  _links: {
+    ...customerProfileBody._links,
+    self: { href: SUPPLIER_PROFILE_URL, title: "Supplier" },
+    describes: [
+      { href: SUPPLIER_COLLECTION_URL, title: "Suppliers", name: "collection" },
+      { href: `${SUPPLIER_COLLECTION_URL}/{id}`, name: "item", templated: true },
+    ],
+  },
+  _templates: {
+    search: {
+      ...searchableCustomerProfileBody._templates.search,
+      target: SUPPLIER_COLLECTION_URL,
+    },
+  },
+};
+
+export const supplierCollectionBody = {
+  _embedded: {
+    item: [
+      {
+        id: "sup-001",
+        name: "Initech Supplies",
+        _links: { self: { href: `${SUPPLIER_COLLECTION_URL}/sup-001` } },
+      },
+    ],
+  },
+  _links: { self: { href: SUPPLIER_COLLECTION_URL } },
+  page: { size: 1, total_items_exact: 1 },
+};
+
+const rootBodyWithSupplier = {
+  ...profileRootBody,
+  _links: {
+    ...profileRootBody._links,
+    "cg:entity": [
+      ...profileRootBody._links["cg:entity"],
+      { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
+    ],
+  },
+};
+
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { "Content-Type": "application/hal+json" } });
 
-/** A fetch that answers the collection fixture; anything else goes to the item-detail fixture. */
+/** A fetch that answers the collection fixture (customers, plus a second `supplier` entity); anything else goes to the item-detail fixture. */
 export function createCollectionFixtureFetch(
   options: Readonly<{ searchable?: boolean; creatable?: boolean }> = {},
 ) {
@@ -97,8 +149,18 @@ export function createCollectionFixtureFetch(
 
   const fetchFn = async (input: Request | string | URL): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input);
+    if (url === PROFILE_URL) {
+      return json(rootBodyWithSupplier);
+    }
     if (url === CUSTOMER_PROFILE_URL) {
       return json(profileBody);
+    }
+    if (url === SUPPLIER_PROFILE_URL) {
+      return json(supplierProfileBody);
+    }
+    if (url === SUPPLIER_COLLECTION_URL || url.startsWith(`${SUPPLIER_COLLECTION_URL}?`)) {
+      collectionRequests.push(url);
+      return json(supplierCollectionBody);
     }
     if (url === CUSTOMER_COLLECTION_URL || url.startsWith(`${CUSTOMER_COLLECTION_URL}?`)) {
       collectionRequests.push(url);

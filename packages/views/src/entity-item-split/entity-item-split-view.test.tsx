@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   CUSTOMER_NEXT_PAGE_URL,
+  SUPPLIER_COLLECTION_URL,
   createCollectionFixtureFetch,
   customerCollectionBody,
 } from "../test-fixtures/collection";
@@ -355,10 +356,12 @@ describe("EntityItemSplitView entity change", () => {
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
     await row("Page two item");
 
-    rerender(<EntityItemSplitView entityName="invoice" />);
-    // The old item is gone from the detail pane and the toolbar.
-    expect(await screen.findByText("Select an item to see its details.")).toBeInTheDocument();
+    rerender(<EntityItemSplitView entityName="supplier" />);
+    // The old item is gone from the detail pane and the toolbar; the supplier's own list shows.
+    await row("Initech Supplies");
+    expect(screen.getByText("Select an item to see its details.")).toBeInTheDocument();
     expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
+    expect(fixture.collectionRequests.at(-1)).toBe(SUPPLIER_COLLECTION_URL);
 
     rerender(<EntityItemSplitView entityName="customer" />);
     // Back on the first page with nothing selected, not on the old entity's page and item.
