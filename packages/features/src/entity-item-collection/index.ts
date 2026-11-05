@@ -8,3 +8,8 @@ export { EntityItemCollectionBrowser } from "./entity-item-collection-browser";
 export type { EntityItemCollectionBrowserProps } from "./entity-item-collection-browser";
 export { EntityItemCountLabel } from "./entity-item-count-label";
 export type { EntityItemCountLabelProps } from "./entity-item-count-label";
+export {
+  useEntityItemCollectionSearch,
+  type EntityItemCollectionSearch,
+  type EntityItemCollectionSearchOptions,
+} from "./use-entity-item-collection-search";
