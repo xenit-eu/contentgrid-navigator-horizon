@@ -25,6 +25,7 @@ import {
 
 export const Route = createFileRoute("/_app/$entity/")({
   validateSearch: entitySearchStateValidator,
+  // Behind the profile gate this is a cache hit; kept so the route follows the view-data-loading contract.
   loader: ({ context, params }) => preloadEntityItemCollection(context, params.entity),
   component: EntityItemCollectionPage,
 });
