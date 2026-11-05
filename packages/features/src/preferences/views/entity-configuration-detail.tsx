@@ -97,6 +97,12 @@ export function EntityConfigurationDetail({
   const itemLayouts = (Object.keys(ITEM_LAYOUT_LABELS) as EntityItemLayout[]).filter(
     (layout) => layout !== "content" || profile.hasContentAttributes,
   );
+  // A saved "content" layout on an entity without content attributes (e.g. one removed by a later
+  // release) renders attribute focus, so the select shows that instead of an empty trigger.
+  const itemLayout =
+    preferences.itemLayout === "content" && !profile.hasContentAttributes
+      ? "stacked"
+      : preferences.itemLayout;
   const [activeTab, setActiveTab] = useState<(typeof PREVIEW_TABS)[number]["key"]>("item");
 
   const body = (
@@ -157,7 +163,7 @@ export function EntityConfigurationDetail({
           <div className="space-y-1.5">
             <Label htmlFor={itemLayoutId}>Item layout</Label>
             <Select
-              value={preferences.itemLayout}
+              value={itemLayout}
               onValueChange={(itemLayout) =>
                 setOverride({ itemLayout: itemLayout as EntityItemLayout })
               }
