@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useControllableState } from "./use-controllable-state";
@@ -25,6 +26,8 @@ describe("useControllableState", () => {
     expect(onStateChange).toHaveBeenNthCalledWith(2, { a: 1, b: 2 });
   });
 
+  // Also covers the documented limit: an update in a later macrotask, before the host re-renders,
+  // builds on the last rendered props.
   it("does not keep a change the host ignored after the tick", async () => {
     const onStateChange = vi.fn();
     const { result } = renderHook(() =>
@@ -38,6 +41,30 @@ describe("useControllableState", () => {
     act(() => result.current[1]((previous) => ({ ...previous, b: 2 })));
 
     expect(onStateChange).toHaveBeenLastCalledWith({ b: 2 });
+  });
+
+  it("keeps a pending change across a re-render the host did not cause", () => {
+    const onStateChange = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ tick }: { tick: number }) => {
+        void tick;
+        return useControllableState<Counter>({
+          state: DEFAULT,
+          onStateChange,
+          defaultState: DEFAULT,
+        });
+      },
+      { initialProps: { tick: 0 } },
+    );
+
+    act(() => {
+      result.current[1]((previous) => ({ ...previous, a: 1 }));
+      // An unrelated re-render with the same state object, between the two updates.
+      flushSync(() => rerender({ tick: 1 }));
+      result.current[1]((previous) => ({ ...previous, b: 2 }));
+    });
+
+    expect(onStateChange).toHaveBeenLastCalledWith({ a: 1, b: 2 });
   });
 
   it("builds on the state the host rendered after applying a change, not on what was reported", () => {
@@ -54,22 +81,6 @@ describe("useControllableState", () => {
     act(() => result.current[1]((previous) => ({ ...previous, a: 2 })));
 
     expect(onStateChange).toHaveBeenLastCalledWith({ a: 2, b: 7 });
-  });
-
-  it("builds on the last rendered props when an update comes after an await, before the host re-renders", async () => {
-    const onStateChange = vi.fn();
-    const { result } = renderHook(() =>
-      useControllableState<Counter>({ state: DEFAULT, onStateChange, defaultState: DEFAULT }),
-    );
-
-    act(() => result.current[1]((previous) => ({ ...previous, a: 1 })));
-    await act(async () => {
-      await Promise.resolve();
-    });
-    // The host has not re-rendered yet (known limit): the first change is not built upon.
-    act(() => result.current[1]((previous) => ({ ...previous, b: 2 })));
-
-    expect(onStateChange).toHaveBeenLastCalledWith({ b: 2 });
   });
 
   it("renders the host's state, or the default while controlled without a state", () => {
