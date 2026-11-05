@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   EyeIcon as Eye,
   LinkBreakIcon as LinkBreak,
@@ -33,7 +33,12 @@ import {
   RecordRowConfirmAction,
   Skeleton,
 } from "@contentgrid/ui";
-import { EntityItemCollectionTable, EntityItemCountLabel } from "../../entity-item-collection";
+import {
+  EntityItemCollectionTable,
+  EntityItemCountLabel,
+  useEntityItemToManyRelationSearch,
+} from "../../entity-item-collection";
+import { EntitySearchBar } from "../../entity-search-bar";
 import { ProblemAlert } from "../../problem-details";
 import type {
   RelationItemClickHandler,
@@ -70,11 +75,10 @@ export function RelationToManySection({
   // Wide panes get the paged record table, narrow ones a stack of item references with
   // "Load more". Both queries are always called (Rules of Hooks); only the one for the current
   // layout is enabled, and both share the relation's query namespace, so mutations refresh either.
+  // In the table layout this is only the unfiltered first page, for the count, "Unlink all" and
+  // the empty state; `RelationToManyTable` fetches the page, filters and sort it shows itself.
   const { toManyTable } = useRelationLayout();
-  const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
-  const collection = useEntityItemToManyRelation(relation, pageUrl ? { url: pageUrl } : undefined, {
-    enabled: toManyTable,
-  });
+  const collection = useEntityItemToManyRelation(relation, undefined, { enabled: toManyTable });
   const loadedPages = useEntityItemToManyRelationInfinite(relation, { enabled: !toManyTable });
   // State of whichever query the current layout shows, in one shape for the header and body.
   const current = toManyTable
@@ -92,9 +96,7 @@ export function RelationToManySection({
     mutate: clearRelation,
     isPending: isClearing,
     error: clearError,
-  } = useClearRelation(relation, {
-    mutationOptions: { onSuccess: () => setPageUrl(undefined) },
-  });
+  } = useClearRelation(relation);
   const {
     mutate: addRelation,
     reset: resetAddRelation,
@@ -251,22 +253,11 @@ export function RelationToManySection({
           </p>
         )}
         {toManyTable && collection.isSuccess && !collection.data.isEmpty && targetProfile && (
-          <EntityItemCollectionTable
-            profile={targetProfile}
-            collection={collection.data}
-            className="max-h-80"
-            onEntityItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
-            onPageChange={setPageUrl}
-            renderRowActions={(item) => (
-              <>
-                <RecordRowAction
-                  label="Details"
-                  icon={<Eye className="size-4" aria-hidden />}
-                  onClick={() => onItemClick?.(targetProfile.name, item.id)}
-                />
-                {renderItemActions(item)}
-              </>
-            )}
+          <RelationToManyTable
+            relation={relation}
+            targetProfile={targetProfile}
+            onItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+            renderItemActions={renderItemActions}
           />
         )}
         {!toManyTable &&
@@ -314,5 +305,80 @@ export function RelationToManySection({
         </AlertDialog>
       )}
     </>
+  );
+}
+
+/**
+ * The table layout's linked items, with the entity search bar, Columns and Filters searching
+ * within the relation. Its page/filters/sort are local: it unmounts once the relation is empty
+ * (e.g. after "Unlink all"), so they start fresh when items are linked again.
+ */
+function RelationToManyTable({
+  relation,
+  targetProfile,
+  onItemClick,
+  renderItemActions,
+}: Readonly<{
+  relation: EntityItemToManyRelation;
+  targetProfile: ProfileEntity;
+  onItemClick: (item: EntityItem) => void;
+  renderItemActions: (item: EntityItem) => ReactNode;
+}>) {
+  const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [currentSort, setCurrentSort] = useState<string | undefined>(undefined);
+
+  // A filter change starts a new search, so the remembered page cursor no longer applies.
+  function handleFiltersChange(next: Record<string, string>) {
+    setFilters(next);
+    setPageUrl(undefined);
+  }
+
+  const { collection, toolbarActions, filterDialog, tableProps, scopeParams } =
+    useEntityItemToManyRelationSearch({
+      relation,
+      profile: targetProfile,
+      pageUrl,
+      onPageChange: setPageUrl,
+      filters,
+      onFiltersChange: handleFiltersChange,
+      currentSort,
+      onSortChange: setCurrentSort,
+    });
+
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <EntitySearchBar
+        profileEntity={targetProfile}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        currentSort={currentSort}
+        scopeParams={scopeParams}
+        actions={toolbarActions}
+      />
+      {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
+      {collection.isError && <ProblemAlert model={toProblemDisplayModel(collection.error)} />}
+      {collection.isSuccess && (
+        <EntityItemCollectionTable
+          profile={targetProfile}
+          collection={collection.data}
+          className="max-h-80"
+          onEntityItemClick={onItemClick}
+          onPageChange={setPageUrl}
+          {...tableProps}
+          renderRowActions={(item) => (
+            <>
+              <RecordRowAction
+                label="Details"
+                icon={<Eye className="size-4" aria-hidden />}
+                onClick={() => onItemClick(item)}
+              />
+              {renderItemActions(item)}
+            </>
+          )}
+        />
+      )}
+      {filterDialog}
+    </div>
   );
 }
