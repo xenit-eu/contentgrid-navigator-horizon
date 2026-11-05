@@ -40,6 +40,38 @@ describe("useControllableState", () => {
     expect(onStateChange).toHaveBeenLastCalledWith({ b: 2 });
   });
 
+  it("builds on the state the host rendered after applying a change, not on what was reported", () => {
+    const onStateChange = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ state }: { state: Counter }) =>
+        useControllableState<Counter>({ state, onStateChange, defaultState: DEFAULT }),
+      { initialProps: { state: DEFAULT } },
+    );
+
+    act(() => result.current[1]((previous) => ({ ...previous, a: 1 })));
+    // The host adjusts the change (here: it also sets `b`) and re-renders.
+    rerender({ state: { a: 1, b: 7 } });
+    act(() => result.current[1]((previous) => ({ ...previous, a: 2 })));
+
+    expect(onStateChange).toHaveBeenLastCalledWith({ a: 2, b: 7 });
+  });
+
+  it("builds on the last rendered props when an update comes after an await, before the host re-renders", async () => {
+    const onStateChange = vi.fn();
+    const { result } = renderHook(() =>
+      useControllableState<Counter>({ state: DEFAULT, onStateChange, defaultState: DEFAULT }),
+    );
+
+    act(() => result.current[1]((previous) => ({ ...previous, a: 1 })));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // The host has not re-rendered yet (known limit): the first change is not built upon.
+    act(() => result.current[1]((previous) => ({ ...previous, b: 2 })));
+
+    expect(onStateChange).toHaveBeenLastCalledWith({ b: 2 });
+  });
+
   it("renders the host's state, or the default while controlled without a state", () => {
     const onStateChange = vi.fn();
     const { result, rerender } = renderHook(
