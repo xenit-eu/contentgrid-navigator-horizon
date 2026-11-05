@@ -171,6 +171,7 @@ function renderCollectionView(props: {
   pageUrl?: string;
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
+  onCreateItem?: () => void;
 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
@@ -453,5 +454,110 @@ describe("EntityItemCollectionView — filter form (HalFormsContainer)", () => {
     await user.click(screen.getByRole("button", { name: /clear all/i }));
 
     expect(onFiltersChange).toHaveBeenCalledWith({});
+  });
+});
+
+describe("EntityItemCollectionView — empty collection", () => {
+  function emptyCollectionBody(links: Record<string, { href: string }> = {}) {
+    return {
+      _embedded: { item: [] },
+      _links: { self: { href: COLLECTION_URL }, ...links },
+      page: { size: 0, total_items_exact: 0 },
+    };
+  }
+
+  function setupEmptyCollectionHandler(links?: Record<string, { href: string }>) {
+    const body = emptyCollectionBody(links);
+    server.use(http.get(COLLECTION_URL, () => HttpResponse.json(body)));
+  }
+
+  const emptyStateHeading = (profile: ProfileEntity) => ({
+    name: `No ${profile.pluralName} found`,
+  });
+
+  it("shows the empty state instead of the table on an unfiltered first page", async () => {
+    setupEmptyCollectionHandler();
+    const profile = makeItemProfile();
+
+    renderCollectionView({ profile });
+
+    expect(await screen.findByRole("heading", emptyStateHeading(profile))).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("offers create in the empty state when the profile has a create form", async () => {
+    setupEmptyCollectionHandler();
+    const createForm = { method: "POST", target: COLLECTION_URL, properties: [] };
+    const profile = makeProfileEntity(
+      {
+        ...itemProfileJson,
+        _templates: { ...itemProfileJson._templates, "create-form": createForm },
+      },
+      PROFILE_URL,
+      "item",
+    );
+
+    renderCollectionView({ profile, onCreateItem: vi.fn() });
+
+    expect(
+      await screen.findByRole("button", { name: `Create ${profile.title}` }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no create in the empty state when the profile has no create form", async () => {
+    setupEmptyCollectionHandler();
+    const profile = makeItemProfile();
+
+    renderCollectionView({ profile, onCreateItem: vi.fn() });
+
+    expect(await screen.findByRole("heading", emptyStateHeading(profile))).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: `Create ${profile.title}` }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the table when filters are active", async () => {
+    setupEmptyCollectionHandler();
+    const profile = makeItemProfile();
+
+    renderCollectionView({ profile, filters: { "code~prefix": "zzz" } });
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", emptyStateHeading(profile))).not.toBeInTheDocument();
+  });
+
+  it("keeps the table on a page that has a previous page", async () => {
+    setupEmptyCollectionHandler({ prev: { href: `${COLLECTION_URL}?_cursor=prev-token` } });
+    const profile = makeItemProfile();
+
+    renderCollectionView({ profile });
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", emptyStateHeading(profile))).not.toBeInTheDocument();
+  });
+
+  it("does not show the empty state while clearing filters, before the unfiltered result arrives", async () => {
+    let releaseUnfiltered!: () => void;
+    const unfilteredReleased = new Promise<void>((resolve) => {
+      releaseUnfiltered = resolve;
+    });
+    server.use(
+      http.get(COLLECTION_URL, async ({ request }) => {
+        if (new URL(request.url).searchParams.has("code~prefix")) {
+          return HttpResponse.json(emptyCollectionBody());
+        }
+        await unfilteredReleased;
+        return HttpResponse.json(SEARCH_MODE_BODY);
+      }),
+    );
+    const profile = makeItemProfile();
+    const { rerender } = renderCollectionView({ profile, filters: { "code~prefix": "zzz" } });
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+
+    rerender(<EntityItemCollectionView profile={profile} filters={{}} />);
+
+    expect(screen.queryByRole("heading", emptyStateHeading(profile))).not.toBeInTheDocument();
+    releaseUnfiltered();
+    expect(await screen.findByText((text) => text.startsWith("2 items"))).toBeInTheDocument();
   });
 });

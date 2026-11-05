@@ -34,6 +34,8 @@ export interface EntityItemCollectionSearchViewProps {
   readonly actions?: ReactNode;
   /** Fired when an entity item row is clicked; receives the item id. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** Opens the create form; offered when the collection has no items. */
+  readonly onCreateItem?: () => void;
 }
 
 /**

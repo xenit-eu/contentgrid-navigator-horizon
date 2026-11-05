@@ -30,6 +30,7 @@ import {
   findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
+import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
@@ -55,6 +56,8 @@ export interface EntityItemCollectionViewProps {
   readonly currentSort?: string;
   /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
   readonly onSortChange?: (sort: string | undefined) => void;
+  /** Opens the create form; offered when the collection has no items. */
+  readonly onCreateItem?: () => void;
 }
 
 /**
@@ -85,6 +88,7 @@ export function EntityItemCollectionView({
   onFiltersChange,
   currentSort,
   onSortChange,
+  onCreateItem,
 }: Readonly<EntityItemCollectionViewProps>) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
@@ -275,6 +279,16 @@ export function EntityItemCollectionView({
 
   const itemCountTitle = `${collection.data?.totalItems?.count ?? "-"} items ${collection.data?.totalItems?.isEstimated ? "(estimated)" : ""}`;
 
+  // Start screen only for an unfiltered first page with no items; a filtered search keeps the
+  // table so its filters stay reachable. Placeholder data is the previous search's result, so it
+  // can't tell whether this search is empty.
+  const isEmptyCollection =
+    collection.isSuccess &&
+    !collection.isPlaceholderData &&
+    collection.data.items.length === 0 &&
+    !collection.data.hasPrevious &&
+    activeFilterCount === 0;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 p-4">
@@ -291,7 +305,11 @@ export function EntityItemCollectionView({
 
         {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
 
-        {collection.isSuccess && (
+        {isEmptyCollection && (
+          <EntityItemCollectionEmptyState profile={profile} onCreateItem={onCreateItem} />
+        )}
+
+        {collection.isSuccess && !isEmptyCollection && (
           <EntityItemCollectionTable
             className="h-full"
             profile={profile}

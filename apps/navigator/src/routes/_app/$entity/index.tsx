@@ -171,6 +171,10 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
     });
   }
 
+  function handleCreateItem() {
+    go({ to: "/$entity/~create", params: { entity: profile.name }, search: {} });
+  }
+
   const breadcrumbs = (
     <Breadcrumb>
       <BreadcrumbList>
@@ -191,13 +195,10 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
     </Breadcrumb>
   );
 
-  const actions = (
+  const actions = profile.createTemplate && (
     <div>
-      <Button
-        variant="default"
-        onClick={() => go({ to: "/$entity/~create", params: { entity: profile.name }, search: {} })}
-      >
-        Create {profile.singularName}
+      <Button variant="default" onClick={handleCreateItem}>
+        Create {profile.title}
       </Button>
     </div>
   );
@@ -211,6 +212,7 @@ function EntityItemCollectionRoute({ profile }: Readonly<{ profile: ProfileEntit
       onFiltersChange={handleFiltersChange}
       currentSort={sort}
       onSortChange={handleSortChange}
+      onCreateItem={handleCreateItem}
       actions={actions}
       toolbar
       breadcrumbs={breadcrumbs}
