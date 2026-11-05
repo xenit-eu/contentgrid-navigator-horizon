@@ -238,6 +238,15 @@ describe("EntityConfigurationDetail", () => {
     expect(screen.queryByRole("option", { name: "Content focus" })).not.toBeInTheDocument();
   });
 
+  it("shows a saved content-focus layout as Stacked for an entity without content attributes", () => {
+    useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+      itemLayout: "content",
+    });
+    renderDetail();
+
+    expect(screen.getByRole("combobox", { name: "Item layout" })).toHaveTextContent("Stacked");
+  });
+
   it("persists an item-layout override when a layout is chosen", async () => {
     const user = userEvent.setup();
     renderDetail();
