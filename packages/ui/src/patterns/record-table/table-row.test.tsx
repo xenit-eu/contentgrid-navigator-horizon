@@ -31,6 +31,14 @@ describe("RecordTableRow", () => {
     expect(supplierCell.className).not.toContain("text-right");
   });
 
+  it("marks an active row with aria-current and no other row", () => {
+    const { rerender } = render(<RecordTableRow cells={CELLS} active />);
+    expect(screen.getByRole("row")).toHaveAttribute("aria-current", "true");
+
+    rerender(<RecordTableRow cells={CELLS} />);
+    expect(screen.getByRole("row")).not.toHaveAttribute("aria-current");
+  });
+
   it("calls onClick when the row is clicked", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();

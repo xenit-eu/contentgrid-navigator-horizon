@@ -164,6 +164,27 @@ describe("EntityItemCollectionTable", () => {
     expect(screen.getByText("Showing 2 of 2 items")).toBeInTheDocument();
   });
 
+  it("marks only the active item's row with aria-current", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable profile={profile} collection={collection} activeItemId="2" />,
+      { wrapper: Wrapper },
+    );
+
+    const rows = screen.getAllByRole("row");
+    expect(rows[1]).not.toHaveAttribute("aria-current");
+    expect(rows[2]).toHaveAttribute("aria-current", "true");
+  });
+
+  it("marks no row when there is no active item", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
+      wrapper: Wrapper,
+    });
+
+    expect(document.querySelector("[aria-current]")).toBeNull();
+  });
+
   it("calls onEntityItemClick with the item when a row is clicked", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();

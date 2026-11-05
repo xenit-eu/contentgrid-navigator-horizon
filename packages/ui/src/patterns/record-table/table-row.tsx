@@ -13,6 +13,8 @@ export interface RecordTableRowProps {
   readonly cells: readonly RecordTableCell[];
   readonly actions?: ReactNode;
   readonly selected?: boolean;
+  /** Marks the row the page is showing elsewhere (e.g. a split view's detail pane): `aria-current` and the selected tint. */
+  readonly active?: boolean;
   readonly onClick?: () => void;
   /** Renders a leading selection checkbox (checked per `selected`) when present. */
   readonly onSelectChange?: (checked: boolean) => void;
@@ -23,16 +25,19 @@ function RecordTableRow({
   cells,
   actions,
   selected = false,
+  active = false,
   onClick,
   onSelectChange,
   className,
 }: RecordTableRowProps) {
-  const rowBackground = selected ? "bg-selected" : "bg-card/50";
+  const highlighted = selected || active;
+  const rowBackground = highlighted ? "bg-selected" : "bg-card/50";
 
   return (
     <div
       role="row"
       data-slot="table-row"
+      aria-current={active ? "true" : undefined}
       onClick={onClick}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={
@@ -62,12 +67,12 @@ function RecordTableRow({
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
         "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
         onClick && "cursor-pointer",
-        onClick && !selected && "hover:bg-hover",
+        onClick && !highlighted && "hover:bg-hover",
         rowBackground,
         className,
       )}
     >
-      {selected && (
+      {highlighted && (
         <span className="absolute left-0 top-0 h-full w-[3px] bg-ring rounded-r-sm" aria-hidden />
       )}
 

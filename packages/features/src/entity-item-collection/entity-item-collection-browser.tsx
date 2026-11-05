@@ -43,6 +43,8 @@ export interface EntityItemCollectionBrowserProps {
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** The item shown elsewhere (e.g. a detail pane); its row is marked `aria-current`. */
+  readonly activeItemId?: string;
   /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).
@@ -80,6 +82,7 @@ export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
+  activeItemId,
   onPageChange,
   filters = {},
   onFiltersChange,
@@ -327,6 +330,7 @@ export function EntityItemCollectionBrowser({
             profile={profile}
             collection={collection.data}
             onEntityItemClick={onEntityItemClick}
+            activeItemId={activeItemId}
             onPageChange={onPageChange}
             currentSort={currentSort}
             onSort={handleSort}
