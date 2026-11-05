@@ -106,7 +106,10 @@ beforeEach(() => {
 
 // Captures the state EntityItemCollectionRoute hands the view, and exposes buttons that report
 // the same state changes a real filter edit or next-page click in the view would.
+const preloadEntityItemCollection = vi.hoisted(() => vi.fn(async () => {}));
+
 vi.mock("@contentgrid/views/entity-item-collection", () => ({
+  preloadEntityItemCollection,
   EntityItemCollectionView: (props: {
     state?: { filters?: Record<string, string>; sort?: string; pageUrl?: string };
     onStateChange?: (state: {
@@ -160,6 +163,18 @@ function renderEntityRoute(queryClient: QueryClient, initialPath = "/invoice") {
 }
 
 describe("EntityItemCollectionRoute — filters/pageUrl memo wiring", () => {
+  it("preloads the entity's collection view in its loader, with the router context", async () => {
+    const queryClient = new QueryClient();
+    renderEntityRoute(queryClient, "/invoice");
+    await screen.findByTestId("filters");
+
+    // The router context the app was created with: the same QueryClient, the API client still absent.
+    expect(preloadEntityItemCollection).toHaveBeenCalledWith(
+      expect.objectContaining({ queryClient, apiFetch: null, profileUrl: null }),
+      "invoice",
+    );
+  });
+
   it("recalls remembered filters when the URL has none, and reflects them back into the URL", async () => {
     const queryClient = new QueryClient();
     rememberCollectionFilters(queryClient, "invoice", { status: "open" });
