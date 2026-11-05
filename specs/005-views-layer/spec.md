@@ -232,7 +232,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 
 **Enforcement and migration**
 
-- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review); features and views never import the router; the UI package never imports features; features never import views, and neither does the UI package or `navigator-data`; and stable views never import experimental views.
+- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review); features and views never import the router; the UI package never imports features; features never import views, and neither does the UI package or `navigator-data`; and stable views never import experimental views. Two exceptions are documented in the lint contract: a transitional list of features the apps still import directly because no view wraps them yet, and the unsaved-changes guard (out of scope) for the router rule.
 - **FR-035**: The existing stability lint rule MUST check views instead of features.
 - **FR-036**: The router calls in the dashboard, sidebar, profile gate and not-found page MUST be replaced by callback props that the view or host code wires to the navigation object.
 - **FR-037**: The two apps MUST share the page logic of every migrated page; a fix to a page MUST NOT need two edits.

@@ -1,7 +1,7 @@
 # Contract: layer lint rules
 
 **Requirements**: FR-028, FR-029, FR-034, FR-035
-**Package**: `packages/eslint-config` (PR 8)
+**Package**: `packages/eslint-config` (PR 7 of the stack)
 
 ## Layers
 
@@ -23,9 +23,16 @@ Each layer imports only from the layers below it.
 | L5  | Stable views never import experimental views                                | Replaces "a stable feature never imports a candidate or experimental feature" once the tag moves (open question 1).                                                                                                                                                                                             |
 | L6  | `no-unstable-features` checks views instead of features                     | Generic app config: `allowedStability` stays at all three tiers pre-GA (ADR-006 amendment); the rule stays enabled.                                                                                                                                                                                             |
 
+## Implementation (PR 7)
+
+- `packages/eslint-config/rules/layers.ts` exports one config factory per package (`appsLayerConfig`, `featuresLayerConfig`, `viewsLayerConfig`, `uiLayerConfig`, `navigatorDataLayerConfig`), imported as `@contentgrid/eslint-config/layers` by each package's own `eslint.config.js`.
+- L1 to L4 are ESLint core `no-restricted-imports` (patterns; the features barrel is an exact `paths` entry). L5 is the repo's `view-stability-order` rule (`@contentgrid/view-stability-order`): a view may import only views at least as stable as itself (experimental < candidate < stable), relative imports and re-exports included. L6 is `no-unstable-features`.
+- **L1 transitional allowlist.** Four features are imported by the apps directly because no view wraps them yet: `app-info-pages`, `entity-item-create`, `preferences`, `search` (`APPS_FEATURE_IMPORTS_PENDING_VIEW`). An entry goes away when its view lands; a new entry needs an amendment here. Since a feature carries no stability tag, these imports are not stability-checked (L6).
+- **L2 exemption.** `unsaved-changes-guard` (spec 005 leaves its home out of scope) and the three feature tests that mount it inside a router are exempt from L2 only (`ROUTER_EXEMPT` in `packages/features/eslint.config.js`); L4 still applies to them. Until the guard moves, "no feature imports the router" (SC-007) holds for everything except that list.
+
 ## Rules for the existing stability rule
 
-- The rule reads a package's `x-stability` field. After PR 8 the field lives on each view, and the rule resolves it for `@contentgrid/views/<name>` imports.
+- The rule reads a package's `x-stability` field. After this PR the field lives on each view, and the rule resolves it for `@contentgrid/views/<name>` imports.
 - The rule's options, tests and fixtures are updated with the move. At go-live the generic app returns to `["stable"]`, as the ADR-006 amendment already describes.
 
 ## Test obligations

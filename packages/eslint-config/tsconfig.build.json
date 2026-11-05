@@ -11,5 +11,5 @@
     "types": ["node"]
   },
   "include": ["rules/**/*.ts"],
-  "exclude": ["rules/**/*.test.ts"]
+  "exclude": ["rules/**/*.test.ts", "rules/__fixtures__/**"]
 }

@@ -4,5 +4,5 @@
     "noEmit": true
   },
   "include": ["rules/**/*.ts"],
-  "exclude": []
+  "exclude": ["rules/__fixtures__/**"]
 }
