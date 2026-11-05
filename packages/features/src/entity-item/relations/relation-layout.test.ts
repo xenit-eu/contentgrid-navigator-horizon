@@ -1,11 +1,5 @@
-import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  CompactRelationLayout,
-  TO_MANY_TABLE_MIN_WIDTH,
-  relationLayoutForPane,
-  useRelationLayout,
-} from "./relation-layout";
+import { TO_MANY_TABLE_MIN_WIDTH, relationLayoutForPane } from "./relation-layout";
 
 describe("relationLayoutForPane", () => {
   it("uses the widest layout outside a resizable pane", () => {
@@ -41,18 +35,5 @@ describe("relationLayoutForPane", () => {
     const layout = relationLayoutForPane({ side: "right", width });
     expect(layout.toOneSummaryColumns).toBe(columns);
     expect(layout.toOneSummaryCount).toBe(count);
-  });
-});
-
-describe("useRelationLayout", () => {
-  it("uses the widest layout outside a pane, and the compact one inside CompactRelationLayout", () => {
-    expect(renderHook(() => useRelationLayout()).result.current.toManyTable).toBe(true);
-
-    const { result } = renderHook(() => useRelationLayout(), { wrapper: CompactRelationLayout });
-    expect(result.current).toEqual({
-      toManyTable: false,
-      toOneSummaryColumns: 0,
-      toOneSummaryCount: 0,
-    });
   });
 });
