@@ -13,7 +13,12 @@ export interface RecordTableRowProps {
   readonly cells: readonly RecordTableCell[];
   readonly actions?: ReactNode;
   readonly selected?: boolean;
-  /** Marks the row the page is showing elsewhere (e.g. a split view's detail pane): `aria-current` and the selected tint. */
+  /**
+   * Marks the row the page is showing elsewhere (e.g. a split view's detail pane): `aria-current`
+   * and the selected tint. It deliberately uses the same highlight as a checkbox-selected row: the
+   * collection browser does not combine a selection column with an active row today. Revisit if
+   * both are ever shown together.
+   */
   readonly active?: boolean;
   readonly onClick?: () => void;
   /** Renders a leading selection checkbox (checked per `selected`) when present. */
