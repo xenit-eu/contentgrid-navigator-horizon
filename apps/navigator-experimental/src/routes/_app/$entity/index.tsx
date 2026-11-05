@@ -59,11 +59,13 @@ export const Route = createFileRoute("/_app/$entity/")({
       deps.item === undefined
         ? preloadEntityItemCollection(context, params.entity)
         : preloadEntityItemSplit(context, params.entity, deps.item);
-    // On "stay" (this match re-runs because the user selected or closed an item) the view is
-    // already mounted and shows its own loading state, and the selection is mirrored locally, so
-    // the navigation must not wait for the preview's fetch before it commits the URL. The preload
-    // still fills the cache. Entering the route (a deep link, a link from elsewhere) and hover
-    // preloads return it, so a deep link loads the item and the list together. Both preload
+    // On "stay" (this route was already active: a selection or close, but also a switch from
+    // another entity's list or Back between list entries, since `cause` is per route id and the
+    // page remounts per entity via its key) the view is already mounted and shows its own loading
+    // state, and the selection is mirrored locally, so the navigation must not wait for the
+    // preview's fetch before it commits the URL. The preload still fills the cache. On "enter"
+    // (arriving from another route: a deep link, the detail page) and for hover preloads the
+    // promise is returned, so a deep link loads the item and the list together. Both preload
     // functions resolve and never reject, so dropping the promise leaves nothing unhandled; the
     // catch is a safety net.
     if (cause === "stay") {
@@ -195,15 +197,17 @@ function EntityItemCollectionRoute({ entityName }: Readonly<{ entityName: string
     void go({
       to: "/$entity",
       params: { entity: entityName },
-      search: (prev) => {
-        const withSearch = searchChanged
-          ? applySortToSearchState(
-              applyFiltersToSearchState(prev, next.collection?.filters ?? {}),
-              next.collection?.sort,
-            )
-          : prev;
-        return itemChanged ? applyItemToSearchState(withSearch, next.selectedItemId) : withSearch;
-      },
+      // The full mirrored state is written over `prev`, not only the keys that changed: `prev` can
+      // be a pending, uncommitted location (a navigation still loading), and a diff would leak its
+      // other keys into this one.
+      search: (prev) =>
+        applyItemToSearchState(
+          applySortToSearchState(
+            applyFiltersToSearchState(prev, next.collection?.filters ?? {}),
+            next.collection?.sort,
+          ),
+          next.selectedItemId,
+        ),
     });
   }
 

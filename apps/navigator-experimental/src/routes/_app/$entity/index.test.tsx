@@ -204,8 +204,16 @@ vi.mock("@contentgrid/views/entity-item-split", async () => {
   };
 });
 
+// The `$entity` parent route's `beforeLoad` awaits this; making it slow keeps a navigation pending.
+const ensureEntityProfileLoaded = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@contentgrid/views/entity-profile-gate", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, ensureEntityProfileLoaded };
+});
+
+const preloadEntityItemDetail = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@contentgrid/views/entity-item-detail", () => ({
-  preloadEntityItemDetail: async () => {},
+  preloadEntityItemDetail,
   EntityItemDetailView: (props: { entityName: string; itemId: string }) => (
     <div data-testid="detail">{`${props.entityName}/${props.itemId}`}</div>
   ),
@@ -591,5 +599,70 @@ describe("EntityItemCollectionRoute — slow item preloads", () => {
     await waitFor(() => expect(router.state.resolvedLocation?.search).toEqual({ item: "i-42" }));
     expect(preloadEntityItemSplit).toHaveBeenCalledWith(expect.anything(), "invoice", "i-42");
     finish();
+  });
+});
+
+describe("EntityItemCollectionRoute — navigations that stay pending", () => {
+  const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  afterEach(() => {
+    ensureEntityProfileLoaded.mockReset();
+    ensureEntityProfileLoaded.mockImplementation(async () => {});
+    preloadEntityItemDetail.mockReset();
+    preloadEntityItemDetail.mockImplementation(async () => {});
+  });
+
+  it("re-syncs to the URL when Back supersedes pending navigations during a slow profile load", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    expect(await screen.findByTestId("selected")).toHaveTextContent("i-42");
+    ensureEntityProfileLoaded.mockImplementation(() => delay(150));
+
+    await user.click(screen.getByText("select-43"));
+    await user.click(screen.getByText("change-filters"));
+    expect(screen.getByTestId("selected")).toHaveTextContent("i-43");
+    act(() => router.history.go(-2));
+    await act(() => delay(800));
+
+    expect(router.state.location.search).toEqual({ item: "i-42" });
+    expect(screen.getByTestId("selected")).toHaveTextContent("i-42");
+    expect(screen.getByTestId("filters")).toHaveTextContent("{}");
+  });
+
+  it("writes the full mirrored state, not a diff over a pending location", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    await screen.findByTestId("filters");
+    ensureEntityProfileLoaded.mockImplementation(() => delay(150));
+
+    // A switch to another entity is still loading when the user edits this list's filters.
+    act(() => {
+      void router.navigate({
+        to: "/$entity",
+        params: { entity: "order" },
+        search: { item: "o-9", "s.prio": "high" } as never,
+      });
+    });
+    await user.click(screen.getByText("change-filters"));
+    await act(() => delay(800));
+
+    expect(router.state.location.pathname).toBe("/invoice");
+    expect(router.state.location.search).toEqual({ "s.status": "closed", item: "i-42" });
+    expect(screen.getByTestId("filters")).toHaveTextContent('{"status":"closed"}');
+  });
+
+  it("keeps the previewed item when a filter change supersedes a slow Open", async () => {
+    const user = userEvent.setup();
+    const { router } = renderEntityRoute(new QueryClient(), "/invoice?item=i-42");
+    await screen.findByTestId("filters");
+    preloadEntityItemDetail.mockImplementation(() => delay(200));
+
+    await user.click(screen.getByText("open-item"));
+    await user.click(screen.getByText("change-filters"));
+    await act(() => delay(500));
+
+    expect(screen.queryByTestId("detail")).toBeNull();
+    expect(screen.getByTestId("filters")).toHaveTextContent('{"status":"closed"}');
+    expect(router.state.location.search).toEqual({ "s.status": "closed", item: "i-42" });
   });
 });
