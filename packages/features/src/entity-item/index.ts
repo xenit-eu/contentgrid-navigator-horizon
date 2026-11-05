@@ -39,7 +39,6 @@ export type {
 } from "./variations/content-focus";
 export { EntityItemPreview } from "./preview/entity-item-preview";
 export type { EntityItemPreviewProps } from "./preview/entity-item-preview";
-export { entityItemHasContent } from "./preview/entity-item-has-content";
 export {
   EntityItemAutoVariation,
   entityItemDetailPadding,

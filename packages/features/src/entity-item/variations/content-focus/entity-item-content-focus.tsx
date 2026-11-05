@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
 import { RightSidePanelLayout } from "../../../layout";
@@ -11,7 +10,7 @@ import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 import { ContentAttributeSelector } from "./components/content-attribute-selector";
 import { ContentPreviewPanel } from "./components/content-preview-panel";
-import { selectDefaultContentAttribute } from "./util/select-default-content-attribute";
+import { useSelectedContentAttribute } from "./util/use-selected-content-attribute";
 
 /**
  * Content-focus item detail (spec `002-pdf-viewer`, contract `contracts/content-focus-view.md`)
@@ -35,32 +34,11 @@ export function EntityItemContentFocus({
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
 
-  // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
-  // whenever the item identity changes — entity OR id, not just id (navigating e.g.
-  // /document/1 -> /invoice/1 keeps the same id with a different profileEntity) — so an
-  // explicit choice for one item never leaks into the next (FR-006).
-  const [userSelectedAttribute, setUserSelectedAttribute] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    setUserSelectedAttribute(undefined);
-  }, [profileEntity.name, item.id]);
-
-  // Defense in depth alongside the effect above: the effect only clears state AFTER the render
-  // that already switched to the new profileEntity/id commits, so a stale
-  // `userSelectedAttribute` from the previous entity can otherwise still reach
-  // `useContentPreview` for one render — which throws synchronously (not just renders an error
-  // state) for an attribute name that isn't a content attribute of the *current* item
-  // (`use-content-preview.ts`'s `findContentAttribute`). Validating here means that render uses
-  // the fresh default instead of crashing.
-  const currentContentAttributeNames = new Set(
-    profileEntity.userDefinedAttributes.filter((attr) => attr.isContent).map((attr) => attr.name),
-  );
-  const validUserSelectedAttribute =
-    userSelectedAttribute !== undefined && currentContentAttributeNames.has(userSelectedAttribute)
-      ? userSelectedAttribute
-      : undefined;
   // `undefined` only when the profile has no content attributes.
-  const attributeName =
-    validUserSelectedAttribute ?? selectDefaultContentAttribute(profileEntity, item);
+  const [attributeName, setUserSelectedAttribute] = useSelectedContentAttribute(
+    profileEntity,
+    item,
+  );
 
   if (attributeName === undefined) {
     return null;

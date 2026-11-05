@@ -1,10 +1,19 @@
-import { useEffect, useState } from "react";
-import type { EntityItem } from "@contentgrid/navigator-data";
+import { AttributeKind, type EntityItem } from "@contentgrid/navigator-data";
 import { EntityItemAttributes } from "../attributes/entity-item-attributes";
 import { ContentAttributeSelector } from "../variations/content-focus/components/content-attribute-selector";
 import { ContentPreviewPanel } from "../variations/content-focus/components/content-preview-panel";
-import { selectDefaultContentAttribute } from "../variations/content-focus/util/select-default-content-attribute";
-import { entityItemHasContent } from "./entity-item-has-content";
+import { useSelectedContentAttribute } from "../variations/content-focus/util/use-selected-content-attribute";
+
+/**
+ * Whether the item holds at least one file: a content attribute whose value has metadata
+ * (data-model.md: "a file exists iff `metadata !== null`"). An item whose content attributes are
+ * all empty has no content to show.
+ */
+function entityItemHasContent(item: EntityItem): boolean {
+  return item.attributes.some(
+    (attr) => attr.value.kind === AttributeKind.CONTENT && attr.value.metadata !== null,
+  );
+}
 
 export interface EntityItemPreviewProps {
   /** The loaded item (and, through it, its profile). The caller owns loading it. */
@@ -33,24 +42,10 @@ export function EntityItemPreview({ item }: Readonly<EntityItemPreviewProps>) {
 function EntityItemContentPreview({ item }: Readonly<EntityItemPreviewProps>) {
   const { profileEntity } = item;
 
-  // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
-  // whenever the item identity changes — entity or id — so a choice for one item never leaks
-  // into the next (FR-006).
-  const [userSelectedAttribute, setUserSelectedAttribute] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    setUserSelectedAttribute(undefined);
-  }, [profileEntity.name, item.id]);
-
-  // The effect above only clears AFTER the render that switched item commits, so a stale choice
-  // must not reach the panel for that one render (it throws for a non-content attribute).
-  const isContentAttribute =
-    userSelectedAttribute !== undefined &&
-    profileEntity.userDefinedAttributes.some(
-      (attr) => attr.isContent && attr.name === userSelectedAttribute,
-    );
-  const attributeName =
-    (isContentAttribute ? userSelectedAttribute : undefined) ??
-    selectDefaultContentAttribute(profileEntity, item);
+  const [attributeName, setUserSelectedAttribute] = useSelectedContentAttribute(
+    profileEntity,
+    item,
+  );
 
   if (attributeName === undefined) return null;
 
