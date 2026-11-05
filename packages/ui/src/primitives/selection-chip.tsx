@@ -61,7 +61,7 @@ function SelectionChip({
           ? "px-[10px] py-[5px] rounded-[6px] text-[12px]"
           : "px-[14px] py-[7px] rounded-[8px] text-[13px]",
         selected
-          ? "bg-[#084772] dark:bg-[#1F9FE0] text-white dark:text-[#04202F] border-[#084772] dark:border-[#1F9FE0] font-semibold"
+          ? "bg-[var(--sky-extract)] text-foreground border-[var(--sky-extract-ring)] font-semibold"
           : "bg-[#FAFDFF] dark:bg-[#13314A] text-[#0E2436] dark:text-[#EAF4FB] border-[#C5D6E2] dark:border-[#335269] font-normal",
         // The selected or focused chip sits on top, so its border shows over the shared edge.
         joined && "relative focus-visible:z-10",
