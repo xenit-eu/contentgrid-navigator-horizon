@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -26,6 +26,10 @@ const pageTwoItem = {
 // The item name shows in its row; once selected it shows in the breadcrumb too.
 const row = async (name: string) => (await screen.findAllByText(name))[0];
 const currentCrumb = () => document.querySelector("[aria-current='page']");
+const previewPane = () => screen.getByRole("region", { name: "Preview" });
+// The preview pane's own header (item reference) names the selected item.
+const previewShows = (name: string) =>
+  waitFor(() => expect(within(previewPane()).getAllByText(name).length).toBeGreaterThan(0));
 
 describe("EntityItemSplitView", () => {
   it("shows the list and an empty preview pane under one Home, collection toolbar", async () => {
@@ -43,24 +47,34 @@ describe("EntityItemSplitView", () => {
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await row("Acme Corp"));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
+    await previewShows("Acme Corp");
 
     await userEvent.click(await row("Globex"));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
+    await previewShows("Globex");
 
     expect(screen.queryByText("Select an item to preview it.")).not.toBeInTheDocument();
     expect(recording.calls.filter((call) => call.method === "openItem")).toEqual([]);
   });
 
-  it("draws exactly one toolbar for both panes", async () => {
+  it("draws exactly one breadcrumb toolbar, always Home > collection, plus the preview's pane header", async () => {
     const { Wrapper } = setup();
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await row("Acme Corp"));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
+    await previewShows("Acme Corp");
 
     expect(screen.getAllByRole("navigation", { name: /breadcrumb/i })).toHaveLength(1);
     expect(document.querySelectorAll("[aria-current='page']")).toHaveLength(1);
+    // The selected item is not a crumb: the collection stays the current location.
+    expect(currentCrumb()).toHaveTextContent("Customers");
+    expect(
+      within(screen.getByRole("navigation", { name: /breadcrumb/i })).queryByText("Acme Corp"),
+    ).toBeNull();
+    // The preview keeps its own header with the item and its Open / Close actions.
+    expect(within(previewPane()).getByRole("link", { name: "Open" })).toBeInTheDocument();
+    expect(
+      within(previewPane()).getByRole("button", { name: "Close preview" }),
+    ).toBeInTheDocument();
   });
 
   it("draws no toolbar when hidden, and still works", async () => {
@@ -128,7 +142,7 @@ describe("EntityItemSplitView", () => {
       selectedItemId: "cust-001",
       collection: { pageUrl: CUSTOMER_NEXT_PAGE_URL },
     });
-    expect(currentCrumb()).toHaveTextContent("Acme Corp");
+    await previewShows("Acme Corp");
 
     await userEvent.click((await screen.findAllByText("Globex"))[0]);
     // A selection change leaves `collection` exactly as it was.
@@ -143,7 +157,7 @@ describe("EntityItemSplitView", () => {
     render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
 
     await userEvent.click(await row("Acme Corp"));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
+    await previewShows("Acme Corp");
 
     expect(fixture.itemCounts.item).toBe(1);
   });
@@ -173,9 +187,9 @@ describe("EntityItemSplitView state", () => {
       wrapper: Wrapper,
     });
 
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
+    await previewShows("Acme Corp");
     await userEvent.click(await row("Globex"));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
+    await previewShows("Globex");
   });
 
   it("reports a selection once with the full next state when controlled, and renders only the given state", async () => {
@@ -267,7 +281,7 @@ describe("EntityItemSplitView state", () => {
     });
 
     await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
+    await previewShows("Globex");
   });
 
   it("does not build on a change the host ignored when the next change arrives in a later tick", async () => {
@@ -329,7 +343,7 @@ describe("EntityItemSplitView state", () => {
       { wrapper: Wrapper },
     );
 
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
+    await previewShows("Globex");
   });
 });
 
@@ -352,7 +366,7 @@ describe("EntityItemSplitView entity change", () => {
     });
 
     await userEvent.click(await row("Acme Corp"));
-    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Acme Corp"));
+    await previewShows("Acme Corp");
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
     await row("Page two item");
 
@@ -449,5 +463,83 @@ describe("EntityItemSplitView preview pane", () => {
 
     expect(listPane()).toHaveClass("hidden", "lg:block");
     expect(previewPane()).not.toHaveClass("hidden");
+  });
+});
+
+describe("EntityItemSplitView focus", () => {
+  // jsdom applies no Tailwind: stand in for `hidden` (below lg) so the list pane's computed
+  // display is `none` exactly as the browser has it, while an item is selected.
+  const hideBelowLg = () => {
+    const style = document.createElement("style");
+    style.textContent = ".hidden { display: none; }";
+    document.head.append(style);
+    return () => style.remove();
+  };
+
+  it("returns focus to the closed item's row after Close", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    await userEvent.click(await row("Globex"));
+    await userEvent.click(await screen.findByRole("button", { name: "Close preview" }));
+
+    await waitFor(() => {
+      const focused = document.activeElement;
+      expect(focused).toHaveAttribute("role", "row");
+      expect(focused).toHaveTextContent("Globex");
+    });
+  });
+
+  it("falls back to the list container when the closed row is gone", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" state={{ selectedItemId: "cust-001" }} />, {
+      wrapper: Wrapper,
+    });
+    await row("Acme Corp");
+    // No row is marked for the item (e.g. it is not on this page): nothing to give focus back to.
+    const marked = document.querySelector("[role='row'][aria-current='true']");
+    marked?.removeAttribute("aria-current");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Close preview" }));
+
+    await waitFor(() => expect(document.activeElement).toBe(document.querySelector(".border-r")));
+  });
+
+  it("moves focus to the preview pane on select when the list is hidden (narrow)", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+    const restore = hideBelowLg();
+    try {
+      await userEvent.click(await row("Acme Corp"));
+
+      await waitFor(() => expect(document.activeElement).toBe(previewPane()));
+    } finally {
+      restore();
+    }
+  });
+
+  it("keeps focus on the row on select when the list is beside the preview (wide)", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    await userEvent.click(await row("Acme Corp"));
+    await previewShows("Acme Corp");
+
+    expect(document.activeElement).toHaveAttribute("role", "row");
+    expect(document.activeElement).toHaveTextContent("Acme Corp");
+  });
+
+  it("does not steal focus when it mounts with a selection", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemSplitView entityName="customer" state={{ selectedItemId: "cust-001" }} />, {
+      wrapper: Wrapper,
+    });
+    const restore = hideBelowLg();
+    try {
+      await previewShows("Acme Corp");
+      expect(document.activeElement).toBe(document.body);
+    } finally {
+      restore();
+    }
   });
 });

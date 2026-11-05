@@ -109,8 +109,8 @@ itemId, onClose? })`, a read-only preview of one item for the split view's right
 
 - `@contentgrid/views/entity-item-split` (`x-stability: stable`, no route yet — spec open question 2):
   `EntityItemSplitView({ entityName, toolbar?, state?, onStateChange? })` places `EntityItemCollectionView`
-  (`toolbar={false}`) and `EntityItemPreviewView` side by side under one toolbar it draws itself (Home ›
-  collection, then the selected item; a create action gated on `createTemplate`; the host's `toolbar.actions`).
+  (`toolbar={false}`) and `EntityItemPreviewView` side by side under one breadcrumb toolbar it draws itself (Home ›
+  collection, always, the collection being the current location; a create action gated on `createTemplate`; the host's `toolbar.actions`).
   State is `EntityItemSplitViewState { collection?: CollectionViewState; selectedItemId?: string }`, controlled or
   internal like the collection view; the list's state sits under its own `collection` key, the selection beside it
   because the preview has no state. Only the list gets a `ChildNavigationProvider`: its `openItem` selects the item
@@ -120,8 +120,9 @@ itemId, onClose? })`, a read-only preview of one item for the split view's right
   Layout is CSS only: side by side from the `lg` breakpoint; below it the preview takes the full width while an
   item is selected (the list is hidden, not unmounted) and Close shows the list again.
   `preloadEntityItemSplit(ctx, entityName, itemId?)` starts `preloadEntityItemCollection` and
-  `preloadEntityItemPreview` together; the view has no address scheme. The toolbar's Collection crumb goes through
-  the parent's navigation and leaves the split (kept as is until open question 2 is settled). The list marks the
+  `preloadEntityItemPreview` together (the preview keeps its own preload because contract rule 5 has parents call each child's); the view has no address scheme. The preview keeps its own pane header (item reference, Open, Close). Focus: after Close it returns to the closed
+  item's row (the list container as fallback); after a selection it moves to the preview pane (`role=region`, `aria-label="Preview"`)
+  only when the list pane's computed `display` is `none` (below `lg`), not on wide screens. The list marks the
   selected row `aria-current="true"` (`activeItemId` on the collection view and feature).
 
 ## Breadcrumbs
