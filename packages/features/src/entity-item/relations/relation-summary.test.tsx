@@ -130,7 +130,7 @@ describe("EntityItemRelationSummary", () => {
       />,
     );
 
-    expect(screen.getByRole("list", { name: "Relations" })).toHaveClass("extra");
+    expect(screen.getByRole("list", { name: "Relation summary" })).toHaveClass("extra");
     await user.click(screen.getByRole("button", { name: /Customer/ }));
     await user.click(screen.getByRole("button", { name: /Invoices/ }));
     expect(onRelationClick.mock.calls).toEqual([["customer"], ["invoices"]]);
