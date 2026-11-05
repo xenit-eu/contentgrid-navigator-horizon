@@ -6,7 +6,7 @@
 
 **Tests**: Included. Each PR carries MSW-backed hook tests, component tests, Storybook stories with visual snapshots in a fixed-size box (ADR-009) and keeps the existing e2e suite green.
 
-**Organization**: PR 1 (this one) is the documents. The remaining work is one phase per stacked PR, PR 2 to PR 8. Every task cites the requirement (FR) and contract it traces to (constitution Principle IX). A PR that departs from this list amends it in the same PR.
+**Organization**: PR 1 (this one) is the documents. The remaining work is one phase per stacked PR, PR 2 to PR 7 (the user-preferences work, T050 to T055, is deferred and parked on `ACC-3216-user-preferences-parked`; this series is 7 PRs). Every task cites the requirement (FR) and contract it traces to (constitution Principle IX). A PR that departs from this list amends it in the same PR.
 
 **Removed/merged**: the series originally stacked ten PRs, with a PR 3 for a shared `navigator-data` "target resolution" mechanism (`ViewTarget`, `ResolvedViewTarget`). Review concluded views should resolve their own data through `navigator-data`'s existing hooks instead, with no shared target type; that PR (and its tasks, T007–T012) is dropped, not deferred. A second round folded the collection view's state (originally its own PR 5) into the item detail view's PR, now PR 3, because the reference implementation (ACC-3216 PR #246) builds both views together, sharing the same by-name-or-by-link target hooks and breadcrumb components; PRs 6–9 are renumbered 5–8 below. Task IDs are kept as they were through both rounds, per this file's own task-ID stability, rather than renumbered — so PR 3's phase below contains T013–T020 and T016a (the original item detail tasks) followed by T027–T034 (the original collection-state tasks), not a contiguous range.
 
@@ -113,32 +113,35 @@ Pre-GA the generic app's stability gate stays suspended; no task reinstates it.
 
 ---
 
-## Phase PR 7: preferences move into a user-preferences feature
+## Deferred (not in this series): preferences move into a user-preferences feature
 
-**Purpose**: preferences become available to every feature, with configurable storage. Open question 4d (a peer dependency in `navigator-data`) is resolved: the store stays inside `packages/features`, which already depends on Zustand, so PR 7 is not gated on a team answer.
+**Status**: deferred by product decision. This work is not part of the views stack and not done in a separate PR either; it is parked on branch `ACC-3216-user-preferences-parked` pending product decisions (open question 4). The tasks below stay unticked and keep their old PR 7 numbering for traceability only.
 
-- [ ] T050 [PR 7] Reorganise `packages/features/src/preferences/` into its own `packages/features/src/user-preferences/` feature (merge logic, `useEntityDisplayPreferences`, `useColumnVisibility`, `resolve-entity-icon`, attribute options); keep exports stable for callers through the barrel. `navigator-data` keeps the `EntityDisplayPreferences` type and the backend fetch it already has, unchanged. Traces: FR-030, FR-033.
-- [ ] T051 [PR 7] Turn the store into a factory taking a storage option (local storage by default), with the persisted key unchanged so existing choices keep working. No peer dependency to add: `packages/features` already depends on Zustand. Traces: FR-031. Depends on T050.
-- [ ] T052 [PR 7] Create the store at startup in both apps and provide it to the hooks; tests supply an in-memory storage. Traces: FR-031, FR-032. Depends on T051.
-- [ ] T053 [P] [PR 7] Keep the backend part as it is (returns nothing); add a test that the three layers merge in priority order. Traces: FR-030; user story 7 scenario 1.
-- [ ] T054 [PR 7] Make the configuration screens optional in the app; with none, changes users already made still apply. Traces: FR-032; user story 7 scenario 2. Depends on T052.
-- [ ] T055 [P] [PR 7] Update `packages/features/CLAUDE.md` (the feature is renamed `preferences` → `user-preferences`) and `packages/navigator-data/CLAUDE.md` (confirm it documents only the type and the backend part). Traces: Principle IX (docs track the code).
+**Purpose**: preferences become available to every feature, with configurable storage. Open question 4d (a peer dependency in `navigator-data`) is resolved: the store stays inside `packages/features`, which already depends on Zustand, so the work is not gated on that question; it is parked for other product reasons.
 
-**Checkpoint**: features read preferences through the hook; storage is chosen by the app.
+- [ ] T050 [deferred] Reorganise `packages/features/src/preferences/` into its own `packages/features/src/user-preferences/` feature (merge logic, `useEntityDisplayPreferences`, `useColumnVisibility`, `resolve-entity-icon`, attribute options); keep exports stable for callers through the barrel. `navigator-data` keeps the `EntityDisplayPreferences` type and the backend fetch it already has, unchanged. Traces: FR-030, FR-033.
+- [ ] T051 [deferred] Turn the store into a factory taking a storage option (local storage by default), with the persisted key unchanged so existing choices keep working. No peer dependency to add: `packages/features` already depends on Zustand. Traces: FR-031. Depends on T050.
+- [ ] T052 [deferred] Create the store at startup in both apps and provide it to the hooks; tests supply an in-memory storage. Traces: FR-031, FR-032. Depends on T051.
+- [ ] T053 [P] [deferred] Keep the backend part as it is (returns nothing); add a test that the three layers merge in priority order. Traces: FR-030; user story 7 scenario 1.
+- [ ] T054 [deferred] Make the configuration screens optional in the app; with none, changes users already made still apply. Traces: FR-032; user story 7 scenario 2. Depends on T052.
+- [ ] T055 [P] [deferred] Update `packages/features/CLAUDE.md` (the feature is renamed `preferences` → `user-preferences`) and `packages/navigator-data/CLAUDE.md` (confirm it documents only the type and the backend part). Traces: Principle IX (docs track the code).
+
+**Checkpoint (when resumed)**: features read preferences through the hook; storage is chosen by the app.
 
 ---
 
-## Phase PR 8: stability on views and layer lint rules
+## Phase PR 7: stability on views and layer lint rules
 
 **Purpose**: the tag follows what users get, and the layers are enforced.
 
-- [ ] T056 [PR 8] Add `x-stability` to each view's `package.json`; remove it from feature directories; keep `dev-tools` as today. Traces: FR-028; constitution Principle IV (amended).
-- [ ] T057 [PR 8] Change `no-unstable-features` to resolve and check views; update its options, tests and fixtures. Traces: FR-035; contract `layer-lint-rules.md` L6.
-- [ ] T058 [PR 8] Keep the generic app's gate suspended: `allowedStability` stays at all three tiers; update the comment in `apps/navigator/eslint.config.js` and the ADR-006 amendment's go-live steps to name views. Traces: FR-029; ADR-006 amendment.
-- [ ] T059 [P] [PR 8] Add layer lint rules L1 to L5 to `packages/eslint-config` with a failing and a passing fixture per rule; L4 (features, the UI package and `navigator-data` never import `packages/views`) needs one fixture pair per importing layer, not just features. Traces: FR-034; contract `layer-lint-rules.md`.
-- [ ] T060 [PR 8] Enable the rules in each package's and app's ESLint config; fix any remaining violation. Traces: FR-034, SC-007. Depends on T059.
-- [ ] T061 [PR 8] Mark the experimental-copy convention in `packages/views/CLAUDE.md` as provisional pending open question 1; update `packages/features/CLAUDE.md`, `apps/navigator/CLAUDE.md` and `apps/navigator-experimental/CLAUDE.md` promotion text. Traces: FR-028; spec.md open question 1.
-- [ ] T062 [PR 8] Amend the constitution (Principles III and IV, version bump per Governance) if review of the open questions changes the stability or layer rules. Traces: Principle IX; Governance (amendment).
+- [x] T056 [PR 7] Add `x-stability` to each view's `package.json`; remove it from feature directories; keep `dev-tools` as today. Traces: FR-028; constitution Principle IV (amended). Done: the base already tagged ten directories (six views and four shells); only `src/navigation/package.json` is new (`recording-navigation` was the only `exports` entry without one); `x-stability` removed from all 15 feature `package.json` files (13 are now deleted because the tag was their only content; `preferences` and `entity-search-bar` keep their name/description). `dev-tools` is not under `packages/features` and has never had a tag, so it stays as it is. `packages/views/src/stability.test.ts` fails if an `exports` entry has no valid tag. Docs updated: `packages/features/CLAUDE.md`, `packages/views/CLAUDE.md`, both apps' `CLAUDE.md`, `README.md`, ADR-006. The three features that were tagged `experimental` (`recently-created`, `profile-inspector`, `_experimental-placeholder`; `hal-forms` carried a comment only) lose that marker; no app imports them directly today.
+- [x] T057 [PR 7] Change `no-unstable-features` (renamed `no-unstable-views` in review) to resolve and check views; update its options, tests and fixtures. Traces: FR-035; contract `layer-lint-rules.md` L6. Done: the rule resolves only `@contentgrid/views/<entry>`; feature imports are no longer stability-checked (features carry no tag), and the root barrel `@contentgrid/views` is untagged and ignored. Option unchanged (`allowedStability`); message id `unstableFeature` renamed `unstableView`; fixtures moved to `__fixtures__/node_modules/@contentgrid/views/` with tests for a direct feature import and the barrel. This resolves the contract's "what happens to app imports of features directly": they are not stability-checked and are governed by L1 instead.
+- [x] T058 [PR 7] Keep the generic app's gate suspended: `allowedStability` stays at all three tiers; update the comment in `apps/navigator/eslint.config.js` and the ADR-006 amendment's go-live steps to name views. Traces: FR-029; ADR-006 amendment. Done: `allowedStability` is unchanged (all three tiers, rule enabled); the comment in `apps/navigator/eslint.config.js` and ADR-006's amendment (what stays in place; go-live steps 2 and 3) now name views.
+- [x] T059 [P] [PR 7] Add layer lint rules L1 to L5 to `packages/eslint-config` with a failing and a passing fixture per rule; L4 (features, the UI package and `navigator-data` never import `packages/views`) needs one fixture pair per importing layer, not just features. Traces: FR-034; contract `layer-lint-rules.md`. Done: `packages/eslint-config/layers.ts` (config factories per package), `plugin.ts` (the shared `@contentgrid` plugin) and `rules/view-stability-order.ts` (L5), tests in `layers.test.ts` against fixtures in `rules/__fixtures__/layers/` (L4 has one pair per importing layer: features, ui, navigator-data). L1 to L4 use the repo's `no-restricted-sources` rule (review: core `no-restricted-imports` ignores `import()`, `typeof import()` and relative paths into another package); L5 is a repo rule (a pattern cannot read the importing view's tag) generalised to the whole ladder, treating untagged code in `packages/views/src` as `stable`. Departures, recorded in the contract: L1 has a transitional allowlist of four features no view wraps yet, owned by each app's eslint config; L2 has a documented exemption for the unsaved-changes guard.
+- [x] T060 [PR 7] Enable the rules in each package's and app's ESLint config; fix any remaining violation. Traces: FR-034, SC-007. Depends on T059. Done: wired in `packages/{features,ui,navigator-data,views}` and both apps (the apps' `local-mock-backend` restriction is merged into the same `no-restricted-sources` entry). Existing violations: apps import `app-info-pages`, `entity-item-create`, `preferences` and `search` features directly (no views yet) and `packages/features` imports the router in `unsaved-changes-guard` plus three tests that mount it (spec: out of scope); both are exempted by name, with comments, and SC-007's "no feature imports the router" stays unmet until the guard moves. Nothing else violated.
+- [x] T061 [PR 7] Mark the experimental-copy convention in `packages/views/CLAUDE.md` as provisional pending open question 1; update `packages/features/CLAUDE.md`, `apps/navigator/CLAUDE.md` and `apps/navigator-experimental/CLAUDE.md` promotion text. Traces: FR-028; spec.md open question 1. Done: `packages/views/CLAUDE.md` marks the experimental-copy convention provisional; `packages/features/CLAUDE.md` and both apps' `CLAUDE.md` describe promotion on views.
+- [x] T062 [PR 7] Amend the constitution (Principles III and IV, version bump per Governance) if review of the open questions changes the stability or layer rules. Traces: Principle IX; Governance (amendment). Done: constitution 1.10.1 → 1.11.0 (MINOR): Principle IV now puts `x-stability` on views, features carry none, the pre-GA bullet is restated for views, and the forward-looking bullet is the rule (a view never imports a less stable view; untagged code in `packages/views/src` counts as `stable`). Sync Impact Report updated.
+- [ ] T063 [PR 7] Go-live: empty the apps' L1 allowlist (the features the apps still import directly because no view wraps them yet), or audit each remaining feature, before the ADR-006 go-live steps are called done. Traces: FR-034; contract `layer-lint-rules.md` L1; ADR-006 amendment go-live steps. Owner to be assigned.
 
 **Checkpoint**: lint fails on each deliberate violation; the real code is clean.
 
@@ -151,8 +154,7 @@ Pre-GA the generic app's stability gate stays suspended; no task reinstates it.
 - PR 4 needs PR 3.
 - PR 5 needs PR 4.
 - PR 6 needs PR 5: it composes the item detail and collection views (already built in PR 3) and the moved layout/shells (PR 5); both are already in place by PR 6's position in the stack.
-- PR 7 is independent of PRs 3–6 and is stacked after them only to keep the series linear.
-- PR 8 is last.
+- The stability and lint PR (T056 to T063) is last, numbered PR 7 in this stack. The deferred preferences work (T050 to T055) is not part of the series.
 - Each PR keeps both apps working and the e2e suite green.
 
 ## Notes

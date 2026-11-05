@@ -1,6 +1,16 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.10.1
+- Version change: 1.0.0 → 1.11.0
+- Amendment (1.10.1 → 1.11.0, MINOR): Principle IV now describes the delivery model as built by
+  spec 005 (ACC-3216, PR 7): `x-stability` lives on views (`packages/views/src/<view>/package.json`),
+  features carry none, the generic app imports only `stable` views, the pre-GA bullet is restated
+  for views and the `no-unstable-views` rule (renamed from `no-unstable-features`), and the
+  forward-looking bullet becomes the actual rule (a view never imports a less stable view;
+  untagged code inside `packages/views/src/` counts as `stable`). MINOR, not PATCH: the tag's
+  location and the obligations it carries change materially (a new MUST on views and an enforced
+  ordering rule). Not MAJOR: no principle is removed, and the three-track gating intent is
+  unchanged. Templates (`.specify/templates/`) do not mention the stability tag, so nothing there
+  needed a follow-up.
 - Amendment (1.10.0 → 1.10.1, PATCH): a third round of the same ACC-3216 PR #227 review, two
   naming/location corrections with no principle content added. (a) The navigation hook is
   renamed `useNavigation()` → `useViewNavigation()`, to avoid confusion with TanStack Router's
@@ -252,29 +262,33 @@ data concern.
 
 ### IV. Three-Track Delivery & Stability Gating
 
-- Every feature directory in `packages/features/src/` MUST declare an `x-stability` field
-  (`experimental` | `candidate` | `stable`) in its `package.json`. A new feature MUST start
-  at `experimental`.
-- `apps/navigator` (generic track) MUST import only `stable` features and MUST NOT contain
+- Every view in `packages/views/src/<view>/` MUST declare an `x-stability` field
+  (`experimental` | `candidate` | `stable`) in its own `package.json`, and each view's entry in the
+  `exports` map of `packages/views/package.json` MUST resolve to that directory so the lint rule
+  can read the tag. A new view MUST start at `experimental`. Features in `packages/features/`
+  carry no `x-stability` field: stability is a property of the composed view, not of the
+  building blocks inside it (ADR-018).
+- `apps/navigator` (generic track) MUST import only `stable` views and MUST NOT contain
   customer-specific code, in-flight demos, or half-built features. `apps/navigator-experimental`
-  may import `experimental`, `candidate`, or `stable` features, and MUST NOT be hosted on a
+  may import `experimental`, `candidate`, or `stable` views, and MUST NOT be hosted on a
   public URL.
 - Promotion (an `x-stability` flip) MUST NOT move code between directories — no fork drift —
-  and MUST go through code review, gated on every dependency of the feature being at or above
+  and MUST go through code review, gated on every dependency of the view being at or above
   the target stability tier.
 - **Pre-GA exception:** while the product is pre-GA, the two bullets above are suspended —
-  a new feature MAY start at any tier (typically `stable` directly), and `apps/navigator`
-  MAY import features at any stability tier. The `x-stability` field itself remains required
-  and the ESLint rule stays enabled (still catching an invalid/typo value); it is reconfigured
-  to allow all tiers. This exception ends at production go-live, at which point the original
-  rules above are reinstated (see the
+  a new view MAY start at any tier (typically `stable` directly), and `apps/navigator`
+  MAY import views at any stability tier. The `x-stability` field itself remains required
+  and the ESLint rule `@contentgrid/no-unstable-views` stays enabled (still catching an
+  invalid/typo value); it is reconfigured to allow all tiers. This exception ends at
+  production go-live, at which point the original rules above are reinstated (see the
   [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga)).
-- **Forward-looking (ADR-018): stability moves to views.** When spec 005 moves stability to views
-  (ACC-3216), the `x-stability` field moves from feature directories to views in `packages/views`, and the
-  `no-unstable-features` rule checks views instead of features. From then on a stable view MUST
-  NOT import an experimental view, and a stable view that needs an experimental feature is
-  copied into an experimental variant. Until then the bullets above apply to features as
-  written, and the generic-app gate stays suspended pre-GA throughout.
+- **Views never import a less stable view.** A stable view MUST NOT import an experimental
+  view (nor a candidate one), and a candidate view MUST NOT import an experimental one; a stable
+  view that needs an experimental feature is copied into an experimental variant. Code under
+  `packages/views/src/` that carries no tag of its own (support folders, the root barrel) is
+  treated as `stable`, so it cannot import or re-export a less stable view either; the root
+  barrel exports navigation infrastructure only, never a view. Lint enforces this
+  (`@contentgrid/view-stability-order`, layer rule L5).
 
 Rationale: this is the mechanism that lets one shared codebase serve a production track and
 an experimentation track without either contaminating the other. Pre-GA, every feature is
@@ -514,4 +528,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.10.1 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-22
+**Version**: 1.11.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-11-05

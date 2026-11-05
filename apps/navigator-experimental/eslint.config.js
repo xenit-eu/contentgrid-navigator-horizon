@@ -1,34 +1,44 @@
 import baseConfig from "@contentgrid/eslint-config";
-import { rule as noUnstableFeatures } from "@contentgrid/eslint-config/rules/no-unstable-features";
+import { appsViewsOnly, restrictSources } from "@contentgrid/eslint-config/layers";
+import { contentgridPlugin } from "@contentgrid/eslint-config/plugin";
+
+// L1: apps import features only through views. These features have no view yet, so the apps still
+// import them directly. Transitional and app-owned: delete an entry when its view lands, and at
+// go-live the list must be empty or each remaining feature audited (ADR-006 amendment, go-live
+// steps; spec 005 T063). `preferences` stays listed: the feature still exists and the apps import
+// it (the user-preferences work is deferred).
+const PENDING_VIEW_FEATURES = ["app-info-pages", "entity-item-create", "preferences", "search"];
+
+// local-mock-backend is dev-only tooling — only main.tsx's DEV-gated enableMocking() may import
+// it. Files inside local-mock-backend/ are exempt so they can import each other. ESLint replaces
+// (never merges) a rule's options between entries, so the non-exempt entry carries L1 and this
+// restriction together.
+const LOCAL_MOCK_BACKEND_EXEMPT = ["src/main.tsx", "src/local-mock-backend/**"];
+const LOCAL_MOCK_BACKEND = {
+  specifier: String.raw`(^|/)local-mock-backend(/|$)`,
+  message:
+    "local-mock-backend is dev-only; only main.tsx's DEV-gated enableMocking() may import it.",
+};
 
 export default [
   ...baseConfig,
   {
-    plugins: { "@contentgrid": { rules: { "no-unstable-features": noUnstableFeatures } } },
+    plugins: { "@contentgrid": contentgridPlugin },
     rules: {
-      "@contentgrid/no-unstable-features": [
+      "@contentgrid/no-unstable-views": [
         "error",
         { allowedStability: ["experimental", "candidate", "stable"] },
       ],
     },
   },
   {
-    // local-mock-backend is dev-only tooling — only main.tsx's DEV-gated enableMocking() may
-    // import it. Files inside local-mock-backend/ are exempt so they can import each other.
-    ignores: ["src/main.tsx", "src/local-mock-backend/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["**/local-mock-backend/**", "./local-mock-backend/*"],
-              message:
-                "local-mock-backend is dev-only; only main.tsx's DEV-gated enableMocking() may import it.",
-            },
-          ],
-        },
-      ],
-    },
+    name: "contentgrid/layers/apps",
+    ignores: LOCAL_MOCK_BACKEND_EXEMPT,
+    rules: restrictSources([...appsViewsOnly(PENDING_VIEW_FEATURES), LOCAL_MOCK_BACKEND]),
+  },
+  {
+    name: "contentgrid/layers/apps/local-mock-backend-exempt",
+    files: LOCAL_MOCK_BACKEND_EXEMPT,
+    rules: restrictSources(appsViewsOnly(PENDING_VIEW_FEATURES)),
   },
 ];
