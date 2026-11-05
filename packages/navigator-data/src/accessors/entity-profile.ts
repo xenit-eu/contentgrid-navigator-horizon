@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { HalObject, type Link, SimpleLink } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
-import type { HalFormValues } from "@contentgrid/hal-forms/values";
+import { type HalFormValues, createValues } from "@contentgrid/hal-forms/values";
 import { ianaRelations } from "@contentgrid/hal/rels";
 import { blueprintRels } from "../api";
 import type { TypedFetch } from "../api/client";
@@ -335,6 +335,9 @@ export default class ProfileEntity {
    * Does not perform the fetch - returns a Request object for use with fetchHalSlice.
    *
    * @param values - Search parameters (filters, sort, pagination)
+   * @param scopeParams - Hidden params that narrow the search to a subset of the collection,
+   *   e.g. a to-many relation's `EntityItemCollection.internalRelationParams` to search only the
+   *   items linked through that relation. Omitted or empty = the whole collection.
    * @returns Request object ready to be fetched
    *
    * @example
@@ -344,13 +347,22 @@ export default class ProfileEntity {
    * const slice = await fetchHalSlice(apiFetch, request);
    * ```
    */
-  public searchEntityRequest(values: HalFormValues<SearchRequestSpec>): Request {
+  public searchEntityRequest(
+    values: HalFormValues<SearchRequestSpec>,
+    scopeParams?: Readonly<Record<string, string>>,
+  ): Request {
     const searchTemplate = this.searchTemplate;
     if (!searchTemplate) {
       throw new Error(`Entity ${this.name} does not have a search template`);
     }
-    const codec = halFormCodecs.requireCodecFor(searchTemplate.template);
-    return codec.encode(values);
+    if (!scopeParams || Object.keys(scopeParams).length === 0) {
+      return halFormCodecs.requireCodecFor(searchTemplate.template).encode(values);
+    }
+    // The codec only encodes declared properties, so the scope goes in as hidden properties.
+    const scopedTemplate = searchTemplate.withHiddenParams(scopeParams).template;
+    return halFormCodecs
+      .requireCodecFor(scopedTemplate)
+      .encode(createValues(scopedTemplate).withValues(values.valueMap));
   }
 
   // ========================================
