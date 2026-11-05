@@ -59,6 +59,6 @@ describe("EntityItemSideBySide", () => {
   it("shows no relation summary under the item's title", () => {
     renderVariation(["customer"]);
 
-    expect(screen.queryByRole("list", { name: "Relations" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Relation summary" })).not.toBeInTheDocument();
   });
 });
