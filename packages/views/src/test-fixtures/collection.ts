@@ -10,8 +10,9 @@ import {
 
 /**
  * The item-detail fixture's `customer` entity, extended for the collection view: a search
- * template with one filter (`name~prefix`) and one sort option (`name,asc`), a create form, and a collection page of two items
- * with a next link. Every collection request is recorded in `collectionRequests`.
+ * template with one filter (`name~prefix`) and one sort option (`name,asc`), a create form, and a
+ * collection page of two items with a next link. Every collection request is recorded in
+ * `collectionRequests`.
  */
 export const CUSTOMER_NEXT_PAGE_URL = `${CUSTOMER_COLLECTION_URL}?_cursor=page2`;
 
@@ -80,7 +81,10 @@ export const customerCollectionBody = {
 export const SUPPLIER_PROFILE_URL = `${API}/profile/suppliers`;
 export const SUPPLIER_COLLECTION_URL = `${API}/suppliers`;
 
-/** A second entity, so tests can switch from `customer` to another entity that really exists. */
+/**
+ * A second entity, so tests can switch from `customer` to another entity that really exists. It
+ * deliberately reuses customer's attributes (only its links differ): it exists for entity-switch tests.
+ */
 export const supplierProfileBody = {
   ...customerProfileBody,
   name: "supplier",
