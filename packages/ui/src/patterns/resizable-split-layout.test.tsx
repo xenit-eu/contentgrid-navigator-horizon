@@ -1,4 +1,5 @@
-import { act, render, screen } from "@testing-library/react";
+import * as React from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResizableSplitLayout, usePaneWidth, useSplitLayoutWidths } from "./resizable-split-layout";
 
@@ -137,9 +138,17 @@ describe("ResizableSplitLayout", () => {
         });
       };
 
+      let mounts = 0;
+      function MountCounter() {
+        React.useEffect(() => {
+          mounts += 1;
+        }, []);
+        return <input aria-label="Left input" />;
+      }
+
       render(
         <ResizableSplitLayout
-          left="Left"
+          left={<MountCounter />}
           right="Right"
           handleLabel="Resize"
           stackBelow={800}
@@ -147,6 +156,10 @@ describe("ResizableSplitLayout", () => {
         />,
       );
       expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+      // Typed input survives both crossings: the panes are never remounted.
+      fireEvent.change(screen.getByRole("textbox", { name: "Left input" }), {
+        target: { value: "unsaved" },
+      });
 
       resizeTo(1000);
       expect(screen.getByRole("separator", { name: "Resize" })).toHaveAttribute(
@@ -156,6 +169,8 @@ describe("ResizableSplitLayout", () => {
 
       resizeTo(500);
       expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Left input" })).toHaveValue("unsaved");
+      expect(mounts).toBe(1);
       vi.unstubAllGlobals();
     });
 
