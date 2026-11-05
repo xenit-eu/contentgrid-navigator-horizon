@@ -20,7 +20,7 @@ variations/
   entity-item-auto-variation.tsx   picks and renders a variation
   attribute-focus/   EntityItemAttributeFocus — sections in one card, with relation summary
   content-focus/     EntityItemContentFocus — content preview + sections side panel
-  side-by-side/      EntityItemSideBySide — attributes card + column of relation cards
+  side-by-side/      EntityItemSideBySide — attributes card + resizable column of relation cards
   item-card/         EntityItemCard — the card attribute-focus and side-by-side share
   attribute-summary/ EntityItemAttributeSummary — compact label/value grid (relation cards)
   item-reference/    EntityItemReference — icon, title, subtitle row
@@ -38,7 +38,9 @@ variation:
 - `"stacked"` → `attribute-focus`: every section in one card, with the relation summary under the
   item's title (the default without content attributes)
 - `"columns"` → `side-by-side`: the attributes and audit trail in a card, the relations in a
-  fixed-width column of cards next to it (below it in a narrow container); no relation summary
+  column of cards next to it, split by a draggable handle (`ResizableSplitLayout`). In a narrow
+  container the panes stack without a handle (`resizableStacked={false}`). Side by side, each pane scrolls on its own and the relations adapt to their pane's width;
+  no relation summary
 
 `resolveEntityItemVariation()` tells you which variation renders. `useEntityItemDetailPadding()`
 (or `entityItemDetailPadding()` given the `itemLayout`) gives the view the matching page padding

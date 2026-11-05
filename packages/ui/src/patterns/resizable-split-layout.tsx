@@ -77,6 +77,11 @@ export interface ResizableSplitLayoutProps extends SplitPaneSizes {
   /** Pane heights while stacked; used instead of the top-level sizes, which are widths. */
   readonly stackedSizes?: SplitPaneSizes;
   /**
+   * When `false`, stacked panes are not resizable: there is no handle and they simply follow each
+   * other at their natural height (`stackedSizes` doesn't apply). Defaults to `true`.
+   */
+  readonly resizableStacked?: boolean;
+  /**
    * Lets the right pane collapse to `rightCollapsedSize` by dragging it below its minimum size,
    * or through `rightPanelRef`. Its content stays mounted while collapsed.
    */
@@ -115,6 +120,7 @@ function ResizableSplitLayout({
   right,
   stackBelow,
   stackedSizes,
+  resizableStacked = true,
   rightCollapsible = false,
   rightPanelRef,
   onRightCollapsedChange,
@@ -184,6 +190,8 @@ function ResizableSplitLayout({
     collapsedRef.current = collapsed;
   };
 
+  const plainStack = stacked && !resizableStacked;
+
   // The library writes panel ids into the DOM (`id`, `data-testid`, the handle's
   // `aria-controls`), so they must be unique per instance.
   const idPrefix = React.useId();
@@ -193,9 +201,21 @@ function ResizableSplitLayout({
       ref={setElement}
       data-slot="resizable-split-layout"
       data-stacked={stacked || undefined}
-      className={cn("h-full w-full min-h-0", className)}
+      className={cn("w-full min-h-0", !plainStack && "h-full", className)}
     >
-      {layoutWidth !== undefined && (
+      {layoutWidth !== undefined && plainStack && (
+        <SplitLayoutWidthsContext.Provider value={widths}>
+          <div className="flex flex-col">
+            <div className={leftClassName}>
+              <PaneSideContext.Provider value="left">{left}</PaneSideContext.Provider>
+            </div>
+            <div className={rightClassName}>
+              <PaneSideContext.Provider value="right">{right}</PaneSideContext.Provider>
+            </div>
+          </div>
+        </SplitLayoutWidthsContext.Provider>
+      )}
+      {layoutWidth !== undefined && !plainStack && (
         <SplitLayoutWidthsContext.Provider value={widths}>
           <ResizablePanelGroup orientation={stacked ? "vertical" : "horizontal"}>
             <ResizablePanel

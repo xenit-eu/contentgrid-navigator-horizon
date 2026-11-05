@@ -1,20 +1,26 @@
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { ResizableSplitLayout } from "@contentgrid/ui";
 import {
   EntityItemSections,
   type EntityItemSectionsProps,
   hasEntityItemRelations,
 } from "../../entity-item-sections";
-import { CompactRelationLayout } from "../../relations/relation-layout";
 import { useEntityItemContext } from "../../use-entity-item-context";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemCard } from "../item-card/entity-item-card";
 
+/** Layout width (px) below which the relations pane moves below the card. */
+const STACK_BELOW = 768;
+
 /**
- * Side-by-side item detail for an already-loaded item: a card with its attributes and audit trail,
- * and its relations in a fixed-width column of cards (compact relation layout) on the card's
- * right, or below it when there is too little room. An item without relations keeps the single
- * card. Like the other variations it draws no toolbar or page chrome (`h-full min-h-0`, no outer
- * padding) and performs no navigation of its own.
+ * Side-by-side item detail for an already-loaded item: a card with its attributes and audit trail
+ * in the left pane of a `ResizableSplitLayout`, and its relations as a column of cards in the
+ * right pane. The user drags the handle between them to resize; each pane scrolls on its own, and
+ * the relation sections adapt to the right pane's width (`usePaneWidth()`). Below
+ * `STACK_BELOW` the panes stack without a handle: the relations follow the card at their natural
+ * height. An item without relations keeps
+ * the single card. Like the other variations it draws no toolbar or page chrome
+ * (`h-full min-h-0`, no outer padding) and performs no navigation of its own.
  */
 export function EntityItemSideBySide({
   item,
@@ -48,27 +54,38 @@ export function EntityItemSideBySide({
 
   return (
     <div className="h-full min-h-0">
-      {/* A container query rather than a measured breakpoint: only the classes change, so the
-          sections (and an open update form) stay mounted when the column moves below the card. */}
-      <div className="@container">
-        <div className="flex flex-col gap-4 @3xl:flex-row @3xl:items-start">
-          <div className="min-w-0 flex-1">
+      <ResizableSplitLayout
+        className="group"
+        left={
+          <div className="h-full min-h-0 overflow-auto">
             <EntityItemCard item={item} actions={actions}>
               <EntityItemSections item={item} {...sectionProps} show="details" />
             </EntityItemCard>
           </div>
-          <CompactRelationLayout>
-            <section aria-label="Relations" className="@3xl:w-96 @3xl:shrink-0">
-              <EntityItemSections
-                item={item}
-                {...sectionProps}
-                show="relations"
-                relationVariant="card"
-              />
-            </section>
-          </CompactRelationLayout>
-        </div>
-      </div>
+        }
+        right={
+          <section
+            aria-label="Relations"
+            className="h-full min-h-0 overflow-auto group-data-[stacked]:mt-4"
+          >
+            <EntityItemSections
+              item={item}
+              {...sectionProps}
+              show="relations"
+              relationVariant="card"
+            />
+          </section>
+        }
+        defaultRightSize={384}
+        minRightSize={340}
+        maxRightSize="60"
+        minLeftSize={360}
+        stackBelow={STACK_BELOW}
+        resizableStacked={false}
+        handleLabel="Resize relations"
+        // The 1px divider sits in the middle of the gap the column used to leave.
+        handleClassName="aria-[orientation=vertical]:mx-2 aria-[orientation=horizontal]:my-2"
+      />
     </div>
   );
 }
