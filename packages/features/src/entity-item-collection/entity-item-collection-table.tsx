@@ -26,7 +26,7 @@ export interface EntityItemCollectionTableProps {
   readonly collection: EntityItemCollection;
   /** Fired when a row (entity item) is clicked, or the row's View action is used; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
-  /** The item shown elsewhere (e.g. a detail pane); its row is marked `aria-current` and tinted. */
+  /** The item shown elsewhere (e.g. a preview pane); its row is marked `aria-current` and tinted. */
   readonly activeItemId?: string;
   /**
    * Fired when the user navigates to another page; receives the target page's

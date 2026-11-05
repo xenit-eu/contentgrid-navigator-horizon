@@ -43,7 +43,7 @@ export interface EntityItemCollectionBrowserProps {
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
-  /** The item shown elsewhere (e.g. a detail pane); its row is marked `aria-current`. */
+  /** The item shown elsewhere (e.g. a preview pane); its row is marked `aria-current`. */
   readonly activeItemId?: string;
   /**
    * Fired when the user paginates; receives the target page's href

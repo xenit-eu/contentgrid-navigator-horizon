@@ -14,6 +14,7 @@ use-entity-item-context.ts   item context hook (item, refetch, edit mode)
 attributes/                  attribute list, editable attributes, value renderers
 relations/                   to-one / to-many relation sections, relation picker
 edit/                        edit button, update form
+preview/                     EntityItemPreview — read-only content-or-attributes preview for a pane next to a list
 variations/
   entity-item-variation-props.ts   props every variation takes
   entity-item-auto-variation.tsx   picks and renders a variation

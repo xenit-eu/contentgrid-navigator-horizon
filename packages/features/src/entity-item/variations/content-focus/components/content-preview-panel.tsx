@@ -54,6 +54,12 @@ export interface ContentPreviewPanelProps {
    * no attribute-selection logic.
    */
   readonly toolbarStart?: ReactNode;
+  /**
+   * Show the content without anything that changes it: an attribute holding no file shows only
+   * "No file", with no upload drop zone, even when the user may upload (default `false`).
+   * Download stays available.
+   */
+  readonly readOnly?: boolean;
 }
 
 function triggerDownload(blob: Blob, filename: string): void {
@@ -78,6 +84,7 @@ export function ContentPreviewPanel({
   entityItem,
   attributeName,
   toolbarStart,
+  readOnly = false,
 }: Readonly<ContentPreviewPanelProps>) {
   const query = useContentPreview(entityItem, attributeName);
   const previewSource = query.data;
@@ -85,7 +92,7 @@ export function ContentPreviewPanel({
   const uploadMutation = useUploadContent(entityItem, attributeName);
   // The attribute the upload was started on: other attributes don't show its progress or error.
   const [uploadAttributeName, setUploadAttributeName] = useState<string | null>(null);
-  const canUpload = entityItem.canUploadContent(attributeName);
+  const canUpload = !readOnly && entityItem.canUploadContent(attributeName);
 
   // Leaving the attribute of a finished upload forgets that upload, so its error isn't shown
   // again when the user comes back. An upload still running is kept, so its progress is.

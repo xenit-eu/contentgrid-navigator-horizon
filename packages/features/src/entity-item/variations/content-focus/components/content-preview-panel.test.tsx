@@ -236,6 +236,16 @@ describe("ContentPreviewPanel", () => {
     expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
+  it("shows no drop zone in read-only mode, even when the user may upload", () => {
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(<ContentPreviewPanel entityItem={entityItem} attributeName="document" readOnly />, {
+      wrapper: makeWrapper(),
+    });
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
   it("uploads a dropped file into the empty attribute, showing the uploading state", async () => {
     const user = userEvent.setup();
     let uploadRequests = 0;
