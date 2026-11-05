@@ -2,7 +2,7 @@
  * Internal barrel for `entity-item`'s content-focus variation (spec `002-pdf-viewer`): renders a
  * content attribute's PDF next to the item's attributes and relations. Re-exported publicly from
  * `@contentgrid/features/entity-item` (see `packages/features/src/entity-item/index.ts`) —
- * `entity-item` itself is `x-stability: "stable"`. Both apps mount it (see
+ * `entity-item` carries no stability tag (the tag lives on views). Both apps mount it (see
  * `packages/features/src/entity-item/CLAUDE.md` for scope).
  *
  * `EntityItemContentFocus` is the public entry point (contract
