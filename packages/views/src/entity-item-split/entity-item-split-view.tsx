@@ -73,7 +73,10 @@ function SplitBody({
     latest.current = { current, onStateChange };
   });
 
+  // Writes the next state into the ref before reporting it, so a second change in the same tick
+  // builds on the first instead of on the stale render-time state.
   const update = useCallback((next: EntityItemSplitViewState): void => {
+    latest.current = { ...latest.current, current: next };
     if (latest.current.onStateChange) latest.current.onStateChange(next);
     else setInternalState(next);
   }, []);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -216,6 +216,82 @@ describe("EntityItemSplitView state", () => {
     expect(onStateChange).toHaveBeenCalledWith({
       selectedItemId: "cust-001",
       collection: { pageUrl: CUSTOMER_NEXT_PAGE_URL },
+    });
+  });
+
+  it("reports a sort change once with the sort and the page reset when controlled", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemSplitView
+        entityName="customer"
+        state={{ selectedItemId: "cust-001", collection: { pageUrl: CUSTOMER_NEXT_PAGE_URL } }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await row("Acme Corp");
+    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({
+      selectedItemId: "cust-001",
+      collection: { sort: "name,asc", pageUrl: undefined },
+    });
+  });
+
+  it("applies a sort change when uncontrolled", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    await row("Acme Corp");
+    await userEvent.click(screen.getByRole("button", { name: /Name/ }));
+
+    await waitFor(() =>
+      expect(fixture.collectionRequests.some((url) => url.includes("_sort=name"))).toBe(true),
+    );
+  });
+
+  it("keeps both changes when a list change and a selection arrive in the same tick (uncontrolled)", async () => {
+    const { Wrapper, fixture } = setup();
+    render(<EntityItemSplitView entityName="customer" />, { wrapper: Wrapper });
+
+    const globex = await row("Globex");
+    const next = screen.getByRole("button", { name: /next/i });
+    // One batched update: the second change must build on the first, not on the render's state.
+    act(() => {
+      fireEvent.click(next);
+      fireEvent.click(globex);
+    });
+
+    await waitFor(() => expect(fixture.collectionRequests).toContain(CUSTOMER_NEXT_PAGE_URL));
+    await waitFor(() => expect(currentCrumb()).toHaveTextContent("Globex"));
+  });
+
+  it("reports both changes in the second onStateChange when they arrive in the same tick (controlled)", async () => {
+    const { Wrapper } = setup();
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemSplitView
+        entityName="customer"
+        state={{ collection: { filters: {} } }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const globex = await row("Globex");
+    const next = screen.getByRole("button", { name: /next/i });
+    act(() => {
+      fireEvent.click(next);
+      fireEvent.click(globex);
+    });
+
+    expect(onStateChange).toHaveBeenCalledTimes(2);
+    expect(onStateChange).toHaveBeenLastCalledWith({
+      collection: { filters: {}, pageUrl: CUSTOMER_NEXT_PAGE_URL },
+      selectedItemId: "cust-002",
     });
   });
 
