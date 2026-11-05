@@ -66,7 +66,17 @@ const meta = {
   title: "Views/EntityItemSplitView",
   component: EntityItemSplitView,
   tags: ["autodocs", "async-content"],
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+    docs: {
+      description: {
+        component:
+          "A list next to the detail of the selected item. Selecting a row changes state, not the route. " +
+          "Open question 2 (two panes, one URL) is still open, so there is no route yet: a delete or edit in the " +
+          "detail pane and the toolbar's Collection crumb go through the parent's navigation and leave the split.",
+      },
+    },
+  },
   render: (args) => (
     <SplitStoryHarness itemId={args.state?.selectedItemId}>
       <EntityItemSplitView {...args} />
