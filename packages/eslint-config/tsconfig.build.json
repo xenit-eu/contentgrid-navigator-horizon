@@ -10,6 +10,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["rules/**/*.ts"],
-  "exclude": ["rules/**/*.test.ts", "rules/__fixtures__/**"]
+  "include": ["*.ts", "rules/**/*.ts"],
+  "exclude": ["**/*.test.ts", "rules/__fixtures__/**"]
 }

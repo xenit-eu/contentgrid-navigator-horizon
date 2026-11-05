@@ -1,4 +1,4 @@
-import { ESLintUtils } from "@typescript-eslint/utils";
+import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -108,7 +108,7 @@ function resolveStability(pkgDir: string, subpath: string): StabilityResult {
 }
 
 export const rule = createRule<[RuleOptions], "unstableView" | "invalidStability">({
-  name: "no-unstable-features",
+  name: "no-unstable-views",
   meta: {
     type: "problem",
     docs: {
@@ -139,10 +139,9 @@ export const rule = createRule<[RuleOptions], "unstableView" | "invalidStability
   create(context, [options]) {
     const allowedStability = options.allowedStability;
 
-    return {
-      ImportDeclaration(node) {
-        const source = node.source.value;
-
+    const check = (node: TSESTree.Node, source: unknown) => {
+      {
+        if (typeof source !== "string") return;
         if (!source.startsWith(VIEWS_PREFIX)) return;
 
         const subpath = source.slice(VIEWS_PREFIX.length);
@@ -175,7 +174,13 @@ export const rule = createRule<[RuleOptions], "unstableView" | "invalidStability
             },
           });
         }
-      },
+      }
+    };
+
+    return {
+      ImportDeclaration: (node) => check(node, node.source.value),
+      ExportNamedDeclaration: (node) => check(node, node.source?.value),
+      ExportAllDeclaration: (node) => check(node, node.source.value),
     };
   },
 });

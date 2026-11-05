@@ -1,6 +1,6 @@
 import { RuleTester } from "@typescript-eslint/rule-tester";
 import { afterAll, describe, it } from "vitest";
-import { rule } from "./no-unstable-features.js";
+import { rule } from "./no-unstable-views.js";
 
 RuleTester.afterAll = afterAll;
 RuleTester.describe = describe;
@@ -15,7 +15,7 @@ const tester = new RuleTester({
 // the real packages/views/ package
 const fixturesDir = new URL("./__fixtures__/fake-app/index.ts", import.meta.url).pathname;
 
-tester.run("no-unstable-features", rule, {
+tester.run("no-unstable-views", rule, {
   valid: [
     {
       name: "stable view is allowed",
@@ -53,8 +53,35 @@ tester.run("no-unstable-features", rule, {
       filename: fixturesDir,
       options: [{ allowedStability: ["stable"] }],
     },
+    {
+      name: "export-from of a stable view is allowed",
+      code: 'export { view } from "@contentgrid/views/stable-view";',
+      filename: fixturesDir,
+      options: [{ allowedStability: ["stable"] }],
+    },
   ],
   invalid: [
+    {
+      name: "export { x } from an experimental view is blocked",
+      code: 'export { view } from "@contentgrid/views/experimental-view";',
+      filename: fixturesDir,
+      options: [{ allowedStability: ["stable"] }],
+      errors: [{ messageId: "unstableView" }],
+    },
+    {
+      name: "export * from a candidate view is blocked",
+      code: 'export * from "@contentgrid/views/candidate-view";',
+      filename: fixturesDir,
+      options: [{ allowedStability: ["stable"] }],
+      errors: [{ messageId: "unstableView" }],
+    },
+    {
+      name: "export-from a typo-tagged view reports invalidStability",
+      code: 'export { view } from "@contentgrid/views/typo-view";',
+      filename: fixturesDir,
+      options: [{ allowedStability: ["stable"] }],
+      errors: [{ messageId: "invalidStability" }],
+    },
     {
       name: "experimental view is blocked when only stable allowed",
       code: 'import "@contentgrid/views/experimental-view";',
