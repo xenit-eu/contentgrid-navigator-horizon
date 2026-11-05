@@ -203,11 +203,10 @@ test("result table document preview @slow", async ({
   await selectSidebarEntity(ENTITY.ORDER);
 
   // A row click selects the item: the list stays and the read-only preview opens beside it
-  // (`?item=<id>`), so the clicks are scoped to the list table, not the preview's own header.
-  const list = page.locator('[data-slot="table"]');
+  // (`?item=<id>`). The clicks target list rows by role; the preview has its own attribute table.
 
   // @embedpdf uses the same data-testid attributes as react-pdf-viewer
-  await list.getByText("metadata.png [4.08 KB]").click();
+  await page.getByRole("row", { name: "metadata.png [4.08 KB]" }).click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
   await page.getByRole("combobox").filter({ hasText: "Document" }).click();
@@ -218,7 +217,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Document" }).click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
-  await list.getByText("Bob.pdf [330.1 KB]").click();
+  await page.getByRole("row", { name: "Bob.pdf [330.1 KB]" }).click();
   await expect(page.getByTestId("core__text-layer-0")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Document" }).click();
@@ -229,7 +228,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.locator("#root")).toContainText("No file present.");
 
-  await list.getByText("testdocx.docx [4.26 KB]").click();
+  await page.getByRole("row", { name: "testdocx.docx [4.26 KB]" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Receipt" }).click();
@@ -238,7 +237,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
 
-  await list.getByText("Bob_broken.pdf [330.1 KB]").click();
+  await page.getByRole("row", { name: "Bob_broken.pdf [330.1 KB]" }).click();
   await page.locator('[role="combobox"]').filter({ hasText: "Receipt" }).click();
   await page.getByRole("option", { name: "Receipt" }).click();
   await expect(page.getByText("Receipt No file present.")).toBeVisible();
@@ -247,7 +246,7 @@ test("result table document preview @slow", async ({
   await page.getByRole("option", { name: "Document" }).click();
   await expect(page.getByText("The document is invalid or corrupted")).toBeVisible();
 
-  await list.getByText("Bob_protected.pdf [330.46 KB]").click();
+  await page.getByRole("row", { name: "Bob_protected.pdf [330.46 KB]" }).click();
   await expect(page.getByTestId("core__viewer")).toBeVisible();
 
   await page.locator('[role="combobox"]').filter({ hasText: "Document" }).click();
