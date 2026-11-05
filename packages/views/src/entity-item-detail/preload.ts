@@ -1,4 +1,5 @@
-import { ensureEntityItem, ensureProfileEntity } from "@contentgrid/navigator-data";
+import { ensureEntityItem } from "@contentgrid/navigator-data";
+import { ensureProfileEntityLoaded } from "../preload/ensure-profile-entity";
 import type { AppRouterContext } from "../shells/router-shell";
 
 /**
@@ -12,15 +13,11 @@ export async function preloadEntityItemDetail(
   entityName: string,
   itemId: string,
 ): Promise<void> {
-  const { apiFetch, profileUrl, queryClient } = ctx;
-  if (!apiFetch || !profileUrl) return;
+  const { apiFetch, queryClient } = ctx;
+  const profileEntity = await ensureProfileEntityLoaded(ctx, entityName);
+  if (!profileEntity || !apiFetch) return;
   try {
-    const profileEntity = await ensureProfileEntity(queryClient, apiFetch, profileUrl, {
-      name: entityName,
-    });
-    if (profileEntity) {
-      await ensureEntityItem(queryClient, apiFetch, profileEntity, itemId);
-    }
+    await ensureEntityItem(queryClient, apiFetch, profileEntity, itemId);
   } catch {
     // Swallowed: an uncaught loader rejection would stop the route from mounting at all.
   }

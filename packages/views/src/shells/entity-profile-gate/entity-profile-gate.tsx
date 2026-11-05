@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   type ProfileEntity,
-  ensureProfileEntity,
   toProblemDisplayModel,
   useProfileEntity,
 } from "@contentgrid/navigator-data";
+import { ensureProfileEntityLoaded } from "../../preload/ensure-profile-entity";
 import type { AppRouterContext } from "../router-shell";
 
 // ---------------------------------------------------------------------------
@@ -16,22 +16,11 @@ export async function ensureEntityProfileLoaded(
   context: AppRouterContext,
   entityName: string,
 ): Promise<{ profileEntity?: ProfileEntity | null }> {
-  const { queryClient, apiFetch, profileUrl } = context;
-  // apiFetch/profileUrl are null until the router-context bridge in main.tsx
-  // fires (auth-gated) — skip prefetching until then and let
-  // EntityProfileGate's own useProfileEntity() fetch normally. A prefetch
-  // failure here is swallowed the same way: an uncaught beforeLoad rejection
-  // would block EntityProfileGate's component from mounting at all, skipping
-  // its own LoadingPage/ErrorPage handling entirely.
-  if (!apiFetch || !profileUrl) return {};
-  try {
-    const profileEntity = await ensureProfileEntity(queryClient, apiFetch, profileUrl, {
-      name: entityName,
-    });
-    return { profileEntity };
-  } catch {
-    return {};
-  }
+  // Skips (returns `{}`) while the API client is absent and swallows a failure: see
+  // `ensureProfileEntityLoaded`. EntityProfileGate's own useProfileEntity() then fetches normally
+  // and draws its own LoadingPage/ErrorPage.
+  const profileEntity = await ensureProfileEntityLoaded(context, entityName);
+  return profileEntity === undefined ? {} : { profileEntity };
 }
 
 /**
