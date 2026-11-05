@@ -500,7 +500,7 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     renderBrowser({ profile, onCreateItem: vi.fn() });
 
     expect(
-      await screen.findByRole("button", { name: `Create ${profile.title}` }),
+      await screen.findByRole("button", { name: `Create ${profile.singularName}` }),
     ).toBeInTheDocument();
   });
 
@@ -512,7 +512,7 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
 
     expect(await screen.findByRole("heading", emptyStateHeading(profile))).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: `Create ${profile.title}` }),
+      screen.queryByRole("button", { name: `Create ${profile.singularName}` }),
     ).not.toBeInTheDocument();
   });
 
