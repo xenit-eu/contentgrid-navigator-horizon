@@ -2,11 +2,12 @@ import { ContentAttributeOptionSelector, ContentPreviewFrame, FilePreview } from
 import type { HalFormsField } from "../hal-forms";
 
 interface CreateEntityItemFilePreviewProps {
-  /** The create form's `file` fields; the preview can switch between them. */
+  /** The create form's `file` fields, listed in the selector. */
   readonly fileFields: readonly HalFormsField[];
   /** Name of the file field being previewed. */
   readonly fieldName: string;
-  readonly onFieldNameChange: (fieldName: string) => void;
+  /** Switches the preview to another file field. Without it the selector is disabled. */
+  readonly onFieldNameChange?: (fieldName: string) => void;
   /** The file picked in that field, if any. */
   readonly file: File | undefined;
   /** Puts a file dropped on the empty preview into the field. Absent for a read-only field. */
@@ -15,8 +16,7 @@ interface CreateEntityItemFilePreviewProps {
 
 /**
  * Previews the file picked in one of the create form's file fields, before anything is uploaded,
- * with a selector to switch between the file fields. With no file picked, the preview offers a
- * drop zone.
+ * with a selector naming the previewed field. With no file picked, the preview offers a drop zone.
  */
 export function CreateEntityItemFilePreview({
   fileFields,

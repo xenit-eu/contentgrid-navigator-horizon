@@ -4,7 +4,7 @@
 
 ## Summary
 
-`CreateEntityItemContainer` keeps which file field is previewed and whether the narrow-screen dialog is open. It renders `CreateEntityItemFilePreview` in a side panel beside the form when the view is at least the `side-by-side` container width (880 px), or in a dialog below it; it mounts only one of the two. The preview reuses the content-focus preview pieces through the `entity-item` entry point: `ContentPreviewFrame`, `ContentAttributeOptionSelector` and `FilePreview`, which shows the picked `File` with `PdfPreview` or `ImageVideoViewer`; nothing is fetched. The container tells the form where the preview is with one `filePreview` value (`HalFormsFilePreview`): `dialog` with `onOpen`, or `beside` with `previewedFieldName`; a form without a file field gets none and keeps its layout. `HalFormsContainer` turns it into plain props for each field (`onFilePreview`, `previewed`, `compact`), so only the file fields whose highlight changes re-render. With the preview beside it, the form fills its height: only the fields scroll and the actions stay in view. The view is the `@container` the width is measured on, so closing the sidebar counts; it has no page title, as the breadcrumb already names the page. The `pdf-viewer` pattern gains a password prompt.
+`CreateEntityItemContainer` keeps which file field is previewed and whether the narrow-screen dialog is open. It renders `CreateEntityItemFilePreview` in a side panel beside the form when the view is at least the `side-by-side` container width (880 px), or in a dialog below it; it mounts only one of the two. The preview reuses the content-focus preview pieces through the `entity-item` entry point: `ContentPreviewFrame`, `ContentAttributeOptionSelector` and `FilePreview`, which shows the picked `File` with `PdfPreview` or `ImageVideoViewer`; nothing is fetched. The container tells the form where the preview is with one `filePreview` value (`HalFormsFilePreview`): `dialog` with `onOpen`, or `beside` with `onSelect` and `previewedFieldName`, both only with several file fields (clicking a field's picked file selects it); a form without a file field gets none and keeps its layout. `HalFormsContainer` turns it into plain props for each field (`onFilePreview`, `onFileClick`, `filePreviewed`, `compactFileDropZone`), so only the file fields whose highlight changes re-render. With the preview beside it, the form fills its height: only the fields scroll and the actions stay in view. The view is the `@container` the width is measured on, so closing the sidebar counts; it has no page title, as the breadcrumb already names the page. The `pdf-viewer` pattern gains a password prompt.
 
 ## Layering
 
@@ -16,7 +16,7 @@ entity-item/variations/content-focus/
 entity-item-create/
   create-entity-item-container   owns previewFieldName, isPreviewOpen, isNarrow (useContainerWidthAtLeast);
                                  renders the preview in an aside beside the form, or a Dialog
-  create-entity-item-file-preview  field selector + the picked file's preview
+  create-entity-item-file-preview  field selector (enabled in the dialog only) + the picked file's preview
                                    -> ../entity-item (ContentPreviewFrame,
                                       ContentAttributeOptionSelector, FilePreview)
   create-entity-item-form        -> ../hal-forms HalFormsContainer (filePreview)
@@ -28,9 +28,9 @@ hal-forms/render/
 
 @contentgrid/ui
   hooks/use-container-width-at-least  whether an element is at least a --container-* width
-  patterns/file-upload-zone      onPreview, previewed, compact, fill; Preview and Remove are
+  patterns/file-upload-zone      onPreview, onFileClick, previewed, compact, fill; Preview and Remove are
                                  ToolbarIconButtons
-  patterns/form-renderers/file-renderer  forwards onPreview, previewed, compact
+  patterns/form-renderers/file-renderer  forwards onPreview, onFileClick, previewed, compact
   patterns/pdf-viewer            password prompt; PdfLoadError kinds "invalid" | "engine"
   styles/preset.css              --container-side-by-side
 ```
@@ -63,7 +63,7 @@ hal-forms/render/
 - `src/entity-item/variations/content-focus/components/file-preview.tsx` (new), exported with `ContentAttributeOptionSelector` from `src/entity-item/index.ts`
 - `src/entity-item/variations/content-focus/components/content-preview-panel.tsx`: uses `PdfPreview` keyed by attribute name and the content's own ETag, `cannotDisplayMessageAndIcon`
 - `src/entity-item/variations/content-focus/components/content-preview-frame.tsx`: `cannotDisplayMessageAndIcon`, `fill`; a protected PDF is not a frame state, as the viewer asks for its password; the "No file" caption only when there is no drop zone
-- `src/entity-item/variations/content-focus/components/content-attribute-selector.tsx`: `ContentAttributeOptionSelector`
+- `src/entity-item/variations/content-focus/components/content-attribute-selector.tsx`: `ContentAttributeOptionSelector`, disabled without `onChange`
 - `src/entity-item/variations/content-focus/components/image-video-viewer.tsx`: `source` takes `kind` and `blob` only, so a picked file fits
 - `src/entity-item/variations/content-focus/util/preview-unavailable-message.ts` (new)
 - `src/entity-item/variations/content-focus/components/save-blob-as-file.ts` (new; `saveBlobAsFile`, used by `content-preview-panel.tsx` and `file-preview.tsx`; in `components/` because it touches the DOM, which `util/` does not)
@@ -71,7 +71,7 @@ hal-forms/render/
 
 ## Tests
 
-- `create-entity-item-container.test.tsx`: preview follows the picked field and the focused field; unreadable PDF; continuous-create reset; highlight only with several file fields; read-only field's empty preview; narrow-screen dialog on the clicked field; the dialog closes when the view widens and doesn't reopen.
+- `create-entity-item-container.test.tsx`: preview follows the picked field, the focused field and the clicked file, with the selector disabled beside the form and enabled in the dialog; unreadable PDF; continuous-create reset; highlight and a clickable picked file only with several file fields; read-only field's empty preview; narrow-screen dialog on the clicked field; the dialog closes when the view widens and doesn't reopen.
 - `pdf-viewer.test.tsx`: `useDocumentLifecycle` reopens with the password and flags a wrong one; the password form flags a rejected password.
 - `pdf-viewer.composition.test.tsx`: an invalid document is reported once; a protected one is not reported.
 - `content-preview-panel.test.tsx`: a viewer-reported invalid PDF shows the corrupted message.
