@@ -93,6 +93,8 @@ function defaultValueFor(field: HalFormsField): FieldValue {
       return field.multiValue ? [] : "";
     case "relation":
       return field.toMany ? [] : "";
+    case "text-multi":
+      return [];
     case "file":
       return undefined;
     case "text":

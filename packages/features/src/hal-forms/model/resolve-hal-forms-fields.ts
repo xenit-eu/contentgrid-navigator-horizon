@@ -233,16 +233,37 @@ function resolveSearchFields(template: SearchHalFormTemplate): HalFormsField[] {
   );
 }
 
-/** Shared `kind` switch for both a create and a search property's non-content mapping. */
+/** `undefined` for HAL-FORMS' "no maximum" (`Infinity`), so a field never carries `Infinity`. */
+function finiteMaxItems(maxItems: number): number | undefined {
+  return Number.isFinite(maxItems) ? maxItems : undefined;
+}
+
+/**
+ * Shared `kind` switch for both a create and a search property's non-content mapping.
+ *
+ * A property with `options` holding inline or remote choices is an `enum`. Options without
+ * either (only `minItems`/`maxItems`) offer no choices: a multi-valued one is a free-text
+ * `text-multi` field, and a single-valued one (`maxItems: 1`) falls through to the plain type
+ * switch below.
+ */
 function mapToHalFormsField(base: FieldMappingInput, property: HalFormsProperty): HalFormsField {
-  // TODO: revisit when multi-value attributes arrive. in this case the inline options will be missing
-  if (property.options) {
-    return {
-      ...base,
-      kind: "enum",
-      options: resolveInlineOptions(property) ?? [],
-      multiValue: property.multiValue,
-    };
+  const { options } = property;
+  if (options) {
+    // Read before the type guards below, which narrow `options` to the no-choices variant.
+    const maxItems = finiteMaxItems(options.maxItems);
+    const { minItems } = options;
+    if (options.isInline() || options.isRemote()) {
+      return {
+        ...base,
+        kind: "enum",
+        options: resolveInlineOptions(property) ?? [],
+        multiValue: property.multiValue,
+        maxItems,
+      };
+    }
+    if (property.multiValue) {
+      return { ...base, kind: "text-multi", maxItems, minItems };
+    }
   }
 
   switch (property.type) {

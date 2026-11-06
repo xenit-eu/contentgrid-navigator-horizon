@@ -83,3 +83,40 @@ describe("HalFormsFieldRenderer autocomplete dispatch", () => {
     expect(screen.getByRole("combobox", { name: "City" })).toBeInTheDocument();
   });
 });
+
+describe("HalFormsFieldRenderer multi-valued dispatch", () => {
+  it("renders a text-multi field as a free-text value list", () => {
+    const field: HalFormsField = {
+      name: "keywords",
+      label: "Keywords",
+      required: false,
+      readOnly: false,
+      kind: "text-multi",
+      maxItems: 100,
+      minItems: 0,
+      property: DUMMY_PROPERTY,
+    };
+    render(<HalFormsFieldRenderer field={field} value={["a", "b"]} onChange={vi.fn()} />);
+    expect(screen.getByRole("textbox", { name: "Keywords" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove a" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove b" })).toBeInTheDocument();
+  });
+
+  it("renders a multi-valued enum field as a combobox", () => {
+    const field: HalFormsField = {
+      name: "letters",
+      label: "Letters",
+      required: false,
+      readOnly: false,
+      kind: "enum",
+      multiValue: true,
+      options: [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+      ],
+      property: { options: { isRemote: () => false } } as unknown as HalFormsProperty,
+    };
+    render(<HalFormsFieldRenderer field={field} value={["a"]} onChange={vi.fn()} />);
+    expect(screen.getByRole("combobox", { name: "Letters" })).toHaveTextContent("A");
+  });
+});
