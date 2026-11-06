@@ -354,6 +354,8 @@ function RelationToManyTable({
         onFiltersChange={handleFiltersChange}
         currentSort={currentSort}
         scopeParams={scopeParams}
+        // Relation parameters mostly point back at the item this section belongs to.
+        defaultMode="all-direct"
         actions={toolbarActions}
       />
       {collection.isPending && <Skeleton className="h-12 w-full rounded-md" />}
