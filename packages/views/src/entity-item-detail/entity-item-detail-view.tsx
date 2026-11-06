@@ -37,6 +37,17 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
+  const deleteAction =
+    result.status === "success" &&
+    resolveEntityItemVariation(result.profileEntity) === "content-focus" ? (
+      <DeleteEntityItemButton
+        item={result.entityItem}
+        label={toolbar === false ? undefined : "Delete"}
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+        onRefresh={() => void result.refetch()}
+      />
+    ) : null;
+
   let content: ReactNode;
   if (result.status === "not-found") {
     content = <ErrorPage model={toProblemDisplayModel(describeTarget(target))} />;
@@ -63,6 +74,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
         onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+        actions={toolbar === false ? deleteAction : undefined}
       />
     );
   } else {
@@ -71,16 +83,6 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
 
   const profileEntity = result.status === "not-found" ? undefined : result.profileEntity;
   const contentPadding = profileEntity ? entityItemDetailPadding(profileEntity) : true;
-  const deleteAction =
-    result.status === "success" &&
-    resolveEntityItemVariation(result.profileEntity) === "content-focus" ? (
-      <DeleteEntityItemButton
-        item={result.entityItem}
-        label="Delete"
-        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
-        onRefresh={() => void result.refetch()}
-      />
-    ) : null;
 
   if (toolbar === false) {
     return (
