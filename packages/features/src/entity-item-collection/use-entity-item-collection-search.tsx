@@ -1,5 +1,4 @@
 import { type ReactNode, useCallback, useMemo, useState } from "react";
-import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import {
   type EntityItemCollection,
@@ -10,15 +9,7 @@ import {
   useEntityItemToManyRelation,
   useTypeahead,
 } from "@contentgrid/navigator-data";
-import {
-  AttributeMultiSelectContent,
-  Badge,
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  type RecordTableSortOption,
-} from "@contentgrid/ui";
+import { type RecordTableSortOption } from "@contentgrid/ui";
 import { type FieldState, resolveHalFormsFields } from "../hal-forms";
 import { toAttributeOption, useColumnVisibility } from "../preferences";
 import {
@@ -31,6 +22,8 @@ import {
   findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
+import { ColumnsButton } from "./components/columns-button";
+import { FiltersButton } from "./components/filters-button";
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 
 export interface EntityItemCollectionSearchOptions {
@@ -213,7 +206,6 @@ function useCollectionSearchControls({
   // switching entities naturally resets this back to the new entity's persisted default — no
   // extra reset effect needed here.
   const persistedVisibility = useColumnVisibility(profile);
-  const [columnsOpen, setColumnsOpen] = useState(false);
   const [localVisibleColumns, setLocalVisibleColumns] = useState<readonly string[]>(
     () => persistedVisibility.visibleColumns,
   );
@@ -327,28 +319,14 @@ function useCollectionSearchControls({
   const toolbarActions = (attributeOptions.length > 0 || fields.length > 0) && (
     <>
       {attributeOptions.length > 0 && (
-        <Popover open={columnsOpen} onOpenChange={setColumnsOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
-              <SlidersHorizontalIcon aria-hidden />
-              Columns
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-72 p-1" align="end">
-            <AttributeMultiSelectContent
-              attributes={attributeOptions}
-              values={localVisibleColumns}
-              onChange={setLocalVisibleColumns}
-            />
-          </PopoverContent>
-        </Popover>
+        <ColumnsButton
+          attributes={attributeOptions}
+          visibleColumns={localVisibleColumns}
+          onVisibleColumnsChange={setLocalVisibleColumns}
+        />
       )}
       {fields.length > 0 && (
-        <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)}>
-          <Funnel aria-hidden />
-          Filters
-          {activeFilterCount > 0 && <Badge variant="secondary">{activeFilterCount}</Badge>}
-        </Button>
+        <FiltersButton activeFilterCount={activeFilterCount} onClick={() => setFiltersOpen(true)} />
       )}
     </>
   );
