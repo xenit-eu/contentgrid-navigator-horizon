@@ -4,7 +4,6 @@ import {
   type EntityItem,
   type ProfileEntity,
   toProblemDisplayModel,
-  useEntityItemCollection,
 } from "@contentgrid/navigator-data";
 import {
   Button,
@@ -15,7 +14,11 @@ import {
   DialogTitle,
   Skeleton,
 } from "@contentgrid/ui";
-import { EntityItemCollectionTable } from "../../entity-item-collection";
+import {
+  EntityItemCollectionTable,
+  useEntityItemCollectionSearch,
+} from "../../entity-item-collection";
+import { EntitySearchBar } from "../../entity-search-bar";
 import { ProblemAlert } from "../../problem-details";
 import type { RelationItemCreateHandler } from "./relation-handlers";
 
@@ -52,7 +55,7 @@ export function RelationItemSearchDialog({
 }: Readonly<RelationItemSearchProps & { open: boolean; onOpenChange: (open: boolean) => void }>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-6xl">
         <RelationItemSearch {...props} />
       </DialogContent>
     </Dialog>
@@ -63,14 +66,27 @@ export function RelationItemSearchDialog({
 function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
   const { targetProfile, onCreateNew } = selection;
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
+  // Dialog-local search state (not URL state): it starts fresh each time the dialog opens.
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [currentSort, setCurrentSort] = useState<string | undefined>(undefined);
   // Keyed by id so a selection survives paging: the table only has the current page's items.
   const [selectedItems, setSelectedItems] = useState<ReadonlyMap<string, EntityItem>>(new Map());
 
-  const collection = useEntityItemCollection(
-    pageUrl !== undefined
-      ? { url: pageUrl, profileEntity: targetProfile }
-      : { profileEntity: targetProfile },
-  );
+  const { collection, toolbarActions, filterDialog, tableProps } = useEntityItemCollectionSearch({
+    profile: targetProfile,
+    pageUrl,
+    onPageChange: setPageUrl,
+    filters,
+    onFiltersChange: handleFiltersChange,
+    currentSort,
+    onSortChange: setCurrentSort,
+  });
+
+  // A filter change starts a new search, so the remembered page cursor no longer applies.
+  function handleFiltersChange(next: Record<string, string>) {
+    setFilters(next);
+    setPageUrl(undefined);
+  }
 
   function handleSelectionChange(nextIds: ReadonlySet<string>) {
     setSelectedItems((prev) => {
@@ -106,6 +122,13 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
           </Button>
         )}
       </DialogHeader>
+      <EntitySearchBar
+        profileEntity={targetProfile}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        currentSort={currentSort}
+        actions={toolbarActions}
+      />
       {selection.linkError && <ProblemAlert model={toProblemDisplayModel(selection.linkError)} />}
       {selection.multiple && (
         <>
@@ -124,6 +147,7 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
           </div>
         </>
       )}
+
       {collection.isPending && <Skeleton className="h-40 w-full rounded-md" />}
       {collection.isError && <ProblemAlert model={toProblemDisplayModel(collection.error)} />}
       {collection.isSuccess && (
@@ -134,8 +158,8 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
             collection={collection.data}
             className="max-h-112"
             showRowActions={false}
-            showItemCount={false}
             onPageChange={setPageUrl}
+            {...tableProps}
             {...(selection.multiple
               ? {
                   selectedIds: new Set(selectedItems.keys()),
@@ -145,6 +169,7 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
           />
         </div>
       )}
+      {filterDialog}
     </>
   );
 }

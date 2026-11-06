@@ -29,6 +29,12 @@ export interface UseTypeaheadOptions {
    */
   profileEntity: ProfileEntity;
   /**
+   * Hidden params that narrow a direct property's suggestions to a subset of the collection —
+   * e.g. a to-many relation's `internalRelationParams`. A relation-traversal property queries its
+   * target entity's own collection and is not scoped. Omitted = the whole collection.
+   */
+  scopeParams?: Readonly<Record<string, string>>;
+  /**
    * A search property from `profileEntity.searchTemplate`.
    * Provides the filter parameter name and the attribute to extract from each result.
    * Obtain via `searchTemplate.getSearchPropertiesByType(...)` or `getSearchPropertyByName(...)`.
@@ -97,6 +103,7 @@ export function useTypeahead({
   searchProperty,
   minLength = 2,
   searchValues,
+  scopeParams,
 }: UseTypeaheadOptions) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 250);
@@ -156,7 +163,10 @@ export function useTypeahead({
       : undefined;
 
   const request = collectionSearchValues
-    ? targetProfileEntity.searchEntityRequest(collectionSearchValues)
+    ? targetProfileEntity.searchEntityRequest(
+        collectionSearchValues,
+        isRelation ? undefined : scopeParams,
+      )
     : null;
   const url = request?.url ?? "";
 

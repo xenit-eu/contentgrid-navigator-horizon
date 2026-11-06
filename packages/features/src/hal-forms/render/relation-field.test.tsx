@@ -49,6 +49,14 @@ function targetProfileJson(name: string, profileUrl: string, collectionUrl: stri
     _embedded: {
       "blueprint:attribute": [
         {
+          name: "id",
+          title: "ID",
+          type: "string",
+          readOnly: true,
+          _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+          _links: {},
+        },
+        {
           name: "name",
           title: "Name",
           type: "string",

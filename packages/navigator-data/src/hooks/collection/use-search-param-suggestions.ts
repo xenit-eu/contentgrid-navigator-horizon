@@ -38,6 +38,13 @@ export interface UseSearchParamSuggestionsOptions {
    * items of this list would match". `undefined` starts from the template's own empty values.
    */
   readonly searchValues: HalFormValues<SearchRequestSpec> | undefined;
+  /**
+   * Hidden params that narrow every count (and direct-parameter suggestion) request to a subset of
+   * the collection — e.g. a to-many relation's `internalRelationParams`, so the bar only suggests
+   * and counts the linked items. A relation parameter's suggestions come from its target entity's
+   * own collection and are not scoped. Omitted = the whole collection.
+   */
+  readonly scopeParams?: Readonly<Record<string, string>>;
   /** Minimum trimmed query length before anything is requested. Defaults to 1. */
   readonly minLength?: number;
   /** Maximum suggestions per parameter. Defaults to 10. */
@@ -100,6 +107,7 @@ export function useSearchParamSuggestions({
   requests,
   query,
   searchValues,
+  scopeParams,
   minLength = 1,
   limit = 10,
 }: UseSearchParamSuggestionsOptions): {
@@ -126,10 +134,11 @@ export function useSearchParamSuggestions({
           profileEntity,
           profiles,
           searchValues,
+          scopeParams,
           active ? debouncedQuery : undefined,
         ),
       ),
-    [requests, profileEntity, profiles, searchValues, active, debouncedQuery],
+    [requests, profileEntity, profiles, searchValues, scopeParams, active, debouncedQuery],
   );
 
   const requestQuery = (profile: ProfileEntity, url: string | undefined, name: string) => ({
@@ -211,6 +220,7 @@ function planRequest(
   profileEntity: ProfileEntity,
   profiles: readonly ProfileEntity[],
   searchValues: HalFormValues<SearchRequestSpec> | undefined,
+  scopeParams: Readonly<Record<string, string>> | undefined,
   query: string | undefined,
 ): Plan {
   const name = searchProperty.property.name;
@@ -222,7 +232,7 @@ function planRequest(
   const base = searchValues ?? createValues(searchTemplate.template);
   let countUrl: string;
   try {
-    countUrl = profileEntity.searchEntityRequest(base.withValue(name, value)).url;
+    countUrl = profileEntity.searchEntityRequest(base.withValue(name, value), scopeParams).url;
   } catch {
     // A parameter this hook does not support (e.g. a multi-valued one) is left idle rather than
     // breaking the caller's render.
