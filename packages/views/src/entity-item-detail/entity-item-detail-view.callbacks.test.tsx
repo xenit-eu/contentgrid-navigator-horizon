@@ -2,16 +2,32 @@
  * The view's wiring of the item feature's callbacks. `EntityItemAutoVariation` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
  * view does with them: relation clicks and "create" go to the navigation object, relation
- * problems open the dialog, and a finished delete opens the item's collection.
+ * problems open the dialog, and a finished delete opens the item's collection. The delete button
+ * is stubbed too; for content focus the view draws it in the toolbar.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
+const resolveEntityItemVariation = vi.hoisted(() =>
+  vi.fn((): "attribute-focus" | "content-focus" => "attribute-focus"),
+);
+
+beforeEach(() => {
+  resolveEntityItemVariation.mockReturnValue("attribute-focus");
+});
+
+vi.mock("@contentgrid/features/entity-item-delete", () => ({
+  DeleteEntityItemButton: (props: { label?: string; onDeleted: () => void }) => (
+    <button onClick={props.onDeleted}>{`toolbar-${props.label}`}</button>
+  ),
+}));
+
 vi.mock("@contentgrid/features/entity-item", () => ({
   entityItemDetailPadding: () => true,
+  resolveEntityItemVariation,
   // The breadcrumbs draw the loaded item with it.
   EntityItemReference: () => <span>item-reference</span>,
   EntityItemAutoVariation: (props: {
@@ -74,6 +90,24 @@ describe("EntityItemDetailView — feature callbacks", () => {
     render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await userEvent.click(await screen.findByText("deleted"));
+
+    expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
+  });
+
+  it("leaves Delete to the variation for attribute focus", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+
+    await screen.findByText("deleted");
+    expect(screen.queryByText("toolbar-Delete")).not.toBeInTheDocument();
+  });
+
+  it("draws Delete in the toolbar for content focus, opening the collection after a delete", async () => {
+    resolveEntityItemVariation.mockReturnValue("content-focus");
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByText("toolbar-Delete"));
 
     expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
   });
