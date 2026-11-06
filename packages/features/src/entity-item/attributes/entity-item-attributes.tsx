@@ -51,8 +51,8 @@ function AuditTimelineEntry({
  * two-entry timeline (created date + creator, then modified date +
  * modifier), boolean attributes as a row of chips below that, then a simple
  * label/value table for every attribute — booleans included, rendered via
- * `AttributeValueRenderer`'s `"table"` variant (plain "True"/"False"/"—" text
- * there). Purely presentational: it reads the resolved `EntityItem` accessor
+ * `AttributeValueRenderer`'s `"attribute-table"` variant (plain "True"/"False"/"—" text
+ * there; string sets as one chip per value). Purely presentational: it reads the resolved `EntityItem` accessor
  * and renders it — it fetches nothing itself.
  */
 export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProps>) {
@@ -91,7 +91,7 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
               <TableRow key={attr.value.name}>
                 <TableCell className="text-muted-foreground font-medium">{label}</TableCell>
                 <TableCell className="w-full">
-                  <AttributeValueRenderer attr={attr} variant="table" />
+                  <AttributeValueRenderer attr={attr} variant="attribute-table" />
                 </TableCell>
               </TableRow>
             ))}

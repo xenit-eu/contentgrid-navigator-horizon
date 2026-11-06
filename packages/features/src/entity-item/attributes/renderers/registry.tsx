@@ -8,11 +8,13 @@ import { ModifiedByAttributeRenderer } from "./modified-by-attribute-renderer";
 import { ModifiedDateAttributeRenderer } from "./modified-date-attribute-renderer";
 import { NumberAttributeRenderer } from "./number-attribute-renderer";
 import { StringAttributeRenderer } from "./string-attribute-renderer";
+import { StringSetAttributeRenderer } from "./string-set-attribute-renderer";
 import { UnknownAttributeRenderer } from "./unknown-attribute-renderer";
 
 export interface AttributeRendererComponents {
   readonly boolean: typeof BooleanAttributeRenderer;
   readonly string: typeof StringAttributeRenderer;
+  readonly stringSet: typeof StringSetAttributeRenderer;
   readonly number: typeof NumberAttributeRenderer;
   readonly date: typeof DateAttributeRenderer;
   readonly datetime: typeof DateTimeAttributeRenderer;
@@ -27,6 +29,7 @@ export interface AttributeRendererComponents {
 export const defaultAttributeRendererComponents: AttributeRendererComponents = {
   boolean: BooleanAttributeRenderer,
   string: StringAttributeRenderer,
+  stringSet: StringSetAttributeRenderer,
   number: NumberAttributeRenderer,
   date: DateAttributeRenderer,
   datetime: DateTimeAttributeRenderer,
