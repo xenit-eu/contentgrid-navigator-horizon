@@ -14,7 +14,7 @@ import {
   ALL_ATTRIBUTE_ITEM_URL,
   makeAllAttributeItem,
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
-import { server } from "../../../test-setup";
+import { server } from "../../test-setup";
 import { DeleteEntityItemButton } from "./delete-entity-item-button";
 
 const noopSupplier: AuthenticationTokenSupplier = async () => null;

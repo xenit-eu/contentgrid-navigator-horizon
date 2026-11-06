@@ -1,7 +1,7 @@
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
+import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
-import { DeleteEntityItemButton } from "../../delete/delete-entity-item-button";
 import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
 import { RelationToManySection } from "../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../relations/relation-to-one-section";
@@ -44,7 +44,9 @@ export function EntityItemAttributeFocus({
               onEdit={() => itemContext.setIsEditing(true)}
             />
           )}
-          {onDeleted && <DeleteEntityItemButton item={item} onDeleted={onDeleted} />}
+          {onDeleted && !itemContext.isEditing && (
+            <DeleteEntityItemButton item={item} onDeleted={onDeleted} />
+          )}
         </div>
       </div>
 

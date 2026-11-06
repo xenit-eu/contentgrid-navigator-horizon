@@ -21,8 +21,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@contentgrid/ui";
-import { ProblemAlert } from "../../problem-details";
-import { EntityItemReference } from "../variations/item-reference/entity-item-reference";
+// Import from the specific file, we'd get circular imports when importing from "../entity-item"
+import { EntityItemReference } from "../entity-item/variations/item-reference/entity-item-reference";
+import { ProblemAlert } from "../problem-details";
 
 export interface DeleteEntityItemButtonProps {
   readonly item: EntityItem;
