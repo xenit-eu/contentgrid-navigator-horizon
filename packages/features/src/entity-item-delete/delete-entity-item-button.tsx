@@ -78,17 +78,19 @@ export function DeleteEntityItemButton({
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <TooltipProvider>
-        <Tooltip open={label ? false : undefined}>
-          <TooltipTrigger asChild>
-            <AlertDialogTrigger asChild>
-              {/* No onclick, that's what the wrapping AlertDialogTrigger is for */}
-              {label ? (
-                <Button type="button" variant="destructive" size="sm">
-                  <TrashIcon />
-                  {label}
-                </Button>
-              ) : (
+      {/* No onclick on the buttons, that's what the wrapping AlertDialogTrigger is for */}
+      {label ? (
+        <AlertDialogTrigger asChild>
+          <Button type="button" variant="destructive" size="sm">
+            <TrashIcon />
+            {label}
+          </Button>
+        </AlertDialogTrigger>
+      ) : (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
                 <Button
                   type="button"
                   variant="destructive"
@@ -98,12 +100,12 @@ export function DeleteEntityItemButton({
                 >
                   <TrashIcon className="size-3.5" />
                 </Button>
-              )}
-            </AlertDialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Delete</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Delete</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>Delete item</AlertDialogTitle>
