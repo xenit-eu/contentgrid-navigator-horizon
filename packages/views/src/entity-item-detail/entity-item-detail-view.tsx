@@ -3,7 +3,9 @@ import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
+  resolveEntityItemVariation,
 } from "@contentgrid/features/entity-item";
+import { DeleteEntityItemButton } from "@contentgrid/features/entity-item-delete";
 import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
@@ -35,6 +37,17 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
+  const deleteAction =
+    result.status === "success" &&
+    resolveEntityItemVariation(result.profileEntity) === "content-focus" ? (
+      <DeleteEntityItemButton
+        item={result.entityItem}
+        label={toolbar === false ? undefined : "Delete"}
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+        onRefresh={() => void result.refetch()}
+      />
+    ) : null;
+
   let content: ReactNode;
   if (result.status === "not-found") {
     content = <ErrorPage model={toProblemDisplayModel(describeTarget(target))} />;
@@ -60,6 +73,8 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         onRequiredRelationClick={(affectedRelation) =>
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+        actions={toolbar === false ? deleteAction : undefined}
       />
     );
   } else {
@@ -88,7 +103,11 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
           entityItem={result.status === "success" ? result.entityItem : undefined}
         />
       }
-      actions={toolbar?.actions}
+      actions={
+        <>
+          {toolbar?.actions} {deleteAction}
+        </>
+      }
       contentPadded={contentPadding}
     >
       {content}
