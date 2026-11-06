@@ -31,6 +31,7 @@ import {
   findActivelyFilteredAttributeNames,
   findInvalidFilterKeys,
 } from "../search/filter-properties";
+import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 
@@ -56,6 +57,8 @@ export interface EntityItemCollectionBrowserProps {
   readonly currentSort?: string;
   /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
   readonly onSortChange?: (sort: string | undefined) => void;
+  /** Fired when the user clicks create; offered when the collection has no items. */
+  readonly onCreateItemClick?: () => void;
 }
 
 /**
@@ -85,6 +88,7 @@ export function EntityItemCollectionBrowser({
   onFiltersChange,
   currentSort,
   onSortChange,
+  onCreateItemClick,
 }: Readonly<EntityItemCollectionBrowserProps>) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
@@ -303,9 +307,20 @@ export function EntityItemCollectionBrowser({
     </>
   );
 
+  // Start screen only for an unfiltered first page with no items; it replaces the search bar and
+  // the table, as there is nothing to search, filter or sort. A filtered search keeps both so its
+  // filters stay reachable. Placeholder data is the previous search's result, so it
+  // can't tell whether this search is empty.
+  const isEmptyCollection =
+    collection.isSuccess &&
+    !collection.isPlaceholderData &&
+    collection.data.items.length === 0 &&
+    !collection.data.hasPrevious &&
+    activeFilterCount === 0;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {onFiltersChange && (
+      {onFiltersChange && !isEmptyCollection && (
         <EntitySearchBar
           className="shrink-0 p-4"
           profileEntity={profile}
@@ -321,7 +336,11 @@ export function EntityItemCollectionBrowser({
 
         {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
 
-        {collection.isSuccess && (
+        {isEmptyCollection && (
+          <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
+        )}
+
+        {collection.isSuccess && !isEmptyCollection && (
           <EntityItemCollectionTable
             className="h-full"
             profile={profile}

@@ -162,6 +162,9 @@ function CollectionBody({
       onSortChange={(sort) => update({ ...current, sort, pageUrl: undefined })}
       onPageChange={(pageUrl) => update({ ...current, pageUrl })}
       onEntityItemClick={(item) => navigation.openItem(profileEntity.name, item.id)}
+      onCreateItemClick={() =>
+        navigation.openCreateItem(profileEntity.name, { openInNewTab: true })
+      }
     />
   );
 }
