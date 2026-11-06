@@ -57,8 +57,8 @@ export interface EntityItemCollectionBrowserProps {
   readonly currentSort?: string;
   /** Fired when the user changes or clears the sort; receives the next sort value (or `undefined`). */
   readonly onSortChange?: (sort: string | undefined) => void;
-  /** Opens the create form; offered when the collection has no items. */
-  readonly onCreateItem?: () => void;
+  /** Fired when the user clicks create; offered when the collection has no items. */
+  readonly onCreateItemClick?: () => void;
 }
 
 /**
@@ -88,7 +88,7 @@ export function EntityItemCollectionBrowser({
   onFiltersChange,
   currentSort,
   onSortChange,
-  onCreateItem,
+  onCreateItemClick,
 }: Readonly<EntityItemCollectionBrowserProps>) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
@@ -337,7 +337,7 @@ export function EntityItemCollectionBrowser({
         {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
 
         {isEmptyCollection && (
-          <EntityItemCollectionEmptyState profile={profile} onCreateItem={onCreateItem} />
+          <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
         )}
 
         {collection.isSuccess && !isEmptyCollection && (

@@ -171,7 +171,7 @@ function renderBrowser(props: {
   pageUrl?: string;
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
-  onCreateItem?: () => void;
+  onCreateItemClick?: () => void;
 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
@@ -498,7 +498,7 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
       "item",
     );
 
-    renderBrowser({ profile, onCreateItem: vi.fn() });
+    renderBrowser({ profile, onCreateItemClick: vi.fn() });
 
     expect(
       await screen.findByRole("button", { name: `Create ${profile.singularName}` }),
@@ -509,7 +509,7 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     setupEmptyCollectionHandler();
     const profile = makeItemProfile();
 
-    renderBrowser({ profile, onCreateItem: vi.fn() });
+    renderBrowser({ profile, onCreateItemClick: vi.fn() });
 
     expect(await screen.findByRole("heading", emptyStateHeading(profile))).toBeInTheDocument();
     expect(
