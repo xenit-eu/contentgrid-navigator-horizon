@@ -1,7 +1,8 @@
+import type { PlainAttributeValue } from "@contentgrid/navigator-data";
 import { AttributeValue } from "@contentgrid/ui";
 
 export interface StringAttributeRendererProps {
-  readonly value: string | number | boolean | null;
+  readonly value: PlainAttributeValue;
   readonly wrap?: boolean;
   /** Hard-truncates the value to this many characters (plus an ellipsis) before rendering. */
   readonly maxCharLength?: number;
