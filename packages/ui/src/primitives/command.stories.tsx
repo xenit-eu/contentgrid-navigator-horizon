@@ -6,7 +6,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "./command";
 
 const meta = {
@@ -28,7 +27,6 @@ export const Default: Story = {
           <CommandItem>Published</CommandItem>
           <CommandItem>Archived</CommandItem>
         </CommandGroup>
-        <CommandSeparator />
         <CommandGroup heading="Other">
           <CommandItem disabled>Deleted</CommandItem>
         </CommandGroup>
