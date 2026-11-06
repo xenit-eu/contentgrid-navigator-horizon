@@ -69,7 +69,8 @@ save of a stale version is refused (412). `noRefetch` is the default when the ca
 ## Rules
 
 - Imports: `@contentgrid/ui`, `@contentgrid/navigator-data`, `../../hal-forms`,
-  `../../problem-details`, `../../unsaved-changes-guard`, `../../layout` (`RightSidePanelLayout`).
+  `../../problem-details`, `../../unsaved-changes-guard`, `../../layout` (`RightSidePanelLayout`),
+  `../../entity-item-delete` (`DeleteEntityItemButton`).
   Never a Layer-1 `@contentgrid/*` package.
 - Variations receive the loaded item and callbacks only — no toolbar, breadcrumb or link render
   props, and no navigation of their own (ADR-018).
