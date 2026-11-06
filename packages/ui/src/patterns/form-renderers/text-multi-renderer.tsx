@@ -18,6 +18,11 @@ export interface TextMultiRendererProps {
   readonly onBlur?: () => void;
 }
 
+function placeholderFor(count: number, maxItems: number): string {
+  if (count >= maxItems) return `Maximum of ${maxItems} values`;
+  return count === 0 ? "Type a value and press Enter" : "Add another…";
+}
+
 /**
  * Free-text multi-value field (a multi-valued property without predefined options): every value is
  * a removable chip, followed by an input. Enter adds the typed value; pasting several lines adds
@@ -95,16 +100,14 @@ export function TextMultiRenderer({
       description={description}
       error={error}
     >
-      {/* Clicking anywhere in the box focuses the input, like a single text field. */}
+      {/* The input grows to fill the rest of the box, so a click on the empty part lands in it. */}
       <div
         data-slot="text-multi"
         data-invalid={!!error || undefined}
-        onClick={() => inputRef.current?.focus()}
         className={cn(
           "border-input dark:bg-input/30 flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border bg-transparent px-1.5 py-1 text-sm shadow-xs transition-[color,box-shadow]",
           "focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]",
           "data-[invalid]:border-destructive data-[invalid]:ring-destructive/20 dark:data-[invalid]:ring-destructive/40",
-          readOnly && "cursor-not-allowed opacity-50",
         )}
       >
         {values.map((item) => (
@@ -125,13 +128,7 @@ export function TextMultiRenderer({
             type="text"
             value={draft}
             disabled={atMax}
-            placeholder={
-              atMax
-                ? `Maximum of ${maxItems} values`
-                : values.length === 0
-                  ? "Type a value and press Enter"
-                  : "Add another…"
-            }
+            placeholder={placeholderFor(values.length, maxItems)}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
