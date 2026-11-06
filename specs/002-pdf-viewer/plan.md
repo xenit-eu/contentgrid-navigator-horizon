@@ -174,7 +174,7 @@ and deleting the wrapper.
    self-hosted wasm and disabled font fallback; `PdfViewer` with document-manager/viewport/scroll/render/
    zoom/search/print/selection plugins; toolbar (page nav + indicator + jump, zoom presets + fit modes,
    search popover with count/prev/next/Enter/Shift+Enter/match-case/whole-word, print, download
-   callback, fullscreen); error boundary; protected-document and load-error callbacks; stories for each
+   callback, fullscreen); error boundary; password prompt for a protected document; load-error callback; stories for each
    state + `play()` per control; a11y pass; `js-in-pdf.pdf` story asserting no dialog/side effect.
 4. **Feature `entity-item-content-focus`**: layout, attribute selector, preview panel (lazy viewer,
    `useContentPreview`, `useDownloadContent` for Download, object-URL lifecycle), preview frame states
