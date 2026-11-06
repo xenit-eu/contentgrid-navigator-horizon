@@ -508,3 +508,75 @@ describe("resolveHalFormsFields — redundant field suppression (search)", () =>
     expect(amount).not.toHaveProperty("hideLabel");
   });
 });
+
+describe("resolveHalFormsFields multi-valued properties", () => {
+  // The two shapes the server sends for a string-set attribute: with and without allowed values.
+  const profileJson = {
+    ...contactProfileJson,
+    _templates: {
+      ...contactProfileJson._templates,
+      "create-form": {
+        ...contactProfileJson._templates["create-form"],
+        properties: [
+          {
+            name: "non_constrained",
+            options: { maxItems: 100, minItems: 0 },
+            prompt: "Non constrained",
+            type: "text",
+          },
+          {
+            name: "constrained",
+            options: { inline: ["a", "b", "c", "d"], maxItems: 100, minItems: 0 },
+            prompt: "Constrained",
+            type: "text",
+          },
+          { name: "unlimited", options: { minItems: 1 }, type: "text" },
+          { name: "single", options: { maxItems: 1 }, type: "text" },
+        ],
+      },
+    },
+  };
+
+  function fieldNamed(name: string) {
+    const profile = makeProfileEntity(profileJson, PROFILE_URL, "contact");
+    const rawTemplate = resolveTemplate(
+      profileJson as unknown as Parameters<typeof resolveTemplate>[0],
+      "create-form",
+    )!;
+    const { fields } = resolveHalFormsFields(new CreateHalFormTemplate(rawTemplate, profile));
+    return fields.find((field) => field.name === name);
+  }
+
+  it("maps options without inline or remote choices to a free-text text-multi field", () => {
+    const field = fieldNamed("non_constrained");
+    expect(field?.kind).toBe("text-multi");
+    expect(field?.label).toBe("Non constrained");
+    if (field?.kind === "text-multi") {
+      expect(field.maxItems).toBe(100);
+      expect(field.minItems).toBe(0);
+    }
+  });
+
+  it("leaves maxItems undefined when the property sets no maximum", () => {
+    const field = fieldNamed("unlimited");
+    expect(field?.kind).toBe("text-multi");
+    if (field?.kind === "text-multi") {
+      expect(field.maxItems).toBeUndefined();
+      expect(field.minItems).toBe(1);
+    }
+  });
+
+  it("maps inline options on a multi-valued property to a multi-valued enum field", () => {
+    const field = fieldNamed("constrained");
+    expect(field?.kind).toBe("enum");
+    if (field?.kind === "enum") {
+      expect(field.multiValue).toBe(true);
+      expect(field.maxItems).toBe(100);
+      expect(field.options.map((option) => option.value)).toEqual(["a", "b", "c", "d"]);
+    }
+  });
+
+  it("maps a single-valued property without choices to a plain text field", () => {
+    expect(fieldNamed("single")?.kind).toBe("text");
+  });
+});

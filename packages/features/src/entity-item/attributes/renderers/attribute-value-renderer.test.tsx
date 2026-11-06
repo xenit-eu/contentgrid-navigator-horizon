@@ -11,6 +11,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { AttributeValueRenderer } from "./attribute-value-renderer";
 import type { AttributeRendererComponents } from "./registry";
+import type { AttributeRendererVariant } from "./variant";
 
 const DUMMY_LINK = {} as ConstructorParameters<typeof EntityItemAttributeContent>[2];
 
@@ -33,8 +34,13 @@ function makeProfileAttribute(overrides: Partial<ProfileAttribute> = {}): Profil
 // module `AttributeValueRenderer` reads its components from.
 const { spyRenderers } = vi.hoisted(() => {
   const spyRenderers: AttributeRendererComponents = {
-    boolean: ({ value, label }) => <span data-testid="r-boolean">{`${value}:${label}`}</span>,
+    boolean: ({ value, label, variant }) => (
+      <span data-testid="r-boolean">{`${value}:${label}:${variant}`}</span>
+    ),
     string: ({ value }) => <span data-testid="r-string">{String(value)}</span>,
+    stringSet: ({ value, variant, maxCharLength }) => (
+      <span data-testid="r-stringSet">{`${JSON.stringify(value)}:${variant}:${maxCharLength}`}</span>
+    ),
     number: ({ value, type }) => <span data-testid="r-number">{`${value}:${type}`}</span>,
     date: ({ value }) => <span data-testid="r-date">{String(value)}</span>,
     datetime: ({ value }) => <span data-testid="r-datetime">{String(value)}</span>,
@@ -56,7 +62,7 @@ vi.mock("./registry", () => ({
   defaultAttributeRendererComponents: spyRenderers,
 }));
 
-function renderAttr(attr: EntityItemAttribute, variant?: "default" | "item-reference" | "table") {
+function renderAttr(attr: EntityItemAttribute, variant?: AttributeRendererVariant) {
   return render(<AttributeValueRenderer attr={attr} variant={variant} />);
 }
 
@@ -212,6 +218,66 @@ describe("AttributeValueRenderer", () => {
       profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.datetime }),
     });
     expect(screen.getByTestId("r-datetime")).toHaveTextContent("2021-01-01T00:00:00.000Z");
+  });
+
+  it("dispatches string_set attributes to the stringSet renderer", () => {
+    renderAttr({
+      value: new EntityItemAttributePlain("tags", ["urgent", "paid"]),
+      profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.stringSet }),
+    });
+    expect(screen.getByTestId("r-stringSet")).toHaveTextContent('["urgent","paid"]');
+  });
+
+  it("passes the variant and maxCharLength through to the stringSet renderer", () => {
+    render(
+      <AttributeValueRenderer
+        attr={{
+          value: new EntityItemAttributePlain("tags", ["urgent"]),
+          profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.stringSet }),
+        }}
+        variant="table"
+        maxCharLength={10}
+      />,
+    );
+    expect(screen.getByTestId("r-stringSet")).toHaveTextContent('["urgent"]:table:10');
+  });
+
+  it("passes the attribute-table variant through to the stringSet renderer", () => {
+    renderAttr(
+      {
+        value: new EntityItemAttributePlain("tags", ["urgent"]),
+        profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.stringSet }),
+      },
+      "attribute-table",
+    );
+    expect(screen.getByTestId("r-stringSet")).toHaveTextContent('["urgent"]:attribute-table:');
+  });
+
+  it("passes the attribute-table variant through to the other renderers", () => {
+    renderAttr(
+      {
+        value: new EntityItemAttributePlain("active", true),
+        profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.boolean }),
+      },
+      "attribute-table",
+    );
+    expect(screen.getByTestId("r-boolean")).toHaveTextContent("true:Yes:attribute-table");
+  });
+
+  it("dispatches a null string_set value to the stringSet renderer", () => {
+    renderAttr({
+      value: new EntityItemAttributePlain("tags", null),
+      profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.stringSet }),
+    });
+    expect(screen.getByTestId("r-stringSet")).toHaveTextContent("null");
+  });
+
+  it("falls back to the string renderer when a string_set value is not a list", () => {
+    renderAttr({
+      value: new EntityItemAttributePlain("tags", "urgent"),
+      profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.stringSet }),
+    });
+    expect(screen.getByTestId("r-string")).toHaveTextContent("urgent");
   });
 
   it("falls back to the string renderer for string-typed attributes", () => {

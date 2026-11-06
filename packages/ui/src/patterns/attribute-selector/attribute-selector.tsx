@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import {
+  BracketsSquareIcon,
   CalendarIcon,
   CaretDownIcon,
   ClockIcon,
@@ -39,6 +40,7 @@ import {
  */
 export type ProfileAttributeOptionType =
   | "string"
+  | "string_set"
   | "long"
   | "double"
   | "boolean"
@@ -69,6 +71,7 @@ export interface ProfileAttributeOption {
 
 const ATTRIBUTE_TYPE_ICONS: Record<ProfileAttributeOptionType, typeof TextAaIcon> = {
   string: TextAaIcon,
+  string_set: BracketsSquareIcon,
   long: HashIcon,
   double: HashIcon,
   boolean: ToggleLeftIcon,
