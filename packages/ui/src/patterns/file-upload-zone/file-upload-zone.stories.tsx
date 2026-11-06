@@ -51,11 +51,12 @@ export const Compact: Story = {
   },
 };
 
-/** A selected file, marked as the selected one of several. */
+/** A picked file, highlighted as the one a preview shows; clicking the file calls `onFileClick`. */
 export const Previewed: Story = {
   args: {
     file: new File(["content"], "invoice.pdf", { type: "application/pdf" }),
     onFileChange: fn(),
+    onFileClick: fn(),
     previewed: true,
   },
 };

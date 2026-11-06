@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -465,6 +465,243 @@ describe("CreateEntityItemContainer", () => {
 
       await vi.waitFor(() => expect(body).toBeDefined());
       expect(body!.has("document")).toBe(false);
+    });
+  });
+
+  describe("file preview", () => {
+    const TWO_FILES_CREATE_FORM = {
+      method: "POST",
+      target: `${API_URL}/invoices`,
+      contentType: "multipart/form-data",
+      properties: [
+        { name: "document", type: "file", prompt: "Document" },
+        { name: "attachment", type: "file", prompt: "Attachment" },
+      ],
+    };
+
+    // A type without a pre-save preview, so the test doesn't load the PDF engine.
+    const textFile = () => new File(["notes"], "notes.txt", { type: "text/plain" });
+
+    // The hidden file inputs, in form order; the field labels point at the drop zones instead.
+    function fileInput(index: number) {
+      return document.querySelectorAll<HTMLInputElement>('input[type="file"]')[index]!;
+    }
+
+    function previewFieldSelector(container: HTMLElement) {
+      return within(container).getByRole("combobox");
+    }
+
+    // jsdom lays nothing out, so every element is 0 px wide and the view is narrow. This makes the
+    // view `wide` (at least `--container-side-by-side`) or not, and `resize` changes it the way
+    // resizing the window or closing the sidebar would.
+    function stubViewWidth(wide: boolean) {
+      let width = wide ? 880 : 879;
+      const callbacks = new Set<ResizeObserverCallback>();
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(private readonly callback: ResizeObserverCallback) {}
+          observe() {
+            callbacks.add(this.callback);
+          }
+          unobserve() {}
+          disconnect() {
+            callbacks.delete(this.callback);
+          }
+        },
+      );
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
+      // jsdom has no default font size in pixels, as a browser has.
+      document.documentElement.style.fontSize = "16px";
+      document.documentElement.style.setProperty("--container-side-by-side", "55rem");
+      return {
+        resize(toWide: boolean) {
+          width = toWide ? 880 : 879;
+          act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
+        },
+      };
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      document.documentElement.style.removeProperty("font-size");
+      document.documentElement.style.removeProperty("--container-side-by-side");
+    });
+
+    it("switches the preview to the file field the user picks a file in", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+
+      await user.upload(fileInput(1), textFile());
+
+      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+      expect(
+        within(preview).getByText("Preview isn't available for text/plain files."),
+      ).toBeInTheDocument();
+    });
+
+    it("shows a PDF that can no longer be read as a file that can't be displayed", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      const unreadablePdf = new File(["%PDF"], "invoice.pdf", { type: "application/pdf" });
+      unreadablePdf.arrayBuffer = () => Promise.reject(new Error("The file could not be read."));
+      await user.upload(fileInput(0), unreadablePdf);
+
+      expect(await within(preview).findByText("This file can't be displayed.")).toBeInTheDocument();
+    });
+
+    it("previews the first file field again after a continuous-create reset", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler(TWO_FILES_CREATE_FORM),
+        createdInvoiceHandler(),
+      );
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      await user.click(screen.getByRole("switch", { name: "Keep creating entities" }));
+      await user.upload(fileInput(1), textFile());
+      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+
+      await user.click(screen.getByRole("button", { name: "Create" }));
+
+      expect(await screen.findByText("Invoice has been successfully created!")).toBeInTheDocument();
+      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+    });
+
+    it("switches the preview to the file field whose file the user clicks; the selector only shows it", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      // A field with a picked file has no file input left, so fill the second field first.
+      await user.upload(fileInput(1), new File(["b"], "annex.txt", { type: "text/plain" }));
+      await user.upload(fileInput(0), new File(["a"], "contract.txt", { type: "text/plain" }));
+      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+
+      await user.click(screen.getByRole("button", { name: /annex\.txt/ }));
+
+      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+      expect(previewFieldSelector(preview)).toBeDisabled();
+      expect(screen.getByRole("button", { name: /annex\.txt/ })).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: /contract\.txt/ })).not.toHaveAttribute(
+        "aria-current",
+      );
+    });
+
+    it("switches the preview to the file field the user focuses", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      await user.click(screen.getByLabelText("Attachment"));
+
+      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+    });
+
+    it("highlights the previewed one of several file fields", async () => {
+      stubViewWidth(true);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      expect(await screen.findByLabelText("Document")).toHaveAttribute("aria-current", "true");
+      expect(screen.getByLabelText("Attachment")).not.toHaveAttribute("aria-current");
+    });
+
+    it("doesn't highlight a form's only file field, nor make its picked file a button", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler({
+          ...TWO_FILES_CREATE_FORM,
+          properties: [{ name: "document", type: "file", prompt: "Document" }],
+        }),
+      );
+      renderForm();
+
+      expect(await screen.findByLabelText("Document")).not.toHaveAttribute("aria-current");
+
+      await user.upload(fileInput(0), textFile());
+      // It is always the one previewed, so clicking it would change nothing.
+      expect(screen.queryByRole("button", { name: /notes\.txt/ })).not.toBeInTheDocument();
+    });
+
+    it("shows a read-only file field's empty preview without a drop zone", async () => {
+      stubViewWidth(true);
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler({
+          ...TWO_FILES_CREATE_FORM,
+          properties: [{ name: "document", type: "file", prompt: "Document", readOnly: true }],
+        }),
+      );
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      expect(within(preview).getByText("No file")).toBeInTheDocument();
+      expect(within(preview).queryByText(/Drop a file here/)).not.toBeInTheDocument();
+    });
+
+    it("opens the preview dialog on the file field whose preview button was clicked", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(false);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      await screen.findByLabelText("Attachment");
+      // In a narrow view the preview is only in the dialog, not also hidden beside the form.
+      expect(screen.queryByRole("complementary", { name: "File preview" })).not.toBeInTheDocument();
+      await user.upload(fileInput(1), textFile());
+      // The file itself is only clickable beside the form; here the button opens the preview.
+      expect(screen.queryByRole("button", { name: /notes\.txt/ })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Preview file" }));
+
+      const dialog = screen.getByRole("dialog", { name: "Preview file" });
+      expect(previewFieldSelector(dialog)).toHaveTextContent("Attachment");
+      // The dialog covers the form, so its selector is the way to switch fields.
+      expect(previewFieldSelector(dialog)).toBeEnabled();
+      expect(
+        within(dialog).getByText("Preview isn't available for text/plain files."),
+      ).toBeInTheDocument();
+    });
+
+    it("closes the preview dialog when the view widens, and doesn't reopen it on narrowing", async () => {
+      const user = userEvent.setup();
+      const viewWidth = stubViewWidth(false);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      await screen.findByLabelText("Attachment");
+      await user.upload(fileInput(1), textFile());
+      await user.click(screen.getByRole("button", { name: "Preview file" }));
+      expect(screen.getByRole("dialog", { name: "Preview file" })).toBeInTheDocument();
+
+      viewWidth.resize(true);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("complementary", { name: "File preview" })).toBeInTheDocument();
+
+      viewWidth.resize(false);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
