@@ -21,7 +21,7 @@ import { DeleteEntityItemButton } from "./delete-entity-item-button";
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 const PROFILE_URL = "https://api.example.contentgrid.com/profile";
 
-function renderButton(item: EntityItem) {
+function renderButton(item: EntityItem, label?: string) {
   const onDeleted = vi.fn();
   const onRefresh = vi.fn();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -32,7 +32,12 @@ function renderButton(item: EntityItem) {
         contentFetch={createContentClient(noopSupplier)}
         profileUrl={PROFILE_URL}
       >
-        <DeleteEntityItemButton item={shownItem} onDeleted={onDeleted} onRefresh={onRefresh} />
+        <DeleteEntityItemButton
+          item={shownItem}
+          onDeleted={onDeleted}
+          onRefresh={onRefresh}
+          label={label}
+        />
         <Toaster />
       </NavigatorDataProvider>
     </QueryClientProvider>
@@ -73,6 +78,17 @@ describe("DeleteEntityItemButton", () => {
 
     await waitFor(() => expect(onDeleted).toHaveBeenCalledOnce());
     expect(ifMatch).toEqual(['"v1"']);
+  });
+
+  it("shows its label as text when it has one", async () => {
+    const user = userEvent.setup();
+    server.use(http.delete(ALL_ATTRIBUTE_ITEM_URL, () => new HttpResponse(null, { status: 204 })));
+    const { onDeleted } = renderButton(makeAllAttributeItem({}, '"v1"'), "Delete");
+
+    expect(screen.getByRole("button", { name: "Delete" })).toHaveTextContent("Delete");
+    await confirmDelete(user);
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledOnce());
   });
 
   it("shows the problem in the dialog when the delete fails, and doesn't call onDeleted", async () => {
