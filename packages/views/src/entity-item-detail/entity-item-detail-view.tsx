@@ -3,7 +3,9 @@ import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
+  resolveEntityItemVariation,
 } from "@contentgrid/features/entity-item";
+import { DeleteEntityItemButton } from "@contentgrid/features/entity-item-delete";
 import { BreadCrumbsToolBarLayout, PageLayout } from "@contentgrid/features/layout";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
@@ -60,7 +62,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         onRequiredRelationClick={(affectedRelation) =>
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
-        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name) }
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
       />
     );
   } else {
@@ -69,6 +71,15 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
 
   const profileEntity = result.status === "not-found" ? undefined : result.profileEntity;
   const contentPadding = profileEntity ? entityItemDetailPadding(profileEntity) : true;
+  const deleteAction =
+    result.status === "success" &&
+    resolveEntityItemVariation(result.profileEntity) === "content-focus" ? (
+      <DeleteEntityItemButton
+        item={result.entityItem}
+        label="Delete"
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+      />
+    ) : null;
 
   if (toolbar === false) {
     return (
@@ -89,7 +100,11 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
           entityItem={result.status === "success" ? result.entityItem : undefined}
         />
       }
-      actions={toolbar?.actions}
+      actions={
+        <>
+          {toolbar?.actions} {deleteAction}
+        </>
+      }
       contentPadded={contentPadding}
     >
       {content}
