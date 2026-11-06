@@ -5,7 +5,8 @@
  * problems open the dialog, and a finished delete opens the item's collection. The delete button
  * is stubbed too; for content focus the view draws it in the toolbar.
  */
-import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
@@ -21,7 +22,7 @@ beforeEach(() => {
 
 vi.mock("@contentgrid/features/entity-item-delete", () => ({
   DeleteEntityItemButton: (props: { label?: string; onDeleted: () => void }) => (
-    <button onClick={props.onDeleted}>{`toolbar-${props.label}`}</button>
+    <button onClick={props.onDeleted}>{`delete-${props.label ?? "icon-only"}`}</button>
   ),
 }));
 
@@ -37,8 +38,10 @@ vi.mock("@contentgrid/features/entity-item", () => ({
     onBlindRelationOverwriteClick?: (info: { existingItem?: string; newItem?: string }) => void;
     onRequiredRelationClick?: (affectedRelation: string) => void;
     onDeleted?: () => void;
+    actions?: ReactNode;
   }) => (
     <div>
+      <div data-testid="variation-actions">{props.actions}</div>
       <button onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}>
         relation-click
       </button>
@@ -99,7 +102,7 @@ describe("EntityItemDetailView — feature callbacks", () => {
     render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
     await screen.findByText("deleted");
-    expect(screen.queryByText("toolbar-Delete")).not.toBeInTheDocument();
+    expect(screen.queryByText("delete-Delete")).not.toBeInTheDocument();
   });
 
   it("draws Delete in the toolbar for content focus, opening the collection after a delete", async () => {
@@ -107,8 +110,23 @@ describe("EntityItemDetailView — feature callbacks", () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
 
-    await userEvent.click(await screen.findByText("toolbar-Delete"));
+    await userEvent.click(await screen.findByText("delete-Delete"));
 
+    expect(screen.getByTestId("variation-actions")).toBeEmptyDOMElement();
+    expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
+  });
+
+  it("hands content focus an icon-only Delete through its actions when there is no toolbar", async () => {
+    resolveEntityItemVariation.mockReturnValue("content-focus");
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} toolbar={false} />, {
+      wrapper: Wrapper,
+    });
+
+    const actions = await screen.findByTestId("variation-actions");
+    await userEvent.click(within(actions).getByText("delete-icon-only"));
+
+    expect(screen.queryByText("delete-Delete")).not.toBeInTheDocument();
     expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
   });
 
