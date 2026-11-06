@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FIRST_PAGE_PAINT_TIMEOUT_MS,
   PdfViewerErrorBoundary,
+  PdfViewerPasswordForm,
   PdfViewerStatusMessage,
   useFirstPagePainted,
 } from "./pdf-viewer";
@@ -575,7 +576,7 @@ describe("PdfViewerErrorBoundary", () => {
 // ---------------------------------------------------------------------------
 
 describe("PdfViewerStatusMessage aria-busy", () => {
-  it("is busy while idle or opening, and not once protected or invalid", () => {
+  it("is busy while idle or opening, and not once invalid", () => {
     const { container, rerender } = render(
       <PdfViewerStatusMessage documentState="idle" labels={DEFAULT_PDF_VIEWER_LABELS} />,
     );
@@ -584,12 +585,6 @@ describe("PdfViewerStatusMessage aria-busy", () => {
     rerender(<PdfViewerStatusMessage documentState="opening" labels={DEFAULT_PDF_VIEWER_LABELS} />);
     expect(container.firstElementChild).toHaveAttribute("aria-busy", "true");
     expect(screen.getByText(DEFAULT_PDF_VIEWER_LABELS.openingDocument)).toBeInTheDocument();
-
-    rerender(
-      <PdfViewerStatusMessage documentState="protected" labels={DEFAULT_PDF_VIEWER_LABELS} />,
-    );
-    expect(container.firstElementChild).toHaveAttribute("aria-busy", "false");
-    expect(screen.getByText(DEFAULT_PDF_VIEWER_LABELS.protectedDocument)).toBeInTheDocument();
 
     rerender(<PdfViewerStatusMessage documentState="invalid" labels={DEFAULT_PDF_VIEWER_LABELS} />);
     expect(container.firstElementChild).toHaveAttribute("aria-busy", "false");
@@ -601,6 +596,31 @@ describe("PdfViewerStatusMessage aria-busy", () => {
       <PdfViewerStatusMessage documentState="ready" labels={DEFAULT_PDF_VIEWER_LABELS} />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("PdfViewerPasswordForm", () => {
+  it("flags the password input as incorrect only once a password was rejected", () => {
+    const { rerender } = render(
+      <PdfViewerPasswordForm
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+        passwordRejected={false}
+        onUnlock={vi.fn()}
+      />,
+    );
+    const input = screen.getByLabelText(DEFAULT_PDF_VIEWER_LABELS.passwordInput);
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    rerender(
+      <PdfViewerPasswordForm
+        labels={DEFAULT_PDF_VIEWER_LABELS}
+        passwordRejected
+        onUnlock={vi.fn()}
+      />,
+    );
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(DEFAULT_PDF_VIEWER_LABELS.passwordIncorrect);
   });
 });
 
@@ -991,6 +1011,38 @@ describe("useDocumentLifecycle", () => {
     expect(result.current.documentState).toBe("protected");
   });
 
+  it("reopens a protected document with the entered password, and flags a wrong one", () => {
+    const retryDocument = vi.fn().mockReturnValue({ wait: vi.fn() });
+    mockDocumentManagerCapability.mockReturnValue({
+      provides: { openDocumentBuffer, closeDocument, retryDocument },
+    });
+    openDocumentBuffer.mockReturnValue(taskOf({ documentId: "doc-2" }));
+    mockDocumentState.mockReturnValue({
+      id: "doc-2",
+      status: "error",
+      errorCode: PdfErrorCode.Password,
+      document: null,
+    });
+    const { result, rerender } = renderHook(() =>
+      useDocumentLifecycle({ bytes: TEST_BYTES, filename: "a.pdf" }),
+    );
+    expect(result.current.passwordRejected).toBe(false);
+
+    act(() => result.current.unlock("secret"));
+    expect(retryDocument).toHaveBeenCalledWith("doc-2", { password: "secret" });
+
+    mockDocumentState.mockReturnValue({
+      id: "doc-2",
+      status: "error",
+      errorCode: PdfErrorCode.Password,
+      passwordProvided: true,
+      document: null,
+    });
+    rerender();
+    expect(result.current.documentState).toBe("protected");
+    expect(result.current.passwordRejected).toBe(true);
+  });
+
   it("maps a non-password error code to the invalid phase", async () => {
     openDocumentBuffer.mockReturnValue(taskOf({ documentId: "doc-3" }));
 
@@ -1007,7 +1059,7 @@ describe("useDocumentLifecycle", () => {
     expect(result.current.documentState).toBe("invalid");
   });
 
-  it("maps a rejected open task to invalid (or protected for a password reason)", async () => {
+  it("maps a rejected open task to invalid", async () => {
     openDocumentBuffer.mockReturnValue(
       failedTaskOf({ code: PdfErrorCode.WrongFormat, message: "nope" }),
     );
