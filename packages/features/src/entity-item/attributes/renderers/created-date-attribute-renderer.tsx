@@ -3,12 +3,13 @@ import type { ProfileAttributeType } from "@contentgrid/navigator-data";
 import { AttributeValue } from "@contentgrid/ui";
 import { formatAbsoluteDate } from "./format-date-value";
 import { formatRelativeOrAbsoluteDate } from "./format-relative-date";
+import { type AttributeRendererVariant, isTableVariant } from "./variant";
 
 export interface CreatedDateAttributeRendererProps {
   readonly value: string | null;
   readonly label: string;
   readonly wrap?: boolean;
-  readonly variant?: "default" | "item-reference" | "table";
+  readonly variant?: AttributeRendererVariant;
   readonly type?: ProfileAttributeType.date | ProfileAttributeType.datetime;
 }
 
@@ -28,12 +29,11 @@ export function CreatedDateAttributeRenderer({
     return <AttributeValue>{value}</AttributeValue>;
   }
 
-  const text =
-    variant === "table"
-      ? formatAbsoluteDate(parsed, type)
-      : variant === "item-reference"
-        ? formatRelativeOrAbsoluteDate(parsed)
-        : `${label}: ${formatRelativeOrAbsoluteDate(parsed)}`;
+  const text = isTableVariant(variant)
+    ? formatAbsoluteDate(parsed, type)
+    : variant === "item-reference"
+      ? formatRelativeOrAbsoluteDate(parsed)
+      : `${label}: ${formatRelativeOrAbsoluteDate(parsed)}`;
 
   return (
     <span className="flex min-w-0 items-center gap-1.5">
