@@ -27,11 +27,16 @@ export interface HalFormsContainerProps {
  * Where a form's file preview is shown, which decides how its file fields look:
  * - `dialog`: a file field with a picked file gets a "Preview file" button that calls `onOpen`.
  * - `beside`: the preview sits next to the form as the large drop area, so the file fields' empty
- *   drop zones shrink to one line, and `previewedFieldName`, when set, is highlighted.
+ *   drop zones shrink to one line. When set, clicking a field's picked file calls `onSelect`, and
+ *   `previewedFieldName` is highlighted.
  */
 export type HalFormsFilePreview =
   | { readonly placement: "dialog"; readonly onOpen: (fieldName: string) => void }
-  | { readonly placement: "beside"; readonly previewedFieldName?: string };
+  | {
+      readonly placement: "beside";
+      readonly onSelect?: (fieldName: string) => void;
+      readonly previewedFieldName?: string;
+    };
 
 /**
  * Renders the field list, section by section — walks `layout.sections[].rows` ->
@@ -235,6 +240,7 @@ function FieldRowLayout({ row, ...fieldListProps }: Readonly<{ row: FieldRow } &
             onRelationItemClick={onRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
             onFilePreview={filePreview?.placement === "dialog" ? filePreview.onOpen : undefined}
+            onFileClick={filePreview?.placement === "beside" ? filePreview.onSelect : undefined}
             filePreviewed={
               filePreview?.placement === "beside" && filePreview.previewedFieldName === name
             }
@@ -277,6 +283,7 @@ function HalFormsFormField({
   onRelationItemClick,
   onRelationItemCreateNew,
   onFilePreview,
+  onFileClick,
   filePreviewed,
   compactFileDropZone,
 }: Readonly<{
@@ -289,6 +296,7 @@ function HalFormsFormField({
   onRelationItemClick?: RelationItemClickHandler;
   onRelationItemCreateNew?: RelationItemCreateHandler;
   onFilePreview?: (fieldName: string) => void;
+  onFileClick?: (fieldName: string) => void;
   filePreviewed: boolean;
   compactFileDropZone?: boolean;
 }>) {
@@ -297,6 +305,7 @@ function HalFormsFormField({
   const handleFocus = useCallback(() => onFieldFocus?.(name), [onFieldFocus, name]);
   const handleBlur = useCallback(() => onFieldBlur?.(name), [onFieldBlur, name]);
   const handleFilePreview = useCallback(() => onFilePreview?.(name), [onFilePreview, name]);
+  const handleFileClick = useCallback(() => onFileClick?.(name), [onFileClick, name]);
 
   return (
     <HalFormsFieldRenderer
@@ -309,6 +318,7 @@ function HalFormsFormField({
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
       onFilePreview={onFilePreview && handleFilePreview}
+      onFileClick={onFileClick && handleFileClick}
       filePreviewed={filePreviewed}
       compactFileDropZone={compactFileDropZone}
     />

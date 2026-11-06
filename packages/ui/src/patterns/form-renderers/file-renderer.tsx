@@ -14,6 +14,8 @@ export interface FileRendererProps {
   readonly onBlur?: () => void;
   /** See `FileUploadZone`'s `onPreview`. */
   readonly onPreview?: () => void;
+  /** See `FileUploadZone`'s `onFileClick`. */
+  readonly onFileClick?: () => void;
   /** See `FileUploadZone`'s `previewed`. */
   readonly previewed?: boolean;
   /** See `FileUploadZone`'s `compact`. */
@@ -33,6 +35,7 @@ export function FileRenderer({
   onFocus,
   onBlur,
   onPreview,
+  onFileClick,
   previewed,
   compact,
 }: Readonly<FileRendererProps>) {
@@ -54,6 +57,7 @@ export function FileRenderer({
         onFocus={onFocus}
         onBlur={onBlur}
         onPreview={onPreview}
+        onFileClick={onFileClick}
         previewed={previewed}
         compact={compact}
         {...fieldAriaProps(name, error)}

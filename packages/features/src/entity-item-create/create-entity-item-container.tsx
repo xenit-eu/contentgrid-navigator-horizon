@@ -250,15 +250,18 @@ function CreateEntityItemContainerReady({
   }, []);
 
   // Narrow screens open the preview in a dialog from a file field's "Preview file" button. Wide
-  // screens show it beside the form, highlighting the field it shows unless that is the only file
-  // field, with nothing to tell apart.
+  // screens show it beside the form; with several file fields, the user switches it by clicking a
+  // field's picked file, and the field it shows is highlighted. A single file field is always the
+  // one shown, so there is nothing to switch or tell apart.
+  const hasSeveralFileFields = fileFields.length > 1;
   let filePreview: HalFormsFilePreview | undefined;
   if (previewFieldName && isNarrow) {
     filePreview = { placement: "dialog", onOpen: handleFilePreview };
   } else if (previewFieldName) {
     filePreview = {
       placement: "beside",
-      previewedFieldName: fileFields.length > 1 ? previewFieldName : undefined,
+      onSelect: hasSeveralFileFields ? setPreviewFieldName : undefined,
+      previewedFieldName: hasSeveralFileFields ? previewFieldName : undefined,
     };
   }
 
@@ -296,7 +299,8 @@ function CreateEntityItemContainerReady({
     />
   );
 
-  if (!previewFieldName) return form;
+  // A form is easier to read at a limited width, with or without a preview beside it.
+  if (!previewFieldName) return <div className="max-w-2xl">{form}</div>;
 
   const previewField = fileFields.find((field) => field.name === previewFieldName);
   const previewFile = formState.values[previewFieldName];
@@ -306,7 +310,9 @@ function CreateEntityItemContainerReady({
     <CreateEntityItemFilePreview
       fileFields={fileFields}
       fieldName={previewFieldName}
-      onFieldNameChange={setPreviewFieldName}
+      // Beside the form the user switches by clicking a file in the form; the dialog covers the
+      // form, so there the selector switches.
+      onFieldNameChange={isNarrow ? setPreviewFieldName : undefined}
       file={previewFile instanceof File ? previewFile : undefined}
       onFileChange={
         previewField?.readOnly
@@ -321,7 +327,7 @@ function CreateEntityItemContainerReady({
     // container itself, so its full height when wide comes from `isNarrow`.
     <div ref={layoutRef} className={isNarrow ? "@container" : "@container h-full"}>
       <div className="flex gap-6 @side-by-side:h-full">
-        <div className="min-w-0 flex-[2] @side-by-side:flex @side-by-side:max-w-2xl @side-by-side:flex-col">
+        <div className="max-w-2xl min-w-0 flex-[2] @side-by-side:flex @side-by-side:flex-col">
           {form}
         </div>
         {isNarrow ? (

@@ -39,6 +39,7 @@ interface SelectedFileProps {
   disabled: boolean;
   previewed: boolean;
   onPreview?: () => void;
+  onFileClick?: () => void;
   onRemove: () => void;
 }
 
@@ -47,6 +48,7 @@ function SelectedFile({
   disabled,
   previewed,
   onPreview,
+  onFileClick,
   onRemove,
 }: Readonly<SelectedFileProps>) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -63,30 +65,46 @@ function SelectedFile({
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  return (
-    <div
-      aria-current={previewed || undefined}
-      className={cn(
-        "flex items-center gap-3 rounded-md border p-3",
-        previewed && "border-primary bg-selected",
-      )}
-    >
+  const details = (
+    <>
       {previewUrl && isImage ? (
         <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
       ) : (
         <UploadSimple className="h-5 w-5 text-muted-foreground" />
       )}
-      <div className="flex-1 min-w-0">
-        <p className="truncate text-sm font-medium">{file.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
+      <span className="block min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{file.name}</span>
+        <span className="mt-0.5 flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
           {file.type && (
             <Badge variant="outline" className="text-xs shrink-0">
               {file.type}
             </Badge>
           )}
-        </div>
-      </div>
+        </span>
+      </span>
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-md border p-3",
+        previewed && "border-primary bg-selected",
+      )}
+    >
+      {onFileClick ? (
+        <button
+          type="button"
+          aria-current={previewed || undefined}
+          onClick={onFileClick}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {details}
+        </button>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{details}</div>
+      )}
       <TooltipProvider>
         {onPreview && (
           <ToolbarIconButton label="Preview file" onClick={onPreview}>
@@ -127,6 +145,8 @@ export interface FileUploadZoneProps {
   onBlur?: () => void;
   /** Opens the file's preview; a selected file gets a "Preview file" button that calls it. */
   onPreview?: () => void;
+  /** Called when the user clicks the picked file; makes the file a button. */
+  onFileClick?: () => void;
   /** Marks the zone as the selected one of several, e.g. the one whose file is shown elsewhere. */
   previewed?: boolean;
   /** Shrinks the empty drop zone to a single line, as tall as a text input. */
@@ -150,6 +170,7 @@ export function FileUploadZone({
   onFocus,
   onBlur,
   onPreview,
+  onFileClick,
   previewed = false,
   compact = false,
   fill = false,
@@ -208,6 +229,7 @@ export function FileUploadZone({
         disabled={disabled}
         previewed={previewed}
         onPreview={onPreview}
+        onFileClick={onFileClick}
         onRemove={() => {
           focusDropZoneRef.current = true;
           onFileChange(null);

@@ -581,6 +581,31 @@ describe("CreateEntityItemContainer", () => {
       expect(previewFieldSelector(preview)).toHaveTextContent("Document");
     });
 
+    it("switches the preview to the file field whose file the user clicks; the selector only shows it", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(true);
+      server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
+      renderForm();
+
+      const preview = await screen.findByRole("complementary", { name: "File preview" });
+      // A field with a picked file has no file input left, so fill the second field first.
+      await user.upload(fileInput(1), new File(["b"], "annex.txt", { type: "text/plain" }));
+      await user.upload(fileInput(0), new File(["a"], "contract.txt", { type: "text/plain" }));
+      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+
+      await user.click(screen.getByRole("button", { name: /annex\.txt/ }));
+
+      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+      expect(previewFieldSelector(preview)).toBeDisabled();
+      expect(screen.getByRole("button", { name: /annex\.txt/ })).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: /contract\.txt/ })).not.toHaveAttribute(
+        "aria-current",
+      );
+    });
+
     it("switches the preview to the file field the user focuses", async () => {
       const user = userEvent.setup();
       stubViewWidth(true);
@@ -602,7 +627,8 @@ describe("CreateEntityItemContainer", () => {
       expect(screen.getByLabelText("Attachment")).not.toHaveAttribute("aria-current");
     });
 
-    it("doesn't highlight a form's only file field", async () => {
+    it("doesn't highlight a form's only file field, nor make its picked file a button", async () => {
+      const user = userEvent.setup();
       stubViewWidth(true);
       server.use(
         profileRootHandler(),
@@ -614,6 +640,10 @@ describe("CreateEntityItemContainer", () => {
       renderForm();
 
       expect(await screen.findByLabelText("Document")).not.toHaveAttribute("aria-current");
+
+      await user.upload(fileInput(0), textFile());
+      // It is always the one previewed, so clicking it would change nothing.
+      expect(screen.queryByRole("button", { name: /notes\.txt/ })).not.toBeInTheDocument();
     });
 
     it("shows a read-only file field's empty preview without a drop zone", async () => {
@@ -642,10 +672,14 @@ describe("CreateEntityItemContainer", () => {
       // In a narrow view the preview is only in the dialog, not also hidden beside the form.
       expect(screen.queryByRole("complementary", { name: "File preview" })).not.toBeInTheDocument();
       await user.upload(fileInput(1), textFile());
+      // The file itself is only clickable beside the form; here the button opens the preview.
+      expect(screen.queryByRole("button", { name: /notes\.txt/ })).not.toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Preview file" }));
 
       const dialog = screen.getByRole("dialog", { name: "Preview file" });
       expect(previewFieldSelector(dialog)).toHaveTextContent("Attachment");
+      // The dialog covers the form, so its selector is the way to switch fields.
+      expect(previewFieldSelector(dialog)).toBeEnabled();
       expect(
         within(dialog).getByText("Preview isn't available for text/plain files."),
       ).toBeInTheDocument();
