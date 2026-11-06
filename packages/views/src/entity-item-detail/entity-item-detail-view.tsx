@@ -78,6 +78,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         item={result.entityItem}
         label="Delete"
         onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+        onRefresh={() => void result.refetch()}
       />
     ) : null;
 

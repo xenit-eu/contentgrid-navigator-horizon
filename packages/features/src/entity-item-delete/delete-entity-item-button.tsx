@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { CircleNotchIcon, TrashIcon } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import {
   type EntityItem,
+  isProblemWithStatus,
   toProblemDisplayModel,
   useDeleteEntityItem,
 } from "@contentgrid/navigator-data";
@@ -28,16 +30,32 @@ import { ProblemAlert } from "../problem-details";
 export interface DeleteEntityItemButtonProps {
   readonly item: EntityItem;
   readonly onDeleted: () => void;
+  readonly onRefresh: () => void;
   readonly label?: string;
 }
 
 export function DeleteEntityItemButton({
   item,
   onDeleted,
+  onRefresh,
   label,
 }: Readonly<DeleteEntityItemButtonProps>) {
   const [open, setOpen] = useState(false);
-  const deleteMutation = useDeleteEntityItem({ mutationOptions: { onSuccess: onDeleted } });
+  const deleteMutation = useDeleteEntityItem({
+    mutationOptions: {
+      onSuccess: onDeleted,
+      onError: (error) => {
+        if (!isProblemWithStatus(error, 412)) {
+          return;
+        }
+        onRefresh();
+        setOpen(false);
+        toast.warning("This item was changed by someone else.", {
+          description: "Check the latest version and delete again.",
+        });
+      },
+    },
+  });
   // Stays busy after success too: the host is navigating away, the item is gone.
   const isBusy = deleteMutation.isPending || deleteMutation.isSuccess;
 
@@ -96,7 +114,7 @@ export function DeleteEntityItemButton({
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {deleteMutation.isError && (
+        {deleteMutation.isError && !isProblemWithStatus(deleteMutation.error, 412) && (
           <ProblemAlert model={toProblemDisplayModel(deleteMutation.error)} />
         )}
         <AlertDialogFooter>

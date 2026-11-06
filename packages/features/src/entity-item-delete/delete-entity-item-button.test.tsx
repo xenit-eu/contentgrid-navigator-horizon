@@ -14,6 +14,7 @@ import {
   ALL_ATTRIBUTE_ITEM_URL,
   makeAllAttributeItem,
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
+import { Toaster } from "@contentgrid/ui";
 import { server } from "../../test-setup";
 import { DeleteEntityItemButton } from "./delete-entity-item-button";
 
@@ -22,19 +23,24 @@ const PROFILE_URL = "https://api.example.contentgrid.com/profile";
 
 function renderButton(item: EntityItem) {
   const onDeleted = vi.fn();
+  const onRefresh = vi.fn();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
+  const tree = (shownItem: EntityItem) => (
     <QueryClientProvider client={queryClient}>
       <NavigatorDataProvider
         apiFetch={createApiClient(noopSupplier)}
         contentFetch={createContentClient(noopSupplier)}
         profileUrl={PROFILE_URL}
       >
-        <DeleteEntityItemButton item={item} onDeleted={onDeleted} />
+        <DeleteEntityItemButton item={shownItem} onDeleted={onDeleted} onRefresh={onRefresh} />
+        <Toaster />
       </NavigatorDataProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return { onDeleted };
+  const { rerender } = render(tree(item));
+  // Stands in for the caller passing the reloaded item back down.
+  const showItem = (reloaded: EntityItem) => rerender(tree(reloaded));
+  return { onDeleted, onRefresh, showItem };
 }
 
 /** Opens the confirmation dialog and confirms; returns the dialog. */
@@ -87,5 +93,37 @@ describe("DeleteEntityItemButton", () => {
     expect(within(dialog).getByRole("button", { name: "Delete" })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeEnabled();
     expect(onDeleted).not.toHaveBeenCalled();
+  });
+
+  it("on a version conflict, refreshes the item, closes the dialog and retries with the new ETag", async () => {
+    const user = userEvent.setup();
+    const ifMatch: (string | null)[] = [];
+    server.use(
+      http.delete(ALL_ATTRIBUTE_ITEM_URL, ({ request }) => {
+        const etag = request.headers.get("If-Match");
+        ifMatch.push(etag);
+        return etag === '"v2"'
+          ? new HttpResponse(null, { status: 204 })
+          : HttpResponse.json(
+              { title: "Precondition Failed", status: 412 },
+              { status: 412, headers: { "Content-Type": "application/problem+json" } },
+            );
+      }),
+    );
+    const { onDeleted, onRefresh, showItem } = renderButton(makeAllAttributeItem({}, '"v1"'));
+
+    await confirmDelete(user);
+
+    expect(await screen.findByText("This item was changed by someone else.")).toBeInTheDocument();
+    expect(screen.getByText("Check the latest version and delete again.")).toBeInTheDocument();
+    expect(onRefresh).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(onDeleted).not.toHaveBeenCalled();
+
+    showItem(makeAllAttributeItem({}, '"v2"'));
+    await confirmDelete(user);
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledOnce());
+    expect(ifMatch).toEqual(['"v1"', '"v2"']);
   });
 });

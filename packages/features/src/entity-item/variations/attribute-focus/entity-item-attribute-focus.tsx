@@ -45,7 +45,11 @@ export function EntityItemAttributeFocus({
             />
           )}
           {onDeleted && !itemContext.isEditing && (
-            <DeleteEntityItemButton item={item} onDeleted={onDeleted} />
+            <DeleteEntityItemButton
+              item={item}
+              onDeleted={onDeleted}
+              onRefresh={() => void itemContext.refresh()}
+            />
           )}
         </div>
       </div>
