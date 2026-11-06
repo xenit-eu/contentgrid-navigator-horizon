@@ -177,6 +177,29 @@ describe("EntityItem — attributes", () => {
     expect((deletedAttr!.value as EntityItemAttributePlain).value).toBeNull();
   });
 
+  it("returns plain attribute for a list of strings (string_set)", () => {
+    const hal = makeEntityItemHal({ id: "inv-001", tags: ["urgent", "paid"] });
+    const item = new EntityItem(hal, makeProfileEntity());
+    const tagsAttr = item.attributes.find((a) => a.value.name === "tags");
+    expect(tagsAttr!.value.kind).toBe(AttributeKind.PLAIN);
+    expect((tagsAttr!.value as EntityItemAttributePlain).value).toEqual(["urgent", "paid"]);
+  });
+
+  it("returns plain attribute for an empty list", () => {
+    const hal = makeEntityItemHal({ id: "inv-001", tags: [] });
+    const item = new EntityItem(hal, makeProfileEntity());
+    const tagsAttr = item.attributes.find((a) => a.value.name === "tags");
+    expect(tagsAttr!.value.kind).toBe(AttributeKind.PLAIN);
+    expect((tagsAttr!.value as EntityItemAttributePlain).value).toEqual([]);
+  });
+
+  it("does not treat a list with non-string elements as plain", () => {
+    const hal = makeEntityItemHal({ id: "inv-001", mixed: ["a", 1] });
+    const item = new EntityItem(hal, makeProfileEntity());
+    const mixedAttr = item.attributes.find((a) => a.value.name === "mixed");
+    expect(mixedAttr!.value.kind).not.toBe(AttributeKind.PLAIN);
+  });
+
   it("returns content attribute when cg:content link is present", () => {
     const hal = makeEntityItemHal(
       {

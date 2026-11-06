@@ -28,6 +28,7 @@ export enum ProfileAttributeSearchType {
 
 export enum ProfileAttributeType {
   string = "string",
+  stringSet = "string_set",
   long = "long",
   double = "double",
   boolean = "boolean",
