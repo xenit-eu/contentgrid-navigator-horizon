@@ -209,3 +209,51 @@ describe("useHalFormsFieldState.buildValues", () => {
     expect(result.current.buildValues(template).valueMap).toEqual({ name: "Acme" });
   });
 });
+
+describe("useHalFormsFieldState.buildValues for a free-text multi-valued property", () => {
+  const templateJson = {
+    name: "invoice",
+    description: "",
+    _links: { self: { href: "https://example.com/profile/invoices" } },
+    _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
+    _templates: {
+      "create-form": {
+        method: "POST",
+        target: "https://example.com/invoices",
+        contentType: "application/json",
+        properties: [
+          {
+            name: "keywords",
+            type: "text",
+            prompt: "Keywords",
+            options: { maxItems: 100, minItems: 0 },
+          },
+        ],
+      },
+    },
+  };
+  const template = resolveTemplate(
+    templateJson as unknown as Parameters<typeof resolveTemplate>[0],
+    "create-form",
+  )!;
+
+  const keywordsField: HalFormsField = {
+    name: "keywords",
+    label: "Keywords",
+    required: false,
+    readOnly: false,
+    kind: "text-multi",
+    maxItems: 100,
+    minItems: 0,
+    property: DUMMY_PROPERTY,
+  };
+
+  it("starts empty and encodes the entered values as a list", () => {
+    const { result } = renderHook(() => useHalFormsFieldState({ fields: [keywordsField] }));
+    expect(result.current.values.keywords).toEqual([]);
+
+    act(() => result.current.setValue("keywords", ["a", "b"]));
+
+    expect(result.current.buildValues(template).valueMap).toEqual({ keywords: ["a", "b"] });
+  });
+});

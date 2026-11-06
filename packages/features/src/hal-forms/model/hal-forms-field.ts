@@ -56,6 +56,15 @@ export type HalFormsField =
   | ({ readonly kind: "enum" } & HalFormsFieldBase & {
         readonly options: readonly EnumOption[];
         readonly multiValue: boolean;
+        /** Most values a multi-valued field takes; `undefined` when unlimited. */
+        readonly maxItems?: number;
+      })
+  /** A multi-valued property without predefined options: any number of free-text values. */
+  | ({ readonly kind: "text-multi" } & HalFormsFieldBase & {
+        /** Most values the field takes; `undefined` when unlimited. */
+        readonly maxItems?: number;
+        /** Fewest values the field takes; `0` when there is no minimum. */
+        readonly minItems: number;
       })
   | ({ readonly kind: "autocomplete" } & HalFormsFieldBase & {
         readonly multiValue: boolean;
