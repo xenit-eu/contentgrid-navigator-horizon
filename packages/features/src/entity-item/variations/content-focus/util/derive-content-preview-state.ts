@@ -12,11 +12,11 @@ import type { ContentPreviewState } from "./content-preview-state";
  * attribute holds no file at all. */
 export type ContentPreviewOrigin = "stored" | "rendition";
 
-/** The three outcomes the PDF viewer's own `onLoadError` callback reports (mirrors
+/** The two outcomes the PDF viewer's own `onLoadError` callback reports (mirrors
  * `@contentgrid/ui`'s `PdfLoadError["kind"]` structurally — this module stays decoupled from
  * `@contentgrid/ui` types per the util layer's "no UI import" rule). The image and video preview
  * report `invalid` too, when the browser cannot display the file. */
-export type ViewerLoadErrorKind = "invalid" | "protected" | "engine";
+export type ViewerLoadErrorKind = "invalid" | "engine";
 
 export interface DeriveContentPreviewStateInput {
   readonly queryStatus: "pending" | "error" | "success";
@@ -38,6 +38,11 @@ export interface DerivedContentPreviewState {
   readonly mimetype?: string | null;
 }
 
+/** The preview state shown instead of a viewer that could not open its file. */
+export function viewerLoadErrorState(kind: ViewerLoadErrorKind): ContentPreviewState {
+  return kind === "invalid" ? "cannotDisplay" : "viewerFailure";
+}
+
 /**
  * Pure mapping from `useContentPreview`'s query state (plus the viewer's own load-error
  * callback) to data-model.md's "Content preview panel state" (FR-024). No fetching, no React.
@@ -52,14 +57,7 @@ export function deriveContentPreviewState(
   const { queryStatus, previewSource, queryError, expectedOrigin, viewerLoadErrorKind } = input;
 
   if (viewerLoadErrorKind !== null) {
-    switch (viewerLoadErrorKind) {
-      case "protected":
-        return { state: "protected" };
-      case "invalid":
-        return { state: "cannotDisplay" };
-      case "engine":
-        return { state: "viewerFailure" };
-    }
+    return { state: viewerLoadErrorState(viewerLoadErrorKind) };
   }
 
   if (queryStatus === "success" && previewSource !== undefined) {
