@@ -30,13 +30,13 @@ Dependency model rationale: [ADR-007](../../docs/adr/ADR-007-two-layer-dependenc
 All seven `@contentgrid/*` Layer-1 packages are `peerDependencies`:
 
 ```
-@contentgrid/hal                   ^0.4.0
-@contentgrid/hal-forms             ^0.4.0
-@contentgrid/typed-fetch           ^0.4.0
-@contentgrid/fetch-hooks           ^0.4.0
-@contentgrid/fetch-hook-authentication ^0.4.0
-@contentgrid/problem-details       ^0.4.0
-@contentgrid/uri-template          ^0.4.0
+@contentgrid/hal                   ^0.4.4
+@contentgrid/hal-forms             ^0.4.4
+@contentgrid/typed-fetch           ^0.4.4
+@contentgrid/fetch-hooks           ^0.4.4
+@contentgrid/fetch-hook-authentication ^0.4.4
+@contentgrid/problem-details       ^0.4.4
+@contentgrid/uri-template          ^0.4.4
 ```
 
 Rule: do NOT move these to `dependencies`. Do NOT re-implement anything
@@ -74,7 +74,7 @@ These are the Layer-1 packages (see ADR-007 and the peerDep rule above) — use 
 | `@contentgrid/problem-details`               | `application/problem+json` parsing & errors | `checkResponse`, `fromResponse`, `ProblemDetailError`, `ProblemDetail`                                                                                                                                          | `build/index.d.ts`          |
 | `@contentgrid/uri-template`                  | URI Template expand / match                 | `UriTemplate` (default — `expand`, `match`, `variables`, `template`)                                                                                                                                            | `build/index.d.ts`          |
 
-> Map tracks the `0.4.x` line (all seven pinned at `0.4.2`, range `^0.4.0`).
+> Map tracks the `0.4.x` line (all seven pinned at `0.4.4`, range `^0.4.4`).
 
 ---
 
