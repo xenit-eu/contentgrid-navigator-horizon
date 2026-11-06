@@ -18,7 +18,9 @@ export interface EntityItemReferenceProps {
   readonly className?: string;
 }
 
+/** Hard limit on the characters of the title and the subtitle (plus an ellipsis). */
 const STRING_REFERENCE_MAX_CHAR_LENGTH = 120;
+
 /**
  * Renders an EntityItem as an ItemReference — icon and color from entity display
  * preferences, title from the preferred name attribute (falls back to the item id
@@ -53,7 +55,11 @@ export function EntityItemReference({
 
   const subtitleAttr = subtitleAttribute ? item.findAttribute(subtitleAttribute.name) : undefined;
   const subtitle = subtitleAttr ? (
-    <AttributeValueRenderer attr={subtitleAttr} variant="item-reference" />
+    <AttributeValueRenderer
+      attr={subtitleAttr}
+      maxCharLength={STRING_REFERENCE_MAX_CHAR_LENGTH}
+      variant="item-reference"
+    />
   ) : undefined;
 
   return (
