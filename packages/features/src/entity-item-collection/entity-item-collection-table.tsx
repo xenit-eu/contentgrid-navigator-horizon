@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo } from "react";
 import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import {
   type EntityItem,
   type EntityItemCollection,
@@ -21,6 +22,7 @@ import {
 } from "../entity-item";
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 import { notifyProblem } from "../problem-details";
+import { capitalizeFirstLetter } from "../string-utils";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
@@ -69,11 +71,6 @@ export interface EntityItemCollectionTableProps {
   readonly paginated?: boolean;
   /** `false` hides the "Showing N of M items" text, keeping the page controls. Defaults to `true`. */
   readonly showItemCount?: boolean;
-  /**
-   * Reloads the collection. Offered as Reload in the toast of a delete that failed because the
-   * item was changed by someone else.
-   */
-  readonly onRefresh?: () => void;
 }
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
@@ -122,7 +119,6 @@ export function EntityItemCollectionTable({
   showRowActions = true,
   paginated = true,
   showItemCount = true,
-  onRefresh,
 }: Readonly<EntityItemCollectionTableProps>) {
   const persistedVisibility = useColumnVisibility(profile);
   // Union a session-local override and any actively-filtered attribute on top of the persisted
@@ -154,7 +150,12 @@ export function EntityItemCollectionTable({
 
   function deleteItem(item: EntityItem) {
     deleteMutation.mutate(item, {
-      onError: (error) => notifyProblem(error, onRefresh),
+      onSuccess: () => {
+        toast.success(
+          `${capitalizeFirstLetter(profile.singularName)} has been successfully deleted!`,
+        );
+      },
+      onError: (error) => notifyProblem(error),
     });
   }
 

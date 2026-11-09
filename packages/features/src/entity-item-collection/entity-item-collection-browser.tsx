@@ -334,7 +334,6 @@ export function EntityItemCollectionBrowser({
             forcedVisibleColumnNames={activelyFilteredAttributeNames}
             // Without a search bar (no `onFiltersChange`), the table keeps the controls itself.
             tableActions={onFiltersChange ? undefined : toolbarActions}
-            onRefresh={() => void collection.refetch()}
           />
         )}
       </div>
