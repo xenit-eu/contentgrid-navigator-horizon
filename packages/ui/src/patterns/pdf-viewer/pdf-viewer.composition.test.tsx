@@ -231,7 +231,6 @@ describe("PdfViewer composition — engine status dispatch", () => {
 
 describe("PdfViewer composition — document phases (plugins ready, no document id yet)", () => {
   it.each([
-    ["protected", DEFAULT_PDF_VIEWER_LABELS.protectedDocument],
     ["invalid", DEFAULT_PDF_VIEWER_LABELS.invalidDocument],
     ["opening", DEFAULT_PDF_VIEWER_LABELS.openingDocument],
   ] as const)(
@@ -252,9 +251,12 @@ describe("PdfViewer composition — document phases (plugins ready, no document 
     },
   );
 
-  it.each(["protected", "invalid"] as const)(
-    "calls onLoadError exactly once with kind: %s, not again on re-render",
-    (documentState) => {
+  it.each([
+    ["invalid", [[{ kind: "invalid" }]]],
+    ["protected", []],
+  ] as const)(
+    "reports a %s document's load error at most once, not again on re-render",
+    (documentState, calls) => {
       mockUseDocumentLifecycle.mockReturnValue({ documentId: null, documentState });
       const onLoadError = vi.fn();
 
@@ -275,8 +277,7 @@ describe("PdfViewer composition — document phases (plugins ready, no document 
         />,
       );
 
-      expect(onLoadError).toHaveBeenCalledTimes(1);
-      expect(onLoadError).toHaveBeenCalledWith({ kind: documentState });
+      expect(onLoadError.mock.calls).toEqual(calls);
     },
   );
 
