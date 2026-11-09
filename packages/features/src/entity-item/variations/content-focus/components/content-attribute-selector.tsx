@@ -1,3 +1,4 @@
+import { PaperclipIcon } from "@phosphor-icons/react";
 import { AttributeKind, type EntityItem } from "@contentgrid/navigator-data";
 import { AttributeSelect, type ProfileAttributeOption } from "@contentgrid/ui";
 
@@ -44,8 +45,8 @@ interface ContentAttributeOptionSelectorProps {
  * options directly, so it also serves a caller that has no `EntityItem`.
  *
  * Renders nothing when there are no options. With exactly one option, or without `onChange`, there
- * is nothing to pick here, so it shows the selected option's title as plain text: the user still
- * sees which attribute is on screen, without a control that does nothing.
+ * is nothing to pick here, so it shows the selected option's title in a pill with a paperclip icon:
+ * the user still sees which attribute is on screen, without a control that does nothing.
  */
 export function ContentAttributeOptionSelector({
   options,
@@ -58,8 +59,13 @@ export function ContentAttributeOptionSelector({
 
   if (!onChange || options.length === 1) {
     const selected = options.find((option) => option.name === value);
+    // A pill with the selector trigger's fill and border, so the toolbar looks alike either way; a
+    // label, not a control, so it has no hover or chevron.
     return (
-      <span className="min-w-0 truncate px-1 text-sm font-medium">{selected?.title ?? value}</span>
+      <span className="border-input text-muted-foreground dark:bg-input/30 flex min-w-0 items-center gap-1.5 rounded-full border bg-transparent px-2.5 py-1 text-sm font-medium">
+        <PaperclipIcon className="size-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{selected?.title ?? value}</span>
+      </span>
     );
   }
 
