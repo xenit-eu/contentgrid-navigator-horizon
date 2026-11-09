@@ -7,6 +7,7 @@
  *   for relation-traversal attributes (no target-entity search-param available there)
  * - sortOptions: inline sort option parsing, profileAttribute linking, no-sort case
  * - getSearchPropertiesByType / getSearchPropertyByName / getSearchPropertiesByAttribute
+ * - range bounds: bound, getRange, isSupersededBound
  * - getRelationSearchProperties
  * - relation traversal: isOverRelation, profileRelation (profileAttribute never resolves here —
  *   see the class-level doc on `enhanceSearchProperty` in search-form.ts)
@@ -23,10 +24,8 @@ import { makeProfileEntity } from "./test-utils";
 // Base fixture: simple entity with search template and sort
 //
 // Property-name suffixes here use a single plain tilde, never a dotted "attribute.~op" form —
-// verified against the committed profile dump for ~prefix/~gt/~gte/~lt/~lte/~after/~before.
-// The inclusive range-pair bounds ("~from" / "~until") aren't in that dump, but are real and
-// plain-tilde per the legacy Navigator's NestedRange pairing
-// (contentgrid-navigator/src/components/form/jsonforms.ts:325).
+// verified against the committed profile dump for ~prefix/~gt/~gte/~lt/~lte/~after/~before/
+// ~from/~until.
 // ---------------------------------------------------------------------------
 
 const PROFILE_URL = "https://example.com/profile/invoices";
@@ -617,5 +616,63 @@ describe("SearchHalFormTemplate — range-pair operators (~from / ~until)", () =
     const tmpl = makeSearchTemplate();
     const relProp = tmpl.searchProperties.find((p) => p.property.name === "customer.name~prefix")!;
     expect(relProp.isOverRelation).toBe(true);
+  });
+});
+
+describe("SearchHalFormTemplate range bounds", () => {
+  const byName = (tmpl: SearchHalFormTemplate, name: string) =>
+    tmpl.searchProperties.find((x) => x.property.name === name)!;
+
+  it.each([
+    ["total~gt", { side: "lower", inclusive: false }],
+    ["total~gte", { side: "lower", inclusive: true }],
+    ["total~lt", { side: "upper", inclusive: false }],
+    ["total~lte", { side: "upper", inclusive: true }],
+    ["invoice_date~after", { side: "lower", inclusive: false }],
+    ["invoice_date~from", { side: "lower", inclusive: true }],
+    ["invoice_date~before", { side: "upper", inclusive: false }],
+    ["invoice_date~until", { side: "upper", inclusive: true }],
+  ])("derives the bound of %s from its search type", (name, bound) => {
+    expect(byName(makeSearchTemplate(), name).bound).toEqual(bound);
+  });
+
+  it.each(["number", "number~prefix", "note~fts", "customer.name~prefix"])(
+    "gives %s no bound",
+    (name) => {
+      expect(byName(makeSearchTemplate(), name).bound).toBeUndefined();
+    },
+  );
+
+  it("prefers the inclusive bound on each side of a range", () => {
+    const tmpl = makeSearchTemplate();
+    const range = tmpl.getRange("invoice_date");
+    expect(range?.lower?.property.name).toBe("invoice_date~from");
+    expect(range?.upper?.property.name).toBe("invoice_date~until");
+  });
+
+  it("falls back to the strict bounds when no inclusive ones exist", () => {
+    const tmpl = makeSearchTemplate();
+    const range = tmpl.getRange("due_date");
+    expect(range?.lower?.property.name).toBe("due_date~after");
+    expect(range?.upper?.property.name).toBe("due_date~before");
+  });
+
+  it("returns undefined for a groupKey without range search", () => {
+    const tmpl = makeSearchTemplate();
+    expect(tmpl.getRange("number")).toBeUndefined();
+    expect(tmpl.getRange("unknown")).toBeUndefined();
+  });
+
+  it("marks only the strict bounds that have an inclusive equivalent as superseded", () => {
+    const tmpl = makeSearchTemplate();
+    const superseded = tmpl.searchProperties
+      .filter((p) => tmpl.isSupersededBound(p))
+      .map((p) => p.property.name);
+    expect(superseded).toEqual([
+      "total~gt",
+      "total~lt",
+      "invoice_date~after",
+      "invoice_date~before",
+    ]);
   });
 });

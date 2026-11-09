@@ -23,4 +23,16 @@ describe("CreatedDateAttributeRenderer", () => {
     }).format(new Date(value));
     expect(screen.getByText(`Created: ${expected}`)).toBeInTheDocument();
   });
+
+  it("omits the attribute label in the item-reference variant", () => {
+    const value = "2016-06-21T00:00:00.000Z";
+    render(<CreatedDateAttributeRenderer value={value} label="Created" variant="item-reference" />);
+    const expected = new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(value));
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText(`Created: ${expected}`)).not.toBeInTheDocument();
+  });
 });

@@ -19,8 +19,8 @@ export type UseSetToOneRelationOptions = {
  * target URI (`string`). The target profile is resolved internally via
  * `useProfileEntities()` — no `targetProfile` parameter is required.
  *
- * Attaches `If-Match` from `relation.source.etag` to prevent concurrent update
- * conflicts (RFC 9110).
+ * Currently sends no `If-Match` — the to-one relation's own ETag is not yet captured.
+ * See FIXME(ACC-3186) in `use-relation-mutation-base.ts`.
  *
  * Cache behaviour on settled:
  * - `onSettled`: Invalidates the to-one relation read key

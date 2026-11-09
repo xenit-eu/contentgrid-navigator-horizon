@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { LinkBreakIcon as LinkBreak } from "@phosphor-icons/react";
 import {
-  AttributeKind,
+  type EntityItem,
   type EntityItemToOneRelation,
   type ProfileEntity,
   toProblemDisplayModel,
@@ -19,59 +20,59 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
+  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
+import { useEntityDisplayPreferences } from "../../preferences";
 import { ProblemAlert } from "../../problem-details";
-import { AttributeValueRenderer } from "../attributes/renderers/attribute-value-renderer";
-import {
-  MutationErrorDisplay,
-  type MutationErrorDisplayProps,
-  type RelationItemClickHandler,
-  RelationItemSearchDialog,
-  onRelationMutationError,
-} from "./relation-shared";
+import { EntityItemAttributeSummary } from "../variations/attribute-summary/entity-item-attribute-summary";
+import { EntityItemReference } from "../variations/item-reference/entity-item-reference";
+import type {
+  RelationItemClickHandler,
+  RelationItemCreateHandler,
+  RelationProblemHandlers,
+} from "./relation-handlers";
+import { RelationItemSearchDialog } from "./relation-item-search-dialog";
+import { type RelationLayout, useRelationLayout } from "./relation-layout";
 
 export function RelationToOneSection({
   relation,
   profiles,
   onItemClick,
+  onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
-  onReload,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
+  onCreateNew?: RelationItemCreateHandler;
 }> &
-  Pick<
-    MutationErrorDisplayProps,
-    "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onReload"
-  >) {
+  Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
     mutate: clearRelation,
     isPending: isClearing,
     error: clearError,
-  } = useClearRelation(relation, {
-    mutationOptions: { onError: onRelationMutationError(onReload) },
-  });
+  } = useClearRelation(relation);
   const {
     mutate: setRelation,
+    reset: resetSetRelation,
     isPending: isSetting,
     error: setError,
-  } = useSetToOneRelation(relation, {
-    mutationOptions: { onError: onRelationMutationError(onReload) },
-  });
-  const mutationError = clearError ?? setError;
+  } = useSetToOneRelation(relation);
+  // `setError` is shown inside the link dialog, which stays open until linking succeeds.
+  const mutationError = clearError;
   const [linkOpen, setLinkOpen] = useState(false);
   const targetProfile = relation.profileRelation.getTargetProfile(profiles);
   const title = relation.profileRelation.title ?? relation.name;
+  const layout = useRelationLayout();
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <div className="flex items-center gap-2">
+    <RelationAccordion
+      title={title}
+      actions={
+        <>
           {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
             <>
               <Button
@@ -83,17 +84,32 @@ export function RelationToOneSection({
                 Link
               </Button>
               <RelationItemSearchDialog
+                multiple={false}
                 targetProfile={targetProfile}
                 open={linkOpen}
-                onOpenChange={setLinkOpen}
-                onSelect={(item) => setRelation(item.selfLink.href)}
+                onOpenChange={(open) => {
+                  setLinkOpen(open);
+                  if (!open) resetSetRelation();
+                }}
+                isLinking={isSetting}
+                linkError={setError}
+                onSelect={(item) =>
+                  setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
+                }
+                onCreateNew={onCreateNew}
               />
             </>
           )}
           {relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isClearing}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={isClearing}
+                >
+                  <LinkBreak className="size-4" />
                   {isClearing ? "Unlinking…" : "Unlink"}
                 </Button>
               </AlertDialogTrigger>
@@ -111,14 +127,14 @@ export function RelationToOneSection({
               </AlertDialogContent>
             </AlertDialog>
           )}
-        </div>
-      </div>
+        </>
+      }
+    >
       {mutationError && (
-        <MutationErrorDisplay
-          error={mutationError}
+        <ProblemAlert
+          model={toProblemDisplayModel(mutationError)}
           onMissingRelationTargetClick={onMissingRelationTargetClick}
           onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
-          onReload={onReload}
         />
       )}
       {linkedItem.isPending && <Skeleton className="h-12 w-full rounded-md" />}
@@ -129,34 +145,48 @@ export function RelationToOneSection({
         <p className="text-sm text-muted-foreground">No item linked</p>
       )}
       {linkedItem.isSuccess && linkedItem.data !== null && (
-        <button
-          type="button"
-          className="w-full text-left rounded-md border p-3 hover:bg-accent transition-colors cursor-pointer"
-          onClick={() => {
-            const linked = linkedItem.data;
-            if (!linked) return;
-            onItemClick?.(linked.profileEntity.name, linked.id);
-          }}
-        >
-          <dl className="grid grid-cols-2 gap-2">
-            {linkedItem.data.userDefinedAttributes
-              .filter((attr) => attr.value.kind !== AttributeKind.NESTED)
-              .slice(0, 4)
-              .map((attr) => {
-                const label =
-                  linkedItem.data!.profileEntity.attributes.find((a) => a.name === attr.value.name)
-                    ?.title ?? attr.value.name;
-                return (
-                  <div key={attr.value.name}>
-                    <dt className="text-xs text-muted-foreground">{label}</dt>
-                    <dd className="text-sm truncate">
-                      <AttributeValueRenderer attr={attr} />
-                    </dd>
-                  </div>
-                );
-              })}
-          </dl>
-        </button>
+        <LinkedItem
+          item={linkedItem.data}
+          layout={layout}
+          onClick={(item) => onItemClick?.(item.profileEntity.name, item.id)}
+        />
+      )}
+    </RelationAccordion>
+  );
+}
+
+/**
+ * The linked item as its reference (icon, name, subtitle). When the pane has room for it
+ * (`layout.toOneSummaryColumns`), a grid of further attributes follows, leaving out the ones the
+ * reference already shows.
+ */
+function LinkedItem({
+  item,
+  layout,
+  onClick,
+}: Readonly<{ item: EntityItem; layout: RelationLayout; onClick: (item: EntityItem) => void }>) {
+  const { nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(item.profileEntity);
+  const columns = layout.toOneSummaryColumns;
+  const shownByReference = [nameAttribute?.name, subtitleAttribute?.name].filter(
+    (name): name is string => name !== undefined,
+  );
+
+  return (
+    <div className="space-y-3 rounded-md border p-2">
+      <EntityItemReference
+        item={item}
+        size="default"
+        onClick={() => onClick(item)}
+        className="p-1"
+      />
+      {columns !== 0 && (
+        <EntityItemAttributeSummary
+          item={item}
+          columns={columns}
+          count={layout.toOneSummaryCount}
+          excludeAttributeNames={shownByReference}
+          className="px-1 pb-1"
+        />
       )}
     </div>
   );

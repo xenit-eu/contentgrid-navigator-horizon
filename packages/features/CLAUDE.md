@@ -7,6 +7,7 @@ unit of promotion between tracks.
 
 Platform-wide conventions: see root [`CLAUDE.md`](../../CLAUDE.md).
 Three-track model: [ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md).
+Views layer above features (navigation context, layer rules): [ADR-018](../../docs/adr/ADR-018-views-layer.md), [`packages/views/CLAUDE.md`](../views/CLAUDE.md).
 
 ---
 
@@ -49,14 +50,35 @@ experimental → candidate → stable
 
 Rules:
 
-- A new feature starts at `"experimental"`.
-- The field must be present. Omitting it is a lint error (HZN-1.9, not yet wired).
+- The field must be present on every feature — enforced by the ESLint rule below
+  (a missing/invalid `x-stability` is a lint error).
 - Do NOT use any value other than the three listed above.
-- The generic build (`apps/navigator`) enforces that it imports only `stable`
-  features via an ESLint rule (HZN-1.9). This enforcement is not yet wired;
-  until it is, contributors must enforce it manually.
+- **Pre-GA exception:** while the product is pre-GA, the promotion ladder is
+  suspended. A new feature may start at any tier (typically `stable` directly)
+  and the generic build (`apps/navigator`) is not gated by stability tier — see
+  the [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga).
+  "A new feature starts at `experimental`" and "generic imports only `stable`"
+  apply again from production go-live.
+- The generic build (`apps/navigator`) enforces feature stability via an ESLint
+  rule (`apps/navigator/eslint.config.js`, `@contentgrid/no-unstable-features`).
+  It is wired and running; it is currently configured to allow all tiers
+  (pre-GA), so today it only catches an invalid/typo `x-stability` value.
 - The CI bundle audit fails the generic build if `experimental` or `candidate`
-  feature code appears in the generic bundle (HZN-1.9, not yet wired).
+  feature code appears in the generic bundle — not yet wired.
+
+---
+
+## Page layout
+
+([ADR-018](../../docs/adr/ADR-018-views-layer.md), `specs/005-views-layer/contracts/view-toolbar.md`)
+
+- A feature draws no toolbar, breadcrumbs or page actions, and takes no props for them. The view
+  above it draws them (`@contentgrid/views`).
+- A feature fills the space it is given: root `h-full min-h-0`, no outer page padding, and no
+  window-sized units (`vh`, `svh`) or fixed widths. The view (or host) owns padding and scrolling.
+- A feature receives the main object it shows (`ProfileEntity`, `EntityItem`) from its view and
+  never loads it again; it loads follow-up data (relations, content) itself by following links.
+- A feature never reads navigation: user actions leave through callback props.
 
 ---
 
@@ -65,12 +87,18 @@ Rules:
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md),
 [migration roadmap](../../docs/contentgrid-navigator-migration-roadmap.md))
 
+**Pre-GA: this workflow is suspended.** Since `apps/navigator` currently
+imports features at any tier, there is nothing to promote — pick the tier that
+matches the feature's actual maturity (typically `stable`) and move on. The
+workflow below applies again once the stability gate is reinstated at
+production go-live.
+
 Promotion = a PR that:
 
 1. Flips `x-stability` in the feature's `package.json`
    (e.g. `"experimental"` → `"candidate"`, or `"candidate"` → `"stable"`).
-2. For promotion to `stable`: adds the feature to `apps/navigator`'s import
-   allowlist (once HZN-1.9 lint enforcement is wired).
+2. For promotion to `stable`: confirms the feature is on `apps/navigator`'s
+   allowed stability tiers (the lint enforcement above is wired).
 
 No code moves between directories. No fork drift. The feature code stays in
 `packages/features/<name>/`.
@@ -84,7 +112,7 @@ graph-aware — work through the full dependency chain, not just direct deps.
 
 Note: `contentgrid-stability check` is the planned CLI (referenced in ADR-006).
 It is not yet implemented as of the current phase; do the graph check manually
-until HZN-1.9 wires it.
+until the lint enforcement above wires it.
 
 ---
 
@@ -96,6 +124,48 @@ until HZN-1.9 wires it.
   `packages/ui/src/patterns/`.
 - If logic touches HAL, ETags, or TanStack Query hooks → it belongs in
   `packages/navigator-data`, not in the feature.
+- **Every HAL-Forms-driven form renders through the `hal-forms` feature**
+  (`src/hal-forms/`, ADR-004 amended 2026-10-01) — the create form and the search/filter
+  form today, and any new form (e.g. an update form). Resolve fields with
+  `resolveHalFormsFields`, render them with `HalFormsContainer`, and keep their state in
+  `useHalFormsFieldState`. The feature that owns the form keeps only its chrome (submit,
+  cancel, alerts, the request it sends). Do NOT add a feature-local field type, `kind`
+  switch or field-state hook; to support a new property shape, add a `kind` to
+  `HalFormsField`, map it in `resolveHalFormsFields` and render it in
+  `HalFormsFieldRenderer`.
+
+---
+
+## `entity-search-bar` feature (`src/entity-search-bar/`)
+
+The single search bar on the entity item collection page (spec
+`specs/003-single-search-bar-entity-item-collection/`): active-filter chips, a
+search-parameter selector with a suggestions popover, and quick filters. `x-stability: stable`
+(its importer, `entity-item-collection`, is stable).
+
+- **Controlled by the collection's `filters`** (the `s.<param>` URL state) through
+  `onFiltersChange` — it shares that state with the advanced filter dialog; it keeps no filter
+  state of its own and adds no URL keys.
+- **`util/` vs `components/`**: every model (search-parameter descriptors, selector groups,
+  suggestion chips/groups, active-filter chips, quick filters, date presets) is built by a pure
+  function in `util/` with a sibling test; `use-entity-search-bar.ts` only orchestrates;
+  components render finished models and pick icons (`components/search-icons.tsx`).
+- **Fields come from `resolveHalFormsFields`**, so the bar offers exactly the dialog's
+  parameters. The number quick filter renders through `HalFormsContainer` +
+  `useHalFormsFieldState`. `valueKindOf` in `util/build-search-param-descriptors.ts` holds the one
+  switch on a field's `kind`, mapping it to the feature's own `valueKind`;
+  `util/build-quick-filters.ts` then picks a quick-filter type from that `valueKind`. This is a
+  documented deviation from the "no feature-local `kind` switch" rule above (see the spec's
+  `plan.md`, Complexity Tracking); do not add a second switch on `field.kind`.
+- **Editing an applied filter**: clicking a chip loads a single selectable parameter into the main
+  bar (selected, value in the focused input; Enter replaces the filter) or opens the quick filter
+  covering all its parameters. The quick-filter popovers are controlled by the hook
+  (`openQuickFilter`) so a chip can open them.
+- **Inclusion**: `searchAttributes` in `EntityDisplayPreferences` (edited next to "Visible
+  columns") limits the selector, suggestions and quick filters; chips always show every active
+  filter, and relation parameters are always included. Import `useSearchAttributeInclusion` by
+  file path (`../preferences/use-search-attribute-inclusion`), not through `../preferences` —
+  the preferences previews import the collection view, which imports this feature.
 
 ---
 

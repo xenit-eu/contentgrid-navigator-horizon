@@ -6,6 +6,8 @@ export * from "./hooks";
 export * from "./accessors/attribute-profile";
 export * from "./accessors/extended-forms/search-form";
 export * from "./accessors/extended-forms/create-form";
+export type { FormAttributeProperty } from "./accessors/extended-forms/form-property";
+export * from "./accessors/extended-forms/update-form";
 export * from "./accessors/entity-item";
 export * from "./accessors/entity-item-collection";
 export * from "./accessors/entity-item-to-one-relation";
@@ -23,8 +25,17 @@ export type {
   EntityDisplayPreferencesMap,
 } from "./accessors/entity-display-preferences";
 export * from "./config";
+export * from "./preview";
 export { queryKeys } from "./query-keys";
 export * from "./search";
+export type { SearchRequestSpec } from "./api/requests";
+export type { FieldValue, FieldValueMap } from "./field-value";
+// Re-exported so `packages/features`/`packages/ui` can build and type raw HAL-FORMS values and
+// templates/properties (e.g. `createValues`/`HalFormValues` in `use-hal-forms-field-state.ts`,
+// `HalFormsField.property` in `packages/features/src/hal-forms`) without importing
+// `@contentgrid/hal-forms` directly — see ADR-007 and both packages' CLAUDE.md forbidden-imports
+// sections.
 export { createValues } from "@contentgrid/hal-forms/values";
 export type { HalFormValues } from "@contentgrid/hal-forms/values";
-export type { SearchRequestSpec } from "./api/requests";
+export type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
+export type { TypedRequestSpec } from "@contentgrid/typed-fetch";

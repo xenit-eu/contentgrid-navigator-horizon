@@ -29,6 +29,10 @@ export const Disabled: Story = {
   ),
 };
 
+export const Indeterminate: Story = {
+  render: () => <Checkbox aria-label="Indeterminate checkbox" checked="indeterminate" />,
+};
+
 const WithLabelDemo = () => {
   const [checked, setChecked] = useState(false);
   return (

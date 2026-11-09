@@ -3,6 +3,7 @@ export type { NavigatorDataContextValue } from "./context";
 export {
   useProfileEntities,
   useLoadedProfileEntities,
+  isAnyProfileLoading,
   useProfileEntity,
   ensureProfileEntity,
 } from "./profile/use-profile-entity";
@@ -19,6 +20,11 @@ export type {
 } from "./collection/use-entity-item-collection";
 export { useRecentlyCreated, useRecentlyModified } from "./collection/use-recent-items";
 export { useEntityItem, ensureEntityItem } from "./item/use-entity-item";
+export { useEntityItemsByUrl } from "./item/use-entity-items-by-url";
+export type {
+  UseEntityItemsByUrlParams,
+  EntityItemsByUrlResult,
+} from "./item/use-entity-items-by-url";
 export type {
   UseEntityItemOptions,
   UseEntityItemParams,
@@ -27,9 +33,22 @@ export type {
 } from "./item/use-entity-item";
 export { useTypeahead } from "./collection/use-typeahead";
 export type { UseTypeaheadOptions } from "./collection/use-typeahead";
+export {
+  extractAttributeSuggestions,
+  resolveRelationSearchTarget,
+} from "./collection/search-suggestion-helpers";
+export type { RelationSearchTarget } from "./collection/search-suggestion-helpers";
+export { useSearchParamSuggestions } from "./collection/use-search-param-suggestions";
+export type {
+  SearchParamSuggestionRequest,
+  SearchParamSuggestionResult,
+  SearchParamSuggestionStatus,
+  UseSearchParamSuggestionsOptions,
+} from "./collection/use-search-param-suggestions";
 export { useEntityItemToOneRelation } from "./relation/use-entity-item-to-one-relation";
 export type { UseEntityItemToOneRelationOptions } from "./relation/use-entity-item-to-one-relation";
 export { useEntityItemToManyRelation } from "./relation/use-entity-item-to-many-relation";
+export { useEntityItemToManyRelationInfinite } from "./relation/use-entity-item-to-many-relation-infinite";
 export type {
   UseEntityItemToManyRelationOptions,
   RelationCollectionParams,
@@ -62,3 +81,5 @@ export type {
 } from "./item/use-content";
 export { useEntityDisplayDefaults } from "./preferences/use-entity-display-defaults";
 export type { UseEntityDisplayDefaultsResult } from "./preferences/use-entity-display-defaults";
+export { useContentPreview } from "./preview/use-content-preview";
+export type { PreviewSource, UseContentPreviewOptions } from "./preview/use-content-preview";

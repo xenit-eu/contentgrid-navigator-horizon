@@ -148,3 +148,31 @@ export const DeleteConfirmation: Story = {
     await expect(args.onDelete).toHaveBeenCalledWith("1");
   },
 };
+
+export const UnlinkConfirmation: Story = {
+  // axe-no-contrast: confirmation dialog opens a portal.
+  tags: ["no-visual-test", "axe-no-contrast"],
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: COLUMNS,
+    rows: ROWS,
+    onUnlink: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    const unlinkButtons = canvas.getAllByRole("button", { name: /unlink/i });
+    await userEvent.click(unlinkButtons[0]);
+
+    let dialog: HTMLElement;
+    await waitFor(() => {
+      dialog = within(document.body).getByRole("alertdialog");
+      expect(dialog).toBeVisible();
+    });
+
+    const confirmBtn = within(dialog!).getByRole("button", { name: /^unlink$/i });
+    await userEvent.click(confirmBtn);
+    await expect(args.onUnlink).toHaveBeenCalledWith("1");
+  },
+};

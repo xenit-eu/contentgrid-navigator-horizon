@@ -155,6 +155,7 @@ describe("EntityItemAttributes", () => {
               value: new EntityItemAttributePlain("active", true),
               profileAttribute: makeProfileAttribute({
                 name: "active",
+                title: "Active",
                 type: ProfileAttributeType.boolean,
               }),
             },
@@ -171,7 +172,7 @@ describe("EntityItemAttributes", () => {
     expect(chips).toHaveLength(1);
   });
 
-  it("renders boolean values as plain true/false/unset text in the table, not a chip", () => {
+  it("renders boolean values as plain True/False/— text in the table, not a chip", () => {
     render(
       <EntityItemAttributes
         item={makeItem(
@@ -207,8 +208,8 @@ describe("EntityItemAttributes", () => {
         )}
       />,
     );
-    expect(screen.getByText("true")).toBeInTheDocument();
-    expect(screen.getByText("false")).toBeInTheDocument();
-    expect(screen.getByText("unset")).toBeInTheDocument();
+    expect(screen.getByText("True")).toBeInTheDocument();
+    expect(screen.getByText("False")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 });

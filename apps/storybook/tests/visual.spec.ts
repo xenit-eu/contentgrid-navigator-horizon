@@ -19,6 +19,28 @@ test.describe("Storybook visual regression", () => {
       await page.waitForSelector("#storybook-root", { state: "attached" });
       // Wait for web fonts so text-rendering diffs don't flake (ADR-009).
       await page.evaluate(() => document.fonts.ready);
+      // A story tagged `async-content` loads real async content (e.g.
+      // PdfViewer opening a document through the PDFium/WASM engine) and
+      // marks itself busy via `aria-busy="true"` for as long as any part of
+      // it is still loading — this waits until nothing is busy before
+      // screenshotting (ADR-009). Opt-in, not generic: a story with a
+      // permanently-busy loading state (e.g. the app-info-pages loading
+      // page) would otherwise time out here on every run.
+      if (story.tags?.includes("async-content")) {
+        // `#storybook-root` attaches before the story's own React tree
+        // commits — without this, the "nothing is busy" check below can
+        // pass vacuously on an empty root and race the story's own loading
+        // states.
+        await page.waitForSelector("#storybook-root > *", {
+          state: "attached",
+          timeout: 30_000,
+        });
+        await page.waitForFunction(
+          () => document.querySelector('[aria-busy="true"]') === null,
+          undefined,
+          { timeout: 30_000 },
+        );
+      }
       // Defensively kill animations/transitions in case a story enables them.
       await page.addStyleTag({
         content:

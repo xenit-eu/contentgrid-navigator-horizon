@@ -27,7 +27,7 @@ function NavItem({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-[10px] px-3 py-2 rounded-[6px] cursor-pointer w-full text-left transition-colors",
+        "flex items-center gap-[10px] px-3 py-2 rounded-[6px] w-full text-left transition-colors",
         active
           ? "bg-[rgba(1,155,227,0.12)] dark:bg-[rgba(90,196,242,0.14)] shadow-[inset_2px_0_0_#019BE3] dark:shadow-[inset_2px_0_0_#5AC4F2]"
           : "bg-transparent",

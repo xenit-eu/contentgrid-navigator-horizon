@@ -11,8 +11,23 @@ import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../../test-setup";
 import { createApiClient } from "../../api/client";
+import { isProblemWithStatus } from "../../api/problem-details";
 import { BASE, PROFILE_URL, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
-import { ensureProfileEntity, useProfileEntities, useProfileEntity } from "./use-profile-entity";
+import {
+  ensureProfileEntity,
+  useLoadedProfileEntities,
+  useProfileEntities,
+  useProfileEntity,
+} from "./use-profile-entity";
+
+/** A promise the test controls the settlement of, to hold one handler open while others resolve. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -191,6 +206,78 @@ describe("useProfileEntities", () => {
     await vi.runAllTimersAsync();
 
     expect(result.current.some((r) => r.isError)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useLoadedProfileEntities
+// ---------------------------------------------------------------------------
+
+describe("useLoadedProfileEntities", () => {
+  it("keeps isLoading true while one profile has settled but another is still pending", async () => {
+    const invoiceGate = deferred<void>();
+
+    server.use(
+      http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
+      http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+      http.get(INVOICE_PROFILE_URL, async () => {
+        await invoiceGate.promise;
+        return HttpResponse.json(invoiceProfileBody);
+      }),
+    );
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useLoadedProfileEntities(), { wrapper });
+
+    // The customer profile resolves, but the invoice profile is still held open —
+    // isLoading must not flip false just because one of the two has settled.
+    await waitFor(() =>
+      expect(result.current.profiles.some((p) => p.name === "customer")).toBe(true),
+    );
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.profiles.some((p) => p.name === "invoice")).toBe(false);
+
+    invoiceGate.resolve();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.profiles.map((p) => p.name).sort()).toEqual(["customer", "invoice"]);
+  });
+
+  it("keeps isLoading true while the profile root itself hasn't resolved yet", async () => {
+    const rootGate = deferred<void>();
+
+    server.use(
+      http.get(PROFILE_URL, async () => {
+        await rootGate.promise;
+        return HttpResponse.json(profileRootBody);
+      }),
+      http.get(CUSTOMER_PROFILE_URL, () => HttpResponse.json(customerProfileBody)),
+      http.get(INVOICE_PROFILE_URL, () => HttpResponse.json(invoiceProfileBody)),
+    );
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useLoadedProfileEntities(), { wrapper });
+
+    // No entity links are known yet, so `profiles` is empty — that must read
+    // as "still loading", not "there is nothing to load".
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.profiles).toEqual([]);
+
+    rootGate.resolve();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.profiles.map((p) => p.name).sort()).toEqual(["customer", "invoice"]);
+  });
+
+  it("exposes the profile root error instead of reading as an empty profile", async () => {
+    server.use(http.get(PROFILE_URL, () => new HttpResponse(null, { status: 401 })));
+
+    const wrapper = makeWrapper();
+    const { result } = renderHook(() => useLoadedProfileEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.profiles).toEqual([]);
+    expect(isProblemWithStatus(result.current.error, 401)).toBe(true);
   });
 });
 

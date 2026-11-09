@@ -43,6 +43,16 @@ export const NoOptions: Story = {
   },
 };
 
+/** A single option shown greyed out for context, instead of hiding the selector entirely. */
+export const Disabled: Story = {
+  args: {
+    attributes: [ATTRIBUTES[0]],
+    value: ATTRIBUTES[0].name,
+    disabled: true,
+    onSelect: fn(),
+  },
+};
+
 export const Interactive: Story = {
   render: (args) => {
     function InteractiveSelect() {

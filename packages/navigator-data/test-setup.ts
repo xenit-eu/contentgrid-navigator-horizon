@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
 
@@ -7,5 +8,25 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 export const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  // Unmount React trees between tests. Vitest runs without `globals: true`,
+  // so RTL's auto-cleanup never registers; without this, mounted hooks keep
+  // React's scheduler running after jsdom teardown ("window is not defined").
+  cleanup();
+});
 afterAll(() => server.close());
+
+// Blob.prototype.stream — jsdom's Blob/File lacks it, and Node 24's fetch waits on it forever when
+// serializing a multipart body that holds a jsdom `File` (a content upload). Mirrors
+// packages/features/test-setup.ts.
+if (!Blob.prototype.stream) {
+  Blob.prototype.stream = function (this: Blob) {
+    return new ReadableStream<Uint8Array<ArrayBuffer>>({
+      start: async (controller) => {
+        controller.enqueue(new Uint8Array(await this.arrayBuffer()));
+        controller.close();
+      },
+    });
+  };
+}

@@ -1,0 +1,517 @@
+<!--
+Sync Impact Report
+- Version change: 1.0.0 → 1.10.1
+- Amendment (1.10.0 → 1.10.1, PATCH): a third round of the same ACC-3216 PR #227 review, two
+  naming/location corrections with no principle content added. (a) The navigation hook is
+  renamed `useNavigation()` → `useViewNavigation()`, to avoid confusion with TanStack Router's
+  own `useNavigate` — the `Navigation` interface, `NavigationProvider` and
+  `ChildNavigationProvider` names are unchanged. (b) Principle VIII's router-allowance bullet
+  incorrectly bundled the app's own `Navigation` implementation together with router setup,
+  both inside `packages/views/src/shells/`. That implementation in fact lives under each app's
+  own `apps/<app>/src/routes/`, as a TanStack file-route-ignored file (e.g.
+  `-router-navigation-provider.tsx`): `packages/views` has no app's registered route tree (the
+  `Register` augmentation lives in each app) to typecheck a view's hardcoded route strings
+  (`/$entity`, `/$entity/$itemId`) against, so a route rename would not fail typecheck there,
+  while it does inside the app; the placement also keeps the file under the existing Sonar CPD
+  exclusion for mirrored app route files (`apps/*/src/routes/**`, PR #204). Router setup itself
+  stays in `packages/views/src/shells/`, unchanged. Both corrections are wording/location only —
+  no rule, obligation or boundary changes — hence PATCH, not MINOR.
+- Amendment (1.9.0 → 1.10.0, MINOR): a second round of the same ACC-3216 PR #227 review. Principle
+  VIII's app-view contract bullet said a link-based prop was "deferred until a view actually needs
+  one (no HAL link today)". The reference implementation (ACC-3216 PR #246, now adopted as PR 3 of
+  this series) builds it directly: the item detail view (`itemUrl`) and the collection view
+  (`collectionUrl`) both resolve a link themselves, through `navigator-data`'s existing
+  `describesUrl` and the profile-optional `useEntityItem`, with no shared target-resolution
+  mechanism. The bullet is corrected to describe this as built, not deferred — a scope/meaning
+  change, hence MINOR, not PATCH.
+- Amendment (1.8.0 → 1.9.0, MINOR): following ACC-3216 PR #227 review (spec 005, the views
+  layer), Principle VIII's preamble drops the "generated through /speckit-plan" carve-out and
+  the "existing code is not retroactively non-compliant" framing for "existing code is always
+  right; correct the spec if it's wrong" — a scope/meaning change, hence MINOR. Its bullets are
+  also aligned to the review's decisions: explicit per-view plain-value props (no shared target
+  type, no HAL link yet) and each view's own preload, replacing the generic
+  `target`/`preload(ctx, target, state)` wording; and, following the same review's rejection of
+  the generic `ViewTargetGate`, the gate bullet now has each view render its own loading/error/
+  not-found state through the shared `LoadingPage`/`ErrorPage` components instead of a shared
+  gate primitive.
+- Amendment (1.7.0 → 1.8.0, MINOR): the views layer ([ADR-018](../../docs/adr/ADR-018-views-layer.md),
+  ACC-3216). Principle VIII previously cited a non-existent
+  `ADR-018-feature-view-component-viewmodel-split.md` (the ADR-018 file is now
+  `ADR-018-views-layer.md`, which this citation resolves to; the earlier ADR-018 references in this report, such as "ADR-018's export-gaps section", pointed to a planned ADR that was never written) and placed views and the shared gate hook in
+  `packages/features`; it now cites the real ADR-018, places views in `packages/views`, routes navigation
+  through a host-provided navigation context read only by views (callback props stay fine for one-page-only actions),
+  lets views draw their default toolbar and be told not to, and has views receive view state
+  alongside the target. Principle III gains the `packages/views` import boundary. Principle IV
+  gains a forward-looking bullet: the `x-stability` tag moves from features to views when spec 005
+  moves stability to views (ACC-3216); the generic-app gate stays suspended pre-GA.
+- Amendment (1.6.0 → 1.7.0, MINOR): Principle I — the conditional-request bullet ("Every
+  mutating request MUST carry `If-Match`") misstated the platform contract. Per the
+  [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html),
+  only entity-item, to-one relation and entity-content support conditional requests, each with
+  its own ETag; to-many relations do not; a create-only PUT uses `If-None-Match: *` (not for
+  entity-items). Rewritten to require conditionality on the changed resource's OWN ETag, permit
+  `If-None-Match: *` where supported, and forbid sending one resource's ETag to another. 412
+  handling unchanged. MINOR rather than PATCH: it adds a new prohibition and a new permitted
+  form, not just wording. Mirrors the same-PR `CLAUDE.md` corrections (Governance → Amendment).
+- Amendment (1.5.0 → 1.6.0, MINOR): NEW Principle IX — Spec Traceability & Self-Contained
+  Artifacts. Every change in a spec-driven PR must trace to a part of the feature's spec;
+  implementation that departs from the spec must amend the spec in the same PR; repo
+  artifacts, commits and PR descriptions must not reference files outside the repository.
+- Amendment (1.4.1 → 1.5.0, MINOR): Principle IV — Three-Track Delivery & Stability Gating —
+  amended to add a pre-GA exception: while the product is pre-GA, a new feature may start at
+  any stability tier (typically `stable`) and `apps/navigator` is not gated by stability tier.
+  The original rules (new feature starts at `experimental`; generic imports only `stable`)
+  resume at production go-live. Reflects the ESLint enforcement in
+  `apps/navigator/eslint.config.js` being reconfigured to allow all tiers pre-GA (see the
+  [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga)).
+- Correction (1.4.0 → 1.4.1, PATCH): Principle III cited `HalFormsCodecs` as an example of an
+  existing `navigator-data` re-export. It isn't one — the Layer-1 codec is only ever imported
+  internally as the default export `halFormCodecs` (four accessor files), never re-exported, and
+  features/ui never need it directly. Replaced with `HalFormValues`, which is actually exported.
+  Found while auditing the real barrel for ADR-018's export-gaps section.
+- Modified principles:
+  - III. Two-Layer Dependency Model & Package Boundaries: added the `packages/views` import
+    boundary (1.7.0 → 1.8.0).
+  - IV. Three-Track Delivery & Stability Gating: added a forward-looking bullet — the tag moves
+    from features to views when spec 005 moves stability to views (ACC-3216); the generic-app gate stays suspended
+    pre-GA (1.7.0 → 1.8.0).
+  - VIII. View-Owned Data Loading, App-View Contract & Transformation Placement: ADR-018 citation now
+    resolves to `ADR-018-views-layer.md`; views live in `packages/views`; navigation context; toolbar drawn by the
+    view and switchable off; view state alongside the target; features fill their space
+    (1.7.0 → 1.8.0). Preamble further revised (1.8.0 → 1.9.0): see the amendment entry above.
+    App-view contract bullet corrected: a link-based prop is built, not deferred (1.9.0 → 1.10.0,
+    see the amendment entry above). Navigation hook renamed `useNavigation()` →
+    `useViewNavigation()`; router-allowance bullet corrected to place the app's own `Navigation`
+    implementation under `apps/<app>/src/routes/`, not `packages/views/src/shells/` (1.10.0 →
+    1.10.1, see the amendment entry above).
+  - I. HAL Is the Only Interaction Model: added the binary-content exception (no HAL-FORMS
+    template exists for `cg:content` PUT/GET) — the principle as written contradicted this
+    documented, sanctioned behavior; corrected/completed.
+  - II. Model-First — No Hardcoded Domain Knowledge: added a bullet requiring profile
+    discovery to go through the `navigator-data` accessor classes rather than raw HAL JSON
+    parsing (MINOR bump, 1.0.0 → 1.1.0).
+  - III. Two-Layer Dependency Model & Package Boundaries: added a bullet permitting
+    `navigator-data` to explicitly re-export selected Layer-1 functions/classes/types
+    (`createValues`, `HalFormsCodecs`, etc.) for callers that need them (MINOR bump,
+    1.1.0 → 1.2.0); added a bullet gating `packages/dev-tools` behind a dev-only import check.
+  - IV. Three-Track Delivery & Stability Gating: added a pre-GA exception — a new feature may
+    start at any tier and `apps/navigator` is not gated by stability tier until production
+    go-live, when the original rules are reinstated (MINOR bump, 1.4.1 → 1.5.0).
+  - V. Deny-by-Default ABAC: added the "gated both before and after the mutation" nuance for
+    Update.
+  - VI. Authentication, Token Handling & Webhook Verification: NEW principle (Bearer-token
+    handling, OIDC Discovery, token refresh, webhook JWT/JWKS verification) — previously
+    entirely unrepresented in this document.
+  - VII. Supply-Chain Integrity for Dependencies: renumbered from VI (no content change) to
+    make room for the new Authentication principle above it; cross-reference in "Development
+    Workflow & Quality Gates" updated accordingly.
+  - VIII. View-Owned Data Loading, App-View Contract & Transformation Placement: NEW principle
+    condensing ADR-018's target architecture (app→view primitive-props contract, router-loader
+    data-loading guarantee, shared profile-entity gate, view-owned default page content,
+    util-layer transformation placement) — explicitly scoped as forward-looking/binding for new
+    work only, not retroactive.
+  - IX. Spec Traceability & Self-Contained Artifacts: NEW principle (spec traceability for
+    spec-driven PRs, spec-update-on-divergence, no references to local files) (MINOR bump,
+    1.5.0 → 1.6.0).
+- Modified sections:
+  - Error Handling & API Contracts: expanded from two short paragraphs into a concrete,
+    testable contract grounded in the actual `packages/navigator-data/src/api/problem-details/`
+    and `packages/features/src/problem-details/` implementations (MINOR bump, 1.2.0 → 1.3.0).
+- Added sections: none new this amendment beyond the principles above (see 1.0.0 entry for the
+  initial set: Core Principles I–VI as originally named; Error Handling & API Contracts;
+  Development Workflow & Quality Gates; Governance)
+- Removed sections: n/a
+- Templates requiring follow-up: not checked — out of scope for this command (see its own
+  Scope Guard); dependent templates/commands read this file at run time.
+- Prior resolved item: RATIFICATION_DATE set to 2026-09-15 (PATCH bump, 1.3.0 → 1.3.1).
+- Deferred items: none outstanding.
+- This report is scratch material for reviewing the amendment and should be removed before
+  the amended file is committed.
+-->
+
+# ContentGrid Navigator Horizon Constitution
+
+## Core Principles
+
+### I. HAL Is the Only Interaction Model (NON-NEGOTIABLE)
+
+- Every mutation MUST be driven by the resource's own `_templates` (HAL-FORMS): read
+  `method`, `target`, and `contentType` from the item's `default`/`delete`/`set-<rel>`/
+  `add-<rel>`/`clear-<rel>` template, or the profile's `create-form` template. Hardcoding an
+  HTTP method, URL, or Content-Type instead of reading it from a template is prohibited.
+- **Binary content is the one documented exception to template-driven mutations**: a `cg:content`
+  PUT/GET has no HAL-FORMS template at all. `entityItem.uploadContentRequest`/
+  `downloadContentRequest` MAY construct a `Request` by hand for this case only — gated on the
+  `cg:content` link's presence (`entityItem.canUploadContent(attrName)`), using `contentFetch`
+  (not `apiFetch`) for the binary transfer. This, together with `unlinkItemRequest` (below), are
+  the only two hand-built-`Request` exceptions in the codebase; neither is a precedent for a
+  third.
+- URLs MUST come only from HAL links: collection URLs from `cg:entity` links, item URLs from
+  the profile's templated `describes` link (or `profileEntity.itemUrl(id)`), relation/content
+  URLs from `cg:relation`/`cg:content` links. String-building, concatenating, or
+  regex-replacing a URL (`href.replace(...)`, `${collectionHref}/${id}`, `.split("/").pop()`)
+  is prohibited, with no exception beyond the single explicitly-documented workaround in
+  `packages/navigator-data/CLAUDE.md` (`unlinkItemRequest`'s per-item DELETE, pending a
+  server-provided template — not a model for any other URL construction).
+- HAL-FORMS template property values MUST be set through the template's own value API
+  (`createValues(template).withValue(name, val)`) and encoded by `HalFormsCodecs`. Building a
+  request body or URL by string-interpolating a value into it, instead of setting it as a
+  template value, is prohibited — the codec owns encoding; hand-rolling it produces requests
+  the server cannot reliably parse and silently skips validation the template already encodes.
+- Entity item IDs MUST be read from the `id` field. Parsing an ID out of a self href
+  (`selfHref.split("/").pop()` or any href-parsing idiom) is prohibited — URL structure is a
+  server implementation detail the client must not depend on.
+- Pagination cursors MUST never be parsed or constructed by hand — follow `next`/`prev`/`self`
+  links directly. The one narrow exception is using an opaque `_cursor` value as a lookup key
+  into a client-side registry that maps back to the exact link it came from; the value itself
+  is never decoded, and no fetch URL is ever built from it by hand.
+- A mutation on a conditional-request resource — entity-item (`/{plural}/{id}`), to-one
+  relation (`/{plural}/{id}/{relation}`) or entity-content (`/{plural}/{id}/{attribute}`) — MUST
+  be conditional on **that resource's own** ETag: `If-Match` with the ETag verbatim and
+  unmodified, stored only for the session (never persisted); or `If-None-Match: *` for a
+  create-only PUT where the platform supports it (never for entity-items). An ETag MUST NOT be
+  sent to a different resource (e.g. an entity item's ETag on its content or relations).
+  Resources outside that list (to-many relations and their per-item endpoints) are not
+  conditional. Where a resource's own ETag cannot currently be obtained, the gap MUST be
+  documented (e.g. FIXME(ACC-3186)) rather than papered over with another resource's ETag. A
+  412 (`unsatisfied-version`) MUST be handled by re-fetching, re-applying the user's change,
+  and retrying — a hook MUST NOT swallow or auto-retry a 412 itself.
+
+Rationale: the REST/HAL API is the platform's only integration point. Every deviation above
+re-encodes a piece of server-owned structure — a path shape, a cursor format, a template
+encoding rule — into client code, which breaks the moment the server changes that structure.
+This is exactly the failure mode hypermedia-driven APIs exist to prevent, and it is the most
+frequently violated class of rule in past HAL-Forms audits of this codebase.
+
+### II. Model-First — No Hardcoded Domain Knowledge
+
+- Entities, attributes, relations, and operations MUST be discovered at runtime from the
+  Profile API (`/profile`, `/profile/{entity}`) — never hardcoded.
+- Entity collection paths MUST use the plural `href` from the profile's `cg:entity` link,
+  never the singular `name` field.
+- Content attributes MUST be identified via `attr.isContent` (object type with embedded
+  `blueprint:attribute` children), never via a `type === "content"` check (no such enum
+  member exists) or by probing for sub-field names (`filename`, `mimetype`, `length`).
+- Audit-role fields (created/modified date/by) MUST be discovered via `blueprint:constraint`
+  system-managed types, never via literal field-name matching (`created_date`, etc.).
+- Profile discovery MUST go through the `navigator-data` accessor classes — `ProfileEntity`,
+  `ProfileAttribute`, `ProfileRelation`, and the HAL-FORMS template accessors
+  (`SearchHalFormTemplate`, `CreateHalFormTemplate`) — and the hooks built on them
+  (`useProfileEntity`, `useProfileEntities`). Parsing the raw `/profile`/`/profile/{entity}`
+  HAL JSON directly in a feature or UI component, instead of going through these accessors, is
+  prohibited.
+
+Rationale: Navigator renders one generic UI over an arbitrary, customer-defined data model.
+A hardcoded name is a hidden assumption that breaks the first time a different application's
+model doesn't happen to share it.
+
+### III. Two-Layer Dependency Model & Package Boundaries
+
+- `packages/ui` MUST NOT import `@contentgrid/hal`, `@contentgrid/hal-forms`, or any other
+  Layer-1 package, and MUST NOT import from `packages/features` or `apps/*`. `@radix-ui/*`
+  MUST only be imported inside `packages/ui`.
+- `packages/navigator-data` MUST NOT import from `packages/ui`, `packages/features`, or
+  `apps/*`. All seven Layer-1 `@contentgrid/*` packages MUST remain `peerDependencies` —
+  re-vendoring or re-implementing what they provide is prohibited.
+- `packages/navigator-data` MAY explicitly re-export selected functions, classes, and types
+  straight from the underlying `@contentgrid/*` Layer-1 packages — e.g. `createValues`,
+  `HalFormValues`, `HalFormsProperty`, `HalFormsTemplate` — when a caller in
+  `packages/features` or `packages/ui` needs them to build or type HAL-FORMS values/templates.
+  This is the sanctioned way those packages reach Layer-1 capability without importing a
+  Layer-1 package directly; the re-export MUST be explicit and named, never a blanket
+  `export *` of the whole Layer-1 package.
+- `packages/features` MUST NOT import a Layer-1 `@contentgrid/*` package directly (go through
+  `@contentgrid/navigator-data`), and MUST NOT import from `apps/*`. A `stable` feature MUST
+  NOT import a `candidate` or `experimental` feature.
+- `packages/views` (ADR-018) sits between the apps and `packages/features`: it MAY import
+  `packages/features`, `packages/ui` and `@contentgrid/navigator-data`, and MUST NOT import
+  `apps/*`. `packages/features`, `packages/ui` and
+  `@contentgrid/navigator-data` MUST NOT import `packages/views`. These boundaries bind new work
+  now and are enforced by lint once spec 005 adds the layer rules (ACC-3216); existing app imports of
+  `packages/features` are migrated by that spec and are not retroactively non-compliant. The
+  design says "apps only import views"; the working reading here — apps import features only
+  through views, and still import the data and UI packages to bootstrap — is to be confirmed in
+  review.
+- The primitive/pattern boundary in `packages/ui` MUST hold: primitives (`src/primitives/`)
+  carry no Navigator-domain or HAL knowledge; the HAL-Forms field-renderer patterns take only
+  plain scalar props (`name`, `label`, `required`, `value`, `onChange`, `error?`, …), never a
+  `HalFormsField` or other HAL-Forms-shaped type.
+- Every HAL-Forms-driven form MUST render through the `hal-forms` feature
+  (`packages/features/src/hal-forms/`): its `HalFormsField` union, `resolveHalFormsFields`,
+  `HalFormsContainer`/`HalFormsFieldRenderer` and `useHalFormsFieldState`. A feature MUST NOT
+  add its own field type, `kind` switch or field-state hook (ADR-004, amended 2026-10-01).
+- `packages/dev-tools` (dev-only tooling such as the Application Selector) MUST only be
+  imported behind an explicit dev-only guard (e.g. `import.meta.env.DEV`) so bundlers
+  tree-shake it out of production builds. It carries no `x-stability` flag and has no
+  promotion path to production regardless of track — it is not a product feature under
+  Principle IV, and MUST NOT be treated as one.
+
+Rationale: this boundary is what keeps a backend contract change from forcing a rewrite of
+the UI layer, and what keeps `packages/ui` reusable independent of any ContentGrid-specific
+data concern.
+
+### IV. Three-Track Delivery & Stability Gating
+
+- Every feature directory in `packages/features/src/` MUST declare an `x-stability` field
+  (`experimental` | `candidate` | `stable`) in its `package.json`. A new feature MUST start
+  at `experimental`.
+- `apps/navigator` (generic track) MUST import only `stable` features and MUST NOT contain
+  customer-specific code, in-flight demos, or half-built features. `apps/navigator-experimental`
+  may import `experimental`, `candidate`, or `stable` features, and MUST NOT be hosted on a
+  public URL.
+- Promotion (an `x-stability` flip) MUST NOT move code between directories — no fork drift —
+  and MUST go through code review, gated on every dependency of the feature being at or above
+  the target stability tier.
+- **Pre-GA exception:** while the product is pre-GA, the two bullets above are suspended —
+  a new feature MAY start at any tier (typically `stable` directly), and `apps/navigator`
+  MAY import features at any stability tier. The `x-stability` field itself remains required
+  and the ESLint rule stays enabled (still catching an invalid/typo value); it is reconfigured
+  to allow all tiers. This exception ends at production go-live, at which point the original
+  rules above are reinstated (see the
+  [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga)).
+- **Forward-looking (ADR-018): stability moves to views.** When spec 005 moves stability to views
+  (ACC-3216), the `x-stability` field moves from feature directories to views in `packages/views`, and the
+  `no-unstable-features` rule checks views instead of features. From then on a stable view MUST
+  NOT import an experimental view, and a stable view that needs an experimental feature is
+  copied into an experimental variant. Until then the bullets above apply to features as
+  written, and the generic-app gate stays suspended pre-GA throughout.
+
+Rationale: this is the mechanism that lets one shared codebase serve a production track and
+an experimentation track without either contaminating the other. Pre-GA, every feature is
+still being built toward its first release, so forcing a promotion ladder before there is a
+production track to protect is process for its own sake — the gate earns its keep once
+Navigator is live.
+
+### V. Deny-by-Default ABAC — Template/Link Presence Is the Permission Signal
+
+- Access is denied by default. A UI operation MUST be gated on the presence of its HAL-FORMS
+  template or link, never assumed from a role or a client-side flag. Absence of
+  `_templates.delete` (or any other template) means that operation MUST NOT be rendered or
+  invoked.
+- Capability MUST be read through a named boolean derived from template presence
+  (`canUpdate`, `canDelete`, `canCreate`, `canSet`, `canClear`, `canAdd`, …) — feature code
+  MUST NOT re-check a raw template inline.
+- A 403, or a 404 on a single-item read, MUST be treated as an authorization outcome, not an
+  error to retry — the application API does not expose permission conditions, and a collection
+  query silently filters out items the current user cannot see.
+- **Update is gated both before and after the mutation**: an ABAC policy's conditions must be
+  satisfied by both the pre-mutation and the post-mutation state of the item. A client MUST NOT
+  assume that passing the pre-mutation check (e.g. a visible `default` template) guarantees the
+  mutation will succeed — a 403 after submitting a value that would violate a condition on the
+  resulting state is expected, policy-correct behavior, not a bug to work around.
+
+Rationale: template/link presence is the only signal the frontend has for what the
+centrally-evaluated ABAC policy allows for the current user. Treating anything else as the
+permission source either renders a control the user cannot actually use, or hides one they
+can.
+
+### VI. Authentication, Token Handling & Webhook Verification
+
+- All API access MUST use an OIDC-based Bearer token (RFC 6750), sent in the `Authorization`
+  header only — never as a query parameter, cookie, or embedded elsewhere in the request.
+- Token endpoints MUST be discovered via OIDC Discovery (`/.well-known/openid-configuration`);
+  hardcoding a token or authorization endpoint URL is prohibited.
+- Tokens are short-lived (5 minutes by default). A client MUST refresh proactively rather than
+  reacting to expiry failures as the primary refresh trigger.
+- A webhook's `ContentGrid-Signature` header (an RS256-signed JWT) MUST be verified using the
+  public keys at `GET ${CONTENTGRID_URL}/.well-known/jwks.json`, selecting the key by the `kid`
+  in the JWT header (keys rotate) — verification MUST use an established JWT library, never a
+  hand-rolled signature check.
+
+Rationale: token handling and webhook verification are the platform's actual trust boundary.
+A hardcoded endpoint breaks silently on issuer rotation; a hand-rolled signature check is the
+highest-risk place in the codebase to get subtly wrong.
+
+### VII. Supply-Chain Integrity for Dependencies (NON-NEGOTIABLE)
+
+- A package install MUST pin an explicit version. `latest`, an unpinned install, or a
+  `"*"`/`"latest"` range in `package.json` is prohibited.
+- A package version published more recently than `pnpm-workspace.yaml`'s
+  `minimumReleaseAge` (currently 14 days) MUST NOT be installed; this setting MUST NOT be
+  lowered or bypassed per-install.
+- `blockExoticSubdeps`, the empty `onlyBuiltDependencies` allowlist, and `approve-builds=false`
+  MUST NOT be disabled or bypassed. Adding a package to `onlyBuiltDependencies` requires
+  understanding why it needs a build script, plus review.
+- `pnpm-lock.yaml` is the source of truth; CI MUST install with `--frozen-lockfile`.
+- GitHub Actions MUST be pinned to full 40-character commit SHAs with a trailing
+  human-readable version comment, never a mutable tag.
+- `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, and `.github/workflows/**` are
+  CODEOWNERS-protected and MUST go through review before merging, with the single documented
+  exception of the Renovate app's own bypass for its minor/patch dependency PRs — never
+  extended to a human contributor or to an AI agent.
+
+Rationale: this is the concrete set of controls already in place against a compromised or
+just-published dependency version; loosening any one of them for convenience defeats the
+others.
+
+### VIII. View-Owned Data Loading, App-View Contract & Transformation Placement
+
+Forward-looking target architecture ([ADR-018](../../docs/adr/ADR-018-views-layer.md), the views
+layer). Binding for new `packages/views` and `packages/features` work, possibly generated through
+`/speckit-plan`/`/speckit-tasks`; in other cases work may have been generated without a
+corresponding plan. The existing code is always right: if you find mistakes in existing specs,
+correct them.
+
+- Views live in `packages/views`. An app (`apps/*`) MUST pass a view only plain values — the
+  explicit props that view declares (e.g. an entity name and item id, or a link such as
+  `itemUrl`/`collectionUrl`) and, optionally, view state — plus plain callback functions. A view
+  that accepts a link resolves it itself through `navigator-data`'s existing hooks (profile
+  discovery by `describesUrl`, item loading by `useEntityItem`'s profile-optional mode) — there is
+  no shared target-resolution mechanism for this, in `navigator-data` or anywhere else. Passing a
+  resolved domain object (`ProfileEntity`, `EntityItem`, …) that the app itself fetched is
+  prohibited; the view resolves its own data via `navigator-data` hooks.
+- A view receives its view state (filters, sort, page, active tab) alongside its identifying
+  props, never inside them. The app maps its own address to view state and back and is the only
+  layer that knows the address format; a frontend address MUST NOT be passed as one of a view's
+  identifying props.
+- An app's route-level responsibility is exactly: choose which view to mount, supply its props
+  and state, provide the navigation context, and guarantee — via the router's own `loader`
+  calling the view's own preload, not a swallow-and-hope `beforeLoad` — that the view's required
+  data is loading before it mounts.
+- A view handles its own loading/error/not-found state and MUST render it with the shared
+  `LoadingPage` / `ErrorPage` components from `@contentgrid/features/app-info-pages` (errors via
+  `toProblemDisplayModel` from `navigator-data`), so every view looks and behaves the same. No
+  separate gate hook or component layer is required.
+- Navigation MUST go through the navigation context the host provides, and only views read it
+  (`useViewNavigation()` — named to avoid confusion with TanStack Router's own `useNavigate`).
+  Features MUST NOT read it: they report user actions through callback props that their view
+  wires to the navigation object. Views and features MUST NOT use the router; host code (the
+  shells area of `packages/views`: router setup only) and the apps MAY — each app's own
+  `Navigation` implementation lives under that app's own `apps/<app>/src/routes/`, as a
+  TanStack file-route-ignored file, not inside `packages/views/src/shells/`: a view's
+  identifying props carry hardcoded route strings, and only the app's own registered route tree
+  (the `Register` augmentation) can typecheck them. A callback prop also remains fine for an
+  action only one page needs (e.g. "after create, go to the new item").
+- A view draws its default toolbar (breadcrumbs and actions), computed from the data it
+  resolved, with every click going through the navigation context. A host or parent view MUST
+  be able to turn it off. A feature MUST NOT draw a
+  toolbar or breadcrumbs, and MUST fill the space it is given.
+- A view loads the main data its page is about and passes it to its features; a feature MAY
+  fetch more only by following links on the object it received, and MUST NOT load the main
+  object again or build URLs.
+- Transformation logic (data reshaping, formatting, HAL-wire-type mapping, etc.) MUST live in a
+  `util/` layer — a feature's own, or the cross-feature `packages/features/src/util/` root when
+  used by 2+ features — never duplicated inline inside a view or component. A view's job is
+  orchestration only; a component consumes already-transformed data.
+
+Rationale: an app holding a resolved domain object forces every app to re-derive anything built
+from it (e.g. breadcrumb labels), once per call site — the exact duplication pattern already
+found in this codebase (independent, drifting "item count" strings in the collection view and
+table; a hand-duplicated HAL wire-type switch between `search/` and `entity-item-create/`).
+Concentrating data loading, gating, page chrome and transformation in one owner per concern
+removes the class of bug, not just today's two instances of it, and lets the same view be shown
+by the app, a chat panel or next to another view.
+
+### IX. Spec Traceability & Self-Contained Artifacts
+
+- **Every change in a spec-driven PR MUST be traceable to the spec.** For a PR implementing a
+  Spec Kit feature (`specs/NNN-*/`), each change MUST map to a specific part of that feature's
+  spec artifacts — a user story, a functional requirement (`FR-xxx`), a success criterion, a
+  `contracts/` entry, or a `tasks.md` task that itself references one of those. A change with
+  no such anchor (an opportunistic refactor, an unrelated fix, a "while I'm here" tweak) MUST
+  either be split into its own PR or be brought into the spec first (next bullet).
+- **When implementation departs from the spec, the spec MUST be updated in the same PR.** If a
+  change is made that the spec does not describe, or a decision in `spec.md`, `plan.md`,
+  `contracts/` or `tasks.md` turns out to be wrong during implementation, the affected
+  artifacts MUST be amended in that PR so they describe what was actually built. Code that
+  silently outgrows its spec is prohibited — the spec is the record of intent, and a stale one
+  is worse than none.
+- **No references to local files.** Spec artifacts, plans, tasks, ADRs, docs, `CLAUDE.md`
+  files, code comments, commit messages and PR descriptions MUST NOT reference files outside
+  this repository: absolute paths (`/Users/…`, `C:\…`), home-relative paths (`~/…`), sibling
+  checkouts (`../<other-repo>/…`), or scratch/temp locations. Reference repo-relative paths,
+  or a public URL (e.g. a GitHub permalink) for external material. If content from an
+  external file is needed, bring the relevant part into the repo or summarize it inline.
+
+Rationale: Spec Kit output is only worth its cost as a contract if it stays true to the code —
+reviewers check a PR against its spec, and later `/speckit-plan` runs build on earlier specs as
+ground truth. Untraceable changes make that review impossible, and an unamended spec misleads
+every reader (human or agent) who comes after. A local file reference resolves on exactly one
+machine: to every other reviewer, to CI and to every future agent it is a dead link, and in a
+repository headed for open source it can leak details of a contributor's environment.
+
+## Error Handling & API Contracts
+
+All error responses use `Content-Type: application/problem+json` (RFC 9457): `type` (URI),
+`title`, `detail`, `status`, plus problem-specific fields. A mutation/query function MUST
+reject with `Error` as its typed error (never a narrower `ProblemDetailError` generic) —
+every non-2xx HTTP response surfaces as `ProblemDetailError` (via `checkResponse`), but a
+pre-fetch affordance/ABAC guard or a network failure rejects with a plain `Error`; `Error` is
+the accurate common supertype, and callers narrow at the point of use.
+
+- **Narrowing MUST use the provided guards** (`packages/navigator-data/src/api/problem-details/guards.ts`)
+  — `isProblemDetailError`, `isProblemOfType`, `isProblemWithStatus`, `isValidationProblem`,
+  `getValidationFieldErrors` — never a raw `instanceof ProblemDetailError` plus manual
+  `.problemDetail.status`/`.type` comparison. `isProblemWithStatus` MUST be used for
+  status-only checks (e.g. 412) so an opaque, typeless problem (masked 403, Spring Boot
+  default 500) is still matched correctly.
+- **Every caught error MUST be converted to a `ProblemDisplayModel` via `toProblemDisplayModel`
+  before being rendered.** This is the only bridge from a caught `Error`/`ProblemDetailError`
+  to presentation data; hand-rolling problem-detail rendering from a raw
+  `ContentGridProblemDetail` in feature code is prohibited. A problem `type` this module does
+  not (yet) recognize, or a validation `errors[]` entry whose `type` isn't modeled, MUST fall
+  back to `kind: "unknown"` / `kind: "unknownField"` rather than throwing — the bridge is
+  forward-compatible with problem types the server may add later.
+- **Rendering MUST go through the `ProblemAlert` dispatcher** (`packages/features/src/problem-details/`),
+  which switches on `model.kind` to the matching component — `ValidationAlert`,
+  `RelationConflictAlert`, `VersionConflictAlert`, or `GenericProblemAlert` (the fallback for
+  `queryParameter`/`requestBody`/`header`/`notFound`/`unknown`) — or render one of those
+  kind-specific components directly when the call site already knows its problem kind. All of
+  them build on the shared `ProblemAlertFrame` shell; a feature MUST NOT construct its own
+  status/title/detail alert shell in parallel.
+- **A validation problem's entity-level errors (no `field`) and any field-scoped error whose
+  `field` doesn't match a rendered form field MUST still reach the user** — typically via the
+  non-field-error fallback path a form's container computes (see `entity-item-create`'s
+  `nonFieldError` handling), never silently dropped because no `HalFormsFieldRenderer` exists for that
+  field name.
+- **Dismissal is scoped to the specific error's identity** (`status|title|detail`), not a bare
+  boolean — `ProblemAlertFrame` re-surfaces automatically when a _different_ error of the same
+  `kind` arrives, even if the user already dismissed a prior one. A feature MUST NOT add its
+  own always-hide-after-dismiss state that would suppress a genuinely new error.
+- Every alert MUST offer the RFC 9457 `type` URI as a "view problem type documentation" link
+  when `type` is known (§3.1.1: dereferencing `type` should show human-readable docs). An
+  opaque (typeless) problem — masked 403, Spring Boot default 500 — MUST NOT be assumed to
+  carry one.
+
+`ProblemDisplayModel.kind` — the contract UI code actually switches on — is one of:
+`validation`, `queryParameter`, `requestBody`, `header`, `unsatisfiedVersion`, `notFound`,
+`blindRelationOverwrite`, `requiredRelation`, `unknown`. These map from the RFC 9457 problem
+`type` families: `input/validation` (400, with `errors[]`), `invalid-query-parameter/*` and
+`invalid-request/*` (400), `unsatisfied-version` (412), `not-found/*` (404),
+`integrity/blind-relation-overwrite` and `integrity/required-relation` (409).
+
+## Development Workflow & Quality Gates
+
+- HAL contract tests (MSW-backed) live alongside the hooks they cover. Adding or changing a
+  hook MUST come with an updated MSW handler fixture so contract tests catch shape drift.
+- Visual regression is covered by Playwright story snapshots; a UI-affecting pattern/primitive
+  change MUST keep its story current.
+- A UI/frontend change MUST be exercised against a running dev server in a browser (golden
+  path and edge cases) before being reported complete. Passing type checks and unit/contract
+  tests verifies code correctness, not feature correctness — if the UI genuinely cannot be
+  exercised in a given session, that limitation MUST be stated explicitly rather than implying
+  the feature was verified end-to-end.
+- Code review is the sole gate for both CODEOWNERS-protected files (Principle VII) and feature
+  promotion (Principle IV) — no automated bypass beyond the single documented Renovate
+  exception.
+
+## Governance
+
+This constitution condenses and elevates governance rules already distributed across the
+repo's per-package `CLAUDE.md` files (root, `packages/ui`, `packages/navigator-data`,
+`packages/features`, `packages/dev-tools`, `apps/navigator`, `apps/navigator-experimental`)
+and the ADRs under `docs/adr/`. Those files remain the detailed, authoritative reference for
+implementation specifics; this document is the condensed set that Spec Kit-generated
+specs/plans/tasks are checked against.
+
+- **Amendment**: a change to this file MUST go through the same review path as the
+  `CLAUDE.md` files it summarizes. When a `CLAUDE.md` rule that a principle here depends on
+  changes, this constitution MUST be amended in the same PR (or an immediately-following one)
+  — a stale principle is worse than a missing one.
+- **Versioning**: semantic versioning. MAJOR for a removed or redefined principle, MINOR for
+  an added principle or materially expanded guidance, PATCH for wording/clarification only.
+- **Compliance**: every `/speckit-plan` and `/speckit-tasks` output MUST comply with the Core
+  Principles above. A deviation requires an explicit, documented justification in that plan's
+  own Complexity/Deviation section — not silent divergence.
+
+**Version**: 1.10.1 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-22

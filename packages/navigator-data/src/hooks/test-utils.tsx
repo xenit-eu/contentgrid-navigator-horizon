@@ -5,10 +5,15 @@ import entityProfilesDump from "../../test-fixtures/entity-profiles/entity-profi
 import ProfileEntity from "../accessors/entity-profile";
 import {
   type AuthenticationTokenSupplier,
+  type ContentFetch,
   type TypedFetch,
   createApiClient,
   createContentClient,
 } from "../api/client";
+import {
+  DEFAULT_RENDITION_POLL_INTERVAL_MS,
+  DEFAULT_RENDITION_TIMEOUT_MS,
+} from "../preview/rendition-job";
 import type { ProfileEntityShape } from "../shapes";
 import { NavigatorDataProvider } from "./context";
 
@@ -88,14 +93,24 @@ export function makeQueryClient() {
  * @param queryClient   - TanStack QueryClient to use; defaults to a fresh one.
  * @param apiFetch      - Optional TypedFetch to inject (e.g. a spy for header assertions).
  *                        Defaults to a real client using noopSupplier so MSW intercepts requests.
- * @param contentFetch  - Optional TypedFetch for binary content (cg:content) requests.
+ * @param contentFetch  - Optional ContentFetch for binary content (cg:content) requests.
  *                        Defaults to a real content client using noopSupplier.
+ * @param renditionUri  - Optional rendition URI template (must contain `{?url}`) to enable
+ *                        `useContentPreview`'s rendition path. When provided, `renditionPolling`
+ *                        is populated with the same defaults `useAppAuth` applies (2000ms /
+ *                        60000ms) — pass a custom poll interval by registering MSW handlers
+ *                        with matching timing instead of overriding this wrapper.
  */
 export function makeWrapper(
   queryClient = makeQueryClient(),
   apiFetch: TypedFetch = createApiClient(noopSupplier),
-  contentFetch: TypedFetch = createContentClient(noopSupplier),
+  contentFetch: ContentFetch = createContentClient(noopSupplier),
+  renditionUri?: string,
 ) {
+  const renditionPolling = renditionUri
+    ? { intervalMs: DEFAULT_RENDITION_POLL_INTERVAL_MS, timeoutMs: DEFAULT_RENDITION_TIMEOUT_MS }
+    : undefined;
+
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -103,6 +118,8 @@ export function makeWrapper(
           apiFetch={apiFetch}
           contentFetch={contentFetch}
           profileUrl={PROFILE_URL}
+          renditionUri={renditionUri}
+          renditionPolling={renditionPolling}
         >
           {children}
         </NavigatorDataProvider>

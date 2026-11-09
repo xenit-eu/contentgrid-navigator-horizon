@@ -265,3 +265,52 @@ describe("DataTable — action menu", () => {
     expect(screen.getByText(/delete this users/i)).toBeInTheDocument();
   });
 });
+
+describe("DataTable — unlink action", () => {
+  it("renders an unlink button per row when onUnlink is provided", () => {
+    renderTable({ onUnlink: vi.fn() });
+    expect(screen.getAllByRole("button", { name: /unlink/i }).length).toBe(2);
+  });
+
+  it("does not render unlink buttons when onUnlink is absent", () => {
+    renderTable();
+    expect(screen.queryByRole("button", { name: /unlink/i })).not.toBeInTheDocument();
+  });
+
+  it("clicking unlink opens the confirmation dialog without calling onUnlink yet", async () => {
+    const user = userEvent.setup();
+    const onUnlink = vi.fn();
+    renderTable({ onUnlink });
+    const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
+    await user.click(firstUnlink);
+    expect(screen.getByText(/unlink user/i)).toBeInTheDocument();
+    expect(onUnlink).not.toHaveBeenCalled();
+  });
+
+  it("confirms unlink and calls onUnlink with row id", async () => {
+    const user = userEvent.setup();
+    const onUnlink = vi.fn();
+    renderTable({ onUnlink });
+    const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
+    await user.click(firstUnlink);
+    await user.click(screen.getByRole("button", { name: "Unlink" }));
+    expect(onUnlink).toHaveBeenCalledWith("1");
+  });
+
+  it("cancels unlink dialog without calling onUnlink", async () => {
+    const user = userEvent.setup();
+    const onUnlink = vi.fn();
+    renderTable({ onUnlink });
+    const [firstUnlink] = screen.getAllByRole("button", { name: /unlink/i });
+    await user.click(firstUnlink);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onUnlink).not.toHaveBeenCalled();
+  });
+
+  it("disables unlink buttons while isUnlinking is true", () => {
+    renderTable({ onUnlink: vi.fn(), isUnlinking: true });
+    for (const button of screen.getAllByRole("button", { name: /unlink/i })) {
+      expect(button).toBeDisabled();
+    }
+  });
+});

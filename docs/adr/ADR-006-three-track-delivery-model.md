@@ -83,4 +83,43 @@ The existing customer UI (already in flight) is **not revisited** as part of thi
 
 ---
 
+## Amendment (2026-09-23): stability gate suspended pre-GA
+
+**Status:** Accepted.
+
+**Decision:** the `stable`-only import boundary on `apps/navigator` is suspended while the
+product is pre-GA. The generic app may import features at any `x-stability` tier, and a new
+feature may start directly at `stable` instead of entering at `experimental` and being
+promoted.
+
+**Why:** the product is still being built. Forcing every feature through
+`experimental → candidate → stable` before there is a production track to protect is ceremony
+that slows the team down without buying anything yet — there's no live traffic for the gate
+to shield. The gate earns its keep once Navigator is live in production; until then, tier
+ceremony is a cost with no matching benefit.
+
+**What stays in place:**
+
+- The `x-stability` field is still required on every feature directory's `package.json`, and
+  only the three documented values (`experimental` | `candidate` | `stable`) are allowed.
+- The ESLint rule (`@contentgrid/no-unstable-features`, wired in
+  `apps/navigator/eslint.config.js`) stays enabled — it still catches an invalid/typo
+  `x-stability` value. Only its `allowedStability` option changed, from `["stable"]` to
+  `["experimental", "candidate", "stable"]`.
+- The rule's implementation, tests, and fixtures in `packages/eslint-config` are untouched.
+
+**What this changes in practice:** `packages/features/CLAUDE.md`, `apps/navigator/CLAUDE.md`,
+and `apps/navigator-experimental/CLAUDE.md` note the suspension; the promotion workflow they
+describe does not need to run pre-GA, since there is nothing to gate.
+
+**Go-live re-enablement step:** when Navigator goes live in production,
+
+1. restore `allowedStability: ["stable"]` in `apps/navigator/eslint.config.js`;
+2. resume the promotion-PR workflow in `packages/features/CLAUDE.md` for any feature still
+   below `stable`;
+3. audit `packages/features/src/*` for features that shipped straight to `stable` pre-GA and
+   confirm each one still belongs there under normal review.
+
+---
+
 **Hub:** [[README|ADR Index]]

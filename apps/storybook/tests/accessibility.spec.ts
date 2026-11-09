@@ -28,10 +28,6 @@ import { loadStories } from "./story-index";
 const stories = loadStories((entry) => !entry.tags?.includes("no-visual-test"), "test:a11y");
 
 test.describe("Storybook accessibility audit (axe-core)", () => {
-  // The @storybook/addon-a11y also runs axe on story load and can race with
-  // AxeBuilder.analyze(). Retry once so the addon's run finishes before ours.
-  test.describe.configure({ retries: 2 });
-
   if (stories.length === 0) {
     // No stories exist yet. Keep the suite green.
     test.skip("no stories found — nothing to audit", () => {});
@@ -39,7 +35,13 @@ test.describe("Storybook accessibility audit (axe-core)", () => {
 
   for (const story of stories) {
     test(`${story.title} / ${story.name} (${story.id})`, async ({ page }) => {
-      await page.goto(`/iframe.html?id=${story.id}&viewMode=story`);
+      // @storybook/addon-a11y also runs axe on story load (via its `afterEach`
+      // story hook) and collides with our own AxeBuilder.analyze() below,
+      // throwing "Axe is already running". The addon exposes a `manual` global
+      // (see its preview.d.ts / initialGlobals) that gates that hook off; set
+      // it through the iframe URL rather than .storybook/preview so the addon
+      // panel keeps auto-running axe for devs using Storybook interactively.
+      await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=a11y.manual:!true`);
       await page.waitForSelector("#storybook-root", { state: "attached" });
       // Wait for web fonts so text-rendering is stable before axe runs.
       await page.evaluate(() => document.fonts.ready);

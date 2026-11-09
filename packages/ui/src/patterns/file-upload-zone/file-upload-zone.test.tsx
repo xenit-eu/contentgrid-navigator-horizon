@@ -23,7 +23,7 @@ function makeFile(name: string, type: string, size = 1024): File {
 describe("FileUploadZone — drop-zone view (no file)", () => {
   it("renders the drop-zone prompt text", () => {
     render(<FileUploadZone file={null} onFileChange={vi.fn()} />);
-    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop a file here/i)).toBeInTheDocument();
   });
 
   it("renders a role=button for the drop zone", () => {
@@ -31,11 +31,11 @@ describe("FileUploadZone — drop-zone view (no file)", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("changes text to 'Drop the file here' on dragover", () => {
+  it("changes text to 'Release to attach' on dragover", () => {
     render(<FileUploadZone file={null} onFileChange={vi.fn()} />);
     const zone = screen.getByRole("button");
     fireEvent.dragOver(zone, { preventDefault: () => {} });
-    expect(screen.getByText(/drop the file here/i)).toBeInTheDocument();
+    expect(screen.getByText(/release to attach/i)).toBeInTheDocument();
   });
 
   it("restores original text on dragleave", () => {
@@ -43,7 +43,7 @@ describe("FileUploadZone — drop-zone view (no file)", () => {
     const zone = screen.getByRole("button");
     fireEvent.dragOver(zone);
     fireEvent.dragLeave(zone);
-    expect(screen.getByText(/drag & drop a file, or click to select/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop a file here/i)).toBeInTheDocument();
   });
 
   it("calls onFileChange when a file is dropped", () => {

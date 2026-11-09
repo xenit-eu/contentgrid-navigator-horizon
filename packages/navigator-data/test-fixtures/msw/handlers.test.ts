@@ -1,5 +1,11 @@
-import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+// This file used to create its own second, independent `setupServer()`, separate from
+// the shared MSW server `test-setup.ts` already registers (as this project's Vitest
+// `setupFiles`) and listens on for every test file. Every prior assertion here passed
+// either way, since none of them counted handler invocations — but `createRenditionHandlers`'
+// `pendingPolls` counting below needs each poll to correspond to exactly one resolver call,
+// which a second listening server put at risk. Reuse the one shared server instead.
+import { server } from "../../test-setup";
 import {
   invoiceProfileBody,
   invoiceProfileTemplates,
@@ -16,14 +22,9 @@ import {
   createProfileHandler,
   createRelationLinkHandler,
   createRelationUnlinkHandler,
+  createRenditionHandlers,
   createUpdateHandler,
 } from "./handlers";
-
-const server = setupServer();
-
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
 
 describe("createEntityHandler", () => {
   it("returns the configured body as JSON", async () => {
@@ -54,7 +55,7 @@ describe("createEntityHandler", () => {
     const body = await res.json();
 
     expect(body._templates).toBeDefined();
-    expect(body._templates.default.method).toBe("PATCH");
+    expect(body._templates.default.method).toBe("PUT");
   });
 });
 
@@ -101,6 +102,41 @@ describe("createListHandler", () => {
     const body = await res.json();
 
     expect(body.page).toEqual({ size: 3, total_items_exact: 3 });
+  });
+
+  it("emits an estimated total instead of an exact one when totals is 'estimate'", async () => {
+    server.use(
+      createListHandler({
+        url: "https://test-application.eu-west-1.contentgrid.app/invoices",
+        items: sampleInvoiceItems,
+        totals: "estimate",
+      }),
+    );
+
+    const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices");
+    const body = await res.json();
+
+    expect(body.page).toEqual({ size: 3, total_items_estimate: 3 });
+  });
+
+  it("answers the total per request with resolveTotal", async () => {
+    server.use(
+      createListHandler({
+        url: "https://test-application.eu-west-1.contentgrid.app/invoices",
+        items: sampleInvoiceItems,
+        resolveTotal: (url) => (url.searchParams.get("number~prefix") === "A" ? 42 : 0),
+      }),
+    );
+
+    const matching = await fetch(
+      "https://test-application.eu-west-1.contentgrid.app/invoices?number~prefix=A",
+    );
+    const other = await fetch(
+      "https://test-application.eu-west-1.contentgrid.app/invoices?number~prefix=B",
+    );
+
+    expect((await matching.json()).page).toEqual({ size: 3, total_items_exact: 42 });
+    expect((await other.json()).page).toEqual({ size: 3, total_items_exact: 0 });
   });
 });
 
@@ -162,7 +198,7 @@ describe("createCreateHandler", () => {
 });
 
 describe("createUpdateHandler", () => {
-  it("responds to PATCH with 204 by default", async () => {
+  it("responds to PUT with 204 by default", async () => {
     server.use(
       createUpdateHandler({
         url: "https://test-application.eu-west-1.contentgrid.app/invoices/inv-1",
@@ -170,7 +206,7 @@ describe("createUpdateHandler", () => {
     );
 
     const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices/inv-1", {
-      method: "PATCH",
+      method: "PUT",
       body: "{}",
     });
 
@@ -188,7 +224,7 @@ describe("createUpdateHandler", () => {
     );
 
     const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices/inv-1", {
-      method: "PATCH",
+      method: "PUT",
       body: "{}",
     });
     const body = await res.json();
@@ -341,5 +377,123 @@ describe("createProblemHandler", () => {
 
     expect(res.status).toBe(409);
     expect(body.type).toBe("https://contentgrid.cloud/problems/integrity/duplicate");
+  });
+});
+
+describe("createRenditionHandlers", () => {
+  const REQUEST_URL = "https://test-application.eu-west-1.contentgrid.app/renditions/get/pdf";
+  const JOB_URL = "https://test-application.eu-west-1.contentgrid.app/renditions/jobs/job-1";
+
+  it("outcome=ready, pendingPolls=0 answers 200 application/pdf directly on the initial request", async () => {
+    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31]);
+    server.use(
+      ...createRenditionHandlers({
+        url: REQUEST_URL,
+        jobUrl: JOB_URL,
+        pendingPolls: 0,
+        outcome: "ready",
+        pdfBytes,
+      }),
+    );
+
+    const res = await fetch(REQUEST_URL);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/pdf");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(pdfBytes);
+  });
+
+  it("outcome=ready, pendingPolls>0 answers 202+Location, then 202 per pending poll, then 200", async () => {
+    server.use(
+      ...createRenditionHandlers({
+        url: REQUEST_URL,
+        jobUrl: JOB_URL,
+        pendingPolls: 2,
+        outcome: "ready",
+      }),
+    );
+
+    const initial = await fetch(REQUEST_URL);
+    expect(initial.status).toBe(202);
+    expect(initial.headers.get("Location")).toBe(JOB_URL);
+
+    const poll1 = await fetch(JOB_URL);
+    expect(poll1.status).toBe(202);
+    const poll2 = await fetch(JOB_URL);
+    expect(poll2.status).toBe(202);
+    const poll3 = await fetch(JOB_URL);
+    expect(poll3.status).toBe(200);
+    expect(poll3.headers.get("Content-Type")).toBe("application/pdf");
+  });
+
+  it("outcome=invalid-conversion always goes through 202+Location, even with pendingPolls=0", async () => {
+    server.use(
+      ...createRenditionHandlers({
+        url: REQUEST_URL,
+        jobUrl: JOB_URL,
+        pendingPolls: 0,
+        outcome: "invalid-conversion",
+      }),
+    );
+
+    const initial = await fetch(REQUEST_URL);
+    expect(initial.status).toBe(202);
+    expect(initial.headers.get("Location")).toBe(JOB_URL);
+
+    const poll = await fetch(JOB_URL);
+    const body = await poll.json();
+    expect(poll.headers.get("Content-Type")).toContain("application/problem+json");
+    expect(body.type).toBe("https://contentgrid.cloud/problems/renditions/invalid-conversion");
+  });
+
+  it("outcome=error answers a 500 problem after the pending polls", async () => {
+    server.use(
+      ...createRenditionHandlers({
+        url: REQUEST_URL,
+        jobUrl: JOB_URL,
+        pendingPolls: 1,
+        outcome: "error",
+      }),
+    );
+
+    await fetch(REQUEST_URL);
+    const poll1 = await fetch(JOB_URL);
+    expect(poll1.status).toBe(202);
+    const poll2 = await fetch(JOB_URL);
+    expect(poll2.status).toBe(500);
+    expect(poll2.headers.get("Content-Type")).toContain("application/problem+json");
+  });
+
+  it("outcome=never keeps answering 202 on the job URL indefinitely", async () => {
+    server.use(
+      ...createRenditionHandlers({
+        url: REQUEST_URL,
+        jobUrl: JOB_URL,
+        pendingPolls: 0,
+        outcome: "never",
+      }),
+    );
+
+    await fetch(REQUEST_URL);
+    for (let i = 0; i < 5; i++) {
+      const poll = await fetch(JOB_URL);
+      expect(poll.status).toBe(202);
+      expect(poll.headers.get("Location")).toBe(JOB_URL);
+    }
+  });
+
+  it("defaults pdfBytes to a minimal %PDF header when omitted", async () => {
+    server.use(
+      ...createRenditionHandlers({
+        url: REQUEST_URL,
+        jobUrl: JOB_URL,
+        pendingPolls: 0,
+        outcome: "ready",
+      }),
+    );
+
+    const res = await fetch(REQUEST_URL);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect(String.fromCharCode(...bytes)).toBe("%PDF");
   });
 });

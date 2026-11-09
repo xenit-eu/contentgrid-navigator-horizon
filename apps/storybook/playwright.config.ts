@@ -4,6 +4,12 @@ const PORT = 6007;
 
 export default defineConfig({
   testDir: "./tests",
+  // Without this, `testDir`'s lack of a narrower scope also picks up interaction.spec.ts and
+  // accessibility.spec.ts (each has its own dedicated config/script — see playwright.shared.ts).
+  // Beyond the wasted duplicate run, accessibility.spec.ts running under this config's
+  // `fullyParallel: true` collides with itself ("Axe is already running") — the a11y suite's
+  // own config deliberately sets `workers: 1` to serialize against exactly that.
+  testMatch: "visual.spec.ts",
   // Baselines live at tests/__snapshots__/<story-id>.png — no platform/project suffix.
   snapshotPathTemplate: "{testDir}/__snapshots__/{arg}{ext}",
   fullyParallel: true,

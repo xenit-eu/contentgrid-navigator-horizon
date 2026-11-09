@@ -34,13 +34,14 @@ Read in this order before writing any code:
    - [`packages/ui/CLAUDE.md`](packages/ui/CLAUDE.md) — shadcn-CLI usage, primitive vs. pattern boundary, forbidden imports.
    - [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md) — HAL hook conventions, ETag pattern, peerDep policy.
    - [`packages/features/CLAUDE.md`](packages/features/CLAUDE.md) — `x-stability` flag mechanism and promotion workflow.
-   - [`apps/navigator/CLAUDE.md`](apps/navigator/CLAUDE.md) — generic track rules (stable features only).
+   - [`packages/views/CLAUDE.md`](packages/views/CLAUDE.md) — views layer between apps and features: navigation context, view props and layer rules.
+   - [`apps/navigator/CLAUDE.md`](apps/navigator/CLAUDE.md) — generic track rules (stable features only; gate suspended pre-GA).
    - [`apps/navigator-experimental/CLAUDE.md`](apps/navigator-experimental/CLAUDE.md) — experimental track rules.
 3. **Architecture Decision Records** in [`docs/adr/`](docs/adr/README.md):
    - [ADR-001](docs/adr/ADR-001-state-management-zustand-tanstack-query.md) — State management: Zustand (client) + TanStack Query (server).
    - [ADR-002](docs/adr/ADR-002-monorepo-tooling-pnpm.md) — Monorepo tooling: pnpm workspaces only.
    - [ADR-003](docs/adr/ADR-003-ui-stack-tailwind-shadcn.md) — UI stack: Tailwind v4 + shadcn/ui; primitive vs. pattern boundary.
-   - [ADR-004](docs/adr/ADR-004-drop-jsonforms-halforms-renderer.md) — Forms: drop JSONForms; HAL-Forms → shadcn renderer.
+   - [ADR-004](docs/adr/ADR-004-drop-jsonforms-halforms-renderer.md) — Forms: drop JSONForms; HAL-Forms → shadcn renderer. Amended 2026-10-01: every form renders through the `hal-forms` feature.
    - [ADR-005](docs/adr/ADR-005-router-tanstack-router.md) — Router: TanStack Router (file-based, type-safe).
    - [ADR-006](docs/adr/ADR-006-three-track-delivery-model.md) — Three-track delivery model: generic / experimental / custom.
    - [ADR-007](docs/adr/ADR-007-two-layer-dependency-model.md) — Two-layer dependency model: peerDeps + composition layer.
@@ -52,6 +53,7 @@ Read in this order before writing any code:
    - [ADR-013](docs/adr/ADR-013-custom-track-private-repo-model.md) — Custom-track delivery: private per-customer repos.
    - [ADR-014](docs/adr/ADR-014-hal-contract-tests-msw.md) — HAL contract tests with MSW.
    - [ADR-015](docs/adr/ADR-015-documentation-surface-split.md) — Documentation surface split.
+   - [ADR-018](docs/adr/ADR-018-views-layer.md) — Views layer between apps and features; amends ADR-007.
 4. **[`docs/contentgrid-navigator-migration-analysis.md`](docs/contentgrid-navigator-migration-analysis.md)** — feature gap, architectural verdict, delivery model detail.
 5. **[`docs/contentgrid-navigator-migration-roadmap.md`](docs/contentgrid-navigator-migration-roadmap.md)** — phase plan, estimates, three-track delivery detail, promotion workflow.
 
@@ -195,7 +197,7 @@ Key problem types from `https://contentgrid.cloud/problems/`:
 
 **Versioning:**
 
-- `unsatisfied-version` (412) — ETag mismatch; re-fetch, re-apply, retry
+- `unsatisfied-version` (412) — a conditional request's precondition failed: the `If-Match` ETag is no longer current, or `If-None-Match: *` was sent to a resource that already exists. `actual_version` holds the current version. Re-fetch, re-apply, retry
 
 **Not found:**
 
@@ -215,7 +217,7 @@ Key problem types from `https://contentgrid.cloud/problems/`:
 | 403  | Authenticated but forbidden                                     |
 | 404  | Resource not found OR access denied to a specific entity (ABAC) |
 | 409  | Unique constraint violation or referential integrity conflict   |
-| 412  | ETag mismatch (optimistic locking failure)                      |
+| 412  | Precondition failed (ETag mismatch, or resource already exists) |
 | 415  | Unsupported Content-Type                                        |
 
 ---
@@ -292,7 +294,7 @@ Use these terms consistently across hooks, components, variables, and parameters
 - **`profileRelation`** — a single relation definition within a `profileEntity` (cardinality, target entity).
 - **`searchTemplate`** — the search form (`_templates.search`) on a `profileEntity`; use it to discover filter properties and sort options.
 - **`createTemplate`** — the create form (`_templates.create-form`) on a `profileEntity`; absent means create is not permitted.
-- **`entityItem`** — a single item from a collection (one entity instance). Holds attribute values, the ETag, and mutation templates.
+- **`entityItem`** — a single item from a collection (one entity instance). Holds attribute values, the entity-item's ETag, and mutation templates. That ETag is only valid for the entity item itself — not for its content attributes or relations.
 - **`entityItemCollection`** — a page of `entityItem`s returned from a collection URL. Exposes `items`, pagination hrefs (`nextHref`, `prevHref`), and total count.
 
 For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
@@ -304,7 +306,10 @@ For the full accessor API see [`packages/navigator-data/CLAUDE.md`](packages/nav
 - Always start API exploration from the root (`/`) — follow `cg:entity` links.
 - Use the entity profile (`/profile/<entity>`) for generic tooling that must adapt to model changes.
 - Prefer PATCH over PUT for partial updates.
-- Always include and validate ETags for mutable operations.
+- Make mutations conditional on the **ETag of the resource being changed** (see the [platform conditional-requests guide](https://docs.contentgrid.com/guides/09_app_api/05_conditional_requests/index.html)). Three resource kinds support conditional requests, each with its **own** ETag: entity-item (`/{plural}/{id}`), to-one relation (`/{plural}/{id}/{relation}`) and entity-content (`/{plural}/{id}/{attribute}`). Never send one resource's ETag to another (e.g. the entity item's ETag on a content PUT). To-many relations (and their per-item endpoints) are not on that list — they don't support conditional requests.
+  - ETags come from GET/HEAD/PUT/PATCH responses and from the POST that created the resource; DELETE returns none. A to-one relation's ETag is on the 302 response of the relation endpoint — the ETag of the followed response belongs to the target entity item. A browser cannot read that 302's headers, so to-one relation mutations are currently not concurrency-safe. FIXME(ACC-3186): the platform is adding an `Accept: text/uri-list` representation of to-one relations that doesn't redirect and carries the relation's own ETag; see [`packages/navigator-data/CLAUDE.md`](packages/navigator-data/CLAUDE.md).
+  - `If-Match: <etag>` on PUT/PATCH/DELETE → 412 when the ETag is no longer current. `If-None-Match: *` on PUT → create only if the resource doesn't exist yet (not supported for entity-items), else 412.
+  - Send ETags verbatim, quotes included. `If-Modified-Since` / `If-Unmodified-Since` are not supported.
 - Never construct or parse pagination cursors — follow HAL `next`/`prev` links directly.
   The one place a `_cursor` value is ever read out of a link is to use it as an opaque
   lookup key (e.g. for browser URL state) into a registry that maps it back to the exact

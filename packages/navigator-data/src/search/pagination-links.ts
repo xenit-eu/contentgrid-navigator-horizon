@@ -122,3 +122,33 @@ export function recallCollectionFilters(
 ): Record<string, string> | undefined {
   return queryClient.getQueryData(queryKeys.collectionFilters.byEntityName(entityName));
 }
+
+/**
+ * Remembers an entity's currently active sort value — keyed by entity name in the `QueryClient`
+ * cache, mirroring `rememberCollectionFilters` above. Pass `sort: undefined` to clear it (e.g.
+ * the user cleared the sort — nothing worth remembering).
+ */
+export function rememberCollectionSort(
+  queryClient: QueryClient,
+  entityName: string,
+  sort: string | undefined,
+): void {
+  const queryKey = queryKeys.collectionSort.byEntityName(entityName);
+  if (sort === undefined) {
+    queryClient.removeQueries({ queryKey, exact: true });
+  } else {
+    queryClient.setQueryData(queryKey, sort);
+  }
+}
+
+/**
+ * Resolves the remembered active sort value for an entity. Returns `undefined` when nothing has
+ * been remembered in this session (first visit, a fresh reload, or a bookmarked/shared link) —
+ * callers fall back to no sort in that case.
+ */
+export function recallCollectionSort(
+  queryClient: QueryClient,
+  entityName: string,
+): string | undefined {
+  return queryClient.getQueryData(queryKeys.collectionSort.byEntityName(entityName));
+}

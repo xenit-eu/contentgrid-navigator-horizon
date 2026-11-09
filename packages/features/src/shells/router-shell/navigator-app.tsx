@@ -48,7 +48,7 @@ export interface MountNavigatorAppOptions {
   queryClient: QueryClient;
   /**
    * Dev-only mock-API bootstrap (MSW worker start). Each app supplies its own
-   * because the dynamic `import("./mocks/browser")` path is per-app.
+   * because the dynamic `import("./local-mock-backend/browser")` path is per-app.
    */
   enableMocking?: () => Promise<void>;
 }

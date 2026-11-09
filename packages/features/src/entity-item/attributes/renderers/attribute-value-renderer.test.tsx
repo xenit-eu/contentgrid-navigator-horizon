@@ -56,8 +56,8 @@ vi.mock("./registry", () => ({
   defaultAttributeRendererComponents: spyRenderers,
 }));
 
-function renderAttr(attr: EntityItemAttribute) {
-  return render(<AttributeValueRenderer attr={attr} />);
+function renderAttr(attr: EntityItemAttribute, variant?: "default" | "item-reference" | "table") {
+  return render(<AttributeValueRenderer attr={attr} variant={variant} />);
 }
 
 describe("AttributeValueRenderer", () => {
@@ -144,6 +144,42 @@ describe("AttributeValueRenderer", () => {
       profileAttribute: makeProfileAttribute({ type: ProfileAttributeType.boolean }),
     });
     expect(screen.getByTestId("r-boolean")).toHaveTextContent(expected);
+  });
+
+  it.each([
+    [true, "true:Active"],
+    [false, "false:Active"],
+    [null, "null:Active"],
+  ])(
+    "dispatches boolean attributes in the item-reference variant with the attribute's own name as the label (value=%s)",
+    (value, expected) => {
+      renderAttr(
+        {
+          value: new EntityItemAttributePlain("active", value),
+          profileAttribute: makeProfileAttribute({
+            type: ProfileAttributeType.boolean,
+            title: "Active",
+          }),
+        },
+        "item-reference",
+      );
+      expect(screen.getByTestId("r-boolean")).toHaveTextContent(expected);
+    },
+  );
+
+  it("falls back to the attribute's raw name when it has no title, in the item-reference variant", () => {
+    renderAttr(
+      {
+        value: new EntityItemAttributePlain("active", true),
+        profileAttribute: makeProfileAttribute({
+          type: ProfileAttributeType.boolean,
+          title: undefined,
+          name: "active",
+        }),
+      },
+      "item-reference",
+    );
+    expect(screen.getByTestId("r-boolean")).toHaveTextContent("true:active");
   });
 
   it("dispatches long attributes to the number renderer with type=long", () => {

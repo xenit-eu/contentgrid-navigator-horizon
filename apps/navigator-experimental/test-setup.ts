@@ -1,20 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-import { vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
 
-// window.matchMedia — used by next-themes (via @contentgrid/ui's Toaster) to
-// detect the system color scheme.
-if (!window.matchMedia) {
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-}
+// Unmount React trees between tests. Vitest runs without `globals: true`,
+// so RTL's auto-cleanup never registers; without this, mounted trees leak
+// across tests and keep React's scheduler running after jsdom teardown.
+afterEach(() => {
+  cleanup();
+});

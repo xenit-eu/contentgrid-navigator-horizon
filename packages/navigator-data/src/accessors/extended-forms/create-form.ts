@@ -1,8 +1,8 @@
 import type { HalFormsProperty, HalFormsTemplate } from "@contentgrid/hal-forms";
 import type { EntityInstanceCreateRequestSpec } from "../../api/requests";
-import type { ProfileAttribute } from "../attribute-profile";
 import type ProfileEntity from "../entity-profile";
 import type { ProfileRelation } from "../relation-profile";
+import { type FormAttributeProperty, toFormAttributeProperty } from "./form-property";
 
 /**
  * Enhanced Create-Form HAL-FORMS Template Wrapper
@@ -23,26 +23,14 @@ import type { ProfileRelation } from "../relation-profile";
  *    - Renders as file upload controls
  *
  * 3. **Relations** - Entity references (type: "url")
- *    - To-one: maxItems === 1 (can be required)
- *    - To-many: !maxItems || maxItems > 1 (never required)
- *    - Linked to target Profile via _allProfiles for rich metadata
+ *    - To-one: maxItems === 1
+ *    - To-many: !maxItems || maxItems > 1
+ *    - Both read `required` straight off the create-form template property — cardinality
+ *      doesn't imply a required-ness rule of its own; the backend decides.
+ *    - Target Profile resolution is NOT done here — the profile list needed to resolve it
+ *      (`useProfileEntities()`) is only available async, after this template is already needed
+ *      for the create/permission gate.
  */
-
-/**
- * Enhanced create-form property for user-defined attributes
- */
-export interface CreateFormProperty {
-  /** The original HAL-FORMS property */
-  property: HalFormsProperty;
-  /** The ProfileAttribute this property maps to (for type, constraints, validation) */
-  profileAttribute?: ProfileAttribute;
-  /** Whether this field is required */
-  isRequired: boolean;
-  /** Whether this is a content/file upload field */
-  isContent: boolean;
-  /** Allowed values for enum-like fields */
-  allowedValues?: readonly string[];
-}
 
 /**
  * Enhanced create-form property for to-one relation fields.
@@ -53,8 +41,6 @@ export interface CreateFormRelationToOneProperty {
   property: HalFormsProperty;
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
-  /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: ProfileEntity;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
   /** Whether this field is required */
@@ -70,20 +56,20 @@ export interface CreateFormRelationToManyProperty {
   property: HalFormsProperty;
   /** The ProfileRelation this property maps to */
   profileRelation?: ProfileRelation;
-  /** The target entity's profile accessor (via _allProfiles lookup) */
-  targetProfile?: ProfileEntity;
   /** The collection URL for fetching available target entities */
   targetCollectionHref: string;
+  /** Whether this field is required (e.g. "at least one link") */
+  isRequired: boolean;
 }
 
 /**
  * Wrapper class for HAL-FORMS create templates with enhanced metadata.
  *
- * Lazily parses and enriches form properties with links to ProfileAttribute,
- * ProfileRelation, and target Profile objects.
+ * Lazily parses and enriches form properties with links to ProfileAttribute
+ * and ProfileRelation objects.
  */
 export class CreateHalFormTemplate {
-  private _userDefinedProperties?: readonly CreateFormProperty[];
+  private _userDefinedProperties?: readonly FormAttributeProperty[];
   private _toOneRelationProperties?: readonly CreateFormRelationToOneProperty[];
   private _toManyRelationProperties?: readonly CreateFormRelationToManyProperty[];
 
@@ -92,26 +78,17 @@ export class CreateHalFormTemplate {
     public readonly template: HalFormsTemplate<EntityInstanceCreateRequestSpec>,
     /** The profile accessor for attribute/relation linking */
     private readonly profileEntity: ProfileEntity,
-    /** Optional array of all profiles for target entity resolution */
-    private readonly _allProfiles?: ProfileEntity[],
   ) {}
 
   /**
    * Get all user-defined attribute properties (excludes relations).
    * System fields (id, audit) never appear in create-form.
    */
-  get userDefinedProperties(): readonly CreateFormProperty[] {
+  get userDefinedProperties(): readonly FormAttributeProperty[] {
     this._userDefinedProperties ??= (this.template.properties ?? [])
       .filter((property) => property.type !== "url")
-      .map((property) => this.enhanceAttributeProperty(property));
+      .map((property) => toFormAttributeProperty(property, this.profileEntity));
     return this._userDefinedProperties;
-  }
-
-  /**
-   * Get all content/file upload properties.
-   */
-  get contentProperties(): readonly CreateFormProperty[] {
-    return this.userDefinedProperties.filter((prop) => prop.isContent);
   }
 
   /**
@@ -130,7 +107,6 @@ export class CreateHalFormTemplate {
 
   /**
    * Get to-many relation properties (!maxItems || maxItems > 1).
-   * To-many relations are never required.
    */
   get toManyRelationProperties(): readonly CreateFormRelationToManyProperty[] {
     this._toManyRelationProperties ??= (this.template.properties ?? [])
@@ -156,56 +132,11 @@ export class CreateHalFormTemplate {
    * Get all properties (user-defined + relations).
    */
   get allProperties(): readonly (
-    | CreateFormProperty
+    | FormAttributeProperty
     | CreateFormRelationToOneProperty
     | CreateFormRelationToManyProperty
   )[] {
     return [...this.userDefinedProperties, ...this.relationProperties];
-  }
-
-  /**
-   * Get a property by its name.
-   */
-  getPropertyByName(
-    name: string,
-  ):
-    | CreateFormProperty
-    | CreateFormRelationToOneProperty
-    | CreateFormRelationToManyProperty
-    | undefined {
-    return this.allProperties.find((prop) => prop.property.name === name);
-  }
-
-  /**
-   * Get all required properties (user-defined attributes + to-one relations).
-   */
-  getRequiredProperties(): readonly (CreateFormProperty | CreateFormRelationToOneProperty)[] {
-    const requiredAttributes = this.userDefinedProperties.filter((prop) => prop.isRequired);
-    const requiredToOne = this.toOneRelationProperties.filter((prop) => prop.isRequired);
-    return [...requiredAttributes, ...requiredToOne];
-  }
-
-  /**
-   * Enhance a user-defined attribute property with profile metadata.
-   */
-  private enhanceAttributeProperty(property: HalFormsProperty): CreateFormProperty {
-    const profileAttribute = this.profileEntity.getAttribute(property.name);
-    const isContent = property.type === "file" || (profileAttribute?.isContent ?? false);
-    const isRequired = property.required ?? false;
-
-    // Extract allowed values from inline options
-    const allowedValues =
-      property.options?.isInline() && Array.isArray(property.options.inline)
-        ? property.options.inline.filter((v): v is string => typeof v === "string")
-        : undefined;
-
-    return {
-      property,
-      profileAttribute,
-      isRequired,
-      isContent,
-      allowedValues,
-    };
   }
 
   /**
@@ -222,17 +153,9 @@ export class CreateHalFormTemplate {
     // To-one relations can be required
     const isRequired = property.required ?? false;
 
-    // Try to resolve target profile using _allProfiles
-    let targetProfile: ProfileEntity | undefined;
-    if (profileRelation && this._allProfiles) {
-      const targetProfileHref = profileRelation.targetProfileHref;
-      targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);
-    }
-
     return {
       property,
       profileRelation,
-      targetProfile,
       targetCollectionHref,
       isRequired,
     };
@@ -249,18 +172,13 @@ export class CreateHalFormTemplate {
     // Extract target collection href from options.link.href
     const targetCollectionHref = property.options?.isRemote() ? property.options.link.href : "";
 
-    // Try to resolve target profile using _allProfiles
-    let targetProfile: ProfileEntity | undefined;
-    if (profileRelation && this._allProfiles) {
-      const targetProfileHref = profileRelation.targetProfileHref;
-      targetProfile = this._allProfiles.find((profile) => profile.link.href === targetProfileHref);
-    }
+    const isRequired = property.required ?? false;
 
     return {
       property,
       profileRelation,
-      targetProfile,
       targetCollectionHref,
+      isRequired,
     };
   }
 }

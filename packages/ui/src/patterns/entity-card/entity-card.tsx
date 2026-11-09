@@ -49,10 +49,7 @@ export function EntityCard({
       data-slot="entity-card"
       role={onCardClick ? "button" : undefined}
       tabIndex={onCardClick ? 0 : undefined}
-      className={cn(
-        "group relative transition-colors",
-        onCardClick && "cursor-pointer hover:border-primary/50",
-      )}
+      className={cn("group relative transition-colors", onCardClick && "hover:border-primary/50")}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
       onKeyDown={
         onCardClick

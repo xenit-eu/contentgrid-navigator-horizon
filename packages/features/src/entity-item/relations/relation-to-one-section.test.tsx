@@ -1,242 +1,209 @@
-/**
- * Regression test for the 412 `unsatisfied-version` reload toast (see
- * `../../problem-details/notify-version-conflict.ts`).
- *
- * The toast used to be raised from a `useEffect` keyed on the mutation's `error`
- * field, which double-fired under React StrictMode's intentional double-invoke
- * of effects. It is now raised from the mutation's own `onError` (wired via
- * `onRelationMutationError` in `./relation-shared`), which TanStack Query only
- * ever calls once per failed mutation attempt — this test renders the tree
- * inside `<StrictMode>` to prove that.
- */
-import { type ReactNode, StrictMode } from "react";
+import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
+  type EntityItem,
+  EntityItemAttributePlain,
   type EntityItemToOneRelation,
   NavigatorDataProvider,
-  type ProfileEntity,
   createApiClient,
   createContentClient,
+  useClearRelation,
+  useEntityItemToOneRelation,
+  useSetToOneRelation,
 } from "@contentgrid/navigator-data";
-import {
-  makeEntityItem,
-  makeProfileEntity,
-} from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { toast } from "@contentgrid/ui";
-import { server } from "../../../test-setup";
+import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import { relationLayoutForPane, useRelationLayout } from "./relation-layout";
 import { RelationToOneSection } from "./relation-to-one-section";
 
-// notifyReloadOnUnsatisfiedVersion calls @contentgrid/ui's `toast` (sonner's `toast`
-// re-exported as-is). Mock only `toast` — every other @contentgrid/ui export stays real.
-vi.mock("@contentgrid/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/ui")>();
+vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
   return {
     ...actual,
-    toast: { error: vi.fn() },
+    useEntityItemToOneRelation: vi.fn(),
+    useClearRelation: vi.fn(),
+    useSetToOneRelation: vi.fn(),
   };
+});
+
+vi.mock("./relation-layout", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./relation-layout")>();
+  return { ...actual, useRelationLayout: vi.fn() };
 });
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
-const INVOICE_PROFILE_URL = `${API_URL}/profile/invoices`;
-const SUPPLIER_PROFILE_URL = `${API_URL}/profile/suppliers`;
-const INVOICE_ITEM_URL = `${API_URL}/invoices/inv-001`;
-const SUPPLIER_RELATION_URL = `${INVOICE_ITEM_URL}/supplier`;
-
-const BLUEPRINT_RELATION_REL = "https://contentgrid.cloud/rels/blueprint/relation";
-const BLUEPRINT_TARGET_ENTITY_REL = "https://contentgrid.cloud/rels/blueprint/target-entity";
-const CG_RELATION_REL = "https://contentgrid.cloud/rels/contentgrid/relation";
-
 const noopSupplier: AuthenticationTokenSupplier = async () => null;
 
-// ---------------------------------------------------------------------------
-// Fixture bodies — profile root + invoice/supplier profiles + invoice item.
-// Only what useProfileEntities() and EntityItem.getToOneRelation() need to
-// resolve a real `supplier` to-one relation with a `clear-supplier` template.
-// ---------------------------------------------------------------------------
-
-const profileRootBody = {
-  _links: {
-    self: { href: PROFILE_URL },
-    "cg:entity": [
-      { href: INVOICE_PROFILE_URL, name: "invoice", title: "Invoice" },
-      { href: SUPPLIER_PROFILE_URL, name: "supplier", title: "Supplier" },
-    ],
-    curies: [
-      { href: "https://contentgrid.cloud/rels/contentgrid/{rel}", name: "cg", templated: true },
-    ],
-  },
-  _templates: {},
-};
-
-const supplierProfileJson = {
-  name: "supplier",
-  title: "Supplier",
-  description: "",
-  _embedded: { "blueprint:attribute": [], "blueprint:relation": [] },
-  _links: {
-    self: { href: SUPPLIER_PROFILE_URL, title: "Supplier" },
-    describes: [
-      { href: SUPPLIER_PROFILE_URL },
-      { href: `${API_URL}/suppliers`, name: "collection" },
-      { href: `${API_URL}/suppliers/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _templates: {},
-};
-
-const invoiceProfileJson = {
-  name: "invoice",
-  title: "Invoice",
-  description: "",
-  _links: {
-    self: { href: INVOICE_PROFILE_URL },
-    describes: [
-      { href: `${API_URL}/invoices`, name: "collection" },
-      { href: `${API_URL}/invoices/{id}`, name: "item", templated: true },
-    ],
-    curies: [
-      {
-        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
-        name: "blueprint",
-        templated: true,
-      },
-    ],
-  },
-  _embedded: {
-    [BLUEPRINT_RELATION_REL]: [
-      {
-        name: "supplier",
-        title: "Supplier",
-        description: "",
-        required: false,
-        many_source_per_target: false,
-        many_target_per_source: false,
-        _links: {
-          self: { href: `${INVOICE_PROFILE_URL}/relations/supplier` },
-          [BLUEPRINT_TARGET_ENTITY_REL]: {
-            href: SUPPLIER_PROFILE_URL,
-            name: "supplier",
-            title: "Supplier",
-          },
-        },
-      },
-    ],
-  },
-  _templates: {},
-};
-
-const invoiceItemJson = {
-  id: "inv-001",
-  _links: {
-    self: { href: INVOICE_ITEM_URL },
-    [CG_RELATION_REL]: [{ href: SUPPLIER_RELATION_URL, name: "supplier" }],
-  },
-  _templates: {
-    "clear-supplier": {
-      method: "DELETE",
-      target: SUPPLIER_RELATION_URL,
-      properties: [],
-    },
-  },
-};
-
-const supplierItemJson = {
-  id: "sup-001",
-  name: "Acme Corp",
-  _links: { self: { href: `${API_URL}/suppliers/sup-001` } },
-};
-
-function buildSupplierRelation(): EntityItemToOneRelation {
-  const invoiceProfile = makeProfileEntity(invoiceProfileJson, INVOICE_PROFILE_URL, "invoice");
-  const invoiceItem = makeEntityItem(invoiceItemJson, invoiceProfile, '"v1"');
-  const relation = invoiceItem.getToOneRelation("supplier");
-  if (!relation) throw new Error("expected a supplier to-one relation on the invoice fixture");
-  return relation;
+function stringAttribute(name: string, title: string) {
+  return {
+    name,
+    title,
+    type: "string",
+    readOnly: false,
+    _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+    _links: {},
+  };
 }
 
-function setupHandlers() {
-  server.use(
-    http.get(PROFILE_URL, () => HttpResponse.json(profileRootBody)),
-    http.get(INVOICE_PROFILE_URL, () => HttpResponse.json(invoiceProfileJson)),
-    http.get(SUPPLIER_PROFILE_URL, () => HttpResponse.json(supplierProfileJson)),
-    http.get(SUPPLIER_RELATION_URL, () => HttpResponse.json(supplierItemJson)),
-    http.delete(SUPPLIER_RELATION_URL, () =>
-      HttpResponse.json(
+/** Customers: `name` becomes the reference title (the first string attribute, by default). */
+const CUSTOMER_PROFILE = makeProfileEntity(
+  {
+    name: "customer",
+    title: "Customers",
+    _links: {
+      self: { href: `${PROFILE_URL}/customers` },
+      describes: [
+        { href: `${API_URL}/customers`, name: "collection", title: "Customers" },
+        { href: `${API_URL}/customers/{id}`, name: "item", title: "Customers", templated: true },
+      ],
+      curies: [
         {
-          status: 412,
-          title: "Version conflict",
-          detail: "This item was changed by someone else.",
-          type: "https://contentgrid.cloud/problems/unsatisfied-version",
+          name: "blueprint",
+          href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+          templated: true,
         },
-        { status: 412, headers: { "Content-Type": "application/problem+json" } },
-      ),
+      ],
+    },
+    _embedded: {
+      "blueprint:attribute": [
+        stringAttribute("name", "Name"),
+        stringAttribute("email", "Email"),
+        stringAttribute("city", "City"),
+      ],
+      "blueprint:relation": [],
+    },
+    _templates: {},
+  },
+  `${PROFILE_URL}/customers`,
+  "customer",
+);
+
+function makeCustomer(): EntityItem {
+  const values = { name: "Acme Corp", email: "info@acme.test", city: "Ghent" };
+  const attributes = Object.entries(values).map(([name, value]) => ({
+    value: new EntityItemAttributePlain(name, value),
+    profileAttribute: CUSTOMER_PROFILE.getAttribute(name),
+  }));
+  return {
+    id: "c-1",
+    profileEntity: CUSTOMER_PROFILE,
+    userDefinedAttributes: attributes,
+    findAttribute: (name: string) => attributes.find((attr) => attr.value.name === name),
+  } as unknown as EntityItem;
+}
+
+function makeRelation(): EntityItemToOneRelation {
+  return {
+    name: "customer",
+    canSet: true,
+    canClear: true,
+    profileRelation: { title: "Customer", getTargetProfile: () => CUSTOMER_PROFILE },
+  } as unknown as EntityItemToOneRelation;
+}
+
+function mockLinkedItem(item: EntityItem | null) {
+  vi.mocked(useEntityItemToOneRelation).mockReturnValue({
+    isPending: false,
+    isSuccess: true,
+    isError: false,
+    data: item,
+  } as unknown as ReturnType<typeof useEntityItemToOneRelation>);
+  vi.mocked(useClearRelation).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  } as unknown as ReturnType<typeof useClearRelation>);
+  vi.mocked(useSetToOneRelation).mockReturnValue({
+    mutate: vi.fn(),
+    reset: vi.fn(),
+    isPending: false,
+    error: null,
+  } as unknown as ReturnType<typeof useSetToOneRelation>);
+}
+
+function renderSection(
+  paneWidth: number | undefined,
+  props: Partial<Parameters<typeof RelationToOneSection>[0]> = {},
+) {
+  vi.mocked(useRelationLayout).mockReturnValue(
+    relationLayoutForPane(
+      paneWidth === undefined ? undefined : { side: "right", width: paneWidth },
     ),
   );
-}
-
-function renderSection(props: {
-  relation: EntityItemToOneRelation;
-  profiles: readonly ProfileEntity[];
-  onReload?: () => void;
-}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const apiFetch = createApiClient(noopSupplier);
-  const contentFetch = createContentClient(noopSupplier);
 
-  function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
-      <StrictMode>
-        <QueryClientProvider client={queryClient}>
-          <NavigatorDataProvider
-            apiFetch={apiFetch}
-            contentFetch={contentFetch}
-            profileUrl={PROFILE_URL}
-          >
-            {children}
-          </NavigatorDataProvider>
-        </QueryClientProvider>
-      </StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <NavigatorDataProvider
+          apiFetch={createApiClient(noopSupplier)}
+          contentFetch={createContentClient(noopSupplier)}
+          profileUrl={PROFILE_URL}
+        >
+          {children}
+        </NavigatorDataProvider>
+      </QueryClientProvider>
     );
   }
 
-  return render(<RelationToOneSection {...props} />, { wrapper: Wrapper });
+  // Unlike the to-many section, a to-one section starts expanded — no click needed.
+  return render(
+    <RelationToOneSection relation={makeRelation()} profiles={[CUSTOMER_PROFILE]} {...props} />,
+    { wrapper: Wrapper },
+  );
 }
 
-describe("RelationToOneSection — 412 unsatisfied-version reload toast", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("RelationToOneSection", () => {
+  it("in a narrow pane, shows only the linked item's reference", () => {
+    mockLinkedItem(makeCustomer());
+    renderSection(320);
+
+    expect(screen.getByRole("button", { name: /acme corp/i })).toBeInTheDocument();
+    expect(screen.queryByText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ghent")).not.toBeInTheDocument();
   });
 
-  it("toasts exactly once when clearing hits a 412, even inside React.StrictMode", async () => {
-    setupHandlers();
-    const relation = buildSupplierRelation();
-    const profiles = [makeProfileEntity(supplierProfileJson, SUPPLIER_PROFILE_URL, "supplier")];
-    const onReload = vi.fn();
+  it("with more width, adds further attributes but not the one the reference already shows", () => {
+    mockLinkedItem(makeCustomer());
+    renderSection(700);
+
+    expect(screen.getByText("Email")).toBeInTheDocument();
+    expect(screen.getByText("info@acme.test")).toBeInTheDocument();
+    expect(screen.getByText("Ghent")).toBeInTheDocument();
+    // "Name" is the reference's title, so it isn't repeated as an attribute label.
+    expect(screen.queryByText("Name")).not.toBeInTheDocument();
+  });
+
+  it("outside a resizable pane, shows the attributes too", () => {
+    mockLinkedItem(makeCustomer());
+    renderSection(undefined);
+
+    expect(screen.getByText("Email")).toBeInTheDocument();
+  });
+
+  it("calls onItemClick when the reference is clicked", async () => {
     const user = userEvent.setup();
+    const onItemClick = vi.fn();
+    mockLinkedItem(makeCustomer());
+    renderSection(320, { onItemClick });
 
-    renderSection({ relation, profiles, onReload });
+    await user.click(screen.getByRole("button", { name: /acme corp/i }));
 
-    // Wait for the linked supplier item to resolve — only then does the Unlink trigger render.
-    await user.click(await screen.findByRole("button", { name: "Unlink" }));
+    expect(onItemClick).toHaveBeenCalledWith("customer", "c-1");
+  });
 
-    // Confirm inside the AlertDialog (scoped — the trigger button behind it is also named "Unlink").
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "Unlink" }));
+  it("shows the empty state when nothing is linked", () => {
+    mockLinkedItem(null);
+    renderSection(320);
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
-    expect(onReload).not.toHaveBeenCalled(); // the toast's Reload action fires it, not the mutation itself
+    expect(screen.getByText("No item linked")).toBeInTheDocument();
   });
 });

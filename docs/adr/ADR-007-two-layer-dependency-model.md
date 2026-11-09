@@ -10,7 +10,9 @@
 
 Backend coupling for the navigator is partly external already. Xenit publishes seven `@contentgrid/*` packages covering HAL, HAL-Forms, typed fetch, fetch-hooks, OIDC auth, problem-details, and URI templates. We consume them as direct dependencies today.
 
-On top of that, we maintain navigator-side composition: TanStack Query hooks, ETag/`If-Match` policy, Zod-validated config, MSW fixtures, and the HAL-Forms→shadcn bridge (ADR-004). Where should this live? Mixed into the app, in a workspace package, or published as its own thing?
+On top of that, we maintain navigator-side composition: TanStack Query hooks, ETag/`If-Match` policy, Zod-validated config, MSW fixtures, and (originally) the HAL-Forms→shadcn bridge (ADR-004). Where should this live? Mixed into the app, in a workspace package, or published as its own thing?
+
+**Update:** ADR-004's rendering-projection bridge has since moved out of `@contentgrid/navigator-data` into `packages/features`, and (per ADR-004's 2026-10-01 amendment) now lives in the shared `packages/features/src/hal-forms/` feature that every form renders through — see ADR-004 and the "What stays out of `@contentgrid/navigator-data`" section below. `@contentgrid/navigator-data` still owns model enrichment (`CreateHalFormTemplate`, `ProfileAttribute`, `ProfileRelation`) and re-exports a handful of `@contentgrid/hal-forms` types (`HalFormsProperty`, `HalFormsTemplate`) so `packages/features`/`packages/ui` can type template data they receive without importing the Layer-1 package directly.
 
 ## Decision
 
@@ -33,7 +35,10 @@ Layer 2 — composition layer (workspace package today; publish-ready surface)
 - Composition glue: typed-fetch + auth hooks + problem-details wired into a usable client.
 - TanStack Query hooks: `useEntity`, `useList`, `useCreate`, `useUpdate`, `useDelete`, `useRelation`, `useSearch`.
 - ETag / `If-Match` optimistic-concurrency policy.
-- HAL-Forms → `FieldDescriptor[]` bridge (ADR-004).
+- Model enrichment for HAL-Forms templates (`CreateHalFormTemplate`, `ProfileAttribute`,
+  `ProfileRelation`) — the rendering-projection bridge that consumes it
+  (`HalFormsField[]`/`HalFormsFieldRenderer`, ADR-004) lives in `packages/features/src/hal-forms/`,
+  not here (see the "What stays out" section below).
 - Zod-validated app config + presets.
 - MSW handler fixtures for tests, exported for consumer reuse.
 
@@ -78,14 +83,26 @@ We pay the ceremony only when the second column's pain is real. See ADR-010 for 
 
 ## What stays out of `@contentgrid/navigator-data`
 
-- `packages/ui` — presentation only, no HAL knowledge. Forms renderers here read `FieldDescriptor[]`; they don't know what HAL-Forms is.
-- `packages/features/*` — feature modules consume `@contentgrid/navigator-data`. They don't re-export from it.
+- `packages/ui` — presentation only, no HAL knowledge. Forms renderers here take plain scalar
+  props (`name`, `label`, `value`, `onChange`, `error`, ...); they don't import
+  `@contentgrid/hal-forms` or know what a `HalFormsField` is.
+- `packages/features/*` — feature modules consume `@contentgrid/navigator-data`. They don't
+  re-export from it. This is also where the ADR-004 rendering-projection engine
+  (`HalFormsField`/`resolveHalFormsFields`/`HalFormsFieldRenderer`/`HalFormsContainer`, under
+  `packages/features/src/hal-forms/`, which every form renders through) lives — a `packages/features` feature is the unit
+  of cross-track sharing (see `packages/features/CLAUDE.md`).
 - `apps/*` — app-level routing, layout, feature composition.
 
 ## Reconsider when
 
 - Layer-1 packages evolve so quickly that we constantly chase Xenit. Then we may collapse layer 2 back into the monorepo or coordinate release windows formally.
 - A backend redesign moves substantial responsibility into the client (e.g. "here's a JSON document, infer your own HAL semantics"). At that point the boundary moves and this ADR is replaced.
+
+---
+
+## Amendment (2026-10-06): apps no longer own page layout and composition
+
+[ADR-018](ADR-018-views-layer.md) adds a views layer (`packages/views`) between the apps and `packages/features`. This changes one line of the "What stays out of `@contentgrid/navigator-data`" section, which read: "`apps/*` — app-level routing, layout, feature composition." After the amendment, apps own routing and the meaning of "navigate" (a route change), but page layout and the composition of features and child views belong to `packages/views`. Everything else here (the two layers, the peerDependencies rule, what stays out of `navigator-data`) holds. The display-preference store moves within `packages/features` (its own `user-preferences` feature, ADR-018 rule 9), not into `navigator-data`, so no peer dependency is added here.
 
 ---
 

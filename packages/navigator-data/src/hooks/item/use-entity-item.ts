@@ -1,6 +1,7 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { SimpleLink } from "@contentgrid/hal";
 import { EntityItem } from "../../accessors/entity-item";
+import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import type ProfileEntity from "../../accessors/entity-profile";
 import type { TypedFetch } from "../../api/client";
 import { fetchHal } from "../../api/hal-client";
@@ -17,10 +18,11 @@ export interface UseEntityItemOptions {
 /**
  * Known profile: profile is supplied directly; item URL is expanded from the entity ID
  * using the profile's `itemLink` URI template.
- * Query is disabled when `entityId` is undefined.
+ * Query is disabled while `profileEntity` or `entityId` is undefined, so a caller can pass a
+ * profile it is still resolving without branching its hook calls.
  */
 export interface EntityItemByProfile {
-  profileEntity: ProfileEntity;
+  profileEntity: ProfileEntity | undefined;
   entityId: string | undefined;
 }
 
@@ -46,7 +48,7 @@ function isByProfile(params: UseEntityItemParams): params is EntityItemByProfile
  * Two modes:
  * - **Known profile** `{ profileEntity, entityId }` — use when the profile is already loaded.
  *   The item URL is expanded from the profile's `itemLink` URI template.
- *   Query is disabled when `entityId` is undefined.
+ *   Query is disabled while `profileEntity` or `entityId` is undefined.
  * - **Discover profile** `{ url }` — use when only the full item URL is known.
  *   Matches the URL against each loaded profile's `describes()` links to find the right profile.
  *   Query is disabled until the matching profile is available.
@@ -69,7 +71,8 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
 
   if (isByProfile(params)) {
     profileEntity = params.profileEntity;
-    url = params.entityId == null ? undefined : profileEntity.itemUrl(params.entityId);
+    url =
+      profileEntity && params.entityId != null ? profileEntity.itemUrl(params.entityId) : undefined;
   } else {
     url = params.url;
     profileEntity = profileResults.find((r) => r.data?.describes(SimpleLink.to(url!)))?.data;
@@ -84,6 +87,26 @@ export function useEntityItem(params: UseEntityItemParams, options?: UseEntityIt
     enabled: !!url && !!profileEntity,
     ...options?.queryOptionsOverride,
   });
+}
+
+/**
+ * Finds `url`'s item in an already-cached collection page of `profileEntity` (e.g. the page a
+ * relation picker just showed), to display it before its own fetch completes.
+ */
+export function findCachedEntityItem(
+  queryClient: QueryClient,
+  profileEntity: ProfileEntity,
+  url: string,
+): EntityItem | undefined {
+  const pages = queryClient.getQueriesData<unknown>({
+    queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+  });
+  for (const [, page] of pages) {
+    if (!(page instanceof EntityItemCollection)) continue;
+    const item = page.items.find((candidate) => candidate.selfLink.href === url);
+    if (item) return item;
+  }
+  return undefined;
 }
 
 /**

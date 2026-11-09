@@ -11,6 +11,8 @@ const TO_MANY_RELATION_KEY = "ToManyRelation";
 const TYPEAHEAD_SUGGESTIONS_KEY = "TypeaheadSuggestions";
 const COLLECTION_PAGE_KEY = "CollectionPage";
 const COLLECTION_FILTERS_KEY = "CollectionFilters";
+const COLLECTION_SORT_KEY = "CollectionSort";
+const CONTENT_PREVIEW_KEY = "ContentPreview";
 
 /**
  * Centralized TanStack Query key factories for all navigator-data queries.
@@ -96,6 +98,13 @@ export const queryKeys = {
     /** Exact key for a specific to-many relation by relation name and relation URL. */
     byUrl: (relationName: string, relationUrl: string) =>
       [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
+    /**
+     * Exact key for a "load more" (infinite) query over a to-many relation, starting at the
+     * relation URL. Nested under `forRelationName` (and `byUrl`), so every relation mutation's
+     * existing prefix invalidation refreshes it too.
+     */
+    infiniteByUrl: (relationName: string, relationUrl: string) =>
+      [TO_MANY_RELATION_KEY, relationName, relationUrl, "infinite"] as const,
   },
 
   typeaheadSuggestions: {
@@ -119,6 +128,21 @@ export const queryKeys = {
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
   },
 
+  searchParamSuggestions: {
+    /**
+     * Exact key for one `useSearchParamSuggestions` request (a per-parameter suggestion/count
+     * search), by URL.
+     *
+     * Nested under `entityItemCollection.forEntity(...)` — unlike `typeaheadSuggestions` — so a
+     * create/update/delete invalidation refreshes the result counts the search bar shows. The
+     * trailing `"suggestions"` segment keeps it a different cache entry from the table's own
+     * `entityItemCollection.byUrl` even when both encode the same URL (the same way
+     * `infiniteByUrl` stays apart), so the two queries' option sets never share one entry.
+     */
+    byUrl: (profileEntity: ProfileEntity, url: string) =>
+      [ENTITY_COLLECTION_KEY, profileEntity.name, url, "suggestions"] as const,
+  },
+
   collectionPage: {
     /** Exact key for the remembered current-page href of one entity's collection. */
     byEntityName: (entityName: string) => [COLLECTION_PAGE_KEY, entityName] as const,
@@ -127,5 +151,25 @@ export const queryKeys = {
   collectionFilters: {
     /** Exact key for the remembered active filter values of one entity's collection. */
     byEntityName: (entityName: string) => [COLLECTION_FILTERS_KEY, entityName] as const,
+  },
+
+  collectionSort: {
+    /** Exact key for the remembered active sort value of one entity's collection. */
+    byEntityName: (entityName: string) => [COLLECTION_SORT_KEY, entityName] as const,
+  },
+
+  /**
+   * `useContentPreview`'s query key — one entry per content link + ETag combination.
+   *
+   * The ETag is part of the key (not just the link href) so that re-uploading a file
+   * onto the same content attribute produces a new key automatically: the entity item's
+   * ETag changes on any mutation, including a content upload, so a stale preview is never
+   * served from cache after a re-upload. Deliberately its own root — never invalidated by
+   * an entity item or collection mutation; see `packages/navigator-data/CLAUDE.md`
+   * "Content preview and renditions".
+   */
+  contentPreview: {
+    /** Exact key for one content link's preview, scoped to the item's current ETag. */
+    byUrl: (href: string, etag: string | null) => [CONTENT_PREVIEW_KEY, href, etag] as const,
   },
 };

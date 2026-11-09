@@ -48,7 +48,7 @@ export function BrandingHeader({
           type="button"
           onClick={onLogoClick}
           className={cn(
-            "flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left",
+            "flex min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-left",
             mobileLeading && "hidden md:flex",
           )}
         >

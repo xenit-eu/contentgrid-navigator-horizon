@@ -4,6 +4,7 @@
    any utility class used only inside packages/features (never coincidentally
    used by packages/ui or this app) silently produces no CSS rule at all. */
 @source "../../../packages/features/src";
+@source "../../../packages/views/src";
 /* Scan the dev-tools package so its Tailwind classes are generated. Note: this
    also emits a few dev-tools-only utility rules into the production CSS even
    though the component JS is tree-shaken out — an accepted, negligible

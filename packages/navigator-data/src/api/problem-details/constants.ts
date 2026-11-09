@@ -72,7 +72,7 @@ export const ContentGridProblemType = {
   REQUEST_INVALID_HEADER: `${CONTENTGRID_PROBLEM_PREFIX}invalid-request/invalid-header`,
 
   // ── Version conflict (HTTP 412) ────────────────────────────────────────────
-  /** The `If-Match` / `If-None-Match` version does not match the current one. */
+  /** An `If-Match` ETag is not the current one, or `If-None-Match: *` met an existing resource. */
   UNSATISFIED_VERSION: `${CONTENTGRID_PROBLEM_PREFIX}unsatisfied-version`,
 
   // ── Not found (HTTP 404) ───────────────────────────────────────────────────
@@ -97,3 +97,21 @@ export const ContentGridProblemType = {
  */
 export type ContentGridProblemTypeUri =
   (typeof ContentGridProblemType)[keyof typeof ContentGridProblemType];
+
+/**
+ * Problem `type` reported by the platform's rendition service (spec 002-pdf-viewer,
+ * `contracts/rendition-service.md`) when a content attribute's stored file cannot be
+ * converted to PDF (unsupported source format).
+ *
+ * Deliberately NOT a member of {@link ContentGridProblemType} above: the rendition
+ * service is a separate platform component from the ContentGrid Application API this
+ * file otherwise catalogues, even though it shares the same `problems/` URI prefix and
+ * RFC 9457 convention. Modeled as its own constant — rather than left for callers to
+ * string-match ad hoc — purely so `isProblemOfType` can narrow it the same way as every
+ * Application API problem type; see `RenditionInvalidConversionProblem` in `./index` and
+ * research.md §8.7 (it is intentionally given no dedicated `ProblemDisplayModel` kind —
+ * `toProblemDisplayModel` falls through to the generic `"unknown"` kind for it, which is
+ * enough to render "Preview not available" + Download without a bespoke alert branch).
+ */
+export const RENDITION_INVALID_CONVERSION =
+  `${CONTENTGRID_PROBLEM_PREFIX}renditions/invalid-conversion` as const;

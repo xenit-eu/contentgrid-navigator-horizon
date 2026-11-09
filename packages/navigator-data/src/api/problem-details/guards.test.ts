@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ProblemDetailError } from "@contentgrid/problem-details";
-import { ContentGridProblemType } from "./constants";
+import { createProblemHandler } from "../../../test-fixtures/msw/handlers";
+import { server } from "../../../test-setup";
+import { noopSupplier } from "../../hooks/test-utils";
+import { createContentClient } from "../client";
+import { ContentGridProblemType, RENDITION_INVALID_CONVERSION } from "./constants";
 import {
   getValidationFieldErrors,
   isProblemDetailError,
@@ -72,5 +76,36 @@ describe("problem-detail guards", () => {
     ]);
     expect(getValidationFieldErrors(requiredRelation)).toEqual([]);
     expect(getValidationFieldErrors(new Error("x"))).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RENDITION_INVALID_CONVERSION — a problem type from the rendition service,
+// not the ContentGrid Application API. Exercised against a real MSW-served
+// response (not a hand-constructed ProblemDetailError like the fixtures
+// above) so the test proves the guard narrows what checkResponse actually
+// produces for this problem type, the same as any other.
+// ---------------------------------------------------------------------------
+
+describe("isProblemOfType — RENDITION_INVALID_CONVERSION (MSW-served)", () => {
+  const RENDITION_URL = "https://api.example.com/renditions/get/pdf";
+
+  it("narrows a rendition service problem response served over the network", async () => {
+    server.use(
+      createProblemHandler({
+        method: "get",
+        url: RENDITION_URL,
+        status: 422,
+        title: "Cannot convert to PDF",
+        type: RENDITION_INVALID_CONVERSION,
+      }),
+    );
+
+    const contentFetch = createContentClient(noopSupplier);
+    const caught = await contentFetch(new Request(RENDITION_URL)).catch((error: unknown) => error);
+
+    expect(isProblemDetailError(caught)).toBe(true);
+    expect(isProblemOfType(caught, RENDITION_INVALID_CONVERSION)).toBe(true);
+    expect(isProblemOfType(caught, ContentGridProblemType.VALIDATION)).toBe(false);
   });
 });
