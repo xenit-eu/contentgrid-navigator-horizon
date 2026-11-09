@@ -10,19 +10,10 @@ export interface ContentAttributeSelectorProps {
 }
 
 /**
- * `AttributeSelect` (`@contentgrid/ui`'s shared profile-attribute selector pattern, round-2
- * review — reuse it instead of a hand-rolled `Select`) over the item's content attributes,
- * rendered in the PDF viewer toolbar's `start` slot at compact (`size="sm"`) height to match the
- * toolbar's other controls.
+ * `ContentAttributeOptionSelector` over the item's content attributes.
  *
  * Lists every content attribute the item has, not only ones that currently hold a file — an
- * attribute that needs uploading or that errors out while loading is still a valid switch target
- * (round-2 review: "cannot look or switch content attributes when one cannot be opened or needs
- * to be uploaded"). Renders nothing when there are no content attributes at all. With exactly one,
- * renders it as a *disabled* selector rather than nothing — same as the old Navigator's greyed-out
- * "Order document" box — so the user still has context on what they're viewing (round-2 review of
- * #192: "instead of returning null I would prefer a disabled selector that still displays the
- * default content attribute"). With two or more, renders the normal enabled selector.
+ * attribute that needs uploading or that errors out while loading is still a valid switch target.
  */
 export function ContentAttributeSelector({
   entityItem,
@@ -36,6 +27,30 @@ export function ContentAttributeSelector({
     return [{ name: attr.value.name, title: attr.profileAttribute?.title, type: "content" }];
   });
 
+  return <ContentAttributeOptionSelector options={options} value={value} onChange={onChange} />;
+}
+
+interface ContentAttributeOptionSelectorProps {
+  readonly options: readonly ProfileAttributeOption[];
+  /** Currently selected option name. */
+  readonly value: string;
+  /** Fires with the newly selected option's name. */
+  readonly onChange: (attributeName: string) => void;
+}
+
+/**
+ * `AttributeSelect` over a given list of content attributes, rendered in a preview toolbar's
+ * `start` slot at compact (`size="sm"`) height to match the toolbar's other controls. Takes the
+ * options directly, so it also serves a caller that has no `EntityItem`.
+ *
+ * Renders nothing when there are no options. With exactly one, renders it as a disabled selector,
+ * so the user still sees which attribute is on screen. With two or more, the selector is enabled.
+ */
+export function ContentAttributeOptionSelector({
+  options,
+  value,
+  onChange,
+}: Readonly<ContentAttributeOptionSelectorProps>) {
   if (options.length === 0) {
     return null;
   }

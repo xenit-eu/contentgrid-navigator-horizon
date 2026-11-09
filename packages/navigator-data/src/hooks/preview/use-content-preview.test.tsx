@@ -101,6 +101,7 @@ describe("useContentPreview — stored PDF", () => {
         body: PDF_BYTES,
         contentType: "application/pdf",
         filename: "report.pdf",
+        etag: '"content-v1"',
       }),
     );
 
@@ -116,6 +117,7 @@ describe("useContentPreview — stored PDF", () => {
       bytes: expect.any(ArrayBuffer),
       filename: "report.pdf",
       origin: "stored",
+      etag: '"content-v1"',
     });
   });
 
@@ -262,6 +264,7 @@ describe("useContentPreview — rendition ready", () => {
       bytes: expect.any(ArrayBuffer),
       filename: "report.docx",
       origin: "rendition",
+      etag: null,
     });
   });
 });
