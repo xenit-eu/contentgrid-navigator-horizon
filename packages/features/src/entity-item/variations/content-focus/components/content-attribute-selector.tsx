@@ -34,7 +34,7 @@ interface ContentAttributeOptionSelectorProps {
   readonly options: readonly ProfileAttributeOption[];
   /** Currently selected option name. */
   readonly value: string;
-  /** Fires with the newly selected option's name. Without it the selector is disabled. */
+  /** Fires with the newly selected option's name. Without it the title is shown as plain text. */
   readonly onChange?: (attributeName: string) => void;
 }
 
@@ -43,8 +43,9 @@ interface ContentAttributeOptionSelectorProps {
  * `start` slot at compact (`size="sm"`) height to match the toolbar's other controls. Takes the
  * options directly, so it also serves a caller that has no `EntityItem`.
  *
- * Renders nothing when there are no options. With exactly one option, or without `onChange`, it is
- * disabled, so the user still sees which attribute is on screen. Otherwise it is enabled.
+ * Renders nothing when there are no options. With exactly one option, or without `onChange`, there
+ * is nothing to pick here, so it shows the selected option's title as plain text: the user still
+ * sees which attribute is on screen, without a control that does nothing.
  */
 export function ContentAttributeOptionSelector({
   options,
@@ -53,6 +54,13 @@ export function ContentAttributeOptionSelector({
 }: Readonly<ContentAttributeOptionSelectorProps>) {
   if (options.length === 0) {
     return null;
+  }
+
+  if (!onChange || options.length === 1) {
+    const selected = options.find((option) => option.name === value);
+    return (
+      <span className="min-w-0 truncate px-1 text-sm font-medium">{selected?.title ?? value}</span>
+    );
   }
 
   return (
@@ -65,9 +73,8 @@ export function ContentAttributeOptionSelector({
         size="sm"
         attributes={options}
         value={value}
-        onSelect={(attribute) => onChange?.(attribute.name)}
+        onSelect={(attribute) => onChange(attribute.name)}
         placeholder="Content attribute"
-        disabled={!onChange || options.length === 1}
       />
     </div>
   );

@@ -311,7 +311,7 @@ function CreateEntityItemContainerReady({
       fileFields={fileFields}
       fieldName={previewFieldName}
       // Beside the form the user switches by clicking a file in the form; the dialog covers the
-      // form, so there the selector switches.
+      // form, so there the preview switches itself.
       onFieldNameChange={isNarrow ? setPreviewFieldName : undefined}
       file={previewFile instanceof File ? previewFile : undefined}
       onFileChange={

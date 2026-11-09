@@ -16,7 +16,7 @@ entity-item/variations/content-focus/
 entity-item-create/
   create-entity-item-container   owns previewFieldName, isPreviewOpen, isNarrow (useContainerWidthAtLeast);
                                  renders the preview in an aside beside the form, or a Dialog
-  create-entity-item-file-preview  field selector (enabled in the dialog only) + the picked file's preview
+  create-entity-item-file-preview  field selector (dialog with several file fields; plain text otherwise) + the picked file's preview
                                    -> ../entity-item (ContentPreviewFrame,
                                       ContentAttributeOptionSelector, FilePreview)
   create-entity-item-form        -> ../hal-forms HalFormsContainer (filePreview)
@@ -63,7 +63,7 @@ hal-forms/render/
 - `src/entity-item/variations/content-focus/components/file-preview.tsx` (new), exported with `ContentAttributeOptionSelector` from `src/entity-item/index.ts`
 - `src/entity-item/variations/content-focus/components/content-preview-panel.tsx`: uses `PdfPreview` keyed by attribute name and the content's own ETag, `cannotDisplayMessageAndIcon`
 - `src/entity-item/variations/content-focus/components/content-preview-frame.tsx`: `cannotDisplayMessageAndIcon`, `fill`; a protected PDF is not a frame state, as the viewer asks for its password; the "No file" caption only when there is no drop zone
-- `src/entity-item/variations/content-focus/components/content-attribute-selector.tsx`: `ContentAttributeOptionSelector`, disabled without `onChange`
+- `src/entity-item/variations/content-focus/components/content-attribute-selector.tsx`: `ContentAttributeOptionSelector`, plain text without `onChange` or with one option
 - `src/entity-item/variations/content-focus/components/image-video-viewer.tsx`: `source` takes `kind` and `blob` only, so a picked file fits
 - `src/entity-item/variations/content-focus/util/preview-unavailable-message.ts` (new)
 - `src/entity-item/variations/content-focus/components/save-blob-as-file.ts` (new; `saveBlobAsFile`, used by `content-preview-panel.tsx` and `file-preview.tsx`; in `components/` because it touches the DOM, which `util/` does not)
@@ -71,7 +71,7 @@ hal-forms/render/
 
 ## Tests
 
-- `create-entity-item-container.test.tsx`: preview follows the picked field, the focused field and the clicked file, with the selector disabled beside the form and enabled in the dialog; unreadable PDF; continuous-create reset; highlight and a clickable picked file only with several file fields; read-only field's empty preview; narrow-screen dialog on the clicked field; the dialog closes when the view widens and doesn't reopen.
+- `create-entity-item-container.test.tsx`: preview follows the picked field, the focused field and the clicked file, with the field named as plain text beside the form and a selector in the dialog; the only file field named as plain text in the dialog; unreadable PDF; continuous-create reset; highlight and a clickable picked file only with several file fields; read-only field's empty preview; narrow-screen dialog on the clicked field; the dialog closes when the view widens and doesn't reopen.
 - `pdf-viewer.test.tsx`: `useDocumentLifecycle` reopens with the password and flags a wrong one; the password form flags a rejected password.
 - `pdf-viewer.composition.test.tsx`: an invalid document is reported once; a protected one is not reported.
 - `content-preview-panel.test.tsx`: a viewer-reported invalid PDF shows the corrupted message.

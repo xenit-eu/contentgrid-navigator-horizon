@@ -72,7 +72,7 @@ A create form has several file fields. The preview follows the field the user is
 
 **Acceptance Scenarios**:
 
-1. **Given** several file fields with a wide view, **When** the user clicks the file picked in a field, **Then** the preview shows that field. The preview's toolbar shows a disabled selector naming the previewed field; the form's fields are where the user switches.
+1. **Given** several file fields with a wide view, **When** the user clicks the file picked in a field, **Then** the preview shows that field. The preview's toolbar names the previewed field as plain text, and screen readers are told when it changes; the form's fields are where the user switches.
 2. **When** the user picks a file in a file field, **Then** the preview switches to that field.
 3. **When** the user focuses a file field with a wide view, **Then** the preview switches to that field.
 4. **Given** several file fields with a wide view, **Then** the previewed field is highlighted in the form; with one file field there is nothing to tell apart and no highlight.
@@ -90,7 +90,7 @@ When the view is narrower than 880 px there is no room beside the form, so a pic
 **Acceptance Scenarios**:
 
 1. **Given** a view narrower than 880 px, **Then** no preview is shown beside the form, and each file field with a picked file shows a **Preview file** button.
-2. **When** the user presses a field's **Preview file** button, **Then** a "Preview file" dialog opens previewing that field, with a selector to switch to another file field, since the dialog covers the form, and otherwise the same behaviour as Stories 2 and 3.
+2. **When** the user presses a field's **Preview file** button, **Then** a "Preview file" dialog opens previewing that field, with a selector to switch to another file field, since the dialog covers the form (with a single file field, its name as plain text), and otherwise the same behaviour as Stories 2 and 3.
 3. **Given** the dialog is open, **When** the view widens past 880 px (a wider window, or the sidebar closed), **Then** the dialog closes and the preview is shown beside the form; narrowing the view again does not reopen it.
 
 ---
@@ -119,7 +119,7 @@ When the view is narrower than 880 px there is no room beside the form, so a pic
 **Previewed field**
 
 - **FR-005**: The preview MUST start on the form's first file field (in the form's own field order) and return to it after a continuous-create reset.
-- **FR-006**: The preview MUST switch to a file field when the user picks a file in it, opens its preview, chooses it in the preview dialog's selector, or, beside the form, focuses it or clicks its picked file. Beside the form, the preview's selector MUST only show the previewed field.
+- **FR-006**: The preview MUST switch to a file field when the user picks a file in it, opens its preview, chooses it in the preview dialog's selector, or, beside the form, focuses it or clicks its picked file. Beside the form, the preview MUST name the previewed field as plain text, not as a selector, and MUST tell screen readers when it changes.
 - **FR-007**: A file dropped on the empty preview MUST fill the previewed field, unless that field is read-only.
 
 **Preview**

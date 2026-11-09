@@ -6,7 +6,10 @@ interface CreateEntityItemFilePreviewProps {
   readonly fileFields: readonly HalFormsField[];
   /** Name of the file field being previewed. */
   readonly fieldName: string;
-  /** Switches the preview to another file field. Without it the selector is disabled. */
+  /**
+   * Switches the preview to another file field, from the preview itself. Passed when the preview
+   * covers the form; without it the user switches fields in the form.
+   */
   readonly onFieldNameChange?: (fieldName: string) => void;
   /** The file picked in that field, if any. */
   readonly file: File | undefined;
@@ -16,7 +19,8 @@ interface CreateEntityItemFilePreviewProps {
 
 /**
  * Previews the file picked in one of the create form's file fields, before anything is uploaded,
- * with a selector naming the previewed field. With no file picked, the preview offers a drop zone.
+ * with the previewed field named in its toolbar. With no file picked, the preview offers a drop
+ * zone. Beside the form, screen readers are also told when the user switches fields in the form.
  */
 export function CreateEntityItemFilePreview({
   fileFields,
@@ -36,17 +40,25 @@ export function CreateEntityItemFilePreview({
       onChange={onFieldNameChange}
     />
   );
-
-  if (file) {
-    return <FilePreview file={file} toolbarStart={fieldSelector} />;
-  }
+  const fieldLabel = fileFields.find((field) => field.name === fieldName)?.label ?? fieldName;
 
   return (
-    <ContentPreviewFrame
-      state="noFile"
-      onFileChange={onFileChange}
-      fill
-      toolbarStart={fieldSelector}
-    />
+    <>
+      {!onFieldNameChange && (
+        <p role="status" className="sr-only">
+          Previewing {fieldLabel}
+        </p>
+      )}
+      {file ? (
+        <FilePreview file={file} toolbarStart={fieldSelector} />
+      ) : (
+        <ContentPreviewFrame
+          state="noFile"
+          onFileChange={onFileChange}
+          fill
+          toolbarStart={fieldSelector}
+        />
+      )}
+    </>
   );
 }

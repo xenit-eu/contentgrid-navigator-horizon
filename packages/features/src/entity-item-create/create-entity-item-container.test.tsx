@@ -491,6 +491,11 @@ describe("CreateEntityItemContainer", () => {
       return within(container).getByRole("combobox");
     }
 
+    // Beside the form, the status that tells screen readers which file field the preview shows.
+    function previewedFieldStatus(preview: HTMLElement) {
+      return within(preview).getByText(/^Previewing /);
+    }
+
     // jsdom lays nothing out, so every element is 0 px wide and the view is narrow. This makes the
     // view `wide` (at least `--container-side-by-side`) or not, and `resize` changes it the way
     // resizing the window or closing the sidebar would.
@@ -536,11 +541,11 @@ describe("CreateEntityItemContainer", () => {
       renderForm();
 
       const preview = await screen.findByRole("complementary", { name: "File preview" });
-      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Document");
 
       await user.upload(fileInput(1), textFile());
 
-      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Attachment");
       expect(
         within(preview).getByText("Preview isn't available for text/plain files."),
       ).toBeInTheDocument();
@@ -573,15 +578,15 @@ describe("CreateEntityItemContainer", () => {
       const preview = await screen.findByRole("complementary", { name: "File preview" });
       await user.click(screen.getByRole("switch", { name: "Keep creating entities" }));
       await user.upload(fileInput(1), textFile());
-      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Attachment");
 
       await user.click(screen.getByRole("button", { name: "Create" }));
 
       expect(await screen.findByText("Invoice has been successfully created!")).toBeInTheDocument();
-      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Document");
     });
 
-    it("switches the preview to the file field whose file the user clicks; the selector only shows it", async () => {
+    it("switches the preview to the file field whose file the user clicks, with no selector beside the form", async () => {
       const user = userEvent.setup();
       stubViewWidth(true);
       server.use(profileRootHandler(), invoiceProfileHandler(TWO_FILES_CREATE_FORM));
@@ -591,12 +596,13 @@ describe("CreateEntityItemContainer", () => {
       // A field with a picked file has no file input left, so fill the second field first.
       await user.upload(fileInput(1), new File(["b"], "annex.txt", { type: "text/plain" }));
       await user.upload(fileInput(0), new File(["a"], "contract.txt", { type: "text/plain" }));
-      expect(previewFieldSelector(preview)).toHaveTextContent("Document");
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Document");
 
       await user.click(screen.getByRole("button", { name: /annex\.txt/ }));
 
-      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
-      expect(previewFieldSelector(preview)).toBeDisabled();
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Attachment");
+      expect(within(preview).getByText("Attachment")).toBeInTheDocument();
+      expect(within(preview).queryByRole("combobox")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /annex\.txt/ })).toHaveAttribute(
         "aria-current",
         "true",
@@ -615,7 +621,7 @@ describe("CreateEntityItemContainer", () => {
       const preview = await screen.findByRole("complementary", { name: "File preview" });
       await user.click(screen.getByLabelText("Attachment"));
 
-      expect(previewFieldSelector(preview)).toHaveTextContent("Attachment");
+      expect(previewedFieldStatus(preview)).toHaveTextContent("Attachment");
     });
 
     it("highlights the previewed one of several file fields", async () => {
@@ -683,6 +689,27 @@ describe("CreateEntityItemContainer", () => {
       expect(
         within(dialog).getByText("Preview isn't available for text/plain files."),
       ).toBeInTheDocument();
+    });
+
+    it("names a form's only file field in the preview dialog, with no selector", async () => {
+      const user = userEvent.setup();
+      stubViewWidth(false);
+      server.use(
+        profileRootHandler(),
+        invoiceProfileHandler({
+          ...TWO_FILES_CREATE_FORM,
+          properties: [{ name: "document", type: "file", prompt: "Document" }],
+        }),
+      );
+      renderForm();
+
+      await screen.findByLabelText("Document");
+      await user.upload(fileInput(0), textFile());
+      await user.click(screen.getByRole("button", { name: "Preview file" }));
+
+      const dialog = screen.getByRole("dialog", { name: "Preview file" });
+      expect(within(dialog).getByText("Document")).toBeInTheDocument();
+      expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
     });
 
     it("closes the preview dialog when the view widens, and doesn't reopen it on narrowing", async () => {
