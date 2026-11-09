@@ -3,12 +3,10 @@ import { Button } from "../primitives/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 
 /**
- * A toolbar icon button with a tooltip carrying its accessible label. Used by
- * `pdf-viewer-toolbar.tsx` (page/zoom/download/print/fullscreen),
- * `pdf-viewer-search-popover.tsx` (previous/next/clear match) and any other
- * preview toolbar that should look the same. Lives outside `pdf-viewer/` so
- * using it doesn't pull in the lazily loaded PDF viewer. Must be rendered
- * inside a `TooltipProvider` (the PDF toolbar wraps its whole render tree in one).
+ * A compact icon-only button with a tooltip carrying its accessible label, for
+ * toolbars and other rows of icon actions. Lives outside `pdf-viewer/` so using
+ * it doesn't pull in the lazily loaded PDF viewer. Must be rendered inside a
+ * `TooltipProvider`.
  */
 export function ToolbarIconButton({
   label,
