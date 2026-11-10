@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { PageTitle, UnsavedChangesDialog } from "@contentgrid/ui";
+import { UnsavedChangesDialog } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import type { RelationConflictAlertProps, ValidationAlertProps } from "../problem-details";
 import { useUnsavedChangesGuard } from "../unsaved-changes-guard";
@@ -31,7 +31,7 @@ export interface CreateEntityItemPanelProps {
 }
 
 /**
- * App-agnostic create-item content: title, unsaved-changes guard, and
+ * App-agnostic create-item content: unsaved-changes guard and
  * `CreateEntityItemContainer`. No page chrome of its own — the caller wraps this
  * in whatever layout (e.g. `BreadCrumbsToolBarLayout`) the route needs, and
  * that layout owns the surrounding padding. All routing / navigation is
@@ -55,8 +55,7 @@ export function CreateEntityItemPanel({
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
 
   return (
-    <div className="space-y-6">
-      <PageTitle header="Create" title={profile.singularName} subtitle="" />
+    <>
       <UnsavedChangesDialog
         open={unsavedChangesGuard.isBlocked}
         onConfirm={unsavedChangesGuard.confirmNavigation}
@@ -78,6 +77,6 @@ export function CreateEntityItemPanel({
         onBlindRelationOverwriteClick={onBlindRelationOverwriteClick}
         onRequiredRelationClick={onRequiredRelationClick}
       />
-    </div>
+    </>
   );
 }
