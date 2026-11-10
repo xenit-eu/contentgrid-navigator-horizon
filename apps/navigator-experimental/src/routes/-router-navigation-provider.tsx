@@ -1,5 +1,11 @@
 import { type ReactNode, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
+import {
+  rememberCollectionFilters,
+  rememberCollectionPageHref,
+  rememberCollectionSort,
+} from "@contentgrid/navigator-data";
 import type { Navigation, NavigationOptions } from "@contentgrid/views";
 import { NavigationProvider } from "@contentgrid/views";
 
@@ -23,6 +29,7 @@ import { NavigationProvider } from "@contentgrid/views";
 export function RouterNavigationProvider({ children }: Readonly<{ children: ReactNode }>) {
   const navigate = useNavigate();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const navigation = useMemo<Navigation>(() => {
     const hrefs = {
       home: () => router.buildLocation({ to: "/", search: {} }).href,
@@ -34,6 +41,8 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           params: { entity: entityName, itemId: id },
           search: (prev) => prev,
         }).href,
+      classifyCreate: () => router.buildLocation({ to: "/~create", search: {} }).href,
+      settings: () => router.buildLocation({ to: "/~configuration", search: {} }).href,
       createItem: (entityName: string) =>
         router.buildLocation({ to: "/$entity/~create", params: { entity: entityName }, search: {} })
           .href,
@@ -50,12 +59,20 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
     return {
       openHome: (options) =>
         open(hrefs.home, options, () => void navigate({ to: "/", search: {} })),
-      openEntityItemCollection: (entityName, options) =>
+      openEntityItemCollection: (entityName, options) => {
+        // The list restores its remembered filters, sort and page when it opens on a clean URL;
+        // `restoreState: false` forgets them first, so it opens fresh.
+        if (options?.restoreState === false) {
+          rememberCollectionFilters(queryClient, entityName, {});
+          rememberCollectionSort(queryClient, entityName, undefined);
+          rememberCollectionPageHref(queryClient, entityName, undefined);
+        }
         open(
           () => hrefs.entityItemCollection(entityName),
           options,
           () => void navigate({ to: "/$entity", params: { entity: entityName }, search: {} }),
-        ),
+        );
+      },
       openItem: (entityName, id, options) =>
         open(
           () => hrefs.item(entityName, id),
@@ -74,12 +91,16 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
           () =>
             void navigate({ to: "/$entity/~create", params: { entity: entityName }, search: {} }),
         ),
+      openClassifyCreate: (options) =>
+        open(hrefs.classifyCreate, options, () => void navigate({ to: "/~create", search: {} })),
+      openSettings: (options) =>
+        open(hrefs.settings, options, () => void navigate({ to: "/~configuration", search: {} })),
       hrefFor: {
         home: hrefs.home,
         entityItemCollection: hrefs.entityItemCollection,
         item: hrefs.item,
       },
     };
-  }, [navigate, router]);
+  }, [navigate, router, queryClient]);
   return <NavigationProvider navigation={navigation}>{children}</NavigationProvider>;
 }
