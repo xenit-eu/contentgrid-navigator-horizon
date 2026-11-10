@@ -302,14 +302,16 @@ export interface InvalidHeaderProblem extends ProblemDetail {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * When it occurs: an `If-Match` / `If-None-Match` conditional request does not
- * match the current entity version (optimistic-locking failure). Re-fetch,
- * re-apply the change, and retry. HTTP 412.
+ * When it occurs: a conditional request's precondition fails — `If-Match` names an
+ * ETag that is no longer the resource's current one (optimistic-locking failure), or
+ * `If-None-Match: *` is sent to a resource that already exists. Applies to every
+ * conditional-request resource (entity-item, to-one relation, entity-content), each
+ * with its own ETag. Re-fetch, re-apply the change, and retry. HTTP 412.
  */
 export interface UnsatisfiedVersionProblem extends ProblemDetail {
   readonly type: typeof ContentGridProblemType.UNSATISFIED_VERSION;
   readonly status: 412;
-  /** The current version (ETag) of the entity. */
+  /** The resource's current version (its ETag value, without the surrounding quotes). */
   readonly actual_version?: string;
 }
 

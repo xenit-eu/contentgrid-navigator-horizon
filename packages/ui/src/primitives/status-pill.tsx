@@ -26,8 +26,8 @@ const statusConfig = {
     defaultIcon: <XCircle size={14} aria-hidden />,
   },
   warning: {
-    textClass: "text-[#A4501F] dark:text-[#E89A63]",
-    bgClass: "bg-[rgba(212,104,42,0.12)] dark:bg-[rgba(232,154,99,0.18)]",
+    textClass: "text-warning-foreground",
+    bgClass: "bg-warning/12 dark:bg-warning/18",
     defaultIcon: <Clock size={14} aria-hidden />,
   },
   neutral: {

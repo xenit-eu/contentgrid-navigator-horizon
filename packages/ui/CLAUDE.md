@@ -32,17 +32,20 @@ Source: [ADR-003](../../docs/adr/ADR-003-ui-stack-tailwind-shadcn.md).
     must not import Radix directly.
 - **Pattern** — a composed component that encodes Navigator-domain semantics.
   Lives in `src/patterns/`. Examples: `EntityCard`, `DataTable`,
-  `FilterSidebar`, HAL-Forms field renderers, `PdfHighlightOverlay`.
+  `AutocompleteRenderer`, HAL-Forms field renderers, `PdfHighlightOverlay`.
   - The HAL-Forms field renderers (`src/patterns/form-renderers/`) take plain scalar props
     (`name`, `label`, `required`, `readOnly`, `description?`, `value`, `onChange`, `error?`,
     plus type-specific constraints like `includesTime`/`options`) — NOT a descriptor object.
-    The `kind`-dispatching switch and the `FieldDescriptor` type itself live in
-    `packages/features/src/entity-item-create/` (ADR-004), not here; these components have no
+    The `kind`-dispatching switch and the `HalFormsField` type itself live in
+    `packages/features/src/hal-forms/` (ADR-004), not here; these components have no
     dependency on that type or on any HAL-Forms shape, and do NOT import `@contentgrid/hal` or
     `@contentgrid/hal-forms` directly.
   - If a pattern is only used in one feature, it belongs in
     `packages/features/<feature>/`, NOT here. The registry is for patterns
-    reused across multiple tracks or apps.
+    reused across multiple tracks or apps. Documented exception: the search and filter
+    building blocks below (spec 003) live here although the entity search bar is their only
+    consumer today — they are domain-free and meant for the advanced filter dialog and the
+    relation pickers next; move one into its feature if that reuse does not happen.
 
 ---
 
@@ -106,8 +109,8 @@ No CLI involved.
   `@contentgrid/typed-fetch`, `@contentgrid/fetch-hooks`,
   `@contentgrid/fetch-hook-authentication`, `@contentgrid/problem-details`,
   or `@contentgrid/uri-template` — those belong in `packages/navigator-data`.
-  The form-renderer patterns take plain scalar props (see above), not a `FieldDescriptor` or any
-  other HAL-Forms-shaped type — that type lives in `packages/features/src/entity-item-create/`.
+  The form-renderer patterns take plain scalar props (see above), not a `HalFormsField` or any
+  other HAL-Forms-shaped type — that type lives in `packages/features/src/hal-forms/`.
 - Do NOT import from `packages/features/*` — features depend on `packages/ui`,
   not the other way around.
 - Do NOT import Radix UI (`@radix-ui/*`) outside `packages/ui`. Inside
@@ -118,10 +121,10 @@ No CLI involved.
 ## HAL-FORMS metadata in pattern components
 
 Per ADR-004, `packages/ui`'s form-renderer patterns
-(`src/patterns/form-renderers/`) are **descriptor-agnostic**: they never see a `FieldDescriptor`,
+(`src/patterns/form-renderers/`) are **descriptor-agnostic**: they never see a `HalFormsField`,
 a `HalFormsProperty`, or any other HAL-Forms-shaped value. The `kind` switch that reads a
-`FieldDescriptor` and unpacks it into plain props lives in
-`packages/features/src/entity-item-create/render/field-renderer.tsx`, one layer up.
+`HalFormsField` and unpacks it into plain props lives in
+`packages/features/src/hal-forms/render/hal-forms-field-renderer.tsx`, one layer up.
 
 - Each renderer takes plain scalar props only: `name`, `label`, `required`, `readOnly`,
   `description?`, `value`, `onChange`, `error?`, plus type-specific constraints
@@ -156,9 +159,9 @@ double-invoke guard, upstream #700), `use-pdf-viewer-document-lifecycle.ts`
 (`useDocumentSearchState` — search state/actions, split out because it has a
 clean input/output boundary of its own; `use-pdf-viewer-state.ts` re-exports
 its public types so existing imports don't need updating), `pdf-viewer-toolbar.tsx`,
-`pdf-viewer-icon-button.tsx` (shared `IconButton`, used by both the toolbar
-and the search popover), `pdf-viewer-search-popover.tsx`
-(`PdfViewerSearchPopover`), `pdf-viewer-labels.ts`, `pdf-viewer-story-helpers.tsx`
+`pdf-viewer-search-popover.tsx` (`PdfViewerSearchPopover`) — both use the shared
+`ToolbarIconButton` (`src/patterns/toolbar-icon-button.tsx`, kept outside this folder so
+other preview toolbars can use it without pulling in the lazily loaded viewer), `pdf-viewer-labels.ts`, `pdf-viewer-story-helpers.tsx`
 (shared story harness — not a `*.stories.tsx` file itself, so Storybook's
 story glob skips it), `fixtures/` (hand-built `minimal.pdf` / `js-in-pdf.pdf`).
 Stories live in two files sharing one `title`
@@ -207,6 +210,12 @@ BufferSource argument is empty` reaches the console), but
   only when it isn't already wrapped by one (`useAmbientPdfEngineStatus()`
   returns `undefined`) — wrap several `PdfViewer`s in one `PdfEngineProvider`
   to share a single engine/worker instead of creating one per viewer.
+- **A password-protected document asks for its password** (`PdfViewerPasswordForm`): the
+  `protected` phase renders a password input instead of a status message, `useDocumentLifecycle`'s
+  `unlock` reopens the document through the document manager's `retryDocument(id, { password })`,
+  and `passwordRejected` (the engine's `passwordProvided` on a still-protected document) shows
+  that a wrong password was entered. `onLoadError` never reports a protected document; Download
+  stays enabled while it waits for the password.
 - **Search and print (US3) are wired**: `SearchPluginPackage` and
   `PrintPluginPackage` are registered from their `/react` subpaths — the
   print package from `/react` auto-mounts its `PrintFrame` utility (the
@@ -287,15 +296,17 @@ BufferSource argument is empty` reaches the console), but
   `test:visual` and, importantly, from `test:a11y` — a `play()`-bearing story
   races the addon-a11y auto-scan against `AxeBuilder.analyze()`, see
   `apps/storybook/tests/accessibility.spec.ts`). A story that must keep its
-  own `play()` for some other reason should carry that same tag. Four of the
-  visual file's own stories — `Default`/`ToolbarMinimal`/`Invalid`/`JsInPdf`,
-  each individually tagged, not the shared `meta` — mount a real PDFium/WASM
-  engine, so the content area reports `aria-busy="true"` until the first page
-  paints (or, for `Invalid`, until the terminal invalid-document message
-  replaces it); `apps/storybook/tests/visual.spec.ts` waits for that to clear
-  before screenshotting — opt-in per story (not a generic wait) so a
-  permanently-busy loading-state story never times the harness out. The five
-  mocked stories (`Protected`/`EngineFailure`/`SearchOpen`/`SearchNoResults`/
+  own `play()` for some other reason should carry that same tag. Eight of the
+  visual file's own stories — `Default`/`MultiPage`/`SampleForm`/`Landscape`/
+  `ToolbarMinimal`/`Protected`/`Invalid`/`JsInPdf`, each individually tagged
+  `async-content`, not the shared `meta` — mount a real PDFium/WASM engine, so
+  the content area reports `aria-busy="true"` until the first page paints (or,
+  for `Invalid`, until the terminal invalid-document message replaces it; for
+  `Protected`, until the password form replaces it);
+  `apps/storybook/tests/visual.spec.ts` waits for that to clear before
+  screenshotting — opt-in per story (not a generic wait) so a
+  permanently-busy loading-state story never times the harness out. The four
+  mocked stories (`EngineFailure`/`SearchOpen`/`SearchNoResults`/
   `PrintReady`) never render `aria-busy="true"`, so they don't carry the tag.
   `PdfViewerHarness`'s own
   "Loading fixture…" placeholder (`pdf-viewer-story-helpers.tsx`, shown while
@@ -312,6 +323,31 @@ BufferSource argument is empty` reaches the console), but
   generated in this change): `Patterns/PdfViewer` — `Default`,
   `ToolbarMinimal`, `Protected`, `Invalid`, `EngineFailure`, `JsInPdf`,
   `SearchOpen`, `SearchNoResults`, `PrintReady`.
+
+---
+
+## Search and filter building blocks
+
+Domain-free pieces used by the entity search bar (spec
+`specs/003-single-search-bar-entity-item-collection/`, contract
+`contracts/ui-primitives-and-patterns.md`), reusable for any filtered list:
+
+- **Primitives**: `FilterButton` (filter trigger with idle / active / positive / negative
+  outlines and a sibling × to clear; works as `<PopoverTrigger asChild>`), plus `Chip` (now with
+  a visible `mode` segment, icons and an optional clickable body), `CountIndicatorChip` (`isLoading`) and `SelectionChip`
+  (`icon` / `trailing`). `--success*` tokens are mapped into `@theme` (`bg-success`,
+  `border-success-foreground`, …).
+- **Patterns**: `FilterChips` (removable chips, optionally `selectable` via `onSelect`, at most two
+  lines then horizontal scroll),
+  `GroupedSelect`, `SearchSuggestionsPopover` (chip row + grouped suggestions, owns the combobox
+  keyboard model via `renderAnchor`), `DateRangeFilter` (range calendar + presets), and
+  `SearchableOptionList`. `filterOptionsByPrefix` (`src/lib/filter-options.ts`) is the shared
+  client-side prefix filter.
+- **ARIA lesson from the axe audit**: a `listbox` may only contain options and groups — keep
+  loading / empty / error text outside it (the popover renders one listbox per group with
+  results), and don't put buttons inside one (`nested-interactive`).
+- **Horizontal scrolling**: `ScrollArea` only mounts a vertical scrollbar; these rows use native
+  `overflow-x-auto` with the `scrollbar-subtle` utility.
 
 ---
 

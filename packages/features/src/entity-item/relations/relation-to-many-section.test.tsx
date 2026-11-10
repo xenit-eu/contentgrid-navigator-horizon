@@ -17,9 +17,11 @@ import {
   useDeleteRelationItem,
   useEntityItemCollection,
   useEntityItemToManyRelation,
+  useEntityItemToManyRelationInfinite,
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import { relationLayoutForPane, useRelationLayout } from "./relation-layout";
 import { RelationToManySection } from "./relation-to-many-section";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
@@ -27,12 +29,20 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   return {
     ...actual,
     useEntityItemToManyRelation: vi.fn(),
+    useEntityItemToManyRelationInfinite: vi.fn(),
     useAddToManyRelation: vi.fn(),
     useClearRelation: vi.fn(),
     useUnlinkRelation: vi.fn(),
     useDeleteRelationItem: vi.fn(),
     useEntityItemCollection: vi.fn(),
   };
+});
+
+// Outside a resizable pane by default (the widest layout: record table); compact-mode tests
+// override this to render the narrow-pane stack instead.
+vi.mock("./relation-layout", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./relation-layout")>();
+  return { ...actual, useRelationLayout: vi.fn() };
 });
 
 const API_URL = "https://api.example.com";
@@ -119,6 +129,7 @@ function makeItem(id: string, amount: number, canDelete = false): EntityItem {
   return {
     id,
     canDelete,
+    profileEntity: TARGET_PROFILE,
     halItem: { data: { id, amount } },
     findAttribute: (name: string) => attributes[name],
     userDefinedAttributes: [],
@@ -217,6 +228,15 @@ function resetMutationMocks() {
     isError: false,
     data: { items: [] },
   } as unknown as ReturnType<typeof useEntityItemCollection>);
+  vi.mocked(useRelationLayout).mockReturnValue(relationLayoutForPane(undefined));
+  // The compact "load more" query — idle unless a test renders the section in a narrow pane.
+  vi.mocked(useEntityItemToManyRelationInfinite).mockReturnValue({
+    isPending: true,
+    isSuccess: false,
+    isError: false,
+    error: null,
+    data: undefined,
+  } as unknown as ReturnType<typeof useEntityItemToManyRelationInfinite>);
 }
 
 function renderSection(
@@ -405,6 +425,109 @@ describe("RelationToManySection", () => {
 
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+  });
+
+  describe("in a narrow pane (compact stack)", () => {
+    const fetchNextPage = vi.fn();
+
+    function mockLoadedPages(pages: EntityItem[][], hasNextPage = false) {
+      vi.mocked(useRelationLayout).mockReturnValue(
+        relationLayoutForPane({ side: "right", width: 320 }),
+      );
+      vi.mocked(useEntityItemToManyRelationInfinite).mockReturnValue({
+        isPending: false,
+        isSuccess: true,
+        isError: false,
+        error: null,
+        data: {
+          pages: pages.map((items) =>
+            makeCollectionData(items, {
+              totalItems: { count: pages.flat().length, isEstimated: false },
+            }),
+          ),
+        },
+        hasNextPage,
+        isFetchingNextPage: false,
+        fetchNextPage,
+      } as unknown as ReturnType<typeof useEntityItemToManyRelationInfinite>);
+    }
+
+    afterEach(() => fetchNextPage.mockReset());
+
+    const sevenItems = Array.from({ length: 7 }, (_, i) => makeItem(`item-${i + 1}`, i));
+
+    it("uses the load-more query instead of the paged table query", () => {
+      mockLoadedPages([sevenItems]);
+      renderSection();
+
+      expect(useEntityItemToManyRelation).toHaveBeenLastCalledWith(expect.anything(), undefined, {
+        enabled: false,
+      });
+      expect(useEntityItemToManyRelationInfinite).toHaveBeenLastCalledWith(expect.anything(), {
+        enabled: true,
+      });
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("shows the first 5 items, and the rest after Load more", async () => {
+      const user = userEvent.setup();
+      mockLoadedPages([sevenItems]);
+      renderSection();
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(5);
+      expect(screen.getByText("item-5")).toBeInTheDocument();
+      expect(screen.queryByText("item-6")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Load more" }));
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(7);
+      expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("fetches the next page once Load more runs past the loaded items", async () => {
+      const user = userEvent.setup();
+      mockLoadedPages([sevenItems.slice(0, 5)], true);
+      renderSection();
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(5);
+      expect(fetchNextPage).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: "Load more" }));
+
+      expect(fetchNextPage).toHaveBeenCalled();
+    });
+
+    it("calls onItemClick when an item reference is clicked", async () => {
+      const user = userEvent.setup();
+      const onItemClick = vi.fn();
+      mockLoadedPages([sevenItems.slice(0, 2)]);
+      renderSection({ onItemClick });
+
+      await user.click(screen.getByRole("button", { name: /item-2/ }));
+
+      expect(onItemClick).toHaveBeenCalledWith("invoice", "item-2");
+    });
+
+    it("still offers unlink per item", async () => {
+      const user = userEvent.setup();
+      const [first] = sevenItems;
+      mockLoadedPages([[first!]]);
+      renderSection({ relation: makeRelation({ canUnlinkItem: true }) });
+
+      await user.click(screen.getByRole("button", { name: "Unlink" }));
+      const dialog = screen.getByRole("alertdialog");
+      await user.click(within(dialog).getByRole("button", { name: "Unlink" }));
+
+      expect(unlinkItem).toHaveBeenCalledWith(first);
+    });
+
+    it("shows the empty state when nothing is linked", () => {
+      mockLoadedPages([[]]);
+      renderSection();
+      expect(screen.getByText("No items linked")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+    });
   });
 
   describe("link dialog (RelationItemSearchDialog)", () => {

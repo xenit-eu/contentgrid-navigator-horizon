@@ -49,4 +49,40 @@ describe("SelectionChip", () => {
     const btn = container.querySelector("[data-slot='selection-chip']");
     expect(btn?.className).toContain("font-normal");
   });
+
+  it("defaults to the default size's padding/text classes", () => {
+    const { container } = render(<SelectionChip label="All" />);
+    const btn = container.querySelector("[data-slot='selection-chip']");
+    expect(btn?.className).toContain("px-[14px]");
+    expect(btn?.className).toContain("text-[13px]");
+  });
+
+  it("applies the sm size's smaller padding/text classes", () => {
+    const { container } = render(<SelectionChip label="All" size="sm" />);
+    const btn = container.querySelector("[data-slot='selection-chip']");
+    expect(btn?.className).toContain("px-[10px]");
+    expect(btn?.className).toContain("text-[12px]");
+  });
+});
+
+describe("SelectionChip slots", () => {
+  it("renders an icon before and trailing content after the label", () => {
+    render(
+      <SelectionChip
+        label="Title"
+        icon={<span data-testid="icon" />}
+        trailing={<span data-testid="count">12</span>}
+      />,
+    );
+    const button = screen.getByRole("button");
+    const children = Array.from(button.childNodes);
+    expect(children[0]).toBe(screen.getByTestId("icon"));
+    expect(children[2]).toBe(screen.getByTestId("count"));
+    expect(button).toHaveTextContent("Title12");
+  });
+
+  it("forwards an id", () => {
+    render(<SelectionChip label="Title" id="chip-1" />);
+    expect(screen.getByRole("button")).toHaveAttribute("id", "chip-1");
+  });
 });

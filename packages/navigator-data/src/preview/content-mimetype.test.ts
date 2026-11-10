@@ -1,43 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { isPdfMimetype, needsRendition } from "./content-mimetype";
+import { nativePreviewKind, needsRendition } from "./content-mimetype";
 
-describe("isPdfMimetype", () => {
-  it("returns true for a bare application/pdf mimetype", () => {
-    expect(isPdfMimetype("application/pdf")).toBe(true);
+describe("nativePreviewKind", () => {
+  it("recognises a PDF whatever its case, parameters or surrounding whitespace", () => {
+    expect(nativePreviewKind("application/pdf")).toBe("pdf");
+    expect(nativePreviewKind("Application/Pdf; charset=UTF-8")).toBe("pdf");
+    expect(nativePreviewKind("  application/pdf  ")).toBe("pdf");
   });
 
-  it("returns true when parameters follow a semicolon", () => {
-    expect(isPdfMimetype("application/pdf; charset=binary")).toBe(true);
+  it("recognises any image/* or video/* mimetype, whatever its case or parameters", () => {
+    expect(nativePreviewKind("image/png")).toBe("image");
+    expect(nativePreviewKind(" IMAGE/JPEG; q=0.9 ")).toBe("image");
+    expect(nativePreviewKind("video/mp4")).toBe("video");
+    expect(nativePreviewKind("Video/WebM; codecs=vp9")).toBe("video");
   });
 
-  it("returns true for mixed/upper case", () => {
-    expect(isPdfMimetype("APPLICATION/PDF")).toBe(true);
-    expect(isPdfMimetype("Application/Pdf; charset=UTF-8")).toBe(true);
-  });
-
-  it("trims surrounding whitespace", () => {
-    expect(isPdfMimetype("  application/pdf  ")).toBe(true);
-  });
-
-  it("returns false for a non-PDF mimetype", () => {
-    expect(isPdfMimetype("image/png")).toBe(false);
+  it("returns undefined for any other, generic or missing mimetype", () => {
     expect(
-      isPdfMimetype("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-    ).toBe(false);
-  });
-
-  it("returns false for the generic octet-stream placeholders", () => {
-    expect(isPdfMimetype("application/octet-stream")).toBe(false);
-    expect(isPdfMimetype("binary/octet-stream")).toBe(false);
-  });
-
-  it("returns false for null or undefined", () => {
-    expect(isPdfMimetype(null)).toBe(false);
-    expect(isPdfMimetype(undefined)).toBe(false);
-  });
-
-  it("returns false for an empty string", () => {
-    expect(isPdfMimetype("")).toBe(false);
+      nativePreviewKind("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    ).toBeUndefined();
+    expect(nativePreviewKind("audio/mpeg")).toBeUndefined();
+    expect(nativePreviewKind("application/octet-stream")).toBeUndefined();
+    expect(nativePreviewKind("")).toBeUndefined();
+    expect(nativePreviewKind(null)).toBeUndefined();
+    expect(nativePreviewKind(undefined)).toBeUndefined();
   });
 });
 
@@ -47,11 +33,11 @@ describe("needsRendition", () => {
     expect(needsRendition("application/pdf; charset=binary")).toBe(false);
   });
 
-  it("returns true for a non-PDF mimetype", () => {
-    expect(needsRendition("image/png")).toBe(true);
+  it("returns true for any other mimetype", () => {
     expect(
       needsRendition("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
     ).toBe(true);
+    expect(needsRendition("text/plain")).toBe(true);
   });
 
   it("returns true for the generic octet-stream placeholders", () => {

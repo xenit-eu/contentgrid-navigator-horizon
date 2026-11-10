@@ -55,7 +55,7 @@ describe("createEntityHandler", () => {
     const body = await res.json();
 
     expect(body._templates).toBeDefined();
-    expect(body._templates.default.method).toBe("PATCH");
+    expect(body._templates.default.method).toBe("PUT");
   });
 });
 
@@ -102,6 +102,41 @@ describe("createListHandler", () => {
     const body = await res.json();
 
     expect(body.page).toEqual({ size: 3, total_items_exact: 3 });
+  });
+
+  it("emits an estimated total instead of an exact one when totals is 'estimate'", async () => {
+    server.use(
+      createListHandler({
+        url: "https://test-application.eu-west-1.contentgrid.app/invoices",
+        items: sampleInvoiceItems,
+        totals: "estimate",
+      }),
+    );
+
+    const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices");
+    const body = await res.json();
+
+    expect(body.page).toEqual({ size: 3, total_items_estimate: 3 });
+  });
+
+  it("answers the total per request with resolveTotal", async () => {
+    server.use(
+      createListHandler({
+        url: "https://test-application.eu-west-1.contentgrid.app/invoices",
+        items: sampleInvoiceItems,
+        resolveTotal: (url) => (url.searchParams.get("number~prefix") === "A" ? 42 : 0),
+      }),
+    );
+
+    const matching = await fetch(
+      "https://test-application.eu-west-1.contentgrid.app/invoices?number~prefix=A",
+    );
+    const other = await fetch(
+      "https://test-application.eu-west-1.contentgrid.app/invoices?number~prefix=B",
+    );
+
+    expect((await matching.json()).page).toEqual({ size: 3, total_items_exact: 42 });
+    expect((await other.json()).page).toEqual({ size: 3, total_items_exact: 0 });
   });
 });
 
@@ -163,7 +198,7 @@ describe("createCreateHandler", () => {
 });
 
 describe("createUpdateHandler", () => {
-  it("responds to PATCH with 204 by default", async () => {
+  it("responds to PUT with 204 by default", async () => {
     server.use(
       createUpdateHandler({
         url: "https://test-application.eu-west-1.contentgrid.app/invoices/inv-1",
@@ -171,7 +206,7 @@ describe("createUpdateHandler", () => {
     );
 
     const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices/inv-1", {
-      method: "PATCH",
+      method: "PUT",
       body: "{}",
     });
 
@@ -189,7 +224,7 @@ describe("createUpdateHandler", () => {
     );
 
     const res = await fetch("https://test-application.eu-west-1.contentgrid.app/invoices/inv-1", {
-      method: "PATCH",
+      method: "PUT",
       body: "{}",
     });
     const body = await res.json();

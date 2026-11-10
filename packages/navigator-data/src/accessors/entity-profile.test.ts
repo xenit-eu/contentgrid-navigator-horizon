@@ -138,6 +138,35 @@ describe("ProfileEntity — basic properties", () => {
   });
 });
 
+describe("ProfileEntity — getDefaultPreferences", () => {
+  it("does not throw and falls back to id when there are no attributes at all", () => {
+    const prefs = makeProfileEntity().getDefaultPreferences();
+    expect(prefs.nameAttribute).toBe("id");
+    expect(prefs.visibleColumns).toEqual(["id"]);
+    expect(prefs.icon).toBe("Database");
+  });
+
+  it("lists no search attributes when nothing has a search parameter", () => {
+    const prefs = makeProfileEntity({
+      attributes: [
+        { name: "id", type: "string" },
+        { name: "title", type: "string" },
+      ],
+    }).getDefaultPreferences();
+    expect(prefs.searchAttributes).toEqual([]);
+  });
+
+  it("prefers the first string attribute as the name attribute", () => {
+    const prefs = makeProfileEntity({
+      attributes: [
+        { name: "id", type: "string" },
+        { name: "title", type: "string" },
+      ],
+    }).getDefaultPreferences();
+    expect(prefs.nameAttribute).toBe("title");
+  });
+});
+
 describe("ProfileEntity — collectionUrl and itemUrl", () => {
   it("collectionUrl returns the collection href", () => {
     expect(makeProfileEntity({ collectionHref: "/invoices" }).collectionUrl).toBe("/invoices");

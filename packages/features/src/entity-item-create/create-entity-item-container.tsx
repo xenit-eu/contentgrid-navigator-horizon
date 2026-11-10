@@ -1,25 +1,40 @@
-import { type SubmitEvent, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
   type EntityItem,
+  type FieldValue,
   type ProfileEntity,
   getValidationFieldErrors,
+  isValidationProblem,
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  useContainerWidthAtLeast,
+} from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
+import {
+  type FieldValidationError,
+  type HalFormsFilePreview,
+  resolveHalFormsFields,
+  toServerFieldErrors,
+  useHalFormsFieldState,
+} from "../hal-forms";
 import {
   ProblemAlert,
   type RelationConflictAlertProps,
   type ValidationAlertProps,
 } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
+import { CreateEntityItemFilePreview } from "./create-entity-item-file-preview";
 import { CreateEntityItemForm } from "./create-entity-item-form";
-import { resolveCreateFieldDescriptors } from "./model/resolve-create-field-descriptors";
-import type { FieldError } from "./state/field-error";
-import { toFieldErrors } from "./state/to-field-errors";
-import { useEntityItemCreateFormState } from "./state/use-entity-item-create-form-state";
+import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
 export interface CreateEntityItemContainerProps {
   readonly profile: ProfileEntity;
@@ -83,9 +98,10 @@ function readInitialContinuousCreate(): boolean {
 
 /**
  * Smart component: gates on `profile.createTemplate`, runs `useCreateEntityItem`, and maps
- * server validation errors into external `FieldError[]`. Renders `CreateEntityItemForm` (the
- * `<form>`/chrome-only component) once a create template is available. Rendered by
- * `CreateEntityItemView`, the package's public entry point for both apps' route files.
+ * server validation errors into server-sourced `FieldValidationError[]` via the `hal-forms`
+ * feature. Renders `CreateEntityItemForm` (the `<form>`/chrome-only component) once a create
+ * template is available. Rendered by `CreateEntityItemPanel`, the package's public entry point
+ * for both apps' route files.
  */
 export function CreateEntityItemContainer(props: Readonly<CreateEntityItemContainerProps>) {
   const createTemplate = props.profile.createTemplate;
@@ -118,12 +134,40 @@ function CreateEntityItemContainerReady({
   onBlindRelationOverwriteClick,
   onRequiredRelationClick,
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
-  const { fields, layout } = useMemo(
-    () => resolveCreateFieldDescriptors(createTemplate),
-    [createTemplate],
+  const { fields, layout } = useMemo(() => resolveHalFormsFields(createTemplate), [createTemplate]);
+  const [externalErrors, setExternalErrors] = useState<Record<string, FieldValidationError[]>>({});
+  const fileFields = useMemo(() => fields.filter((field) => field.kind === "file"), [fields]);
+  // The file attached on the Create Item page goes into the first file field, read once on
+  // mount. Without a file field it is kept for a later create form.
+  const fileFieldName = fileFields[0]?.name;
+  // The file field shown in the preview: the first one, until the user picks a file in another.
+  const [previewFieldName, setPreviewFieldName] = useState(fileFieldName);
+  // The preview dialog, opened from a file field's preview button when the view is narrow.
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  // The view's own width, not the window's, so opening or closing the sidebar counts.
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const isNarrow = !useContainerWidthAtLeast(layoutRef, "side-by-side");
+  // The dialog only exists while the view is narrow. Widening the view closes it, so narrowing it
+  // again doesn't reopen a dialog the user never asked for.
+  if (!isNarrow && isPreviewOpen) setIsPreviewOpen(false);
+  const [initialValues] = useState(() => {
+    const { initialFile } = useCreateEntityItemState.getState();
+    return initialFile && fileFieldName ? { [fileFieldName]: initialFile } : undefined;
+  });
+  const formState = useHalFormsFieldState({ fields, initialValues, externalErrors });
+  const { setValue } = formState;
+  // Removing the file from the file field also drops the attached file from the store, so it
+  // isn't offered again on the next create form. This runs on user edits only, not on a value
+  // effect: the form's own reset after a create clears the field without going through here.
+  const handleFieldChange = useCallback(
+    (name: string, value: FieldValue) => {
+      if (name === fileFieldName && !value)
+        useCreateEntityItemState.getState().setInitialFile(null);
+      if (value instanceof File) setPreviewFieldName(name);
+      setValue(name, value);
+    },
+    [fileFieldName, setValue],
   );
-  const [externalErrors, setExternalErrors] = useState<Record<string, FieldError[]>>({});
-  const formState = useEntityItemCreateFormState({ fields, externalErrors });
   const [continuousCreateMode, setContinuousCreateModeState] = useState<boolean>(
     readInitialContinuousCreate,
   );
@@ -169,7 +213,11 @@ function CreateEntityItemContainerReady({
         // "unsaved" anymore, so isDirty (and onDirtyChange) must reflect that even if
         // the caller doesn't navigate away immediately (e.g. an embedding that stays
         // mounted after create instead of redirecting).
-        formState.reset();
+        useCreateEntityItemState.getState().setInitialFile(null);
+        // Reset to an empty baseline, not the values this form was opened with — the initial
+        // file it may have been prefilled with was just used.
+        formState.reset({});
+        setPreviewFieldName(fileFieldName);
         if (continuousCreateMode) {
           setFormResetCount((count) => count + 1);
         } else {
@@ -177,45 +225,58 @@ function CreateEntityItemContainerReady({
         }
       },
       onError: (error) => {
-        setExternalErrors(toFieldErrors(getValidationFieldErrors(error)));
+        setExternalErrors(toServerFieldErrors(getValidationFieldErrors(error)));
       },
     });
   }
 
-  // A validation problem can contain entity-level errors with no `field` (e.g. a
-  // cross-field constraint) alongside, or instead of, field-scoped ones. Those never
-  // render inline, so they must always fall through to the alert below — checking only
-  // "no field errors at all" left them silently dropped whenever the array was non-empty
-  // but contained an entry with no `field`.
-  //
-  // The same reasoning extends to a field-scoped error whose `field` doesn't match any
-  // rendered field name (e.g. a system/audit field, or any property this
-  // form doesn't produce a descriptor for) — `toFieldErrors` buckets it under that field
-  // name, but no `FieldRenderer` exists to show it, and it also isn't a `field === undefined`
-  // entry, so without this check it would be dropped by both paths and never reach the user.
-  const knownFieldNames = new Set(fields.map((field) => field.name));
-  const submitFieldErrors = createMutation.isError
-    ? getValidationFieldErrors(createMutation.error)
-    : [];
-  const nonFieldError =
-    createMutation.isError &&
-    (submitFieldErrors.length === 0 ||
-      submitFieldErrors.some(
-        (fieldError) => fieldError.field === undefined || !knownFieldNames.has(fieldError.field),
-      ))
-      ? createMutation.error
+  // A validation problem shows on its fields; every other error goes in the alert.
+  const formAlertError =
+    createMutation.error && !isValidationProblem(createMutation.error)
+      ? toProblemDisplayModel(createMutation.error)
       : undefined;
 
-  return (
+  // Focusing a file field shows it in the preview beside the form.
+  const handleFieldFocus = useCallback(
+    (name: string) => {
+      if (fileFields.some((field) => field.name === name)) setPreviewFieldName(name);
+    },
+    [fileFields],
+  );
+
+  const handleFilePreview = useCallback((name: string) => {
+    setPreviewFieldName(name);
+    setIsPreviewOpen(true);
+  }, []);
+
+  // Narrow screens open the preview in a dialog from a file field's "Preview file" button. Wide
+  // screens show it beside the form; with several file fields, the user switches it by clicking a
+  // field's picked file, and the field it shows is highlighted. A single file field is always the
+  // one shown, so there is nothing to switch or tell apart.
+  const hasSeveralFileFields = fileFields.length > 1;
+  let filePreview: HalFormsFilePreview | undefined;
+  if (previewFieldName && isNarrow) {
+    filePreview = { placement: "dialog", onOpen: handleFilePreview };
+  } else if (previewFieldName) {
+    filePreview = {
+      placement: "beside",
+      onSelect: hasSeveralFileFields ? setPreviewFieldName : undefined,
+      previewedFieldName: hasSeveralFileFields ? previewFieldName : undefined,
+    };
+  }
+
+  const form = (
     <CreateEntityItemForm
       fields={fields}
       layout={layout}
       values={formState.values}
       fieldState={formState.fieldState}
-      onFieldChange={formState.setValue}
+      onFieldChange={handleFieldChange}
       onFieldBlur={formState.touchField}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
+      onFieldFocus={handleFieldFocus}
+      filePreview={filePreview}
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}
@@ -223,9 +284,9 @@ function CreateEntityItemContainerReady({
       onContinuousCreateChange={setContinuousCreateMode}
       formResetCount={formResetCount}
       nonFieldErrorAlert={
-        nonFieldError && (
+        formAlertError && (
           <ProblemAlert
-            model={toProblemDisplayModel(nonFieldError)}
+            model={formAlertError}
             onConflictingItemClick={onConflictingItemClick}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
             onAllowedValuesClick={onAllowedValuesClick}
@@ -236,5 +297,60 @@ function CreateEntityItemContainerReady({
         )
       }
     />
+  );
+
+  // A form is easier to read at a limited width, with or without a preview beside it.
+  if (!previewFieldName) return <div className="max-w-2xl">{form}</div>;
+
+  const previewField = fileFields.find((field) => field.name === previewFieldName);
+  const previewFile = formState.values[previewFieldName];
+  // Only one of the dialog and the side panel is mounted, so the file is read and the PDF engine
+  // started once.
+  const preview = (
+    <CreateEntityItemFilePreview
+      fileFields={fileFields}
+      fieldName={previewFieldName}
+      // Beside the form the user switches by clicking a file in the form; the dialog covers the
+      // form, so there the preview switches itself.
+      onFieldNameChange={isNarrow ? setPreviewFieldName : undefined}
+      file={previewFile instanceof File ? previewFile : undefined}
+      onFileChange={
+        previewField?.readOnly
+          ? undefined
+          : (file) => handleFieldChange(previewFieldName, file ?? undefined)
+      }
+    />
+  );
+
+  return (
+    // The `@container` the `@side-by-side:` classes below measure. A container query can't size the
+    // container itself, so its full height when wide comes from `isNarrow`.
+    <div ref={layoutRef} className={isNarrow ? "@container" : "@container h-full"}>
+      <div className="flex gap-6 @side-by-side:h-full">
+        <div className="max-w-2xl min-w-0 flex-[2] @side-by-side:flex @side-by-side:flex-col">
+          {form}
+        </div>
+        {isNarrow ? (
+          <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+            <DialogContent className="flex h-[80vh] flex-col gap-0 p-0 sm:max-w-3xl">
+              <DialogHeader className="border-b p-4">
+                <DialogTitle>Preview file</DialogTitle>
+                <DialogDescription className="sr-only">
+                  The file picked in the form, before it is saved.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="min-h-0 flex-1">{preview}</div>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <aside
+            aria-label="File preview"
+            className="min-w-0 flex-[3] overflow-hidden rounded-md border"
+          >
+            {preview}
+          </aside>
+        )}
+      </div>
+    </div>
   );
 }

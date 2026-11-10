@@ -69,9 +69,14 @@ vi.mock("@contentgrid/features/dashboard", () => ({
   EntityCountOverview: () => <div data-testid="entity-overview" />,
 }));
 
-vi.mock("@contentgrid/features/entity-item-collection", () => ({
-  EntityItemCollectionSearchView: ({ profile }: { profile: { name: string } }) => (
-    <div data-testid="entity-detail" data-entity={profile.name} />
+vi.mock("@contentgrid/features/preferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@contentgrid/features/preferences")>();
+  return { ...actual, EntityConfigurationDetail: () => <div data-testid="configuration-detail" /> };
+});
+
+vi.mock("@contentgrid/views/entity-item-collection", () => ({
+  EntityItemCollectionView: ({ entityName }: { entityName: string }) => (
+    <div data-testid="entity-detail" data-entity={entityName} />
   ),
 }));
 
@@ -154,6 +159,13 @@ describe("ExperimentalBanner", () => {
     renderRouter("/");
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Experimental — not for production use");
+    });
+  });
+
+  it("gates the configuration detail page behind the entity profile", async () => {
+    renderRouter("/~configuration/invoice");
+    await waitFor(() => {
+      expect(screen.getByTestId("configuration-detail")).toBeInTheDocument();
     });
   });
 });

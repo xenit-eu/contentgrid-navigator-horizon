@@ -12,12 +12,35 @@ const genericProblem: ProblemDisplayModel = {
 
 describe("ContentPreviewFrame", () => {
   it("renders the drop zone and caption for noFile, with no Download or Retry button", () => {
-    render(<ContentPreviewFrame state="noFile" onDownload={vi.fn()} onRetry={vi.fn()} />);
+    render(
+      <ContentPreviewFrame
+        state="noFile"
+        onFileChange={vi.fn()}
+        onDownload={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
-    expect(screen.getByText(/Drag & drop a file/)).toBeInTheDocument();
+    expect(screen.queryByText("No file")).not.toBeInTheDocument();
+    expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("renders only the caption for noFile when no upload handler is given", () => {
+    render(<ContentPreviewFrame state="noFile" />);
+
+    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.queryByText(/Drag & drop a file/)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
+  it("holds the uploading percentage at 99% until the server has confirmed the upload", () => {
+    const { rerender } = render(<ContentPreviewFrame state="uploading" uploadProgress={40} />);
+    expect(screen.getByText("Uploading… 40%")).toBeInTheDocument();
+
+    rerender(<ContentPreviewFrame state="uploading" uploadProgress={100} />);
+    expect(screen.getByText("Uploading… 99%")).toBeInTheDocument();
   });
 
   it("renders a skeleton and caption for loading, with Download but no Retry", () => {
@@ -69,12 +92,9 @@ describe("ContentPreviewFrame", () => {
     }
   });
 
-  it("never renders Retry for cannotDisplay or protected, even when onRetry is supplied", () => {
-    for (const state of ["cannotDisplay", "protected"] as const) {
-      const { unmount } = render(<ContentPreviewFrame state={state} onRetry={vi.fn()} />);
-      expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
-      unmount();
-    }
+  it("never renders Retry for cannotDisplay, even when onRetry is supplied", () => {
+    render(<ContentPreviewFrame state="cannotDisplay" onRetry={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
   it("omits Retry entirely when onRetry is not supplied, even for a retryable state", () => {
@@ -87,7 +107,7 @@ describe("ContentPreviewFrame", () => {
     expect(screen.getByText("Geen bestand")).toBeInTheDocument();
   });
 
-  it("renders toolbarStart in a header bar for every non-ready state (round-2 review: the attribute selector must stay usable no matter the state)", () => {
+  it("renders toolbarStart in a header bar for every non-ready state, so the attribute selector stays usable", () => {
     for (const state of [
       "noFile",
       "loading",
@@ -96,7 +116,6 @@ describe("ContentPreviewFrame", () => {
       "couldNotPrepare",
       "couldNotRetrieve",
       "cannotDisplay",
-      "protected",
       "viewerFailure",
     ] as const) {
       const { unmount } = render(

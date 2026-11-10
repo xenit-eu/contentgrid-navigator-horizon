@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LoadingPage } from "@contentgrid/features/app-info-pages";
-import { CreateEntityItemView } from "@contentgrid/features/entity-item-create";
-import { BreadCrumbsToolBarLayout } from "@contentgrid/features/layout";
-import { useOpenInNewTab } from "@contentgrid/features/router-shell";
+import {
+  CreateEntityItemPanel,
+  CreateEntityItemProfileSelector,
+} from "@contentgrid/features/entity-item-create";
 import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-data";
 import {
   Breadcrumb,
@@ -11,6 +12,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@contentgrid/ui";
+import { BreadCrumbsToolBarLayout } from "@contentgrid/views/layout";
+import { useOpenInNewTab } from "@contentgrid/views/router-shell";
 
 export const Route = createFileRoute("/_app/$entity/~create")({
   component: RouteComponent,
@@ -63,8 +66,20 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
   );
 
   return (
-    <BreadCrumbsToolBarLayout breadcrumbs={breadcrumbs}>
-      <CreateEntityItemView
+    <BreadCrumbsToolBarLayout
+      breadcrumbs={breadcrumbs}
+      actions={
+        <CreateEntityItemProfileSelector
+          selectedProfile={profile}
+          onSelect={(next) =>
+            go({ to: "/$entity/~create", params: { entity: next.name }, search: {} })
+          }
+        />
+      }
+    >
+      {/* Keyed on the entity: switching entity keeps this route mounted, the form must not. */}
+      <CreateEntityItemPanel
+        key={profile.name}
         profile={profile}
         onCreated={(item) =>
           go({

@@ -29,9 +29,9 @@ const toneConfig = {
     role: "status" as const,
   },
   warning: {
-    textClass: "text-[#A4501F] dark:text-[#E89A63]",
-    bgClass: "bg-[rgba(212,104,42,0.10)] dark:bg-[rgba(232,154,99,0.14)]",
-    borderClass: "border border-[rgba(212,104,42,0.3)] dark:border-[rgba(232,154,99,0.34)]",
+    textClass: "text-warning-foreground",
+    bgClass: "bg-warning/10 dark:bg-warning/14",
+    borderClass: "border border-warning/30 dark:border-warning/34",
     defaultIcon: <Warning size={16} aria-hidden />,
     role: "alert" as const,
   },

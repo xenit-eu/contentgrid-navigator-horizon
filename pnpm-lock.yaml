@@ -92,6 +92,9 @@ importers:
       '@contentgrid/uri-template':
         specifier: ^0.4.0
         version: 0.4.2
+      '@contentgrid/views':
+        specifier: workspace:*
+        version: link:../../packages/views
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.101.0(react@19.2.7)
@@ -192,6 +195,9 @@ importers:
       '@contentgrid/uri-template':
         specifier: ^0.4.0
         version: 0.4.2
+      '@contentgrid/views':
+        specifier: workspace:*
+        version: link:../../packages/views
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.101.0(react@19.2.7)
@@ -262,6 +268,9 @@ importers:
       '@contentgrid/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@contentgrid/views':
+        specifier: workspace:*
+        version: link:../../packages/views
       react:
         specifier: ^19.1.0
         version: 19.2.7
@@ -587,6 +596,9 @@ importers:
       react-dom:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.2.7(react@19.2.7)
+      react-resizable-panels:
+        specifier: 4.14.1
+        version: 4.14.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -600,9 +612,6 @@ importers:
       '@contentgrid/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@contentgrid/navigator-data':
-        specifier: workspace:*
-        version: link:../navigator-data
       '@contentgrid/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -618,6 +627,61 @@ importers:
       eslint:
         specifier: ^10.0.0
         version: 10.4.1(jiti@2.7.0)
+      storybook:
+        specifier: 10.4.2
+        version: 10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.17)(prettier@3.8.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.3
+
+  packages/views:
+    dependencies:
+      '@contentgrid/features':
+        specifier: workspace:*
+        version: link:../features
+      '@contentgrid/navigator-data':
+        specifier: workspace:*
+        version: link:../navigator-data
+      '@contentgrid/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@phosphor-icons/react':
+        specifier: 2.1.10
+        version: 2.1.10(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react:
+        specifier: ^18.0.0 || ^19.0.0
+        version: 19.2.7
+    devDependencies:
+      '@contentgrid/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@contentgrid/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@storybook/react':
+        specifier: ^10.0.0
+        version: 10.4.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(storybook@10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.17)(prettier@3.8.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.101.0(react@19.2.7)
+      '@tanstack/react-query-devtools':
+        specifier: 5.101.0
+        version: 5.101.0(@tanstack/react-query@5.101.0(react@19.2.7))(react@19.2.7)
+      '@tanstack/react-router':
+        specifier: 1.170.15
+        version: 1.170.15(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/react':
+        specifier: ^19.1.5
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.1.5
+        version: 19.2.3(@types/react@19.2.17)
+      eslint:
+        specifier: ^10.0.0
+        version: 10.4.1(jiti@2.7.0)
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.2.7(react@19.2.7)
       storybook:
         specifier: 10.4.2
         version: 10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.17)(prettier@3.8.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -4749,6 +4813,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-resizable-panels@4.14.1:
+    resolution: {integrity: sha512-OB1bXDNTLcGgTTbaX6Dn5efZhlMboSnkfr1w4xpsJTHPEbRJpACBhXpgRCXozgPO1ztgFeZRUe5J3mFNCVKm5g==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   react-style-singleton@2.2.3:
     resolution: {integrity: sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==}
@@ -9590,6 +9660,11 @@ snapshots:
       use-sidecar: 1.1.3(@types/react@19.2.17)(react@19.2.7)
     optionalDependencies:
       '@types/react': 19.2.17
+
+  react-resizable-panels@4.14.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+    dependencies:
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
 
   react-style-singleton@2.2.3(@types/react@19.2.17)(react@19.2.7):
     dependencies:

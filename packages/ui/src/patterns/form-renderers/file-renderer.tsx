@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { FileUploadZone } from "../file-upload-zone";
 import { FieldShell, fieldAriaProps } from "./field-shell";
 
@@ -8,11 +7,19 @@ export interface FileRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  readonly value: File | undefined;
+  readonly onChange: (value: File | undefined) => void;
   readonly error?: string;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
+  /** See `FileUploadZone`'s `onPreview`. */
+  readonly onPreview?: () => void;
+  /** See `FileUploadZone`'s `onFileClick`. */
+  readonly onFileClick?: () => void;
+  /** See `FileUploadZone`'s `previewed`. */
+  readonly previewed?: boolean;
+  /** See `FileUploadZone`'s `compact`. */
+  readonly compact?: boolean;
 }
 
 /** File picker field; the value is the picked `File`, or `undefined` when none is picked. */
@@ -27,8 +34,12 @@ export function FileRenderer({
   error,
   onFocus,
   onBlur,
+  onPreview,
+  onFileClick,
+  previewed,
+  compact,
 }: Readonly<FileRendererProps>) {
-  const file = value instanceof File ? value : null;
+  const file = value ?? null;
 
   return (
     <FieldShell
@@ -45,6 +56,10 @@ export function FileRenderer({
         disabled={readOnly}
         onFocus={onFocus}
         onBlur={onBlur}
+        onPreview={onPreview}
+        onFileClick={onFileClick}
+        previewed={previewed}
+        compact={compact}
         {...fieldAriaProps(name, error)}
       />
     </FieldShell>

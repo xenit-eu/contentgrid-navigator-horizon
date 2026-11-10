@@ -34,7 +34,8 @@ export async function fetchVoid(apiFetch: TypedFetch, request: Request): Promise
 /**
  * Result of a single-resource HAL fetch.
  * The ETag is returned verbatim (including surrounding quotes) and must be
- * passed as If-Match on any subsequent PUT/PATCH to the same URL.
+ * passed as If-Match on any subsequent PUT/PATCH/DELETE to the same URL — never to a
+ * different resource (an entity item's ETag is not valid for its content or relations).
  * See packages/navigator-data/CLAUDE.md — ETag / conditional-request pattern.
  */
 export interface HalFetchResult<T> {

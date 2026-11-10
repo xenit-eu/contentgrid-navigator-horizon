@@ -4,7 +4,7 @@ import { Input } from "../../primitives/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../primitives/popover";
 import { Switch } from "../../primitives/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
-import { IconButton } from "./pdf-viewer-icon-button";
+import { ToolbarIconButton } from "../toolbar-icon-button";
 import { type PdfViewerLabels, formatLabel } from "./pdf-viewer-labels";
 import type { PdfViewerSearchActions, PdfViewerSearchState } from "./use-pdf-viewer-search";
 
@@ -21,12 +21,12 @@ export interface PdfViewerSearchPopoverProps {
  * whole-word toggles. Split out of `pdf-viewer-toolbar.tsx` into its own
  * file — a self-contained control with a clean `search`/`searchActions`
  * props boundary and no dependency on the rest of the toolbar beyond the
- * shared `IconButton` (`pdf-viewer-icon-button.tsx`).
+ * shared `ToolbarIconButton` (`../toolbar-icon-button.tsx`).
  *
  * The popover's content renders through a Radix `Portal` into
  * `document.body`, not into a story's `canvasElement` — a `play()` querying
  * it must use `within(document.body)` (see `pdf-viewer.interaction.stories.tsx`).
- * Must be rendered inside a `TooltipProvider` (for its `IconButton`s and its
+ * Must be rendered inside a `TooltipProvider` (for its `ToolbarIconButton`s and its
  * own trigger's tooltip) — the toolbar wraps its whole render tree in one.
  * The trigger nests a Radix `TooltipTrigger`/`PopoverTrigger` pair, both
  * `asChild`, around the same `Button` — Radix's `Slot` forwards props
@@ -96,27 +96,27 @@ export function PdfViewerSearchPopover({
               {positionLabel ?? ""}
             </span>
             <div className="flex items-center gap-1">
-              <IconButton
+              <ToolbarIconButton
                 label={labels.searchPreviousMatch}
                 disabled={!hasResults}
                 onClick={searchActions.previousMatch}
               >
                 <CaretUpIcon />
-              </IconButton>
-              <IconButton
+              </ToolbarIconButton>
+              <ToolbarIconButton
                 label={labels.searchNextMatch}
                 disabled={!hasResults}
                 onClick={searchActions.nextMatch}
               >
                 <CaretDownIcon />
-              </IconButton>
-              <IconButton
+              </ToolbarIconButton>
+              <ToolbarIconButton
                 label={labels.searchClear}
                 disabled={!hasQuery}
                 onClick={searchActions.clearSearch}
               >
                 <XIcon />
-              </IconButton>
+              </ToolbarIconButton>
             </div>
           </div>
           <div className="flex items-center gap-4">

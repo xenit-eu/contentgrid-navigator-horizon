@@ -51,6 +51,18 @@ describe("PageTitle", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Invoices" })).toBeInTheDocument();
   });
 
+  it("renders the title bold by default", () => {
+    render(<PageTitle title="Invoices" />);
+    expect(screen.getByRole("heading", { name: "Invoices" })).toHaveClass("font-bold");
+  });
+
+  it("renders the title in a normal weight when boldTitle is false", () => {
+    render(<PageTitle title="Invoices" boldTitle={false} />);
+    const title = screen.getByRole("heading", { name: "Invoices" });
+    expect(title).toHaveClass("font-normal");
+    expect(title).not.toHaveClass("font-bold");
+  });
+
   it("reflects the compact size on the root element", () => {
     const { container } = render(<PageTitle title="Invoices" size="compact" />);
     expect(container.querySelector('[data-slot="page-title"]')).toHaveAttribute(

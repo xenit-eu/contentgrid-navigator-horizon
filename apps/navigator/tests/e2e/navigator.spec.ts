@@ -362,14 +362,13 @@ test("Create mode", async ({ page, login, goToClassifyCreateInstancePage }) => {
   await login();
   await goToClassifyCreateInstancePage();
 
-  // Entity-type selector — use .first() until the label is confirmed from the running app.
-  await page.getByRole("combobox").first().click();
-  await page.getByRole("option", { name: ENTITY.CREATE_ALLOWED }).click();
-  await page.getByRole("paragraph").filter({ hasText: ENTITY.CREATE_ALLOWED }).click();
-  await page.getByRole("option", { name: "Empty" }).click();
+  // Choose an entity, then continue to its create form.
+  await page.getByRole("radio", { name: ENTITY.CREATE_ALLOWED }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
 
-  // Close the open Radix dropdown — Escape replaces the MUI backdrop click
-  await page.keyboard.press("Escape");
+  // Switch entity from the create form's toolbar.
+  await page.getByRole("combobox").filter({ hasText: ENTITY.CREATE_ALLOWED }).click();
+  await page.getByRole("option", { name: "Empty" }).click();
 
   await page.getByRole("button", { name: "Create" }).click();
 });
@@ -378,8 +377,8 @@ test("Press cancel in create mode", async ({ page, login, goToClassifyCreateInst
   await login();
   await goToClassifyCreateInstancePage();
 
-  await page.getByRole("combobox").first().click();
-  await page.getByRole("option", { name: ENTITY.CREATE_ALLOWED }).click();
+  await page.getByRole("radio", { name: ENTITY.CREATE_ALLOWED }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await expect(page.getByText("Search")).toBeVisible();

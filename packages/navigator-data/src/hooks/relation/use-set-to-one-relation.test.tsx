@@ -253,8 +253,9 @@ describe("useSetToOneRelation — If-Match header", () => {
   // FIXME(ACC-3186): to-one relation mutations currently send no If-Match —
   // relation.source.etag is the wrong etag for this request (a to-one relation is its
   // own conditional-request resource, distinct from the source item; see
-  // use-relation-mutation-base.ts). Skipped until a manual-redirect fetch path can
-  // capture the relation's own etag; the assertion should then use that etag.
+  // use-relation-mutation-base.ts). Skipped until the platform's `Accept: text/uri-list`
+  // representation of to-one relations ships (no redirect, carries the relation's own
+  // ETag); the assertion should then use that etag.
   it.skip("sends If-Match verbatim from source.etag", async () => {
     setupProfileHandlers();
     let capturedIfMatch: string | null = null;

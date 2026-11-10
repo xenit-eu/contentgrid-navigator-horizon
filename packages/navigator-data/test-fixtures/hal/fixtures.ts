@@ -35,7 +35,7 @@ export const invoiceCreateTemplate = {
 } as const;
 
 export const invoiceUpdateTemplate = {
-  method: "PATCH",
+  method: "PUT",
   target: "/invoices/{id}",
   contentType: "application/json",
   title: "Update invoice",

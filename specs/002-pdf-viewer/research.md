@@ -183,7 +183,8 @@ Exists in `packages/navigator-data`:
 - `EntityItem.contentLinks` / `contentLink(attributeName)` (`accessors/entity-item.ts:97, ~369`) from
   `cgRels.content`.
 - `EntityItem.downloadContentRequest(attributeName, { range? })` and `uploadContentRequest(...)`
-  (`entity-item.ts:402-478`), the documented hand-built-Request exception, with `If-Match` and `Range`.
+  (`entity-item.ts:402-478`), the documented hand-built-Request exception, with `Range` on download and a
+  conditional upload on the content's own ETag (`If-Match`, or `If-None-Match: *` for an empty attribute).
 - `useDownloadContent(entityItem, attributeName)` (`hooks/item/use-content.ts:169-207`) → mutation
   returning `{ blob, mimetype, filename, contentLength, isPartial }` via `contentFetch` (Bearer, no HAL
   Accept header). Blobs are not cached.

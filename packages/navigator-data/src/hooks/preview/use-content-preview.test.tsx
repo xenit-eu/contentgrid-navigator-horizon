@@ -3,6 +3,7 @@
  *
  * Covers:
  * - Stored PDF success
+ * - Stored image / video → the file itself, never a rendition
  * - 404 on the stored download → noFile
  * - null metadata → noFile without any request
  * - Rendition ready → pdf/origin:"rendition"
@@ -48,6 +49,7 @@ const RENDITION_REQUEST_URL = `${BASE}/renditions/get/pdf`;
 const RENDITION_JOB_URL = `${BASE}/renditions/jobs/job-1`;
 const RENDITION_URI_TEMPLATE = `${RENDITION_REQUEST_URL}{?url}`;
 const PDF_BYTES = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+const MEDIA_BYTES = new Uint8Array([0x00, 0x01, 0x02]);
 
 afterEach(() => {
   vi.useRealTimers();
@@ -99,6 +101,7 @@ describe("useContentPreview — stored PDF", () => {
         body: PDF_BYTES,
         contentType: "application/pdf",
         filename: "report.pdf",
+        etag: '"content-v1"',
       }),
     );
 
@@ -114,6 +117,7 @@ describe("useContentPreview — stored PDF", () => {
       bytes: expect.any(ArrayBuffer),
       filename: "report.pdf",
       origin: "stored",
+      etag: '"content-v1"',
     });
   });
 
@@ -180,6 +184,44 @@ describe("useContentPreview — noFile", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Stored image / video
+// ---------------------------------------------------------------------------
+
+describe("useContentPreview — stored image or video", () => {
+  it.each([
+    ["image", "photo.png", "image/png"],
+    ["video", "clip.mp4", "video/mp4"],
+  ] as const)(
+    "returns the stored %s file without asking for a rendition",
+    async (kind, filename, mimetype) => {
+      let renditionRequested = false;
+      server.use(
+        createContentDownloadHandler({
+          url: contentUrlFor("item-1"),
+          body: MEDIA_BYTES,
+          contentType: mimetype,
+          etag: '"content-v1"',
+        }),
+        http.get(RENDITION_REQUEST_URL, () => {
+          renditionRequested = true;
+          return new HttpResponse(null, { status: 500 });
+        }),
+      );
+
+      const entityItem = makeItem({ metadata: { filename, mimetype, length: MEDIA_BYTES.length } });
+      const { result } = renderHook(() => useContentPreview(entityItem, "content"), {
+        wrapper: makeWrapper(makeQueryClient(), undefined, undefined, RENDITION_URI_TEMPLATE),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toMatchObject({ kind, etag: '"content-v1"' });
+      expect(result.current.data).toHaveProperty("blob.size", MEDIA_BYTES.length);
+      expect(renditionRequested).toBe(false);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Non-PDF: unavailable / rendition
 // ---------------------------------------------------------------------------
 
@@ -222,6 +264,7 @@ describe("useContentPreview — rendition ready", () => {
       bytes: expect.any(ArrayBuffer),
       filename: "report.docx",
       origin: "rendition",
+      etag: null,
     });
   });
 });

@@ -130,7 +130,7 @@ export function EntityConfigurationCard({
             <button
               type="button"
               aria-label={`Change icon and color for ${profile.pluralName}`}
-              className="inline-flex cursor-pointer items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <EntityIconBadge variant="sm" profile={profile} />
             </button>

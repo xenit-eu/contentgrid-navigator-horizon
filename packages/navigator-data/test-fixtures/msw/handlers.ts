@@ -30,10 +30,17 @@ export interface ListHandlerConfig {
   items: HalObjectShape<Record<string, unknown>>[];
   page?: { size: number; total_items_exact: number };
   links?: LinksShape;
+  /**
+   * `"estimate"` emits `page.total_items_estimate` instead of `page.total_items_exact`, like a
+   * server that could not afford an exact count. Defaults to `"exact"`.
+   */
+  totals?: "exact" | "estimate";
+  /** Answers the total per request (e.g. per query string); defaults to the item count. */
+  resolveTotal?: (requestUrl: URL) => number;
 }
 
 export function createListHandler(config: ListHandlerConfig): HttpHandler {
-  const { url, items, page, links } = config;
+  const { url, items, page, links, totals = "exact", resolveTotal } = config;
 
   // MSW matches handlers by path only (query strings are ignored), so match
   // against the path and check any query params from `url` explicitly. This
@@ -54,14 +61,20 @@ export function createListHandler(config: ListHandlerConfig): HttpHandler {
       }
     }
 
+    const total = resolveTotal ? resolveTotal(new URL(request.url)) : undefined;
+    const size = page?.size ?? items.length;
+    const count = total ?? page?.total_items_exact ?? items.length;
     const body: HalSliceShape<Record<string, unknown>> & {
-      page: { size: number; total_items_exact: number };
+      page: { size: number; total_items_exact?: number; total_items_estimate?: number };
     } = {
       _embedded: {
         item: items,
       },
       _links: links ?? { self: { href: url } },
-      page: page ?? { size: items.length, total_items_exact: items.length },
+      page:
+        totals === "estimate"
+          ? { size, total_items_estimate: count }
+          : { size, total_items_exact: count },
     };
     return HttpResponse.json(body);
   });
@@ -104,7 +117,7 @@ export function createCreateHandler(config: CreateHandlerConfig): HttpHandler {
   });
 }
 
-// ---- Update handler (PATCH -> configurable status) ----
+// ---- Update handler (PUT, the item `default` template's method -> configurable status) ----
 
 export interface UpdateHandlerConfig {
   url: string;
@@ -118,7 +131,7 @@ export interface UpdateHandlerConfig {
 
 export function createUpdateHandler(config: UpdateHandlerConfig): HttpHandler {
   const { url, status = 204, body, etag } = config;
-  return http.patch(url, () => {
+  return http.put(url, () => {
     const headers: Record<string, string> = {};
     if (etag) headers["ETag"] = etag;
     if (body) {
@@ -249,6 +262,8 @@ export interface ContentDownloadHandlerConfig {
    * Format: "bytes start-end/total" e.g. "bytes 0-99/1000".
    */
   contentRange?: string;
+  /** Optional ETag of the content (sent verbatim, quotes included). */
+  etag?: string;
 }
 
 export function createContentDownloadHandler(config: ContentDownloadHandlerConfig): HttpHandler {
@@ -258,6 +273,7 @@ export function createContentDownloadHandler(config: ContentDownloadHandlerConfi
     contentType = "application/octet-stream",
     filename,
     contentRange,
+    etag,
   } = config;
 
   return http.get(url, () => {
@@ -270,6 +286,9 @@ export function createContentDownloadHandler(config: ContentDownloadHandlerConfi
     }
     if (contentRange) {
       headers["Content-Range"] = contentRange;
+    }
+    if (etag) {
+      headers.ETag = etag;
     }
     if (typeof body !== "string") {
       headers["Content-Length"] = String(body.length);

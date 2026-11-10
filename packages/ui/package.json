@@ -16,7 +16,6 @@
     "./tailwind-preset": "./tailwind-preset.ts"
   },
   "peerDependencies": {
-    "@contentgrid/navigator-data": "workspace:*",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
@@ -49,13 +48,13 @@
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react-day-picker": "^10.0.0",
+    "react-resizable-panels": "4.14.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
     "@contentgrid/eslint-config": "workspace:*",
-    "@contentgrid/navigator-data": "workspace:*",
     "@contentgrid/tsconfig": "workspace:*",
     "@storybook/react": "^10.0.0",
     "@types/react": "^19.1.5",

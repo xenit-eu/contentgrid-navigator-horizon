@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { HalObject, type Link, type SimpleLink } from "@contentgrid/hal";
+import { HalObject, type Link, SimpleLink } from "@contentgrid/hal";
 import { resolveTemplate } from "@contentgrid/hal-forms";
 import halFormCodecs from "@contentgrid/hal-forms/codecs";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
@@ -86,13 +86,19 @@ export default class ProfileEntity {
     const visibleColumns = ["id", ...userColumns];
 
     const textAttribute = this.userDefinedAttributes.find((attr) => attr.type === "string");
-    const nameAttribute = (textAttribute ?? this.idAttribute).name;
+    // Fall back to the literal "id" rather than `this.idAttribute`: a profile without any
+    // attributes (e.g. a minimal stub) has no `id` attribute, and `idAttribute` is `!`-asserted.
+    const nameAttribute = textAttribute?.name ?? "id";
 
     const icon = this.hasContentAttributes ? "FileText" : "Database";
+
+    // Everything that can be searched; `id` is not among `searchableAttributes`.
+    const searchAttributes = this.searchableAttributes.map((attr) => attr.name);
 
     return {
       visibleColumns,
       nameAttribute,
+      searchAttributes,
       icon,
     };
   }
@@ -247,6 +253,16 @@ export default class ProfileEntity {
     ].filter((attr): attr is ProfileAttribute => attr !== undefined);
   }
 
+  /**
+   * User-defined and audit attributes with at least one search parameter — the attributes that
+   * can take part in the entity search bar. `id` is never one of them.
+   */
+  public get searchableAttributes(): ProfileAttribute[] {
+    return [...this.userDefinedAttributes, ...this.auditAttributes].filter(
+      (attr) => attr.searchParams.length > 0,
+    );
+  }
+
   public get auditAttributeNames(): ReadonlySet<string> {
     return new Set(this.auditAttributes.map((a) => a.name));
   }
@@ -281,6 +297,11 @@ export default class ProfileEntity {
     const template = this.itemLink.template;
     const [idVariable] = template.variables;
     return template.expand({ [idVariable]: entityId });
+  }
+
+  /** {@link describes} for a bare href, for callers that hold a URL rather than a link. */
+  public describesUrl(href: string): boolean {
+    return this.describes(SimpleLink.to(href));
   }
 
   public describes(link: SimpleLink): boolean {

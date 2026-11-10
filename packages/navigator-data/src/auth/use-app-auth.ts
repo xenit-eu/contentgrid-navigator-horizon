@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "react-oidc-context";
 import { createApiClient, createContentClient } from "../api/client";
-import type { TypedFetch } from "../api/client";
+import type { ContentFetch, TypedFetch } from "../api/client";
 import {
   DEFAULT_RENDITION_POLL_INTERVAL_MS,
   DEFAULT_RENDITION_TIMEOUT_MS,
@@ -17,7 +17,7 @@ export interface AppAuthResult {
    * Authenticated fetch client for binary content requests (no Accept: hal+json header).
    * Use exclusively for PUT/GET to cg:content links.
    */
-  contentFetch: TypedFetch;
+  contentFetch: ContentFetch;
   profileUrl: string;
   /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUri`. */
   renditionUri?: string;

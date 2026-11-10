@@ -98,6 +98,13 @@ export const queryKeys = {
     /** Exact key for a specific to-many relation by relation name and relation URL. */
     byUrl: (relationName: string, relationUrl: string) =>
       [TO_MANY_RELATION_KEY, relationName, relationUrl] as const,
+    /**
+     * Exact key for a "load more" (infinite) query over a to-many relation, starting at the
+     * relation URL. Nested under `forRelationName` (and `byUrl`), so every relation mutation's
+     * existing prefix invalidation refreshes it too.
+     */
+    infiniteByUrl: (relationName: string, relationUrl: string) =>
+      [TO_MANY_RELATION_KEY, relationName, relationUrl, "infinite"] as const,
   },
 
   typeaheadSuggestions: {
@@ -119,6 +126,21 @@ export const queryKeys = {
      */
     byUrl: (profileEntity: ProfileEntity, url: string) =>
       [TYPEAHEAD_SUGGESTIONS_KEY, profileEntity.name, url] as const,
+  },
+
+  searchParamSuggestions: {
+    /**
+     * Exact key for one `useSearchParamSuggestions` request (a per-parameter suggestion/count
+     * search), by URL.
+     *
+     * Nested under `entityItemCollection.forEntity(...)` — unlike `typeaheadSuggestions` — so a
+     * create/update/delete invalidation refreshes the result counts the search bar shows. The
+     * trailing `"suggestions"` segment keeps it a different cache entry from the table's own
+     * `entityItemCollection.byUrl` even when both encode the same URL (the same way
+     * `infiniteByUrl` stays apart), so the two queries' option sets never share one entry.
+     */
+    byUrl: (profileEntity: ProfileEntity, url: string) =>
+      [ENTITY_COLLECTION_KEY, profileEntity.name, url, "suggestions"] as const,
   },
 
   collectionPage: {

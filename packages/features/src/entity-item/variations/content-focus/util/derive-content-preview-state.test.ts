@@ -38,6 +38,7 @@ describe("deriveContentPreviewState", () => {
           bytes: new ArrayBuffer(0),
           filename: "a.pdf",
           origin: "stored",
+          etag: null,
         },
       }),
     ).toEqual({ state: "ready" });
@@ -58,16 +59,16 @@ describe("deriveContentPreviewState", () => {
       deriveContentPreviewState({
         ...BASE,
         queryStatus: "success",
-        previewSource: { kind: "unavailable", mimetype: "image/png" },
+        previewSource: { kind: "unavailable", mimetype: "application/msword" },
       }),
-    ).toEqual({ state: "previewUnavailable", mimetype: "image/png" });
+    ).toEqual({ state: "previewUnavailable", mimetype: "application/msword" });
     expect(
       deriveContentPreviewState({
         ...BASE,
         queryStatus: "success",
-        previewSource: { kind: "unsupported", mimetype: "image/x-tiff" },
+        previewSource: { kind: "unsupported", mimetype: "application/x-msaccess" },
       }),
-    ).toEqual({ state: "previewUnavailable", mimetype: "image/x-tiff" });
+    ).toEqual({ state: "previewUnavailable", mimetype: "application/x-msaccess" });
   });
 
   it("carries a null mimetype through unchanged when the file's mimetype is unknown", () => {
@@ -112,20 +113,7 @@ describe("deriveContentPreviewState", () => {
           bytes: new ArrayBuffer(0),
           filename: "a.pdf",
           origin: "stored",
-        },
-        viewerLoadErrorKind: "protected",
-      }),
-    ).toEqual({ state: "protected" });
-
-    expect(
-      deriveContentPreviewState({
-        ...BASE,
-        queryStatus: "success",
-        previewSource: {
-          kind: "pdf",
-          bytes: new ArrayBuffer(0),
-          filename: "a.pdf",
-          origin: "stored",
+          etag: null,
         },
         viewerLoadErrorKind: "invalid",
       }),
@@ -140,6 +128,7 @@ describe("deriveContentPreviewState", () => {
           bytes: new ArrayBuffer(0),
           filename: "a.pdf",
           origin: "stored",
+          etag: null,
         },
         viewerLoadErrorKind: "engine",
       }),

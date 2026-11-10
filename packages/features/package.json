@@ -20,18 +20,6 @@
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
     },
-    "./router-shell": {
-      "import": "./src/shells/router-shell/index.ts",
-      "types": "./src/shells/router-shell/index.ts"
-    },
-    "./auth-shell": {
-      "import": "./src/shells/auth-shell/index.tsx",
-      "types": "./src/shells/auth-shell/index.tsx"
-    },
-    "./entity-profile-gate": {
-      "import": "./src/shells/entity-profile-gate/index.ts",
-      "types": "./src/shells/entity-profile-gate/index.ts"
-    },
     "./navigator-header": {
       "import": "./src/navigator-header/index.ts",
       "types": "./src/navigator-header/index.ts"
@@ -56,6 +44,10 @@
       "import": "./src/entity-item-collection/index.ts",
       "types": "./src/entity-item-collection/index.ts"
     },
+    "./entity-search-bar": {
+      "import": "./src/entity-search-bar/index.ts",
+      "types": "./src/entity-search-bar/index.ts"
+    },
     "./entity-item": {
       "import": "./src/entity-item/index.ts",
       "types": "./src/entity-item/index.ts"
@@ -75,6 +67,10 @@
     "./unsaved-changes-guard": {
       "import": "./src/unsaved-changes-guard/index.ts",
       "types": "./src/unsaved-changes-guard/index.ts"
+    },
+    "./hal-forms": {
+      "import": "./src/hal-forms/index.ts",
+      "types": "./src/hal-forms/index.ts"
     }
   },
   "scripts": {

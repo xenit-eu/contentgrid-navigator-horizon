@@ -21,28 +21,51 @@ export interface CountIndicatorChipProps extends VariantProps<typeof countIndica
   count: number | null;
   /** Whether `count` is an estimate rather than an exact total. */
   isEstimated?: boolean;
+  /** Shows a pulsing placeholder (and `aria-busy`) while the count is being fetched. */
+  isLoading?: boolean;
   className?: string;
 }
 
 function CountIndicatorChip({
   count,
   isEstimated = false,
+  isLoading = false,
   variant = "default",
   className,
 }: Readonly<CountIndicatorChipProps>) {
+  if (isLoading) {
+    return (
+      <span
+        data-slot="count-indicator-chip"
+        data-variant={variant}
+        aria-busy="true"
+        className={cn(countIndicatorChipVariants({ variant }), "animate-pulse", className)}
+      >
+        <span aria-hidden className="inline-block h-3 w-4 rounded-sm bg-muted-foreground/25" />
+        <span className="sr-only">Loading count</span>
+      </span>
+    );
+  }
+
   const label = count === null ? "?" : `${count.toLocaleString()}${isEstimated ? "~" : ""}`;
+  const description =
+    count === null
+      ? "unknown number of results"
+      : `${isEstimated ? "about " : ""}${count.toLocaleString()} ${count === 1 ? "result" : "results"}`;
 
   return (
     <span
       data-slot="count-indicator-chip"
       data-variant={variant}
+      title={description}
       className={cn(
         countIndicatorChipVariants({ variant }),
         count === 0 && "border-dashed opacity-60",
         className,
       )}
     >
-      {label}
+      <span aria-hidden>{label}</span>
+      <span className="sr-only">{description}</span>
     </span>
   );
 }

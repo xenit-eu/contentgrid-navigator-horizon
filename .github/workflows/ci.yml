@@ -40,7 +40,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -99,7 +99,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -116,15 +116,15 @@ jobs:
         run: pnpm test:coverage
 
       - name: SonarQube scan
-        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8
         with:
           args: >
             -Dsonar.projectKey=xenit-eu_contentgrid-navigator-horizon
             -Dsonar.organization=xenit-eu
             -Dsonar.sources=apps,packages
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.*,**/test-setup.*,**/public/mockServiceWorker.js,**/routeTree.gen.ts
-            -Dsonar.coverage.exclusions=**/*.stories.tsx,**/tests/**,**/playwright*.config.ts,**/test-fixtures/**,**/src/mocks/**,**/main.tsx
-            -Dsonar.cpd.exclusions=apps/*/src/main.tsx,apps/*/src/mocks/**,apps/*/src/vite-env.d.ts,apps/*/src/routes/**
+            -Dsonar.coverage.exclusions=**/*.stories.tsx,**/tests/**,**/playwright*.config.ts,**/test-fixtures/**,**/src/local-mock-backend/**,**/main.tsx
+            -Dsonar.cpd.exclusions=apps/*/src/main.tsx,apps/*/src/local-mock-backend/**,apps/*/src/vite-env.d.ts,apps/*/src/routes/**
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.typescript.tsconfigPath=tsconfig.json
         env:

@@ -233,6 +233,20 @@ export function clearDevConfig(): void {
   cachedConfig = null;
 }
 
+/**
+ * True when a developer has connected a real backend via the Application Selector at `/config`
+ * (stored under {@link DEV_CONFIG_STORAGE_KEY}). Consumers use this to disable the local mock
+ * backend even when `VITE_USE_MOCK_API=true` — a connected real backend takes priority.
+ */
+export function hasDevConfigOverride(): boolean {
+  try {
+    return localStorage.getItem(DEV_CONFIG_STORAGE_KEY) !== null;
+  } catch {
+    // localStorage unavailable — same fallback as the dev override check in loadAppConfig above.
+    return false;
+  }
+}
+
 export function getAppConfig(): RuntimeAppConfig {
   if (!cachedConfig) {
     throw new Error("App config not loaded. Call loadAppConfig() first.");

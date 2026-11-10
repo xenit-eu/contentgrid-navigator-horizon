@@ -4,7 +4,7 @@
  * useUnlinkRelation (DELETE single item from to-many):
  * - unlink success → isSuccess, data is void
  * - sends DELETE to relation.link.href/item.id (workaround URL construction)
- * - attaches If-Match from relation.source.etag
+ * - sends no If-Match (not a conditional-request resource; source ETag is not its own)
  * - 412 no retry
  * - Cache: invalidates toManyRelation.forRelationName on settled (all pages, item may shift)
  * - Cache: invalidates entityItem.byUrl for source item on settled (ETag may be bumped)
@@ -243,9 +243,9 @@ describe("useUnlinkRelation — unlink success", () => {
     expect(capturedUrl).toBe(UNLINK_URL);
   });
 
-  it("attaches If-Match from relation.source.etag", async () => {
+  it("sends no If-Match, even when the source item has an ETag", async () => {
     setupProfileHandlers();
-    let capturedIfMatch: string | null = null;
+    let capturedIfMatch: string | null = "NOT_CAPTURED";
 
     server.use(
       http.delete(UNLINK_URL, ({ request }) => {
@@ -267,7 +267,7 @@ describe("useUnlinkRelation — unlink success", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(capturedIfMatch).toBe('"v1"');
+    expect(capturedIfMatch).toBeNull();
   });
 });
 

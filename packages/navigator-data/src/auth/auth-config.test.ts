@@ -229,6 +229,27 @@ describe("clearDevConfig", () => {
   });
 });
 
+describe("hasDevConfigOverride", () => {
+  it("returns true when the dev-config key is present", async () => {
+    const { hasDevConfigOverride, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
+    localStorage.setItem(DEV_CONFIG_STORAGE_KEY, "{}");
+    expect(hasDevConfigOverride()).toBe(true);
+  });
+
+  it("returns false when the dev-config key is absent", async () => {
+    const { hasDevConfigOverride } = await import("./auth-config");
+    expect(hasDevConfigOverride()).toBe(false);
+  });
+
+  it("returns false when localStorage throws", async () => {
+    const { hasDevConfigOverride } = await import("./auth-config");
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("localStorage unavailable");
+    });
+    expect(hasDevConfigOverride()).toBe(false);
+  });
+});
+
 describe("signinWithNewConfig", () => {
   it("stores the config in localStorage, removes the existing session, and redirects", async () => {
     const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);

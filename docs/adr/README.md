@@ -23,6 +23,7 @@ These live in the WORK vault during planning. They migrate to `docs/adr/` in the
 - [[ADR-013-custom-track-private-repo-model]]
 - [[ADR-014-hal-contract-tests-msw]]
 - [[ADR-015-documentation-surface-split]]
+- [[ADR-018-views-layer]]
 
 ## Index (legacy)
 
@@ -31,7 +32,7 @@ These live in the WORK vault during planning. They migrate to `docs/adr/` in the
 | [001](ADR-001-state-management-zustand-tanstack-query.md) | State management: Zustand for client, TanStack Query for server                                                                          | Accepted                                    |
 | [002](ADR-002-monorepo-tooling-pnpm.md)                   | Monorepo tooling: pnpm workspaces only                                                                                                   | Accepted                                    |
 | [003](ADR-003-ui-stack-tailwind-shadcn.md)                | UI stack: Tailwind v4 + shadcn/ui (drop MUI)                                                                                             | Accepted                                    |
-| [004](ADR-004-drop-jsonforms-halforms-renderer.md)        | Forms: drop JSONForms; HAL-Forms→shadcn renderer                                                                                         | Accepted                                    |
+| [004](ADR-004-drop-jsonforms-halforms-renderer.md)        | Forms: drop JSONForms; HAL-Forms→shadcn renderer                                                                                         | Accepted — amended 2026-10-01               |
 | [005](ADR-005-router-tanstack-router.md)                  | Router: TanStack Router (drop React Router v7)                                                                                           | Accepted                                    |
 | [006](ADR-006-three-track-delivery-model.md)              | Three-track delivery model: generic, experimental, custom                                                                                | Accepted — amended 2026-09-23               |
 | [007](ADR-007-two-layer-dependency-model.md)              | Two-layer dependency model: existing core packages (peerDeps) + composition layer                                                        | Accepted                                    |
@@ -43,6 +44,7 @@ These live in the WORK vault during planning. They migrate to `docs/adr/` in the
 | [013](ADR-013-custom-track-private-repo-model.md)         | Custom-track delivery: private per-customer repos consuming published packages                                                           | Accepted                                    |
 | [014](ADR-014-hal-contract-tests-msw.md)                  | Cross-repo integration testing: HAL contract tests with MSW                                                                              | Accepted                                    |
 | [015](ADR-015-documentation-surface-split.md)             | Documentation surface split: in-repo docs, public docs site, Confluence                                                                  | Accepted                                    |
+| [018](ADR-018-views-layer.md)                             | Views layer between apps and features (amends ADR-007)                                                                                   | Proposed                                    |
 
 ## Conventions
 

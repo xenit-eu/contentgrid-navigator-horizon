@@ -36,4 +36,14 @@ describe("FieldShell", () => {
     expect(screen.getByText("Due date is required")).toBeInTheDocument();
     expect(screen.queryByText("When this is due")).not.toBeInTheDocument();
   });
+
+  it("keeps a hidden label as the control's accessible name, but visually hidden", () => {
+    render(
+      <FieldShell name="due_date" label="Due date" required={false} hideLabel>
+        <input id="due_date" />
+      </FieldShell>,
+    );
+    expect(screen.getByRole("textbox", { name: "Due date" })).toBeInTheDocument();
+    expect(screen.getByText("Due date")).toHaveClass("sr-only");
+  });
 });

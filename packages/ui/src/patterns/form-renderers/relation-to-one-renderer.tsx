@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { EyeIcon, LinkBreakIcon, PlusIcon } from "@phosphor-icons/react";
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Button } from "../../primitives/button";
 import { Skeleton } from "../../primitives/skeleton";
 import { RecordRowAction } from "../record-table/record-row-action";
@@ -14,8 +13,8 @@ export interface RelationToOneRendererProps {
   readonly readOnly: boolean;
   readonly description?: string;
   /** The linked item's href, or `""` when nothing is linked. */
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  readonly value: string | undefined;
+  readonly onChange: (value: string) => void;
   readonly error?: string;
   /** Summary of the linked item, rendered by the caller. */
   readonly linkedItem?: ReactNode;
@@ -45,7 +44,7 @@ export function RelationToOneRenderer({
   onLink,
   onViewDetails,
 }: Readonly<RelationToOneRendererProps>) {
-  const hasValue = typeof value === "string" && value !== "";
+  const hasValue = value !== undefined && value !== "";
   const isLinked = !isLoading && hasValue;
 
   return (

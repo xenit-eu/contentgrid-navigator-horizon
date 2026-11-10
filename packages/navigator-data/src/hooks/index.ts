@@ -33,9 +33,22 @@ export type {
 } from "./item/use-entity-item";
 export { useTypeahead } from "./collection/use-typeahead";
 export type { UseTypeaheadOptions } from "./collection/use-typeahead";
+export {
+  extractAttributeSuggestions,
+  resolveRelationSearchTarget,
+} from "./collection/search-suggestion-helpers";
+export type { RelationSearchTarget } from "./collection/search-suggestion-helpers";
+export { useSearchParamSuggestions } from "./collection/use-search-param-suggestions";
+export type {
+  SearchParamSuggestionRequest,
+  SearchParamSuggestionResult,
+  SearchParamSuggestionStatus,
+  UseSearchParamSuggestionsOptions,
+} from "./collection/use-search-param-suggestions";
 export { useEntityItemToOneRelation } from "./relation/use-entity-item-to-one-relation";
 export type { UseEntityItemToOneRelationOptions } from "./relation/use-entity-item-to-one-relation";
 export { useEntityItemToManyRelation } from "./relation/use-entity-item-to-many-relation";
+export { useEntityItemToManyRelationInfinite } from "./relation/use-entity-item-to-many-relation-infinite";
 export type {
   UseEntityItemToManyRelationOptions,
   RelationCollectionParams,

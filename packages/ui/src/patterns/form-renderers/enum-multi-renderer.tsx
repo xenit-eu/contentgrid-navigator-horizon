@@ -1,4 +1,3 @@
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Checkbox } from "../../primitives/checkbox";
 import { Label } from "../../primitives/label";
 import type { EnumOption } from "./enum-renderer";
@@ -10,8 +9,8 @@ export interface EnumMultiRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  readonly value: readonly string[] | undefined;
+  readonly onChange: (value: string[]) => void;
   readonly error?: string;
   readonly options: readonly EnumOption[];
   /** True when the caller's options source is a remote link not yet resolved into `options`. */
@@ -30,7 +29,7 @@ export function EnumMultiRenderer({
   options,
   isRemote = false,
 }: Readonly<EnumMultiRendererProps>) {
-  const selected = Array.isArray(value) ? value : [];
+  const selected = value ?? [];
 
   function toggle(optionValue: string, checked: boolean) {
     onChange(checked ? [...selected, optionValue] : selected.filter((v) => v !== optionValue));

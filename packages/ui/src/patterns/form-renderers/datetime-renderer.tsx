@@ -1,5 +1,4 @@
 import { format } from "date-fns";
-import type { FieldValue } from "@contentgrid/navigator-data/field-value";
 import { Input } from "../../primitives/input";
 import { FieldShell, fieldAriaProps } from "./field-shell";
 
@@ -9,9 +8,14 @@ export interface DateTimeRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: FieldValue;
-  readonly onChange: (value: FieldValue) => void;
+  /** A `Date`, or an ISO string (a date-only value, or an already-applied search filter value);
+   * `""`/`undefined` for empty. */
+  readonly value: Date | string | undefined;
+  /** A `Date` when `includesTime`, else the raw `yyyy-MM-dd` string; `""` when cleared. */
+  readonly onChange: (value: Date | string) => void;
   readonly error?: string;
+  /** See `FieldShellProps.hideLabel`. */
+  readonly hideLabel?: boolean;
   readonly includesTime: boolean;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
@@ -23,7 +27,7 @@ export interface DateTimeRendererProps {
  * `toISOString()` renders in UTC, which drifts from what the user typed in any non-UTC
  * timezone since `onChange` below parses the raw input as local time.
  */
-function toInputValue(value: FieldValue, includesTime: boolean): string {
+function toInputValue(value: Date | string | undefined, includesTime: boolean): string {
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return "";
     return format(value, includesTime ? "yyyy-MM-dd'T'HH:mm" : "yyyy-MM-dd");
@@ -40,6 +44,7 @@ export function DateTimeRenderer({
   value,
   onChange,
   error,
+  hideLabel,
   includesTime,
   onFocus,
   onBlur,
@@ -51,6 +56,7 @@ export function DateTimeRenderer({
       required={required}
       description={description}
       error={error}
+      hideLabel={hideLabel}
     >
       <Input
         id={name}

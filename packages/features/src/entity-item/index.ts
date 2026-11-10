@@ -1,10 +1,4 @@
-export { EntityItemView } from "./entity-item-view";
-export type {
-  EntityItemViewProps,
-  EntityItemIdentity,
-  EntityItemViewByProfile,
-  EntityItemViewByUrl,
-} from "./entity-item-view";
+export { EntityItemAttributeFocus } from "./variations/attribute-focus/entity-item-attribute-focus";
 export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
@@ -14,17 +8,15 @@ export type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
 } from "./relations/relation-handlers";
-export { ensureEntityItemDetailLoaderData } from "./entity-item-loader";
-export type { EntityItemDetailLoaderContext } from "./entity-item-loader";
-export { EntityItemAttributeSummary } from "./variations/entity-item-attribute-summary";
+export { EntityItemAttributeSummary } from "./variations/attribute-summary/entity-item-attribute-summary";
 export {
   EntityItemReference,
   EntityItemReferenceLoading,
-} from "./variations/entity-item-reference";
+} from "./variations/item-reference/entity-item-reference";
 export type {
   EntityItemReferenceProps,
   EntityItemReferenceLoadingProps,
-} from "./variations/entity-item-reference";
+} from "./variations/item-reference/entity-item-reference";
 export {
   AttributeValueRenderer,
   TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
@@ -33,10 +25,12 @@ export type { AttributeValueRendererProps } from "./attributes/renderers/attribu
 export {
   pdfiumWasmUrl,
   selectDefaultContentAttribute,
+  ContentAttributeOptionSelector,
   ContentAttributeSelector,
   ContentPreviewFrame,
   ContentPreviewPanel,
-  EntityItemContentFocusView,
+  EntityItemContentFocus,
+  FilePreview,
 } from "./variations/content-focus";
 export type {
   ContentAttributeSelectorProps,
@@ -44,7 +38,15 @@ export type {
   ContentPreviewFrameProps,
   ContentPreviewFrameLabels,
   ContentPreviewPanelProps,
-  EntityItemContentFocusViewProps,
-  ViewToolbarConfiguration,
-  ViewToolbarOptions,
 } from "./variations/content-focus";
+export {
+  EntityItemAutoVariation,
+  entityItemDetailPadding,
+  entityItemVariations,
+  resolveEntityItemVariation,
+} from "./variations/entity-item-auto-variation";
+export type {
+  EntityItemAutoVariationProps,
+  EntityItemVariation,
+} from "./variations/entity-item-auto-variation";
+export type { EntityItemVariationProps } from "./variations/entity-item-variation-props";
