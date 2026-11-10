@@ -1,5 +1,6 @@
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
+import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
 import { RelationToManySection } from "../../relations/relation-to-many-section";
@@ -25,6 +26,7 @@ export function EntityItemAttributeFocus({
   onRequiredRelationClick,
   actions,
   allowEdit = true,
+  onDeleted,
 }: Readonly<EntityItemVariationProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
   const itemContext = useEntityItemContext(item, refetch);
@@ -40,6 +42,13 @@ export function EntityItemAttributeFocus({
               item={item}
               isEditing={itemContext.isEditing}
               onEdit={() => itemContext.setIsEditing(true)}
+            />
+          )}
+          {onDeleted && !itemContext.isEditing && (
+            <DeleteEntityItemButton
+              item={item}
+              onDeleted={onDeleted}
+              onRefresh={() => void itemContext.refresh()}
             />
           )}
         </div>

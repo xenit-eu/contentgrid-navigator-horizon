@@ -18,7 +18,8 @@ import { selectDefaultContentAttribute } from "./util/select-default-content-att
  * for an already-loaded item: a preview of one of its content attributes, with the item's
  * attributes and relations in a side panel. It draws no toolbar, page layout or loading/error state
  * of its own. The preview and relations load their own follow-up data by following the item's
- * links. Renders nothing when the item's profile has no content attributes.
+ * links. Renders nothing when the item's profile has no content attributes. It draws no delete
+ * button and ignores `onDeleted`: the view puts Delete in its toolbar for this variation.
  */
 export function EntityItemContentFocus({
   item,
