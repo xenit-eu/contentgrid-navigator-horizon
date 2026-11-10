@@ -38,7 +38,8 @@ export async function ensureEntityProfileLoaded(
  * Gate for the /$entity subtree: resolves the entity's profile once and gates both the collection
  * and item-detail pages behind it, so an unknown entity name shows one consistent error page
  * instead of each page independently loading and silently rendering blank. Takes plain props;
- * `EntityProfileGateRoute` wires it to the router and to `useViewNavigation()`.
+ * each app's `EntityGateRoute` (in its `$entity` route files) wires it to the router and to
+ * `useViewNavigation()`.
  */
 export function EntityProfileGate({
   entityName,

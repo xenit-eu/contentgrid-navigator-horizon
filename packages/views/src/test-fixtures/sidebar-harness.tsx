@@ -4,8 +4,8 @@ import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-dat
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 
 /**
- * What `SideBarLayout` and `SidebarShell` tests share: the one entity the sidebar lists, the
- * and the mocked hook results. The module mocks live in `./sidebar-mocks` (no static import of
+ * What `SideBarLayout` and `SidebarShell` tests share: the entity the sidebar lists and the
+ * mocked hook results. The module mocks live in `./sidebar-mocks` (no static import of
  * `@contentgrid/navigator-data`, so a `vi.mock` factory can load them without a cycle).
  */
 export const invoiceProfile = makeProfileEntity(
