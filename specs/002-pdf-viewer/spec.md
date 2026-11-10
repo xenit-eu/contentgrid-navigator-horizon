@@ -103,8 +103,8 @@ A user searches for a word inside the document, steps through the matches, and p
 
 - The byte request returns 404: the attribute holds no file; treated as the "No file" state, not as a system failure.
 - The byte request returns 401/403/5xx or a problem-details body: an error state with the problem title and a Retry action; Download stays available.
-- Corrupt or truncated PDF: "This file cannot be displayed" with Download.
-- Password-protected PDF: a "Protected document" state with Download; the viewer never tries to bypass the protection.
+- Corrupt or truncated PDF: "The document is invalid or corrupted" with Download.
+- Password-protected PDF: the viewer asks for the password and opens the document with it, saying so when the password is wrong; Download stays available. The viewer never tries to bypass the protection.
 - Zero-page or extremely long (hundreds of pages) PDF: no crash; navigation still works; pages render lazily.
 - Mimetype with parameters or different casing; missing or generic mimetype (see Story 2, scenario 8).
 - Rendition service answers "pending" forever (a known production incident): the ceiling ends the wait visibly.
@@ -122,7 +122,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-001**: The system MUST choose the content-focus layout for an entity item if and only if its entity profile declares at least one content attribute; otherwise it MUST use the attribute-focus layout.
 - **FR-002**: The system MUST take the presence of a file, its mimetype, filename and size from the content attribute's metadata on the entity item, and the file's location exclusively from the item's content link for that attribute. A 404 from that link means the attribute holds no file.
 - **FR-003**: The system MUST recognise a file as PDF when its mimetype, ignoring parameters and letter case, is `application/pdf`.
-- **FR-004**: When an item has more than one content attribute — whether or not each one currently holds a file — the system MUST offer an attribute selector, default to the first attribute in profile order that holds a file (or the first attribute at all if none does), cancel any in-flight load when the selection changes, and keep the selector visible and usable regardless of the current attribute's preview state (loading, error, unsupported, empty, or ready) so a user can always switch away from one that can't be opened or still needs a file uploaded (round-2 review of #192). When an item has exactly one content attribute, the system MUST still show that attribute in a _disabled_ selector (for viewing context — which attribute is on screen) rather than hiding it; the selector is hidden only when the item has no content attributes at all (round-2 review of #192).
+- **FR-004**: When an item has more than one content attribute — whether or not each one currently holds a file — the system MUST offer an attribute selector, default to the first attribute in profile order that holds a file (or the first attribute at all if none does), cancel any in-flight load when the selection changes, and keep the selector visible and usable regardless of the current attribute's preview state (loading, error, unsupported, empty, or ready) so a user can always switch away from one that can't be opened or still needs a file uploaded (round-2 review of #192). When an item has exactly one content attribute, the system MUST still show that attribute's title as plain text in the selector's place (for viewing context — which attribute is on screen) rather than hiding it; the selector is hidden only when the item has no content attributes at all (round-2 review of #192).
 
 **Loading and display**
 
@@ -151,7 +151,7 @@ A user searches for a word inside the document, steps through the matches, and p
 
 **States and errors**
 
-- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area when the user may upload); uploading (with the percentage sent); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; protected document; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed.
+- **FR-024**: The system MUST render a distinct, tested state for each of: no file (with the drag-and-drop upload area when the user may upload); uploading (with the percentage sent); bytes could not be retrieved (with the problem title when the platform provides one); file cannot be displayed; preparing preview; preview not available; preview could not be prepared; viewer failure. Each state MUST offer Download when a file exists, and Retry where a retry can succeed. A password-protected PDF is not a separate state: the viewer asks for its password.
 - **FR-025**: A failure inside the embedded document renderer MUST be contained to the viewer area; the rest of the detail page MUST remain usable.
 
 **Security**

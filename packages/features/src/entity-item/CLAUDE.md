@@ -73,6 +73,9 @@ save of a stale version is refused (412). `noRefetch` is the default when the ca
   Never a Layer-1 `@contentgrid/*` package.
 - Variations receive the loaded item and callbacks only — no toolbar, breadcrumb or link render
   props, and no navigation of their own (ADR-018).
+- `entity-item-create` previews a picked file with `FilePreview`, `ContentPreviewFrame` and
+  `ContentAttributeOptionSelector`, imported from this feature's `index.ts` — never from
+  `variations/content-focus/` directly.
 - `variations/content-focus/util/` stays pure: no `useQuery`, no JSX, no `@contentgrid/ui`.
 
 ## Content focus deployment requirements

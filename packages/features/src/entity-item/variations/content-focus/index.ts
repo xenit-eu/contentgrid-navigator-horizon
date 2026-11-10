@@ -15,7 +15,10 @@
  */
 export { pdfiumWasmUrl } from "./util/pdfium-wasm-url";
 export { selectDefaultContentAttribute } from "./util/select-default-content-attribute";
-export { ContentAttributeSelector } from "./components/content-attribute-selector";
+export {
+  ContentAttributeOptionSelector,
+  ContentAttributeSelector,
+} from "./components/content-attribute-selector";
 export type { ContentAttributeSelectorProps } from "./components/content-attribute-selector";
 export { ContentPreviewFrame } from "./components/content-preview-frame";
 export type {
@@ -23,6 +26,7 @@ export type {
   ContentPreviewFrameProps,
   ContentPreviewFrameLabels,
 } from "./components/content-preview-frame";
+export { FilePreview } from "./components/file-preview";
 export { ContentPreviewPanel } from "./components/content-preview-panel";
 export type { ContentPreviewPanelProps } from "./components/content-preview-panel";
 export { EntityItemContentFocus } from "./entity-item-content-focus";
