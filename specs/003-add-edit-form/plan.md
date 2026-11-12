@@ -179,15 +179,19 @@ No tests that only check a click calls a callback.
 
 - **Cleared values**: `buildValues` omits empty values. Confirm on a real backend that a PUT without a property clears it.
 
-## PR 2 — outline (after `004-create-item-page` merges)
+## PR 2 — file changes
 
-To be detailed against `hal-forms` when PR 2 starts:
+See `data-model.md` (PR 2) and the contracts. In short:
 
-- One `file` field per content attribute, found with `attr.isContent`, replacing the two text fields from PR 1. Gated on `canUploadContent` / `canDeleteContent`.
-- Picking or removing a file only queues it; `<attr>.filename`/`<attr>.mimetype` follow the picked file. On Save the metadata PUT sends the stored values, then each file step runs in order with the ETag of the step before (D1). Removing a file uses DELETE on the `cg:content` link (D2, constitution amendment in that PR).
-- XHR upload progress and `cancel()` in `useUploadContent`; retry by calling `mutate` again with the same `File`; 412 and 415 handled at the call site.
-- Local preview of a picked PDF in the content-focus layout (D7).
+- One file field per content attribute below the template's fields (`EditContentFields`), next to
+  the `<attr>.filename`/`<attr>.mimetype` text fields, which stay editable (FR-012) and follow a
+  picked or removed file.
+- Changes wait in `useEntityItemContext` until Save; the content-focus preview shows them.
+- Save: metadata PUT (`useUpdateEntityItem`), then `useApplyContentChanges` (D1). Removal is a
+  DELETE on the `cg:content` link (D2, constitution 1.11.0).
 
 ## Complexity Tracking
 
-None for PR 1. PR 2 carries the content DELETE deviation (research D2).
+None for PR 1. PR 2: the content DELETE (research D2) is covered by constitution 1.11.0's
+binary-content exception. The file fields render `FileRenderer` next to `HalFormsContainer`, not
+through it, because the update template has no file property to resolve a field from.
