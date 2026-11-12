@@ -11,6 +11,7 @@ draws a toolbar or page chrome (see "Page layout" in `packages/features/CLAUDE.m
 
 ```
 use-entity-item-context.ts   item context hook (item, refetch, edit mode)
+content-attribute-metadata.ts  a content attribute's stored-file metadata, read off the item
 attributes/                  attribute list, editable attributes, value renderers
 relations/                   to-one / to-many relation sections, relation picker
 edit/                        edit button, update form
@@ -56,12 +57,21 @@ Every variation takes `EntityItemVariationProps`:
 the shown item. It returns:
 
 - `item`, `refetch` — passed through
-- `shownItem` — the version being edited while the form is open, `item` otherwise; pass this to
-  `EditableEntityItemAttributes`
+- `shownItem` — while editing, the version the edit form was opened on; `item` otherwise. Pass this
+  to `EditableEntityItemAttributes`
 - `isEditing`, `setIsEditing` — edit mode; it ends when the item changes and stays closed when the
   page comes back to it
-- `refresh` — refetches and moves the open form onto the latest version (the form's Refresh after
+- `refresh` — refetches and moves the edit form onto the latest version (the form's Refresh after
   a 412)
+- `pendingContent`, `setPendingContent` — the file changes made in the edit form and not saved
+  yet, per content attribute: a new file to store, or `null` to remove the stored one. Save sends
+  them after the other fields are saved.
+  - Why here and not in the form: the content preview next to the form needs them too. It shows
+    a picked file before it is uploaded, and a drop zone when there is no file (removed, or none stored); a file dropped there
+    is added to the same list (`withContentChange`).
+  - When the list is emptied: on opening or closing the edit form (saved or cancelled), and on
+    moving to another item. `refresh` (after a 412) keeps it, so the user can save again without
+    picking the files again.
 
 While editing, a background refetch does not change `shownItem`, so the user's input stays and a
 save of a stale version is refused (412). `noRefetch` is the default when the caller can't reload.

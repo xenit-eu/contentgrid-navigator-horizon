@@ -1,4 +1,4 @@
-import type { EntityItem } from "@contentgrid/navigator-data";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 import { EditEntityItemContainer } from "../edit/edit-entity-item-container";
 import { isEditableEntityItem } from "../edit/editable-entity-item";
 import { EntityItemAttributes } from "./entity-item-attributes";
@@ -11,6 +11,12 @@ interface EditableEntityItemAttributesProps {
   readonly onEditingChange: (isEditing: boolean) => void;
   /** Reloads the item after a version conflict and passes the latest version back down. */
   readonly onRefresh: () => void;
+  /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
+  readonly pendingContent: ContentChanges;
+  readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** The attribute shown in the content preview, and how to show another; content focus only. */
+  readonly previewedAttributeName?: string;
+  readonly onPreview?: (attributeName: string) => void;
 }
 
 /**
@@ -22,6 +28,10 @@ export function EditableEntityItemAttributes({
   isEditing,
   onEditingChange,
   onRefresh,
+  pendingContent,
+  onPendingContentChange,
+  previewedAttributeName,
+  onPreview,
 }: Readonly<EditableEntityItemAttributesProps>) {
   if (isEditing && isEditableEntityItem(item)) {
     return (
@@ -30,6 +40,10 @@ export function EditableEntityItemAttributes({
         item={item}
         onClose={() => onEditingChange(false)}
         onRefresh={onRefresh}
+        pendingContent={pendingContent}
+        onPendingContentChange={onPendingContentChange}
+        previewedAttributeName={previewedAttributeName}
+        onPreview={onPreview}
       />
     );
   }

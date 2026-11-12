@@ -22,6 +22,8 @@ interface EditEntityItemFormProps {
   readonly onCancel: () => void;
   /** Rendered above the fields — the error that has no field to show on. */
   readonly nonFieldErrorAlert?: ReactNode;
+  /** The file fields, rendered below the other fields. */
+  readonly contentFields: ReactNode;
 }
 
 /**
@@ -40,6 +42,7 @@ export function EditEntityItemForm({
   canSave,
   onCancel,
   nonFieldErrorAlert,
+  contentFields,
 }: Readonly<EditEntityItemFormProps>) {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
@@ -53,6 +56,8 @@ export function EditEntityItemForm({
         onFieldBlur={onFieldBlur}
         fieldState={fieldState}
       />
+
+      {contentFields}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSaving || !canSave}>

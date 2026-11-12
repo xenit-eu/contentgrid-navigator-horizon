@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
 import { RightSidePanelLayout } from "../../../layout";
 import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
+import { getContentAttributeMetadata } from "../../content-attribute-metadata";
 import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
+import { withContentChange } from "../../edit/with-content-change";
 import { RelationToManySection } from "../../relations/relation-to-many-section";
 import { RelationToOneSection } from "../../relations/relation-to-one-section";
 import { useEntityItemContext } from "../../use-entity-item-context";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 import { ContentAttributeSelector } from "./components/content-attribute-selector";
+import { ContentPreviewFrame } from "./components/content-preview-frame";
 import { ContentPreviewPanel } from "./components/content-preview-panel";
+import { FilePreview } from "./components/file-preview";
 import { selectDefaultContentAttribute } from "./util/select-default-content-attribute";
 
 /**
@@ -96,6 +101,10 @@ export function EntityItemContentFocus({
             isEditing={itemContext.isEditing}
             onEditingChange={itemContext.setIsEditing}
             onRefresh={() => void itemContext.refresh()}
+            pendingContent={itemContext.pendingContent}
+            onPendingContentChange={itemContext.setPendingContent}
+            previewedAttributeName={attributeName}
+            onPreview={setUserSelectedAttribute}
           />
           {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
             <>
@@ -131,10 +140,14 @@ export function EntityItemContentFocus({
         </div>
       }
     >
-      <ContentPreviewPanel
-        entityItem={item}
+      <ContentFocusPreview
+        item={item}
+        shownItem={itemContext.shownItem}
         attributeName={attributeName}
-        toolbarStart={
+        isEditing={itemContext.isEditing}
+        pendingContent={itemContext.pendingContent}
+        onPendingContentChange={itemContext.setPendingContent}
+        attributeSelector={
           <ContentAttributeSelector
             entityItem={item}
             value={attributeName}
@@ -143,5 +156,61 @@ export function EntityItemContentFocus({
         }
       />
     </RightSidePanelLayout>
+  );
+}
+
+interface ContentFocusPreviewProps {
+  /** The loaded item, whose stored file the preview shows. */
+  readonly item: EntityItem;
+  /** The version of the item the edit form was opened on (`item` when not editing). */
+  readonly shownItem: EntityItem;
+  readonly attributeName: string;
+  readonly isEditing: boolean;
+  /** The file changes made in the edit form and not saved yet. */
+  readonly pendingContent: ContentChanges;
+  readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  readonly attributeSelector: ReactNode;
+}
+
+/**
+ * The preview of one content attribute. While editing it shows the form's file: the picked file,
+ * or, when there is no file (removed, or none stored), a drop zone that picks one into the form.
+ * Nothing is uploaded before Save. Otherwise it shows the stored file.
+ */
+function ContentFocusPreview({
+  item,
+  shownItem,
+  attributeName,
+  isEditing,
+  pendingContent,
+  onPendingContentChange,
+  attributeSelector,
+}: Readonly<ContentFocusPreviewProps>) {
+  const fileChange = pendingContent.get(attributeName);
+  if (fileChange instanceof File) {
+    return <FilePreview file={fileChange} toolbarStart={attributeSelector} />;
+  }
+
+  const isRemoved = fileChange === null;
+  const hasStoredFile = Boolean(getContentAttributeMetadata(shownItem, attributeName));
+  if (isEditing && (isRemoved || !hasStoredFile)) {
+    const pickFile = (file: File | null) =>
+      onPendingContentChange(withContentChange(pendingContent, shownItem, attributeName, file));
+    return (
+      <ContentPreviewFrame
+        state="noFile"
+        fill
+        onFileChange={shownItem.canUploadContent(attributeName) ? pickFile : undefined}
+        toolbarStart={attributeSelector}
+      />
+    );
+  }
+
+  return (
+    <ContentPreviewPanel
+      entityItem={item}
+      attributeName={attributeName}
+      toolbarStart={attributeSelector}
+    />
   );
 }

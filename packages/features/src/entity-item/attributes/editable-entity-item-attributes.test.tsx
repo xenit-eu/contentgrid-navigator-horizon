@@ -33,6 +33,8 @@ function EditableAttributesHost({ item }: Readonly<{ item: EntityItem }>) {
         isEditing={isEditing}
         onEditingChange={setIsEditing}
         onRefresh={() => {}}
+        pendingContent={new Map()}
+        onPendingContentChange={() => {}}
       />
     </>
   );

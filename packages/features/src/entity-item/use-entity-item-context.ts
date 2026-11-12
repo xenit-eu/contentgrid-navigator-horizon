@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { EntityItem } from "@contentgrid/navigator-data";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 
 /** Reloads the item; the view that owns the item query supplies it. */
 export type EntityItemRefetch = () => Promise<{
@@ -19,17 +19,25 @@ export const noRefetch: EntityItemRefetch = async () => ({ isSuccess: false });
  * (412). `shownItem` is that version while editing and `item` otherwise. `refresh` refetches the
  * item and moves the form onto the latest version. Edit mode belongs to one item, so it ends when
  * the page moves on to another item and stays closed when the page comes back to it.
+ *
+ * `pendingContent` holds the unsaved file changes of the edit form. It lives here so the content
+ * preview next to the form can show them too; `refresh` keeps them.
  */
 export function useEntityItemContext(item: EntityItem, refetch: EntityItemRefetch = noRefetch) {
   const href = item.selfLink.href;
   const [editedItem, setEditedItem] = useState<EntityItem | null>(null);
+  const [pendingContent, setPendingContent] = useState<ContentChanges>(new Map());
   const [shownHref, setShownHref] = useState(href);
   if (href !== shownHref) {
     setShownHref(href);
     setEditedItem(null);
+    setPendingContent(new Map());
   }
 
-  const setIsEditing = (isEditing: boolean) => setEditedItem(isEditing ? item : null);
+  const setIsEditing = (isEditing: boolean) => {
+    setEditedItem(isEditing ? item : null);
+    setPendingContent(new Map());
+  };
   const refresh = async () => {
     const result = await refetch();
     if (result.isSuccess && result.data) setEditedItem(result.data);
@@ -43,5 +51,7 @@ export function useEntityItemContext(item: EntityItem, refetch: EntityItemRefetc
     editedItem,
     setIsEditing,
     refresh,
+    pendingContent,
+    setPendingContent,
   };
 }
