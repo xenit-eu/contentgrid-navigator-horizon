@@ -71,10 +71,11 @@ export { useClearRelation } from "./relation/use-clear-relation";
 export type { UseClearRelationOptions } from "./relation/use-clear-relation";
 export { useUnlinkRelation } from "./relation/use-unlink-relation";
 export type { UseUnlinkRelationOptions } from "./relation/use-unlink-relation";
-export { useUploadContent, useDownloadContent } from "./item/use-content";
+export { useUploadContent, useApplyContentChanges, useDownloadContent } from "./item/use-content";
 export type {
   UseUploadContentOptions,
   UploadContentVariables,
+  ContentChanges,
   UseDownloadContentOptions,
   DownloadContentVariables,
   ContentDownload,

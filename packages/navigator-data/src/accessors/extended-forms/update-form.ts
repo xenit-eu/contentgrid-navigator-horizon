@@ -30,4 +30,21 @@ export class UpdateHalFormTemplate {
     );
     return this._userDefinedProperties;
   }
+
+  /**
+   * The names of the properties holding a content attribute's filename and mimetype
+   * (`<attr>.filename`, `<attr>.mimetype`), each `undefined` when the template lacks it. A form
+   * uses them to show a picked or removed file in those fields.
+   */
+  contentMetadataPropertyNames(attributeName: string): {
+    readonly filename?: string;
+    readonly mimetype?: string;
+  } {
+    const propertyNames = new Set((this.template.properties ?? []).map(({ name }) => name));
+    const existingPropertyName = (name: string) => (propertyNames.has(name) ? name : undefined);
+    return {
+      filename: existingPropertyName(`${attributeName}.filename`),
+      mimetype: existingPropertyName(`${attributeName}.mimetype`),
+    };
+  }
 }

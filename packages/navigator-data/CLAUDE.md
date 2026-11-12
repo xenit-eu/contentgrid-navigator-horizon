@@ -118,7 +118,8 @@ entity name like `invoice`.
   delete: `useDeleteEntityItem`, relation set (to-one): `useSetToOneRelation`,
   relation add (to-many): `useAddToManyRelation`, relation clear: `useClearRelation`,
   delete relation item: `useDeleteRelationItem`, unlink from to-many: `useUnlinkRelation`,
-  binary content: `useUploadContent`, `useDownloadContent`
+  binary content: `useUploadContent`, `useDownloadContent`, `useApplyContentChanges` (the update
+  form's queued file changes)
 - Derived / convenience: `useRecentlyCreated`, `useRecentlyModified`
 
 `useEntityItem` supports two modes — choose based on what you know at call time:
@@ -150,6 +151,9 @@ Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query f
 | `EntityItemToOneRelation`  | to-one relation link on an entity item      | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItem \| null` (null = empty slot; 404 → null)           |
 | `EntityItemToManyRelation` | to-many relation link on an entity item     | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItemCollection` (keys under `toManyRelation` namespace) |
 
+`UpdateHalFormTemplate.contentMetadataPropertyNames(attr)` names a content attribute's
+`<attr>.filename`/`<attr>.mimetype` properties (each `undefined` when the template lacks it).
+
 Standalone query factories (system-level, not tied to one entity):
 
 - `profileRootQuery(apiFetch, profileUrl)` — query options for `/profile`
@@ -165,8 +169,9 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.getToOneRelation(name)?.setRelationRequest(targetHref)` → `Request` for `_templates.set-<rel>` (PUT, text/uri-list; via `EntityItemToOneRelation`)
 - `entityItem.getToManyRelation(name)?.addRelationRequest(targetHrefs)` → `Request` for `_templates.add-<rel>` (POST, text/uri-list, one href per line; via `EntityItemToManyRelation`)
 - `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
-- `entityItem.uploadContentRequest(attrName, file, contentEtag)` → hand-built PUT `Request` to the `cg:content` link, conditional on the content's own ETag (binary exception — no HAL-FORMS template)
+- `entityItem.uploadContentRequest(attrName, file, contentEtag, filename?)` → hand-built PUT `Request` to the `cg:content` link, conditional on the content's own ETag; the file is stored under `filename` when given (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
+- `entityItem.deleteContentRequest(attrName, contentEtag)` → hand-built DELETE `Request` to the `cg:content` link with `If-Match` carrying the content's own ETag (binary exception)
 
 **URL construction — never concatenate by hand:**
 
@@ -782,10 +787,13 @@ export function useXxx(/* accessor(s) */, options?: UseXxxOptions) {
 
 ## Content exception
 
-Binary content operations (PUT/GET to `cg:content` links) have **no HAL-FORMS template or codec**.
-They are the one allowed case where a `Request` is constructed by hand.
+Binary content operations (PUT/GET/HEAD/DELETE to `cg:content` links) have **no HAL-FORMS
+template or codec**. They are the one allowed case where a `Request` is constructed by hand. The
+HEAD (in `useApplyContentChanges`) is the download request with its method changed, to read the
+content's own ETag before a PUT or DELETE.
 
-Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-content.ts`).
+Implemented hooks: `useUploadContent`, `useDownloadContent` and `useApplyContentChanges`
+(`src/hooks/item/use-content.ts`).
 
 **Rules:**
 
@@ -814,6 +822,18 @@ Implemented hooks: `useUploadContent` and `useDownloadContent` (`src/hooks/use-c
 - Download (GET) returns the blob + metadata as `ContentDownload`; `isPartial: true` when the
   response is 206 (Range request); `etag` is the content's own ETag — the value to pass as
   `contentEtag` when replacing that file.
+- `useApplyContentChanges(entityItem)` applies the update form's queued file changes
+  (`ContentChanges`: attribute name → `File` to store, or `null` to remove), one after the other,
+  each picked file under its name in `filenames` when given. The content's ETag is read with a HEAD
+  on the `cg:content` link just before each PUT/DELETE (404 → no file: `If-None-Match: *` on the
+  PUT, nothing sent for a removal); the PUT goes through `uploadContentRequest`, the DELETE through
+  `deleteContentRequest`. A failed change doesn't stop the
+  others: the mutation resolves with the failures keyed by attribute name. Like
+  `useUploadContent`, it returns `progress` (0–100) for each file being stored, keyed by
+  attribute name. Once settled it
+  invalidates the item's `entityItem.byUrl` and the entity's collections. The caller saves the
+  metadata first, conditional on the item's ETag — that is what catches a file changed since the
+  form was opened, because the item's ETag changes with its file.
 - Content helpers live in `src/api/content-types.ts`: `parseContentDisposition(header)`.
 - 412/415 surface as `ProblemDetailError`; the hook does not auto-retry.
 

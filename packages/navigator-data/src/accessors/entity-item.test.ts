@@ -780,6 +780,13 @@ describe("EntityItem — uploadContentRequest", () => {
   });
 });
 
+describe("EntityItem — deleteContentRequest", () => {
+  it("throws when the cg:content link is absent", () => {
+    const item = makeEntityItemWithoutContentLink();
+    expect(() => item.deleteContentRequest("document", '"content-v1"')).toThrow();
+  });
+});
+
 describe("EntityItem — downloadContentRequest", () => {
   it("returns a Request with GET method pointing to the content link href", () => {
     const item = makeEntityItemWithContentLink();

@@ -29,7 +29,7 @@ import { createContentClient } from "../../api/client";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
 import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
-import { useDownloadContent, useUploadContent } from "./use-content";
+import { useApplyContentChanges, useDownloadContent, useUploadContent } from "./use-content";
 
 // ---------------------------------------------------------------------------
 // Fixture URLs
@@ -643,5 +643,151 @@ describe("useDownloadContent — ABAC: cg:content link absent", () => {
 
     expect(result.current.error).toBeInstanceOf(Error);
     expect((result.current.error as Error).message).toMatch(/cg:content link absent/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useApplyContentChanges
+// ---------------------------------------------------------------------------
+
+describe("useApplyContentChanges", () => {
+  const OTHER_CONTENT_URL = `${INVOICE_ITEM_URL}/attachment`;
+
+  function makeItemWithTwoContentLinks(): EntityItem {
+    const itemBody = {
+      id: "inv-001",
+      document: { filename: "file.pdf", mimetype: "application/pdf", length: 1024 },
+      attachment: null,
+      _links: {
+        self: { href: INVOICE_ITEM_URL },
+        [CG_CONTENT_REL]: [
+          { href: CONTENT_URL, name: "document" },
+          { href: OTHER_CONTENT_URL, name: "attachment" },
+        ],
+      },
+    };
+    const hal = new HalObject(itemBody as unknown as HalObjectShape<EntityItemShape>);
+    return new EntityItem(hal, makeInvoiceProfile(), '"item-v1"');
+  }
+
+  function headWithEtag(url: string, etag: string) {
+    return http.head(url, () => new HttpResponse(null, { status: 200, headers: { ETag: etag } }));
+  }
+
+  async function apply(entityItem: EntityItem, changes: Map<string, File | null>) {
+    const { result } = renderHook(() => useApplyContentChanges(entityItem), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      result.current.mutate({ changes, filenames: new Map() });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    return result.current.data;
+  }
+
+  it("removes a file with If-Match carrying the content's ETag, never the item's", async () => {
+    let ifMatch: string | null = null;
+    server.use(
+      headWithEtag(CONTENT_URL, '"content-v1"'),
+      http.delete(CONTENT_URL, ({ request }) => {
+        ifMatch = request.headers.get("If-Match");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
+
+    expect(failures?.size).toBe(0);
+    expect(ifMatch).toBe('"content-v1"');
+  });
+
+  it("sends nothing to remove a file that is already gone (HEAD 404)", async () => {
+    // A DELETE would be an unhandled request and fail the test.
+    server.use(http.head(CONTENT_URL, () => new HttpResponse(null, { status: 404 })));
+
+    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
+
+    expect(failures?.size).toBe(0);
+  });
+
+  it("stores a file with If-None-Match: * when the attribute holds no file (HEAD 404)", async () => {
+    let ifNoneMatch: string | null = null;
+    server.use(
+      http.head(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+      http.put(OTHER_CONTENT_URL, ({ request }) => {
+        ifNoneMatch = request.headers.get("If-None-Match");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["attachment", file]]));
+
+    expect(failures?.size).toBe(0);
+    expect(ifNoneMatch).toBe("*");
+  });
+
+  it("still applies the other changes when one fails, and reports only the failed one", async () => {
+    let attachmentStored = false;
+    server.use(
+      headWithEtag(CONTENT_URL, '"content-v1"'),
+      createProblemHandler({
+        method: "delete",
+        url: CONTENT_URL,
+        status: 412,
+        type: "https://contentgrid.cloud/problems/unsatisfied-version",
+        title: "Unsatisfied version",
+      }),
+      http.head(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+      http.put(OTHER_CONTENT_URL, () => {
+        attachmentStored = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const failures = await apply(
+      makeItemWithTwoContentLinks(),
+      new Map<string, File | null>([
+        ["document", null],
+        ["attachment", file],
+      ]),
+    );
+
+    expect(attachmentStored).toBe(true);
+    expect([...(failures?.keys() ?? [])]).toEqual(["document"]);
+    expect(failures?.get("document")).toBeInstanceOf(ProblemDetailError);
+  });
+
+  it("reports the progress of each stored file under its attribute name", async () => {
+    server.use(
+      headWithEtag(CONTENT_URL, '"content-v1"'),
+      http.delete(CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
+      http.head(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+      http.put(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
+    );
+    // MSW can't produce upload progress events, so the upload reports a fixed percentage.
+    const contentFetch = createContentClient(noopSupplier);
+    contentFetch.withUploadProgress = (onProgress) => {
+      onProgress(50);
+      return contentFetch;
+    };
+    const { result } = renderHook(() => useApplyContentChanges(makeItemWithTwoContentLinks()), {
+      wrapper: makeWrapper(undefined, undefined, contentFetch),
+    });
+
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    await act(async () => {
+      result.current.mutate({
+        changes: new Map<string, File | null>([
+          ["document", null],
+          ["attachment", file],
+        ]),
+        filenames: new Map(),
+      });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.progress).toEqual(new Map([["attachment", 50]]));
   });
 });
