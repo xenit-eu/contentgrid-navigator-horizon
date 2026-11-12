@@ -39,11 +39,6 @@ export interface EntityItemCollectionSearchOptions {
   /** Currently active sort value, e.g. `"name,asc"`. */
   readonly currentSort?: string;
   readonly onSortChange?: (sort: string | undefined) => void;
-  /**
-   * Hidden params that narrow the filters' typeahead to a subset of the collection (e.g. a
-   * to-many relation's `internalRelationParams`). Omitted = the whole collection.
-   */
-  readonly scopeParams?: Readonly<Record<string, string>>;
 }
 
 export interface EntityItemCollectionSearch {
@@ -101,7 +96,7 @@ export function useEntityItemToManyRelationSearch({
   // the `_internal_*` params that scope a search to the linked items; suggestions use them too.
   const firstPage = useEntityItemToManyRelation(relation, undefined).data;
   const scopeParams = useMemo(() => firstPage?.internalRelationParams, [firstPage]);
-  const controls = useCollectionSearchControls({ ...options, scopeParams });
+  const controls = useCollectionSearchControls(options, scopeParams);
   const filters = options.filters ?? EMPTY_FILTERS;
   const isSearching = Object.values(filters).some(Boolean) || options.currentSort !== undefined;
   const collection = useEntityItemToManyRelation(
@@ -119,17 +114,23 @@ export function useEntityItemToManyRelationSearch({
  * Everything but the fetch: the search values and page for the current filters/sort, and a
  * `withCollection` that builds the toolbar, filters modal and table props once the caller has
  * fetched the page those describe.
+ *
+ * `scopeParams` are hidden params that narrow the filters' typeahead to a subset of the
+ * collection: a to-many relation's `internalRelationParams`, set by
+ * `useEntityItemToManyRelationSearch`. Omitted = the whole collection.
  */
-function useCollectionSearchControls({
-  profile,
-  pageUrl,
-  onPageChange,
-  filters = EMPTY_FILTERS,
-  onFiltersChange,
-  currentSort,
-  onSortChange,
-  scopeParams,
-}: EntityItemCollectionSearchOptions) {
+function useCollectionSearchControls(
+  {
+    profile,
+    pageUrl,
+    onPageChange,
+    filters = EMPTY_FILTERS,
+    onFiltersChange,
+    currentSort,
+    onSortChange,
+  }: EntityItemCollectionSearchOptions,
+  scopeParams?: Readonly<Record<string, string>>,
+) {
   const searchTemplate = profile.searchTemplate;
   const { fields, layout } = useMemo(
     () =>
