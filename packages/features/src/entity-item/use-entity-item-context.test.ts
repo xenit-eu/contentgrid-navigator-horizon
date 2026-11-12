@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { makeAllAttributeItem } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
-import { useEntityItemContext } from "./use-entity-item-context";
+import { relationSection, useEntityItemContext } from "./use-entity-item-context";
 
 describe("useEntityItemContext", () => {
   it("does not reopen edit mode when the page comes back to the item", () => {
@@ -44,15 +44,15 @@ describe("useEntityItemContext sections", () => {
     element.scrollIntoView = scrollIntoView;
     const { result } = renderHook(() => useEntityItemContext(makeAllAttributeItem()).sections);
 
-    act(() => result.current.sectionRef("relation:invoices")(element));
+    act(() => result.current.sectionRef(relationSection("invoices"))(element));
     act(() => result.current.revealRelation("invoices"));
 
-    expect(result.current.openProps("relation:invoices", false).open).toBe(true);
+    expect(result.current.openProps(relationSection("invoices"), false).open).toBe(true);
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
 
     // An unregistered section is opened without scrolling.
     scrollIntoView.mockClear();
-    act(() => result.current.sectionRef("relation:invoices")(null));
+    act(() => result.current.sectionRef(relationSection("invoices"))(null));
     act(() => result.current.revealRelation("invoices"));
     expect(scrollIntoView).not.toHaveBeenCalled();
     rafSpy.mockRestore();
@@ -74,7 +74,7 @@ describe("useEntityItemContext sections", () => {
 
     rerender({ item: itemB });
     expect(result.current.openProps("attributes", true).open).toBe(true);
-    expect(result.current.openProps("relation:invoices", false).open).toBe(false);
+    expect(result.current.openProps(relationSection("invoices"), false).open).toBe(false);
 
     // Coming back to the first item does not bring its toggles back either.
     rerender({ item: itemA });

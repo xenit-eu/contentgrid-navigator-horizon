@@ -14,7 +14,7 @@ export const noRefetch: EntityItemRefetch = async () => ({ isSuccess: false });
  * The open-state key of a relation's section. Relation names are customer-defined, so their keys
  * are prefixed to never match a built-in one (`"attributes"`, `"audit"`).
  */
-export const relationSection = (relationName: string) => `relation:${relationName}`;
+export const relationSection = (relationName: string) => `relation:section:${relationName}`;
 
 /** Open/closed state of the item's collapsible sections (`EntityItemSections`). */
 export interface EntityItemSectionsState {
