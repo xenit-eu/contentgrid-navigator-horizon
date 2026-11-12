@@ -38,6 +38,25 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   };
 });
 
+// A stand-in for the search bar: one button that applies a filter, so a test can change the
+// filters without the real bar's suggestion requests.
+vi.mock("../../entity-search-bar", () => ({
+  EntitySearchBar: ({
+    onFiltersChange,
+  }: {
+    onFiltersChange: (filters: Record<string, string>) => void;
+  }) => (
+    <>
+      <button type="button" onClick={() => onFiltersChange({ amount: "30" })}>
+        Filter on amount 30
+      </button>
+      <button type="button" onClick={() => onFiltersChange({})}>
+        Clear filters
+      </button>
+    </>
+  ),
+}));
+
 // Outside a resizable pane by default (the widest layout: record table); compact-mode tests
 // override this to render the narrow-pane stack instead.
 vi.mock("./relation-layout", async (importOriginal) => {
@@ -97,6 +116,22 @@ const TARGET_PROFILE_JSON = {
   },
 };
 const TARGET_PROFILE = makeProfileEntity(TARGET_PROFILE_JSON, `${PROFILE_URL}/invoices`, "invoice");
+/** The same profile with a search template, so the search controls have a field to filter on. */
+const SEARCHABLE_PROFILE = makeProfileEntity(
+  {
+    ...TARGET_PROFILE_JSON,
+    _templates: {
+      ...TARGET_PROFILE_JSON._templates,
+      search: {
+        method: "GET",
+        target: `${API_URL}/invoices`,
+        properties: [{ name: "amount", type: "number" }],
+      },
+    },
+  },
+  `${PROFILE_URL}/invoices`,
+  "invoice",
+);
 
 function makeRelation(
   overrides: Partial<{
@@ -427,6 +462,40 @@ describe("RelationToManySection", () => {
     expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
   });
 
+  it("narrows the table to a filter while the header keeps the unfiltered count", async () => {
+    const user = userEvent.setup();
+    const linked = [makeItem("1", 10), makeItem("2", 20), makeItem("3", 30)];
+    // The section's own query (no params) is the unfiltered relation; a search is the filtered one.
+    vi.mocked(useEntityItemToManyRelation).mockImplementation(
+      (_relation, params) =>
+        ({
+          isPending: false,
+          isSuccess: true,
+          isError: false,
+          error: null,
+          data:
+            params && "searchValues" in params
+              ? makeCollectionData([linked[2]!], { totalItems: { count: 1, isEstimated: false } })
+              : makeCollectionData(linked, { totalItems: { count: 3, isEstimated: false } }),
+        }) as unknown as ReturnType<typeof useEntityItemToManyRelation>,
+    );
+    renderSection({
+      relation: makeRelation({ targetProfile: SEARCHABLE_PROFILE }),
+      profiles: [SEARCHABLE_PROFILE],
+    });
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("row")).toHaveLength(1 + 3);
+
+    await user.click(screen.getByRole("button", { name: "Filter on amount 30" }));
+
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(1 + 1);
+    expect(useEntityItemToManyRelation).toHaveBeenLastCalledWith(expect.anything(), {
+      searchValues: expect.anything(),
+    });
+    // The header still counts every linked item, not just the filtered ones.
+    expect(screen.getByRole("button", { name: /invoices/i })).toHaveTextContent(/^3/);
+  });
+
   describe("in a narrow pane (compact stack)", () => {
     const fetchNextPage = vi.fn();
 
@@ -590,6 +659,44 @@ describe("RelationToManySection", () => {
         [`${API_URL}/invoices/1`, `${API_URL}/invoices/3`],
         expect.anything(),
       );
+    });
+
+    it("goes back to the first page when a filter changes", async () => {
+      const user = userEvent.setup();
+      const page2 = `${API_URL}/invoices?page=2`;
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([]) });
+      vi.mocked(useEntityItemCollection).mockImplementation(
+        (params) =>
+          ({
+            isPending: false,
+            isSuccess: true,
+            isError: false,
+            data:
+              params && "url" in params && params.url === page2
+                ? makeCollectionData([makeItem("3", 30)], { hasPrevious: true })
+                : makeCollectionData([makeItem("1", 10)], { hasNext: true, nextHref: page2 }),
+          }) as unknown as ReturnType<typeof useEntityItemCollection>,
+      );
+      renderSection({
+        relation: makeRelation({ canAdd: true, targetProfile: SEARCHABLE_PROFILE }),
+        profiles: [SEARCHABLE_PROFILE],
+      });
+
+      await user.click(screen.getByRole("button", { name: "Link" }));
+      const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Next" }));
+      expect(useEntityItemCollection).toHaveBeenLastCalledWith(
+        expect.objectContaining({ url: page2 }),
+      );
+
+      await user.click(within(dialog).getByRole("button", { name: "Filter on amount 30" }));
+      // Clearing the filter again must not bring back page 2: the filter change forgot it.
+      await user.click(within(dialog).getByRole("button", { name: "Clear filters" }));
+
+      const [params] = vi.mocked(useEntityItemCollection).mock.lastCall!;
+      expect(params).not.toHaveProperty("url");
+      expect(params).toHaveProperty("searchValues");
+      expect(within(dialog).getByRole("button", { name: "Previous" })).toBeDisabled();
     });
 
     it("keeps the dialog open while linking and closes it once linking succeeds", async () => {
