@@ -58,6 +58,39 @@ describe("useEntityItemContext sections", () => {
     rafSpy.mockRestore();
   });
 
+  it("restores every section's default when the page moves on to another item", () => {
+    const itemA = makeAllAttributeItem();
+    const itemB = makeAllAttributeItem({
+      _links: { self: { href: "https://api.example.contentgrid.com/all-attributes/other" } },
+    });
+    // The hook stays mounted across items, as it does when the next item comes from the cache.
+    const { result, rerender } = renderHook(({ item }) => useEntityItemContext(item).sections, {
+      initialProps: { item: itemA as EntityItem },
+    });
+
+    act(() => result.current.openProps("attributes", true).onOpenChange(false));
+    act(() => result.current.revealRelation("invoices"));
+    expect(result.current.openProps("attributes", true).open).toBe(false);
+
+    rerender({ item: itemB });
+    expect(result.current.openProps("attributes", true).open).toBe(true);
+    expect(result.current.openProps("relation:invoices", false).open).toBe(false);
+
+    // Coming back to the first item does not bring its toggles back either.
+    rerender({ item: itemA });
+    expect(result.current.openProps("attributes", true).open).toBe(true);
+  });
+
+  it("keeps toggles while the same item is refetched", () => {
+    const { result, rerender } = renderHook(({ item }) => useEntityItemContext(item).sections, {
+      initialProps: { item: makeAllAttributeItem() as EntityItem },
+    });
+
+    act(() => result.current.openProps("attributes", true).onOpenChange(false));
+    rerender({ item: makeAllAttributeItem() });
+    expect(result.current.openProps("attributes", true).open).toBe(false);
+  });
+
   it("sectionRef returns the same callback for a section across renders", () => {
     const { result, rerender } = renderHook(
       () => useEntityItemContext(makeAllAttributeItem()).sections,

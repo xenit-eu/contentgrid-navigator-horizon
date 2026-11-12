@@ -82,6 +82,8 @@ the shown item. It returns:
   a 412)
 - `sections` — open/closed state of the collapsible sections; pass it to `EntityItemSections` as
   `state`, and use its `revealRelation` to expand and scroll to a relation (the relation summary)
+  — toggles last while the page stays on the item; on another item every section is back at its
+  default (`defaultSectionOpen` in `entity-item-sections.tsx`)
 
 While editing, a background refetch does not change `shownItem`, so the user's input stays and a
 save of a stale version is refused (412). `noRefetch` is the default when the caller can't reload.

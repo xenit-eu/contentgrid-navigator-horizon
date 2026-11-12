@@ -27,6 +27,8 @@ export interface EntityItemSectionsState {
   readonly sectionRef: (section: string) => (element: HTMLElement | null) => void;
   /** Expands a relation's section and scrolls it into view — e.g. from `EntityItemRelationSummary`. */
   readonly revealRelation: (relationName: string) => void;
+  /** Forgets every toggle, so each section is back at its default (`defaultOpen`). */
+  readonly restoreDefaults: () => void;
 }
 
 function useEntityItemSectionsState(): EntityItemSectionsState {
@@ -63,6 +65,7 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
         elements.current.get(section)?.scrollIntoView?.({ behavior: "smooth", block: "start" }),
       );
     },
+    restoreDefaults: () => setToggled(new Map()),
   };
 }
 
@@ -74,7 +77,8 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
  * change it, so the user's input stays and a save of an item that changed meanwhile is refused
  * (412). `shownItem` is that version while editing and `item` otherwise. `refresh` refetches the
  * item and moves the form onto the latest version. Edit mode belongs to one item, so it ends when
- * the page moves on to another item and stays closed when the page comes back to it.
+ * the page moves on to another item and stays closed when the page comes back to it. The sections
+ * go back to their defaults on another item too.
  *
  * `sections` is the open/closed state for `EntityItemSections`, kept here so something outside
  * the sections (the relation summary under the item's title) can expand and scroll to one of them.
@@ -87,6 +91,9 @@ export function useEntityItemContext(item: EntityItem, refetch: EntityItemRefetc
   if (href !== shownHref) {
     setShownHref(href);
     setEditedItem(null);
+    // A toggle is for the item it was made on: every item starts with its sections at their
+    // defaults, whether or not the page stayed mounted in between (e.g. a cached item).
+    sections.restoreDefaults();
   }
 
   const setIsEditing = (isEditing: boolean) => setEditedItem(isEditing ? item : null);
