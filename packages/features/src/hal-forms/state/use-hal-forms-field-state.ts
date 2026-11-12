@@ -232,9 +232,12 @@ export function useHalFormsFieldState({
   ): HalFormValues<Spec> {
     return Object.entries(values).reduce((vals, [name, value]) => {
       if (value === undefined || value === "") return vals;
-      // Also omit an empty array (the seeded default for an untouched multi-value field) — the
-      // HAL-FORMS codec rejects an empty list for a multi-value property outright, so an
-      // untouched one must be omitted, not sent. Mirrors entity-item-create's buildValues.
+      // Also omit an empty array (the seeded default for an untouched multi-value field), so an
+      // untouched one is left out like any other empty field.
+      // Clearing still works on edit because the update (`default`) template is a PUT, which
+      // replaces the whole item: an attribute left out of the body is cleared. A PATCH would keep
+      // the old values instead, so a field that started with values would then have to send `[]`
+      // (the codec accepts an empty list for a multi-value property).
       if (Array.isArray(value) && value.length === 0) return vals;
       return vals.withValue(name, value);
     }, createValues(template));
