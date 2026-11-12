@@ -85,8 +85,6 @@ export function useEntityItemCollectionSearch(
 export interface EntityItemToManyRelationSearchOptions extends EntityItemCollectionSearchOptions {
   /** The to-many relation whose linked items are listed; `profile` is its target profile. */
   readonly relation: EntityItemToManyRelation;
-  /** `false` keeps the relation query from fetching (e.g. while another layout is shown). */
-  readonly enabled?: boolean;
 }
 
 /**
@@ -97,12 +95,11 @@ export interface EntityItemToManyRelationSearchOptions extends EntityItemCollect
  */
 export function useEntityItemToManyRelationSearch({
   relation,
-  enabled,
   ...options
 }: EntityItemToManyRelationSearchOptions): EntityItemCollectionSearch {
   // The relation's unfiltered first page (shared cache with the relation's other views) carries
   // the `_internal_*` params that scope a search to the linked items; suggestions use them too.
-  const firstPage = useEntityItemToManyRelation(relation, undefined, { enabled }).data;
+  const firstPage = useEntityItemToManyRelation(relation, undefined).data;
   const scopeParams = useMemo(() => firstPage?.internalRelationParams, [firstPage]);
   const controls = useCollectionSearchControls({ ...options, scopeParams });
   const filters = options.filters ?? EMPTY_FILTERS;
@@ -114,7 +111,6 @@ export function useEntityItemToManyRelationSearch({
       : isSearching
         ? { searchValues: controls.searchValues }
         : undefined,
-    { enabled },
   );
   return controls.withCollection(collection);
 }
