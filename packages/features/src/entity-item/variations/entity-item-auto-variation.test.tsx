@@ -76,6 +76,36 @@ vi.mock("../relations/relation-to-many-section", () => ({
   RelationToManySection: () => <div>many-relation</div>,
 }));
 
+// Stands in for the edit form: opens it, and reports a file removed in it, not saved yet.
+vi.mock("../attributes/editable-entity-item-attributes", () => ({
+  EditableEntityItemAttributes: (props: {
+    onEditingChange: (isEditing: boolean) => void;
+    onPendingContentChange: (pendingContent: ReadonlyMap<string, File | null>) => void;
+  }) => (
+    <>
+      <button type="button" onClick={() => props.onEditingChange(true)}>
+        open the form
+      </button>
+      <button
+        type="button"
+        onClick={() => props.onPendingContentChange(new Map([["receipt", null]]))}
+      >
+        remove receipt in the form
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onPendingContentChange(
+            new Map([["receipt", new File(["x"], "new.txt", { type: "text/plain" })]]),
+          )
+        }
+      >
+        pick a receipt in the form
+      </button>
+    </>
+  ),
+}));
+
 vi.mock("./content-focus/components/content-attribute-selector", () => ({
   ContentAttributeSelector: (props: { value: string; onChange: (name: string) => void }) => (
     <button type="button" onClick={() => props.onChange("receipt")}>
@@ -131,6 +161,8 @@ function makeEntityItem(options: {
     selfLink: { href: "https://api.example.com/orders/1" },
     attributes: contentAttrs,
     userDefinedAttributes: contentAttrs,
+    findAttribute: (name: string) => contentAttrs.find((attr) => attr.value.name === name),
+    canUploadContent: () => true,
     toOneRelations: [],
     toManyRelations: [],
     createdDate: undefined,
@@ -172,6 +204,38 @@ describe("EntityItemAutoVariation", () => {
 
     expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
     expect(screen.queryByText("Entity Detail")).not.toBeInTheDocument();
+  });
+
+  it("offers a drop zone in the preview for an attribute whose file is removed in the edit form", async () => {
+    const profile = makeProfile({ hasContentAttributes: true, contentAttributeNames: ["receipt"] });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("receipt", true)],
+    });
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "open the form" }));
+    fireEvent.click(screen.getByRole("button", { name: "remove receipt in the form" }));
+
+    expect(screen.getByRole("button", { name: /drop a file here/i })).toBeInTheDocument();
+    expect(screen.queryByText("content-preview-panel:receipt")).not.toBeInTheDocument();
+  });
+
+  it("shows a file picked in the form in place of the stored one", async () => {
+    const profile = makeProfile({ hasContentAttributes: true, contentAttributeNames: ["receipt"] });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("receipt", true)],
+    });
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "open the form" }));
+    fireEvent.click(screen.getByRole("button", { name: "pick a receipt in the form" }));
+
+    expect(screen.getByRole("button", { name: /currently receipt/ })).toBeInTheDocument();
+    expect(screen.queryByText(/content-preview-panel:/)).not.toBeInTheDocument();
   });
 
   it("prefers the earlier content attribute in profile order when both hold a file", async () => {

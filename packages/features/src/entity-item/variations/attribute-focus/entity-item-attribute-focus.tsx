@@ -51,6 +51,8 @@ export function EntityItemAttributeFocus({
           isEditing={itemContext.isEditing}
           onEditingChange={itemContext.setIsEditing}
           onRefresh={() => void itemContext.refresh()}
+          pendingContent={itemContext.pendingContent}
+          onPendingContentChange={itemContext.setPendingContent}
         />
 
         {(item.toOneRelations.length > 0 || item.toManyRelations.length > 0) && (
