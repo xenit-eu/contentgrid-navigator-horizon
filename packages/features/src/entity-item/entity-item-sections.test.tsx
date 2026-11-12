@@ -79,8 +79,14 @@ function makeItem(
     id: overrides.id ?? "item-1",
     selfLink: { href: `https://api.example.com/items/${overrides.id ?? "item-1"}` },
     audit: overrides.audit ?? false,
-    toOneRelations: (overrides.toOne ?? []).map((name) => ({ name })),
-    toManyRelations: (overrides.toMany ?? []).map((name) => ({ name })),
+    toOneRelations: (overrides.toOne ?? []).map((name) => ({
+      name,
+      profileRelation: { isToOne: true },
+    })),
+    toManyRelations: (overrides.toMany ?? []).map((name) => ({
+      name,
+      profileRelation: { isToOne: false },
+    })),
   } as unknown as EntityItem;
 }
 

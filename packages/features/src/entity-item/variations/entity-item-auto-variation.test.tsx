@@ -282,8 +282,8 @@ describe("EntityItemAutoVariation", () => {
         profileEntity: profile,
         contentAttrs: [makeContentAttribute("document", true)],
       }),
-      toOneRelations: [{ name: "owner" }],
-      toManyRelations: [{ name: "lines" }],
+      toOneRelations: [{ name: "owner", profileRelation: { isToOne: true } }],
+      toManyRelations: [{ name: "lines", profileRelation: { isToOne: false } }],
     } as unknown as EntityItem;
     const onRelationItemClick = vi.fn();
 

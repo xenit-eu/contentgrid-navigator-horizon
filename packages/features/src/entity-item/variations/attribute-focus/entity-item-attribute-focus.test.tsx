@@ -54,8 +54,14 @@ function makeItem(options: { toOne?: number; toMany?: number }): EntityItem {
   return {
     selfLink: { href: "https://api.example.com/items/1" },
     updateTemplate: null,
-    toOneRelations: Array.from({ length: options.toOne ?? 0 }, () => ({ name: "owner" })),
-    toManyRelations: Array.from({ length: options.toMany ?? 0 }, () => ({ name: "lines" })),
+    toOneRelations: Array.from({ length: options.toOne ?? 0 }, () => ({
+      name: "owner",
+      profileRelation: { isToOne: true },
+    })),
+    toManyRelations: Array.from({ length: options.toMany ?? 0 }, () => ({
+      name: "lines",
+      profileRelation: { isToOne: false },
+    })),
   } as unknown as EntityItem;
 }
 

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { ClockCounterClockwiseIcon, ListBulletsIcon } from "@phosphor-icons/react";
-import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
+import type { EntityItem, ProfileEntity, ProfileRelation } from "@contentgrid/navigator-data";
 import { ActionableAccordion } from "@contentgrid/ui";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EntityItemAuditTrail, hasAuditTrail } from "./attributes/entity-item-attributes";
@@ -17,6 +17,26 @@ import { type EntityItemSectionsState, relationSection } from "./use-entity-item
 
 const ATTRIBUTES_SECTION = "attributes";
 const AUDIT_SECTION = "audit";
+
+/**
+ * Whether a section starts expanded, until the user toggles it (`useEntityItemContext` then keeps
+ * the toggled state). A relation's section is identified by the relation itself, so a preference
+ * can target one relation by name; its cardinality only matters for the default below.
+ *
+ * User preferences hook in here: read a per-entity setting through
+ * `useEntityDisplayPreferences(item.profileEntity)` (`@contentgrid/features/preferences`) in
+ * `EntityItemSections` and pass it to this function. Let it win over the defaults below, per
+ * section (`"attributes"`, `"audit"`) or per relation name. Adding the setting to
+ * `EntityDisplayPreferences` gives it the same layering as the other preferences: user override >
+ * backend default > heuristic.
+ */
+function defaultSectionOpen(section: "attributes" | "audit" | ProfileRelation): boolean {
+  if (section === "attributes" || section === "audit") return true;
+  // A to-many relation can hold many items and fetches them, so it starts collapsed; a to-one
+  // relation is a single reference and starts open.
+  return section.isToOne;
+}
+
 export type EntityItemSectionsProps = RelationProblemHandlers & {
   readonly item: EntityItem;
   readonly profiles: readonly ProfileEntity[];
@@ -52,8 +72,8 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
 
 /**
  * The item's attributes, each of its relations and its audit trail as collapsible rows, meant to
- * sit edge to edge inside one surrounding card or panel. Attributes, to-one relations and the
- * audit trail start expanded, to-many relations collapsed.
+ * sit edge to edge inside one surrounding card or panel. Which sections start expanded is decided
+ * by `defaultSectionOpen`.
  */
 export function EntityItemSections({
   item,
@@ -73,7 +93,7 @@ export function EntityItemSections({
 }: Readonly<EntityItemSectionsProps>) {
   const isEditing = editedItem !== null;
   const editFormRef = useRef<EditEntityItemFormHandle>(null);
-  const attributesOpen = state.openProps(ATTRIBUTES_SECTION, true);
+  const attributesOpen = state.openProps(ATTRIBUTES_SECTION, defaultSectionOpen("attributes"));
   const attributes = (
     <ActionableAccordion
       title={
@@ -129,7 +149,7 @@ export function EntityItemSections({
             relation={rel}
             profiles={profiles}
             variant={relationVariant}
-            {...state.openProps(relationSection(rel.name), true)}
+            {...state.openProps(relationSection(rel.name), defaultSectionOpen(rel.profileRelation))}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -147,7 +167,7 @@ export function EntityItemSections({
             relation={rel}
             profiles={profiles}
             variant={relationVariant}
-            {...state.openProps(relationSection(rel.name), false)}
+            {...state.openProps(relationSection(rel.name), defaultSectionOpen(rel.profileRelation))}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -167,7 +187,7 @@ export function EntityItemSections({
         </span>
       }
       variant="row"
-      {...state.openProps(AUDIT_SECTION, true)}
+      {...state.openProps(AUDIT_SECTION, defaultSectionOpen("audit"))}
     >
       <EntityItemAuditTrail item={item} />
     </ActionableAccordion>
