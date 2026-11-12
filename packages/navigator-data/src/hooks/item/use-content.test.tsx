@@ -670,6 +670,9 @@ describe("useApplyContentChanges", () => {
     return new EntityItem(hal, makeInvoiceProfile(), '"item-v1"');
   }
 
+  // A HEAD 404 carries the Content-Type of the problem a GET would return, without its body.
+  const PROBLEM_JSON = { "Content-Type": "application/problem+json" };
+
   function headWithEtag(url: string, etag: string) {
     return http.head(url, () => new HttpResponse(null, { status: 200, headers: { ETag: etag } }));
   }
@@ -703,7 +706,9 @@ describe("useApplyContentChanges", () => {
 
   it("sends nothing to remove a file that is already gone (HEAD 404)", async () => {
     // A DELETE would be an unhandled request and fail the test.
-    server.use(http.head(CONTENT_URL, () => new HttpResponse(null, { status: 404 })));
+    server.use(
+      http.head(CONTENT_URL, () => new HttpResponse(null, { status: 404, headers: PROBLEM_JSON })),
+    );
 
     const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
 
@@ -713,7 +718,10 @@ describe("useApplyContentChanges", () => {
   it("stores a file with If-None-Match: * when the attribute holds no file (HEAD 404)", async () => {
     let ifNoneMatch: string | null = null;
     server.use(
-      http.head(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+      http.head(
+        OTHER_CONTENT_URL,
+        () => new HttpResponse(null, { status: 404, headers: PROBLEM_JSON }),
+      ),
       http.put(OTHER_CONTENT_URL, ({ request }) => {
         ifNoneMatch = request.headers.get("If-None-Match");
         return new HttpResponse(null, { status: 204 });
@@ -738,7 +746,10 @@ describe("useApplyContentChanges", () => {
         type: "https://contentgrid.cloud/problems/unsatisfied-version",
         title: "Unsatisfied version",
       }),
-      http.head(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+      http.head(
+        OTHER_CONTENT_URL,
+        () => new HttpResponse(null, { status: 404, headers: PROBLEM_JSON }),
+      ),
       http.put(OTHER_CONTENT_URL, () => {
         attachmentStored = true;
         return new HttpResponse(null, { status: 204 });
@@ -763,7 +774,10 @@ describe("useApplyContentChanges", () => {
     server.use(
       headWithEtag(CONTENT_URL, '"content-v1"'),
       http.delete(CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
-      http.head(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+      http.head(
+        OTHER_CONTENT_URL,
+        () => new HttpResponse(null, { status: 404, headers: PROBLEM_JSON }),
+      ),
       http.put(OTHER_CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
     );
     // MSW can't produce upload progress events, so the upload reports a fixed percentage.
