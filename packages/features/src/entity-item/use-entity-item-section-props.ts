@@ -6,6 +6,7 @@ export type UseEntityItemSectionPropsOptions = Pick<
   EntityItemSectionsProps,
   | "item"
   | "allowEdit"
+  | "openAllByDefault"
   | "onRelationItemClick"
   | "onRelationItemCreateNew"
   | "onMissingRelationTargetClick"
@@ -26,6 +27,7 @@ export function useEntityItemSectionProps({
   item,
   refetch,
   allowEdit = true,
+  openAllByDefault = false,
   ...handlers
 }: Readonly<UseEntityItemSectionPropsOptions>): EntityItemSectionsProps {
   const { profiles } = useLoadedProfileEntities();
@@ -39,6 +41,7 @@ export function useEntityItemSectionProps({
     onEditingChange: itemContext.setIsEditing,
     onRefresh: () => void itemContext.refresh(),
     allowEdit,
+    openAllByDefault,
     ...handlers,
   };
 }

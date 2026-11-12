@@ -114,6 +114,20 @@ describe("EntityItemSections", () => {
     expect(screen.getByText("audit trail")).toBeInTheDocument();
   });
 
+  it("openAllByDefault opens every section, to-many relations included", () => {
+    render(
+      <Harness
+        item={makeItem({ toOne: ["customer"], toMany: ["invoices"], audit: true })}
+        openAllByDefault
+      />,
+    );
+
+    expect(screen.getByText("attributes item-1")).toBeInTheDocument();
+    expect(screen.getByText("to-one customer open")).toBeInTheDocument();
+    expect(screen.getByText("to-many invoices open")).toBeInTheDocument();
+    expect(screen.getByText("audit trail")).toBeInTheDocument();
+  });
+
   it("leaves out the audit section when the item has no audit trail", () => {
     render(<Harness item={makeItem()} />);
 

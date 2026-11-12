@@ -15,10 +15,12 @@ vi.mock("../../entity-item-sections", async (importOriginal) => {
     EntityItemSections: ({
       show = "all",
       relationVariant = "row",
+      openAllByDefault = false,
     }: {
       show?: string;
       relationVariant?: string;
-    }) => <div>{`sections ${show} ${relationVariant}`}</div>,
+      openAllByDefault?: boolean;
+    }) => <div data-open-all={openAllByDefault}>{`sections ${show} ${relationVariant}`}</div>,
   };
 });
 
@@ -47,6 +49,13 @@ describe("EntityItemSideBySide", () => {
         "sections relations card",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("opens every section by default, in both panes", () => {
+    renderVariation(["customer"]);
+
+    expect(screen.getByText("sections details row")).toHaveAttribute("data-open-all", "true");
+    expect(screen.getByText("sections relations card")).toHaveAttribute("data-open-all", "true");
   });
 
   it("keeps the single card for an item without relations", () => {

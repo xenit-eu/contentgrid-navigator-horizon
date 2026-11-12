@@ -23,14 +23,22 @@ const AUDIT_SECTION = "audit";
  * the toggled state). A relation's section is identified by the relation itself, so a preference
  * can target one relation by name; its cardinality only matters for the default below.
  *
- * User preferences hook in here: read a per-entity setting through
- * `useEntityDisplayPreferences(item.profileEntity)` (`@contentgrid/features/preferences`) in
- * `EntityItemSections` and pass it to this function. Let it win over the defaults below, per
- * section (`"attributes"`, `"audit"`) or per relation name. Adding the setting to
- * `EntityDisplayPreferences` gives it the same layering as the other preferences: user override >
- * backend default > heuristic.
+ * The first answer wins, in this order:
+ * 1. User preference (not built yet): read a per-entity setting through
+ *    `useEntityDisplayPreferences(item.profileEntity)` (`@contentgrid/features/preferences`) in
+ *    `useEntityItemSectionProps`, pass it down and check it here first, per section
+ *    (`"attributes"`, `"audit"`) or per relation name. Adding the setting to
+ *    `EntityDisplayPreferences` gives it the same layering as the other preferences: user
+ *    override > backend default > heuristic.
+ * 2. The variation: `openAll` (`openAllByDefault`) opens every section, for a layout with room
+ *    for them all, e.g. side by side.
+ * 3. The section itself: see below.
  */
-function defaultSectionOpen(section: "attributes" | "audit" | ProfileRelation): boolean {
+function defaultSectionOpen(
+  section: "attributes" | "audit" | ProfileRelation,
+  openAll: boolean,
+): boolean {
+  if (openAll) return true;
   if (section === "attributes" || section === "audit") return true;
   // A to-many relation can hold many items and fetches them, so it starts collapsed; a to-one
   // relation is a single reference and starts open.
@@ -68,6 +76,12 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
    * `"card"` as a card of its own, spaced apart — for relations shown outside that card.
    */
   readonly relationVariant?: "row" | "card";
+  /**
+   * Opens every section by default, to-many relations included (default `false`: see
+   * `defaultSectionOpen`). The variation sets it through `useEntityItemSectionProps`, so every
+   * `EntityItemSections` it renders agrees.
+   */
+  readonly openAllByDefault?: boolean;
 };
 
 /**
@@ -90,10 +104,14 @@ export function EntityItemSections({
   show = "all",
   relationVariant = "row",
   allowEdit = true,
+  openAllByDefault = false,
 }: Readonly<EntityItemSectionsProps>) {
   const isEditing = editedItem !== null;
   const editFormRef = useRef<EditEntityItemFormHandle>(null);
-  const attributesOpen = state.openProps(ATTRIBUTES_SECTION, defaultSectionOpen("attributes"));
+  const attributesOpen = state.openProps(
+    ATTRIBUTES_SECTION,
+    defaultSectionOpen("attributes", openAllByDefault),
+  );
   const attributes = (
     <ActionableAccordion
       title={
@@ -149,7 +167,10 @@ export function EntityItemSections({
             relation={rel}
             profiles={profiles}
             variant={relationVariant}
-            {...state.openProps(relationSection(rel.name), defaultSectionOpen(rel.profileRelation))}
+            {...state.openProps(
+              relationSection(rel.name),
+              defaultSectionOpen(rel.profileRelation, openAllByDefault),
+            )}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -167,7 +188,10 @@ export function EntityItemSections({
             relation={rel}
             profiles={profiles}
             variant={relationVariant}
-            {...state.openProps(relationSection(rel.name), defaultSectionOpen(rel.profileRelation))}
+            {...state.openProps(
+              relationSection(rel.name),
+              defaultSectionOpen(rel.profileRelation, openAllByDefault),
+            )}
             onItemClick={onRelationItemClick}
             onCreateNew={onRelationItemCreateNew}
             onMissingRelationTargetClick={onMissingRelationTargetClick}
@@ -187,7 +211,7 @@ export function EntityItemSections({
         </span>
       }
       variant="row"
-      {...state.openProps(AUDIT_SECTION, defaultSectionOpen("audit"))}
+      {...state.openProps(AUDIT_SECTION, defaultSectionOpen("audit", openAllByDefault))}
     >
       <EntityItemAuditTrail item={item} />
     </ActionableAccordion>

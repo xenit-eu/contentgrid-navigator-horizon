@@ -19,7 +19,8 @@ const STACK_BELOW = 768;
  */
 export function EntityItemSideBySide({ actions, ...props }: Readonly<EntityItemVariationProps>) {
   const { item } = props;
-  const sectionProps = useEntityItemSectionProps(props);
+  // The relations get a column of their own, with room to show them all expanded.
+  const sectionProps = useEntityItemSectionProps({ ...props, openAllByDefault: true });
 
   if (!hasEntityItemRelations(item)) {
     return (
