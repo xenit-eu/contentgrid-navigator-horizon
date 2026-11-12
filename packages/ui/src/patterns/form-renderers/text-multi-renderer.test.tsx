@@ -98,10 +98,25 @@ describe("TextMultiRenderer", () => {
         onChange={onChange}
       />,
     );
-    expect(screen.getByLabelText("Keywords")).toBeDisabled();
-    expect(screen.getByLabelText("Keywords")).toHaveAttribute("placeholder", "Maximum of 2 values");
+    const input = screen.getByLabelText("Keywords");
+    expect(input).toHaveAttribute("readonly");
+    expect(input).toHaveAttribute("aria-disabled", "true");
+    expect(input).toHaveAttribute("placeholder", "Maximum of 2 values");
     await user.click(screen.getByRole("button", { name: "Remove a" }));
     expect(onChange).toHaveBeenLastCalledWith(["b"]);
+  });
+
+  it("keeps keyboard focus in the field when a chip is removed at maxItems", async () => {
+    const user = userEvent.setup();
+    render(
+      <TextMultiRenderer
+        {...textMultiField({ maxItems: 2 })}
+        value={["a", "b"]}
+        onChange={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove a" }));
+    expect(screen.getByLabelText("Keywords")).toHaveFocus();
   });
 
   it("shows the values without remove buttons or an input when read-only", () => {
@@ -115,6 +130,7 @@ describe("TextMultiRenderer", () => {
     expect(screen.getByText("a")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Keywords" })).toHaveTextContent("a");
   });
 
   it("marks the input invalid and describes it with the hint and the error", () => {

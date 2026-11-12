@@ -1,7 +1,7 @@
 import { type ClipboardEvent, type KeyboardEvent, useRef, useState } from "react";
 import { cn } from "../../lib/utils";
 import { Chip } from "../../primitives/chip";
-import { FieldShell, fieldAriaProps } from "./field-shell";
+import { FieldShell, fieldAriaProps, fieldLabelId } from "./field-shell";
 
 export interface TextMultiRendererProps {
   readonly name: string;
@@ -12,7 +12,7 @@ export interface TextMultiRendererProps {
   readonly value: readonly string[] | undefined;
   readonly onChange: (value: string[]) => void;
   readonly error?: string;
-  /** Most values that can be entered; the input is disabled once it is reached. */
+  /** Most values that can be entered; the input stops accepting new ones once it is reached. */
   readonly maxItems?: number;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
@@ -101,7 +101,10 @@ export function TextMultiRenderer({
       error={error}
     >
       {/* The input grows to fill the rest of the box, so a click on the empty part lands in it. */}
+      {/* Read-only renders no input for the label to point at, so the chips are named as a group. */}
       <div
+        role={readOnly ? "group" : undefined}
+        aria-labelledby={readOnly ? fieldLabelId(name) : undefined}
         data-slot="text-multi"
         data-invalid={!!error || undefined}
         className={cn(
@@ -127,7 +130,11 @@ export function TextMultiRenderer({
             name={name}
             type="text"
             value={draft}
-            disabled={atMax}
+            // Not `disabled`: removing a chip refocuses this input, which a disabled input would
+            // refuse — focus would fall back to <body>. `readOnly` blocks typing; Backspace and
+            // the chips' remove buttons still work.
+            readOnly={atMax}
+            aria-disabled={atMax || undefined}
             placeholder={placeholderFor(values.length, maxItems)}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={handleKeyDown}
@@ -138,7 +145,7 @@ export function TextMultiRenderer({
             aria-describedby={[hintId, fieldAriaProps(name, error)["aria-describedby"]]
               .filter(Boolean)
               .join(" ")}
-            className="placeholder:text-muted-foreground h-7 min-w-24 flex-1 bg-transparent px-1.5 outline-none disabled:cursor-not-allowed"
+            className="placeholder:text-muted-foreground h-7 min-w-24 flex-1 bg-transparent px-1.5 outline-none aria-disabled:cursor-not-allowed"
           />
         )}
         {readOnly && values.length === 0 && <span className="px-1.5 text-muted-foreground">—</span>}
