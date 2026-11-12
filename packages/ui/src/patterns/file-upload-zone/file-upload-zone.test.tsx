@@ -152,10 +152,43 @@ describe("FileUploadZone — file selected view", () => {
     expect(onFileChange).toHaveBeenCalledWith(null);
   });
 
+  it("shows the upload progress in place of the size, and no remove button, while uploading", () => {
+    const file = makeFile("report.pdf", "application/pdf", 2048);
+    render(<FileUploadZone file={file} onFileChange={vi.fn()} uploadProgress={42} />);
+    expect(screen.getByText("Uploading… 42%")).toBeInTheDocument();
+    expect(screen.queryByText("2.0 KB")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
+  });
+
+  it("stops the upload progress at 99% until the upload is confirmed", () => {
+    const file = makeFile("report.pdf", "application/pdf");
+    render(<FileUploadZone file={file} onFileChange={vi.fn()} uploadProgress={100} />);
+    expect(screen.getByText("Uploading… 99%")).toBeInTheDocument();
+  });
+
+  it("shows the compact card's size and type, and the upload progress in their place while uploading", () => {
+    const file = makeFile("report.pdf", "application/pdf", 2048);
+    const { rerender } = render(<FileUploadZone file={file} onFileChange={vi.fn()} compact />);
+    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("· application/pdf")).toBeInTheDocument();
+
+    rerender(<FileUploadZone file={file} onFileChange={vi.fn()} compact uploadProgress={42} />);
+    expect(screen.getByText("Uploading… 42%")).toBeInTheDocument();
+    expect(screen.queryByText("2.0 KB")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
+  });
+
   it("renders image preview for image files", () => {
     const file = makeFile("photo.png", "image/png");
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
     expect(screen.getByRole("img", { name: "Preview" })).toBeInTheDocument();
+  });
+
+  it("does not render an image preview for a stored image, whose bytes it doesn't have", () => {
+    const storedFile = { name: "photo.png", size: 2048, type: "image/png" };
+    render(<FileUploadZone file={storedFile} onFileChange={vi.fn()} />);
+    expect(screen.getByText("photo.png")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Preview" })).not.toBeInTheDocument();
   });
 
   it("does not render an image preview for non-image files", () => {
