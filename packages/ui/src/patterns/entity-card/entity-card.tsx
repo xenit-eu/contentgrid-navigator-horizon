@@ -69,7 +69,9 @@ export function EntityCard({
       tabIndex={onCardClick ? 0 : undefined}
       className={cn(
         "group relative transition-colors",
-        onCardClick && "cursor-pointer hover:border-primary/50",
+        // Cards in a grid stretch to the tallest one; a flush card keeps its content's height.
+        !flushContent && "h-full",
+        onCardClick && "hover:border-primary/50",
         flushContent && children && "gap-1 overflow-hidden pt-4 pb-0",
       )}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
@@ -94,6 +96,8 @@ export function EntityCard({
             title={title}
             subtitle={description}
             indentSubtitle={indentSubtitle}
+            clamp
+            className="min-w-0 flex-1"
             icon={
               icon && (
                 <span role="presentation" onClick={(event) => event.stopPropagation()}>
@@ -115,7 +119,9 @@ export function EntityCard({
           </div>
         )}
       </CardHeader>
-      {children && <CardContent className={cn(flushContent && "px-0")}>{children}</CardContent>}
+      {children && (
+        <CardContent className={cn("mt-auto", flushContent && "px-0")}>{children}</CardContent>
+      )}
     </Card>
   );
 }
