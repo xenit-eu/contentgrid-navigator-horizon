@@ -10,6 +10,7 @@ import {
   useSetToOneRelation,
 } from "@contentgrid/navigator-data";
 import {
+  ActionableAccordion,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -20,7 +21,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
-  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
 import { useEntityDisplayPreferences } from "../../preferences";
@@ -74,7 +74,7 @@ export function RelationToOneSection({
   const layout = useRelationLayout();
 
   return (
-    <RelationAccordion
+    <ActionableAccordion
       title={title}
       variant={variant}
       open={open}
@@ -159,7 +159,7 @@ export function RelationToOneSection({
           onClick={(item) => onItemClick?.(item.profileEntity.name, item.id)}
         />
       )}
-    </RelationAccordion>
+    </ActionableAccordion>
   );
 }
 

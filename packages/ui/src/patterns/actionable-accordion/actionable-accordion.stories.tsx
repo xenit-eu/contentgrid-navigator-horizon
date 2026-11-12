@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
-import { RelationAccordion } from "./relation-accordion";
+import { ActionableAccordion } from "./actionable-accordion";
 
 const meta = {
-  title: "Patterns/RelationAccordion",
-  component: RelationAccordion,
+  title: "Patterns/ActionableAccordion",
+  component: ActionableAccordion,
   tags: ["autodocs"],
-} satisfies Meta<typeof RelationAccordion>;
+} satisfies Meta<typeof ActionableAccordion>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -38,8 +38,8 @@ export const Rows: Story = {
   },
   render: (args) => (
     <div className="rounded-xl border">
-      <RelationAccordion {...args} />
-      <RelationAccordion {...args} title="Suppliers" />
+      <ActionableAccordion {...args} />
+      <ActionableAccordion {...args} title="Suppliers" />
     </div>
   ),
 };

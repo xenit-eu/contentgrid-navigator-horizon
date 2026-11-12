@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { LinkBreakIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button } from "../../primitives/button";
 import { CountIndicatorChip } from "../../primitives/count-indicator-chip";
-import { RelationAccordion } from "../relation-accordion/relation-accordion";
+import { ActionableAccordion } from "../actionable-accordion/actionable-accordion";
 import { FieldMessage, RequiredMarker } from "./field-shell";
 
 export interface RelationToManyRendererProps {
@@ -23,7 +23,7 @@ export interface RelationToManyRendererProps {
 }
 
 /**
- * A to-many relation field: a `RelationAccordion` (count chip + label, "Link" and "Unlink all" actions)
+ * A to-many relation field: a `ActionableAccordion` (count chip + label, "Link" and "Unlink all" actions)
  * around the caller's table of linked items — legacy `RelationCandidateTable`.
  */
 export function RelationToManyRenderer({
@@ -40,7 +40,7 @@ export function RelationToManyRenderer({
 }: Readonly<RelationToManyRendererProps>) {
   return (
     <div className="space-y-1.5">
-      <RelationAccordion
+      <ActionableAccordion
         title={
           <span className="inline-flex items-center gap-2">
             <CountIndicatorChip variant="solid" count={count} />
@@ -74,7 +74,7 @@ export function RelationToManyRenderer({
         }
       >
         {children}
-      </RelationAccordion>
+      </ActionableAccordion>
 
       <FieldMessage name={name} description={description} error={error} />
     </div>

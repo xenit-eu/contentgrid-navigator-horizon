@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { ClockCounterClockwiseIcon, ListBulletsIcon } from "@phosphor-icons/react";
 import type { EntityItem, ProfileEntity } from "@contentgrid/navigator-data";
-import { RelationAccordion } from "@contentgrid/ui";
+import { ActionableAccordion } from "@contentgrid/ui";
 import { EditableEntityItemAttributes } from "./attributes/editable-entity-item-attributes";
 import { EntityItemAuditTrail, hasAuditTrail } from "./attributes/entity-item-attributes";
 import { CancelEditEntityItemButton, EditEntityItemButton } from "./edit/edit-entity-item-button";
@@ -75,7 +75,7 @@ export function EntityItemSections({
   const editFormRef = useRef<EditEntityItemFormHandle>(null);
   const attributesOpen = state.openProps(ATTRIBUTES_SECTION, true);
   const attributes = (
-    <RelationAccordion
+    <ActionableAccordion
       title={
         <span className="inline-flex items-center gap-2">
           <ListBulletsIcon className="size-4 text-muted-foreground" aria-hidden />
@@ -115,7 +115,7 @@ export function EntityItemSections({
         auditTrail={false}
         editFormRef={editFormRef}
       />
-    </RelationAccordion>
+    </ActionableAccordion>
   );
   const relations = (
     <>
@@ -159,7 +159,7 @@ export function EntityItemSections({
     </>
   );
   const audit = hasAuditTrail(item) && (
-    <RelationAccordion
+    <ActionableAccordion
       title={
         <span className="inline-flex items-center gap-2">
           <ClockCounterClockwiseIcon className="size-4 text-muted-foreground" aria-hidden />
@@ -170,7 +170,7 @@ export function EntityItemSections({
       {...state.openProps(AUDIT_SECTION, true)}
     >
       <EntityItemAuditTrail item={item} />
-    </RelationAccordion>
+    </ActionableAccordion>
   );
 
   if (show === "details") {

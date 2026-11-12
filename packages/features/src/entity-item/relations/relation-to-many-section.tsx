@@ -18,6 +18,7 @@ import {
   useUnlinkRelation,
 } from "@contentgrid/navigator-data";
 import {
+  ActionableAccordion,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,7 +31,6 @@ import {
   CountIndicatorChip,
   RecordRowAction,
   RecordRowConfirmAction,
-  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
 import { EntityItemCollectionTable, EntityItemCountLabel } from "../../entity-item-collection";
@@ -160,7 +160,7 @@ export function RelationToManySection({
 
   return (
     <>
-      <RelationAccordion
+      <ActionableAccordion
         variant={variant}
         open={accordionOpen}
         onOpenChange={setAccordionOpen}
@@ -282,7 +282,7 @@ export function RelationToManySection({
               renderItemActions={renderItemActions}
             />
           )}
-      </RelationAccordion>
+      </ActionableAccordion>
       {canUnlinkAll && (
         <AlertDialog open={confirmUnlinkAll} onOpenChange={setConfirmUnlinkAll}>
           <AlertDialogContent size="sm">
