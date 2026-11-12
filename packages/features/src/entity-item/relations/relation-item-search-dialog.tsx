@@ -55,7 +55,9 @@ export function RelationItemSearchDialog({
 }: Readonly<RelationItemSearchProps & { open: boolean; onOpenChange: (open: boolean) => void }>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl">
+      {/* A fixed height, so the dialog stays put while searching: the results fill what the
+          header, search bar and selection bar leave, and scroll inside it. */}
+      <DialogContent className="flex h-[90vh] flex-col sm:max-w-6xl">
         <RelationItemSearch {...props} />
       </DialogContent>
     </Dialog>
@@ -148,15 +150,16 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
         </>
       )}
 
-      {collection.isPending && <Skeleton className="h-40 w-full rounded-md" />}
-      {collection.isError && <ProblemAlert model={toProblemDisplayModel(collection.error)} />}
-      {collection.isSuccess && (
-        // `min-w-0` lets this grid item shrink so the table scrolls instead of overflowing.
-        <div className="min-w-0">
+      {/* `min-h-0`/`min-w-0` let this flex item shrink, so the table scrolls instead of
+          overflowing the dialog. */}
+      <div className="min-h-0 min-w-0 flex-1">
+        {collection.isPending && <Skeleton className="h-full w-full rounded-md" />}
+        {collection.isError && <ProblemAlert model={toProblemDisplayModel(collection.error)} />}
+        {collection.isSuccess && (
           <EntityItemCollectionTable
             profile={targetProfile}
             collection={collection.data}
-            className="max-h-112"
+            className="h-full"
             showRowActions={false}
             onPageChange={setPageUrl}
             {...tableProps}
@@ -167,8 +170,8 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
                 }
               : { onEntityItemClick: selection.isLinking ? undefined : selection.onSelect })}
           />
-        </div>
-      )}
+        )}
+      </div>
       {filterDialog}
     </>
   );
