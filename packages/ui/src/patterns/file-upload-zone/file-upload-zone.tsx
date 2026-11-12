@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CloudArrowUpIcon as CloudArrowUp,
   EyeIcon as Eye,
-  FileIcon as FileGlyph,
+  FileTextIcon as FileText,
   UploadSimpleIcon as UploadSimple,
   XIcon as X,
 } from "@phosphor-icons/react";
@@ -105,8 +105,8 @@ function SelectedFile({
           previewed && "border-primary bg-selected",
         )}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-          <FileGlyph className="size-5 text-muted-foreground" aria-hidden />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <FileText className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm leading-5 font-medium" title={file.name}>
