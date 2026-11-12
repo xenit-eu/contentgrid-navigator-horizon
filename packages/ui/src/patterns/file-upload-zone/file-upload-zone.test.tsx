@@ -166,6 +166,18 @@ describe("FileUploadZone — file selected view", () => {
     expect(screen.getByText("Uploading… 99%")).toBeInTheDocument();
   });
 
+  it("shows the compact card's size and type, and the upload progress in their place while uploading", () => {
+    const file = makeFile("report.pdf", "application/pdf", 2048);
+    const { rerender } = render(<FileUploadZone file={file} onFileChange={vi.fn()} compact />);
+    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("· application/pdf")).toBeInTheDocument();
+
+    rerender(<FileUploadZone file={file} onFileChange={vi.fn()} compact uploadProgress={42} />);
+    expect(screen.getByText("Uploading… 42%")).toBeInTheDocument();
+    expect(screen.queryByText("2.0 KB")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
+  });
+
   it("renders image preview for image files", () => {
     const file = makeFile("photo.png", "image/png");
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
