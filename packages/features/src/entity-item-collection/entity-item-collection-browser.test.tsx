@@ -9,10 +9,10 @@
  */
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
@@ -190,7 +190,10 @@ function renderBrowser(props: {
     );
   }
 
-  return render(<EntityItemCollectionBrowser {...props} />, { wrapper: Wrapper });
+  return {
+    ...render(<EntityItemCollectionBrowser {...props} />, { wrapper: Wrapper }),
+    queryClient,
+  };
 }
 
 describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () => {
@@ -453,5 +456,200 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     await user.click(screen.getByRole("button", { name: /clear all/i }));
 
     expect(onFiltersChange).toHaveBeenCalledWith({});
+  });
+});
+
+describe("EntityItemCollectionBrowser — item preview", () => {
+  // The listed items, filtered by `code~prefix`; a DELETE removes one.
+  let items: { id: string; code: string }[];
+
+  beforeEach(() => {
+    items = [
+      { id: "item-0", code: "ABC-0" },
+      { id: "item-1", code: "XYZ-1" },
+    ];
+    server.use(
+      // The pane loads the profiles its relations link to; this entity has no relations.
+      http.get(PROFILE_URL, () => HttpResponse.json({ _links: { self: { href: PROFILE_URL } } })),
+      http.get(COLLECTION_URL, ({ request }) => {
+        const prefix = new URL(request.url).searchParams.get("code~prefix");
+        const shown = items.filter((item) => !prefix || item.code.startsWith(prefix));
+        return HttpResponse.json({
+          _embedded: {
+            item: shown.map((item) => {
+              const href = `${COLLECTION_URL}/${item.id}`;
+              return {
+                ...item,
+                _links: { self: { href } },
+                _templates: { delete: { method: "DELETE", target: href, properties: [] } },
+              };
+            }),
+          },
+          _links: { self: { href: COLLECTION_URL } },
+          page: { size: shown.length, total_items_exact: shown.length },
+        });
+      }),
+      http.delete(`${COLLECTION_URL}/:id`, ({ params }) => {
+        items = items.filter((item) => item.id !== params.id);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+  });
+
+  // jsdom lays nothing out, so every element is 0 px wide and the browser is narrow. This makes it
+  // `wide` (at least `--container-side-by-side`) or not, and `resize` changes it the way resizing
+  // the window or closing the sidebar would.
+  function stubWidth(wide: boolean) {
+    let width = wide ? 880 : 879;
+    const callbacks = new Set<ResizeObserverCallback>();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private readonly callback: ResizeObserverCallback) {}
+        observe() {
+          callbacks.add(this.callback);
+        }
+        unobserve() {}
+        disconnect() {
+          callbacks.delete(this.callback);
+        }
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
+    // jsdom has no default font size in pixels, as a browser has.
+    document.documentElement.style.fontSize = "16px";
+    document.documentElement.style.setProperty("--container-side-by-side", "55rem");
+    return {
+      resize(toWide: boolean) {
+        width = toWide ? 880 : 879;
+        act(() => callbacks.forEach((callback) => callback([], {} as ResizeObserver)));
+      },
+    };
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.documentElement.style.removeProperty("font-size");
+    document.documentElement.style.removeProperty("--container-side-by-side");
+  });
+
+  async function findRow(code: string) {
+    // The code shows in both the reference and the Code column.
+    // The collection table is the first; the pane's attributes may add another.
+    const [table] = await screen.findAllByRole("table");
+    const [cell] = await within(table).findAllByText(code);
+    return cell.closest<HTMLElement>('[role="row"]')!;
+  }
+
+  it("previews a clicked row in a dialog when narrow, and gives focus back to the row on Escape", async () => {
+    stubWidth(false);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    const row = await findRow("ABC-0");
+    await user.click(row);
+    expect(within(await screen.findByRole("dialog")).getByRole("region")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(row).toHaveFocus();
+  });
+
+  it("previews a row beside the table when wide, marks it current, and gives focus back on Close", async () => {
+    stubWidth(true);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    const row = await findRow("ABC-0");
+    row.focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("region")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(row).toHaveAttribute("aria-current", "true");
+    // Focus stays on the row, so the next row is one Tab away.
+    expect(row).toHaveFocus();
+
+    // By keyboard: in jsdom every element is at 0,0, so a pointer press counts as one on the
+    // resize handle, which then takes focus.
+    within(screen.getByRole("region")).getByRole("button", { name: "Close" }).focus();
+    await user.keyboard("{Enter}");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(row).not.toHaveAttribute("aria-current");
+    expect(row).toHaveFocus();
+  });
+
+  it("closes the preview when the width crosses the side-by-side width", async () => {
+    const width = stubWidth(true);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    await user.click(await findRow("ABC-0"));
+    expect(await screen.findByRole("region")).toBeInTheDocument();
+
+    width.resize(false);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the pane when a filter drops the previewed item, and keeps it when the item still matches", async () => {
+    stubWidth(true);
+    const user = userEvent.setup();
+    const profile = makeItemProfile();
+    const { rerender } = renderBrowser({ profile });
+
+    await user.click(await findRow("ABC-0"));
+    expect(await screen.findByRole("region")).toBeInTheDocument();
+
+    rerender(<EntityItemCollectionBrowser profile={profile} filters={{ "code~prefix": "ABC" }} />);
+    expect(await screen.findByText((text) => text.endsWith("of 1 items"))).toBeInTheDocument();
+    expect(screen.getByRole("region")).toBeInTheDocument();
+
+    rerender(<EntityItemCollectionBrowser profile={profile} filters={{ "code~prefix": "XYZ" }} />);
+    expect(await findRow("XYZ-1")).toBeInTheDocument();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+
+  it("shows the item's new values after a refetch, and closes once a refetch no longer lists it", async () => {
+    stubWidth(true);
+    const user = userEvent.setup();
+    const { queryClient } = renderBrowser({ profile: makeItemProfile() });
+
+    await user.click(await findRow("ABC-0"));
+    const pane = await screen.findByRole("region");
+
+    // Edited elsewhere.
+    items[0] = { id: "item-0", code: "ABC-0-edited" };
+    await act(() => queryClient.invalidateQueries());
+    expect(await within(pane).findAllByText("ABC-0-edited")).not.toHaveLength(0);
+
+    // Deleted elsewhere.
+    items = items.slice(1);
+    await act(() => queryClient.invalidateQueries());
+    await findRow("XYZ-1");
+    expect(screen.queryByText("ABC-0-edited")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+
+  it("closes the pane when its item is deleted from its row, not when another item is", async () => {
+    stubWidth(true);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    async function deleteFromRow(code: string) {
+      await user.click(within(await findRow(code)).getByRole("button", { name: "Delete" }));
+      const confirm = await screen.findByRole("alertdialog");
+      await user.click(within(confirm).getByRole("button", { name: "Delete" }));
+      await screen.findByText((text) => text.endsWith(`of ${items.length} items`));
+    }
+
+    await user.click(await findRow("ABC-0"));
+    expect(await screen.findByRole("region")).toBeInTheDocument();
+
+    await deleteFromRow("XYZ-1");
+    expect(screen.getByRole("region")).toBeInTheDocument();
+
+    await deleteFromRow("ABC-0");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 });

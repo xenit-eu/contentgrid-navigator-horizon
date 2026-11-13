@@ -7,8 +7,8 @@ import {
   useDeleteEntityItem,
 } from "@contentgrid/navigator-data";
 import {
-  Button,
   RecordDataTable,
+  RecordRowAction,
   RecordRowConfirmAction,
   type RecordTableCell,
   RecordTableRow,
@@ -24,8 +24,12 @@ import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
   readonly collection: EntityItemCollection;
-  /** Fired when a row (entity item) is clicked, or the row's View action is used; receives the item. */
+  /** Fired when a row (entity item) is clicked, or Enter/Space is pressed on it; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** Fired by the default View row action, which is shown only with it; receives that row's item. */
+  readonly onEntityItemOpen?: (item: EntityItem) => void;
+  /** The item to mark as the current row, e.g. the one previewed beside the table. */
+  readonly currentItem?: EntityItem;
   /**
    * Fired when the user navigates to another page; receives the target page's
    * href (`collection.nextHref` / `collection.prevHref`). Absent = pagination
@@ -103,6 +107,8 @@ export function EntityItemCollectionTable({
   profile,
   collection,
   onEntityItemClick,
+  onEntityItemOpen,
+  currentItem,
   onPageChange,
   currentSort,
   onSort,
@@ -216,6 +222,7 @@ export function EntityItemCollectionTable({
               key={item.id}
               cells={cells}
               selected={selectedIds.has(item.id)}
+              current={item.id === currentItem?.id}
               onSelectChange={
                 onSelectionChange ? (checked) => toggleSelected([item], checked) : undefined
               }
@@ -231,17 +238,13 @@ export function EntityItemCollectionTable({
                   renderRowActions(item)
                 ) : (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEntityItemClick?.(item);
-                      }}
-                    >
-                      <Eye className="size-4" aria-hidden />
-                      <span className="sr-only">View</span>
-                    </Button>
+                    {onEntityItemOpen && (
+                      <RecordRowAction
+                        label="View"
+                        icon={<Eye className="size-4" aria-hidden />}
+                        onClick={() => onEntityItemOpen(item)}
+                      />
+                    )}
                     {item.canDelete && (
                       <RecordRowConfirmAction
                         label="Delete"
