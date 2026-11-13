@@ -90,8 +90,10 @@ export function EntityItemAttributes({ item }: Readonly<EntityItemAttributesProp
             {attributes.map(({ attr, label }) => (
               <TableRow key={attr.value.name}>
                 <TableCell className="text-muted-foreground font-medium">{label}</TableCell>
-                <TableCell className="w-full">
-                  <AttributeValueRenderer attr={attr} variant="table" />
+                {/* `max-w-0` keeps the column to the space left, so a long value wraps
+                    instead of widening the table. */}
+                <TableCell className="w-full max-w-0">
+                  <AttributeValueRenderer attr={attr} variant="table" wrap />
                 </TableCell>
               </TableRow>
             ))}

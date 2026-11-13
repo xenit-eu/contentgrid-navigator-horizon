@@ -4,6 +4,8 @@ import { AttributeValue } from "@contentgrid/ui";
 export interface ContentAttributeRendererProps {
   readonly metadata: { readonly filename: string | null; readonly length: number } | null;
   readonly icon?: ReactNode;
+  /** Wrap a long file name onto more lines instead of cutting it off with an ellipsis. */
+  readonly wrap?: boolean;
 }
 
 const KB = 1024;
@@ -20,14 +22,20 @@ function formatFileSize(bytes: number): string {
 export function ContentAttributeRenderer({
   metadata,
   icon,
+  wrap,
 }: Readonly<ContentAttributeRendererProps>) {
   if (metadata == null) {
     return <AttributeValue />;
   }
 
   const text = `${metadata.filename ?? "Untitled"} · ${formatFileSize(metadata.length)}`;
+  // When a long file name is cut off with an ellipsis, the title shows the whole name.
   const value = (
-    <AttributeValue className="text-xs text-muted-foreground/80">{text}</AttributeValue>
+    <span className="block min-w-0" title={text}>
+      <AttributeValue wrap={wrap} className="text-xs text-muted-foreground/80">
+        {text}
+      </AttributeValue>
+    </span>
   );
 
   if (!icon) {

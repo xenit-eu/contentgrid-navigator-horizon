@@ -370,6 +370,13 @@ describe("RelationToManySection", () => {
     expect(onItemClick).toHaveBeenCalledWith("invoice", "42");
   });
 
+  it("offers no Details action without onItemClick", () => {
+    mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("42", 10)]) });
+    renderSection({ relation: makeRelation() });
+
+    expect(screen.queryByRole("button", { name: "Details" })).not.toBeInTheDocument();
+  });
+
   it("explains why linked items can't be shown when the target profile is unresolved", () => {
     mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("42", 10)]) });
     renderSection({ relation: makeRelation({ targetProfile: undefined }) });

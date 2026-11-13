@@ -76,7 +76,7 @@ export function ImageVideoViewer({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ContentPreviewToolbar start={toolbarStart} end={toolbarButtons} />
-      <div className="flex min-h-0 flex-1 items-start overflow-auto p-4">
+      <div className="scrollbar-subtle flex min-h-0 flex-1 items-start overflow-auto p-4">
         {url !== null && source.kind === "image" && (
           <img
             src={url}

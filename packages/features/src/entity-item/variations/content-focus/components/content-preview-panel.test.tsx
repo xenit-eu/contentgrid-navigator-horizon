@@ -219,7 +219,7 @@ describe("ContentPreviewPanel", () => {
     expect(document.querySelector('input[type="file"]')).toBeInTheDocument();
   });
 
-  it("shows only 'No file', without a drop zone, when the user may not upload", () => {
+  it("shows only the no-file caption, without a drop zone, when the user may not upload", () => {
     const entityItem = makeStubEntityItem({
       attributeName: "document",
       metadata: null,
@@ -229,7 +229,18 @@ describe("ContentPreviewPanel", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText("No file uploaded yet")).toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  });
+
+  it("offers no drop zone with allowUpload={false}, even when the user may upload", () => {
+    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
+    render(
+      <ContentPreviewPanel entityItem={entityItem} attributeName="document" allowUpload={false} />,
+      { wrapper: makeWrapper() },
+    );
+
+    expect(screen.getByText("No file uploaded yet")).toBeInTheDocument();
     expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
@@ -296,7 +307,7 @@ describe("ContentPreviewPanel", () => {
     rerender(<ContentPreviewPanel entityItem={entityItem} attributeName="photo" />);
 
     expect(screen.queryByText(/Uploading…/)).not.toBeInTheDocument();
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText("No file uploaded yet")).toBeInTheDocument();
     expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
