@@ -37,76 +37,40 @@ viewing ──Edit──▶ editing ──Save──▶ saving ──204 + item 
 
 On 412 the form shows "This item has been updated by someone else" (`VersionConflictAlert`) and disables Save. Refresh refetches the item and the view makes the refetched version the edited one; it has a new ETag, so the form opens again on it and the next save is conditional on that ETag. The user's unsaved input is not kept.
 
-## PR 2 — file changes (outline; to be rewritten against `hal-forms` when PR 2 starts)
+## PR 2 — file changes
 
-### Edit session
+### Pending file changes
 
-Extends the PR 1 state with pending file changes. Exists only while edit mode is open.
+`ContentChanges` (attribute name → `File` to store, or `null` to remove), held by
+`useEntityItemContext` so the form and the content-focus preview read the same map.
 
-| Field            | Type                                     | Notes                                                                                                |
-| ---------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `baseItem`       | `EntityItem`                             | The item version the form was opened on (or reloaded to after a conflict). Its ETag guards the save. |
-| `fields`         | `HalFormsField[]`                        | From `resolveHalFormsFields(baseItem.updateTemplate)`.                                               |
-| `initialValues`  | `FieldValueMap`                          | `baseItem` body decoded through the update template codec.                                           |
-| `values`         | `FieldValueMap`                          | Current input (form state hook).                                                                     |
-| `dirtyFields`    | `Set<string>`                            | Properties whose value differs from `initialValues`.                                                 |
-| `pendingFiles`   | `Map<attributeName, PendingFileChange>`  | At most one entry per content attribute.                                                             |
-| `status`         | `EditStatus`                             | See state transitions.                                                                               |
-| `problem`        | `ProblemDisplayModel \| null`            | Last non-field problem, rendered by `ProblemAlert`.                                                  |
-| `externalErrors` | `Record<string, FieldValidationError[]>` | Server field errors (`toServerFieldErrors(getValidationFieldErrors(error))`).                        |
+- Picking a file sets the entry to the `File`. Removing means "no file here": `null` when the
+  attribute holds a stored file (removed on Save), else the entry is deleted. Cancel brings the
+  stored file back (FR-008, FR-009).
+- The attribute's `<attr>.filename`/`<attr>.mimetype` fields follow the entry: the picked file's
+  name and type, empty for a removed file, the stored values once the entry is gone (FR-010).
+- Opening or closing the form clears the map; `refresh` keeps it, and the reopened form shows the
+  kept entries in those fields.
+- While editing, the content-focus preview shows the picked file, or a drop zone that picks into
+  the map when the attribute has no file in the form; picking a file brings its attribute into the
+  preview (FR-011).
+- `isDirty = form isDirty || map not empty`.
 
-Derived: `isDirty = dirtyFields.size > 0 || pendingFiles.size > 0`.
+### Save
 
-#### Validation rules
+1. **Metadata**: `useUpdateEntityItem` PUT with `If-Match` = the item's ETag. For every attribute in
+   the map, `<attr>.filename`/`<attr>.mimetype` are sent with the stored values (FR-014). A file
+   changed since the form opened changed the item's ETag too, so this fails with 412 before any
+   file is sent. With files to follow it doesn't refresh the cache (`invalidateOnSuccess: false`):
+   the file step refreshes the item and its lists once, at the end.
+2. **Files**: `useApplyContentChanges` with the map and each picked file's filename field value,
+   which the file is stored under (FR-015). Each change reads the content's own ETag with a HEAD;
+   removing a file that is already gone sends nothing.
+3. **Result**: no failure → toast, form closes. Failures → one error toast per failed attribute,
+   saying the other changes were saved; the map keeps only the failed entries, and `refresh` moves the form onto the latest item; Save
+   then sends only those again (FR-024).
 
-- Required properties must be non-empty before a request is sent (same rules as the create form).
-- Allowed-values properties: a stored value outside the allowed list is kept as is and not rejected on the client (spec edge case).
-- A content attribute can only get a pending `replace` when `canUploadContent(attr)`, and a pending `remove` when `canDeleteContent(attr)` and it currently holds a file.
+### Limits
 
-### Pending file change
-
-| Field           | Type                    | Notes                                                            |
-| --------------- | ----------------------- | ---------------------------------------------------------------- |
-| `attributeName` | `string`                | Content attribute (`attr.isContent`).                            |
-| `action`        | `"replace" \| "remove"` |                                                                  |
-| `file`          | `File` (replace only)   | Never sent before Save (FR-009).                                 |
-| `step`          | `FileStepState`         | `idle` → `uploading(progress 0–1)` → `done` \| `failed(problem)` |
-
-Rules:
-
-- Picking a file sets `<attr>.filename` and `<attr>.mimetype` in `values` to the file's name and type (media type left unchanged when the browser reports none). Withdrawing the change restores them from `initialValues` (FR-010).
-- A newer pick or remove replaces the entry; withdrawing deletes it.
-- Cancel clears the map; nothing is uploaded.
-
-### Save plan
-
-Built from the session when the user saves; executed by `useSaveEntityItemEdit` (D1).
-
-1. **Metadata step**: `values` with, for each attribute in `pendingFiles`, `<attr>.filename`/`<attr>.mimetype` reset to the stored file's values (FR-014), encoded by `baseItem.editEntityRequest`, sent with `If-Match: baseItem.etag`. Returns `item₁`.
-2. **File steps**, in profile order of the attributes: `replace` → `item₁.uploadContentRequest(attr, file, { filename: values["<attr>.filename"] })`; `remove` → `item₁.deleteContentRequest(attr)`. Each step uses the ETag of the item returned by the previous step (after each file step the item is refetched to get the new ETag).
-3. **Reload**: final item fetch; cache updated (`entityItem.byUrl`), collections invalidated.
-
-Result: `{ item, failedFileSteps: attributeName[] }`. A failed metadata step rejects (nothing else runs). A failed file step is recorded and the remaining file steps still run (each file is reported separately — spec edge case); the mutation resolves with the failures listed.
-
-### State transitions (`EditStatus`)
-
-```text
-viewing ──Edit──▶ editing ──Save──▶ saving ──ok, no failures──▶ viewing (+ toast)
-                    ▲  │               │
-                    │  └─Cancel────────┼──(dirty? confirm)──▶ viewing
-                    │                  ├─400 validation──▶ editing (field errors)
-                    │                  ├─412 conflict──▶ reloading ──▶ editing (merged)
-                    │                  ├─403──▶ editing (not permitted alert)
-                    │                  ├─404──▶ notFound (only Leave)
-                    │                  ├─network/other──▶ editing (ProblemAlert)
-                    │                  └─file step failed──▶ editing (file flagged, retry)
-                    └──────────────Retry file──────────────┘
-```
-
-- `saving` disables Save and shows progress (FR-019).
-- Retry from a partial failure runs only the failed file steps, starting from the latest item and its ETag (FR-024).
-- Leaving the page while `isDirty` asks for confirmation (FR-020).
-
-### Conflict merge (D11)
-
-As in PR 1; pending file changes are kept.
+- FR-015: no upload progress; Save shows "Saving…" until every change is done.
+- FR-024: a failed change is reported in a toast, not on its field.

@@ -75,17 +75,17 @@ D3–D6 below were written before the form stack moved to `hal-forms`; for PR 1 
 
 Format per `/speckit-plan`: decision, rationale, alternatives considered.
 
-### D1 — One save orchestration hook in `navigator-data`
+### D1 — Metadata PUT, then a separate hook for the file changes
 
-- **Decision**: add `useSaveEntityItemEdit(entityItem)` in `navigator-data/src/hooks/item/`. One mutation runs the whole save: metadata PUT, then each pending file step in order, then a final item fetch. Every step uses the ETag returned by the step before it.
-- **Rationale**: `useUploadContent` sends `If-Match` from the `EntityItem` it was created with (`uploadContentRequest`, `entity-item.ts:438`). After the metadata PUT the item has a new ETag, so a second hook bound to the old item would fail every upload with 412. Chaining inside one mutation passes the fresh `EntityItem` from step to step. It also keeps HAL knowledge (request building, ETags, cache updates) in the data layer (constitution III).
-- **Alternatives**: compose `useUpdateEntityItem` + `useUploadContent` in the feature — rejected, stale ETag on every upload after a metadata change. Let the server skip `If-Match` on content PUT — rejected, constitution I requires it on every mutation.
+- **Decision**: the update form saves the metadata with `useUpdateEntityItem`, then applies the file changes with `useApplyContentChanges(entityItem)`. Each content PUT/DELETE is conditional on the content's own ETag, read with a HEAD on the `cg:content` link just before it.
+- **Rationale**: content is its own conditional-request resource; the item's ETag is not valid for it, so chaining item ETags from step to step does not apply. The metadata PUT, conditional on the item's ETag, catches a file that changed since the form was opened (the item's ETag changes with its file); the HEAD covers the short gap after it. A failed file change does not stop the others and is reported per attribute.
+- **Alternatives**: one hook running metadata and files — rejected, it duplicates `useUpdateEntityItem` and gains nothing, since the file changes do not use the item's ETag. Unconditional content requests — rejected, constitution I requires conditional mutations.
 
 ### D2 — Removing a file uses a new `deleteContentRequest`
 
-- **Decision**: add `EntityItem.deleteContentRequest(attributeName)` and `canDeleteContent(attributeName)` (link presence), used only by D1. DELETE on the `cg:content` link with `If-Match`, sent with `contentFetch`.
-- **Rationale**: the original Navigator removes a file with DELETE on the content link (`performFileAction`). No template exists for it, exactly as for content PUT/GET.
-- **Alternatives**: clear the file by sending empty `<attr>.filename`/`<attr>.mimetype` in the metadata PUT — rejected, it does not remove the stored bytes and the server behaviour is undocumented. **Constitution impact**: principle I names content PUT/GET as the only binary exception; this extends it to DELETE, so the plan's Complexity Tracking justifies it, and the constitution gets a matching amendment in the implementation PR that adds the request.
+- **Decision**: add `EntityItem.deleteContentRequest(attributeName, contentEtag)`: DELETE on the `cg:content` link with `If-Match` carrying the content's ETag, as `uploadContentRequest` does, sent with `contentFetch`. The link's presence gates it, as for upload, so no separate `canDeleteContent`.
+- **Rationale**: removing a file is a DELETE on the content link. No template exists for it, exactly as for content PUT/GET.
+- **Alternatives**: clear the file by sending empty `<attr>.filename`/`<attr>.mimetype` in the metadata PUT — rejected, it does not remove the stored bytes and the server behaviour is undocumented. **Constitution impact**: principle I's binary-content exception now names HEAD and DELETE too (1.11.0).
 
 ### D3 — `UpdateHalFormTemplate` accessor for the item `default` template
 

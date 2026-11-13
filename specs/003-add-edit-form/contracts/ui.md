@@ -1,42 +1,27 @@
 # Contract: `@contentgrid/ui` patterns
 
-PR 2 only. PR 1 adds no `ui` pattern: the edit form uses the create form's Save/Cancel row.
+Plain scalar props only — no `EntityItem` or HAL types (constitution III).
 
-Plain scalar props only — no `FieldDescriptor`, `EntityItem` or HAL types (constitution III). Each pattern ships a story with play tests and Playwright snapshots (light and dark).
-
-## `EditActionBar` (patterns/edit-action-bar/) — new
+## `FileUploadZone` (patterns/file-upload-zone/)
 
 ```ts
-interface EditActionBarProps {
-  readonly onSave: () => void;
-  readonly onCancel: () => void;
-  readonly saving?: boolean; // disables Save, shows spinner (FR-019)
-  readonly dirty?: boolean; // shows "Unsaved changes" (FR-003b)
-  readonly saveLabel?: string; // default "Save"
-  readonly cancelLabel?: string; // default "Cancel"
+/** What the zone shows of a file; a `File` matches it. */
+interface FileSummary {
+  readonly name: string;
+  readonly size: number; // bytes
+  readonly type: string; // empty when unknown
+}
+
+interface FileUploadZoneProps {
+  file: FileSummary | null; // a picked `File` or a stored file
+  // other props unchanged
 }
 ```
 
-Sticky to the bottom of its scroll container; keyboard order Cancel → Save; Save is the submit button of the enclosing form.
+The selected-file card shows a type icon (image, video, PDF, other) in a tile, or a thumbnail for a
+picked image; a stored file has no thumbnail, its bytes are not loaded. Story: `StoredFile`.
 
-## `FileRenderer` (patterns/form-renderers/) — extended
+## `FileRenderer` (patterns/form-renderers/)
 
-```ts
-interface FileRendererProps {
-  // existing: name, label, required, description, value, onChange, error, …
-  readonly current?: { filename: string | null; mimetype: string | null } | null;
-  readonly pending?: { kind: "replace"; filename: string; progress?: number } | { kind: "remove" };
-  readonly failureMessage?: string;
-  readonly filename?: string; // editable filename input (update form)
-  readonly onFilenameChange?: (filename: string) => void;
-  readonly onRemove?: () => void;
-  readonly onUndo?: () => void; // withdraw pending change
-  readonly onRetry?: () => void;
-}
-```
-
-States (one story each): empty, current file, replace pending, remove pending, uploading with progress, failed with retry, disabled (no permission).
-
-## Motion
-
-View ↔ edit uses a 150–200 ms opacity/height transition via existing tokens; disabled under `prefers-reduced-motion` (FR-003a).
+`value: FileSummary | undefined` (a picked `File` or a stored file); `onChange` receives the picked
+`File`, or `undefined` when the file is removed. `hideLabel` hides the label visually (it still names the field).

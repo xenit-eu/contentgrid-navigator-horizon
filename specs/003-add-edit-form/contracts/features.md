@@ -46,89 +46,49 @@ Layered like `entity-item-create`:
 
 Template parameter widened to `CreateHalFormTemplate | UpdateHalFormTemplate | SearchHalFormTemplate`; an update template uses the create path (attributes only).
 
-## PR 2 (outline; to be rewritten against `hal-forms` when PR 2 starts)
+## PR 2
 
-Not built. Written before PR 1 moved to `hal-forms`; where it differs from PR 1 above (`EntityItemEditPanel`, `allowEdit`, Edit in the toolbar), PR 1 is current.
+### `useEntityItemContext` (entity-item/use-entity-item-context.ts)
 
-## Item views (entity-item)
+Gains `contentChanges: ContentChanges` and `setContentChanges`. Opening or closing the form and
+moving to another item clear them; `refresh` keeps them.
 
-Both views gain edit mode. The only new prop an app can pass is `allowEdit`.
+### `EditableEntityItemAttributes` / `EditEntityItemContainer` (entity-item/)
+
+Both gain `contentChanges` and `onContentChangesChange`; the variations pass the item context's
+pair.
+
+### `EditContentFields` (entity-item/edit/edit-content-fields.tsx)
 
 ```ts
-// EntityItemView and EntityItemContentFocusView
-interface EditModeProps {
-  /** Show the Edit action when the item can be updated. Default true; false for read-only embeddings (FR-002). */
-  readonly allowEdit?: boolean;
-  /** Fired after a successful save, e.g. for app-level analytics. Optional. */
-  readonly onSaved?: (target: { entityName: string; itemId: string }) => void;
+interface EditContentFieldsProps {
+  readonly item: EditableEntityItem;
+  readonly contentChanges: ContentChanges;
+  readonly onContentChange: (attributeName: string, file: File | null) => void;
+  readonly renderMetadataFields: (attributeName: string) => ReactNode;
+  readonly previewedAttributeName?: string;
+  readonly onPreview?: (attributeName: string) => void;
 }
 ```
 
-- The view adds an Edit button to its toolbar `actions` (after any app-supplied actions) when `allowEdit && entityItem.canUpdate && updateTemplate has properties`.
-- While editing, `EntityItemAttributes` is replaced by `EntityItemEditPanel`; header, relation sections and preview stay mounted.
-- The view blocks router navigation while `isDirty` (confirm dialog), using the router's blocker.
+One compact `FileRenderer` per content attribute of the item, below the template's fields: the
+picked file, else the stored one. While it shows a file, the attribute's `<attr>.filename`/
+`<attr>.mimetype` fields follow, labelled as the template gives them, all in a `Card` styled like
+the relation sections, through `renderMetadataFields` (a `HalFormsContainer` with just those
+fields); the container takes them out of the main layout (`layoutWithoutContentMetadata`). Values,
+validation and Save are unchanged. The file field shows no required asterisk: the form doesn't
+check that a file stays. In
+content focus with more than one file, the previewed file's card is highlighted, the others offer
+Preview; a picked file comes into the preview (the container calls `onPreview`). Read-only without the attribute's
+`cg:content` link. The update template has no file property, so these fields are rendered next to
+`HalFormsContainer` rather than through it; they add no field kind, `kind` switch or field-state
+hook.
 
-## `EntityItemEditPanel` (entity-item/edit/)
+### Content-focus preview
 
-```ts
-interface EntityItemEditPanelProps {
-  readonly session: EntityItemEditSession; // from useEntityItemEditSession
-}
-```
-
-Renders: "Editing <item name>" heading, `ProblemAlert` for non-field problems, one `FieldRenderer` per descriptor, `EditActionBar` pinned to the panel bottom.
-
-## `useEntityItemEditSession` (entity-item/edit/)
-
-```ts
-interface EntityItemEditSession {
-  readonly status: "editing" | "saving" | "reloading" | "notFound";
-  readonly fields: readonly FieldDescriptor[];
-  readonly form: UseEntityItemCreateFormState; // reused hook, with initialValues
-  readonly pendingFiles: ReadonlyMap<string, PendingFileChange>;
-  readonly problem: ProblemDisplayModel | null;
-  readonly isDirty: boolean;
-  pickFile(attributeName: string, file: File): void;
-  removeFile(attributeName: string): void;
-  withdrawFileChange(attributeName: string): void;
-  renameFile(attributeName: string, filename: string): void;
-  save(): void;
-  retryFailedFiles(): void;
-  cancel(): void; // caller confirms first when isDirty
-}
-
-function useEntityItemEditSession(
-  entityItem: EntityItem,
-  callbacks: { onDone: () => void },
-): EntityItemEditSession;
-```
-
-Behaviour per `data-model.md` (state transitions, conflict merge). Success toast: `"<Entity> has been successfully updated!"` via sonner.
-
-## Field descriptors (entity-item-create/model)
-
-```ts
-// field-descriptor.ts — file variant gains optional metadata (update form only)
-| ({ readonly kind: "file" } & FieldDescriptorBase & {
-    readonly multiple: boolean;
-    readonly metadata?: { readonly filenameProperty: string; readonly mimetypeProperty: string };
-  })
-
-function resolveEditFieldDescriptors(template: UpdateHalFormTemplate): FieldDescriptor[];
-```
-
-- One `file` descriptor per content attribute; its dot-notation properties are not emitted separately.
-- The HAL wire-type → descriptor mapping moves to `entity-item-create/util/` and is shared by `resolveCreateFieldDescriptors` and `resolveEditFieldDescriptors` (constitution VIII).
-
-## `FieldRenderer`
-
-New optional props, used only by the edit panel for `file` descriptors with `metadata`:
-
-```ts
-readonly currentFile?: { name: string | null; mimetype: string | null } | null;
-readonly pendingFile?: { action: "replace"; file: File; progress?: number; failed?: ProblemDisplayModel } | { action: "remove"; failed?: ProblemDisplayModel };
-readonly onPickFile?: (file: File) => void;
-readonly onRemoveFile?: () => void;
-readonly onWithdrawFileChange?: () => void;
-readonly onRenameFile?: (filename: string) => void;
-```
+While editing, `EntityItemContentFocus` shows the form's file for the previewed attribute:
+`FilePreview` for a picked file, and for no file (removed, or none stored) a filling
+`ContentPreviewFrame state="noFile"` drop zone that picks into the form through
+`withContentChange` (nothing is uploaded before Save). Otherwise `ContentPreviewPanel`. The form's
+file fields use `FileRenderer`'s compact mode; their filename and mimetype fields follow the map
+whichever side changed it.
