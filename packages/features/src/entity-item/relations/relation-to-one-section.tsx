@@ -10,6 +10,7 @@ import {
   useSetToOneRelation,
 } from "@contentgrid/navigator-data";
 import {
+  ActionableAccordion,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -20,7 +21,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
-  RelationAccordion,
   Skeleton,
 } from "@contentgrid/ui";
 import { useEntityDisplayPreferences } from "../../preferences";
@@ -31,6 +31,7 @@ import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
   RelationProblemHandlers,
+  RelationSectionDisplayProps,
 } from "./relation-handlers";
 import { RelationItemSearchDialog } from "./relation-item-search-dialog";
 import { type RelationLayout, useRelationLayout } from "./relation-layout";
@@ -42,12 +43,16 @@ export function RelationToOneSection({
   onCreateNew,
   onMissingRelationTargetClick,
   onBlindRelationOverwriteClick,
+  variant,
+  open,
+  onOpenChange,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
 }> &
+  RelationSectionDisplayProps &
   Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
   const linkedItem = useEntityItemToOneRelation(relation);
   const {
@@ -69,8 +74,11 @@ export function RelationToOneSection({
   const layout = useRelationLayout();
 
   return (
-    <RelationAccordion
+    <ActionableAccordion
       title={title}
+      variant={variant}
+      open={open}
+      onOpenChange={onOpenChange}
       actions={
         <>
           {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
@@ -151,7 +159,7 @@ export function RelationToOneSection({
           onClick={(item) => onItemClick?.(item.profileEntity.name, item.id)}
         />
       )}
-    </RelationAccordion>
+    </ActionableAccordion>
   );
 }
 

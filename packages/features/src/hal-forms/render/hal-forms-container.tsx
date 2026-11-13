@@ -92,7 +92,7 @@ export function HalFormsContainer({
  * collapse/expand together as one unit, never per-row — with the title as the toggle trigger and
  * the description rendered below it, outside the button, so it isn't part of the button's
  * accessible name; the content region points at it via `aria-describedby`, same as a described
- * row does. Expanded by default (FR-027), same as `RelationAccordion` — a search form's
+ * row does. Expanded by default (FR-027), same as `ActionableAccordion` — a search form's
  * relation-traversal sections (the only collapsible ones this feature produces, see
  * `generate-search-form-layout.ts`) must not hide an active relation filter (e.g. one applied
  * from a deep link) behind a closed header. A

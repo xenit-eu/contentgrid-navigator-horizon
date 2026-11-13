@@ -11,3 +11,12 @@ export type RelationProblemHandlers = Pick<
   ProblemAlertProps,
   "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick" | "onRequiredRelationClick"
 >;
+
+/** How a relation section presents itself; every field is optional and keeps today's default. */
+export interface RelationSectionDisplayProps {
+  /** `"card"` (default): a standalone card. `"row"`: a flat row in a list inside one card. */
+  readonly variant?: "card" | "row";
+  /** Controls whether the section is expanded; omit to let the section manage it. */
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
+}

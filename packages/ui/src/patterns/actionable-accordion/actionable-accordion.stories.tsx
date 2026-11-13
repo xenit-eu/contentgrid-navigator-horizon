@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
-import { RelationAccordion } from "./relation-accordion";
+import { ActionableAccordion } from "./actionable-accordion";
 
 const meta = {
-  title: "Patterns/RelationAccordion",
-  component: RelationAccordion,
+  title: "Patterns/ActionableAccordion",
+  component: ActionableAccordion,
   tags: ["autodocs"],
-} satisfies Meta<typeof RelationAccordion>;
+} satisfies Meta<typeof ActionableAccordion>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -28,6 +28,20 @@ export const NoActions: Story = {
     title: "Invoices",
     children: <p className="text-sm text-muted-foreground">Three linked invoices go here.</p>,
   },
+};
+
+export const Rows: Story = {
+  args: {
+    title: "Invoices",
+    variant: "row",
+    children: <p className="text-sm text-muted-foreground">Three linked invoices go here.</p>,
+  },
+  render: (args) => (
+    <div className="rounded-xl border">
+      <ActionableAccordion {...args} />
+      <ActionableAccordion {...args} title="Suppliers" />
+    </div>
+  ),
 };
 
 export const CollapseInteraction: Story = {

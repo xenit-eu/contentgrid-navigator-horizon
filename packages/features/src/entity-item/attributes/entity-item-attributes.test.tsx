@@ -9,7 +9,11 @@ import {
   ProfileAttributeType,
   type ProfileEntity,
 } from "@contentgrid/navigator-data";
-import { EntityItemAttributes } from "./entity-item-attributes";
+import {
+  EntityItemAttributes,
+  EntityItemAuditTrail,
+  hasAuditTrail,
+} from "./entity-item-attributes";
 
 function makeProfileAttribute(overrides: Partial<ProfileAttribute> = {}): ProfileAttribute {
   return {
@@ -101,6 +105,17 @@ describe("EntityItemAttributes", () => {
       />,
     );
     expect(container.querySelectorAll(".bg-muted-foreground\\/30")).toHaveLength(1);
+  });
+
+  it("leaves the timeline out when auditTrail is off", () => {
+    const item = makeItem([], {
+      createdDate: {
+        value: new EntityItemAttributePlain("createdAt", "2016-01-01T00:00:00.000Z"),
+        profileAttribute: makeProfileAttribute({ name: "createdAt", isCreatedDate: true }),
+      },
+    });
+    render(<EntityItemAttributes item={item} auditTrail={false} />);
+    expect(screen.queryByText(/^Attr: /)).not.toBeInTheDocument();
   });
 
   it("filters nested attributes out of the table", () => {
@@ -211,5 +226,26 @@ describe("EntityItemAttributes", () => {
     expect(screen.getByText("True")).toBeInTheDocument();
     expect(screen.getByText("False")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+});
+
+describe("EntityItemAuditTrail", () => {
+  it("renders the timeline on its own", () => {
+    const item = makeItem([], {
+      modifiedBy: {
+        value: new EntityItemAttributePlain("modifiedBy", "joe@example.com"),
+        profileAttribute: makeProfileAttribute({ name: "modifiedBy", isModifiedBy: true }),
+      },
+    });
+    expect(hasAuditTrail(item)).toBe(true);
+    render(<EntityItemAuditTrail item={item} />);
+    expect(screen.getByText("Attr: joe@example.com")).toBeInTheDocument();
+  });
+
+  it("renders nothing for an item without audit attributes", () => {
+    const item = makeItem([]);
+    expect(hasAuditTrail(item)).toBe(false);
+    const { container } = render(<EntityItemAuditTrail item={item} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });

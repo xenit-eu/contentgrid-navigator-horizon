@@ -1,17 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { RelationAccordion } from "./relation-accordion";
+import { ActionableAccordion } from "./actionable-accordion";
 
-function renderAccordion(overrides: Partial<Parameters<typeof RelationAccordion>[0]> = {}) {
+function renderAccordion(overrides: Partial<Parameters<typeof ActionableAccordion>[0]> = {}) {
   return render(
-    <RelationAccordion title="Invoices" {...overrides}>
+    <ActionableAccordion title="Invoices" {...overrides}>
       {overrides.children ?? <p>Invoice list</p>}
-    </RelationAccordion>,
+    </ActionableAccordion>,
   );
 }
 
-describe("RelationAccordion", () => {
+describe("ActionableAccordion", () => {
   it("renders the title and children", () => {
     renderAccordion();
     expect(screen.getByText("Invoices")).toBeInTheDocument();
