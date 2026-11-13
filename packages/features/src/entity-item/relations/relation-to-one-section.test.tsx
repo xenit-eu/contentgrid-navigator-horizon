@@ -164,7 +164,7 @@ afterEach(() => {
 describe("RelationToOneSection", () => {
   it("in a narrow pane, shows only the linked item's reference", () => {
     mockLinkedItem(makeCustomer());
-    renderSection(320);
+    renderSection(320, { onItemClick: vi.fn() });
 
     expect(screen.getByRole("button", { name: /acme corp/i })).toBeInTheDocument();
     expect(screen.queryByText("Email")).not.toBeInTheDocument();

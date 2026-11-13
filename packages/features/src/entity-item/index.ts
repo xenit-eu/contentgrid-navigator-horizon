@@ -3,6 +3,8 @@ export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
 export { RelationToManySection } from "./relations/relation-to-many-section";
+export { EntityItemRelations } from "./relations/entity-item-relations";
+export type { EntityItemRelationsProps } from "./relations/entity-item-relations";
 export { RelationItemSearchDialog } from "./relations/relation-item-search-dialog";
 export type {
   RelationItemClickHandler,

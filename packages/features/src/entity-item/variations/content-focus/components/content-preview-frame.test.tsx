@@ -21,7 +21,7 @@ describe("ContentPreviewFrame", () => {
       />,
     );
 
-    expect(screen.queryByText("No file")).not.toBeInTheDocument();
+    expect(screen.queryByText("No file uploaded yet")).not.toBeInTheDocument();
     expect(screen.getByText(/Drop a file here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("ContentPreviewFrame", () => {
   it("renders only the caption for noFile when no upload handler is given", () => {
     render(<ContentPreviewFrame state="noFile" />);
 
-    expect(screen.getByText("No file")).toBeInTheDocument();
+    expect(screen.getByText("No file uploaded yet")).toBeInTheDocument();
     expect(screen.queryByText(/Drag & drop a file/)).not.toBeInTheDocument();
     expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
