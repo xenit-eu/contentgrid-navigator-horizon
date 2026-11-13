@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo } from "react";
 import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import {
   type EntityItem,
   type EntityItemCollection,
@@ -20,6 +21,8 @@ import {
   TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
 } from "../entity-item";
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
+import { notifyProblem } from "../problem-details";
+import { capitalizeFirstLetter } from "../string-utils";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
@@ -145,6 +148,17 @@ export function EntityItemCollectionTable({
 
   const deleteMutation = useDeleteEntityItem();
 
+  function deleteItem(item: EntityItem) {
+    deleteMutation.mutate(item, {
+      onSuccess: () => {
+        toast.success(
+          `${capitalizeFirstLetter(profile.singularName)} has been successfully deleted!`,
+        );
+      },
+      onError: (error) => notifyProblem(error),
+    });
+  }
+
   const selectedCount = collection.items.filter((item) => selectedIds.has(item.id)).length;
   const selectionState: boolean | "indeterminate" =
     selectedCount === 0
@@ -249,7 +263,7 @@ export function EntityItemCollectionTable({
                         title="Delete item"
                         description={`Are you sure you want to delete this ${profile.singularName.toLowerCase()}? This action cannot be undone.`}
                         disabled={deleteMutation.isPending}
-                        onConfirm={() => deleteMutation.mutate(item)}
+                        onConfirm={() => deleteItem(item)}
                       />
                     )}
                   </>
