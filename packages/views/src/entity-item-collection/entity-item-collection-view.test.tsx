@@ -49,6 +49,19 @@ describe("EntityItemCollectionView", () => {
     expect(screen.queryByRole("button", { name: /Create/ })).not.toBeInTheDocument();
   });
 
+  it("opens create in a new tab from the empty collection", async () => {
+    const { Wrapper, recording } = setup({ empty: true });
+    // Without the toolbar, the empty state's button is the only create action.
+    render(<EntityItemCollectionView entityName="customer" toolbar={false} />, {
+      wrapper: Wrapper,
+    });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
+    expect(recording.calls).toEqual([
+      { method: "openCreateItem", args: ["customer", { openInNewTab: true }] },
+    ]);
+  });
+
   it("draws no toolbar when hidden", async () => {
     const { Wrapper } = setup();
     render(<EntityItemCollectionView entityName="customer" toolbar={false} />, {
