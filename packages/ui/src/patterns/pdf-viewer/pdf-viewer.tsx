@@ -460,7 +460,10 @@ function PdfViewerChrome({
       >
         {documentState === "ready" && documentId ? (
           <GlobalPointerProvider documentId={documentId}>
-            <Viewport documentId={documentId} className="bg-muted h-full w-full overflow-auto">
+            <Viewport
+              documentId={documentId}
+              className="scrollbar-subtle bg-muted h-full w-full overflow-auto"
+            >
               <Scroller
                 documentId={documentId}
                 renderPage={({ pageIndex }) => (
