@@ -143,7 +143,9 @@ A contributor imports from the wrong layer. Lint fails with a message that names
 
 ---
 
-### User Story 7 - Preferences available to every feature (Priority: P3)
+### User Story 7 - Preferences available to every feature (Priority: P3) — DEFERRED
+
+> Deferred by product decision: not part of the views stack; the work is parked on branch `ACC-3216-user-preferences-parked` pending product decisions (open question 4).
 
 A user's display choices (icon, colour, card style, name attribute, visible columns) apply wherever a feature reads them, and an app can choose where they are stored.
 
@@ -223,16 +225,16 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 - **FR-028**: The stability tag MUST live on views, not on features. When a stable view needs an experimental feature, an experimental copy of the view MUST be made; a stable view MUST NOT contain an experimental view.
 - **FR-029**: The generic app's stability gate MUST stay suspended until go-live.
 
-**Preferences**
+**Preferences** _(FR-030 to FR-032 deferred: not part of this series; parked on `ACC-3216-user-preferences-parked`)_
 
-- **FR-030**: Display preferences MUST be read through one hook in the `user-preferences` feature, merging in priority order: the user's own changes, the backend's values (loaded from `navigator-data`, which keeps the type and the backend part it already has), then a default worked out from the profile.
-- **FR-031**: The preference store MUST be created by the app at startup, with the storage location configurable (the browser's local storage by default).
-- **FR-032**: An app that does not offer preference screens MUST still apply changes users already made.
+- **FR-030** _(deferred)_: Display preferences MUST be read through one hook in the `user-preferences` feature, merging in priority order: the user's own changes, the backend's values (loaded from `navigator-data`, which keeps the type and the backend part it already has), then a default worked out from the profile.
+- **FR-031** _(deferred)_: The preference store MUST be created by the app at startup, with the storage location configurable (the browser's local storage by default).
+- **FR-032** _(deferred)_: An app that does not offer preference screens MUST still apply changes users already made.
 - **FR-033**: Views MUST NOT pass preferences down; features read them through the hook.
 
 **Enforcement and migration**
 
-- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review); features and views never import the router; the UI package never imports features; features never import views, and neither does the UI package or `navigator-data`; and stable views never import experimental views.
+- **FR-034**: Lint MUST check each layer's imports: apps import features only through views (the design's "apps only import views", read as in Assumptions, to be confirmed in review); features and views never import the router; the UI package never imports features; features never import views, and neither does the UI package or `navigator-data`; and stable views never import experimental views. Two exceptions are documented in the lint contract: a transitional list of features the apps still import directly because no view wraps them yet, and the unsaved-changes guard (out of scope) for the router rule.
 - **FR-035**: The existing stability lint rule MUST check views instead of features.
 - **FR-036**: The router calls in the dashboard, sidebar, profile gate and not-found page MUST be replaced by callback props that the view or host code wires to the navigation object.
 - **FR-037**: The two apps MUST share the page logic of every migrated page; a fix to a page MUST NOT need two edits.
@@ -266,7 +268,7 @@ Edge cases marked _assumption_ are not in the design; those marked _current beha
 These stay open. A team meeting settles them; none is decided here — except question 5, resolved by what PR 3 actually built, and question 6, resolved during review.
 
 1. **Experimental copies and unfinished features.** How do we keep an experimental copy of a view up to date with fixes to the original? And once features carry no stability tag, what stops someone from putting an unfinished feature in a stable view?
-2. **Two panes, one address.** Each pane has its own filters, sort and page. Proposal: child views report changes to their parent through the change notification (FR-012), and the app writes them to the address with a prefix per pane. Not yet agreed.
+2. **Two panes, one address.** Each pane has its own filters, sort and page. Proposal: child views report changes to their parent through the change notification (FR-012), and the app writes them to the address with a prefix per pane. Not yet agreed. The split view built in PR 6 leaves the address to the host; one follow-up it exposes: its toolbar's Collection breadcrumb calls the parent's `openEntityItemCollection` and so leaves the split, rather than deselecting the item. Previewing an item from the entity collection (pane, URL, row actions) is specified separately in ACC-3236 / spec 007 (PR #263); this series only provides the composed split view.
 3. **The unsaved-changes guard.** Today it blocks route changes while a form is dirty and turns on the browser's leave prompt; only the create form uses it, and the edit form is next. It does not work when a split view switches the item in a pane (no route change), nor in the chat (no router). Proposal: the feature reports whether it has unsaved changes (`onDirtyChange`); the view asks the navigation object to guard leaving (`useViewNavigation().guardLeave(isDirty)`) and shows the confirm dialog; each host decides how: the app with `useBlocker`, a split view before it switches a pane, the chat with only the browser prompt. `guardLeave` is part of this open proposal, not one of the six decided navigation functions. Not yet agreed. To keep this series small, the guard stays where it is for now; that is a sequencing choice, not an answer.
 4. **Preferences.** (a) A list setting a user changed, such as visible columns, replaces the backend's list as a whole, so a column the backend adds later never shows for that user; a reset per setting is needed, not only "reset all". (b) Can the backend lock a preference so users cannot change it? (c) Will user preferences move to the server so they follow the user across devices? (d) _Resolved during review:_ the store moves into its own `user-preferences` feature in `packages/features`, not into the data layer, so no new peer dependency arises — `packages/features` already depends on the state library.
 5. **Filters in a link** _(added during spec writing, not from the design review; it comes from the design's "open point" under rule 2)_ — _Resolved as of PR 3_: a `collectionUrl` target starts the view at the link's own page, with the filter values the link carries for the search template's own fields extracted into the view's initial state, so the filter form shows them as active; fields the template does not have are not extracted. This is not cursor-decoding — it reads declared search parameters by the template's own field names, never the opaque page key.

@@ -13,8 +13,8 @@ Per-package rules: [`packages/ui/CLAUDE.md`](../../packages/ui/CLAUDE.md),
 
 ## Track rules
 
-- **Allowed feature stability levels: `experimental`, `candidate`, and `stable`.**
-  This app is the seeding ground for the initial set of stability-flagged features
+- **Allowed view stability levels: `experimental`, `candidate`, and `stable`.**
+  This app is the seeding ground for the initial set of stability-flagged views
   (HZN-1.10). All three tiers are importable here.
 - **Purpose: validate features before promotion to generic.** When a feature in
   this app is deemed ready for production, open a promotion PR per the workflow
@@ -60,18 +60,19 @@ generated automatically — never edit it manually.
 ## Promotion workflow
 
 **Pre-GA note:** promotion is not required right now — `apps/navigator`
-currently accepts features at any stability tier, so a feature is usable there
+currently accepts views at any stability tier, so a view is usable there
 without an `x-stability` flip. See the
 [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga).
 The workflow below applies again once the gate is reinstated at go-live.
 
-To move a feature from this track to the generic track:
+To move a view from this track to the generic track (stability is tagged on views, not features):
 
-1. Confirm the feature's `x-stability` is ready to advance
-   (run the dependency graph check — see
-   [`packages/features/CLAUDE.md`](../../packages/features/CLAUDE.md)).
-2. Open a PR that flips `x-stability` in the feature's `package.json`.
-3. Add the feature to `apps/navigator`'s import allowlist
+1. Confirm the view's `x-stability` is ready to advance: every view it imports
+   (`../<view>`) must already be at or above the target tier (lint rule
+   `@contentgrid/view-stability-order`).
+2. Open a PR that flips `x-stability` in the view's `package.json`
+   (`packages/views/src/<view>/package.json`).
+3. Add the view to `apps/navigator`'s import allowlist
    (once HZN-1.9 ESLint/bundle-audit enforcement is wired).
 4. Code review is the gate. No code moves, no fork drift.
 

@@ -31,6 +31,14 @@ describe("RecordTableRow", () => {
     expect(supplierCell.className).not.toContain("text-right");
   });
 
+  it("marks an active row with aria-current and no other row", () => {
+    const { rerender } = render(<RecordTableRow cells={CELLS} active />);
+    expect(screen.getByRole("row")).toHaveAttribute("aria-current", "true");
+
+    rerender(<RecordTableRow cells={CELLS} />);
+    expect(screen.getByRole("row")).not.toHaveAttribute("aria-current");
+  });
+
   it("calls onClick when the row is clicked", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
@@ -61,6 +69,26 @@ describe("RecordTableRow", () => {
     screen.getByRole("row").focus();
     await user.keyboard(" ");
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("does not call onClick when Enter is pressed on a focused child control", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <RecordTableRow
+        cells={CELLS}
+        onClick={onClick}
+        actions={
+          // Like the real row actions, the control handles its own click (stops propagation).
+          <button type="button" onClick={(e) => e.stopPropagation()}>
+            Inner action
+          </button>
+        }
+      />,
+    );
+    screen.getByRole("button", { name: "Inner action" }).focus();
+    await user.keyboard("{Enter}");
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does not call onClick for other keys", async () => {

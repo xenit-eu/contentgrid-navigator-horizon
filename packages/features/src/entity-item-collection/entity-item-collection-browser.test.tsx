@@ -132,6 +132,33 @@ function makeItemProfile(): ProfileEntity {
   return makeProfileEntity(itemProfileJson, PROFILE_URL, "item");
 }
 
+// The same profile with a sort option on `code`, so the table offers sorting by that column.
+function makeSortableItemProfile(): ProfileEntity {
+  const json = {
+    ...itemProfileJson,
+    _templates: {
+      ...itemProfileJson._templates,
+      search: {
+        ...itemProfileJson._templates.search,
+        properties: [
+          ...itemProfileJson._templates.search.properties,
+          {
+            name: "_sort",
+            type: "text",
+            options: {
+              minItems: 0,
+              inline: [
+                { property: "code", direction: "asc", value: "code,asc", prompt: "Code A→Z" },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  };
+  return makeProfileEntity(json, PROFILE_URL, "item");
+}
+
 // A distinguishable ITEM COUNT via `total_items_exact`, so the rendered "N items" subtitle
 // (from EntityItemCollectionBrowser's own `PageTitle`, built from `collection.totalItems`) tells us
 // unambiguously which response actually got used.
@@ -171,6 +198,8 @@ function renderBrowser(props: {
   pageUrl?: string;
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
+  onSortChange?: (sort: string | undefined) => void;
+  onPageChange?: (pageUrl: string | undefined) => void;
 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
@@ -401,6 +430,21 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
 
     expect(onFiltersChange).toHaveBeenCalledTimes(1);
     expect(onFiltersChange).toHaveBeenCalledWith({ "code~prefix": "abc" });
+  });
+
+  it("reports a sort click once through onSortChange and never through onPageChange", async () => {
+    setupCollectionHandler();
+    const user = userEvent.setup();
+    const onSortChange = vi.fn();
+    const onPageChange = vi.fn();
+    renderBrowser({ profile: makeSortableItemProfile(), onSortChange, onPageChange });
+
+    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await user.click(screen.getByRole("button", { name: /Code/ }));
+
+    expect(onSortChange).toHaveBeenCalledTimes(1);
+    expect(onSortChange).toHaveBeenCalledWith("code,asc");
+    expect(onPageChange).not.toHaveBeenCalled();
   });
 
   it("reports a typed number filter value back through onFiltersChange", async () => {

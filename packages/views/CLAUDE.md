@@ -33,8 +33,34 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   ensure helpers, never rejects, and returns while the API client is absent
   ([contract](../../specs/005-views-layer/contracts/view-data-loading.md)).
 - Views draw the toolbar; features fill the space they get ([contract](../../specs/005-views-layer/contracts/view-toolbar.md)).
-- Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (tag moves here
-  in a later PR).
+- Each view MUST be its own `exports` entry, so its stability tag can be resolved per view (see [Stability](#stability)).
+
+## Stability
+
+The `x-stability` tag (`experimental` | `candidate` | `stable`) lives on views, not on features
+(FR-028, [ADR-018](../../docs/adr/ADR-018-views-layer.md)).
+
+- Every `exports` entry other than the root barrel resolves to a directory whose `package.json` carries
+  `x-stability` (`src/<view>/package.json`, `src/shells/<shell>/package.json`, and `src/navigation/package.json` for
+  `recording-navigation`). `src/stability.test.ts` fails if an entry has no valid tag. Support folders that are not
+  an entry (`breadcrumbs/`, `toolbar/`, `hooks/`, …) carry none.
+- `@contentgrid/no-unstable-views` reads that tag for `@contentgrid/views/<entry>` imports and checks it against
+  the app's `allowedStability`. It does not look at feature imports (features carry no tag); the root barrel
+  `@contentgrid/views` is untagged and ignored. The generic app's gate stays at all three tiers pre-GA.
+- `@contentgrid/view-stability-order` (layer rule L5) fails a view that imports a less stable view
+  (experimental < candidate < stable), including re-exports and dynamic `import()`. Code in `packages/views/src` that carries no tag (support folders, the
+  root barrel) counts as `stable`, so it cannot import or re-export a less stable view. The root barrel
+  (`src/index.ts`) exports navigation infrastructure only, never a view; `src/stability.test.ts` enforces it. Views import
+  their siblings relatively (`../entity-item-detail`) because a package self-reference (`@contentgrid/views/...`) does not
+  resolve under `tsc`. Today every view is `stable`.
+- A stable view that needs an experimental feature gets an experimental copy of the view — **provisional**, pending
+  spec open question 1.
+
+## Layer lint rules
+
+Configured per package from `@contentgrid/eslint-config/layers`
+([contract](../../specs/005-views-layer/contracts/layer-lint-rules.md)). Here: L2 (no `@tanstack/react-router` outside
+`src/shells/`) and L5. Features, `ui` and `navigator-data` may not import this package at all (L4).
 
 ## Navigation
 
@@ -95,6 +121,21 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   the `entity-item-collection` feature gets the loaded profile and the state, and fetches the page itself. A link
   starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
   collection, plus a create action gated on `profileEntity.createTemplate`.
+
+- `@contentgrid/views/entity-item-split` (`x-stability: stable`, no route yet — spec open question 2):
+  `EntityItemSplitView({ entityName, toolbar?, state?, onStateChange? })` places `EntityItemCollectionView` and
+  `EntityItemDetailView`, both with `toolbar={false}`, side by side under one toolbar it draws itself (Home ›
+  collection, then the selected item; a create action gated on `createTemplate`; the host's `toolbar.actions`).
+  State is `EntityItemSplitViewState { collection?: CollectionViewState; selectedItemId?: string }`, controlled or
+  internal like the collection view; the list's state sits under its own `collection` key, the selection beside it
+  because the detail view has no state. Only the list gets a `ChildNavigationProvider`: its `openItem` selects the
+  item in the detail pane (no route change), unless it asks for a new tab or names another entity, and every other
+  call goes to the parent's navigation. The detail pane is not wrapped: what it opens (a relation's item) leaves the
+  split through the parent. `preloadEntityItemSplit(ctx, entityName, itemId?)` starts `preloadEntityItemCollection`
+  and `preloadEntityItemDetail` together; the view has no address scheme. Leaving the split: a delete or edit in the
+  detail pane and the toolbar's Collection crumb go through the parent's navigation and leave the split; the
+  split does not clear or reroute its own selection after them (kept as is until open question 2 is settled).
+  The list marks the selected row `aria-current="true"` (`activeItemId` on the collection view and feature).
 
 ## Breadcrumbs
 

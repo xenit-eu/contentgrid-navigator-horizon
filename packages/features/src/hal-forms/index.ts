@@ -1,4 +1,4 @@
-// @contentgrid/features/hal-forms — generic HAL-Forms field renderer (x-stability: experimental)
+// @contentgrid/features/hal-forms — generic HAL-Forms field renderer
 // See specs/001-hal-form-layout/ for the feature spec, plan, and data model.
 
 export type { HalFormsField, HalFormsFieldBase } from "./model/hal-forms-field";
