@@ -33,7 +33,19 @@ export interface EntitySearchBarProps {
   readonly onFiltersChange: (next: Record<string, string>) => void;
   /** The collection's sort, so suggestion pages follow the list's own order. */
   readonly currentSort?: string;
+  /**
+   * Hidden params that narrow the suggestions and counts to a subset of the collection — e.g. a
+   * to-many relation's `internalRelationParams`, when the bar searches a relation's linked items.
+   */
+  readonly scopeParams?: Readonly<Record<string, string>>;
   readonly className?: string;
+  /**
+   * The selector mode the bar starts in and returns to after a search (Escape, a picked
+   * suggestion, a submitted value). `"all-direct"` is "All except relations" — it falls back to
+   * "All" when the entity has no relation parameters to leave out. Defaults to `"all"`; the user
+   * can still pick any mode.
+   */
+  readonly defaultMode?: "all" | "all-direct";
   /**
    * The page's own controls (e.g. Columns, Filters), shown right-aligned on the quick-filter
    * row; only the quick filters scroll.
@@ -42,6 +54,7 @@ export interface EntitySearchBarProps {
 }
 
 const ALL: SelectorMode = { kind: "all" };
+const ALL_DIRECT: SelectorMode = { kind: "all-direct" };
 
 /**
  * View model of the entity search bar (contracts/features.md §1): derives every row's model
@@ -54,6 +67,8 @@ export function useEntitySearchBar({
   filters,
   onFiltersChange,
   currentSort,
+  scopeParams,
+  defaultMode: requestedDefaultMode = "all",
 }: EntitySearchBarProps) {
   // `profileEntity.searchTemplate` builds a new object on every access; resolve it once per
   // profile so everything memoised on it stays stable across renders.
@@ -103,7 +118,8 @@ export function useEntitySearchBar({
 
   // ---- Main bar: selector, input and suggestions popover ----
 
-  const [mode, setModeState] = useState<SelectorMode>(ALL);
+  // `null` = the default mode, resolved below once the parameters are known.
+  const [modeState, setModeState] = useState<SelectorMode | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [popoverRequested, setPopoverRequested] = useState(false);
   const [inputError, setInputError] = useState<string | undefined>(undefined);
@@ -113,13 +129,17 @@ export function useEntitySearchBar({
     [includedDescriptors, profileEntity],
   );
 
+  const hasRelationParams = includedDescriptors.some((d) => isSelectableParam(d) && d.relation);
+  const defaultMode = requestedDefaultMode === "all-direct" && hasRelationParams ? ALL_DIRECT : ALL;
+  const mode = modeState ?? defaultMode;
+
   const selected =
     mode.kind === "param" ? includedDescriptors.find((d) => d.name === mode.name) : undefined;
-  // A selected parameter that disappeared (profile or inclusion change) falls back to "All".
+  // A selected parameter that disappeared (profile or inclusion change) falls back to the default.
   const selectedMissing = mode.kind === "param" && !selected;
   const effectiveMode: SelectorMode = useMemo(
-    () => (selectedMissing ? ALL : mode),
-    [mode, selectedMissing],
+    () => (selectedMissing ? defaultMode : mode),
+    [mode, selectedMissing, defaultMode],
   );
 
   const searchValues = useMemo(
@@ -152,6 +172,7 @@ export function useEntitySearchBar({
     requests: popoverOpen ? requests : NO_REQUESTS,
     query,
     searchValues,
+    scopeParams,
   });
 
   const { chips: paramChips, groups } = useMemo(
@@ -185,21 +206,21 @@ export function useEntitySearchBar({
     [inputValue],
   );
 
-  /** Back to "All" (Escape / Backspace on an empty input); never reopens the popover. */
+  /** Back to the default mode (Escape / Backspace on an empty input); never reopens the popover. */
   const resetMode = useCallback(() => {
-    setModeState(ALL);
+    setModeState(null);
     setInputError(undefined);
     setPopoverRequested(false);
   }, []);
 
   const resetInput = useCallback(() => {
     setInputValue("");
-    setModeState(ALL);
+    setModeState(null);
     setInputError(undefined);
     setPopoverRequested(false);
   }, []);
 
-  /** Applies a picked suggestion and returns the bar to "All" (FR-019). */
+  /** Applies a picked suggestion and returns the bar to the default mode (FR-019). */
   const applySuggestion = useCallback(
     (paramName: string, value: string) => {
       setParams({ [paramName]: value });
