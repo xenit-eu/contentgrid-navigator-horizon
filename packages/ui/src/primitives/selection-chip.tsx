@@ -20,6 +20,9 @@ interface SelectionChipProps {
   /** Trailing content after the label, e.g. a `CountIndicatorChip`. */
   readonly trailing?: ReactNode;
   readonly id?: string;
+  /** Joins the chip to its neighbour into one control: `"start"` is the left chip, `"end"` the
+   *  right one. */
+  readonly joined?: "start" | "end";
 }
 
 function SelectionChip({
@@ -36,6 +39,7 @@ function SelectionChip({
   icon,
   trailing,
   id,
+  joined,
 }: SelectionChipProps) {
   return (
     <button
@@ -51,14 +55,18 @@ function SelectionChip({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap border transition-colors",
+        "inline-flex items-center gap-1.5 whitespace-nowrap border border-[#C5D6E2] dark:border-[#335269] transition-colors",
         disabled && "cursor-not-allowed opacity-50",
         size === "sm"
           ? "px-[10px] py-[5px] rounded-[6px] text-[12px]"
           : "px-[14px] py-[7px] rounded-[8px] text-[13px]",
         selected
-          ? "bg-[#084772] dark:bg-[#1F9FE0] text-white dark:text-[#04202F] border-[#084772] dark:border-[#1F9FE0] font-semibold"
-          : "bg-[#FAFDFF] dark:bg-[#13314A] text-[#0E2436] dark:text-[#EAF4FB] border-[#C5D6E2] dark:border-[#335269] font-normal",
+          ? "bg-[var(--sky-extract)] dark:bg-[var(--dark-accent)] text-foreground font-semibold"
+          : "bg-[#FAFDFF] dark:bg-[#13314A] text-[#0E2436] dark:text-[#EAF4FB] font-normal",
+        // The focused chip sits on top, so its focus ring shows over the shared edge.
+        joined && "relative focus-visible:z-10",
+        joined === "start" && "rounded-r-none",
+        joined === "end" && "-ml-px rounded-l-none",
         className,
       )}
     >

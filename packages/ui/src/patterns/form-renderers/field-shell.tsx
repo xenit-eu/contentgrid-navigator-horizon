@@ -46,7 +46,9 @@ export function FieldMessage({
 }: Readonly<Pick<FieldShellProps, "name" | "description" | "error">>) {
   return (
     <>
-      {description && !error && <p className="text-sm text-muted-foreground">{description}</p>}
+      {description && !error && (
+        <p className="text-xs leading-snug text-muted-foreground">{description}</p>
+      )}
       {error && (
         <p id={`${name}-error`} className="text-sm text-destructive">
           {error}
