@@ -4,6 +4,7 @@ import {
   ProfileAttributeType,
 } from "@contentgrid/navigator-data";
 import { defaultAttributeRendererComponents } from "./registry";
+import type { AttributeRendererVariant } from "./variant";
 
 /** Shared default for hard-truncating table-cell text — see `maxCharLength` below. */
 export const TABLE_ATTRIBUTE_MAX_CHAR_LENGTH = 80;
@@ -22,12 +23,17 @@ export interface AttributeValueRendererProps {
    *   the audit timeline and relation previews.
    * - `"item-reference"` — for `EntityItemReference` titles/subtitles: same
    *   chip look for Creator/Modifier but without the attribute-name prefix.
-   * - `"table"` — for `EntityItemCollectionTable` columns and the detail
-   *   view's attribute table: plain, single-color text (no chips, no
-   *   backgrounds); only a user icon or a date icon may accompany the text.
+   * - `"table"` — for `EntityItemCollectionTable` columns: plain,
+   *   single-color text (no chips, no backgrounds); only a user icon or a date
+   *   icon may accompany the text. String sets are comma-separated text.
+   * - `"attribute-table"` — for the detail view's attribute table: the same
+   *   as `"table"`, except that string sets show every value as a chip.
    */
-  readonly variant?: "default" | "item-reference" | "table";
-  /** Hard-truncates long string values to this many characters (plus an ellipsis). Only applied to plain string attributes. */
+  readonly variant?: AttributeRendererVariant;
+  /**
+   * Hard-truncates long string values to this many characters (plus an ellipsis). Applied to
+   * plain string and string-set attributes (to each chip in the `"attribute-table"` variant).
+   */
   readonly maxCharLength?: number;
 }
 
@@ -120,6 +126,19 @@ export function AttributeValueRenderer({
   }
   if (type === ProfileAttributeType.datetime) {
     return <components.datetime value={attr.value.value as string | null} wrap={wrap} />;
+  }
+  if (type === ProfileAttributeType.stringSet) {
+    const value = attr.value.value;
+    if (value === null || Array.isArray(value)) {
+      return (
+        <components.stringSet
+          value={value}
+          wrap={wrap}
+          maxCharLength={maxCharLength}
+          variant={variant}
+        />
+      );
+    }
   }
   return <components.string value={attr.value.value} wrap={wrap} maxCharLength={maxCharLength} />;
 }

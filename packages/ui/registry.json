@@ -74,6 +74,14 @@
       "files": [{ "path": "src/primitives/label.tsx", "type": "registry:ui" }]
     },
     {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "ContentGrid copy of the shadcn/ui Command primitive (cmdk).",
+      "dependencies": ["cmdk"],
+      "files": [{ "path": "src/primitives/command.tsx", "type": "registry:ui" }]
+    },
+    {
       "name": "popover",
       "type": "registry:ui",
       "title": "Popover",
