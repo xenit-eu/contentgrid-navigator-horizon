@@ -35,4 +35,17 @@ describe("UpdateHalFormTemplate", () => {
       "Constraint C",
     ]);
   });
+
+  it("names a content attribute's filename and mimetype properties, when the template has them", () => {
+    const updateTemplate = makeAllAttributeItem().updateTemplate!;
+
+    expect(updateTemplate.contentMetadataPropertyNames("content")).toEqual({
+      filename: "content.filename",
+      mimetype: "content.mimetype",
+    });
+    expect(updateTemplate.contentMetadataPropertyNames("text")).toEqual({
+      filename: undefined,
+      mimetype: undefined,
+    });
+  });
 });

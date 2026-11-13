@@ -3,6 +3,7 @@
  *
  * Covers:
  * - PUT with If-Match → 204 → the shown item is re-fetched with its new ETag before success
+ * - `invalidateOnSuccess: false` → the shown item is not re-fetched
  */
 import { useQuery } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -63,5 +64,35 @@ describe("useUpdateEntityItem", () => {
       queryKeys.entityItem.byUrl(item.profileEntity, ALL_ATTRIBUTE_ITEM_URL),
     );
     expect(cached?.etag).toBe('"v2"');
+  });
+
+  it("leaves the shown item as it is with invalidateOnSuccess: false", async () => {
+    const item = makeAllAttributeItem({}, '"v1"');
+    let itemFetches = 0;
+    server.use(
+      http.put(ALL_ATTRIBUTE_ITEM_URL, () => new HttpResponse(null, { status: 204 })),
+      http.get(ALL_ATTRIBUTE_ITEM_URL, () => {
+        itemFetches += 1;
+        return HttpResponse.json(allAttributeItemBodyWith({}), { headers: { ETag: '"v1"' } });
+      }),
+    );
+    const { result } = renderHook(
+      () => {
+        const { apiFetch } = useNavigatorData();
+        const shownItem = useQuery(
+          EntityItem.fetchByUrlQuery(apiFetch, ALL_ATTRIBUTE_ITEM_URL, item.profileEntity),
+        );
+        return {
+          shownItem,
+          update: useUpdateEntityItem(item, { invalidateOnSuccess: false }),
+        };
+      },
+      { wrapper: makeWrapper(makeQueryClient()) },
+    );
+    await waitFor(() => expect(result.current.shownItem.isSuccess).toBe(true));
+
+    await act(() => result.current.update.mutateAsync(textUpdate(item, "Updated")));
+
+    expect(itemFetches).toBe(1);
   });
 });
