@@ -72,6 +72,26 @@ describe("RecordTableRow", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("does not call onClick when Enter is pressed on a button inside the row", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <RecordTableRow
+        cells={CELLS}
+        onClick={onClick}
+        // Like the real row actions, the button's own click does not reach the row.
+        actions={
+          <button type="button" onClick={(event) => event.stopPropagation()}>
+            Delete
+          </button>
+        }
+      />,
+    );
+    screen.getByRole("button", { name: "Delete" }).focus();
+    await user.keyboard("{Enter}");
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it("is focusable (tabIndex=0) when onClick is provided", () => {
     render(<RecordTableRow cells={CELLS} onClick={vi.fn()} />);
     expect(screen.getByRole("row")).toHaveAttribute("tabIndex", "0");

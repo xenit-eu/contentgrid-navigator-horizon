@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FunnelIcon as Funnel, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
   EntityItem,
@@ -12,10 +12,17 @@ import {
   AttributeMultiSelectContent,
   Badge,
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
   type RecordTableSortOption,
+  ResizableSplitLayout,
+  type SplitPaneHandle,
+  useContainerWidthAtLeast,
 } from "@contentgrid/ui";
 import { ErrorPage, LoadingPage } from "../app-info-pages";
 import { EntitySearchBar } from "../entity-search-bar";
@@ -33,6 +40,10 @@ import {
 } from "../search/filter-properties";
 import { EntityItemCollectionFilterDialog } from "./entity-item-collection-filter-dialog";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
+import { EntityItemPreviewPane } from "./entity-item-preview-pane";
+
+/** Width the preview pane opens at, beside the table. */
+const PREVIEW_PANE_SIZE = "45%";
 
 export interface EntityItemCollectionBrowserProps {
   readonly profile: ProfileEntity;
@@ -41,7 +52,10 @@ export interface EntityItemCollectionBrowserProps {
    * a next/prev link. When omitted the first (default) page is fetched.
    */
   readonly pageUrl?: string;
-  /** Fired when an entity item row is clicked; receives the item id. */
+  /**
+   * Opens the item's own page; receives the item. Rows show a View action only with it. A row
+   * click previews the item beside the table (or in a dialog when narrow) either way.
+   */
   readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
    * Fired when the user paginates; receives the target page's href
@@ -204,6 +218,63 @@ export function EntityItemCollectionBrowser({
       : { profileEntity: profile, searchValues },
   );
 
+  // The preview: beside the table when this browser is at least the `side-by-side` width, in a
+  // dialog otherwise. The width is this browser's own, so a sidebar or a split pane counts.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const isWide = useContainerWidthAtLeast(rootRef, "side-by-side");
+  const splitPaneRef = useRef<SplitPaneHandle>(null);
+  const [previewedId, setPreviewedId] = useState<string>();
+  // The row the preview was opened from, to give focus back to when the preview closes.
+  const previewRowRef = useRef<HTMLElement | null>(null);
+  const wasPreviewOpenRef = useRef(false);
+
+  // Crossing the width closes the preview rather than moving it between pane and dialog.
+  const [previewWasWide, setPreviewWasWide] = useState(isWide);
+  if (previewWasWide !== isWide) {
+    setPreviewWasWide(isWide);
+    setPreviewedId(undefined);
+  }
+
+  // The item as the shown page has it, so a refetch shows its new values. When the shown page
+  // no longer has it (filter, sort, page change, delete), the preview closes. While a new page
+  // loads, the previous page stays shown, so this happens once the new page is in.
+  const previewedItem = previewedId ? collection.data?.findById(previewedId) : undefined;
+  if (previewedId && collection.data && !previewedItem) {
+    setPreviewedId(undefined);
+  }
+  const isPreviewOpen = previewedItem !== undefined;
+
+  function handlePreview(item: EntityItem) {
+    // A row has focus here: clicking it or pressing Enter/Space on it focuses it.
+    previewRowRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPreviewedId(item.id);
+  }
+
+  function closePreview() {
+    setPreviewedId(undefined);
+  }
+
+  /** Focuses the row the preview was opened from, or the table's first row once it is gone. */
+  function focusPreviewRow() {
+    const row = previewRowRef.current?.isConnected
+      ? previewRowRef.current
+      : rootRef.current?.querySelector<HTMLElement>('[role="row"][tabindex="0"]');
+    row?.focus();
+  }
+
+  useLayoutEffect(() => {
+    const pane = splitPaneRef.current;
+    if (pane && isPreviewOpen && pane.isCollapsed()) pane.resize(PREVIEW_PANE_SIZE);
+    if (pane && !isPreviewOpen && !pane.isCollapsed()) pane.collapse();
+
+    // Closing the pane removes what had focus inside it; give focus back to the row.
+    const justClosed = wasPreviewOpenRef.current && !isPreviewOpen;
+    wasPreviewOpenRef.current = isPreviewOpen;
+    const focusIsLost = !document.activeElement || document.activeElement === document.body;
+    if (justClosed && focusIsLost) focusPreviewRow();
+  }, [isPreviewOpen]);
+
   // Pagination reset is the caller's responsibility here: a filter change is reported via
   // `onFiltersChange`, and the caller (the route) clears its own remembered page position — calling
   // `onPageChange` too would race with that.
@@ -303,8 +374,38 @@ export function EntityItemCollectionBrowser({
     </>
   );
 
+  const previewPane = previewedItem && (
+    <EntityItemPreviewPane entityItem={previewedItem} onClose={closePreview} />
+  );
+
+  const table = (
+    <>
+      {collection.isPending && <LoadingPage />}
+
+      {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
+
+      {collection.isSuccess && (
+        <EntityItemCollectionTable
+          className="h-full"
+          profile={profile}
+          collection={collection.data}
+          onEntityItemClick={handlePreview}
+          onEntityItemOpen={onEntityItemClick}
+          currentItem={previewedItem}
+          onPageChange={onPageChange}
+          currentSort={currentSort}
+          onSort={handleSort}
+          visibleColumnNames={localVisibleColumns}
+          forcedVisibleColumnNames={activelyFilteredAttributeNames}
+          // Without a search bar (no `onFiltersChange`), the table keeps the controls itself.
+          tableActions={onFiltersChange ? undefined : toolbarActions}
+        />
+      )}
+    </>
+  );
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div ref={rootRef} className="flex h-full min-h-0 flex-col">
       {onFiltersChange && (
         <EntitySearchBar
           className="shrink-0 p-4"
@@ -317,26 +418,55 @@ export function EntityItemCollectionBrowser({
       )}
 
       <div className={`min-h-0 flex-1 px-4 pb-4 ${onFiltersChange ? "" : "pt-4"}`}>
-        {collection.isPending && <LoadingPage />}
-
-        {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
-
-        {collection.isSuccess && (
-          <EntityItemCollectionTable
-            className="h-full"
-            profile={profile}
-            collection={collection.data}
-            onEntityItemClick={onEntityItemClick}
-            onPageChange={onPageChange}
-            currentSort={currentSort}
-            onSort={handleSort}
-            visibleColumnNames={localVisibleColumns}
-            forcedVisibleColumnNames={activelyFilteredAttributeNames}
-            // Without a search bar (no `onFiltersChange`), the table keeps the controls itself.
-            tableActions={onFiltersChange ? undefined : toolbarActions}
+        {isWide ? (
+          // The pane's panel is always there, collapsed while nothing is previewed, so opening
+          // the pane never remounts the table.
+          <ResizableSplitLayout
+            left={table}
+            right={previewPane}
+            defaultRightSize={0}
+            minLeftSize={320}
+            minRightSize={360}
+            rightCollapsible
+            rightCollapsedSize={0}
+            rightPanelRef={splitPaneRef}
+            // Dragging the pane shut closes it like its Close button.
+            onRightCollapsedChange={(collapsed) => collapsed && closePreview()}
+            resizable={isPreviewOpen}
+            handleLabel="Resize preview"
+            handleClassName="mx-2"
           />
+        ) : (
+          table
         )}
       </div>
+
+      {!isWide && (
+        <Dialog open={isPreviewOpen} onOpenChange={(open) => !open && closePreview()}>
+          {/* The pane draws the border and its own Close button. */}
+          <DialogContent
+            showCloseButton={false}
+            // Focus the dialog itself rather than its first button, the pane's Close: focusing a
+            // button opens its tooltip, which the first Escape would close instead of the dialog.
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              (event.currentTarget as HTMLElement).focus();
+            }}
+            // Back to the row on close, also when a refetch removed it.
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              focusPreviewRow();
+            }}
+            className="flex h-[80vh] flex-col gap-0 border-0 p-0 sm:max-w-3xl"
+          >
+            <DialogTitle className="sr-only">{`${profile.singularName} preview`}</DialogTitle>
+            <DialogDescription className="sr-only">
+              The item's preview and details.
+            </DialogDescription>
+            {previewPane}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {fields.length > 0 && (
         <EntityItemCollectionFilterDialog

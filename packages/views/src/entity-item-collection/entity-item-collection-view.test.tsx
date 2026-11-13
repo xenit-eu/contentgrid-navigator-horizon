@@ -24,11 +24,12 @@ describe("EntityItemCollectionView", () => {
     expect(document.querySelector("[aria-current='page']")).toHaveTextContent("Customers");
   });
 
-  it("opens a clicked item through the navigation object", async () => {
+  it("opens an item from its row's View action through the navigation object", async () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
-    await userEvent.click(await findFirstItem());
+    await findFirstItem();
+    await userEvent.click(screen.getAllByRole("button", { name: "View" })[0]);
 
     expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
   });

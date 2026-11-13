@@ -183,22 +183,57 @@ describe("EntityItemCollectionTable", () => {
     expect(onEntityItemClick.mock.calls[0][0].id).toBe("1");
   });
 
-  it("calls onEntityItemClick when the row's View action is used", async () => {
+  it("calls onEntityItemOpen, not onEntityItemClick, when the row's View action is used", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();
     const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
     render(
       <EntityItemCollectionTable
         profile={profile}
         collection={collection}
         onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
       />,
       { wrapper: Wrapper },
     );
 
     const viewButtons = screen.getAllByRole("button", { name: "View" });
     await user.click(viewButtons[0]);
-    expect(onEntityItemClick).toHaveBeenCalledOnce();
+    expect(onEntityItemOpen).toHaveBeenCalledWith(collection.items[0]);
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
+  it("shows no View action without onEntityItemOpen", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+  });
+
+  it("marks only the row of currentItem as current", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        currentItem={collection.items[1]}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const currentRows = screen
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-current"));
+    expect(currentRows).toHaveLength(1);
+    expect(currentRows[0]).toHaveTextContent(collection.items[1].id);
   });
 
   it("only renders the Delete action for items the user is permitted to delete (ABAC)", async () => {
