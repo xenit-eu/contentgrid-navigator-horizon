@@ -26,7 +26,7 @@
 - The create form itself: its fields, validation, required-field markers, continuous-create mode, relation pickers and submission are unchanged.
 - Replacing or removing a file that is already stored: the edit form (`003-add-edit-form`).
 - Uploading several files at once, or into a multi-valued content attribute.
-- Previewing the attached file on the Create item page.
+- Previewing the attached file on the Create item page. The create form previews its picked files (`006-create-form-file-preview`).
 - Upload progress percentage on the item page.
 - Client-side file type or size limits: the model does not publish them, so the mockup's "PDF, DOCX, PNG up to 20 MB" hint is not shown.
 
