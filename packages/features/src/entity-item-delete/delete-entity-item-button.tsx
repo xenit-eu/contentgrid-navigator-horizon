@@ -81,7 +81,7 @@ export function DeleteEntityItemButton({
       {/* No onclick on the buttons, that's what the wrapping AlertDialogTrigger is for */}
       {label ? (
         <AlertDialogTrigger asChild>
-          <Button type="button" variant="destructive" size="sm">
+          <Button type="button" variant="destructive-outline" size="sm">
             <TrashIcon />
             {label}
           </Button>
