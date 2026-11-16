@@ -3,7 +3,6 @@ import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
-  resolveEntityItemVariation,
 } from "@contentgrid/features/entity-item";
 import { DeleteEntityItemButton } from "@contentgrid/features/entity-item-delete";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
@@ -37,12 +36,13 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
+  // With a toolbar, Delete goes in it. Without one, the variation draws its own next to Edit
+  // (`onDeleted`).
   const deleteAction =
-    result.status === "success" &&
-    resolveEntityItemVariation(result.profileEntity) === "content-focus" ? (
+    result.status === "success" && toolbar !== false ? (
       <DeleteEntityItemButton
         item={result.entityItem}
-        label={toolbar === false ? undefined : "Delete"}
+        label="Delete"
         onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
         onRefresh={() => void result.refetch()}
       />
@@ -73,8 +73,11 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         onRequiredRelationClick={(affectedRelation) =>
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
-        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
-        actions={toolbar === false ? deleteAction : undefined}
+        onDeleted={
+          toolbar === false
+            ? () => navigation.openEntityItemCollection(result.profileEntity.name)
+            : undefined
+        }
       />
     );
   } else {

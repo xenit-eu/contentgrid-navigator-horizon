@@ -37,8 +37,7 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    */
   readonly allowEdit?: boolean;
   /**
-   * Fired after the item was deleted. The delete button only shows when this is passed and the
-   * item has a delete template; the caller decides where to go next.
+   * Fired after the item was deleted; the caller navigates away. Without this prop, no delete button is shown.
    */
   readonly onDeleted?: () => void;
 };
