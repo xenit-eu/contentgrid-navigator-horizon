@@ -38,13 +38,18 @@ Every variation takes `EntityItemVariationProps`:
 - `onRelationItemClick`, `onRelationItemCreateNew` and the relation problem handlers
 - `actions` — extra nodes drawn next to the edit button
 - `allowEdit` — show the edit button (default `true`)
+- `onDeleted` — draw an icon-only Delete next to Edit (hidden while editing); the caller decides
+  where to go after a delete. The view passes it only when it has no toolbar to put Delete in.
+- `onEditingChange` — hears edit mode open and close, so the view can hide its toolbar Delete
+  while the edit form is open
 
 ### Adding a variation
 
 1. Create `variations/<name>/entity-item-<name>.tsx` exporting `EntityItem<Name>`, typed
    `Readonly<EntityItemVariationProps>`. Root `h-full min-h-0`, no outer padding.
-2. Call `useEntityItemContext(item, refetch)` for edit mode, render `actions` next to
-   `EditEntityItemButton`, and render that button only when `allowEdit` is true.
+2. Call `useEntityItemContext(item, refetch, onEditingChange)` for edit mode, render `actions`
+   next to `EditEntityItemButton`, and render that button only when `allowEdit` is true. When
+   `onDeleted` is passed, render `DeleteEntityItemButton` after it, hidden while editing.
 3. Register it in `ENTITY_ITEM_VARIATIONS` in `entity-item-auto-variation.tsx` (the
    `satisfies` check fails if its props don't match). Update `resolveEntityItemVariation` if
    `"auto"` should pick it.

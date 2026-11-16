@@ -36,10 +36,14 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
+  // Hides the toolbar's Delete while the item's edit form is open: deleting would navigate away
+  // and run into the unsaved-changes prompt.
+  const [isEditing, setIsEditing] = useState(false);
+
   // With a toolbar, Delete goes in it. Without one, the variation draws its own next to Edit
   // (`onDeleted`).
   const deleteAction =
-    result.status === "success" && toolbar !== false ? (
+    result.status === "success" && toolbar !== false && !isEditing ? (
       <DeleteEntityItemButton
         item={result.entityItem}
         label="Delete"
@@ -78,6 +82,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
             ? () => navigation.openEntityItemCollection(result.profileEntity.name)
             : undefined
         }
+        onEditingChange={setIsEditing}
       />
     );
   } else {

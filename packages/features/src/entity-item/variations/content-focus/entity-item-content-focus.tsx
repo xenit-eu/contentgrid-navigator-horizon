@@ -32,10 +32,11 @@ export function EntityItemContentFocus({
   actions,
   allowEdit = true,
   onDeleted,
+  onEditingChange,
 }: Readonly<EntityItemVariationProps>) {
   const { profileEntity } = item;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
+  const itemContext = useEntityItemContext(item, refetch, onEditingChange);
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.

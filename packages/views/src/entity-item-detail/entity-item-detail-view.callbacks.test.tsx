@@ -29,8 +29,11 @@ vi.mock("@contentgrid/features/entity-item", () => ({
     onBlindRelationOverwriteClick?: (info: { existingItem?: string; newItem?: string }) => void;
     onRequiredRelationClick?: (affectedRelation: string) => void;
     onDeleted?: () => void;
+    onEditingChange?: (isEditing: boolean) => void;
   }) => (
     <div>
+      <button onClick={() => props.onEditingChange?.(true)}>start-editing</button>
+      <button onClick={() => props.onEditingChange?.(false)}>stop-editing</button>
       <button onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}>
         relation-click
       </button>
@@ -84,6 +87,18 @@ describe("EntityItemDetailView — feature callbacks", () => {
     await userEvent.click(await screen.findByText("delete-Delete"));
 
     expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
+  });
+
+  it("hides the toolbar's Delete while the item is being edited", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+    await screen.findByText("delete-Delete");
+
+    await userEvent.click(screen.getByText("start-editing"));
+    expect(screen.queryByText("delete-Delete")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("stop-editing"));
+    expect(screen.getByText("delete-Delete")).toBeInTheDocument();
   });
 
   it("does not hand the variation onDeleted when Delete is in the toolbar", async () => {

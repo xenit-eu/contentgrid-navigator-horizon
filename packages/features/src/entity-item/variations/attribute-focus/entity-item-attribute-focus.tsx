@@ -27,9 +27,10 @@ export function EntityItemAttributeFocus({
   actions,
   allowEdit = true,
   onDeleted,
+  onEditingChange,
 }: Readonly<EntityItemVariationProps>) {
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
+  const itemContext = useEntityItemContext(item, refetch, onEditingChange);
 
   return (
     <div className="h-full min-h-0">
