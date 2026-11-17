@@ -49,6 +49,7 @@ interface SelectedFileProps {
   disabled: boolean;
   previewed: boolean;
   compact: boolean;
+  uploadProgress?: number;
   onPreview?: () => void;
   onFileClick?: () => void;
   onRemove: () => void;
@@ -59,10 +60,14 @@ function SelectedFile({
   disabled,
   previewed,
   compact,
+  uploadProgress,
   onPreview,
   onFileClick,
   onRemove,
 }: Readonly<SelectedFileProps>) {
+  const isUploading = uploadProgress !== undefined;
+  // Stops at 99% until the server has confirmed the upload.
+  const uploadingCaption = isUploading && `Uploading… ${Math.min(uploadProgress, 99)}%`;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // A thumbnail only for a picked image in the full card: a stored file's bytes are not loaded
@@ -84,7 +89,7 @@ function SelectedFile({
           <Eye className="h-4 w-4" />
         </ToolbarIconButton>
       )}
-      {!disabled && (
+      {!disabled && !isUploading && (
         <ToolbarIconButton label="Remove file" onClick={onRemove}>
           <X className="h-4 w-4" />
         </ToolbarIconButton>
@@ -126,8 +131,14 @@ function SelectedFile({
                 {file.name}
               </span>
               <span className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
-                <span className="shrink-0 tabular-nums">{formatFileSize(file.size)}</span>
-                {file.type && <span className="truncate">· {file.type}</span>}
+                {uploadingCaption ? (
+                  <span className="tabular-nums">{uploadingCaption}</span>
+                ) : (
+                  <>
+                    <span className="shrink-0 tabular-nums">{formatFileSize(file.size)}</span>
+                    {file.type && <span className="truncate">· {file.type}</span>}
+                  </>
+                )}
               </span>
             </span>
           </>,
@@ -158,11 +169,19 @@ function SelectedFile({
           <span className="block min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{file.name}</span>
             <span className="mt-0.5 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-              {file.type && (
-                <Badge variant="outline" className="text-xs shrink-0">
-                  {file.type}
-                </Badge>
+              {uploadingCaption ? (
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {uploadingCaption}
+                </span>
+              ) : (
+                <>
+                  <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+                  {file.type && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {file.type}
+                    </Badge>
+                  )}
+                </>
               )}
             </span>
           </span>
@@ -206,6 +225,9 @@ export interface FileUploadZoneProps {
   compact?: boolean;
   /** Makes the empty drop zone fill its container. */
   fill?: boolean;
+  /** While the file is being uploaded, its progress (0–100): shown in place of its size and type,
+   * and the file can't be removed. */
+  uploadProgress?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +249,7 @@ export function FileUploadZone({
   previewed = false,
   compact = false,
   fill = false,
+  uploadProgress,
 }: Readonly<FileUploadZoneProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLButtonElement>(null);
@@ -282,6 +305,7 @@ export function FileUploadZone({
         disabled={disabled}
         previewed={previewed}
         compact={compact}
+        uploadProgress={uploadProgress}
         onPreview={onPreview}
         onFileClick={onFileClick}
         onRemove={() => {

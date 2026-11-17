@@ -51,6 +51,17 @@ export const CompactStoredFile: Story = {
   },
 };
 
+/** A picked file being stored, as the update form shows it while saving. */
+export const CompactUploading: Story = {
+  args: {
+    file: { name: "baby-duck.jpg", size: 110_100, type: "image/jpeg" },
+    onFileChange: fn(),
+    compact: true,
+    uploadProgress: 42,
+  },
+};
+
+/** A single-line empty zone. */
 export const Compact: Story = {
   args: {
     file: null,
