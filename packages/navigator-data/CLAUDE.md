@@ -167,6 +167,7 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
 - `entityItem.uploadContentRequest(attrName, file, contentEtag)` → hand-built PUT `Request` to the `cg:content` link, conditional on the content's own ETag (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
+- `entityItem.deleteContentRequest(attrName, contentEtag)` → hand-built DELETE `Request` to the `cg:content` link with `If-Match` carrying the content's own ETag (binary exception)
 
 **URL construction — never concatenate by hand:**
 
