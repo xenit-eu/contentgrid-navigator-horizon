@@ -10,7 +10,7 @@ import {
 } from "@contentgrid/navigator-data";
 import { Badge } from "@contentgrid/ui";
 import type { PdfViewerToolbarOptions } from "@contentgrid/ui";
-import { getContentAttributeMetadata } from "../util/content-attribute-metadata";
+import { getContentAttributeMetadata } from "../../../content-attribute-metadata";
 import type { ViewerLoadErrorKind } from "../util/derive-content-preview-state";
 import { deriveContentPreviewState } from "../util/derive-content-preview-state";
 import { buildPreviewUnavailableMessage } from "../util/preview-unavailable-message";
