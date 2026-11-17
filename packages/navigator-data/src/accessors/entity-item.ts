@@ -509,6 +509,31 @@ export class EntityItem {
   }
 
   /**
+   * Builds a DELETE Request that removes the stored file of a content attribute.
+   *
+   * Same exception to the HAL-FORMS template rule as upload and download: binary content has no
+   * `_templates` entry, so the Request is built from the `cg:content` link href, whose presence is
+   * the ABAC gate. Send it with `contentFetch`.
+   *
+   * The request is conditional on the content's own ETag (`If-Match`) — never the entity item's
+   * ETag, which is a different resource.
+   *
+   * @param attributeName - The name of the content attribute
+   * @param contentEtag - The ETag of the stored content
+   * @returns Request ready to be sent with contentFetch
+   * @throws Error if the cg:content link is absent (ABAC deny)
+   */
+  public deleteContentRequest(attributeName: string, contentEtag: string): Request {
+    const link = this.contentLink(attributeName);
+    if (link === null) {
+      throw new Error(
+        `Content removal not permitted for attribute '${attributeName}': cg:content link absent`,
+      );
+    }
+    return new Request(link.href, { method: "DELETE", headers: { "If-Match": contentEtag } });
+  }
+
+  /**
    * Builds a GET Request for downloading binary content from a content attribute.
    *
    * This is the ONE allowed exception to the HAL-FORMS template rule — binary content
