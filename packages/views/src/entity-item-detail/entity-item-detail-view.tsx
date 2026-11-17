@@ -4,6 +4,7 @@ import {
   EntityItemAutoVariation,
   entityItemDetailPadding,
 } from "@contentgrid/features/entity-item";
+import { DeleteEntityItemButton } from "@contentgrid/features/entity-item-delete";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
@@ -35,6 +36,22 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
+  // Hides the toolbar's Delete while the item's edit form is open: deleting would navigate away
+  // and run into the unsaved-changes prompt.
+  const [isEditing, setIsEditing] = useState(false);
+
+  // With a toolbar, Delete goes in it. Without one, the variation draws its own next to Edit
+  // (`onDeleted`).
+  const deleteAction =
+    result.status === "success" && toolbar !== false && !isEditing ? (
+      <DeleteEntityItemButton
+        item={result.entityItem}
+        label="Delete"
+        onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
+        onRefresh={() => void result.refetch()}
+      />
+    ) : null;
+
   let content: ReactNode;
   if (result.status === "not-found") {
     content = <ErrorPage model={toProblemDisplayModel(describeTarget(target))} />;
@@ -60,6 +77,12 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
         onRequiredRelationClick={(affectedRelation) =>
           setProblemDialog({ kind: "requiredRelation", affectedRelation })
         }
+        onDeleted={
+          toolbar === false
+            ? () => navigation.openEntityItemCollection(result.profileEntity.name)
+            : undefined
+        }
+        onEditingChange={setIsEditing}
       />
     );
   } else {
@@ -88,7 +111,11 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
           entityItem={result.status === "success" ? result.entityItem : undefined}
         />
       }
-      actions={toolbar?.actions}
+      actions={
+        <>
+          {toolbar?.actions} {deleteAction}
+        </>
+      }
       contentPadded={contentPadding}
     >
       {content}

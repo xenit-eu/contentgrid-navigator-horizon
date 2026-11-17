@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { Separator } from "@contentgrid/ui";
+import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { RightSidePanelLayout } from "../../../layout";
 import { EditableEntityItemAttributes } from "../../attributes/editable-entity-item-attributes";
 import { EditEntityItemButton } from "../../edit/edit-entity-item-button";
@@ -30,10 +31,12 @@ export function EntityItemContentFocus({
   onRequiredRelationClick,
   actions,
   allowEdit = true,
+  onDeleted,
+  onEditingChange,
 }: Readonly<EntityItemVariationProps>) {
   const { profileEntity } = item;
   const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
+  const itemContext = useEntityItemContext(item, refetch, onEditingChange);
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -84,6 +87,13 @@ export function EntityItemContentFocus({
                 item={item}
                 isEditing={itemContext.isEditing}
                 onEdit={() => itemContext.setIsEditing(true)}
+              />
+            )}
+            {onDeleted && !itemContext.isEditing && (
+              <DeleteEntityItemButton
+                item={item}
+                onDeleted={onDeleted}
+                onRefresh={() => void itemContext.refresh()}
               />
             )}
           </div>

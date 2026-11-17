@@ -83,7 +83,7 @@ export function BooleanRenderer({
         role="radiogroup"
         aria-labelledby={labelId}
         aria-required={required}
-        className={cn("flex items-center gap-2", readOnly && "pointer-events-none opacity-50")}
+        className={cn("flex items-center", readOnly && "pointer-events-none opacity-50")}
         onFocus={onFocus}
         onBlur={onBlur}
         {...fieldAriaProps(name, error)}
@@ -93,6 +93,7 @@ export function BooleanRenderer({
           role="radio"
           label="True"
           size="sm"
+          joined="start"
           selected={value === true}
           tabIndex={value === false ? -1 : 0}
           onClick={() => select(true)}
@@ -104,6 +105,7 @@ export function BooleanRenderer({
           role="radio"
           label="False"
           size="sm"
+          joined="end"
           selected={value === false}
           tabIndex={value === false ? 0 : -1}
           onClick={() => select(false)}
@@ -111,7 +113,7 @@ export function BooleanRenderer({
           disabled={readOnly}
         />
         {!readOnly && value !== undefined && (
-          <Button type="button" variant="ghost" size="sm" onClick={clear}>
+          <Button type="button" variant="ghost" size="sm" className="ml-2" onClick={clear}>
             Clear
           </Button>
         )}

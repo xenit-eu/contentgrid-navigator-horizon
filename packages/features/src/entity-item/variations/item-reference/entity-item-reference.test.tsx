@@ -71,6 +71,9 @@ function makeWidgetProfile() {
   return makeProfileEntity(widgetProfileJson, PROFILE_URL, "widget");
 }
 
+const LONG_NAME = "N".repeat(130);
+const LONG_EMAIL = `${"e".repeat(130)}@example.com`;
+
 // Item 2 deliberately omits "name" — the profile still declares it, but the response has no
 // value for it — so `item.findAttribute("name")` returns undefined and EntityItemReference
 // falls back to `item.id` as the title.
@@ -89,10 +92,16 @@ function collectionBody() {
           email: "bob@example.com",
           _links: { self: { href: `${COLLECTION_URL}/2` } },
         },
+        {
+          id: "3",
+          name: LONG_NAME,
+          email: LONG_EMAIL,
+          _links: { self: { href: `${COLLECTION_URL}/3` } },
+        },
       ],
     },
     _links: { self: { href: COLLECTION_URL } },
-    page: { size: 2, total_items_exact: 2 },
+    page: { size: 3, total_items_exact: 3 },
   };
 }
 
@@ -122,7 +131,7 @@ function makeWrapper() {
   return Wrapper;
 }
 
-async function fetchItems(): Promise<[EntityItem, EntityItem]> {
+async function fetchItems(): Promise<[EntityItem, EntityItem, EntityItem]> {
   setupHandler();
   const profile = makeWidgetProfile();
   const Wrapper = makeWrapper();
@@ -130,8 +139,8 @@ async function fetchItems(): Promise<[EntityItem, EntityItem]> {
     wrapper: Wrapper,
   });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
-  const [itemA, itemB] = result.current.data!.items;
-  return [itemA, itemB];
+  const [itemA, itemB, itemC] = result.current.data!.items;
+  return [itemA, itemB, itemC];
 }
 
 afterEach(() => {
@@ -165,6 +174,19 @@ describe("EntityItemReference", () => {
 
     expect(await screen.findByText("Acme")).toBeInTheDocument();
     expect(screen.getByText("hello@acme.com")).toBeInTheDocument();
+  });
+
+  it("truncates a long title and subtitle to 120 characters", async () => {
+    const [, , itemC] = await fetchItems();
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(PROFILE_URL, "widget", { subtitleAttribute: "email" });
+
+    render(<EntityItemReference item={itemC} />, { wrapper: makeWrapper() });
+
+    expect(await screen.findByText(`${LONG_NAME.slice(0, 120)}…`)).toBeInTheDocument();
+    expect(screen.getByText(`${LONG_EMAIL.slice(0, 120)}…`)).toBeInTheDocument();
+    expect(screen.queryByText(LONG_EMAIL)).not.toBeInTheDocument();
   });
 
   it("renders as a clickable button and calls onClick", async () => {

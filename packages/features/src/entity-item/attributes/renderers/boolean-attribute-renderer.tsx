@@ -1,10 +1,11 @@
 import { CheckCircleIcon, MinusCircleIcon, XCircleIcon } from "@phosphor-icons/react";
 import { AttributeValue, StatusPill } from "@contentgrid/ui";
+import { type AttributeRendererVariant, isTableVariant } from "./variant";
 
 export interface BooleanAttributeRendererProps {
   readonly value: boolean | null;
   readonly label: string;
-  readonly variant?: "default" | "item-reference" | "table";
+  readonly variant?: AttributeRendererVariant;
 }
 
 export function BooleanAttributeRenderer({
@@ -12,7 +13,7 @@ export function BooleanAttributeRenderer({
   label,
   variant = "default",
 }: Readonly<BooleanAttributeRendererProps>) {
-  if (variant === "table") {
+  if (isTableVariant(variant)) {
     return (
       <AttributeValue>
         {value === true ? "True" : value === false ? "False" : undefined}
