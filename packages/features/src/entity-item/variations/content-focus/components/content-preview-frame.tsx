@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
-import { FileXIcon, ImageBrokenIcon, VideoCameraSlashIcon } from "@phosphor-icons/react";
+import {
+  FileDashedIcon,
+  FileXIcon,
+  ImageBrokenIcon,
+  VideoCameraSlashIcon,
+} from "@phosphor-icons/react";
 import type { PreviewSource, ProblemDisplayModel } from "@contentgrid/navigator-data";
 import { Button, DEFAULT_PDF_VIEWER_LABELS, FileUploadZone, Skeleton } from "@contentgrid/ui";
 import { ProblemAlert } from "../../../../problem-details";
@@ -61,7 +66,7 @@ export interface ContentPreviewFrameLabels {
 }
 
 const DEFAULT_LABELS: Required<ContentPreviewFrameLabels> = {
-  noFileCaption: "No file",
+  noFileCaption: "No file uploaded yet",
   uploadingCaption: "Uploading…",
   loadingCaption: "Loading preview…",
   preparingPreviewCaption: "Preparing preview…",
@@ -184,11 +189,7 @@ export function ContentPreviewFrame({
     const message = labels[ERROR_MESSAGE_LABEL_KEY[state]];
     body = (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 p-6">
-        {icon && (
-          <div className="flex size-16 items-center justify-center rounded-full border bg-secondary text-secondary-foreground [&_svg]:size-8">
-            {icon}
-          </div>
-        )}
+        {icon && <StateIcon>{icon}</StateIcon>}
         <div className="w-full max-w-md">
           {problem ? (
             <ProblemAlert model={problem} />
@@ -246,8 +247,25 @@ function NoFileBody({ problem, onFileChange, fill, noFileCaption }: Readonly<NoF
           <FileUploadZone file={null} onFileChange={onFileChange} fill={fill} />
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{noFileCaption}</p>
+        <>
+          <StateIcon large>
+            <FileDashedIcon aria-hidden />
+          </StateIcon>
+          <p className="text-base font-medium text-muted-foreground">{noFileCaption}</p>
+        </>
       )}
+    </div>
+  );
+}
+
+/** The round icon shown above a state's message. */
+function StateIcon({ large, children }: Readonly<{ large?: boolean; children: ReactNode }>) {
+  const size = large ? "size-20 [&_svg]:size-10" : "size-16 [&_svg]:size-8";
+  return (
+    <div
+      className={`flex items-center justify-center rounded-full border bg-secondary text-secondary-foreground ${size}`}
+    >
+      {children}
     </div>
   );
 }
