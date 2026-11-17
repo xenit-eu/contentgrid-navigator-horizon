@@ -27,7 +27,7 @@ function RecordTableRow({
   onSelectChange,
   className,
 }: RecordTableRowProps) {
-  const rowBackground = selected ? "bg-selected" : "bg-card/50";
+  const rowBackground = selected ? "bg-selected" : "bg-table-row";
 
   return (
     <div
@@ -60,7 +60,7 @@ function RecordTableRow({
         // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
         // to its content's actual width when that's wider than the container (matching what the
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
-        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
+        "group/row relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
         onClick && "cursor-pointer",
         onClick && !selected && "hover:bg-hover",
         rowBackground,
@@ -102,7 +102,12 @@ function RecordTableRow({
       {actions && (
         <div
           role="cell"
-          className={cn("sticky right-0 flex items-center justify-end gap-1", rowBackground)}
+          className={cn(
+            "sticky right-0 flex items-center justify-end gap-1",
+            rowBackground,
+            // Follows the row's hover, so the sticky cell doesn't stand out from it.
+            onClick && !selected && "group-hover/row:bg-hover",
+          )}
         >
           {actions}
         </div>

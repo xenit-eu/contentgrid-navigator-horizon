@@ -97,7 +97,7 @@ describe("RecordTableHeader — actions column", () => {
   it("pins the trailing actions header cell to the right with an opaque background", () => {
     renderHeader({ showActionsColumn: true });
     const headers = screen.getAllByRole("columnheader");
-    expect(headers.at(-1)).toHaveClass("sticky", "right-0", "bg-muted/70");
+    expect(headers.at(-1)).toHaveClass("sticky", "right-0", "bg-table-header");
   });
 });
 
