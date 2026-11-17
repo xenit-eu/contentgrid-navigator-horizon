@@ -1,3 +1,4 @@
+import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { EntityItemSections } from "../../entity-item-sections";
 import { EntityItemRelationSummary } from "../../relations/relation-summary";
 import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
@@ -14,16 +15,31 @@ import { EntityItemCard } from "../item-card/entity-item-card";
  */
 export function EntityItemAttributeFocus({
   actions,
+  onDeleted,
   ...props
 }: Readonly<EntityItemVariationProps>) {
   const { item } = props;
   const sectionProps = useEntityItemSectionProps(props);
+  // Delete hides while the edit form is open: deleting would navigate away from unsaved input.
+  const showDelete = onDeleted !== undefined && sectionProps.editedItem === null;
+  const headerActions = (actions || showDelete) && (
+    <>
+      {actions}
+      {showDelete && (
+        <DeleteEntityItemButton
+          item={item}
+          onDeleted={onDeleted}
+          onRefresh={sectionProps.onRefresh}
+        />
+      )}
+    </>
+  );
 
   return (
     <div className="h-full min-h-0">
       <EntityItemCard
         item={item}
-        actions={actions}
+        actions={headerActions}
         summary={
           <EntityItemRelationSummary
             item={item}

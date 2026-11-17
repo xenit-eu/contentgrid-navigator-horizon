@@ -2,13 +2,21 @@
  * The view's wiring of the item feature's callbacks. `EntityItemAutoVariation` is stubbed to
  * buttons that fire the same callbacks the real feature does, so these tests isolate what the
  * view does with them: relation clicks and "create" go to the navigation object, relation
- * problems open the dialog.
+ * problems open the dialog, and a finished delete opens the item's collection. The delete button
+ * is stubbed too; with a toolbar the view draws it there, without one the variation draws its own
+ * (`onDeleted`).
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemDetailView } from "./entity-item-detail-view";
+
+vi.mock("@contentgrid/features/entity-item-delete", () => ({
+  DeleteEntityItemButton: (props: { label?: string; onDeleted: () => void }) => (
+    <button onClick={props.onDeleted}>{`delete-${props.label ?? "icon-only"}`}</button>
+  ),
+}));
 
 vi.mock("@contentgrid/features/entity-item", () => ({
   useEntityItemDetailPadding: () => true,
@@ -20,8 +28,12 @@ vi.mock("@contentgrid/features/entity-item", () => ({
     onMissingRelationTargetClick?: (url: string, field?: string) => void;
     onBlindRelationOverwriteClick?: (info: { existingItem?: string; newItem?: string }) => void;
     onRequiredRelationClick?: (affectedRelation: string) => void;
+    onDeleted?: () => void;
+    onEditingChange?: (isEditing: boolean) => void;
   }) => (
     <div>
+      <button onClick={() => props.onEditingChange?.(true)}>start-editing</button>
+      <button onClick={() => props.onEditingChange?.(false)}>stop-editing</button>
       <button onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}>
         relation-click
       </button>
@@ -37,6 +49,7 @@ vi.mock("@contentgrid/features/entity-item", () => ({
         blind
       </button>
       <button onClick={() => props.onRequiredRelationClick?.("owner")}>required</button>
+      <button onClick={() => props.onDeleted?.()}>deleted</button>
     </div>
   ),
 }));
@@ -65,6 +78,48 @@ describe("EntityItemDetailView — feature callbacks", () => {
     expect(recording.calls).toEqual([
       { method: "openCreateItem", args: ["company", { openInNewTab: true }] },
     ]);
+  });
+
+  it("draws Delete in the toolbar, opening the collection after a delete", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByText("delete-Delete"));
+
+    expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
+  });
+
+  it("hides the toolbar's Delete while the item is being edited", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+    await screen.findByText("delete-Delete");
+
+    await userEvent.click(screen.getByText("start-editing"));
+    expect(screen.queryByText("delete-Delete")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("stop-editing"));
+    expect(screen.getByText("delete-Delete")).toBeInTheDocument();
+  });
+
+  it("does not hand the variation onDeleted when Delete is in the toolbar", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByText("deleted"));
+
+    expect(recording.calls).toEqual([]);
+  });
+
+  it("leaves Delete to the variation when there is no toolbar, opening the collection after a delete", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} toolbar={false} />, {
+      wrapper: Wrapper,
+    });
+
+    await userEvent.click(await screen.findByText("deleted"));
+
+    expect(screen.queryByText("delete-Delete")).not.toBeInTheDocument();
+    expect(recording.calls).toEqual([{ method: "openEntityItemCollection", args: [entityName] }]);
   });
 
   it.each([

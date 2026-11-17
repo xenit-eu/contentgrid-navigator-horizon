@@ -1,4 +1,5 @@
 import { ResizableSplitLayout } from "@contentgrid/ui";
+import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { EntityItemSections, hasEntityItemRelations } from "../../entity-item-sections";
 import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
@@ -17,15 +18,33 @@ const STACK_BELOW = 768;
  * the single card. Like the other variations it draws no toolbar or page chrome
  * (`h-full min-h-0`, no outer padding) and performs no navigation of its own.
  */
-export function EntityItemSideBySide({ actions, ...props }: Readonly<EntityItemVariationProps>) {
+export function EntityItemSideBySide({
+  actions,
+  onDeleted,
+  ...props
+}: Readonly<EntityItemVariationProps>) {
   const { item } = props;
   // The relations get a column of their own, with room to show them all expanded.
   const sectionProps = useEntityItemSectionProps({ ...props, openAllByDefault: true });
+  // Delete hides while the edit form is open: deleting would navigate away from unsaved input.
+  const showDelete = onDeleted !== undefined && sectionProps.editedItem === null;
+  const headerActions = (actions || showDelete) && (
+    <>
+      {actions}
+      {showDelete && (
+        <DeleteEntityItemButton
+          item={item}
+          onDeleted={onDeleted}
+          onRefresh={sectionProps.onRefresh}
+        />
+      )}
+    </>
+  );
 
   if (!hasEntityItemRelations(item)) {
     return (
       <div className="h-full min-h-0">
-        <EntityItemCard item={item} actions={actions}>
+        <EntityItemCard item={item} actions={headerActions}>
           <EntityItemSections {...sectionProps} />
         </EntityItemCard>
       </div>
@@ -38,7 +57,7 @@ export function EntityItemSideBySide({ actions, ...props }: Readonly<EntityItemV
         className="group"
         left={
           <div className="h-full min-h-0 overflow-auto">
-            <EntityItemCard item={item} actions={actions}>
+            <EntityItemCard item={item} actions={headerActions}>
               <EntityItemSections {...sectionProps} show="details" />
             </EntityItemCard>
           </div>

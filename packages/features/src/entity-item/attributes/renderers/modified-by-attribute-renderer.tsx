@@ -1,11 +1,13 @@
 import { UserIcon } from "@phosphor-icons/react";
+import type { PlainAttributeValue } from "@contentgrid/navigator-data";
 import { AttributeValue, StatusPill } from "@contentgrid/ui";
+import { type AttributeRendererVariant, isTableVariant } from "./variant";
 
 export interface ModifiedByAttributeRendererProps {
-  readonly value: string | number | boolean | null;
+  readonly value: PlainAttributeValue;
   readonly label: string;
   readonly wrap?: boolean;
-  readonly variant?: "default" | "item-reference" | "table";
+  readonly variant?: AttributeRendererVariant;
 }
 
 export function ModifiedByAttributeRenderer({
@@ -16,7 +18,7 @@ export function ModifiedByAttributeRenderer({
 }: Readonly<ModifiedByAttributeRendererProps>) {
   const displayValue = value == null ? undefined : String(value);
 
-  if (variant === "table") {
+  if (isTableVariant(variant)) {
     return (
       <span className="flex min-w-0 items-center gap-1.5">
         <UserIcon size={14} className="shrink-0 text-muted-foreground" aria-hidden />

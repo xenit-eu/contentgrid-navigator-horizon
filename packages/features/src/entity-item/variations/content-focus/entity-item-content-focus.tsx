@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { RightSidePanelLayout } from "../../../layout";
 import { EntityItemSections } from "../../entity-item-sections";
 import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
@@ -15,10 +16,28 @@ import { selectDefaultContentAttribute } from "./util/select-default-content-att
  * of its own. The preview and relations load their own follow-up data by following the item's
  * links. Renders nothing when the item's profile has no content attributes.
  */
-export function EntityItemContentFocus({ actions, ...props }: Readonly<EntityItemVariationProps>) {
+export function EntityItemContentFocus({
+  actions,
+  onDeleted,
+  ...props
+}: Readonly<EntityItemVariationProps>) {
   const { item } = props;
   const { profileEntity } = item;
   const sectionProps = useEntityItemSectionProps(props);
+  // Delete hides while the edit form is open: deleting would navigate away from unsaved input.
+  const showDelete = onDeleted !== undefined && sectionProps.editedItem === null;
+  const headerActions = (actions || showDelete) && (
+    <>
+      {actions}
+      {showDelete && (
+        <DeleteEntityItemButton
+          item={item}
+          onDeleted={onDeleted}
+          onRefresh={sectionProps.onRefresh}
+        />
+      )}
+    </>
+  );
 
   // `undefined` means "use the data-model default" (selectDefaultContentAttribute); reset
   // whenever the item identity changes — entity OR id, not just id (navigating e.g.
@@ -62,9 +81,9 @@ export function EntityItemContentFocus({ actions, ...props }: Readonly<EntityIte
       sidePanelHeader={
         <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
           <EntityItemReference item={item} size="sm" />
-          {actions && (
+          {headerActions && (
             <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
-              {actions}
+              {headerActions}
             </div>
           )}
         </div>

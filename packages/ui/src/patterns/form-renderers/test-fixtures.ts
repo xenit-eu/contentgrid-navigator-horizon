@@ -6,6 +6,7 @@ import type { FileRendererProps } from "./file-renderer";
 import type { NumberRendererProps } from "./number-renderer";
 import type { RelationToManyRendererProps } from "./relation-to-many-renderer";
 import type { RelationToOneRendererProps } from "./relation-to-one-renderer";
+import type { TextMultiRendererProps } from "./text-multi-renderer";
 import type { TextRendererProps } from "./text-renderer";
 
 /** Every renderer's fixture omits `value`/`onChange` — those vary per test/story and are
@@ -89,6 +90,18 @@ export function enumMultiField(
     required: false,
     readOnly: false,
     options: INLINE_STATUS_OPTIONS,
+    ...overrides,
+  };
+}
+
+export function textMultiField(
+  overrides: Partial<BaseProps<TextMultiRendererProps>> = {},
+): BaseProps<TextMultiRendererProps> {
+  return {
+    name: "keywords",
+    label: "Keywords",
+    required: false,
+    readOnly: false,
     ...overrides,
   };
 }

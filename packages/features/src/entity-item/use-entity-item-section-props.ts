@@ -15,6 +15,11 @@ export type UseEntityItemSectionPropsOptions = Pick<
 > & {
   /** Reloads the item; see `useEntityItemContext`. */
   readonly refetch?: EntityItemRefetch;
+  /**
+   * Hears every change of edit mode; see `useEntityItemContext`. Not passed on to
+   * `EntityItemSections`, whose own `onEditingChange` opens and closes the form.
+   */
+  readonly onEditingChange?: (isEditing: boolean) => void;
 };
 
 /**
@@ -28,10 +33,11 @@ export function useEntityItemSectionProps({
   refetch,
   allowEdit = true,
   openAllByDefault = false,
+  onEditingChange,
   ...handlers
 }: Readonly<UseEntityItemSectionPropsOptions>): EntityItemSectionsProps {
   const { profiles } = useLoadedProfileEntities();
-  const itemContext = useEntityItemContext(item, refetch);
+  const itemContext = useEntityItemContext(item, refetch, onEditingChange);
 
   return {
     item,

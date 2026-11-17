@@ -27,7 +27,7 @@ function formatFileSize(bytes: number): string {
 function dropZoneStateClassName(isDragActive: boolean, previewed: boolean): string {
   if (isDragActive) return "border-primary bg-primary/10";
   if (previewed) return "border-solid border-primary bg-selected";
-  return "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5";
+  return "border-primary/40 bg-primary/[0.03] hover:border-primary hover:bg-primary/5 aria-invalid:border-destructive";
 }
 
 // ---------------------------------------------------------------------------

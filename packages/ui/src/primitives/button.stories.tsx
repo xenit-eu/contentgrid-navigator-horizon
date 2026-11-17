@@ -23,6 +23,7 @@ export const Variants: Story = {
       <Button variant="outline">Outline</Button>
       <Button variant="ghost">Ghost</Button>
       <Button variant="destructive">Delete account</Button>
+      <Button variant="destructive-outline">Delete item</Button>
       <Button variant="link">Learn more</Button>
     </div>
   ),

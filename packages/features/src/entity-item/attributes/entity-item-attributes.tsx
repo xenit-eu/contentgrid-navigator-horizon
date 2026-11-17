@@ -92,7 +92,7 @@ export function EntityItemAttributes({
               <TableRow key={attr.value.name}>
                 <TableCell className="text-muted-foreground font-medium">{label}</TableCell>
                 <TableCell className="w-full">
-                  <AttributeValueRenderer attr={attr} variant="table" />
+                  <AttributeValueRenderer attr={attr} variant="attribute-table" />
                 </TableCell>
               </TableRow>
             ))}
