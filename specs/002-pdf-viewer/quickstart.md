@@ -46,7 +46,7 @@ pnpm --filter navigator-experimental dev
 3. Item with two content attributes → selector defaults to the first with a file; switching cancels the
    previous load, no flash of the previous document (US1-4). Watch the network tab: one request per
    selection, aborted on switch.
-4. Item with an empty content attribute → "No file" with the drop zone (US1-5).
+4. Item with an empty content attribute → the "No file" state with the drop zone (US1-5).
 5. Entity without content attribute → attribute-focus layout, no viewer (US1-6).
 6. Download → original filename, request carries the user's token (network tab), works from every state
    that has a file (US1-7, FR-012).

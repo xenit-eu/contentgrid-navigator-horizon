@@ -52,8 +52,8 @@ When `firstFileField` is absent nothing is shown and the store is left untouched
 
 | State                     | Shown                                                                                | Actions                |
 | ------------------------- | ------------------------------------------------------------------------------------ | ---------------------- |
-| `noFile` + may upload     | drop zone + "No file"                                                                | drop / browse → upload |
-| `noFile` + may not upload | "No file"                                                                            | none                   |
+| `noFile` + may upload     | drop zone, no caption                                                                | drop / browse → upload |
+| `noFile` + may not upload | "No file uploaded yet"                                                               | none                   |
 | `uploading` (new)         | skeleton + "Uploading…"                                                              | none                   |
 | `noFile` + upload error   | problem alert + drop zone                                                            | drop / browse → upload |
 | after success             | the item's new file → normal preview states (`loading` → `ready` / rendition states) | as in 002              |
