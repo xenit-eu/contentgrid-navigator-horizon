@@ -47,11 +47,13 @@ async function renderForm(
     onClose = vi.fn(),
     onRefresh = vi.fn(),
     onPreview,
+    onSavingChange,
     ref,
   }: {
     onClose?: () => void;
     onRefresh?: () => void;
     onPreview?: (attributeName: string) => void;
+    onSavingChange?: (isSaving: boolean) => void;
     ref?: React.Ref<EditEntityItemFormHandle>;
   } = {},
 ) {
@@ -66,6 +68,7 @@ async function renderForm(
         pendingContent={pendingContent}
         onPendingContentChange={setPendingContent}
         onPreview={onPreview}
+        onSavingChange={onSavingChange}
         ref={ref}
       />
     );
@@ -322,6 +325,32 @@ describe("EditEntityItemContainer", () => {
       await waitFor(() => expect(onClose).toHaveBeenCalled());
       expect(appendSpy).toHaveBeenCalledWith("file", picked, "renamed.txt");
       appendSpy.mockRestore();
+    });
+
+    it("keeps the file fields read-only while Save runs", async () => {
+      const user = userEvent.setup();
+      let releaseSave: () => void = () => {};
+      const saveHeld = new Promise<void>((resolve) => (releaseSave = resolve));
+      const onSavingChange = vi.fn();
+      server.use(
+        contentHead,
+        http.put(ALL_ATTRIBUTE_ITEM_URL, async () => {
+          await saveHeld;
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.delete(CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
+      );
+      await renderForm(makeAllAttributeItem({}, '"v1"'), { onSavingChange });
+
+      expect(screen.getByRole("button", { name: "Remove file" })).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: "Remove file" })).not.toBeInTheDocument(),
+      );
+      expect(onSavingChange).toHaveBeenLastCalledWith(true);
+      releaseSave();
+      await waitFor(() => expect(onSavingChange).toHaveBeenLastCalledWith(false));
     });
 
     it("brings a picked file into the preview, but not a removal", async () => {

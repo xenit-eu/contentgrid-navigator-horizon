@@ -83,8 +83,12 @@ vi.mock("../attributes/editable-entity-item-attributes", () => ({
   EditableEntityItemAttributes: (props: {
     onEditingChange: (isEditing: boolean) => void;
     onPendingContentChange: (pendingContent: ReadonlyMap<string, File | null>) => void;
+    onSavingChange?: (isSaving: boolean) => void;
   }) => (
     <>
+      <button type="button" onClick={() => props.onSavingChange?.(true)}>
+        start saving
+      </button>
       <button type="button" onClick={() => props.onEditingChange(true)}>
         open the form
       </button>
@@ -245,6 +249,23 @@ describe("EntityItemAutoVariation", () => {
 
     expect(screen.getByRole("button", { name: /drop a file here/i })).toBeInTheDocument();
     expect(screen.queryByText("content-preview-panel:receipt")).not.toBeInTheDocument();
+  });
+
+  it("takes no file in the preview's drop zone while the form saves", async () => {
+    const profile = makeProfile({ hasContentAttributes: true, contentAttributeNames: ["receipt"] });
+    const item = makeEntityItem({
+      profileEntity: profile,
+      contentAttrs: [makeContentAttribute("receipt", true)],
+    });
+    renderBody(<EntityItemAutoVariation entityItem={item} />);
+    expect(await screen.findByText("content-preview-panel:receipt")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "open the form" }));
+    fireEvent.click(screen.getByRole("button", { name: "remove receipt in the form" }));
+    expect(screen.getByRole("button", { name: /drop a file here/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "start saving" }));
+
+    expect(screen.queryByRole("button", { name: /drop a file here/i })).not.toBeInTheDocument();
   });
 
   it("shows a file picked in the form in place of the stored one", async () => {

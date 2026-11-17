@@ -11,6 +11,8 @@ interface EditContentFieldsProps {
   readonly onContentChange: (attributeName: string, file: File | null) => void;
   /** While Save stores the picked files, each one's upload progress, by attribute name. */
   readonly uploadProgress?: ReadonlyMap<string, number>;
+  /** Makes every file field read-only, e.g. while Save runs: no file can be picked or removed. */
+  readonly disabled?: boolean;
   /** The attribute's filename and mimetype fields, shown under its file while it has one. */
   readonly renderMetadataFields: (attributeName: string) => ReactNode;
   /** The attribute shown in the content preview next to the form, if any. */
@@ -24,13 +26,14 @@ interface EditContentFieldsProps {
  * stored one, with the file's filename and mimetype fields, in a card like the relation sections.
  * With several files, the one in the content preview is highlighted and the others offer Preview.
  * Picking or removing a file only reports the change; nothing is sent before Save. Without the
- * attribute's `cg:content` link the file can't be picked or removed.
+ * attribute's `cg:content` link, or while `disabled`, the file can't be picked or removed.
  */
 export function EditContentFields({
   item,
   pendingContent,
   onContentChange,
   uploadProgress,
+  disabled = false,
   renderMetadataFields,
   previewedAttributeName,
   onPreview,
@@ -57,7 +60,7 @@ export function EditContentFields({
             name={name}
             label={contentAttributeLabel(item, name)}
             required={false}
-            readOnly={!item.canUploadContent(name)}
+            readOnly={disabled || !item.canUploadContent(name)}
             value={file ?? undefined}
             onChange={(picked) => onContentChange(name, picked ?? null)}
             previewed={isPreviewed}

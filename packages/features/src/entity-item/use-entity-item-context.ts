@@ -85,7 +85,8 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
  * reporting effect, firing `false` and `true` again each time.
  *
  * `pendingContent` holds the unsaved file changes of the edit form. It lives here so the content
- * preview next to the form can show them too; `refresh` keeps them.
+ * preview next to the form can show them too; `refresh` keeps them. `isSaving` is whether the form
+ * is saving: the preview takes no file while it is.
  */
 export function useEntityItemContext(
   item: EntityItem,
@@ -95,12 +96,14 @@ export function useEntityItemContext(
   const href = item.selfLink.href;
   const [editedItem, setEditedItem] = useState<EntityItem | null>(null);
   const [pendingContent, setPendingContent] = useState<ContentChanges>(new Map());
+  const [isSaving, setIsSaving] = useState(false);
   const [shownHref, setShownHref] = useState(href);
   const sections = useEntityItemSectionsState();
   if (href !== shownHref) {
     setShownHref(href);
     setEditedItem(null);
     setPendingContent(new Map());
+    setIsSaving(false);
     // A toggle is for the item it was made on: every item starts with its sections at their
     // defaults, whether or not the page stayed mounted in between (e.g. a cached item).
     sections.restoreDefaults();
@@ -121,6 +124,7 @@ export function useEntityItemContext(
   const setIsEditing = (editing: boolean) => {
     setEditedItem(editing ? item : null);
     setPendingContent(new Map());
+    setIsSaving(false);
   };
   const refresh = async () => {
     const result = await refetch();
@@ -138,5 +142,7 @@ export function useEntityItemContext(
     sections,
     pendingContent,
     setPendingContent,
+    isSaving,
+    setIsSaving,
   };
 }
