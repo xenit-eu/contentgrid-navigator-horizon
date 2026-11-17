@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { EyeIcon, LinkBreakIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button } from "../../primitives/button";
 import { Skeleton } from "../../primitives/skeleton";
+import { ActionableAccordion } from "../actionable-accordion/actionable-accordion";
 import { RecordRowAction } from "../record-table/record-row-action";
-import { RelationAccordion } from "../relation-accordion/relation-accordion";
 import { FieldMessage, RequiredMarker, fieldAriaProps } from "./field-shell";
 
 export interface RelationToOneRendererProps {
@@ -27,7 +27,7 @@ export interface RelationToOneRendererProps {
 }
 
 /**
- * A to-one relation field: a `RelationAccordion` (label, Link/Change/Unlink/Details actions)
+ * A to-one relation field: a `ActionableAccordion` (label, Link/Change/Unlink/Details actions)
  * around the linked item's summary. Unlink clears the value to `""`.
  */
 export function RelationToOneRenderer({
@@ -49,7 +49,7 @@ export function RelationToOneRenderer({
 
   return (
     <div className="space-y-1.5">
-      <RelationAccordion
+      <ActionableAccordion
         title={
           <span id={`${name}-label`} className="inline-flex items-center gap-2">
             {label}
@@ -102,7 +102,7 @@ export function RelationToOneRenderer({
             </p>
           )}
         </div>
-      </RelationAccordion>
+      </ActionableAccordion>
 
       <FieldMessage name={name} description={description} error={error} />
     </div>

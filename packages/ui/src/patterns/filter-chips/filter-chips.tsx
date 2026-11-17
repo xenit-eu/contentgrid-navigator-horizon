@@ -80,7 +80,14 @@ export function FilterChips({
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(scroller);
-    return () => observer.disconnect();
+    // A web font arriving after the first measure widens the chips without resizing the scroller,
+    // so the observer misses it and the stale width truncates them. Measure again once it loads.
+    const fonts = document.fonts as FontFaceSet | undefined; // absent in jsdom
+    fonts?.addEventListener("loadingdone", measure);
+    return () => {
+      observer.disconnect();
+      fonts?.removeEventListener("loadingdone", measure);
+    };
   }, [chips, maxLines]);
 
   if (chips.length === 0) return null;

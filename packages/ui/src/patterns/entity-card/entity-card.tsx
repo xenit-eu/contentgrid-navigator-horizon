@@ -3,13 +3,11 @@ import { cn } from "../../lib/utils";
 import { PageTitle, type PageTitleProps } from "../../primitives";
 import { Card, CardContent, CardHeader } from "../../primitives/card";
 
-export interface EntityCardProps {
+interface EntityCardBaseProps {
   /** Unique identifier / URL-safe name for this entity (passed to `onCardClick`) */
   name: string;
   /** Small eyebrow label rendered above the title. Omitted entirely when not provided. */
   header?: string;
-  /** Human-readable title */
-  title: string;
   /** Optional description shown below the title */
   description?: string;
   /** Forwarded to the title block's `PageTitle` as its `size`. Defaults to `"compact"` —
@@ -30,12 +28,31 @@ export interface EntityCardProps {
   onCardClick?: (name: string) => void;
 
   indentSubtitle?: boolean;
+  /** Renders `children` edge to edge — no horizontal padding, no bottom gutter, and a tighter
+   * header — e.g. for a list of full-width rows that should run to the card's border. */
+  flushContent?: boolean;
 }
+
+export type EntityCardProps = EntityCardBaseProps &
+  (
+    | {
+        /** Human-readable title */
+        title: string;
+        heading?: undefined;
+      }
+    | {
+        /** Custom title block rendered in place of the default one (`header`, `title`,
+         * `description`, `icon`) — e.g. an item reference with a summary below it. */
+        heading: ReactNode;
+        title?: undefined;
+      }
+  );
 
 export function EntityCard({
   name,
   header,
   title,
+  heading,
   description,
   icon,
   action,
@@ -43,6 +60,7 @@ export function EntityCard({
   onCardClick,
   indentSubtitle = true,
   titleVariant = "compact",
+  flushContent = false,
 }: Readonly<EntityCardProps>) {
   return (
     <Card
@@ -50,8 +68,11 @@ export function EntityCard({
       role={onCardClick ? "button" : undefined}
       tabIndex={onCardClick ? 0 : undefined}
       className={cn(
-        "group relative h-full transition-colors",
+        "group relative transition-colors",
+        // Cards in a grid stretch to the tallest one; a flush card keeps its content's height.
+        !flushContent && "h-full",
         onCardClick && "hover:border-primary/50",
+        flushContent && children && "gap-1 overflow-hidden pt-4 pb-0",
       )}
       onClick={onCardClick ? () => onCardClick(name) : undefined}
       onKeyDown={
@@ -68,22 +89,26 @@ export function EntityCard({
       }
     >
       <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <PageTitle
-          size={titleVariant}
-          header={header}
-          title={title}
-          subtitle={description}
-          indentSubtitle={indentSubtitle}
-          clamp
-          className="min-w-0 flex-1"
-          icon={
-            icon && (
-              <span role="presentation" onClick={(event) => event.stopPropagation()}>
-                {icon}
-              </span>
-            )
-          }
-        />
+        {title !== undefined ? (
+          <PageTitle
+            size={titleVariant}
+            header={header}
+            title={title}
+            subtitle={description}
+            indentSubtitle={indentSubtitle}
+            clamp
+            className="min-w-0 flex-1"
+            icon={
+              icon && (
+                <span role="presentation" onClick={(event) => event.stopPropagation()}>
+                  {icon}
+                </span>
+              )
+            }
+          />
+        ) : (
+          <div className="min-w-0 flex-1">{heading}</div>
+        )}
         {action && (
           <div
             role="presentation"
@@ -94,7 +119,9 @@ export function EntityCard({
           </div>
         )}
       </CardHeader>
-      {children && <CardContent className="mt-auto">{children}</CardContent>}
+      {children && (
+        <CardContent className={cn("mt-auto", flushContent && "px-0")}>{children}</CardContent>
+      )}
     </Card>
   );
 }

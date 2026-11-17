@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemAutoVariation,
-  entityItemDetailPadding,
+  useEntityItemDetailPadding,
 } from "@contentgrid/features/entity-item";
 import { DeleteEntityItemButton } from "@contentgrid/features/entity-item-delete";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
@@ -90,7 +90,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   }
 
   const profileEntity = result.status === "not-found" ? undefined : result.profileEntity;
-  const contentPadding = profileEntity ? entityItemDetailPadding(profileEntity) : true;
+  const contentPadding = useEntityItemDetailPadding(profileEntity);
 
   if (toolbar === false) {
     return (

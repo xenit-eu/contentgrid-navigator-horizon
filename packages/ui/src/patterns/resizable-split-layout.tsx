@@ -18,6 +18,9 @@ export interface PaneWidth {
   readonly width: number | undefined;
 }
 
+/** A plain stack's panes take their content's height instead of a share of the layout's. */
+const PLAIN_STACK_PANE_STYLE: React.CSSProperties = { maxHeight: "none", overflow: "visible" };
+
 /** Imperative handle to the right pane: `collapse()`, `expand()`, `isCollapsed()`, `resize()`. */
 export type SplitPaneHandle = PanelImperativeHandle;
 
@@ -77,6 +80,12 @@ export interface ResizableSplitLayoutProps extends SplitPaneSizes {
   /** Pane heights while stacked; used instead of the top-level sizes, which are widths. */
   readonly stackedSizes?: SplitPaneSizes;
   /**
+   * When `false`, stacked panes are not resizable: there is no handle and they simply follow each
+   * other at their natural height (`stackedSizes` doesn't apply). The panes stay mounted when the
+   * layout crosses `stackBelow`. Defaults to `true`.
+   */
+  readonly resizableStacked?: boolean;
+  /**
    * Lets the right pane collapse to `rightCollapsedSize` by dragging it below its minimum size,
    * or through `rightPanelRef`. Its content stays mounted while collapsed.
    */
@@ -115,6 +124,7 @@ function ResizableSplitLayout({
   right,
   stackBelow,
   stackedSizes,
+  resizableStacked = true,
   rightCollapsible = false,
   rightPanelRef,
   onRightCollapsedChange,
@@ -184,6 +194,8 @@ function ResizableSplitLayout({
     collapsedRef.current = collapsed;
   };
 
+  const plainStack = stacked && !resizableStacked;
+
   // The library writes panel ids into the DOM (`id`, `data-testid`, the handle's
   // `aria-controls`), so they must be unique per instance.
   const idPrefix = React.useId();
@@ -193,11 +205,19 @@ function ResizableSplitLayout({
       ref={setElement}
       data-slot="resizable-split-layout"
       data-stacked={stacked || undefined}
-      className={cn("h-full w-full min-h-0", className)}
+      className={cn("w-full min-h-0", !plainStack && "h-full", className)}
     >
       {layoutWidth !== undefined && (
         <SplitLayoutWidthsContext.Provider value={widths}>
-          <ResizablePanelGroup orientation={stacked ? "vertical" : "horizontal"}>
+          {/* One element structure for every mode, so crossing `stackBelow` never remounts the
+              panes (an open form inside one keeps its values). A plain stack only overrides the
+              library's inline sizing — the group grows with its content, each pane takes its
+              natural height (`flex-none!` beats the inline flex values) — and drops the handle. */}
+          <ResizablePanelGroup
+            orientation={stacked ? "vertical" : "horizontal"}
+            style={plainStack ? { height: "auto", overflow: "visible" } : undefined}
+            className={cn(plainStack && "[&>[data-panel]]:flex-none!")}
+          >
             <ResizablePanel
               id={`${idPrefix}-left`}
               defaultSize={
@@ -206,16 +226,19 @@ function ResizableSplitLayout({
               minSize={sizes.minLeftSize}
               maxSize={sizes.maxLeftSize}
               onResize={(size) => updateWidth("left", size)}
+              style={plainStack ? PLAIN_STACK_PANE_STYLE : undefined}
               className={leftClassName}
             >
               <PaneSideContext.Provider value="left">{left}</PaneSideContext.Provider>
             </ResizablePanel>
-            <ResizableHandle
-              withHandle={withHandle && resizable}
-              disabled={!resizable}
-              aria-label={handleLabel}
-              className={handleClassName}
-            />
+            {!plainStack && (
+              <ResizableHandle
+                withHandle={withHandle && resizable}
+                disabled={!resizable}
+                aria-label={handleLabel}
+                className={handleClassName}
+              />
+            )}
             <ResizablePanel
               id={`${idPrefix}-right`}
               panelRef={panelRef}
@@ -225,6 +248,7 @@ function ResizableSplitLayout({
               collapsible={rightCollapsible}
               collapsedSize={sizes.rightCollapsedSize}
               onResize={handleRightResize}
+              style={plainStack ? PLAIN_STACK_PANE_STYLE : undefined}
               className={rightClassName}
             >
               <PaneSideContext.Provider value="right">{right}</PaneSideContext.Provider>

@@ -19,7 +19,7 @@ vi.mock("@contentgrid/features/entity-item-delete", () => ({
 }));
 
 vi.mock("@contentgrid/features/entity-item", () => ({
-  entityItemDetailPadding: () => true,
+  useEntityItemDetailPadding: () => true,
   // The breadcrumbs draw the loaded item with it.
   EntityItemReference: () => <span>item-reference</span>,
   EntityItemAutoVariation: (props: {

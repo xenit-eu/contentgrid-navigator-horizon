@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { type FilterChipItem, FilterChips } from "./filter-chips";
@@ -124,5 +124,33 @@ describe("FilterChips", () => {
 
     rect.mockRestore();
     client.mockRestore();
+  });
+
+  it("measures again when a web font finishes loading", () => {
+    // jsdom has no FontFaceSet; an EventTarget stands in for `document.fonts`.
+    const fonts = new EventTarget();
+    Object.defineProperty(document, "fonts", { value: fonts, configurable: true });
+    let chipWidth = 100;
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        return { width: this.tagName === "LI" ? chipWidth : 0 } as DOMRect;
+      });
+    const client = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+
+    render(<FilterChips chips={chips} onRemove={vi.fn()} maxLines={1} />);
+    // Measured with the fallback font: both chips fit, so the list is not sized.
+    expect(screen.getByRole("list").style.width).toBe("");
+
+    // The web font widens the chips; the scroller keeps its size, so only the font event says so.
+    chipWidth = 300;
+    act(() => {
+      fonts.dispatchEvent(new Event("loadingdone"));
+    });
+    expect(screen.getByRole("list")).toHaveStyle({ width: `${2 * (300 + 8)}px` });
+
+    rect.mockRestore();
+    client.mockRestore();
+    delete (document as { fonts?: unknown }).fonts;
   });
 });
