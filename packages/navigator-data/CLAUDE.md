@@ -150,6 +150,9 @@ Accessor classes wrap a parsed HAL resource and co-locate their TanStack Query f
 | `EntityItemToOneRelation`  | to-one relation link on an entity item      | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItem \| null` (null = empty slot; 404 → null)           |
 | `EntityItemToManyRelation` | to-many relation link on an entity item     | `fetchQuery(apiFetch, url, targetProfileEntity)` → `EntityItemCollection` (keys under `toManyRelation` namespace) |
 
+`UpdateHalFormTemplate.contentMetadataPropertyNames(attr)` names a content attribute's
+`<attr>.filename`/`<attr>.mimetype` properties (each `undefined` when the template lacks it).
+
 Standalone query factories (system-level, not tied to one entity):
 
 - `profileRootQuery(apiFetch, profileUrl)` — query options for `/profile`
@@ -167,7 +170,6 @@ Methods that encode HAL-FORMS values into a `Request` object follow the pattern
 - `entityItem.getToOneRelation(name)?.clearRelationRequest()` or `entityItem.getToManyRelation(name)?.clearRelationRequest()` → `Request` for `_templates.clear-<rel>` (DELETE, no body)
 - `entityItem.uploadContentRequest(attrName, file, contentEtag)` → hand-built PUT `Request` to the `cg:content` link, conditional on the content's own ETag (binary exception — no HAL-FORMS template)
 - `entityItem.downloadContentRequest(attrName, opts?)` → hand-built GET `Request` to the `cg:content` link (binary exception — no HAL-FORMS template)
-- `entityItem.deleteContentRequest(attrName, contentEtag)` → hand-built DELETE `Request` to the `cg:content` link with `If-Match` carrying the content's own ETag (binary exception)
 
 **URL construction — never concatenate by hand:**
 
