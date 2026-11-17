@@ -67,6 +67,7 @@ function valueKindOf(
 ): SearchValueKind | undefined {
   switch (field.kind) {
     case "text":
+    case "text-multi":
     case "autocomplete":
       return "text";
     case "enum":

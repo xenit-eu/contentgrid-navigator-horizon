@@ -24,6 +24,12 @@ export function RequiredMarker() {
   );
 }
 
+/** Id of `FieldShell`'s label — for a control that is not a labelable element (e.g. a
+ * `role="group"`) and so must point at the label with `aria-labelledby` instead. */
+export function fieldLabelId(name: string): string {
+  return `${name}-label`;
+}
+
 /** `aria-invalid`/`aria-describedby` for a field's own input control — shared by every
  * single-input renderer in this directory (spread directly onto the control element). */
 export function fieldAriaProps(
@@ -74,7 +80,7 @@ export function FieldShell({
 }: Readonly<FieldShellProps>) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={name} className={hideLabel ? "sr-only" : undefined}>
+      <Label id={fieldLabelId(name)} htmlFor={name} className={hideLabel ? "sr-only" : undefined}>
         {label}
         {required && <RequiredMarker />}
       </Label>

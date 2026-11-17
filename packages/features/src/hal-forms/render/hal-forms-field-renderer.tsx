@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   ProvenanceTag,
+  TextMultiRenderer,
   TextRenderer,
 } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
@@ -215,6 +216,22 @@ function renderFieldWidget({
           onBlur={onBlur}
         />
       );
+    case "text-multi":
+      return (
+        <TextMultiRenderer
+          name={field.name}
+          label={field.label}
+          required={field.required}
+          readOnly={field.readOnly}
+          description={field.description}
+          maxItems={field.maxItems}
+          value={asStringArray(value)}
+          onChange={onChange}
+          error={error}
+          onFocus={onFocus}
+          onBlur={onBlur}
+        />
+      );
     case "enum": {
       const isRemote = field.property.options?.isRemote() ?? false;
       return field.multiValue ? (
@@ -226,6 +243,7 @@ function renderFieldWidget({
           description={field.description}
           options={field.options}
           isRemote={isRemote}
+          maxItems={field.maxItems}
           value={asStringArray(value)}
           onChange={onChange}
           error={error}

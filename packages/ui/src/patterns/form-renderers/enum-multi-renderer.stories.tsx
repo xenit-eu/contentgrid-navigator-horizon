@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, fn, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { EnumMultiRenderer } from "./enum-multi-renderer";
 import { enumMultiField } from "./test-fixtures";
 
@@ -28,6 +28,14 @@ export const WithSelectedValues: Story = {
   },
 };
 
+export const ReadOnly: Story = {
+  args: {
+    ...enumMultiField({ readOnly: true }),
+    value: ["draft"],
+    onChange: fn(),
+  },
+};
+
 export const RemoteOptionsNotYetLoaded: Story = {
   args: {
     ...enumMultiField({ options: [], isRemote: true }),
@@ -36,7 +44,7 @@ export const RemoteOptionsNotYetLoaded: Story = {
   },
 };
 
-export const CheckingAnOptionCallsOnChange: Story = {
+export const PickingAnOptionCallsOnChange: Story = {
   args: {
     ...enumMultiField(),
     value: ["draft"],
@@ -44,7 +52,10 @@ export const CheckingAnOptionCallsOnChange: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    await fireEvent.click(canvas.getByLabelText("Published"));
+    await userEvent.click(canvas.getByRole("combobox", { name: "Tags" }));
+    // The list is portalled out of the story canvas.
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await page.findByRole("option", { name: "Published" }));
     await expect(args.onChange).toHaveBeenCalledWith(["draft", "published"]);
   },
   tags: ["no-visual-test"],
