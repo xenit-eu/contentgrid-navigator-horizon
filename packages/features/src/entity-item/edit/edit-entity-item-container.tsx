@@ -156,15 +156,21 @@ export function EditEntityItemContainer({
     );
   }
 
-  /** The name in each picked file's filename field, which the file is stored under. */
+  /** The name and media type in each picked file's filename and mimetype fields, which the file
+   * is stored under. */
   function pickedFileMetadata(changes: ContentChanges) {
-    const metadata = new Map<string, { filename: string }>();
+    const metadata = new Map<string, { filename?: string; mimetype?: string }>();
+    const textOf = (fieldName: string | undefined) => {
+      const value = fieldName === undefined ? undefined : formState.values[fieldName];
+      return typeof value === "string" && value !== "" ? value : undefined;
+    };
     for (const [attributeName, file] of changes) {
-      const { filename } = updateTemplate.contentMetadataPropertyNames(attributeName);
-      const value = filename === undefined ? undefined : formState.values[filename];
-      if (file && typeof value === "string" && value !== "") {
-        metadata.set(attributeName, { filename: value });
-      }
+      if (!file) continue;
+      const names = updateTemplate.contentMetadataPropertyNames(attributeName);
+      metadata.set(attributeName, {
+        filename: textOf(names.filename),
+        mimetype: textOf(names.mimetype),
+      });
     }
     return metadata;
   }
