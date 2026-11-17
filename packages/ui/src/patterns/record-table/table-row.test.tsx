@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { getRecordTableGridTemplate } from "./grid-template";
+import { RecordRowAction } from "./record-row-action";
 import { RecordTableRow } from "./table-row";
 import type { RecordTableCell } from "./table-row";
 
@@ -63,12 +64,64 @@ describe("RecordTableRow", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it("prevents the default (page scroll) for Space on the row itself", () => {
+    render(<RecordTableRow cells={CELLS} onClick={vi.fn()} />);
+    // fireEvent returns false when the event's default was prevented.
+    expect(fireEvent.keyDown(screen.getByRole("row"), { key: " " })).toBe(false);
+  });
+
+  it.each([
+    ["Enter", "{Enter}"],
+    ["Space", " "],
+  ])(
+    "only acts on the row's View button, not the row, when %s is pressed on it",
+    async (_, key) => {
+      const user = userEvent.setup();
+      const onClick = vi.fn();
+      const onView = vi.fn();
+      render(
+        <RecordTableRow
+          cells={CELLS}
+          onClick={onClick}
+          actions={<RecordRowAction label="View" icon={<span />} onClick={onView} />}
+        />,
+      );
+      await user.tab();
+      expect(screen.getByRole("row")).toHaveFocus();
+      await user.tab();
+      expect(screen.getByRole("button", { name: "View" })).toHaveFocus();
+      await user.keyboard(key);
+      expect(onView).toHaveBeenCalledOnce();
+      expect(onClick).not.toHaveBeenCalled();
+    },
+  );
+
   it("does not call onClick for other keys", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
     render(<RecordTableRow cells={CELLS} onClick={onClick} />);
     screen.getByRole("row").focus();
     await user.keyboard("a");
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("does not call onClick when Enter is pressed on a button inside the row", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <RecordTableRow
+        cells={CELLS}
+        onClick={onClick}
+        // Like the real row actions, the button's own click does not reach the row.
+        actions={
+          <button type="button" onClick={(event) => event.stopPropagation()}>
+            Delete
+          </button>
+        }
+      />,
+    );
+    screen.getByRole("button", { name: "Delete" }).focus();
+    await user.keyboard("{Enter}");
     expect(onClick).not.toHaveBeenCalled();
   });
 
