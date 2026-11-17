@@ -1,6 +1,12 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.10.1
+- Version change: 1.0.0 → 1.11.0
+- Amendment (1.10.1 → 1.11.0, MINOR): Principle I's binary-content exception extended from
+  `cg:content` PUT/GET to HEAD and DELETE. Removing a stored file from the update form needs a
+  DELETE on the `cg:content` link, which has no HAL-FORMS template either;
+  `entityItem.deleteContentRequest` builds it, gated on the same link, sent with `contentFetch`
+  and `If-Match` carrying the content's own ETag. That ETag is read with a HEAD on the same link,
+  the download request with its method changed.
 - Amendment (1.10.0 → 1.10.1, PATCH): a third round of the same ACC-3216 PR #227 review, two
   naming/location corrections with no principle content added. (a) The navigation hook is
   renamed `useNavigation()` → `useViewNavigation()`, to avoid confusion with TanStack Router's
@@ -140,8 +146,9 @@ Sync Impact Report
   `add-<rel>`/`clear-<rel>` template, or the profile's `create-form` template. Hardcoding an
   HTTP method, URL, or Content-Type instead of reading it from a template is prohibited.
 - **Binary content is the one documented exception to template-driven mutations**: a `cg:content`
-  PUT/GET has no HAL-FORMS template at all. `entityItem.uploadContentRequest`/
-  `downloadContentRequest` MAY construct a `Request` by hand for this case only — gated on the
+  PUT/GET/HEAD/DELETE has no HAL-FORMS template at all. `entityItem.uploadContentRequest`/
+  `downloadContentRequest`/`deleteContentRequest` (and a HEAD built from the download request)
+  MAY construct a `Request` by hand for this case only — gated on the
   `cg:content` link's presence (`entityItem.canUploadContent(attrName)`), using `contentFetch`
   (not `apiFetch`) for the binary transfer. This, together with `unlinkItemRequest` (below), are
   the only two hand-built-`Request` exceptions in the codebase; neither is a precedent for a
@@ -514,4 +521,4 @@ specs/plans/tasks are checked against.
   Principles above. A deviation requires an explicit, documented justification in that plan's
   own Complexity/Deviation section — not silent divergence.
 
-**Version**: 1.10.1 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-10-22
+**Version**: 1.11.0 | **Ratified**: 2026-09-15 | **Last Amended**: 2026-11-10
