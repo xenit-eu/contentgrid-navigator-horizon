@@ -327,6 +327,30 @@ describe("EditEntityItemContainer", () => {
       appendSpy.mockRestore();
     });
 
+    it("stores a picked file under the media type edited in its mimetype field", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      server.use(
+        itemSaved,
+        http.head(CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+        http.put(CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
+      );
+      // Read the part off the spy: undici can't parse a multipart body back into jsdom Files.
+      const appendSpy = vi.spyOn(FormData.prototype, "append");
+      await renderForm(makeAllAttributeItem({ content: null }, '"v1"'), { onClose });
+
+      await pickFile(user, new File(["new"], "new.txt", { type: "text/plain" }));
+      const mimetype = screen.getByLabelText("Content: Mimetype");
+      await user.clear(mimetype);
+      await user.type(mimetype, "text/markdown");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      const part = appendSpy.mock.calls.find(([field]) => field === "file")?.[1] as File;
+      expect(part.type).toBe("text/markdown");
+      appendSpy.mockRestore();
+    });
+
     it("keeps the file fields read-only while Save runs", async () => {
       const user = userEvent.setup();
       let releaseSave: () => void = () => {};
