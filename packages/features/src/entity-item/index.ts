@@ -52,3 +52,7 @@ export type {
   EntityItemVariation,
 } from "./variations/entity-item-auto-variation";
 export type { EntityItemVariationProps } from "./variations/entity-item-variation-props";
+export { EntityItemSections } from "./entity-item-sections";
+export type { EntityItemSectionsProps } from "./entity-item-sections";
+export { useEntityItemSectionProps } from "./use-entity-item-section-props";
+export type { UseEntityItemSectionPropsOptions } from "./use-entity-item-section-props";

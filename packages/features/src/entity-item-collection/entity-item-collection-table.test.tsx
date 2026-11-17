@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, type JsonBodyType, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
@@ -107,8 +107,17 @@ function collectionBody() {
   };
 }
 
-function setupHandler() {
-  server.use(http.get(COLLECTION_URL, () => HttpResponse.json(collectionBody())));
+function setupHandler(body: JsonBodyType = collectionBody()) {
+  server.use(http.get(COLLECTION_URL, () => HttpResponse.json(body)));
+}
+
+/** The same page with no item deletable. */
+function collectionBodyWithoutDelete() {
+  const body = collectionBody();
+  for (const widget of body._embedded.widget) {
+    delete (widget as { _templates?: unknown })._templates;
+  }
+  return body;
 }
 
 function makeWrapper() {
@@ -133,12 +142,12 @@ function makeWrapper() {
   return Wrapper;
 }
 
-async function fetchCollection(): Promise<{
+async function fetchCollection(body?: JsonBodyType): Promise<{
   profile: ProfileEntity;
   collection: EntityItemCollection;
   Wrapper: ReturnType<typeof makeWrapper>;
 }> {
-  setupHandler();
+  setupHandler(body);
   const profile = makeWidgetProfile();
   const Wrapper = makeWrapper();
   const { result } = renderHook(() => useEntityItemCollection({ profileEntity: profile }), {
@@ -183,22 +192,129 @@ describe("EntityItemCollectionTable", () => {
     expect(onEntityItemClick.mock.calls[0][0].id).toBe("1");
   });
 
-  it("calls onEntityItemClick when the row's View action is used", async () => {
+  it("calls onEntityItemOpen, not onEntityItemClick, when the row's View action is used", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();
     const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
     render(
       <EntityItemCollectionTable
         profile={profile}
         collection={collection}
         onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
       />,
       { wrapper: Wrapper },
     );
 
     const viewButtons = screen.getAllByRole("button", { name: "View" });
     await user.click(viewButtons[0]);
-    expect(onEntityItemClick).toHaveBeenCalledOnce();
+    expect(onEntityItemOpen).toHaveBeenCalledWith(collection.items[0]);
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
+  it("shows no View action without onEntityItemOpen", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+  });
+
+  describe("actions column", () => {
+    const ACTIONS_TRACK = "72px";
+    const gridOf = (row: HTMLElement) => row.style.gridTemplateColumns;
+
+    it("is absent without onEntityItemOpen when no item can be deleted", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
+      render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
+        wrapper: Wrapper,
+      });
+
+      for (const row of screen.getAllByRole("row")) {
+        expect(gridOf(row)).not.toContain(ACTIONS_TRACK);
+      }
+    });
+
+    it("is present when View is available", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
+      render(
+        <EntityItemCollectionTable
+          profile={profile}
+          collection={collection}
+          onEntityItemOpen={vi.fn()}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      for (const row of screen.getAllByRole("row")) {
+        expect(gridOf(row)).toContain(ACTIONS_TRACK);
+      }
+    });
+
+    it("is present, on every row, when only some items can be deleted", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection();
+      render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
+        wrapper: Wrapper,
+      });
+
+      for (const row of screen.getAllByRole("row")) {
+        expect(gridOf(row)).toContain(ACTIONS_TRACK);
+      }
+    });
+
+    it("follows an explicit showRowActions and custom renderRowActions", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
+      const { rerender } = render(
+        <EntityItemCollectionTable profile={profile} collection={collection} showRowActions />,
+        { wrapper: Wrapper },
+      );
+      expect(gridOf(screen.getAllByRole("row")[0])).toContain(ACTIONS_TRACK);
+
+      rerender(
+        <EntityItemCollectionTable
+          profile={profile}
+          collection={collection}
+          renderRowActions={() => <button>Unlink</button>}
+        />,
+      );
+      expect(gridOf(screen.getAllByRole("row")[0])).toContain(ACTIONS_TRACK);
+      expect(screen.getAllByRole("button", { name: "Unlink" })).toHaveLength(2);
+
+      rerender(
+        <EntityItemCollectionTable
+          profile={profile}
+          collection={collection}
+          onEntityItemOpen={vi.fn()}
+          showRowActions={false}
+        />,
+      );
+      expect(gridOf(screen.getAllByRole("row")[0])).not.toContain(ACTIONS_TRACK);
+    });
+  });
+
+  it("marks only the row of currentItem as current", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        currentItem={collection.items[1]}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const currentRows = screen
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-current"));
+    expect(currentRows).toHaveLength(1);
+    expect(currentRows[0]).toHaveTextContent(collection.items[1].id);
   });
 
   it("only renders the Delete action for items the user is permitted to delete (ABAC)", async () => {
