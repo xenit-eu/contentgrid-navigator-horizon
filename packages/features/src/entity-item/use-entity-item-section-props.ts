@@ -53,6 +53,8 @@ export function useEntityItemSectionProps({
     editedItem: itemContext.editedItem,
     onEditingChange: itemContext.setIsEditing,
     onRefresh: () => void itemContext.refresh(),
+    pendingContent: itemContext.pendingContent,
+    onPendingContentChange: itemContext.setPendingContent,
     openAllByDefault,
     ...handlers,
   };

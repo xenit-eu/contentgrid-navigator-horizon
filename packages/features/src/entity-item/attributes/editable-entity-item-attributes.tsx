@@ -1,5 +1,5 @@
 import type { Ref } from "react";
-import type { EntityItem } from "@contentgrid/navigator-data";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 import {
   EditEntityItemContainer,
   type EditEntityItemFormHandle,
@@ -19,6 +19,12 @@ interface EditableEntityItemAttributesProps {
   readonly auditTrail?: boolean;
   /** Handle to the update form while editing, e.g. to cancel it from outside. */
   readonly editFormRef?: Ref<EditEntityItemFormHandle>;
+  /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
+  readonly pendingContent: ContentChanges;
+  readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** The attribute shown in the content preview, and how to show another; content focus only. */
+  readonly previewedAttributeName?: string;
+  readonly onPreview?: (attributeName: string) => void;
 }
 
 /**
@@ -32,6 +38,10 @@ export function EditableEntityItemAttributes({
   onRefresh,
   auditTrail,
   editFormRef,
+  pendingContent,
+  onPendingContentChange,
+  previewedAttributeName,
+  onPreview,
 }: Readonly<EditableEntityItemAttributesProps>) {
   if (isEditing && isEditableEntityItem(item)) {
     return (
@@ -41,6 +51,10 @@ export function EditableEntityItemAttributes({
         onClose={() => onEditingChange(false)}
         onRefresh={onRefresh}
         ref={editFormRef}
+        pendingContent={pendingContent}
+        onPendingContentChange={onPendingContentChange}
+        previewedAttributeName={previewedAttributeName}
+        onPreview={onPreview}
       />
     );
   }
