@@ -92,7 +92,7 @@ src/hooks/
   collection/  # entity collection queries and pagination helpers
   item/        # single entity-item queries and item mutations (create/update/delete/content)
   relation/    # relation read queries and relation mutations
-  preview/     # content-preview query (useContentPreview) — see Content preview and renditions
+  preview/     # content-preview query (useContentPreview, contentPreviewVersion) — see Content preview and renditions
   preferences/ # backend-provided display-preference defaults (useEntityDisplayDefaults)
   context.tsx  # NavigatorDataProvider / useNavigatorData
   index.ts     # single public barrel — all hooks re-exported from here
@@ -840,11 +840,16 @@ on it, so a different file never shows in a viewer left over from the previous o
 
 - Throws synchronously (during render, not inside `queryFn`) when `attributeName` does not name a
   content attribute of the item — a caller programming error, not a state to render around.
-- Query key: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)` — its own root, never
-  invalidated by an entity item or collection mutation. The key uses the **entity item's** ETag (the
-  item's content metadata changes with its file), not the content's own ETag. The ETag in the key means a re-upload onto
-  the same attribute produces a new key automatically (a stale preview is never served after a
-  re-upload); it is NOT invalidated by any relation/entity-item cache invalidation.
+- Query key: `queryKeys.contentPreview.byUrl(link.href, contentPreviewVersion(entityItem, attributeName))`
+  — its own root, never invalidated by an entity item or collection mutation. The version is the
+  **entity item's** ETag (the item's content metadata changes with its file), not the content's own
+  ETag; for an item without an ETag (taken from a collection page) it is a string built from the
+  content attribute's metadata (file name, size, type). A re-upload onto the same attribute
+  therefore produces a new key automatically (a stale preview is never served after a re-upload),
+  and it is NOT invalidated by any relation/entity-item cache invalidation. Without an ETag, a
+  replacement with the same name, size and type is not detected.
+  `contentPreviewVersion` is exported next to `useContentPreview`; use it wherever the same
+  version is needed (e.g. as a viewer key).
 - **Uses `contentFetch` for everything — the stored download AND every rendition request/poll.**
   Never `apiFetch`. The frontend performs no token exchange: the rendition service receives the same
   Bearer credential as a content download; TokenMonger handles whatever exchange it needs on the
