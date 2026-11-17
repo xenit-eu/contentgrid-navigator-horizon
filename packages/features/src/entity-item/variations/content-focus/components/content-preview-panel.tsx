@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   type EntityItem,
+  contentPreviewVersion,
   needsRendition,
   toProblemDisplayModel,
   useContentPreview,
@@ -69,12 +70,14 @@ export function ContentPreviewPanel({
   }
   const [viewerLoadErrorKind, setViewerLoadErrorKind] = useState<ViewerLoadErrorKind | null>(null);
 
-  // A new attribute/item (or a re-upload bumping the ETag) means nothing from the previous
-  // selection should keep showing as belonging to the new one (FR-006) — including a
-  // viewer-reported load error from whatever was displayed before.
+  // A different item, attribute or file means nothing from the previous selection should keep
+  // showing as belonging to the new one (FR-006) — including a viewer-reported load error from
+  // whatever was displayed before. Keyed on what identifies the content, not on the item object:
+  // a list refetch hands over a new, equal object.
+  const contentVersion = contentPreviewVersion(entityItem, attributeName);
   useEffect(() => {
     setViewerLoadErrorKind(null);
-  }, [entityItem, attributeName]);
+  }, [entityItem.id, attributeName, contentVersion]);
 
   const metadata = getContentAttributeMetadata(entityItem, attributeName);
   const expectedOrigin =
