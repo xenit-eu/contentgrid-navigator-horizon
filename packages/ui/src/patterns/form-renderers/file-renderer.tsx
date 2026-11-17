@@ -21,6 +21,8 @@ export interface FileRendererProps {
   readonly previewed?: boolean;
   /** See `FileUploadZone`'s `compact`. */
   readonly compact?: boolean;
+  /** See `FileUploadZone`'s `uploadProgress`. */
+  readonly uploadProgress?: number;
 }
 
 /** File picker field; `onChange` gets the picked `File`, or `undefined` when the file is removed. */
@@ -39,6 +41,7 @@ export function FileRenderer({
   onFileClick,
   previewed,
   compact,
+  uploadProgress,
 }: Readonly<FileRendererProps>) {
   const file = value ?? null;
 
@@ -61,6 +64,7 @@ export function FileRenderer({
         onFileClick={onFileClick}
         previewed={previewed}
         compact={compact}
+        uploadProgress={uploadProgress}
         {...fieldAriaProps(name, error)}
       />
     </FieldShell>
