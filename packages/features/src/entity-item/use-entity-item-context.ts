@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { EntityItem } from "@contentgrid/navigator-data";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 
 /** Reloads the item; the view that owns the item query supplies it. */
 export type EntityItemRefetch = () => Promise<{
@@ -83,6 +83,9 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
  * form, the page moving on to another item), and `false` when the caller unmounts while editing.
  * Pass a stable function (e.g. a `useState` setter): a new one on every render re-runs the
  * reporting effect, firing `false` and `true` again each time.
+ *
+ * `pendingContent` holds the unsaved file changes of the edit form. It lives here so the content
+ * preview next to the form can show them too; `refresh` keeps them.
  */
 export function useEntityItemContext(
   item: EntityItem,
@@ -91,11 +94,13 @@ export function useEntityItemContext(
 ) {
   const href = item.selfLink.href;
   const [editedItem, setEditedItem] = useState<EntityItem | null>(null);
+  const [pendingContent, setPendingContent] = useState<ContentChanges>(new Map());
   const [shownHref, setShownHref] = useState(href);
   const sections = useEntityItemSectionsState();
   if (href !== shownHref) {
     setShownHref(href);
     setEditedItem(null);
+    setPendingContent(new Map());
     // A toggle is for the item it was made on: every item starts with its sections at their
     // defaults, whether or not the page stayed mounted in between (e.g. a cached item).
     sections.restoreDefaults();
@@ -113,7 +118,10 @@ export function useEntityItemContext(
     return () => onEditingChange?.(false);
   }, [isEditing, onEditingChange]);
 
-  const setIsEditing = (editing: boolean) => setEditedItem(editing ? item : null);
+  const setIsEditing = (editing: boolean) => {
+    setEditedItem(editing ? item : null);
+    setPendingContent(new Map());
+  };
   const refresh = async () => {
     const result = await refetch();
     if (result.isSuccess && result.data) setEditedItem(result.data);
@@ -128,5 +136,7 @@ export function useEntityItemContext(
     setIsEditing,
     refresh,
     sections,
+    pendingContent,
+    setPendingContent,
   };
 }
