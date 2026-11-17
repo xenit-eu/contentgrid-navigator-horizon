@@ -1,4 +1,11 @@
-import { type Ref, type SubmitEvent, useImperativeHandle, useMemo, useState } from "react";
+import {
+  type Ref,
+  type SubmitEvent,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import {
   type ContentChanges,
@@ -48,6 +55,8 @@ interface EditEntityItemContainerProps {
   /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
   readonly pendingContent: ContentChanges;
   readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** Hears whether the form is saving, so the content preview can stop taking files meanwhile. */
+  readonly onSavingChange?: (isSaving: boolean) => void;
   /** See `EditContentFields`. */
   readonly previewedAttributeName?: string;
   readonly onPreview?: (attributeName: string) => void;
@@ -66,6 +75,9 @@ interface EditEntityItemContainerProps {
  * file changes are applied, a picked file under the name in its filename field. When one of them
  * fails, a toast names it and the form moves onto the item as it is stored now, keeping only the
  * failed changes, so Save tries just those again.
+ *
+ * While Save runs the file fields are read-only (`EditContentFields`' `disabled`), and
+ * `onSavingChange` tells the content preview to stop taking files too.
  */
 export function EditEntityItemContainer({
   item,
@@ -73,6 +85,7 @@ export function EditEntityItemContainer({
   onRefresh,
   pendingContent,
   onPendingContentChange,
+  onSavingChange,
   previewedAttributeName,
   onPreview,
   ref,
@@ -96,6 +109,12 @@ export function EditEntityItemContainer({
 
   useSyncFileMetadataFields(item, pendingContent, formState.setValues);
 
+  const isSaving = updateMutation.isPending || contentMutation.isPending;
+  useEffect(() => {
+    onSavingChange?.(isSaving);
+    return () => onSavingChange?.(false);
+  }, [isSaving, onSavingChange]);
+
   const isDirty = formState.isDirty || pendingContent.size > 0;
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
@@ -108,15 +127,17 @@ export function EditEntityItemContainer({
     updateMutation.reset();
     if (!formState.validate()) return;
 
+    // The file fields are read-only from here on, but a failure is judged against what was sent.
+    const sentChanges = pendingContent;
     updateMutation.mutate(valuesToSave(), {
       onSuccess: () => {
-        if (pendingContent.size === 0) {
+        if (sentChanges.size === 0) {
           finishSave();
           return;
         }
         contentMutation.mutate(
-          { changes: pendingContent, metadata: pickedFilenames() },
-          { onSuccess: handleContentChangesSaved },
+          { changes: sentChanges, metadata: pickedFileMetadata(sentChanges) },
+          { onSuccess: (failures) => handleContentChangesSaved(failures, sentChanges) },
         );
       },
     });
@@ -136,9 +157,9 @@ export function EditEntityItemContainer({
   }
 
   /** The name in each picked file's filename field, which the file is stored under. */
-  function pickedFilenames() {
+  function pickedFileMetadata(changes: ContentChanges) {
     const metadata = new Map<string, { filename: string }>();
-    for (const [attributeName, file] of pendingContent) {
+    for (const [attributeName, file] of changes) {
       const { filename } = updateTemplate.contentMetadataPropertyNames(attributeName);
       const value = filename === undefined ? undefined : formState.values[filename];
       if (file && typeof value === "string" && value !== "") {
@@ -148,7 +169,10 @@ export function EditEntityItemContainer({
     return metadata;
   }
 
-  function handleContentChangesSaved(failures: ReadonlyMap<string, Error>) {
+  function handleContentChangesSaved(
+    failures: ReadonlyMap<string, Error>,
+    sentChanges: ContentChanges,
+  ) {
     if (failures.size === 0) {
       finishSave();
       return;
@@ -162,7 +186,7 @@ export function EditEntityItemContainer({
     // The metadata is saved already: the form moves onto the latest version of the item, with
     // only the failed changes still waiting.
     onPendingContentChange(
-      new Map([...pendingContent].filter(([attributeName]) => failures.has(attributeName))),
+      new Map([...sentChanges].filter(([attributeName]) => failures.has(attributeName))),
     );
     onRefresh();
   }
@@ -205,7 +229,7 @@ export function EditEntityItemContainer({
         onFieldChange={formState.setValue}
         onFieldBlur={formState.touchField}
         onSubmit={handleSubmit}
-        isSaving={updateMutation.isPending || contentMutation.isPending}
+        isSaving={isSaving}
         canSave={
           !isProblemWithStatus(updateMutation.error, 404) &&
           !isProblemWithStatus(updateMutation.error, 412)
@@ -220,6 +244,7 @@ export function EditEntityItemContainer({
             pendingContent={pendingContent}
             onContentChange={handleContentChange}
             uploadProgress={contentMutation.isPending ? contentMutation.progress : undefined}
+            disabled={isSaving}
             renderMetadataFields={(attributeName) => (
               <HalFormsContainer
                 fields={fields}

@@ -109,6 +109,7 @@ export function EntityItemContentFocus({
         isEditing={sectionProps.editedItem !== null}
         pendingContent={sectionProps.pendingContent}
         onPendingContentChange={sectionProps.onPendingContentChange}
+        isSaving={sectionProps.isSaving}
         attributeSelector={
           <ContentAttributeSelector
             entityItem={item}
@@ -131,6 +132,8 @@ interface ContentFocusPreviewProps {
   /** The file changes made in the edit form and not saved yet. */
   readonly pendingContent: ContentChanges;
   readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** Whether the edit form is saving; the drop zone takes no file then. */
+  readonly isSaving: boolean;
   readonly attributeSelector: ReactNode;
 }
 
@@ -146,6 +149,7 @@ function ContentFocusPreview({
   isEditing,
   pendingContent,
   onPendingContentChange,
+  isSaving,
   attributeSelector,
 }: Readonly<ContentFocusPreviewProps>) {
   const fileChange = pendingContent.get(attributeName);
@@ -162,7 +166,7 @@ function ContentFocusPreview({
       <ContentPreviewFrame
         state="noFile"
         fill
-        onFileChange={shownItem.canUploadContent(attributeName) ? pickFile : undefined}
+        onFileChange={shownItem.canUploadContent(attributeName) && !isSaving ? pickFile : undefined}
         toolbarStart={attributeSelector}
       />
     );

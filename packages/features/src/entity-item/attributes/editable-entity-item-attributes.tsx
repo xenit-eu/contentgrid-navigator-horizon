@@ -22,6 +22,8 @@ interface EditableEntityItemAttributesProps {
   /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
   readonly pendingContent: ContentChanges;
   readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** Hears whether the form is saving. */
+  readonly onSavingChange?: (isSaving: boolean) => void;
   /** The attribute shown in the content preview, and how to show another; content focus only. */
   readonly previewedAttributeName?: string;
   readonly onPreview?: (attributeName: string) => void;
@@ -40,6 +42,7 @@ export function EditableEntityItemAttributes({
   editFormRef,
   pendingContent,
   onPendingContentChange,
+  onSavingChange,
   previewedAttributeName,
   onPreview,
 }: Readonly<EditableEntityItemAttributesProps>) {
@@ -53,6 +56,7 @@ export function EditableEntityItemAttributes({
         ref={editFormRef}
         pendingContent={pendingContent}
         onPendingContentChange={onPendingContentChange}
+        onSavingChange={onSavingChange}
         previewedAttributeName={previewedAttributeName}
         onPreview={onPreview}
       />
