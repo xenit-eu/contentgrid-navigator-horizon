@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HalObject, type Link, type SimpleLink } from "@contentgrid/hal";
+import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalObjectShape } from "@contentgrid/hal/shape";
 import type { ProfileEntityShape } from "../shapes";
 import ProfileEntity from "./entity-profile";
@@ -395,6 +396,43 @@ describe("ProfileEntity — searchTemplate", () => {
 
   it("throws when searchEntityRequest is called without a search template", () => {
     expect(() => makeProfileEntity().searchEntityRequest({} as never)).toThrow();
+  });
+});
+
+describe("ProfileEntity — searchEntityRequest", () => {
+  const entity = makeProfileEntity({
+    templates: {
+      search: {
+        method: "GET",
+        target: "https://api.example.com/invoices",
+        properties: [{ name: "number", type: "text" }],
+      },
+    },
+  });
+  const values = () => createValues(entity.searchTemplate!.template).withValue("number", "INV-1");
+
+  it("encodes the values as query params on the template's target", () => {
+    const url = new URL(entity.searchEntityRequest(values()).url);
+
+    expect(url.origin + url.pathname).toBe("https://api.example.com/invoices");
+    expect([...url.searchParams]).toEqual([["number", "INV-1"]]);
+  });
+
+  it("adds scopeParams to the request, next to the values", () => {
+    const url = new URL(
+      entity.searchEntityRequest(values(), { _internal_order__invoices: "order-1" }).url,
+    );
+
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      number: "INV-1",
+      _internal_order__invoices: "order-1",
+    });
+  });
+
+  it("searches the whole collection with empty scopeParams", () => {
+    const url = new URL(entity.searchEntityRequest(values(), {}).url);
+
+    expect([...url.searchParams]).toEqual([["number", "INV-1"]]);
   });
 });
 
