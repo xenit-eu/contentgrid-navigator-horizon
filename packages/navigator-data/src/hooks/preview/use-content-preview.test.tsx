@@ -13,6 +13,8 @@
  * - A poll-time 500 → isError (ProblemDetailError)
  * - Key change (attribute/item switch) aborts in-flight polling — no further handler calls
  * - ETag change produces a new key — the item is re-fetched, not served from cache
+ * - Without an ETag the key follows the content metadata (changed → re-fetch, same → cached);
+ *   with an ETag the key is exactly the ETag
  * - contentFetch is used; apiFetch is never called
  * - Throws synchronously for a non-content attribute name
  */
@@ -42,7 +44,7 @@ import {
   makeWrapper,
   noopSupplier,
 } from "../test-utils";
-import { useContentPreview } from "./use-content-preview";
+import { contentPreviewVersion, useContentPreview } from "./use-content-preview";
 
 const CG_CONTENT_REL = "https://contentgrid.cloud/rels/contentgrid/content";
 const RENDITION_REQUEST_URL = `${BASE}/renditions/get/pdf`;
@@ -441,6 +443,100 @@ describe("useContentPreview — ETag change produces a new key", () => {
     rerender({ item: itemV2 });
 
     await waitFor(() => expect(downloadCount).toBe(2));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Item without an ETag (taken from a collection page)
+// ---------------------------------------------------------------------------
+
+describe("useContentPreview — item without an ETag", () => {
+  const METADATA_A = { filename: "a.pdf", mimetype: "application/pdf", length: 10 };
+
+  function countingHandler(counter: { n: number }) {
+    return http.get(contentUrlFor("item-1"), () => {
+      counter.n += 1;
+      return new HttpResponse(PDF_BYTES, {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    });
+  }
+
+  it("re-fetches when the content metadata changes", async () => {
+    const counter = { n: 0 };
+    server.use(countingHandler(counter));
+
+    const { result, rerender } = renderHook(({ item }) => useContentPreview(item, "content"), {
+      initialProps: { item: makeItem({ etag: null, metadata: METADATA_A }) },
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(counter.n).toBe(1);
+
+    rerender({ item: makeItem({ etag: null, metadata: { ...METADATA_A, length: 11 } }) });
+    await waitFor(() => expect(counter.n).toBe(2));
+  });
+
+  it("keeps the cached result when the metadata is unchanged", async () => {
+    const counter = { n: 0 };
+    server.use(countingHandler(counter));
+
+    const { result, rerender } = renderHook(({ item }) => useContentPreview(item, "content"), {
+      initialProps: { item: makeItem({ etag: null, metadata: METADATA_A }) },
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    rerender({ item: makeItem({ etag: null, metadata: { ...METADATA_A } }) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(counter.n).toBe(1);
+  });
+
+  it("shows the new state when a file is added to an item that had none", async () => {
+    const counter = { n: 0 };
+    server.use(countingHandler(counter));
+
+    const { result, rerender } = renderHook(({ item }) => useContentPreview(item, "content"), {
+      initialProps: { item: makeItem({ etag: null, metadata: null }) },
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.data).toEqual({ kind: "noFile" }));
+
+    rerender({ item: makeItem({ etag: null, metadata: METADATA_A }) });
+    await waitFor(() => expect(result.current.data).toMatchObject({ kind: "pdf" }));
+    expect(counter.n).toBe(1);
+  });
+
+  it("keys exactly as before with an ETag, and by metadata without one", () => {
+    expect(contentPreviewVersion(makeItem({ etag: '"v1"' }), "content")).toBe('"v1"');
+    const noEtag = contentPreviewVersion(makeItem({ etag: null, metadata: METADATA_A }), "content");
+    expect(noEtag).toContain("a.pdf");
+    expect(contentPreviewVersion(makeItem({ etag: null, metadata: null }), "content")).toBe(
+      "no-file",
+    );
+  });
+
+  it("uses the ETag-based key in the query cache", async () => {
+    server.use(
+      createContentDownloadHandler({
+        url: contentUrlFor("item-1"),
+        body: PDF_BYTES,
+        contentType: "application/pdf",
+      }),
+    );
+    const queryClient = makeQueryClient();
+    const item = makeItem({ etag: '"v1"' });
+    const { result } = renderHook(() => useContentPreview(item, "content"), {
+      wrapper: makeWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .map((q) => q.queryKey),
+    ).toEqual([["ContentPreview", contentUrlFor("item-1"), '"v1"']]);
   });
 });
 

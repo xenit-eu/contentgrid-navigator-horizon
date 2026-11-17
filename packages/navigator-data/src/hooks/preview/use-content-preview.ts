@@ -81,13 +81,33 @@ function findContentAttribute(
 }
 
 /**
+ * What makes the content of `attributeName` on `entityItem` "different content": the item's
+ * ETag when it has one, else a string built from the attribute's metadata (file name, size,
+ * type; `"no-file"` when it has none). Used as the second part of the preview's query key, and
+ * usable by callers that need to reset state when the content changes.
+ *
+ * @throws {Error} synchronously for a non-content attribute, like {@link useContentPreview}.
+ */
+export function contentPreviewVersion(entityItem: EntityItem, attributeName: string): string {
+  if (entityItem.etag !== null) {
+    return entityItem.etag;
+  }
+  const { metadata } = findContentAttribute(entityItem, attributeName);
+  if (metadata === null) {
+    return "no-file";
+  }
+  return `metadata:${JSON.stringify([metadata.filename, metadata.length, metadata.mimetype])}`;
+}
+
+/**
  * Resolves a content attribute to a displayable preview: the stored file directly when it is a
  * PDF, an image or a video, or — for any other file, when a rendition endpoint is configured —
  * the platform's PDF rendition of it.
  *
- * Key: `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)`. The ETag makes a
- * re-upload onto the same attribute produce a new key automatically, so a stale preview
- * is never served after a re-upload. Never invalidated by an item/collection mutation.
+ * Key: `queryKeys.contentPreview.byUrl(link.href, contentPreviewVersion(entityItem, attributeName))`.
+ * The version is the item's ETag, so a re-upload onto the same attribute produces a new key
+ * automatically and a stale preview is never served after a re-upload. Never invalidated by an
+ * item/collection mutation.
  *
  * `queryFn` honours `signal` throughout — an unmount, a key change (new `entityItem`/
  * `attributeName`/ETag), or `options.enabled` flipping to `false` aborts any download or
@@ -98,11 +118,11 @@ function findContentAttribute(
  * stale on its own), `gcTime: 300_000` (5 minutes — long enough to survive a fullscreen
  * toggle's unmount/remount without a re-download, short enough not to hold bytes forever).
  *
- * Pass an individually-fetched `entityItem` (e.g. from `useEntityItem`), not one taken
- * straight from a collection page: `EntityItemCollection` items carry `etag: null` (the
- * collection response has no per-item ETag), so the key would degrade to
- * `["ContentPreview", href, null]` — with `staleTime: Infinity`, a re-upload done elsewhere
- * would not be detected under that key until the item itself is re-fetched with a real ETag.
+ * An item taken from a collection page has no ETag (the collection response carries none per
+ * item). Its key then uses the content attribute's own metadata instead — file name, size and
+ * type, or "no file" — so a replaced, added or removed file gets a new key and is downloaded
+ * again. The limit: a replacement with the same name, size and type is not detected for an item
+ * without an ETag; fetch the item individually (e.g. `useEntityItem`) to get one.
  *
  * @param entityItem - The item whose content attribute is being previewed.
  * @param attributeName - Name of a content attribute on `entityItem` (see
@@ -120,7 +140,10 @@ export function useContentPreview(
   const { metadata, link } = contentAttribute;
 
   return useQuery({
-    queryKey: queryKeys.contentPreview.byUrl(link.href, entityItem.etag),
+    queryKey: queryKeys.contentPreview.byUrl(
+      link.href,
+      contentPreviewVersion(entityItem, attributeName),
+    ),
     queryFn: async ({ signal }): Promise<PreviewSource> => {
       if (metadata === null) {
         return { kind: "noFile" };
