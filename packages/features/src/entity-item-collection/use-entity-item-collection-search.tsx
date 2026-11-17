@@ -30,7 +30,7 @@ export interface EntityItemCollectionSearchOptions {
   readonly profile: ProfileEntity;
   /** URL of the collection page to display (a next/prev link); omitted = the first page. */
   readonly pageUrl?: string;
-  /** Fired when the sort changes, with `undefined` to go back to the first page. */
+  /** Fired when the sort changes and pages are navigated (next/prev), with `undefined` to go back to the first page. */
   readonly onPageChange?: (href: string | undefined) => void;
   /** Current filter values, keyed by search property name. */
   readonly filters?: Record<string, string>;
