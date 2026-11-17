@@ -3,6 +3,6 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["rules/**/*.ts"],
-  "exclude": []
+  "include": ["*.ts", "rules/**/*.ts"],
+  "exclude": ["rules/__fixtures__/**"]
 }

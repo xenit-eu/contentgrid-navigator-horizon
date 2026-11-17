@@ -61,7 +61,7 @@ interface CollectionViewState {
 
 ### Composite view state (split views)
 
-A parent view's state holds each child's state under that child's own key, so panes do not overwrite each other: `{ [childKey]: ChildState }`. How the app writes this to the address is open question 2.
+A parent view's state holds each child's state under that child's own key, so panes do not overwrite each other: `{ [childKey]: ChildState }`. How the app writes this to the address is open question 2. The split view's own state is `{ collection?: CollectionViewState; selectedItemId?: string }`: the list's state sits under its key, and the selection sits beside it because the item detail child has no state of its own, so there is nothing to prefix for it.
 
 ## Navigation object
 
@@ -95,7 +95,9 @@ function preloadEntityItemDetail(
 
 `ctx` is the router context: the query client and the API client. A preload is a thin wrapper around `navigator-data`'s own `ensure*` helpers (`ensureProfileEntity`, `ensureEntityItem`, …), each of which calls the query client's `ensureQueryData(...)` with the exact query factory the view's own hooks read — no new query keys, and no view-specific helper added to `navigator-data`. A preload never throws to the route (it swallows failures as `ensureEntityItemDetailLoaderData` does today) and never loads data the view would not need.
 
-## Display preferences (move to a user-preferences feature)
+## Display preferences (move to a user-preferences feature) — deferred
+
+> Deferred by product decision: not part of this series; parked on `ACC-3216-user-preferences-parked` pending product decisions (open question 4). Kept as the design for when the work resumes.
 
 The `EntityDisplayPreferences` type and the backend part already live in `@contentgrid/navigator-data` and stay there unchanged. The merge logic, the hook and the store move into their own feature in `packages/features` (`user-preferences`), not into `navigator-data` — other features already import one another (e.g. every HAL-Forms-driven form goes through the `hal-forms` feature), so a shared feature is enough; it does not need to live in the data layer. This also means no new peer dependency: `packages/features` already depends on Zustand, so open question 4(d) (a Zustand peer dependency in `navigator-data`) does not arise.
 
@@ -109,4 +111,4 @@ The `EntityDisplayPreferences` type and the backend part already live in `@conte
 
 ## Stability tag
 
-Today: `x-stability` in each feature directory's `package.json`. After PR 8: `x-stability` in each view's `package.json`; features carry none. Values stay `experimental | candidate | stable`.
+Before PR 7 of the stack: `x-stability` in each feature directory's `package.json`. From PR 7: `x-stability` in each view's `package.json`; features carry none. Values stay `experimental | candidate | stable`.

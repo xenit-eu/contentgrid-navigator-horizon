@@ -4,3 +4,4 @@ export type {
   EntityItemCollectionTarget,
   EntityItemCollectionViewProps,
 } from "./entity-item-collection-view";
+export { preloadEntityItemCollection } from "./preload";

@@ -20,6 +20,10 @@
       "import": "./src/entity-item-collection/index.ts",
       "types": "./src/entity-item-collection/index.ts"
     },
+    "./entity-item-split": {
+      "import": "./src/entity-item-split/index.ts",
+      "types": "./src/entity-item-split/index.ts"
+    },
     "./layout": {
       "import": "./src/layout/index.ts",
       "types": "./src/layout/index.ts"

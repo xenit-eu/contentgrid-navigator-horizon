@@ -13,6 +13,13 @@ export interface RecordTableRowProps {
   readonly cells: readonly RecordTableCell[];
   readonly actions?: ReactNode;
   readonly selected?: boolean;
+  /**
+   * Marks the row the page is showing elsewhere (e.g. a split view's detail pane): `aria-current`
+   * and the selected tint. It deliberately uses the same highlight as a checkbox-selected row: the
+   * collection browser does not combine a selection column with an active row today. Revisit if
+   * both are ever shown together.
+   */
+  readonly active?: boolean;
   readonly onClick?: () => void;
   /** Renders a leading selection checkbox (checked per `selected`) when present. */
   readonly onSelectChange?: (checked: boolean) => void;
@@ -23,21 +30,26 @@ function RecordTableRow({
   cells,
   actions,
   selected = false,
+  active = false,
   onClick,
   onSelectChange,
   className,
 }: RecordTableRowProps) {
-  const rowBackground = selected ? "bg-selected" : "bg-card/50";
+  const highlighted = selected || active;
+  const rowBackground = highlighted ? "bg-selected" : "bg-card/50";
 
   return (
     <div
       role="row"
       data-slot="table-row"
+      aria-current={active ? "true" : undefined}
       onClick={onClick}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={
         onClick
           ? (e) => {
+              // Keys bubbling from a child control (e.g. a row action) must not activate the row.
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter") {
                 onClick();
               } else if (e.key === " ") {
@@ -62,12 +74,12 @@ function RecordTableRow({
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
         "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
         onClick && "cursor-pointer",
-        onClick && !selected && "hover:bg-hover",
+        onClick && !highlighted && "hover:bg-hover",
         rowBackground,
         className,
       )}
     >
-      {selected && (
+      {highlighted && (
         <span className="absolute left-0 top-0 h-full w-[3px] bg-ring rounded-r-sm" aria-hidden />
       )}
 

@@ -1,14 +1,15 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo } from "react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
 import { extractFilterValuesFromCollectionUrl } from "@contentgrid/features/search";
 import { type ProfileEntity, toProblemDisplayModel } from "@contentgrid/navigator-data";
-import { Button } from "@contentgrid/ui";
 import { EntityItemCollectionBreadcrumbs } from "../breadcrumbs";
+import { useControllableState } from "../hooks/use-controllable-state";
 import { useProfileEntityTarget } from "../hooks/use-profile-entity-target";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useViewNavigation } from "../navigation";
+import { CreateItemAction } from "../toolbar";
 import type { ViewProps } from "../types/view";
 
 /**
@@ -42,6 +43,8 @@ export type EntityItemCollectionViewProps = ViewProps &
     readonly state?: CollectionViewState;
     /** Called with the full next state on every change. */
     readonly onStateChange?: (state: CollectionViewState) => void;
+    /** The item shown elsewhere (e.g. a split view's detail pane); its row is marked current. */
+    readonly activeItemId?: string;
   };
 
 function describeTarget(target: EntityItemCollectionTarget): string {
@@ -61,6 +64,9 @@ function initialStateForLink(profileEntity: ProfileEntity, url: string): Collect
   return { filters: extractFilterValuesFromCollectionUrl(fields, url), pageUrl: url };
 }
 
+/** Shared by every render, so a host-controlled list's default has a stable identity. */
+const EMPTY_COLLECTION_STATE: CollectionViewState = {};
+
 /**
  * One entity's list: filters, table and pagination, under a Home, collection breadcrumb toolbar
  * with a create action when the profile allows creating. Resolves the target's profile itself
@@ -72,11 +78,23 @@ export function EntityItemCollectionView({
   toolbar,
   state,
   onStateChange,
+  activeItemId,
   ...target
 }: Readonly<EntityItemCollectionViewProps>) {
-  const navigation = useViewNavigation();
   const result = useProfileEntityTarget(
     "collectionUrl" in target ? { url: target.collectionUrl } : target,
+  );
+
+  const loadedProfileEntity = result.status === "success" ? result.profileEntity : undefined;
+  const collectionUrl = "collectionUrl" in target ? target.collectionUrl : undefined;
+  // Stable between renders: the view's state hook treats a new default reference as the host
+  // having answered, which would drop a pending same-tick change.
+  const defaultState = useMemo(
+    () =>
+      loadedProfileEntity && collectionUrl !== undefined
+        ? initialStateForLink(loadedProfileEntity, collectionUrl)
+        : EMPTY_COLLECTION_STATE,
+    [loadedProfileEntity, collectionUrl],
   );
 
   let content: ReactNode;
@@ -92,14 +110,10 @@ export function EntityItemCollectionView({
       <CollectionBody
         key={`${result.profileEntity.name}|${"collectionUrl" in target ? target.collectionUrl : ""}`}
         profileEntity={result.profileEntity}
-        initialState={
-          state ??
-          ("collectionUrl" in target
-            ? initialStateForLink(result.profileEntity, target.collectionUrl)
-            : {})
-        }
+        initialState={state ?? defaultState}
         state={state}
         onStateChange={onStateChange}
+        activeItemId={activeItemId}
       />
     );
   }
@@ -114,11 +128,7 @@ export function EntityItemCollectionView({
       breadcrumbs={<EntityItemCollectionBreadcrumbs profileEntity={profileEntity} />}
       actions={
         <>
-          {profileEntity?.createTemplate && (
-            <Button onClick={() => navigation.openCreateItem(profileEntity.name)}>
-              Create {profileEntity.singularName}
-            </Button>
-          )}
+          <CreateItemAction profileEntity={profileEntity} />
           {toolbar?.actions}
         </>
       }
@@ -133,22 +143,22 @@ function CollectionBody({
   initialState,
   state,
   onStateChange,
+  activeItemId,
 }: Readonly<{
   profileEntity: ProfileEntity;
   initialState: CollectionViewState;
   state: CollectionViewState | undefined;
   onStateChange: ((state: CollectionViewState) => void) | undefined;
+  activeItemId: string | undefined;
 }>) {
   const navigation = useViewNavigation();
-  const [internalState, setInternalState] = useState(initialState);
   // Controlled with no `state` yet still starts from `initialState` (the target link's own page
   // and filters) rather than an empty state, the same way the uncontrolled branch does.
-  const current = onStateChange ? (state ?? initialState) : internalState;
-
-  function update(next: CollectionViewState): void {
-    if (onStateChange) onStateChange(next);
-    else setInternalState(next);
-  }
+  const [current, update] = useControllableState({
+    state,
+    onStateChange,
+    defaultState: initialState,
+  });
 
   return (
     <EntityItemCollectionFeature
@@ -156,11 +166,14 @@ function CollectionBody({
       filters={current.filters}
       currentSort={current.sort}
       pageUrl={current.pageUrl}
+      activeItemId={activeItemId}
       // A page link belongs to the search that produced it, so a new filter or sort starts over
       // at page 1.
-      onFiltersChange={(filters) => update({ ...current, filters, pageUrl: undefined })}
-      onSortChange={(sort) => update({ ...current, sort, pageUrl: undefined })}
-      onPageChange={(pageUrl) => update({ ...current, pageUrl })}
+      onFiltersChange={(filters) =>
+        update((previous) => ({ ...previous, filters, pageUrl: undefined }))
+      }
+      onSortChange={(sort) => update((previous) => ({ ...previous, sort, pageUrl: undefined }))}
+      onPageChange={(pageUrl) => update((previous) => ({ ...previous, pageUrl }))}
       onEntityItemClick={(item) => navigation.openItem(profileEntity.name, item.id)}
     />
   );

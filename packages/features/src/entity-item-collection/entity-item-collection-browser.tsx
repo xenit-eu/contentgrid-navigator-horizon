@@ -43,6 +43,8 @@ export interface EntityItemCollectionBrowserProps {
   readonly pageUrl?: string;
   /** Fired when an entity item row is clicked; receives the item id. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** The item shown elsewhere (e.g. a detail pane); its row is marked `aria-current`. */
+  readonly activeItemId?: string;
   /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).
@@ -80,6 +82,7 @@ export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
+  activeItemId,
   onPageChange,
   filters = {},
   onFiltersChange,
@@ -223,11 +226,11 @@ export function EntityItemCollectionBrowser({
     setActiveTypeaheadField(undefined);
   }
 
-  // A sort change invalidates whatever page cursor was in flight the same way a filter change
-  // does — hand pagination back to page one via the same callback.
+  // Pagination reset is the caller's responsibility here, as for a filter change: the caller
+  // clears its own page cursor in `onSortChange` — calling `onPageChange` too would race with that
+  // (both next states are built from the same render-time state, so the second drops the first).
   function handleSort(option: RecordTableSortOption | undefined) {
     onSortChange?.(option?.value);
-    onPageChange?.(undefined);
   }
 
   // `HalFormsContainer`'s widgets work with typed `FieldValue`s; `filters` (this view's own
@@ -327,6 +330,7 @@ export function EntityItemCollectionBrowser({
             profile={profile}
             collection={collection.data}
             onEntityItemClick={onEntityItemClick}
+            activeItemId={activeItemId}
             onPageChange={onPageChange}
             currentSort={currentSort}
             onSort={handleSort}

@@ -26,6 +26,8 @@ export interface EntityItemCollectionTableProps {
   readonly collection: EntityItemCollection;
   /** Fired when a row (entity item) is clicked, or the row's View action is used; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** The item shown elsewhere (e.g. a detail pane); its row is marked `aria-current` and tinted. */
+  readonly activeItemId?: string;
   /**
    * Fired when the user navigates to another page; receives the target page's
    * href (`collection.nextHref` / `collection.prevHref`). Absent = pagination
@@ -103,6 +105,7 @@ export function EntityItemCollectionTable({
   profile,
   collection,
   onEntityItemClick,
+  activeItemId,
   onPageChange,
   currentSort,
   onSort,
@@ -216,6 +219,7 @@ export function EntityItemCollectionTable({
               key={item.id}
               cells={cells}
               selected={selectedIds.has(item.id)}
+              active={item.id === activeItemId}
               onSelectChange={
                 onSelectionChange ? (checked) => toggleSelected([item], checked) : undefined
               }

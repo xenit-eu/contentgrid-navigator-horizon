@@ -9,6 +9,7 @@ export const PROFILE_URL = `${API}/profile`;
 export const CUSTOMER_PROFILE_URL = `${API}/profile/customers`;
 export const CUSTOMER_COLLECTION_URL = `${API}/customers`;
 export const CUSTOMER_ITEM_URL = `${CUSTOMER_COLLECTION_URL}/cust-001`;
+export const CUSTOMER_ITEM_2_URL = `${CUSTOMER_COLLECTION_URL}/cust-002`;
 
 const stringAttribute = (name: string, title: string, readOnly: boolean) => ({
   name,
@@ -70,6 +71,12 @@ export const customerItemBody = {
   _links: { self: { href: CUSTOMER_ITEM_URL } },
 };
 
+export const customerItem2Body = {
+  id: "cust-002",
+  name: "Globex",
+  _links: { self: { href: CUSTOMER_ITEM_2_URL } },
+};
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -88,6 +95,10 @@ export function createFixtureFetch() {
     if (url === CUSTOMER_ITEM_URL) {
       counts.item++;
       return json(customerItemBody);
+    }
+    if (url === CUSTOMER_ITEM_2_URL) {
+      counts.item++;
+      return json(customerItem2Body);
     }
     return json(
       {
