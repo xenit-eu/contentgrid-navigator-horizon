@@ -42,7 +42,15 @@ export const LargeFileSelected: Story = {
   },
 };
 
-/** A single-line empty zone. */
+/** A stored file as a two-line card, next to compact empty zones (the update form). */
+export const CompactStoredFile: Story = {
+  args: {
+    file: { name: "baby-duck.jpg", size: 110_100, type: "image/jpeg" },
+    onFileChange: fn(),
+    compact: true,
+  },
+};
+
 export const Compact: Story = {
   args: {
     file: null,

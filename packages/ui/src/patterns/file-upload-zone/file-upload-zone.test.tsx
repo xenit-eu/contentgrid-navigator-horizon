@@ -152,10 +152,18 @@ describe("FileUploadZone — file selected view", () => {
     expect(onFileChange).toHaveBeenCalledWith(null);
   });
 
-  it("renders image preview for image files", () => {
-    const file = makeFile("photo.png", "image/png");
-    render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByRole("img", { name: "Preview" })).toBeInTheDocument();
+  it("shows the compact card's size and type", () => {
+    const file = makeFile("report.pdf", "application/pdf", 2048);
+    render(<FileUploadZone file={file} onFileChange={vi.fn()} compact />);
+    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("· application/pdf")).toBeInTheDocument();
+  });
+
+  it("does not render an image preview for a stored image, whose bytes it doesn't have", () => {
+    const storedFile = { name: "photo.png", size: 2048, type: "image/png" };
+    render(<FileUploadZone file={storedFile} onFileChange={vi.fn()} />);
+    expect(screen.getByText("photo.png")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Preview" })).not.toBeInTheDocument();
   });
 
   it("does not render an image preview for non-image files", () => {
