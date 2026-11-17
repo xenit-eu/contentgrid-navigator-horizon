@@ -459,6 +459,9 @@ export class EntityItem {
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
    * @param contentEtag - The ETag of the stored content, or null when the attribute holds no file
+   * @param filename - The name to store the file under; the file's own name when omitted
+   * @param mimetype - The media type to store the file under; the file's own type when omitted. A
+   *   different one goes in the multipart part's `Content-Type`.
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
@@ -466,6 +469,8 @@ export class EntityItem {
     attributeName: string,
     file: File,
     contentEtag: string | null,
+    filename: string = file.name,
+    mimetype?: string,
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -475,7 +480,9 @@ export class EntityItem {
     }
 
     const body = new FormData();
-    body.append("file", file, file.name);
+    const part =
+      mimetype && mimetype !== file.type ? new File([file], filename, { type: mimetype }) : file;
+    body.append("file", part, filename);
 
     return new Request(link.href, {
       method: "PUT",
