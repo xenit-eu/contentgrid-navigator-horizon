@@ -198,7 +198,8 @@ export function useApplyContentChanges(entityItem: EntityItem) {
       method: "HEAD",
     });
     try {
-      const response = await contentFetch(headRequest).then(checkResponse);
+      // `contentFetch` already turns an error answer into a ProblemDetailError.
+      const response = await contentFetch(headRequest);
       const etag = response.headers.get("ETag");
       if (etag === null) {
         throw new Error(`The stored file of '${attributeName}' has no readable ETag`);

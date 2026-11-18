@@ -26,6 +26,7 @@ import { server } from "../../../test-setup";
 import { type ContentMetadata, EntityItem } from "../../accessors/entity-item";
 import ProfileEntity from "../../accessors/entity-profile";
 import { createContentClient } from "../../api/client";
+import { isProblemWithStatus } from "../../api/problem-details/guards";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
 import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
@@ -717,6 +718,30 @@ describe("useApplyContentChanges", () => {
     const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
 
     expect(failures?.size).toBe(0);
+  });
+
+  it("fails the change, sending nothing, when the stored file's HEAD has no ETag", async () => {
+    // A DELETE would be an unhandled request and fail the test.
+    server.use(http.head(CONTENT_URL, () => new HttpResponse(null, { status: 200 })));
+
+    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
+
+    expect(failures?.size).toBe(1);
+    expect(failures?.get("document")?.message).toMatch(/no readable ETag/);
+  });
+
+  it("reports a HEAD failure other than 404 as that attribute's failure, sending nothing", async () => {
+    server.use(
+      http.head(CONTENT_URL, () => new HttpResponse(null, { status: 403, headers: PROBLEM_JSON })),
+    );
+
+    const failures = await apply(
+      makeItemWithTwoContentLinks(),
+      new Map([["document", new File(["x"], "x.txt", { type: "text/plain" })]]),
+    );
+
+    expect(failures?.size).toBe(1);
+    expect(isProblemWithStatus(failures?.get("document"), 403)).toBe(true);
   });
 
   it("stores a file with If-None-Match: * when the attribute holds no file (HEAD 404)", async () => {
