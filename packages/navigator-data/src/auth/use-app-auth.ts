@@ -7,7 +7,7 @@ import {
   DEFAULT_RENDITION_TIMEOUT_MS,
 } from "../preview/rendition-job";
 import { getAppConfig } from "./auth-config";
-import { createOidcTokenSupplier } from "./token-supplier";
+import { createExtensionAwareTokenSupplier, createOidcTokenSupplier } from "./token-supplier";
 
 export interface AppAuthResult {
   auth: ReturnType<typeof useAuth>;
@@ -15,7 +15,9 @@ export interface AppAuthResult {
   apiFetch: TypedFetch;
   /**
    * Authenticated fetch client for binary content requests (no Accept: hal+json header).
-   * Use exclusively for PUT/GET to cg:content links.
+   * Use exclusively for PUT/GET to cg:content links and rendition requests: the application
+   * origin gets the user's token, any other origin (the rendition service) an exchanged
+   * extension token — see `createExtensionAwareTokenSupplier`.
    */
   contentFetch: ContentFetch;
   profileUrl: string;
@@ -53,13 +55,24 @@ export function useAppAuth(): AppAuthResult {
   const authRef = useRef(auth);
   authRef.current = auth;
 
-  const { apiFetch, contentFetch } = useMemo(() => {
+  const { apiFetch, contentFetch, clearExtensionTokens } = useMemo(() => {
     const supplier = createOidcTokenSupplier(async () => authRef.current.user ?? null);
+    const contentSupplier = createExtensionAwareTokenSupplier({
+      applicationUrl: getAppConfig().apiBaseUrl,
+      userTokenSupplier: supplier,
+      user: () => authRef.current.user?.profile.sub,
+    });
     return {
       apiFetch: createApiClient(supplier),
-      contentFetch: createContentClient(supplier),
+      contentFetch: createContentClient(contentSupplier),
+      clearExtensionTokens: contentSupplier.clear,
     };
   }, []); // created once; token is read via ref on each request
+
+  // Drop the cached extension tokens when the user signs out or changes (and on unmount), so a
+  // previous user's tokens don't stay in memory until they expire.
+  const userSub = auth.user?.profile.sub;
+  useEffect(() => clearExtensionTokens, [userSub, clearExtensionTokens]);
 
   const { apiBaseUrl, renditionUri, renditionPollIntervalMs, renditionTimeoutMs } = getAppConfig();
 
