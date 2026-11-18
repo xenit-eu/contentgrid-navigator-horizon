@@ -1,7 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
-import halFormCodecs from "@contentgrid/hal-forms/codecs";
-import { createValues } from "@contentgrid/hal-forms/values";
 import type { HalFormValues } from "@contentgrid/hal-forms/values";
 import { EntityItemCollection } from "../../accessors/entity-item-collection";
 import { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
@@ -84,16 +82,11 @@ function resolveMainUrl(
     if (!params.searchValues || !targetProfile || !internalRelationParams) {
       return undefined;
     }
-    const scopedTemplate = targetProfile.searchTemplate?.withHiddenParams(internalRelationParams);
-    if (!scopedTemplate) {
+    if (!targetProfile.searchTemplate) {
       return undefined;
     }
     try {
-      const codec = halFormCodecs.requireCodecFor(scopedTemplate.template);
-      const scopedValues = createValues(scopedTemplate.template).withValues(
-        params.searchValues.valueMap,
-      );
-      return codec.encode(scopedValues).url;
+      return targetProfile.searchEntityRequest(params.searchValues, internalRelationParams).url;
     } catch {
       // codec not found or encoding failed; caller disables the query
       return undefined;

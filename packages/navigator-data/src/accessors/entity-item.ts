@@ -533,7 +533,7 @@ export class EntityItem {
  * Use `attribute.value.kind` to narrow the type in a switch statement.
  */
 export enum AttributeKind {
-  /** String, number, boolean, or null value */
+  /** String, string list, number, boolean, or null value */
   PLAIN,
   /** Binary content stored in S3 (file/image/document) */
   CONTENT,
@@ -564,7 +564,7 @@ type EntityItemAttributeKind =
  * Factory function to create an EntityItemAttribute from a raw attribute entry.
  *
  * Inspects the value type and creates the appropriate attribute kind:
- * - Plain values (string/number/boolean/null) → EntityItemAttributePlain
+ * - Plain values (string/string[]/number/boolean/null) → EntityItemAttributePlain
  * - Objects → EntityItemAttributeNested (with recursive profile lookup)
  * - Other types → EntityItemAttributeUnknown
  *
@@ -607,23 +607,45 @@ interface EntityItemAttributeBase<T extends AttributeKind> {
 }
 
 /**
- * A plain scalar attribute: string, number, boolean, or null.
+ * The value of a plain attribute: a JSON scalar, `null`, or a list of strings
+ * (a `string_set` attribute).
+ */
+export type PlainAttributeValue = string | readonly string[] | number | boolean | null;
+
+/**
+ * A plain attribute: string, list of strings, number, boolean, or null.
  *
- * Represents primitive JSON values returned directly in the entity-item response.
+ * Represents primitive JSON values (and string arrays) returned directly in the entity-item response.
  */
 export class EntityItemAttributePlain implements EntityItemAttributeBase<AttributeKind.PLAIN> {
   readonly kind = AttributeKind.PLAIN;
   public constructor(
     public readonly name: string,
-    public readonly value: string | number | boolean | null,
+    public readonly value: PlainAttributeValue,
   ) {}
 }
 
 /**
- * Type guard for plain scalar values.
+ * Type guard for a list of strings (the value of a `string_set` attribute).
  */
-function isPlainValue(value: unknown): value is string | number | boolean | null {
-  return value === null || ["string", "number", "boolean"].includes(typeof value);
+function isStringSet(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+/**
+ * Type guard for plain values: scalars, `null`, and lists of strings.
+ *
+ * `typeof` reports arrays as `"object"`, so string lists need their own check —
+ * otherwise they would be treated as nested objects.
+ */
+function isPlainValue(value: unknown): value is PlainAttributeValue {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    isStringSet(value)
+  );
 }
 
 /**

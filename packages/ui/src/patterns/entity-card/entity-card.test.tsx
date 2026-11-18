@@ -41,6 +41,22 @@ describe("EntityCard", () => {
     expect(screen.queryByText("Entity description")).not.toBeInTheDocument();
   });
 
+  it("exposes full title and description as native tooltips on clamped text", () => {
+    render(<EntityCard {...baseProps} description="Entity description" />);
+    expect(screen.getByText("Invoice")).toHaveAttribute("title", "Invoice");
+    expect(screen.getByText("Entity description")).toHaveAttribute("title", "Entity description");
+  });
+
+  it("reserves description space when there is no description", () => {
+    const { container } = render(<EntityCard {...baseProps} />);
+    expect(container.querySelector('[data-slot="page-title-subtitle"]')).toBeEmptyDOMElement();
+  });
+
+  it("pins the body to the bottom of the card", () => {
+    render(<EntityCard {...baseProps}>body</EntityCard>);
+    expect(screen.getByText("body")).toHaveClass("mt-auto");
+  });
+
   it("renders a custom icon when provided", () => {
     render(<EntityCard {...baseProps} icon={<span data-testid="custom-icon" />} />);
     expect(screen.getByTestId("custom-icon")).toBeInTheDocument();

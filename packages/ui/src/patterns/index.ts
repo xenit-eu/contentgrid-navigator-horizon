@@ -2,7 +2,7 @@ export * from "./entity-card";
 export * from "./data-table";
 export * from "./filter-chips";
 export * from "./relation-section";
-export * from "./relation-accordion";
+export * from "./actionable-accordion";
 export * from "./entity-item-picker";
 export * from "./file-upload-zone";
 export * from "./branding-header";

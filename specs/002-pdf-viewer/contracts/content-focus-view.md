@@ -28,8 +28,8 @@ export interface EntityItemContentFocusViewProps {
 - Select the default content attribute (data-model rules); expose the selector whenever the item has
   at least one content attribute at all — not only ones that currently hold a file, so a user can
   still switch to/from an attribute that needs a file uploaded or that errors out while loading
-  (round-2 review of #192). With exactly one content attribute the selector is shown _disabled_,
-  still displaying that attribute for context, instead of being hidden (round-2 review of #192);
+  (round-2 review of #192). With exactly one content attribute that attribute's title is shown as
+  plain text in the selector's place, for context, instead of nothing (round-2 review of #192);
   it is hidden only when the item has no content attributes. The selector stays visible in every
   content-preview state, not only once a PDF viewer is actually mounted.
 

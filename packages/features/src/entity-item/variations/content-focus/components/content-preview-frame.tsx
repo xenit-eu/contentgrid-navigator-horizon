@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import type { ProblemDisplayModel } from "@contentgrid/navigator-data";
-import { Button, FileUploadZone, Skeleton } from "@contentgrid/ui";
+import { FileXIcon, ImageBrokenIcon, VideoCameraSlashIcon } from "@phosphor-icons/react";
+import type { PreviewSource, ProblemDisplayModel } from "@contentgrid/navigator-data";
+import { Button, DEFAULT_PDF_VIEWER_LABELS, FileUploadZone, Skeleton } from "@contentgrid/ui";
 import { ProblemAlert } from "../../../../problem-details";
 import {
   type ContentPreviewState,
@@ -10,6 +11,39 @@ import {
 import { ContentPreviewToolbar } from "./content-preview-toolbar";
 
 export type { ContentPreviewState } from "../util/content-preview-state";
+
+/**
+ * The `cannotDisplay` message and icon for a PDF, image or video that could not be opened. Any
+ * other kind keeps the frame's default message.
+ */
+export function cannotDisplayMessageAndIcon(
+  kind: PreviewSource["kind"] | undefined,
+): Pick<ContentPreviewFrameProps, "labels" | "icon"> {
+  switch (kind) {
+    case "pdf":
+      return {
+        labels: { cannotDisplayMessage: DEFAULT_PDF_VIEWER_LABELS.invalidDocument },
+        icon: <FileXIcon aria-hidden />,
+      };
+    case "image":
+      return {
+        labels: { cannotDisplayMessage: buildCannotDisplayMessage("image") },
+        icon: <ImageBrokenIcon aria-hidden />,
+      };
+    case "video":
+      return {
+        labels: { cannotDisplayMessage: buildCannotDisplayMessage("video") },
+        icon: <VideoCameraSlashIcon aria-hidden />,
+      };
+    default:
+      return {};
+  }
+}
+
+/** An image or video the browser can't open names which of the two it is. */
+function buildCannotDisplayMessage(kind: "image" | "video"): string {
+  return `Your browser can't open this ${kind}. You can download it instead.`;
+}
 
 /** All strings the frame renders, overridable per FR-031; every field has an English default. */
 export interface ContentPreviewFrameLabels {
@@ -21,7 +55,6 @@ export interface ContentPreviewFrameLabels {
   readonly couldNotPrepareMessage?: string;
   readonly couldNotRetrieveMessage?: string;
   readonly cannotDisplayMessage?: string;
-  readonly protectedMessage?: string;
   readonly viewerFailureMessage?: string;
   readonly downloadButtonLabel?: string;
   readonly retryButtonLabel?: string;
@@ -36,7 +69,6 @@ const DEFAULT_LABELS: Required<ContentPreviewFrameLabels> = {
   couldNotPrepareMessage: "Couldn't prepare a preview for this file.",
   couldNotRetrieveMessage: "Couldn't retrieve this file.",
   cannotDisplayMessage: "This file can't be displayed.",
-  protectedMessage: "This file is password protected.",
   viewerFailureMessage: "The viewer ran into a problem displaying this file.",
   downloadButtonLabel: "Download",
   retryButtonLabel: "Retry",
@@ -47,7 +79,6 @@ const ERROR_MESSAGE_LABEL_KEY: Record<ErrorPreviewState, keyof ContentPreviewFra
   couldNotPrepare: "couldNotPrepareMessage",
   couldNotRetrieve: "couldNotRetrieveMessage",
   cannotDisplay: "cannotDisplayMessage",
-  protected: "protectedMessage",
   viewerFailure: "viewerFailureMessage",
 };
 
@@ -68,7 +99,7 @@ export interface ContentPreviewFrameProps {
    * A `toProblemDisplayModel(error)` result for an error state backed by a caught error
    * (`couldNotPrepare`, `couldNotRetrieve`, `viewerFailure`) — rendered via `ProblemAlert`
    * instead of the default message. Omitted for a state that is a plain `PreviewSource` variant
-   * rather than a thrown error (`previewUnavailable`, `cannotDisplay`, `protected`). In the
+   * rather than a thrown error (`previewUnavailable`, `cannotDisplay`). In the
    * `noFile` state it is a failed upload, shown above the drop zone.
    */
   readonly problem?: ProblemDisplayModel;
@@ -87,6 +118,8 @@ export interface ContentPreviewFrameProps {
    * rendered when this is provided — omit it when the user may not upload to the attribute.
    */
   readonly onFileChange?: (file: File | null) => void;
+  /** Makes the "No file" drop zone fill the frame instead of a small box in its middle. */
+  readonly fill?: boolean;
   /** Percentage (0–100) of the file sent, shown after the caption in the `uploading` state. */
   readonly uploadProgress?: number;
   readonly labels?: ContentPreviewFrameLabels;
@@ -105,6 +138,7 @@ export function ContentPreviewFrame({
   onDownload,
   onRetry,
   onFileChange,
+  fill,
   uploadProgress,
   toolbarStart,
   labels: labelOverrides,
@@ -119,19 +153,12 @@ export function ContentPreviewFrame({
 
   if (state === "noFile") {
     body = (
-      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6">
-        {problem && (
-          <div className="w-full max-w-md">
-            <ProblemAlert model={problem} />
-          </div>
-        )}
-        {onFileChange && (
-          <div className="w-full max-w-md">
-            <FileUploadZone file={null} onFileChange={onFileChange} />
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground">{labels.noFileCaption}</p>
-      </div>
+      <NoFileBody
+        problem={problem}
+        onFileChange={onFileChange}
+        fill={fill}
+        noFileCaption={labels.noFileCaption}
+      />
     );
   } else if (state === "uploading" || state === "loading" || state === "preparingPreview") {
     let caption = labels.preparingPreviewCaption;
@@ -193,6 +220,34 @@ export function ContentPreviewFrame({
     <div className="flex h-full min-h-0 flex-col">
       <ContentPreviewToolbar start={toolbarStart} />
       <div className="min-h-0 flex-1">{body}</div>
+    </div>
+  );
+}
+
+interface NoFileBodyProps {
+  readonly problem?: ProblemDisplayModel;
+  readonly onFileChange?: (file: File | null) => void;
+  readonly fill?: boolean;
+  readonly noFileCaption: string;
+}
+
+/** The "No file" state: a failed upload's problem, then the drop zone or, without one, a caption. */
+function NoFileBody({ problem, onFileChange, fill, noFileCaption }: Readonly<NoFileBodyProps>) {
+  return (
+    <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6">
+      {problem && (
+        <div className="w-full max-w-md">
+          <ProblemAlert model={problem} />
+        </div>
+      )}
+      {/* The drop zone already says there is no file; the caption is for when it is absent. */}
+      {onFileChange ? (
+        <div className={fill ? "min-h-0 w-full flex-1" : "w-full max-w-md"}>
+          <FileUploadZone file={null} onFileChange={onFileChange} fill={fill} />
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">{noFileCaption}</p>
+      )}
     </div>
   );
 }

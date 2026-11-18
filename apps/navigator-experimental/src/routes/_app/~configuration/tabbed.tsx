@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageLayout } from "@contentgrid/features/layout";
 import { EntityConfigurationOverviewTabbed } from "@contentgrid/features/preferences";
+import { PageLayout } from "@contentgrid/views/layout";
 
 export const Route = createFileRoute("/_app/~configuration/tabbed")({
   component: ConfigurationOverviewTabbedPage,

@@ -1,7 +1,7 @@
 # Contract: view toolbar
 
 **Requirements**: FR-021, FR-022, FR-023, FR-024, FR-025
-**Package**: `packages/views`; shared toolbar layout (today `BreadCrumbsToolBarLayout`, moves with `features/layout` in PR 5)
+**Package**: `packages/views`; shared toolbar layout (`BreadCrumbsToolBarLayout`, in `packages/views/src/layout/` since PR 5)
 
 ## Rules
 

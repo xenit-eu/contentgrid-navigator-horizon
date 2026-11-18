@@ -1,4 +1,4 @@
-import { type SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type SubmitEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   type CreateHalFormTemplate,
@@ -10,9 +10,18 @@ import {
   toProblemDisplayModel,
   useCreateEntityItem,
 } from "@contentgrid/navigator-data";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  useContainerWidthAtLeast,
+} from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../entity-item";
 import {
   type FieldValidationError,
+  type HalFormsFilePreview,
   resolveHalFormsFields,
   toServerFieldErrors,
   useHalFormsFieldState,
@@ -23,6 +32,7 @@ import {
   type ValidationAlertProps,
 } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
+import { CreateEntityItemFilePreview } from "./create-entity-item-file-preview";
 import { CreateEntityItemForm } from "./create-entity-item-form";
 import { useCreateEntityItemState } from "./state/create-entity-item-state";
 
@@ -126,9 +136,20 @@ function CreateEntityItemContainerReady({
 }: Readonly<CreateEntityItemContainerProps & { createTemplate: CreateHalFormTemplate }>) {
   const { fields, layout } = useMemo(() => resolveHalFormsFields(createTemplate), [createTemplate]);
   const [externalErrors, setExternalErrors] = useState<Record<string, FieldValidationError[]>>({});
+  const fileFields = useMemo(() => fields.filter((field) => field.kind === "file"), [fields]);
   // The file attached on the Create Item page goes into the first file field, read once on
   // mount. Without a file field it is kept for a later create form.
-  const fileFieldName = fields.find((field) => field.kind === "file")?.name;
+  const fileFieldName = fileFields[0]?.name;
+  // The file field shown in the preview: the first one, until the user picks a file in another.
+  const [previewFieldName, setPreviewFieldName] = useState(fileFieldName);
+  // The preview dialog, opened from a file field's preview button when the view is narrow.
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  // The view's own width, not the window's, so opening or closing the sidebar counts.
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const isNarrow = !useContainerWidthAtLeast(layoutRef, "side-by-side");
+  // The dialog only exists while the view is narrow. Widening the view closes it, so narrowing it
+  // again doesn't reopen a dialog the user never asked for.
+  if (!isNarrow && isPreviewOpen) setIsPreviewOpen(false);
   const [initialValues] = useState(() => {
     const { initialFile } = useCreateEntityItemState.getState();
     return initialFile && fileFieldName ? { [fileFieldName]: initialFile } : undefined;
@@ -142,6 +163,7 @@ function CreateEntityItemContainerReady({
     (name: string, value: FieldValue) => {
       if (name === fileFieldName && !value)
         useCreateEntityItemState.getState().setInitialFile(null);
+      if (value instanceof File) setPreviewFieldName(name);
       setValue(name, value);
     },
     [fileFieldName, setValue],
@@ -195,6 +217,7 @@ function CreateEntityItemContainerReady({
         // Reset to an empty baseline, not the values this form was opened with — the initial
         // file it may have been prefilled with was just used.
         formState.reset({});
+        setPreviewFieldName(fileFieldName);
         if (continuousCreateMode) {
           setFormResetCount((count) => count + 1);
         } else {
@@ -213,7 +236,36 @@ function CreateEntityItemContainerReady({
       ? toProblemDisplayModel(createMutation.error)
       : undefined;
 
-  return (
+  // Focusing a file field shows it in the preview beside the form.
+  const handleFieldFocus = useCallback(
+    (name: string) => {
+      if (fileFields.some((field) => field.name === name)) setPreviewFieldName(name);
+    },
+    [fileFields],
+  );
+
+  const handleFilePreview = useCallback((name: string) => {
+    setPreviewFieldName(name);
+    setIsPreviewOpen(true);
+  }, []);
+
+  // Narrow screens open the preview in a dialog from a file field's "Preview file" button. Wide
+  // screens show it beside the form; with several file fields, the user switches it by clicking a
+  // field's picked file, and the field it shows is highlighted. A single file field is always the
+  // one shown, so there is nothing to switch or tell apart.
+  const hasSeveralFileFields = fileFields.length > 1;
+  let filePreview: HalFormsFilePreview | undefined;
+  if (previewFieldName && isNarrow) {
+    filePreview = { placement: "dialog", onOpen: handleFilePreview };
+  } else if (previewFieldName) {
+    filePreview = {
+      placement: "beside",
+      onSelect: hasSeveralFileFields ? setPreviewFieldName : undefined,
+      previewedFieldName: hasSeveralFileFields ? previewFieldName : undefined,
+    };
+  }
+
+  const form = (
     <CreateEntityItemForm
       fields={fields}
       layout={layout}
@@ -223,6 +275,8 @@ function CreateEntityItemContainerReady({
       onFieldBlur={formState.touchField}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
+      onFieldFocus={handleFieldFocus}
+      filePreview={filePreview}
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       onCancel={onCancel}
@@ -243,5 +297,60 @@ function CreateEntityItemContainerReady({
         )
       }
     />
+  );
+
+  // A form is easier to read at a limited width, with or without a preview beside it.
+  if (!previewFieldName) return <div className="max-w-2xl">{form}</div>;
+
+  const previewField = fileFields.find((field) => field.name === previewFieldName);
+  const previewFile = formState.values[previewFieldName];
+  // Only one of the dialog and the side panel is mounted, so the file is read and the PDF engine
+  // started once.
+  const preview = (
+    <CreateEntityItemFilePreview
+      fileFields={fileFields}
+      fieldName={previewFieldName}
+      // Beside the form the user switches by clicking a file in the form; the dialog covers the
+      // form, so there the preview switches itself.
+      onFieldNameChange={isNarrow ? setPreviewFieldName : undefined}
+      file={previewFile instanceof File ? previewFile : undefined}
+      onFileChange={
+        previewField?.readOnly
+          ? undefined
+          : (file) => handleFieldChange(previewFieldName, file ?? undefined)
+      }
+    />
+  );
+
+  return (
+    // The `@container` the `@side-by-side:` classes below measure. A container query can't size the
+    // container itself, so its full height when wide comes from `isNarrow`.
+    <div ref={layoutRef} className={isNarrow ? "@container" : "@container h-full"}>
+      <div className="flex gap-6 @side-by-side:h-full">
+        <div className="max-w-2xl min-w-0 flex-[2] @side-by-side:flex @side-by-side:flex-col">
+          {form}
+        </div>
+        {isNarrow ? (
+          <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+            <DialogContent className="flex h-[80vh] flex-col gap-0 p-0 sm:max-w-3xl">
+              <DialogHeader className="border-b p-4">
+                <DialogTitle>Preview file</DialogTitle>
+                <DialogDescription className="sr-only">
+                  The file picked in the form, before it is saved.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="min-h-0 flex-1">{preview}</div>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <aside
+            aria-label="File preview"
+            className="min-w-0 flex-[3] overflow-hidden rounded-md border"
+          >
+            {preview}
+          </aside>
+        )}
+      </div>
+    </div>
   );
 }

@@ -21,7 +21,7 @@ export interface UseEntityDisplayPreferencesResult {
 
 /**
  * The single entry point for reading (and writing) an entity's display preferences —
- * icon, color, cardStyle, nameAttribute, visibleColumns.
+ * icon, color, cardStyle, nameAttribute, visibleColumns, itemLayout.
  *
  * Layers, highest priority first:
  * 1. User override (persisted, per-backend) — `entity-display-preferences-store.ts`.

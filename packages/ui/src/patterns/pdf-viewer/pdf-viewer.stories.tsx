@@ -188,11 +188,12 @@ export const ToolbarMinimal: Story = {
 /**
  * Real engine on a password-protected fixture (standard security handler,
  * user password set): PDFium reports a password error, so the viewer settles
- * on its terminal `"protected"` state instead of painting a page.
+ * on its `"protected"` state and asks for the password instead of painting a
+ * page.
  */
 export const Protected: Story = {
-  // `async-content` — see `Default` and `Invalid`: busy until the protected
-  // message replaces the loading placeholder.
+  // `async-content` — see `Default` and `Invalid`: busy until the password
+  // form replaces the loading placeholder.
   tags: ["async-content"],
   render: () => (
     <StoryFrame>

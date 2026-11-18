@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SideBarLayout } from "@contentgrid/features/layout";
+import { SidebarShell } from "@contentgrid/views/sidebar-shell";
 
 export const Route = createFileRoute("/_app")({
-  component: SideBarLayout,
+  component: AppLayout,
 });
+
+function AppLayout() {
+  return <SidebarShell />;
+}

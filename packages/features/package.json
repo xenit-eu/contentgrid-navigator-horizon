@@ -20,18 +20,6 @@
       "import": "./src/_experimental-placeholder/index.tsx",
       "types": "./src/_experimental-placeholder/index.tsx"
     },
-    "./router-shell": {
-      "import": "./src/shells/router-shell/index.ts",
-      "types": "./src/shells/router-shell/index.ts"
-    },
-    "./auth-shell": {
-      "import": "./src/shells/auth-shell/index.tsx",
-      "types": "./src/shells/auth-shell/index.tsx"
-    },
-    "./entity-profile-gate": {
-      "import": "./src/shells/entity-profile-gate/index.ts",
-      "types": "./src/shells/entity-profile-gate/index.ts"
-    },
     "./navigator-header": {
       "import": "./src/navigator-header/index.ts",
       "types": "./src/navigator-header/index.ts"
@@ -75,6 +63,10 @@
     "./entity-item-create": {
       "import": "./src/entity-item-create/index.ts",
       "types": "./src/entity-item-create/index.ts"
+    },
+    "./entity-item-delete": {
+      "import": "./src/entity-item-delete/index.ts",
+      "types": "./src/entity-item-delete/index.ts"
     },
     "./unsaved-changes-guard": {
       "import": "./src/unsaved-changes-guard/index.ts",

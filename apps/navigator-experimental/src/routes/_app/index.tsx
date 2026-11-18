@@ -1,15 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EntityCountOverview } from "@contentgrid/features/dashboard";
-import { PageLayout } from "@contentgrid/features/layout";
+import { EntityOverviewView } from "@contentgrid/views/entity-overview";
 
 export const Route = createFileRoute("/_app/")({
-  component: IndexPage,
+  component: EntityOverviewView,
 });
-
-function IndexPage() {
-  return (
-    <PageLayout>
-      <EntityCountOverview />
-    </PageLayout>
-  );
-}
