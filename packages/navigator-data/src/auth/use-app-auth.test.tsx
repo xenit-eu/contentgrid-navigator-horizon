@@ -9,7 +9,7 @@ import { getAppConfig } from "./auth-config";
 import { isAuthReady, useAppAuth } from "./use-app-auth";
 
 // A vi.fn() (not a fixed factory) so individual tests can configure a different
-// RuntimeAppConfig (e.g. with renditionUri set) via `vi.mocked(getAppConfig).mockReturnValue`.
+// RuntimeAppConfig (e.g. with renditionUriTemplate set) via `vi.mocked(getAppConfig).mockReturnValue`.
 vi.mock("./auth-config", () => ({
   getAppConfig: vi.fn(),
 }));
@@ -69,21 +69,23 @@ describe("useAppAuth", () => {
     expect(result.current.apiFetch).toBe(firstFetch);
   });
 
-  it("applies the 2000ms/60000ms rendition defaults when renditionUri is set but the poll settings are not", () => {
+  it("applies the 2000ms/60000ms rendition defaults when renditionUriTemplate is set but the poll settings are not", () => {
     vi.mocked(getAppConfig).mockReturnValue(
-      makeTestAppConfig({ renditionUri: "https://renditions.example.com/get/pdf{?url}" }),
+      makeTestAppConfig({ renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}" }),
     );
     const ctx = makeAuthCtx();
     const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
 
-    expect(result.current.renditionUri).toBe("https://renditions.example.com/get/pdf{?url}");
+    expect(result.current.renditionUriTemplate).toBe(
+      "https://renditions.example.com/get/pdf{?url}",
+    );
     expect(result.current.renditionPolling).toEqual({ intervalMs: 2000, timeoutMs: 60000 });
   });
 
   it("uses the configured poll interval/timeout instead of the defaults when both are set", () => {
     vi.mocked(getAppConfig).mockReturnValue(
       makeTestAppConfig({
-        renditionUri: "https://renditions.example.com/get/pdf{?url}",
+        renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}",
         renditionPollIntervalMs: 500,
         renditionTimeoutMs: 5000,
       }),
@@ -94,17 +96,17 @@ describe("useAppAuth", () => {
     expect(result.current.renditionPolling).toEqual({ intervalMs: 500, timeoutMs: 5000 });
   });
 
-  it("leaves renditionUri and renditionPolling undefined when renditionUri is not set", () => {
+  it("leaves renditionUriTemplate and renditionPolling undefined when renditionUriTemplate is not set", () => {
     const ctx = makeAuthCtx();
     const { result } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
 
-    expect(result.current.renditionUri).toBeUndefined();
+    expect(result.current.renditionUriTemplate).toBeUndefined();
     expect(result.current.renditionPolling).toBeUndefined();
   });
 
   it("renditionPolling reference is stable across re-renders (NavigatorDataProvider memoises on it)", () => {
     vi.mocked(getAppConfig).mockReturnValue(
-      makeTestAppConfig({ renditionUri: "https://renditions.example.com/get/pdf{?url}" }),
+      makeTestAppConfig({ renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}" }),
     );
     const ctx = makeAuthCtx();
     const { result, rerender } = renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });

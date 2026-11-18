@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDefaultExtractServiceUrl, getDefaultRenditionUri } from "./dev-apps";
+import { getDefaultExtractServiceUrl, getDefaultRenditionUriTemplate } from "./dev-apps";
 
 describe("getDefaultExtractServiceUrl", () => {
   it("returns the real production extract URL when mock is off", () => {
@@ -27,15 +27,15 @@ describe("getDefaultExtractServiceUrl", () => {
   });
 });
 
-describe("getDefaultRenditionUri", () => {
+describe("getDefaultRenditionUriTemplate", () => {
   it("returns the production rendition URI", () => {
-    expect(getDefaultRenditionUri("production")).toBe(
+    expect(getDefaultRenditionUriTemplate("production")).toBe(
       "https://renditions.eu-west-1.contentgrid.cloud/renditions/get/pdf{?url}",
     );
   });
 
   it("returns the sandbox rendition URI", () => {
-    expect(getDefaultRenditionUri("sandbox")).toBe(
+    expect(getDefaultRenditionUriTemplate("sandbox")).toBe(
       "https://renditions.sandbox.contentgrid.cloud/renditions/get/pdf{?url}",
     );
   });

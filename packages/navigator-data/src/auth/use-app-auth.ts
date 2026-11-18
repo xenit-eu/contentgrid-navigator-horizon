@@ -21,12 +21,12 @@ export interface AppAuthResult {
    */
   contentFetch: ContentFetch;
   profileUrl: string;
-  /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUri`. */
-  renditionUri?: string;
+  /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUriTemplate`. */
+  renditionUriTemplate?: string;
   /**
    * Poll interval/ceiling for rendition jobs, populated with `RuntimeAppConfig`'s
    * `renditionPollIntervalMs`/`renditionTimeoutMs` (defaulting to 2000ms/60000ms) whenever
-   * `renditionUri` is configured; `undefined` when renditions are disabled.
+   * `renditionUriTemplate` is configured; `undefined` when renditions are disabled.
    */
   renditionPolling?: { intervalMs: number; timeoutMs: number };
 }
@@ -74,7 +74,8 @@ export function useAppAuth(): AppAuthResult {
   const userSub = auth.user?.profile.sub;
   useEffect(() => clearExtensionTokens, [userSub, clearExtensionTokens]);
 
-  const { apiBaseUrl, renditionUri, renditionPollIntervalMs, renditionTimeoutMs } = getAppConfig();
+  const { apiBaseUrl, renditionUriTemplate, renditionPollIntervalMs, renditionTimeoutMs } =
+    getAppConfig();
 
   useEffect(() => {
     if (!auth.isLoading && !auth.error && auth.user?.expired) {
@@ -93,13 +94,13 @@ export function useAppAuth(): AppAuthResult {
   // every useNavigatorData() consumer on every AuthShell render.
   const renditionPolling = useMemo(
     () =>
-      renditionUri
+      renditionUriTemplate
         ? {
             intervalMs: renditionPollIntervalMs ?? DEFAULT_RENDITION_POLL_INTERVAL_MS,
             timeoutMs: renditionTimeoutMs ?? DEFAULT_RENDITION_TIMEOUT_MS,
           }
         : undefined,
-    [renditionUri, renditionPollIntervalMs, renditionTimeoutMs],
+    [renditionUriTemplate, renditionPollIntervalMs, renditionTimeoutMs],
   );
 
   return {
@@ -107,7 +108,7 @@ export function useAppAuth(): AppAuthResult {
     apiFetch,
     contentFetch,
     profileUrl: `${apiBaseUrl}/profile`,
-    renditionUri,
+    renditionUriTemplate,
     renditionPolling,
   };
 }

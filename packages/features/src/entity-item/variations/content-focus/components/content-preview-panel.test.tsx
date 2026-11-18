@@ -167,11 +167,11 @@ function makeStubEntityItemWithAttributes(
   } as unknown as EntityItem;
 }
 
-function makeWrapper(renditionUri?: string) {
+function makeWrapper(renditionUriTemplate?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
-  const renditionPolling = renditionUri ? { intervalMs: 5, timeoutMs: 200 } : undefined;
+  const renditionPolling = renditionUriTemplate ? { intervalMs: 5, timeoutMs: 200 } : undefined;
 
   return function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
@@ -180,7 +180,7 @@ function makeWrapper(renditionUri?: string) {
           apiFetch={apiFetch}
           contentFetch={contentFetch}
           profileUrl={`${API_URL}/profile`}
-          renditionUri={renditionUri}
+          renditionUriTemplate={renditionUriTemplate}
           renditionPolling={renditionPolling}
         >
           {children}

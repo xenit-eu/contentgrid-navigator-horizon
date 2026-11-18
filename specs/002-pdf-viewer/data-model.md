@@ -115,10 +115,10 @@ displayed (FR-006).
 
 ## Configuration (extended, `RuntimeAppConfig`)
 
-| Field                     | Type    | Source                                                                    | Default                              |
-| ------------------------- | ------- | ------------------------------------------------------------------------- | ------------------------------------ |
-| `renditionUri`            | string? | Liaison `config.js` `v1.renditionUri`, dev override, `VITE_RENDITION_URI` | unset → renditions disabled (FR-022) |
-| `renditionPollIntervalMs` | number? | Liaison / dev override                                                    | 2000                                 |
-| `renditionTimeoutMs`      | number? | Liaison / dev override                                                    | 60000                                |
+| Field                     | Type    | Source                                                                                     | Default                              |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------ | ------------------------------------ |
+| `renditionUriTemplate`    | string? | Liaison `config.js` `v1.renditionUriTemplate`, dev override, `VITE_RENDITION_URI_TEMPLATE` | unset → renditions disabled (FR-022) |
+| `renditionPollIntervalMs` | number? | Liaison / dev override                                                                     | 2000                                 |
+| `renditionTimeoutMs`      | number? | Liaison / dev override                                                                     | 60000                                |
 
-Validation: `renditionUri` must contain the `{?url}` expression; interval ≥ 250 ms; timeout ≥ interval.
+Validation: `renditionUriTemplate` must contain the `{?url}` expression; interval ≥ 250 ms; timeout ≥ interval.

@@ -80,7 +80,7 @@ describe("AuthShell", () => {
     expect(screen.getByText("content")).toBeInTheDocument();
   });
 
-  it("forwards renditionUri and renditionPolling from useAppAuth into NavigatorDataProvider", () => {
+  it("forwards renditionUriTemplate and renditionPolling from useAppAuth into NavigatorDataProvider", () => {
     const renditionPolling = { intervalMs: 2000, timeoutMs: 60000 };
     vi.mocked(useAppAuth).mockReturnValue({
       auth: {
@@ -93,7 +93,7 @@ describe("AuthShell", () => {
       apiFetch: vi.fn(),
       contentFetch: vi.fn(),
       profileUrl: "https://api.example.com/profile",
-      renditionUri: "https://api.example.com/renditions/get/pdf{?url}",
+      renditionUriTemplate: "https://api.example.com/renditions/get/pdf{?url}",
       renditionPolling,
     } as unknown as AppAuthResult);
 
@@ -105,7 +105,7 @@ describe("AuthShell", () => {
 
     const lastCallProps = vi.mocked(NavigatorDataProvider).mock.calls.at(-1)?.[0];
     expect(lastCallProps).toMatchObject({
-      renditionUri: "https://api.example.com/renditions/get/pdf{?url}",
+      renditionUriTemplate: "https://api.example.com/renditions/get/pdf{?url}",
       renditionPolling,
     });
   });

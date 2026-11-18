@@ -869,15 +869,15 @@ on it, so a different file never shows in a viewer left over from the previous o
   `ContentGridProblemDetail` union member) purely so `isProblemOfType` narrows it uniformly, but
   deliberately given no dedicated `ProblemDisplayModel` kind — `toProblemDisplayModel` falls through
   to `kind: "unknown"` for it.
-- Configuration: `RuntimeAppConfig.renditionUri` (a `{?url}` URI template), `renditionPollIntervalMs`
-  (default 2000), `renditionTimeoutMs` (default 60000) — from Liaison `config.js`'s `v1.renditionUri`
-  etc. (`auth/auth-config.ts`), the dev-config override, or `VITE_RENDITION_URI` (env fallback for
-  `renditionUri` only — the two numeric fields have no env fallback). Invalid values (a
-  `renditionUri` missing `{?url}`, an interval below 250ms, a timeout below the effective interval)
+- Configuration: `RuntimeAppConfig.renditionUriTemplate` (a `{?url}` URI template), `renditionPollIntervalMs`
+  (default 2000), `renditionTimeoutMs` (default 60000) — from Liaison `config.js`'s `v1.renditionUriTemplate`
+  etc. (`auth/auth-config.ts`), the dev-config override, or `VITE_RENDITION_URI_TEMPLATE` (env fallback for
+  `renditionUriTemplate` only — the two numeric fields have no env fallback). Invalid values (a
+  `renditionUriTemplate` missing `{?url}`, an interval below 250ms, a timeout below the effective interval)
   are dropped with a `console.warn`, never thrown — a misconfigured rendition endpoint must not block
   the rest of the app. `useAppAuth()` reads the validated config and fills in the two defaults,
-  producing `NavigatorDataContextValue.renditionUri`/`renditionPolling` — `useContentPreview` treats
-  `renditionUri === undefined` as "renditions disabled" (`{ kind: "unavailable" }`), never as a
+  producing `NavigatorDataContextValue.renditionUriTemplate`/`renditionPolling` — `useContentPreview` treats
+  `renditionUriTemplate === undefined` as "renditions disabled" (`{ kind: "unavailable" }`), never as a
   transient error.
 - Tests: `test-fixtures/msw/handlers.ts`'s `createRenditionHandlers({ url, jobUrl, pendingPolls,
 outcome })` simulates one rendition job (`"ready" | "invalid-conversion" | "error" | "never"`); use
