@@ -67,7 +67,16 @@ function SelectedFile({
 }: Readonly<SelectedFileProps>) {
   const isUploading = uploadProgress !== undefined;
   // Stops at 99% until the server has confirmed the upload.
-  const uploadingCaption = isUploading && `Uploading… ${Math.min(uploadProgress, 99)}%`;
+  const shownPercentage = isUploading ? Math.min(uploadProgress, 99) : 0;
+  const uploadingCaption = isUploading && `Uploading… ${shownPercentage}%`;
+  // The caption doubles as a progress bar for assistive technology.
+  const progressbarProps = {
+    role: "progressbar",
+    "aria-valuemin": 0,
+    "aria-valuemax": 100,
+    "aria-valuenow": shownPercentage,
+    "aria-label": `Uploading ${file.name}`,
+  } as const;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // A thumbnail only for a picked image in the full card: a stored file's bytes are not loaded
@@ -132,7 +141,9 @@ function SelectedFile({
               </span>
               <span className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
                 {uploadingCaption ? (
-                  <span className="tabular-nums">{uploadingCaption}</span>
+                  <span className="tabular-nums" {...progressbarProps}>
+                    {uploadingCaption}
+                  </span>
                 ) : (
                   <>
                     <span className="shrink-0 tabular-nums">{formatFileSize(file.size)}</span>
@@ -170,7 +181,7 @@ function SelectedFile({
             <span className="block truncate text-sm font-medium">{file.name}</span>
             <span className="mt-0.5 flex items-center gap-2">
               {uploadingCaption ? (
-                <span className="text-xs text-muted-foreground tabular-nums">
+                <span className="text-xs text-muted-foreground tabular-nums" {...progressbarProps}>
                   {uploadingCaption}
                 </span>
               ) : (
