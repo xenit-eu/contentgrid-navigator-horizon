@@ -441,6 +441,20 @@ describe("EditEntityItemContainer", () => {
 
       await waitFor(() => expect(onClose).toHaveBeenCalled());
     });
+    it("removing a file picked for an attribute without a stored file leaves the form clean", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const ref = createRef<EditEntityItemFormHandle>();
+      await renderForm(makeAllAttributeItem({ content: null }, '"v1"'), { onClose, ref });
+
+      await pickFile(user, new File(["new"], "new.txt", { type: "text/plain" }));
+      await user.click(screen.getByRole("button", { name: "Remove file" }));
+      act(() => ref.current?.cancel());
+
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(screen.queryByText("Leave without saving?")).not.toBeInTheDocument();
+    });
+
     it("on retry sends only the file change that failed", async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
