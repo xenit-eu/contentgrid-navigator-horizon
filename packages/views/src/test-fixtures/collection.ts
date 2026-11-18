@@ -8,7 +8,8 @@ import {
 /**
  * The item-detail fixture's `customer` entity, extended for the collection view: a search
  * template with one filter (`name~prefix`), a create form, and a collection page of two items
- * with a next link. Every collection request is recorded in `collectionRequests`.
+ * with a next link (or no items, with `empty`). Every collection request is recorded in
+ * `collectionRequests`.
  */
 export const CUSTOMER_NEXT_PAGE_URL = `${CUSTOMER_COLLECTION_URL}?_cursor=page2`;
 
@@ -64,14 +65,20 @@ export const customerCollectionBody = {
   page: { size: 2, total_items_exact: 2 },
 };
 
+const emptyCustomerCollectionBody = {
+  _embedded: { item: [] },
+  _links: { self: { href: CUSTOMER_COLLECTION_URL } },
+  page: { size: 20, total_items_exact: 0 },
+};
+
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { "Content-Type": "application/hal+json" } });
 
 /** A fetch that answers the collection fixture; anything else goes to the item-detail fixture. */
 export function createCollectionFixtureFetch(
-  options: Readonly<{ searchable?: boolean; creatable?: boolean }> = {},
+  options: Readonly<{ searchable?: boolean; creatable?: boolean; empty?: boolean }> = {},
 ) {
-  const { searchable = true, creatable = true } = options;
+  const { searchable = true, creatable = true, empty = false } = options;
   const itemFixture = createFixtureFetch();
   const collectionRequests: string[] = [];
 
@@ -92,7 +99,7 @@ export function createCollectionFixtureFetch(
     }
     if (url === CUSTOMER_COLLECTION_URL || url.startsWith(`${CUSTOMER_COLLECTION_URL}?`)) {
       collectionRequests.push(url);
-      return json(customerCollectionBody);
+      return json(empty ? emptyCustomerCollectionBody : customerCollectionBody);
     }
     return itemFixture.fetch(input);
   };
