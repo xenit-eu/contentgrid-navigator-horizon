@@ -63,8 +63,13 @@ const RENDITION_JOB_URL = "https://renditions.example.com/jobs/42";
  * A content client with the extension-aware supplier, plus an MSW-backed record of the token
  * exchanges and the `Authorization` header every request arrived with.
  */
-function setUpExtensionAwareClient(initialUser = "u1") {
-  let user: string | undefined = initialUser;
+function setUpExtensionAwareClient() {
+  let user = "u1";
+  const userWithSub = (sub: string) =>
+    makeUser({
+      access_token: `user-token-${sub}`,
+      profile: { sub, iss: "https://oidc.example.com", aud: "client", exp: 0, iat: 0 },
+    });
   const exchanges: { authorization: string | null; resource: string | null }[] = [];
   const authorizations: Record<string, string | null> = {};
 
@@ -89,8 +94,7 @@ function setUpExtensionAwareClient(initialUser = "u1") {
 
   const supplier = createExtensionAwareTokenSupplier({
     applicationUrl: APP_URL,
-    userTokenSupplier: async () => ({ token: `user-token-${user}`, expiresAt: null }),
-    user: () => user,
+    getUser: async () => userWithSub(user),
   });
   const contentFetch = createContentClient(supplier);
   const get = (url: string) => contentFetch(createRequest({ url, method: "GET" }, {}));
@@ -100,7 +104,7 @@ function setUpExtensionAwareClient(initialUser = "u1") {
     get,
     exchanges,
     authorizations,
-    signIn: (sub: string | undefined) => {
+    signIn: (sub: string) => {
       user = sub;
     },
   };

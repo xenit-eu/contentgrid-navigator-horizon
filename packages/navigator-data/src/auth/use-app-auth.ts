@@ -56,11 +56,11 @@ export function useAppAuth(): AppAuthResult {
   authRef.current = auth;
 
   const { apiFetch, contentFetch, clearExtensionTokens } = useMemo(() => {
-    const supplier = createOidcTokenSupplier(async () => authRef.current.user ?? null);
+    const getUser = async () => authRef.current.user ?? null;
+    const supplier = createOidcTokenSupplier(getUser);
     const contentSupplier = createExtensionAwareTokenSupplier({
       applicationUrl: getAppConfig().apiBaseUrl,
-      userTokenSupplier: supplier,
-      user: () => authRef.current.user?.profile.sub,
+      getUser,
     });
     return {
       apiFetch: createApiClient(supplier),

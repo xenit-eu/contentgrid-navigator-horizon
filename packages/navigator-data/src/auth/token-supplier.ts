@@ -30,10 +30,11 @@ export const TOKEN_EXCHANGE_PATH = "/.contentgrid/authentication/external/token"
 export interface ExtensionAwareTokenSupplierOptions {
   /** Base URL of the ContentGrid application (`RuntimeAppConfig.apiBaseUrl`). */
   applicationUrl: string;
-  /** Supplies the user's own access token: for the application origin and the token exchange itself. */
-  userTokenSupplier: AuthenticationTokenSupplier;
-  /** Identity of the signed-in user (OIDC `sub`), so exchanged tokens are never handed to another user. */
-  user: () => string | undefined;
+  /**
+   * The signed-in OIDC user. Its access token is used for the application origin and the token
+   * exchange itself; its `sub` keeps exchanged tokens from being handed to another user.
+   */
+  getUser: () => Promise<User | null>;
 }
 
 /** A token supplier whose cached extension tokens can be dropped, e.g. when the user signs out or changes. */
@@ -56,8 +57,7 @@ export type ExtensionAwareTokenSupplier = AuthenticationTokenSupplier & {
  */
 export function createExtensionAwareTokenSupplier({
   applicationUrl,
-  userTokenSupplier,
-  user,
+  getUser,
 }: ExtensionAwareTokenSupplierOptions): ExtensionAwareTokenSupplier {
   const applicationOrigin = new URL(applicationUrl).origin;
   const extensionTokenSupplier = createCachingTokenSupplier(
@@ -66,11 +66,11 @@ export function createExtensionAwareTokenSupplier({
     }),
     {
       uriKey: (uri) => new URL(uri).origin,
-      scope: user,
+      scope: async () => (await getUser())?.profile.sub,
     },
   );
   const supplier = new CompositeTokenSupplierBuilder()
-    .origin(applicationOrigin, userTokenSupplier)
+    .origin(applicationOrigin, createOidcTokenSupplier(getUser))
     .default(extensionTokenSupplier)
     .build();
 
