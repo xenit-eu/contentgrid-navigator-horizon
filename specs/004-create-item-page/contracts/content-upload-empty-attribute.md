@@ -8,7 +8,7 @@
 **File**: `packages/features/src/entity-item/variations/content-focus/components/content-preview-frame.tsx`
 
 - New state `"uploading"`: skeleton + caption `labels.uploadingCaption` (default "Uploading…"); no actions.
-- `noFile`: renders `FileUploadZone` **only when `onFileChange` is provided**; otherwise the "No file" caption only. `NOOP_FILE_CHANGE` is removed.
+- `noFile`: renders `FileUploadZone` **only when `onFileChange` is provided**; otherwise the "No file uploaded yet" caption only. `NOOP_FILE_CHANGE` is removed.
 - `noFile` + `problem`: the problem alert is shown above the drop zone.
 
 ## `ContentPreviewPanel` (owns data)

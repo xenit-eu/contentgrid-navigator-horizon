@@ -37,7 +37,7 @@ PR 1 has no e2e test: the demo MSW data has no item `default` templates, so the 
 | --- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----- |
 | 10  | Content-focus item: **Edit**, drop a new PDF on its content attribute | Preview shows the picked PDF; filename/mimetype follow it; nothing uploaded yet (network tab)          | US2-2 |
 | 11  | **Save**                                                              | Metadata PUT, then content PUT with progress, then item reload; preview and download show the new file | US2-5 |
-| 12  | **Edit**, remove the file, **Save**                                   | Content DELETE sent; attribute shows "No file"                                                         | US2-4 |
+| 12  | **Edit**, remove the file, **Save**                                   | Content DELETE sent; attribute shows the "No file" state                                               | US2-4 |
 | 13  | **Edit**, rename the file only, **Save**                              | Same bytes, new name in download and panel                                                             | US2-6 |
 | 14  | Content PUT fails after a successful metadata PUT                     | Edit mode stays open, file flagged with Retry; Retry uploads only that file                            | US3-5 |
 

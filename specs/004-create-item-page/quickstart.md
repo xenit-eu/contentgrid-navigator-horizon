@@ -28,9 +28,9 @@ pnpm dev:navigator            # MSW fixtures in development mode
 
 ### Upload into an empty content attribute (US3)
 
-1. Open an item whose content attribute has no file → drop zone with "No file".
+1. Open an item whose content attribute has no file → drop zone, no caption.
 2. Drop a PDF → "Uploading…" → the PDF renders; file name, size and type are updated in the side panel.
-3. With a fixture where the `cg:content` link is absent → only "No file", no drop zone.
+3. With a fixture where the `cg:content` link is absent → only "No file uploaded yet", no drop zone.
 4. With a fixture answering 412 → "modified" problem shown, item reloaded, drop zone back.
 
 ## Automated checks
