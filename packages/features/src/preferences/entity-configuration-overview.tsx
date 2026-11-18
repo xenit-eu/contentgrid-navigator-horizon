@@ -1,14 +1,9 @@
 import { type ReactNode, useState } from "react";
 import { GearIcon as Gear, WrenchIcon } from "@phosphor-icons/react";
-import {
-  type ProfileEntity,
-  useLoadedProfileEntities,
-  useNavigatorData,
-} from "@contentgrid/navigator-data";
+import { type ProfileEntity, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   Alert,
   Button,
-  ENTITY_COLOR_THEMES,
   EntityCard,
   IconBadge,
   IconColorPickerContent,
@@ -17,11 +12,10 @@ import {
   PopoverContent,
   PopoverTrigger,
   Skeleton,
-  ThemeSelector,
 } from "@contentgrid/ui";
-import { EntityIconBadge } from "../../layout";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
-import { useEntityDisplayPreferences } from "../use-entity-display-preferences";
+import { EntityIconBadge } from "../layout";
+import { EntityColorThemeSelector } from "./entity-color-theme-selector";
+import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
 
 export interface EntityConfigurationOverviewProps {
   readonly onSelectEntity: (profile: ProfileEntity) => void;
@@ -38,19 +32,7 @@ export function EntityConfigurationOverview({
   onSelectEntity,
 }: Readonly<EntityConfigurationOverviewProps>) {
   const { profiles, isLoading } = useLoadedProfileEntities();
-  const { profileUrl } = useNavigatorData();
-  const setOverride = useEntityDisplayPreferencesStore((state) => state.setOverride);
-  const [selectedTheme, setSelectedTheme] = useState<string | undefined>(undefined);
   const [showColorHint, setShowColorHint] = useState(true);
-
-  function applyTheme() {
-    const theme = ENTITY_COLOR_THEMES.find((candidate) => candidate.name === selectedTheme);
-    if (!theme || theme.colors.length === 0) return;
-    // Cycles through the theme's colors — duplicates allowed once entities outnumber colors.
-    profiles.forEach((profile, index) => {
-      setOverride(profileUrl, profile.name, { color: theme.colors[index % theme.colors.length] });
-    });
-  }
 
   let content: ReactNode;
   if (isLoading && profiles.length === 0) {
@@ -96,13 +78,7 @@ export function EntityConfigurationOverview({
           theme selector.
         </Alert>
       )}
-      <ThemeSelector
-        themes={ENTITY_COLOR_THEMES}
-        value={selectedTheme}
-        onValueChange={setSelectedTheme}
-        onApply={applyTheme}
-        applyDisabled={profiles.length === 0}
-      />
+      <EntityColorThemeSelector profiles={profiles} />
 
       {content}
     </div>

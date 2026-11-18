@@ -10,14 +10,10 @@
  * `useEntityDisplayPreferences` is the single entry point for reading and writing these
  * preferences; `useColumnVisibility` is a thin wrapper over it for the collection-view case.
  *
- * `EntityConfigurationOverview` + `EntityConfigurationDetail` (`~configuration`,
- * `~configuration/$entity`) are the entry point for users to edit these preferences — an
- * entity-card selector page plus a growing per-entity detail page. (The earlier inline
- * `~settings` page has been retired in favor of this pair.)
- *
- * `EntityConfigurationOverviewTabbed` is an alternate layout for the same page: the same
- * card grid, plus a vertical tab list beneath it that renders `EntityConfigurationDetail`
- * inline instead of navigating to `~configuration/$entity`.
+ * The `~configuration` pages themselves are views (`@contentgrid/views/entity-configuration-*`);
+ * this feature gives them their parts: `EntityConfigurationOverview` (the entity card grid with a
+ * theme selector), `EntityDisplaySettingsForm` (one entity's settings), `EntityColorBadge`,
+ * `EntityColorThemeSelector` and `EntityCreateFormPreview` (the create form's placeholder preview).
  */
 
 export {
@@ -34,8 +30,13 @@ export { resolveEntityCardIcon } from "./resolve-entity-icon";
 export {
   EntityConfigurationOverview,
   EntityConfigurationCard,
-} from "./views/entity-configuration-overview";
-export type { EntityConfigurationOverviewProps } from "./views/entity-configuration-overview";
-export { EntityConfigurationOverviewTabbed } from "./views/entity-configuration-overview-tabbed";
-export { EntityConfigurationDetail } from "./views/entity-configuration-detail";
-export type { EntityConfigurationDetailProps } from "./views/entity-configuration-detail";
+} from "./entity-configuration-overview";
+export type { EntityConfigurationOverviewProps } from "./entity-configuration-overview";
+export { EntityDisplaySettingsForm } from "./entity-display-settings-form";
+export type { EntityDisplaySettingsFormProps } from "./entity-display-settings-form";
+export { EntityColorBadge } from "./entity-color-badge";
+export type { EntityColorBadgeProps } from "./entity-color-badge";
+export { EntityColorThemeSelector } from "./entity-color-theme-selector";
+export type { EntityColorThemeSelectorProps } from "./entity-color-theme-selector";
+export { EntityCreateFormPreview } from "./entity-create-form-preview";
+export type { EntityCreateFormPreviewProps } from "./entity-create-form-preview";

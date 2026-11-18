@@ -31,6 +31,8 @@ export interface Navigation {
   openClassifyCreate(options?: NavigationOptions): void;
   /** Opens the application's settings (the user menu's "Settings"). */
   openSettings(options?: NavigationOptions): void;
+  /** Opens one entity's display configuration, from the settings page. */
+  openEntityConfiguration(entityName: string, options?: NavigationOptions): void;
   /**
    * The real address for each `open*` above, when the host has one to give (contract
    * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so
@@ -42,6 +44,8 @@ export interface Navigation {
     home(): string;
     entityItemCollection(entityName: string): string;
     item(entityName: string, id: string): string;
+    /** The settings page (`openSettings`). Optional: a host without one falls back to a button. */
+    settings?(): string;
   };
 }
 
@@ -55,6 +59,7 @@ const noopNavigation: Navigation = {
   openCreateItem: () => {},
   openClassifyCreate: () => {},
   openSettings: () => {},
+  openEntityConfiguration: () => {},
 };
 
 export function NavigationProvider({
@@ -109,6 +114,7 @@ export function ChildNavigationProvider({
     openCreateItem,
     openClassifyCreate,
     openSettings,
+    openEntityConfiguration,
     hrefFor,
   } = overrides;
   const navigation = useMemo<Navigation>(
@@ -119,6 +125,7 @@ export function ChildNavigationProvider({
       openCreateItem: openCreateItem ?? parent.openCreateItem,
       openClassifyCreate: openClassifyCreate ?? parent.openClassifyCreate,
       openSettings: openSettings ?? parent.openSettings,
+      openEntityConfiguration: openEntityConfiguration ?? parent.openEntityConfiguration,
       hrefFor: hrefFor ?? parent.hrefFor,
     }),
     [
@@ -129,6 +136,7 @@ export function ChildNavigationProvider({
       openCreateItem,
       openClassifyCreate,
       openSettings,
+      openEntityConfiguration,
       hrefFor,
     ],
   );

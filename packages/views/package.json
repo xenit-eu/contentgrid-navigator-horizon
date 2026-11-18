@@ -47,6 +47,14 @@
     "./not-found": {
       "import": "./src/not-found/index.ts",
       "types": "./src/not-found/index.ts"
+    },
+    "./entity-configuration-overview": {
+      "import": "./src/entity-configuration-overview/index.ts",
+      "types": "./src/entity-configuration-overview/index.ts"
+    },
+    "./entity-configuration-detail": {
+      "import": "./src/entity-configuration-detail/index.ts",
+      "types": "./src/entity-configuration-detail/index.ts"
     }
   },
   "scripts": {

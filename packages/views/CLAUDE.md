@@ -50,8 +50,9 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   `{ openInNewTab: true }` — and a host that can't open tabs may ignore it. The recording fake records `options`
   as the last element of `args` only when it was passed. `openEntityItemCollection` also honours
   `{ restoreState: false }` (default `true`): the sidebar passes it to open a fresh list instead of the remembered one.
-- Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create Item") and
-  `openSettings` (the user menu's "Settings"); `openEditItem` arrives with the page that needs it.
+- Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create Item"),
+  `openSettings` (the user menu's "Settings", with an optional `hrefFor.settings`) and `openEntityConfiguration`
+  (a settings card); `openEditItem` arrives with the page that needs it.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.
@@ -74,8 +75,9 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   features' `EntityCountOverview` and `NotFoundPage`; those take callback props and never read navigation.
 - `useUnsavedChangesGuard` and the create form still use the router from `@contentgrid/features`; where they live is
   [open question 3](../../specs/005-views-layer/spec.md) and is not decided here.
-- `RightSidePanelLayout` and `EntityIconBadge` stay in `@contentgrid/features/layout`: features import them, and a
-  feature may not import a view.
+- `RightSidePanelLayout`, `EntityIconBadge` and `EntityProfileSelector` (the toolbar's entity dropdown, used by the
+  create form and the entity configuration page) stay in `@contentgrid/features/layout`: features import them, and
+  a feature may not import a view.
 
 ## Views
 
@@ -96,12 +98,25 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
   collection, plus a create action gated on `profileEntity.createTemplate`.
 
+- `@contentgrid/views/entity-configuration-overview`: `EntityConfigurationOverviewView()`, the settings page
+  around the preferences feature's `EntityConfigurationOverview`; a card opens
+  `navigation.openEntityConfiguration`.
+- `@contentgrid/views/entity-configuration-detail`: `EntityConfigurationDetailView(ViewProps & { entityName })`.
+  Resolves the profile (`useProfileEntityTarget`), draws a Settings › entity toolbar with an `EntityProfileSelector`
+  (every entity; picking one calls `openEntityConfiguration`) and a card (title,
+  `EntityColorBadge`, Close → `openSettings`) around `EntityConfigurationPanel`: preview tabs next to the
+  feature's `EntityDisplaySettingsForm`. The item and collection previews are `EntityItemDetailView` (the first
+  item) and `EntityItemCollectionView`, both `toolbar={false}`, stretched to the card's remaining height so the whole
+  page shows; the create tab is the feature's placeholder `EntityCreateFormPreview`.
+
 ## Breadcrumbs
 
-- `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `CollectionBreadcrumb` and
-  `ItemBreadcrumb`, each rendering its `children` crumbs after itself. A crumb with children is a link; the last one
+- `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `SettingsBreadcrumb` (the root of
+  the settings trails), `CollectionBreadcrumb` and `ItemBreadcrumb`, each rendering its `children` crumbs after
+  itself. A crumb with children is a link; the last one
   is the current page. A crumb draws nothing until its data is known, so pages nest them without conditions. Each
-  page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`); each view draws its
+  page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`,
+  `EntityConfigurationBreadcrumbs`); each view draws its
   own toolbar around it.
 
 ## Testing
