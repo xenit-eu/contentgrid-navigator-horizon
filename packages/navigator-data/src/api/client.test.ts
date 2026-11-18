@@ -6,6 +6,7 @@ import { createRequest } from "@contentgrid/typed-fetch";
 import { server } from "../../test-setup";
 import { type AuthenticationTokenSupplier, createApiClient, createContentClient } from "./client";
 import { ACCEPT_HAL } from "./content-types";
+import { isProblemWithStatus } from "./problem-details/guards";
 
 const TEST_URL = "https://api.example.com/test";
 
@@ -127,6 +128,29 @@ describe("createContentClient", () => {
     await expect(
       contentFetch(createRequest({ url: TEST_URL, method: "GET" }, {})),
     ).rejects.toBeInstanceOf(ProblemDetailError);
+  });
+});
+
+describe("createContentClient — HEAD", () => {
+  it("rejects with a ProblemDetailError carrying the status when the problem has no body", async () => {
+    server.use(
+      http.head(
+        TEST_URL,
+        () =>
+          new HttpResponse(null, {
+            status: 404,
+            headers: { "Content-Type": "application/problem+json" },
+          }),
+      ),
+    );
+
+    const contentFetch = createContentClient(staticSupplier);
+    const error = await contentFetch(createRequest({ url: TEST_URL, method: "HEAD" }, {})).catch(
+      (thrown: unknown) => thrown,
+    );
+
+    expect(error).toBeInstanceOf(ProblemDetailError);
+    expect(isProblemWithStatus(error, 404)).toBe(true);
   });
 });
 
