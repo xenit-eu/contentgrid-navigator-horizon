@@ -51,12 +51,17 @@ Template parameter widened to `CreateHalFormTemplate | UpdateHalFormTemplate | S
 ### `useEntityItemContext` (entity-item/use-entity-item-context.ts)
 
 Gains `pendingContent: ContentChanges` and `setPendingContent`. Opening or closing the form and
-moving to another item clear them; `refresh` keeps them. It also gains `isSaving` and
-`setIsSaving`, set by the form while it saves; they are cleared with `pendingContent`.
+moving to another item clear them; `refresh` keeps them. It also gains `contentFailures:
+ReadonlyMap<string, string>` (attribute name → message of the file change the last Save could not
+apply) and `setContentFailures`, cleared with `pendingContent` and kept by `refresh`; changing an
+attribute's file through `setPendingContent` drops that attribute's failure. It also gains
+`isSaving` and `setIsSaving`, set by the form while it saves; they are cleared with
+`pendingContent`.
 
 ### `EditableEntityItemAttributes` / `EditEntityItemContainer` (entity-item/)
 
-Both gain `pendingContent` and `onPendingContentChange`, and `onSavingChange`; the variations get
+Both gain `pendingContent` and `onPendingContentChange`, `contentFailures` and
+`onContentFailuresChange`, and `onSavingChange`; the variations get
 them from the item context through `useEntityItemSectionProps` and `EntityItemSections`.
 
 ### `EditContentFields` (entity-item/edit/edit-content-fields.tsx)
@@ -65,6 +70,8 @@ them from the item context through `useEntityItemSectionProps` and `EntityItemSe
 interface EditContentFieldsProps {
   readonly item: EditableEntityItem;
   readonly pendingContent: ContentChanges;
+  /** The message of each failed file change, by attribute name; shown on that attribute's card. */
+  readonly contentFailures: ReadonlyMap<string, string>;
   readonly onContentChange: (attributeName: string, file: File | null) => void;
   /** While Save stores the picked files, each one's upload progress, by attribute name. */
   readonly uploadProgress?: ReadonlyMap<string, number>;
@@ -81,7 +88,8 @@ picked file, else the stored one. While it shows a file, the attribute's `<attr>
 `<attr>.mimetype` fields follow, labelled as the template gives them, all in a `Card` styled like
 the relation sections, through `renderMetadataFields` (a `HalFormsContainer` with just those
 fields); the container takes them out of the main layout (`layoutWithoutContentMetadata`). Values,
-validation and Save are unchanged. The file field shows no required asterisk: the form doesn't
+validation are unchanged; Save is two-step: the metadata PUT, then the file changes (see
+`data-model.md`). The file field shows no required asterisk: the form doesn't
 check that a file stays. In
 content focus with more than one file, the previewed file's card is highlighted, the others offer
 Preview; a picked file comes into the preview (the container calls `onPreview`). Read-only without the attribute's

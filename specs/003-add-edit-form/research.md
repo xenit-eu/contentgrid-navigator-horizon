@@ -78,7 +78,7 @@ Format per `/speckit-plan`: decision, rationale, alternatives considered.
 ### D1 — Metadata PUT, then a separate hook for the file changes
 
 - **Decision**: the update form saves the metadata with `useUpdateEntityItem`, then applies the file changes with `useApplyContentChanges(entityItem)`. Each content PUT/DELETE is conditional on the content's own ETag, read with a HEAD on the `cg:content` link just before it.
-- **Rationale**: content is its own conditional-request resource; the item's ETag is not valid for it, so chaining item ETags from step to step does not apply. The metadata PUT, conditional on the item's ETag, catches a file that changed since the form was opened (the item's ETag changes with its file); the HEAD covers the short gap after it. A failed file change does not stop the others and is reported per attribute.
+- **Rationale**: content is its own conditional-request resource; the item's ETag is not valid for it, so chaining item ETags from step to step does not apply. The metadata PUT, conditional on the item's ETag, catches a file that changed since the form was opened (the item's ETag changes with its file; the platform team confirmed on 2026-11-18 that an entity item's ETag changes when one of its files changes, and that it does not change when a relation changes); the HEAD covers the short gap after it. A failed file change does not stop the others and is reported per attribute.
 - **Alternatives**: one hook running metadata and files — rejected, it duplicates `useUpdateEntityItem` and gains nothing, since the file changes do not use the item's ETag. Unconditional content requests — rejected, constitution I requires conditional mutations.
 
 ### D2 — Removing a file uses a new `deleteContentRequest`

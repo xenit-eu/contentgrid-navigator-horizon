@@ -42,7 +42,7 @@ Not in either PR: the pinned action bar, edit-mode heading and view/edit transit
 ### Session 2026-09-29
 
 - Q: When someone else changed the item while the form was open, what happens on save? → A: The save is refused and the user is told the item has been updated by someone else. Refresh reloads the latest version into the form; the user's unsaved input is not kept (FR-023, Story 3 scenario 2).
-- Q: The attribute values saved but a file upload or removal failed. Does edit mode stay open? → A: It stays open, with the failed file flagged and a retry of only the failed steps (FR-024, Story 3 scenario 5).
+- Q: The attribute values saved but a file upload or removal failed. Does edit mode stay open? → A: It stays open, with the failed file flagged on its attribute (and in a toast); the values already saved are not undone, and saving again retries only the failed steps (FR-024, Story 3 scenario 5).
 - Q: How is the edit form presented? → A: Whatever looks most modern, elegant and in line with the Horizon look and feel. Chosen: in place of the attribute panel with a pinned action bar and a subtle view/edit transition (FR-003–FR-003c). It keeps the item header, relations and preview in view, which a separate page or a dialog would not.
 
 ## User Scenarios & Testing _(mandatory)_
@@ -170,7 +170,7 @@ A content editor saves and something goes wrong: a value is rejected, someone el
 - **FR-021**: Server validation messages tied to a field MUST be shown on that field; messages not tied to a field MUST be shown above the form. The user's input MUST be kept.
 - **FR-022**: A refused update (not permitted, or the result would not be permitted) MUST keep the form open with the input and explain that the update is not allowed.
 - **FR-023**: A conflicting change MUST be reported as such, and saving MUST NOT be possible until the user refreshes. Refresh MUST reload the latest version into the form, after which saving again is conditional on that version.
-- **FR-024**: A failed file step MUST be shown on the affected content attribute with a retry, and MUST NOT undo the attribute values already saved. Edit mode MUST stay open until every file step has succeeded or the user cancels; a retry MUST apply only the steps that failed.
+- **FR-024**: A failed file step MUST be shown on the affected content attribute (and in a toast), and MUST NOT undo the attribute values already saved. Edit mode MUST stay open until every file step has succeeded or the user cancels; saving again is the retry and MUST apply only the steps that failed. There is no separate retry control.
 - **FR-025**: An item that no longer exists MUST be reported as not found, without offering to save again.
 
 ### Key Entities

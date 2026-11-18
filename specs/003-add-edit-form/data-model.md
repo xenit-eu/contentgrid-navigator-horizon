@@ -65,13 +65,19 @@ On 412 the form shows "This item has been updated by someone else" (`VersionConf
    the file step refreshes the item and its lists once, at the end.
 2. **Files**: `useApplyContentChanges` with the map and, for each picked file, the values of its
    filename and mimetype fields, which the file is stored under (FR-015). Each change reads the content's own ETag with a HEAD;
-   removing a file that is already gone sends nothing.
+   removing a file that is already gone (HEAD 404) sends nothing and counts as done.
 3. **Result**: no failure → toast, form closes. Failures → one error toast per failed attribute,
-   saying the other changes were saved; the map keeps only the failed entries, and `refresh` moves the form onto the latest item; Save
-   then sends only those again (FR-024).
+   saying the other changes were saved, and the message of each failure is kept per attribute
+   (`contentFailures`, next to the map) and shown on that attribute's card. The map keeps only the
+   failed entries, and `refresh` moves the form onto the latest item; Save then sends only those
+   again (FR-024). A kept failed file keeps the name and media type it was sent under, so the
+   reseeded filename and mimetype fields show what the user typed. A failure is cleared when the
+   user changes that attribute's file again and when a new Save starts. Cancel is disabled while
+   Save runs.
 
 ### Limits
 
 - FR-015: each picked file's card shows its upload progress; Save shows "Saving…" until every
   change is done, and the file fields are read-only meanwhile.
-- FR-024: a failed change is reported in a toast, not on its field.
+- FR-024: a failed change is reported in a toast and on its file's card; Save is the retry, there
+  is no per-card retry button.
