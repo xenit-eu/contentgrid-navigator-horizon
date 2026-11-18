@@ -12,6 +12,14 @@ export interface FileRendererProps {
   readonly error?: string;
   readonly onFocus?: () => void;
   readonly onBlur?: () => void;
+  /** See `FileUploadZone`'s `onPreview`. */
+  readonly onPreview?: () => void;
+  /** See `FileUploadZone`'s `onFileClick`. */
+  readonly onFileClick?: () => void;
+  /** See `FileUploadZone`'s `previewed`. */
+  readonly previewed?: boolean;
+  /** See `FileUploadZone`'s `compact`. */
+  readonly compact?: boolean;
 }
 
 /** File picker field; the value is the picked `File`, or `undefined` when none is picked. */
@@ -26,6 +34,10 @@ export function FileRenderer({
   error,
   onFocus,
   onBlur,
+  onPreview,
+  onFileClick,
+  previewed,
+  compact,
 }: Readonly<FileRendererProps>) {
   const file = value ?? null;
 
@@ -44,6 +56,10 @@ export function FileRenderer({
         disabled={readOnly}
         onFocus={onFocus}
         onBlur={onBlur}
+        onPreview={onPreview}
+        onFileClick={onFileClick}
+        previewed={previewed}
+        compact={compact}
         {...fieldAriaProps(name, error)}
       />
     </FieldShell>

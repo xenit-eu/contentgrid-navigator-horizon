@@ -16,6 +16,11 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => ({
 
 vi.mock("../../attributes/entity-item-attributes", () => ({
   EntityItemAttributes: () => <div>attributes</div>,
+  EntityItemAuditTrail: () => <div>audit</div>,
+  hasAuditTrail: () => false,
+}));
+vi.mock("../../relations/relation-summary", () => ({
+  EntityItemRelationSummary: () => null,
 }));
 vi.mock("../item-reference/entity-item-reference", () => ({
   EntityItemReference: () => <div>reference</div>,
@@ -49,17 +54,24 @@ function makeItem(options: { toOne?: number; toMany?: number }): EntityItem {
   return {
     selfLink: { href: "https://api.example.com/items/1" },
     updateTemplate: null,
-    toOneRelations: Array.from({ length: options.toOne ?? 0 }, () => ({ name: "owner" })),
-    toManyRelations: Array.from({ length: options.toMany ?? 0 }, () => ({ name: "lines" })),
+    toOneRelations: Array.from({ length: options.toOne ?? 0 }, () => ({
+      name: "owner",
+      profileRelation: { isToOne: true },
+    })),
+    toManyRelations: Array.from({ length: options.toMany ?? 0 }, () => ({
+      name: "lines",
+      profileRelation: { isToOne: false },
+    })),
   } as unknown as EntityItem;
 }
 
 describe("EntityItemAttributeFocus", () => {
-  it("renders the item's reference and attributes, and no relations section without relations", () => {
+  it("renders the item's reference and attributes, and no relation sections without relations", () => {
     render(<EntityItemAttributeFocus item={makeItem({})} />);
     expect(screen.getByText("reference")).toBeInTheDocument();
     expect(screen.getByText("attributes")).toBeInTheDocument();
-    expect(screen.queryByText("Relations")).not.toBeInTheDocument();
+    expect(screen.queryByText("one-click")).not.toBeInTheDocument();
+    expect(screen.queryByText("many-required")).not.toBeInTheDocument();
   });
 
   it("fills its parent and draws no padding or toolbar of its own", () => {
@@ -84,7 +96,6 @@ describe("EntityItemAttributeFocus", () => {
       />,
     );
 
-    expect(screen.getByText("Relations")).toBeInTheDocument();
     await userEvent.click(screen.getByText("one-click"));
     await userEvent.click(screen.getByText("one-create"));
     await userEvent.click(screen.getByText("one-missing"));

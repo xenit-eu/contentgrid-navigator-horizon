@@ -1,3 +1,4 @@
+import { PaperclipIcon } from "@phosphor-icons/react";
 import { AttributeKind, type EntityItem } from "@contentgrid/navigator-data";
 import { AttributeSelect, type ProfileAttributeOption } from "@contentgrid/ui";
 
@@ -10,19 +11,10 @@ export interface ContentAttributeSelectorProps {
 }
 
 /**
- * `AttributeSelect` (`@contentgrid/ui`'s shared profile-attribute selector pattern, round-2
- * review — reuse it instead of a hand-rolled `Select`) over the item's content attributes,
- * rendered in the PDF viewer toolbar's `start` slot at compact (`size="sm"`) height to match the
- * toolbar's other controls.
+ * `ContentAttributeOptionSelector` over the item's content attributes.
  *
  * Lists every content attribute the item has, not only ones that currently hold a file — an
- * attribute that needs uploading or that errors out while loading is still a valid switch target
- * (round-2 review: "cannot look or switch content attributes when one cannot be opened or needs
- * to be uploaded"). Renders nothing when there are no content attributes at all. With exactly one,
- * renders it as a *disabled* selector rather than nothing — same as the old Navigator's greyed-out
- * "Order document" box — so the user still has context on what they're viewing (round-2 review of
- * #192: "instead of returning null I would prefer a disabled selector that still displays the
- * default content attribute"). With two or more, renders the normal enabled selector.
+ * attribute that needs uploading or that errors out while loading is still a valid switch target.
  */
 export function ContentAttributeSelector({
   entityItem,
@@ -36,8 +28,45 @@ export function ContentAttributeSelector({
     return [{ name: attr.value.name, title: attr.profileAttribute?.title, type: "content" }];
   });
 
+  return <ContentAttributeOptionSelector options={options} value={value} onChange={onChange} />;
+}
+
+interface ContentAttributeOptionSelectorProps {
+  readonly options: readonly ProfileAttributeOption[];
+  /** Currently selected option name. */
+  readonly value: string;
+  /** Fires with the newly selected option's name. Without it the title is shown as plain text. */
+  readonly onChange?: (attributeName: string) => void;
+}
+
+/**
+ * `AttributeSelect` over a given list of content attributes, rendered in a preview toolbar's
+ * `start` slot at compact (`size="sm"`) height to match the toolbar's other controls. Takes the
+ * options directly, so it also serves a caller that has no `EntityItem`.
+ *
+ * Renders nothing when there are no options. With exactly one option, or without `onChange`, there
+ * is nothing to pick here, so it shows the selected option's title in a pill with a paperclip icon:
+ * the user still sees which attribute is on screen, without a control that does nothing.
+ */
+export function ContentAttributeOptionSelector({
+  options,
+  value,
+  onChange,
+}: Readonly<ContentAttributeOptionSelectorProps>) {
   if (options.length === 0) {
     return null;
+  }
+
+  if (!onChange || options.length === 1) {
+    const selected = options.find((option) => option.name === value);
+    // A pill with the selector trigger's fill and border, so the toolbar looks alike either way; a
+    // label, not a control, so it has no hover or chevron.
+    return (
+      <span className="border-input text-muted-foreground dark:bg-input/30 flex min-w-0 items-center gap-1.5 rounded-full border bg-transparent px-2.5 py-1 text-sm font-medium">
+        <PaperclipIcon className="size-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{selected?.title ?? value}</span>
+      </span>
+    );
   }
 
   return (
@@ -52,7 +81,6 @@ export function ContentAttributeSelector({
         value={value}
         onSelect={(attribute) => onChange(attribute.name)}
         placeholder="Content attribute"
-        disabled={options.length === 1}
       />
     </div>
   );

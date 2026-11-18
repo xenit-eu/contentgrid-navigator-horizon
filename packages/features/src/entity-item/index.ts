@@ -1,4 +1,5 @@
 export { EntityItemAttributeFocus } from "./variations/attribute-focus/entity-item-attribute-focus";
+export { EntityItemSideBySide } from "./variations/side-by-side/entity-item-side-by-side";
 export { EntityItemAttributes } from "./attributes/entity-item-attributes";
 export type { EntityItemAttributesProps } from "./attributes/entity-item-attributes";
 export { RelationToOneSection } from "./relations/relation-to-one-section";
@@ -25,10 +26,12 @@ export type { AttributeValueRendererProps } from "./attributes/renderers/attribu
 export {
   pdfiumWasmUrl,
   selectDefaultContentAttribute,
+  ContentAttributeOptionSelector,
   ContentAttributeSelector,
   ContentPreviewFrame,
   ContentPreviewPanel,
   EntityItemContentFocus,
+  FilePreview,
 } from "./variations/content-focus";
 export type {
   ContentAttributeSelectorProps,
@@ -42,6 +45,7 @@ export {
   entityItemDetailPadding,
   entityItemVariations,
   resolveEntityItemVariation,
+  useEntityItemDetailPadding,
 } from "./variations/entity-item-auto-variation";
 export type {
   EntityItemAutoVariationProps,

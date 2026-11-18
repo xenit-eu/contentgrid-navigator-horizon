@@ -8,7 +8,11 @@ export {
   type ResolvedHalFormsFields,
 } from "./model/resolve-hal-forms-fields";
 export { generateSearchFormLayout } from "./model/generate-search-form-layout";
-export { HalFormsContainer, type HalFormsContainerProps } from "./render/hal-forms-container";
+export {
+  HalFormsContainer,
+  type HalFormsContainerProps,
+  type HalFormsFilePreview,
+} from "./render/hal-forms-container";
 export {
   HalFormsFieldRenderer,
   type HalFormsFieldRendererProps,

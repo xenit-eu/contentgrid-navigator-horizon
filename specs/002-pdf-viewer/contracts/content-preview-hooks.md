@@ -4,7 +4,13 @@
 
 ```ts
 export type PreviewSource =
-  | { kind: "pdf"; bytes: ArrayBuffer; filename: string; origin: "stored" | "rendition" }
+  | {
+      kind: "pdf";
+      bytes: ArrayBuffer;
+      filename: string;
+      origin: "stored" | "rendition";
+      etag: string | null;
+    }
   | { kind: "image" | "video"; blob: Blob; etag: string | null }
   | { kind: "noFile" }
   | { kind: "unavailable"; mimetype: string | null }

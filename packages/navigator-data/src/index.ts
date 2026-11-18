@@ -18,11 +18,13 @@ export type { default as ProfileEntityType } from "./accessors/entity-profile";
 export {
   entityDisplayPreferencesSchema,
   entityDisplayPreferencesMapSchema,
+  entityItemLayoutSchema,
   validateEntityDisplayPreferencesMap,
 } from "./accessors/entity-display-preferences";
 export type {
   EntityDisplayPreferences,
   EntityDisplayPreferencesMap,
+  EntityItemLayout,
 } from "./accessors/entity-display-preferences";
 export * from "./config";
 export * from "./preview";

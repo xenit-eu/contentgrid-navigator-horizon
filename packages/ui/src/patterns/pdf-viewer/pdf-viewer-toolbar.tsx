@@ -260,7 +260,11 @@ export function PdfViewerToolbar({
           </ToolbarIconButton>
         )}
         {onDownload && (
-          <ToolbarIconButton label={labels.download} disabled={!ready} onClick={onDownload}>
+          <ToolbarIconButton
+            label={labels.download}
+            disabled={!ready && documentState !== "protected"}
+            onClick={onDownload}
+          >
             <DownloadIcon />
           </ToolbarIconButton>
         )}

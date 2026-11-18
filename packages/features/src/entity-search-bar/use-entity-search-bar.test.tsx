@@ -22,10 +22,10 @@ function recordRequests() {
     seen.filter((url) => `${url.origin}${url.pathname}` === collectionUrl);
 }
 
-function renderSearchBar(filters: Record<string, string> = {}) {
+function renderSearchBar(filters: Record<string, string> = {}, defaultMode?: "all" | "all-direct") {
   const onFiltersChange = vi.fn();
   const hook = renderHook(
-    () => useEntitySearchBar({ profileEntity: searchBar, filters, onFiltersChange }),
+    () => useEntitySearchBar({ profileEntity: searchBar, filters, onFiltersChange, defaultMode }),
     { wrapper: makeSearchBarWrapper() },
   );
   return { ...hook, onFiltersChange };
@@ -85,6 +85,25 @@ describe("useEntitySearchBar — main bar", () => {
     expect(result.current.input.value).toBe("");
     expect(result.current.input.mode).toEqual({ kind: "all" });
     expect(result.current.input.popoverOpen).toBe(false);
+  });
+
+  it("starts in and returns to 'All except relations' when that is the default mode", async () => {
+    const { result } = renderSearchBar({}, "all-direct");
+    await waitForDescriptors(result);
+    expect(result.current.input.mode).toEqual({ kind: "all-direct" });
+
+    // "All" stays selectable.
+    act(() => result.current.input.setMode({ kind: "all" }));
+    expect(result.current.input.mode).toEqual({ kind: "all" });
+
+    act(() => result.current.input.setMode({ kind: "param", name: "notes~fts" }));
+    act(() => result.current.input.setValue("adv"));
+    act(() => result.current.input.applySuggestion("title~prefix", "Alpha invoice"));
+    expect(result.current.input.mode).toEqual({ kind: "all-direct" });
+
+    act(() => result.current.input.setMode({ kind: "param", name: "notes~fts" }));
+    act(() => result.current.input.resetMode());
+    expect(result.current.input.mode).toEqual({ kind: "all-direct" });
   });
 
   it("searches only the selected prefix parameter", async () => {

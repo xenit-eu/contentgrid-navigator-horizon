@@ -1,4 +1,4 @@
-import { DatabaseIcon, FileTextIcon, PlusIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, DatabaseIcon, FileTextIcon, PlusIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "storybook/test";
 import { Button } from "../../primitives/button";
@@ -135,6 +135,50 @@ export const NoAction: Story = {
   },
 };
 
+const gridCards = [
+  { name: "a", title: "Companies" },
+  { name: "b", title: "Invoices", description: "Outgoing invoices." },
+  {
+    name: "c",
+    title: "Suppliers",
+    description:
+      "Every supplier we buy from, including their contact persons, payment terms, delivery addresses and the full history of purchase orders placed with them.",
+  },
+  { name: "d", title: "No content no relationses", description: "Wrapping title." },
+  { name: "e", title: "Products", description: "Catalogue of products and their prices." },
+  { name: "f", title: "Contracts", description: "Signed agreements with customers." },
+  { name: "g", title: "Shipments" },
+  { name: "h", title: "Warehouses", description: "Where stock is kept." },
+];
+
+/** Regression story: titles, descriptions and count rows must align across a grid row. */
+export const Grid: Story = {
+  args: { name: "grid", title: "Grid" },
+  render: () => (
+    <div className="grid w-[1000px] grid-cols-4 gap-4">
+      {gridCards.map((card, index) => (
+        <EntityCard
+          key={card.name}
+          {...card}
+          icon={
+            <IconBadge
+              icon={index % 2 === 0 ? <DatabaseIcon aria-hidden /> : <FileTextIcon aria-hidden />}
+            />
+          }
+        >
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <div className="text-2xl font-bold">99</div>
+              <p className="text-xs text-muted-foreground">items</p>
+            </div>
+            <ArrowRightIcon aria-hidden className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </EntityCard>
+      ))}
+    </div>
+  ),
+};
+
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
   args: {
@@ -160,5 +204,24 @@ export const WithInteraction: Story = {
     const card = canvasElement.querySelector('[data-slot="entity-card"]') as HTMLElement;
     await userEvent.click(card);
     await expect(args.onCardClick).toHaveBeenCalledWith("invoice");
+  },
+};
+
+export const WithHeadingAndFlushContent: Story = {
+  args: {
+    name: "invoice-42",
+    heading: (
+      <div className="space-y-1">
+        <p className="text-lg font-semibold">Invoice #42</p>
+        <p className="text-xs text-muted-foreground">3 suppliers · 1 customer</p>
+      </div>
+    ),
+    flushContent: true,
+    children: (
+      <ul>
+        <li className="border-t px-6 py-3 text-sm font-semibold">Attributes</li>
+        <li className="border-t px-6 py-3 text-sm font-semibold">Suppliers</li>
+      </ul>
+    ),
   },
 };

@@ -1,7 +1,7 @@
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
-import { AuthShell } from "@contentgrid/features/auth-shell";
 import { ThemeProvider, Toaster } from "@contentgrid/ui";
-import type { AppRouterContext } from "../../../../packages/features/src/shells/router-shell";
+import { AuthShell } from "@contentgrid/views/auth-shell";
+import type { AppRouterContext } from "@contentgrid/views/router-shell";
 import { RouterNavigationProvider } from "./-router-navigation-provider";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({

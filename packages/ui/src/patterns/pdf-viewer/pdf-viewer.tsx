@@ -1,8 +1,10 @@
 import {
   Component,
+  type FormEvent,
   type ReactNode,
   type RefObject,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -24,6 +26,8 @@ import { SelectionLayer, SelectionPluginPackage } from "@embedpdf/plugin-selecti
 import { Viewport, ViewportPluginPackage } from "@embedpdf/plugin-viewport/react";
 import { ZoomPluginPackage } from "@embedpdf/plugin-zoom/react";
 import { cn } from "../../lib/utils";
+import { Button } from "../../primitives/button";
+import { Input } from "../../primitives/input";
 import {
   PdfEngineProvider,
   type PdfEngineStatus,
@@ -65,7 +69,9 @@ export interface PdfViewerToolbarOptions {
   readonly end?: ReactNode;
 }
 
-export type PdfLoadError = { readonly kind: "invalid" | "protected" | "engine" };
+/** Why the viewer could not show the document. A protected document is not one: the viewer asks
+ * for its password. */
+export type PdfLoadError = { readonly kind: "invalid" | "engine" };
 
 export interface PdfViewerProps {
   /** The document; a new reference reopens the document. */
@@ -162,7 +168,7 @@ function usePdfViewerPlugins(initialZoom: PdfZoomInput): PluginBatchRegistration
 
 /**
  * `aria-busy` is `true` for `idle`/`opening` (still loading — nothing to show
- * yet, or the document is being parsed) and `false` for `protected`/`invalid`
+ * yet, or the document is being parsed) and `false` for `invalid`
  * (a terminal, resolved state — the message itself IS the result, not a sign
  * more is coming). Rendered even for `idle` (no message text) so the busy
  * signal exists from the very first paint, not only once the "opening"
@@ -173,7 +179,6 @@ function usePdfViewerPlugins(initialZoom: PdfZoomInput): PluginBatchRegistration
 // Maps each terminal/loading phase to its label field; `idle`/`ready` have
 // no message of their own (looked up as `undefined` below -> no text).
 const STATUS_MESSAGE_KEY: Partial<Record<PdfDocumentPhase, keyof PdfViewerLabels>> = {
-  protected: "protectedDocument",
   invalid: "invalidDocument",
   opening: "openingDocument",
 };
@@ -191,6 +196,53 @@ export function PdfViewerStatusMessage({
       className="text-muted-foreground flex h-full w-full items-center justify-center p-8 text-center text-sm"
     >
       {message}
+    </div>
+  );
+}
+
+/** Asks for the password of a `protected` document and reopens it with what is entered. */
+export function PdfViewerPasswordForm({
+  labels,
+  passwordRejected,
+  onUnlock,
+}: Readonly<{
+  labels: PdfViewerLabels;
+  passwordRejected: boolean;
+  onUnlock: (password: string) => void;
+}>) {
+  const [password, setPassword] = useState("");
+  const errorId = useId();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    onUnlock(password);
+  }
+
+  return (
+    <div className="flex h-full w-full items-center justify-center p-8">
+      <form className="flex w-full max-w-sm flex-col gap-3" onSubmit={handleSubmit}>
+        <p className="text-center text-sm">{labels.protectedDocument}</p>
+        <div className="flex gap-2">
+          <Input
+            type="password"
+            // The document's password, not a login: asks the browser not to fill it in or save it.
+            autoComplete="off"
+            aria-label={labels.passwordInput}
+            aria-invalid={passwordRejected}
+            aria-describedby={passwordRejected ? errorId : undefined}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <Button type="submit" disabled={!password}>
+            {labels.passwordSubmit}
+          </Button>
+        </div>
+        {passwordRejected && (
+          <p id={errorId} role="alert" className="text-destructive text-sm">
+            {labels.passwordIncorrect}
+          </p>
+        )}
+      </form>
     </div>
   );
 }
@@ -344,6 +396,8 @@ interface PdfViewerChromeProps {
   readonly resolvedToolbar: PdfViewerToolbarOptions | false;
   readonly labels: PdfViewerLabels;
   readonly onDownload?: () => void;
+  readonly passwordRejected: boolean;
+  readonly onUnlock: (password: string) => void;
 }
 
 function PdfViewerChrome({
@@ -358,6 +412,8 @@ function PdfViewerChrome({
   resolvedToolbar,
   labels,
   onDownload,
+  passwordRejected,
+  onUnlock,
 }: Readonly<PdfViewerChromeProps>) {
   // Only tracks paint while `ready` (see `useFirstPagePainted`'s own doc
   // comment) — mounted here rather than in `PdfViewerActiveSession` because
@@ -388,8 +444,9 @@ function PdfViewerChrome({
         />
       )}
       {/* `aria-busy` here only ever covers the `ready`-but-unpainted gap —
-          `idle`/`opening`/`protected`/`invalid` are covered by
-          `PdfViewerStatusMessage`'s own `aria-busy` below, mutually
+          `idle`/`opening`/`invalid` are covered by
+          `PdfViewerStatusMessage`'s own `aria-busy` below (and `protected`
+          shows the password form, which is never busy), mutually
           exclusive with this branch (see its doc comment). Together these
           give the visual-regression harness (`visual.spec.ts`) a generic
           `[aria-busy="true"]` signal to wait out before it screenshots a story
@@ -423,6 +480,12 @@ function PdfViewerChrome({
               />
             </Viewport>
           </GlobalPointerProvider>
+        ) : documentState === "protected" ? (
+          <PdfViewerPasswordForm
+            labels={labels}
+            passwordRejected={passwordRejected}
+            onUnlock={onUnlock}
+          />
         ) : (
           <PdfViewerStatusMessage documentState={documentState} labels={labels} />
         )}
@@ -447,6 +510,8 @@ interface PdfViewerActiveSessionProps {
   readonly resolvedToolbar: PdfViewerToolbarOptions | false;
   readonly labels: PdfViewerLabels;
   readonly onDownload?: () => void;
+  readonly passwordRejected: boolean;
+  readonly onUnlock: (password: string) => void;
 }
 
 function PdfViewerActiveSession({
@@ -457,6 +522,8 @@ function PdfViewerActiveSession({
   resolvedToolbar,
   labels,
   onDownload,
+  passwordRejected,
+  onUnlock,
 }: Readonly<PdfViewerActiveSessionProps>) {
   const { page, zoom, search, fullscreen, actions, searchActions } = usePdfViewerActiveState({
     documentId,
@@ -478,6 +545,8 @@ function PdfViewerActiveSession({
       resolvedToolbar={resolvedToolbar}
       labels={labels}
       onDownload={onDownload}
+      passwordRejected={passwordRejected}
+      onUnlock={onUnlock}
     />
   );
 }
@@ -507,17 +576,20 @@ function PdfViewerBody({
   hostRef,
 }: Readonly<PdfViewerBodyProps>) {
   const effectiveFullscreenTarget = fullscreenTarget ?? hostRef;
-  const { documentId, documentState } = useDocumentLifecycle({ bytes, filename });
+  const { documentId, documentState, passwordRejected, unlock } = useDocumentLifecycle({
+    bytes,
+    filename,
+  });
 
-  const reportedFailureRef = useRef<PdfDocumentPhase | null>(null);
+  const reportedInvalidRef = useRef(false);
   useEffect(() => {
-    if (documentState === "protected" || documentState === "invalid") {
-      if (reportedFailureRef.current === documentState) return;
-      reportedFailureRef.current = documentState;
-      onLoadError?.({ kind: documentState });
-    } else {
-      reportedFailureRef.current = null;
+    if (documentState !== "invalid") {
+      reportedInvalidRef.current = false;
+      return;
     }
+    if (reportedInvalidRef.current) return;
+    reportedInvalidRef.current = true;
+    onLoadError?.({ kind: "invalid" });
   }, [documentState, onLoadError]);
 
   if (!documentId) {
@@ -534,6 +606,8 @@ function PdfViewerBody({
         resolvedToolbar={resolvedToolbar}
         labels={labels}
         onDownload={onDownload}
+        passwordRejected={passwordRejected}
+        onUnlock={unlock}
       />
     );
   }
@@ -547,6 +621,8 @@ function PdfViewerBody({
       resolvedToolbar={resolvedToolbar}
       labels={labels}
       onDownload={onDownload}
+      passwordRejected={passwordRejected}
+      onUnlock={unlock}
     />
   );
 }

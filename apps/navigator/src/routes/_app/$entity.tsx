@@ -1,10 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { useViewNavigation } from "@contentgrid/views";
 import {
   EntityProfileGate,
   ensureEntityProfileLoaded,
-} from "@contentgrid/features/entity-profile-gate";
+} from "@contentgrid/views/entity-profile-gate";
 
 export const Route = createFileRoute("/_app/$entity")({
   beforeLoad: ({ context, params }) => ensureEntityProfileLoaded(context, params.entity),
-  component: EntityProfileGate,
+  component: EntityGateRoute,
 });
+
+function EntityGateRoute() {
+  const { entity } = Route.useParams();
+  const navigation = useViewNavigation();
+
+  return (
+    <EntityProfileGate entityName={entity} onBackHome={() => navigation.openHome()}>
+      <Outlet />
+    </EntityProfileGate>
+  );
+}

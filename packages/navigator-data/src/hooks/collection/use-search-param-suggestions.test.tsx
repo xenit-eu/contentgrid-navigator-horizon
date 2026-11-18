@@ -46,6 +46,7 @@ function renderSuggestions(props: {
   query: string;
   searchValues?: Parameters<typeof useSearchParamSuggestions>[0]["searchValues"];
   profileEntity?: ProfileEntity;
+  scopeParams?: Record<string, string>;
 }) {
   return renderHook(
     (p: typeof props) =>
@@ -54,6 +55,7 @@ function renderSuggestions(props: {
         requests: p.requests,
         query: p.query,
         searchValues: p.searchValues,
+        scopeParams: p.scopeParams,
       }),
     { wrapper: makeWrapper(makeQueryClient()), initialProps: props },
   );
@@ -85,6 +87,30 @@ describe("useSearchParamSuggestions", () => {
     const calls = requests.to(SEARCH_BAR_COLLECTION_URL);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.searchParams.get("title~prefix")).toBe("Al");
+  });
+
+  it("adds the scope params to count requests but not to relation-target suggestions", async () => {
+    server.use(...searchBarHandlers({ resolveTotal: () => 2 }));
+    const requests = recordRequests();
+    const scopeParams = { _internal_order__invoices: "019d-order" };
+
+    const { result } = renderSuggestions({
+      requests: [request("title~prefix"), request("customer.name~prefix")],
+      query: "Al",
+      scopeParams,
+    });
+
+    await waitFor(
+      () => expect(result.current.results.every((r) => r.status === "success")).toBe(true),
+      { timeout: 3000 },
+    );
+    const countCalls = requests.to(SEARCH_BAR_COLLECTION_URL);
+    expect(countCalls).toHaveLength(2);
+    for (const call of countCalls) {
+      expect(call.searchParams.get("_internal_order__invoices")).toBe("019d-order");
+    }
+    const targetCall = requests.to(SEARCH_BAR_CUSTOMER_COLLECTION_URL)[0];
+    expect(targetCall?.searchParams.has("_internal_order__invoices")).toBe(false);
   });
 
   it("reports an estimated total as estimated", async () => {

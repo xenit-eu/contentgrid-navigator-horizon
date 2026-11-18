@@ -1,7 +1,6 @@
 /**
- * Tests for `ContentAttributeSelector`: nothing for zero content attributes, a disabled selector
- * that still shows the sole attribute for context (round-2 review of #192) for exactly one, and
- * the normal enabled selector for two or more.
+ * Tests for `ContentAttributeSelector`: nothing for zero content attributes, the sole attribute's
+ * title as plain text for exactly one, and an enabled selector for two or more.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -40,15 +39,14 @@ describe("ContentAttributeSelector", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("renders a disabled selector showing the sole content attribute, for context, instead of nothing", () => {
+  it("shows the sole content attribute's title as plain text, with no selector", () => {
     const entityItem = makeEntityItem([makeContentAttribute("document", "Order document")]);
     render(
       <ContentAttributeSelector entityItem={entityItem} value="document" onChange={vi.fn()} />,
     );
 
-    const trigger = screen.getByRole("combobox");
-    expect(trigger).toBeDisabled();
-    expect(trigger).toHaveTextContent("Order document");
+    expect(screen.getByText("Order document")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   it("renders an enabled selector when the item has two or more content attributes", () => {

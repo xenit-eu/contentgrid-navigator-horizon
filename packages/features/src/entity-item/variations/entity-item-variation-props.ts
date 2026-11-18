@@ -36,4 +36,15 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    * has an update template.
    */
   readonly allowEdit?: boolean;
+  /**
+   * Fired after the item was deleted; the caller navigates away. Without this prop, no delete button is shown.
+   */
+  readonly onDeleted?: () => void;
+  /**
+   * Fired when the item's edit mode opens or closes (also `false` when the variation unmounts
+   * while editing), so the caller can adapt what it draws around the item, e.g. hide a Delete in
+   * its toolbar while the edit form is open. Pass a stable function (e.g. a `useState` setter),
+   * not an inline arrow.
+   */
+  readonly onEditingChange?: (isEditing: boolean) => void;
 };

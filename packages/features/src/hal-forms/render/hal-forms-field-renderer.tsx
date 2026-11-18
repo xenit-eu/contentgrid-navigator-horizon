@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   ProvenanceTag,
+  TextMultiRenderer,
   TextRenderer,
 } from "@contentgrid/ui";
 import type { RelationItemClickHandler, RelationItemCreateHandler } from "../../entity-item";
@@ -39,6 +40,15 @@ export interface HalFormsFieldRendererProps {
   readonly onRelationItemClick?: RelationItemClickHandler;
   /** Fired from a relation picker's "Create" button with the target entity's profile name. */
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /** A file field's "Preview file" button, shown once a file is picked. */
+  readonly onFilePreview?: () => void;
+  /** Called when the user clicks a file field's picked file. */
+  readonly onFileClick?: () => void;
+  /** Highlights a file field as the one a preview shows. */
+  readonly filePreviewed?: boolean;
+  /** Shrinks a file field's empty drop zone to one line, when a larger drop area is shown
+   * elsewhere. */
+  readonly compactFileDropZone?: boolean;
 }
 
 /**
@@ -71,6 +81,10 @@ export const HalFormsFieldRenderer = memo(function HalFormsFieldRenderer({
   onBlur,
   onRelationItemClick,
   onRelationItemCreateNew,
+  onFilePreview,
+  onFileClick,
+  filePreviewed,
+  compactFileDropZone,
 }: Readonly<HalFormsFieldRendererProps>) {
   return (
     <div className="relative">
@@ -83,6 +97,10 @@ export const HalFormsFieldRenderer = memo(function HalFormsFieldRenderer({
         onBlur,
         onRelationItemClick,
         onRelationItemCreateNew,
+        onFilePreview,
+        onFileClick,
+        filePreviewed,
+        compactFileDropZone,
       })}
       {fieldState?.provenance !== undefined && (
         <ProvenanceIndicator label={field.label} provenance={fieldState.provenance} />
@@ -126,6 +144,10 @@ function renderFieldWidget({
   onBlur,
   onRelationItemClick,
   onRelationItemCreateNew,
+  onFilePreview,
+  onFileClick,
+  filePreviewed,
+  compactFileDropZone,
 }: Readonly<HalFormsFieldRendererProps>) {
   const error = fieldState?.errors.map((fieldError) => fieldError.message).join(" ") || undefined;
 
@@ -194,6 +216,22 @@ function renderFieldWidget({
           onBlur={onBlur}
         />
       );
+    case "text-multi":
+      return (
+        <TextMultiRenderer
+          name={field.name}
+          label={field.label}
+          required={field.required}
+          readOnly={field.readOnly}
+          description={field.description}
+          maxItems={field.maxItems}
+          value={asStringArray(value)}
+          onChange={onChange}
+          error={error}
+          onFocus={onFocus}
+          onBlur={onBlur}
+        />
+      );
     case "enum": {
       const isRemote = field.property.options?.isRemote() ?? false;
       return field.multiValue ? (
@@ -205,6 +243,7 @@ function renderFieldWidget({
           description={field.description}
           options={field.options}
           isRemote={isRemote}
+          maxItems={field.maxItems}
           value={asStringArray(value)}
           onChange={onChange}
           error={error}
@@ -260,6 +299,10 @@ function renderFieldWidget({
           error={error}
           onFocus={onFocus}
           onBlur={onBlur}
+          onPreview={onFilePreview}
+          onFileClick={onFileClick}
+          previewed={filePreviewed}
+          compact={compactFileDropZone}
         />
       );
     case "relation":

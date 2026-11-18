@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SideBarLayout } from "@contentgrid/features/layout";
+import { SidebarShell } from "@contentgrid/views/sidebar-shell";
 import { ExperimentalBanner } from "../components/experimental-banner";
 
 export const Route = createFileRoute("/_app")({
@@ -7,5 +7,5 @@ export const Route = createFileRoute("/_app")({
 });
 
 function ExperimentalLayout() {
-  return <SideBarLayout topChildren={<ExperimentalBanner />} />;
+  return <SidebarShell topChildren={<ExperimentalBanner />} />;
 }

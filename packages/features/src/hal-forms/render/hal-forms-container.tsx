@@ -19,7 +19,24 @@ export interface HalFormsContainerProps {
   readonly onRelationItemClick?: RelationItemClickHandler;
   /** Fired from a relation picker's "Create" button with the target entity's profile name. */
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  /** Where the form's file preview is shown; absent when the form has none. */
+  readonly filePreview?: HalFormsFilePreview;
 }
+
+/**
+ * Where a form's file preview is shown, which decides how its file fields look:
+ * - `dialog`: a file field with a picked file gets a "Preview file" button that calls `onOpen`.
+ * - `beside`: the preview sits next to the form as the large drop area, so the file fields' empty
+ *   drop zones shrink to one line. When set, clicking a field's picked file calls `onSelect`, and
+ *   `previewedFieldName` is highlighted.
+ */
+export type HalFormsFilePreview =
+  | { readonly placement: "dialog"; readonly onOpen: (fieldName: string) => void }
+  | {
+      readonly placement: "beside";
+      readonly onSelect?: (fieldName: string) => void;
+      readonly previewedFieldName?: string;
+    };
 
 /**
  * Renders the field list, section by section — walks `layout.sections[].rows` ->
@@ -40,6 +57,7 @@ export function HalFormsContainer({
   onFieldBlur,
   onRelationItemClick,
   onRelationItemCreateNew,
+  filePreview,
 }: Readonly<HalFormsContainerProps>) {
   const fieldsByName = new Map(fields.map((field) => [field.name, field] as const));
 
@@ -60,6 +78,7 @@ export function HalFormsContainer({
             onFieldBlur={onFieldBlur}
             onRelationItemClick={onRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
+            filePreview={filePreview}
           />
         </div>
       ))}
@@ -73,7 +92,7 @@ export function HalFormsContainer({
  * collapse/expand together as one unit, never per-row — with the title as the toggle trigger and
  * the description rendered below it, outside the button, so it isn't part of the button's
  * accessible name; the content region points at it via `aria-describedby`, same as a described
- * row does. Expanded by default (FR-027), same as `RelationAccordion` — a search form's
+ * row does. Expanded by default (FR-027), same as `ActionableAccordion` — a search form's
  * relation-traversal sections (the only collapsible ones this feature produces, see
  * `generate-search-form-layout.ts`) must not hide an active relation filter (e.g. one applied
  * from a deep link) behind a closed header. A
@@ -90,6 +109,7 @@ function FieldSectionLayout({
   onFieldBlur,
   onRelationItemClick,
   onRelationItemCreateNew,
+  filePreview,
 }: Readonly<{
   section: FieldSection;
   fieldsByName: ReadonlyMap<string, HalFormsField>;
@@ -100,6 +120,7 @@ function FieldSectionLayout({
   onFieldBlur?: (fieldName: string) => void;
   onRelationItemClick?: RelationItemClickHandler;
   onRelationItemCreateNew?: RelationItemCreateHandler;
+  filePreview?: HalFormsFilePreview;
 }>) {
   const descriptionId = useId();
   const header =
@@ -123,6 +144,7 @@ function FieldSectionLayout({
       onFieldBlur={onFieldBlur}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
+      filePreview={filePreview}
     />
   );
 
@@ -167,14 +189,16 @@ interface FieldListProps {
   readonly onFieldBlur?: (fieldName: string) => void;
   readonly onRelationItemClick?: RelationItemClickHandler;
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
+  readonly filePreview?: HalFormsFilePreview;
 }
 
 function FieldSectionRows({
   rows,
   ...fieldListProps
 }: Readonly<{ rows: readonly FieldRow[] } & FieldListProps>) {
+  // More space between fields than inside one, so each help text reads as part of its own field.
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {rows.map((row, index) => (
         <FieldRowLayout key={index} row={row} {...fieldListProps} />
       ))}
@@ -198,6 +222,7 @@ function FieldRowLayout({ row, ...fieldListProps }: Readonly<{ row: FieldRow } &
     onFieldBlur,
     onRelationItemClick,
     onRelationItemCreateNew,
+    filePreview,
   } = fieldListProps;
   const fields = (
     <div className={row.fieldNames.length > 1 ? "grid grid-cols-2 gap-4" : undefined}>
@@ -215,6 +240,12 @@ function FieldRowLayout({ row, ...fieldListProps }: Readonly<{ row: FieldRow } &
             onFieldBlur={onFieldBlur}
             onRelationItemClick={onRelationItemClick}
             onRelationItemCreateNew={onRelationItemCreateNew}
+            onFilePreview={filePreview?.placement === "dialog" ? filePreview.onOpen : undefined}
+            onFileClick={filePreview?.placement === "beside" ? filePreview.onSelect : undefined}
+            filePreviewed={
+              filePreview?.placement === "beside" && filePreview.previewedFieldName === name
+            }
+            compactFileDropZone={filePreview?.placement === "beside"}
           />
         );
       })}
@@ -240,6 +271,8 @@ function FieldRowLayout({ row, ...fieldListProps }: Readonly<{ row: FieldRow } &
  * field a "changed" prop regardless of `memo`, re-rendering ALL fields on one field's keystroke.
  * `useCallback` keeps each one stable while the container's callbacks (`useHalFormsFieldState`'s
  * `setValue`/`touchField` are `useCallback`-stable for the same reason) and `name` don't change.
+ * `filePreviewed` is a plain boolean for the same reason: when the previewed field changes, only
+ * the two file fields whose highlight changes re-render.
  */
 function HalFormsFormField({
   field,
@@ -250,6 +283,10 @@ function HalFormsFormField({
   onFieldBlur,
   onRelationItemClick,
   onRelationItemCreateNew,
+  onFilePreview,
+  onFileClick,
+  filePreviewed,
+  compactFileDropZone,
 }: Readonly<{
   field: HalFormsField;
   value: FieldValue;
@@ -259,11 +296,17 @@ function HalFormsFormField({
   onFieldBlur?: (fieldName: string) => void;
   onRelationItemClick?: RelationItemClickHandler;
   onRelationItemCreateNew?: RelationItemCreateHandler;
+  onFilePreview?: (fieldName: string) => void;
+  onFileClick?: (fieldName: string) => void;
+  filePreviewed: boolean;
+  compactFileDropZone?: boolean;
 }>) {
   const { name } = field;
   const handleChange = useCallback((v: FieldValue) => onChange(name, v), [onChange, name]);
   const handleFocus = useCallback(() => onFieldFocus?.(name), [onFieldFocus, name]);
   const handleBlur = useCallback(() => onFieldBlur?.(name), [onFieldBlur, name]);
+  const handleFilePreview = useCallback(() => onFilePreview?.(name), [onFilePreview, name]);
+  const handleFileClick = useCallback(() => onFileClick?.(name), [onFileClick, name]);
 
   return (
     <HalFormsFieldRenderer
@@ -275,6 +318,10 @@ function HalFormsFormField({
       onBlur={onFieldBlur && handleBlur}
       onRelationItemClick={onRelationItemClick}
       onRelationItemCreateNew={onRelationItemCreateNew}
+      onFilePreview={onFilePreview && handleFilePreview}
+      onFileClick={onFileClick && handleFileClick}
+      filePreviewed={filePreviewed}
+      compactFileDropZone={compactFileDropZone}
     />
   );
 }

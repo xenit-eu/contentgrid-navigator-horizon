@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   RouterProvider,
@@ -10,6 +11,7 @@ import {
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { recallCollectionFilters, rememberCollectionFilters } from "@contentgrid/navigator-data";
 import { useViewNavigation } from "@contentgrid/views";
 import { RouterNavigationProvider } from "./-router-navigation-provider";
 
@@ -28,6 +30,11 @@ function NavigationProbe() {
       <button onClick={() => navigation.openEntityItemCollection("invoice")}>
         open-collection
       </button>
+      <button
+        onClick={() => navigation.openEntityItemCollection("invoice", { restoreState: false })}
+      >
+        open-collection-fresh
+      </button>
       <button onClick={() => navigation.openItem("invoice", "42")}>open-item</button>
       <button onClick={() => navigation.openCreateItem("invoice")}>open-create</button>
       <button onClick={() => navigation.openCreateItem("invoice", { openInNewTab: true })}>
@@ -35,6 +42,11 @@ function NavigationProbe() {
       </button>
       <button onClick={() => navigation.openItem("invoice", "42", { openInNewTab: true })}>
         open-item-new-tab
+      </button>
+      <button onClick={() => navigation.openClassifyCreate()}>open-classify-create</button>
+      <button onClick={() => navigation.openSettings()}>open-settings</button>
+      <button onClick={() => navigation.openSettings({ openInNewTab: true })}>
+        open-settings-new-tab
       </button>
       <span data-testid="href-home">{navigation.hrefFor?.home()}</span>
       <span data-testid="href-collection">
@@ -58,14 +70,29 @@ const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/" });
 const entityRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity" });
 const itemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/$itemId" });
 const createItemRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$entity/~create" });
-const routeTree = rootRoute.addChildren([indexRoute, entityRoute, itemRoute, createItemRoute]);
+const classifyCreateRoute = createRoute({ getParentRoute: () => rootRoute, path: "/~create" });
+const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/~configuration" });
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  entityRoute,
+  itemRoute,
+  createItemRoute,
+  classifyCreateRoute,
+  settingsRoute,
+]);
+
+const queryClient = new QueryClient();
 
 function renderRouter(initialPath = "/") {
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("RouterNavigationProvider", () => {
@@ -145,5 +172,39 @@ describe("RouterNavigationProvider", () => {
     expect(windowOpen).toHaveBeenCalledWith("/invoice/42?q=acme", "_blank", "noopener,noreferrer");
     expect(screen.getByTestId("location")).toHaveTextContent("/invoice?q=acme");
     windowOpen.mockRestore();
+  });
+
+  it("navigates to the classify-create page and to settings", async () => {
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-classify-create"));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/~create"));
+
+    await userEvent.click(screen.getByText("open-settings"));
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/~configuration"),
+    );
+  });
+
+  it("opens settings in a new tab without navigating", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-settings-new-tab"));
+
+    expect(windowOpen).toHaveBeenCalledWith("/~configuration", "_blank", "noopener,noreferrer");
+    windowOpen.mockRestore();
+  });
+
+  it("keeps the list's remembered state when opening a collection, unless restoreState is false", async () => {
+    rememberCollectionFilters(queryClient, "invoice", { q: "acme" });
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("open-collection"));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/invoice"));
+    expect(recallCollectionFilters(queryClient, "invoice")).toEqual({ q: "acme" });
+
+    await userEvent.click(screen.getByText("open-collection-fresh"));
+    expect(recallCollectionFilters(queryClient, "invoice")).toBeUndefined();
   });
 });
