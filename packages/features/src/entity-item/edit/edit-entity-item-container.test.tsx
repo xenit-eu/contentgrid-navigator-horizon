@@ -509,6 +509,43 @@ describe("EditEntityItemContainer", () => {
       expect(requests).toContain("DELETE receipt");
     });
 
+    it("sends no file request, shows the conflict and keeps the change when the metadata save gets a 412", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const fileRequests: string[] = [];
+      server.use(
+        http.put(ALL_ATTRIBUTE_ITEM_URL, () =>
+          problem(412, {
+            type: "https://contentgrid.cloud/problems/unsatisfied-version",
+            title: "Unsatisfied version",
+          }),
+        ),
+        http.head(CONTENT_URL, () => {
+          fileRequests.push("HEAD");
+          return new HttpResponse(null, { status: 200, headers: { ETag: '"content-v1"' } });
+        }),
+        http.put(CONTENT_URL, () => {
+          fileRequests.push("PUT");
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.delete(CONTENT_URL, () => {
+          fileRequests.push("DELETE");
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      await renderForm(makeAllAttributeItem({}, '"v1"'), { onClose });
+
+      await user.click(screen.getByRole("button", { name: "Remove file" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(await screen.findByRole("button", { name: "Refresh" })).toBeInTheDocument();
+      expect(fileRequests).toEqual([]);
+      expect(onClose).not.toHaveBeenCalled();
+      // The removal still waits.
+      expect(screen.queryByLabelText("Content: Filename")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
     describe("after a file change failed", () => {
       const failedMessage = "This file was not saved: Unsatisfied version. Save to try again.";
       const conflict = () =>
