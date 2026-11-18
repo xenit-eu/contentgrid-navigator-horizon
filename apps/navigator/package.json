@@ -15,8 +15,8 @@
   "dependencies": {
     "@contentgrid/dev-tools": "workspace:*",
     "@contentgrid/features": "workspace:*",
-    "@contentgrid/fetch-hook-authentication": "^0.4.4",
-    "@contentgrid/fetch-hooks": "^0.4.4",
+    "@contentgrid/fetch-hook-authentication": "^0.4.5",
+    "@contentgrid/fetch-hooks": "^0.4.5",
     "@contentgrid/hal": "^0.4.4",
     "@contentgrid/hal-forms": "^0.4.4",
     "@contentgrid/navigator-data": "workspace:*",
