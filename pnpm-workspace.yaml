@@ -22,3 +22,8 @@ minimumReleaseAgeExclude:
   - vite@8.0.16
   # Renovate security update: vitest@4.1.11
   - vitest@4.1.11
+  # First-party (xenit-eu/contentgrid-ts) release with the caching token supplier, needed for
+  # rendition token exchange (ACC-3292); fetch-hook-authentication pins fetch-hooks to the same version.
+  # Remove once both are older than minimumReleaseAge (published 2026-11-12).
+  - "@contentgrid/fetch-hook-authentication@0.4.5"
+  - "@contentgrid/fetch-hooks@0.4.5"
