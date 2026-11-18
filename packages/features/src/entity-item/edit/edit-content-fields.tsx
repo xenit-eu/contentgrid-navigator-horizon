@@ -8,6 +8,8 @@ interface EditContentFieldsProps {
   readonly item: EditableEntityItem;
   /** File changes picked in the form, applied on Save. */
   readonly pendingContent: ContentChanges;
+  /** The message of each failed file change, by attribute name; shown on the attribute's card. */
+  readonly contentFailures: ReadonlyMap<string, string>;
   readonly onContentChange: (attributeName: string, file: File | null) => void;
   /** While Save stores the picked files, each one's upload progress, by attribute name. */
   readonly uploadProgress?: ReadonlyMap<string, number>;
@@ -25,12 +27,13 @@ interface EditContentFieldsProps {
  * One file field per content attribute of `item`, showing the file picked for it or else the
  * stored one, with the file's filename and mimetype fields, in a card like the relation sections.
  * With several files, the one in the content preview is highlighted and the others offer Preview.
- * Picking or removing a file only reports the change; nothing is sent before Save. Without the
+ * A file change that failed on Save shows its message on the card. Picking or removing a file only reports the change; nothing is sent before Save. Without the
  * attribute's `cg:content` link, or while `disabled`, the file can't be picked or removed.
  */
 export function EditContentFields({
   item,
   pendingContent,
+  contentFailures,
   onContentChange,
   uploadProgress,
   disabled = false,
@@ -66,6 +69,7 @@ export function EditContentFields({
             previewed={isPreviewed}
             onPreview={canChoosePreview && !isPreviewed ? () => onPreview(name) : undefined}
             uploadProgress={uploadProgress?.get(name)}
+            error={contentFailures.get(name)}
             compact
           />
           {file && renderMetadataFields(name)}

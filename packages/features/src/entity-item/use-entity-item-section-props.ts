@@ -48,6 +48,8 @@ export function useEntityItemSectionProps({
     onRefresh: () => void itemContext.refresh(),
     pendingContent: itemContext.pendingContent,
     onPendingContentChange: itemContext.setPendingContent,
+    contentFailures: itemContext.contentFailures,
+    onContentFailuresChange: itemContext.setContentFailures,
     isSaving: itemContext.isSaving,
     onSavingChange: itemContext.setIsSaving,
     allowEdit,

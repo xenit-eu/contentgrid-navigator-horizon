@@ -66,6 +66,9 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
   /** Files picked or removed in the update form (`useEntityItemContext`'s `pendingContent`). */
   readonly pendingContent: ContentChanges;
   readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** The failed file changes of the last Save (`useEntityItemContext`'s `contentFailures`). */
+  readonly contentFailures: ReadonlyMap<string, string>;
+  readonly onContentFailuresChange: (contentFailures: ReadonlyMap<string, string>) => void;
   /** Whether the update form is saving, and how the form reports it (`isSaving` in the context). */
   readonly isSaving: boolean;
   readonly onSavingChange: (isSaving: boolean) => void;
@@ -112,6 +115,8 @@ export function EntityItemSections({
   onRefresh,
   pendingContent,
   onPendingContentChange,
+  contentFailures,
+  onContentFailuresChange,
   onSavingChange,
   previewedAttributeName,
   onPreview,
@@ -171,6 +176,8 @@ export function EntityItemSections({
         onRefresh={onRefresh}
         pendingContent={pendingContent}
         onPendingContentChange={onPendingContentChange}
+        contentFailures={contentFailures}
+        onContentFailuresChange={onContentFailuresChange}
         onSavingChange={onSavingChange}
         previewedAttributeName={previewedAttributeName}
         onPreview={onPreview}

@@ -12,7 +12,6 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
-  type ContentChanges,
   type EntityItem,
   NavigatorDataProvider,
   createApiClient,
@@ -23,8 +22,13 @@ import {
   allAttributeItemBodyWith,
   makeAllAttributeItem,
 } from "@contentgrid/navigator-data/test-fixtures/hal/all-attribute-item";
+import {
+  ORDER_ITEM_URL,
+  makeOrderItem,
+} from "@contentgrid/navigator-data/test-fixtures/hal/order-item";
 import { Toaster } from "@contentgrid/ui";
 import { server } from "../../../test-setup";
+import { useEntityItemContext } from "../use-entity-item-context";
 import {
   EditEntityItemContainer,
   type EditEntityItemFormHandle,
@@ -48,25 +52,35 @@ async function renderForm(
     onRefresh = vi.fn(),
     onPreview,
     onSavingChange,
+    remountOnRefresh = false,
     ref,
   }: {
     onClose?: () => void;
     onRefresh?: () => void;
     onPreview?: (attributeName: string) => void;
     onSavingChange?: (isSaving: boolean) => void;
+    /** Remounts the form on Refresh, as the item pages do when the refetched item has a new ETag. */
+    remountOnRefresh?: boolean;
     ref?: React.Ref<EditEntityItemFormHandle>;
   } = {},
 ) {
-  // Holds the file changes the way `useEntityItemContext` does for the item pages.
+  // Holds the file changes and their failures like the item pages do.
   function Form() {
-    const [pendingContent, setPendingContent] = useState<ContentChanges>(new Map());
+    const context = useEntityItemContext(item);
+    const [version, setVersion] = useState(0);
     return (
       <EditEntityItemContainer
+        key={version}
         item={item as EditableEntityItem}
         onClose={onClose}
-        onRefresh={onRefresh}
-        pendingContent={pendingContent}
-        onPendingContentChange={setPendingContent}
+        onRefresh={() => {
+          onRefresh();
+          if (remountOnRefresh) setVersion((current) => current + 1);
+        }}
+        pendingContent={context.pendingContent}
+        onPendingContentChange={context.setPendingContent}
+        contentFailures={context.contentFailures}
+        onContentFailuresChange={context.setContentFailures}
         onPreview={onPreview}
         onSavingChange={onSavingChange}
         ref={ref}
@@ -90,7 +104,7 @@ async function renderForm(
       </NavigatorDataProvider>
     </QueryClientProvider>,
   );
-  await screen.findByLabelText("Text");
+  await screen.findByRole("button", { name: "Save" });
 }
 
 /** Answers the reload that follows a successful PUT. */
@@ -426,6 +440,123 @@ describe("EditEntityItemContainer", () => {
       await user.click(screen.getByRole("button", { name: "Save" }));
 
       await waitFor(() => expect(onClose).toHaveBeenCalled());
+    });
+    it("on retry sends only the file change that failed", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const DOCUMENT_URL = `${ORDER_ITEM_URL}/document`;
+      const RECEIPT_URL = `${ORDER_ITEM_URL}/receipt`;
+      const requests: string[] = [];
+      let failReceipt = true;
+      server.use(
+        http.put(ORDER_ITEM_URL, () => new HttpResponse(null, { status: 204 })),
+        http.head(DOCUMENT_URL, () => {
+          requests.push("HEAD document");
+          return new HttpResponse(null, { status: 200, headers: { ETag: '"d1"' } });
+        }),
+        http.delete(DOCUMENT_URL, () => {
+          requests.push("DELETE document");
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.head(RECEIPT_URL, () => {
+          requests.push("HEAD receipt");
+          return new HttpResponse(null, { status: 200, headers: { ETag: '"r1"' } });
+        }),
+        http.delete(RECEIPT_URL, () => {
+          requests.push("DELETE receipt");
+          return failReceipt
+            ? problem(412, {
+                type: "https://contentgrid.cloud/problems/unsatisfied-version",
+                title: "Unsatisfied version",
+              })
+            : new HttpResponse(null, { status: 204 });
+        }),
+      );
+      await renderForm(makeOrderItem({}, '"v1"'), { onClose, remountOnRefresh: true });
+
+      const removeButtons = screen.getAllByRole("button", { name: "Remove file" });
+      expect(removeButtons).toHaveLength(2);
+      await user.click(removeButtons[0]);
+      await user.click(screen.getAllByRole("button", { name: "Remove file" })[0]);
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(
+        await screen.findByText("This file was not saved: Unsatisfied version. Save to try again."),
+      ).toBeInTheDocument();
+      expect(requests).toContain("DELETE document");
+      expect(requests).toContain("DELETE receipt");
+
+      requests.length = 0;
+      failReceipt = false;
+      await user.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(requests.filter((request) => request.endsWith("document"))).toEqual([]);
+      expect(requests).toContain("DELETE receipt");
+    });
+
+    describe("after a file change failed", () => {
+      const failedMessage = "This file was not saved: Unsatisfied version. Save to try again.";
+      const conflict = () =>
+        problem(412, {
+          type: "https://contentgrid.cloud/problems/unsatisfied-version",
+          title: "Unsatisfied version",
+        });
+
+      it("shows the failure on its card until another file is picked", async () => {
+        const user = userEvent.setup();
+        server.use(
+          contentHead,
+          itemSaved,
+          http.delete(CONTENT_URL, () => conflict()),
+        );
+        await renderForm(makeAllAttributeItem({}, '"v1"'), { remountOnRefresh: true });
+
+        await user.click(screen.getByRole("button", { name: "Remove file" }));
+        await user.click(screen.getByRole("button", { name: "Save" }));
+
+        expect(await screen.findByText(failedMessage)).toBeInTheDocument();
+
+        await pickFile(user, new File(["new"], "new.txt", { type: "text/plain" }));
+        expect(screen.queryByText(failedMessage)).not.toBeInTheDocument();
+      });
+
+      it("keeps the filename the user typed, and the retry stores the file under it", async () => {
+        const user = userEvent.setup();
+        const onClose = vi.fn();
+        let failPut = true;
+        server.use(
+          itemSaved,
+          http.head(CONTENT_URL, () => new HttpResponse(null, { status: 404 })),
+          http.put(CONTENT_URL, () =>
+            failPut ? conflict() : new HttpResponse(null, { status: 204 }),
+          ),
+        );
+        const appendSpy = vi.spyOn(FormData.prototype, "append");
+        await renderForm(makeAllAttributeItem({ content: null }, '"v1"'), {
+          onClose,
+          remountOnRefresh: true,
+        });
+
+        const picked = new File(["new"], "new.txt", { type: "text/plain" });
+        await pickFile(user, picked);
+        const filename = screen.getByLabelText("Content: Filename");
+        await user.clear(filename);
+        await user.type(filename, "renamed.txt");
+        await user.click(screen.getByRole("button", { name: "Save" }));
+
+        expect(await screen.findByText(failedMessage)).toBeInTheDocument();
+        expect(screen.getByLabelText("Content: Filename")).toHaveValue("renamed.txt");
+
+        failPut = false;
+        appendSpy.mockClear();
+        await user.click(screen.getByRole("button", { name: "Save" }));
+
+        await waitFor(() => expect(onClose).toHaveBeenCalled());
+        const part = appendSpy.mock.calls.find(([field]) => field === "file");
+        expect(part?.[2]).toBe("renamed.txt");
+        appendSpy.mockRestore();
+      });
     });
   });
 });

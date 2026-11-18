@@ -97,6 +97,14 @@ the shown item. It returns:
   - When the list is emptied: on opening or closing the edit form (saved or cancelled), and on
     moving to another item. `refresh` (after a 412) keeps it, so the user can save again without
     picking the files again.
+- `contentFailures`, `setContentFailures` — the message of each file change the last Save could not
+  apply, by attribute name; the form shows it on that attribute's card (`FileRenderer`'s `error`).
+  - Why here and not in the form: the form remounts when the refresh after a failure lands (new
+    ETag), and the failure has to outlive that.
+  - When an entry goes: when the user changes that attribute's file again (`setPendingContent`
+    drops the failures of the attributes it changes, whether the change comes from the form or the
+    content preview's drop zone), when a new Save starts (the form clears them, then sets the new
+    Save's), on opening or closing the form and on moving to another item. `refresh` keeps them.
 - `isSaving`, `setIsSaving` — whether the edit form is saving; the form reports it through
   `onSavingChange`. While it is true the file fields and the content preview's drop zone take no
   file, and the form's Cancel does nothing. Cleared together with `pendingContent`.
