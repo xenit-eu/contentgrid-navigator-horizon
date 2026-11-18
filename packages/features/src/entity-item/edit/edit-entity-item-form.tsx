@@ -63,7 +63,7 @@ export function EditEntityItemForm({
         <Button type="submit" disabled={isSaving || !canSave}>
           {isSaving ? "Saving…" : "Save"}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
           Cancel
         </Button>
       </div>

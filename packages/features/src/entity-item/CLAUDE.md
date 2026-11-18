@@ -101,7 +101,7 @@ the shown item. It returns:
     picking the files again.
 - `isSaving`, `setIsSaving` — whether the edit form is saving; the form reports it through
   `onSavingChange`. While it is true the file fields and the content preview's drop zone take no
-  file. Cleared together with `pendingContent`.
+  file, and the form's Cancel does nothing. Cleared together with `pendingContent`.
 
 While editing, a background refetch does not change `shownItem`, so the user's input stays and a
 save of a stale version is refused (412). `noRefetch` is the default when the caller can't reload.

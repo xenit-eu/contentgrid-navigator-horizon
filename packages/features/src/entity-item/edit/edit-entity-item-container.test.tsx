@@ -221,6 +221,31 @@ describe("EditEntityItemContainer", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("cancel() does nothing while Save runs", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const ref = createRef<EditEntityItemFormHandle>();
+    let releaseSave: () => void = () => {};
+    const saveHeld = new Promise<void>((resolve) => (releaseSave = resolve));
+    server.use(
+      http.put(ALL_ATTRIBUTE_ITEM_URL, async () => {
+        await saveHeld;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      reloadHandler,
+    );
+    await renderForm(makeAllAttributeItem({}, '"v1"'), { onClose, ref });
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled());
+    act(() => ref.current?.cancel());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByText("Leave without saving?")).not.toBeInTheDocument();
+
+    releaseSave();
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+  });
+
   describe("file changes", () => {
     const CONTENT_URL = `${ALL_ATTRIBUTE_ITEM_URL}/content`;
     const contentHead = http.head(
