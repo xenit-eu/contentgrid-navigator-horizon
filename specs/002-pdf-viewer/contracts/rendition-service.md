@@ -12,11 +12,12 @@ authentication and configuration (spec Clarifications). Items marked _confirm_ a
 ## Authentication
 
 Every request (initial and polls) is made with the same authenticated content client the viewer uses
-for downloads: `Authorization: Bearer <user access token>`, header only. The frontend performs no
-token exchange. Whatever exchange the rendition service needs to read the source file is done on the
-platform side by TokenMonger (the platform's token-exchange component). _Confirm_: the service accepts
-the user's access token for the Navigator's realm, and its CORS policy allows the Navigator origin
-with an `Authorization` header.
+for downloads, with the Bearer token in the `Authorization` header only. The rendition service is on
+another origin, so it gets an extension token, not the user's access token: the client exchanges the
+user's token at `<application origin>/.contentgrid/authentication/external/token` (grant type
+`https://contentgrid.cloud/oauth2/grant/extension-token`, `resource` = the request URL) and caches the
+result per user and origin until shortly before it expires (ACC-3292). _Confirm_: the service's CORS
+policy allows the Navigator origin with an `Authorization` header.
 
 ## Request / response
 

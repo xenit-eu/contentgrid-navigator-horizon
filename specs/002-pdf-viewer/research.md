@@ -347,6 +347,15 @@ npm registry and jsDelivr file listings for `@embedpdf/*@2.15.0`, and the EmbedP
 
 ### 8.3 Rendition authentication: the user's credentials, no exchange in the frontend
 
+> **Superseded 2026-11-18 (ACC-3292).** The frontend now exchanges tokens for the rendition service:
+> `contentFetch` uses `createExtensionAwareTokenSupplier` (`packages/navigator-data/src/auth/token-supplier.ts`).
+> The application origin keeps the user's access token; any other origin gets an extension token from
+> `<application origin>/.contentgrid/authentication/external/token` (contentgrid-system-design
+> `extension-authentication.md`, "User-facing token exchange"), cached per user and origin with
+> `@contentgrid/fetch-hook-authentication`'s `createCachingTokenSupplier` (≥ 0.4.5) and cleared when the
+> user changes. Reason: the user's access token grants access to every application of the organization and
+> must not be sent to an extension. The original decision is kept below for history.
+
 - **Decision**: rendition requests (initial and polls) go through the existing `contentFetch`, so they
   carry the user's access token in the `Authorization` header exactly like content downloads. The
   frontend does not exchange tokens; TokenMonger performs whatever exchange the rendition service needs
