@@ -32,6 +32,7 @@ import {
   initialFormValues,
   layoutWithoutContentMetadata,
   metadataFieldsLayout,
+  startingMetadataValues,
   storedMetadataValues,
 } from "./content-metadata-fields";
 import { EditContentFields, contentAttributeLabel } from "./edit-content-fields";
@@ -305,7 +306,7 @@ type PickedFileMetadata = Map<string, { filename?: string; mimetype?: string }>;
 /**
  * Keeps the filename and mimetype fields in step with the file changes, whether they were made in
  * the form or in the content preview: a changed file's fields show the picked file (none for a
- * removed one), and a change that is taken back shows the stored values again.
+ * removed one), and a change that is taken back shows the values the form started with.
  */
 function useSyncFileMetadataFields(
   item: EditableEntityItem,
@@ -323,7 +324,7 @@ function useSyncFileMetadataFields(
     if (file === previousPendingContent.get(attributeName)) continue;
     setValues(
       file === undefined
-        ? storedMetadataValues(item, attributeName)
+        ? startingMetadataValues(item, attributeName)
         : changedFileMetadataValues(item, attributeName, file),
     );
   }

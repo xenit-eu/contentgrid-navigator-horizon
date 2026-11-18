@@ -28,6 +28,23 @@ export function storedMetadataValues(
 }
 
 /**
+ * What the form starts with in a content attribute's filename and mimetype fields: the stored
+ * values, or the empty text of a field with none. A change that is taken back restores these, so
+ * the form is no longer dirty because of it.
+ */
+export function startingMetadataValues(
+  item: EditableEntityItem,
+  attributeName: string,
+): Record<string, FieldValue> {
+  return Object.fromEntries(
+    Object.entries(storedMetadataValues(item, attributeName)).map(([name, value]) => [
+      name,
+      value ?? "",
+    ]),
+  );
+}
+
+/**
  * The values of a content attribute's filename and mimetype fields for a file change: the picked
  * file's own name and type, or none when the file is removed (`null`).
  */
