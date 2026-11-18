@@ -75,7 +75,7 @@ sees the real `problem | Error`.
 **Rules**
 
 - Poll first, then wait: a ready job is never delayed by a sleep.
-- Every request goes through `contentFetch` (the user's credentials; any exchange happens on the platform side). The content href is passed only as
+- Every request goes through `contentFetch` (an exchanged extension token for the rendition service, cached per user and origin — ACC-3292). The content href is passed only as
   the `url` parameter value; nothing else is built.
 - `cancelled` (abort) rejects with `AbortError` and is not shown as an error.
 

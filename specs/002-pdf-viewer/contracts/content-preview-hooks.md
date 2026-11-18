@@ -33,7 +33,7 @@ export function useContentPreview(
 - `queryFn` honours `signal`; unmount or key change aborts any download or poll in flight.
 - `retry: false`, `staleTime: Infinity`, `gcTime: 300_000`. Retry is `refetch()`.
 - A stored PDF, image (`image/*`) or video (`video/*`) is downloaded as it is; any other file goes to the rendition service.
-- Uses `contentFetch` for both stored files and rendition requests (the user's credentials; TokenMonger handles any exchange on the platform side); never `apiFetch`.
+- Uses `contentFetch` for both stored files and rendition requests (the user's token for the application origin, an exchanged extension token for the rendition service — ACC-3292); never `apiFetch`.
 - Never writes to other query keys; never invalidates item or collection caches.
 
 ## `requestRendition(fetch, uriTemplate, contentHref, options)`
