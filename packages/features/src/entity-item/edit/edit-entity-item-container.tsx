@@ -74,7 +74,7 @@ interface EditEntityItemContainerProps {
  * that changed since the form was opened fails the save with 412 before any file is sent; then the
  * file changes are applied, a picked file under the name in its filename field. When one of them
  * fails, a toast names it and the form moves onto the item as it is stored now, keeping only the
- * failed changes, so Save tries just those again.
+ * failed changes, so Save tries just those again. Cancel does nothing while Save runs.
  *
  * While Save runs the file fields are read-only (`EditContentFields`' `disabled`), and
  * `onSavingChange` tells the content preview to stop taking files too.
@@ -118,7 +118,12 @@ export function EditEntityItemContainer({
   const isDirty = formState.isDirty || pendingContent.size > 0;
   const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
-  const cancel = () => (isDirty ? setIsConfirmingCancel(true) : onClose());
+  // Leaving mid-save would unmount the form before the file requests and their follow-up ran.
+  const cancel = () => {
+    if (isSaving) return;
+    if (isDirty) setIsConfirmingCancel(true);
+    else onClose();
+  };
   useImperativeHandle(ref, () => ({ cancel }));
 
   function handleSubmit(event: SubmitEvent) {
