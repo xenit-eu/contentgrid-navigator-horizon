@@ -134,7 +134,7 @@ export function useContentPreview(
   attributeName: string,
   options?: UseContentPreviewOptions,
 ): UseQueryResult<PreviewSource, Error> {
-  const { contentFetch, renditionUri, renditionPolling } = useNavigatorData();
+  const { contentFetch, renditionUriTemplate, renditionPolling } = useNavigatorData();
 
   const contentAttribute = findContentAttribute(entityItem, attributeName);
   const { metadata, link } = contentAttribute;
@@ -182,11 +182,11 @@ export function useContentPreview(
       }
 
       // Any other file can only be shown through its PDF rendition.
-      if (renditionUri === undefined || renditionPolling === undefined) {
+      if (renditionUriTemplate === undefined || renditionPolling === undefined) {
         return { kind: "unavailable", mimetype: metadata.mimetype };
       }
 
-      const rendition = await requestRendition(contentFetch, renditionUri, link.href, {
+      const rendition = await requestRendition(contentFetch, renditionUriTemplate, link.href, {
         signal,
         intervalMs: renditionPolling.intervalMs,
         timeoutMs: renditionPolling.timeoutMs,

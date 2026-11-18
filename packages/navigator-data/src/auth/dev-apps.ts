@@ -5,7 +5,7 @@ export interface DevAppConfig {
   authority: string;
   clientId: string;
   extractServiceUrl?: string;
-  renditionUri?: string;
+  renditionUriTemplate?: string;
 }
 
 export interface DevApp {
@@ -80,7 +80,7 @@ export function getDefaultExtractServiceUrl(
     : "https://extract.sandbox.contentgrid.cloud/extract/";
 }
 
-export function getDefaultRenditionUri(environment: "production" | "sandbox"): string {
+export function getDefaultRenditionUriTemplate(environment: "production" | "sandbox"): string {
   return environment === "production"
     ? "https://renditions.eu-west-1.contentgrid.cloud/renditions/get/pdf{?url}"
     : "https://renditions.sandbox.contentgrid.cloud/renditions/get/pdf{?url}";

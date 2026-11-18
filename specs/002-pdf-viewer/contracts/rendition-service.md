@@ -5,8 +5,8 @@ authentication and configuration (spec Clarifications). Items marked _confirm_ a
 
 ## Configuration
 
-- `renditionUri`: URI template, e.g. `https://renditions.<zone>.contentgrid.cloud/renditions/get/pdf{?url}`.
-  Delivered per deployment (Liaison `config.js` → `v1.renditionUri`; env fallback).
+- `renditionUriTemplate`: URI template, e.g. `https://renditions.<zone>.contentgrid.cloud/renditions/get/pdf{?url}`.
+  Delivered per deployment (Liaison `config.js` → `v1.renditionUriTemplate`; env fallback).
 - The `url` parameter value is the content attribute's `cg:content` href, passed opaque.
 
 ## Authentication
@@ -21,10 +21,10 @@ policy allows the Navigator origin with an `Authorization` header.
 
 ## Request / response
 
-| Step     | Request                       | Expected responses                                                                                                                                                                                                                           |
-| -------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Initiate | `GET <renditionUri expanded>` | `202 Accepted` + `Location: <job url>` (job created); `200 OK` `application/pdf` (already available, _confirm_); `application/problem+json` with `type` `…/problems/renditions/invalid-conversion` (cannot convert); other 4xx/5xx = failure |
-| Poll     | `GET <job url>`               | `202` (pending, poll again after `intervalMs`); `200 OK` `application/pdf` body; problem `invalid-conversion`; other = failure                                                                                                               |
+| Step     | Request                               | Expected responses                                                                                                                                                                                                                           |
+| -------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initiate | `GET <renditionUriTemplate expanded>` | `202 Accepted` + `Location: <job url>` (job created); `200 OK` `application/pdf` (already available, _confirm_); `application/problem+json` with `type` `…/problems/renditions/invalid-conversion` (cannot convert); other 4xx/5xx = failure |
+| Poll     | `GET <job url>`                       | `202` (pending, poll again after `intervalMs`); `200 OK` `application/pdf` body; problem `invalid-conversion`; other = failure                                                                                                               |
 
 - Polling stops at the first terminal response, on abort, or when `now ≥ start + timeoutMs`.
 - _Confirm_: `Access-Control-Expose-Headers: Location` and CORS allowing the Navigator origin with

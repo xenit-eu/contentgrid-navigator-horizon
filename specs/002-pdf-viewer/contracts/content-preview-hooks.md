@@ -64,12 +64,12 @@ export interface NavigatorDataContextValue {
   apiFetch: TypedFetch;
   contentFetch: TypedFetch;
   profileUrl: string;
-  renditionUri?: string; // URI template with {?url}
+  renditionUriTemplate?: string; // URI template with {?url}
   renditionPolling?: { intervalMs: number; timeoutMs: number };
 }
 ```
 
-`RuntimeAppConfig` gains `renditionPollIntervalMs?`, `renditionTimeoutMs?`; `ContentGridConfigSchema` accepts `v1.renditionUri`. `makeWrapper(queryClient?, apiFetch?, contentFetch?, renditionUri?)`
+`RuntimeAppConfig` gains `renditionPollIntervalMs?`, `renditionTimeoutMs?`; `ContentGridConfigSchema` accepts `v1.renditionUriTemplate`. `makeWrapper(queryClient?, apiFetch?, contentFetch?, renditionUriTemplate?)`
 in `hooks/test-utils.tsx` gains matching optional parameters.
 
 ## Utilities
