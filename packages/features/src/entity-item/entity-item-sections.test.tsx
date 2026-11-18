@@ -101,6 +101,8 @@ function Harness(props: Partial<Omit<EntityItemSectionsProps, "state">> & { item
       onRefresh={vi.fn()}
       pendingContent={new Map()}
       onPendingContentChange={vi.fn()}
+      contentFailures={new Map()}
+      onContentFailuresChange={() => {}}
       isSaving={false}
       onSavingChange={vi.fn()}
       {...props}

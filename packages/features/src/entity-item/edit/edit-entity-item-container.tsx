@@ -55,6 +55,9 @@ interface EditEntityItemContainerProps {
   /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
   readonly pendingContent: ContentChanges;
   readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** The message of each failed file change, by attribute name; shown on that attribute's card. */
+  readonly contentFailures: ReadonlyMap<string, string>;
+  readonly onContentFailuresChange: (contentFailures: ReadonlyMap<string, string>) => void;
   /** Hears whether the form is saving, so the content preview can stop taking files meanwhile. */
   readonly onSavingChange?: (isSaving: boolean) => void;
   /** See `EditContentFields`. */
@@ -73,8 +76,9 @@ interface EditEntityItemContainerProps {
  * metadata is saved first, with the stored filename and mimetype of every changed file, so a file
  * that changed since the form was opened fails the save with 412 before any file is sent; then the
  * file changes are applied, a picked file under the name in its filename field. When one of them
- * fails, a toast names it and the form moves onto the item as it is stored now, keeping only the
- * failed changes, so Save tries just those again. Cancel does nothing while Save runs.
+ * fails, a toast names it, the failure shows on its file's card, and the form moves onto the item
+ * as it is stored now, keeping only the failed changes (each file under the name and media type it
+ * was sent under), so Save tries just those again. Cancel does nothing while Save runs.
  *
  * While Save runs the file fields are read-only (`EditContentFields`' `disabled`), and
  * `onSavingChange` tells the content preview to stop taking files too.
@@ -85,6 +89,8 @@ export function EditEntityItemContainer({
   onRefresh,
   pendingContent,
   onPendingContentChange,
+  contentFailures,
+  onContentFailuresChange,
   onSavingChange,
   previewedAttributeName,
   onPreview,
@@ -132,8 +138,11 @@ export function EditEntityItemContainer({
     updateMutation.reset();
     if (!formState.validate()) return;
 
+    // Each Save reports its own failures.
+    onContentFailuresChange(new Map());
     // The file fields are read-only from here on, but a failure is judged against what was sent.
     const sentChanges = pendingContent;
+    const sentMetadata = pickedFileMetadata(sentChanges);
     updateMutation.mutate(valuesToSave(), {
       onSuccess: () => {
         if (sentChanges.size === 0) {
@@ -141,8 +150,10 @@ export function EditEntityItemContainer({
           return;
         }
         contentMutation.mutate(
-          { changes: sentChanges, metadata: pickedFileMetadata(sentChanges) },
-          { onSuccess: (failures) => handleContentChangesSaved(failures, sentChanges) },
+          { changes: sentChanges, metadata: sentMetadata },
+          {
+            onSuccess: (failures) => handleContentChangesSaved(failures, sentChanges, sentMetadata),
+          },
         );
       },
     });
@@ -163,8 +174,8 @@ export function EditEntityItemContainer({
 
   /** The name and media type in each picked file's filename and mimetype fields, which the file
    * is stored under. */
-  function pickedFileMetadata(changes: ContentChanges) {
-    const metadata = new Map<string, { filename?: string; mimetype?: string }>();
+  function pickedFileMetadata(changes: ContentChanges): PickedFileMetadata {
+    const metadata: PickedFileMetadata = new Map();
     const textOf = (fieldName: string | undefined) => {
       const value = fieldName === undefined ? undefined : formState.values[fieldName];
       return typeof value === "string" && value !== "" ? value : undefined;
@@ -183,22 +194,35 @@ export function EditEntityItemContainer({
   function handleContentChangesSaved(
     failures: ReadonlyMap<string, Error>,
     sentChanges: ContentChanges,
+    sentMetadata: PickedFileMetadata,
   ) {
     if (failures.size === 0) {
       finishSave();
       return;
     }
+    const messages = new Map<string, string>();
     for (const [attributeName, error] of failures) {
+      const { title } = toProblemDisplayModel(error);
       const label = contentAttributeLabel(item, attributeName);
-      toast.error(
-        `Changes saved, but the file of ${label} was not: ${toProblemDisplayModel(error).title}`,
-      );
+      toast.error(`Changes saved, but the file of ${label} was not: ${title}`);
+      messages.set(attributeName, `This file was not saved: ${title}. Save to try again.`);
     }
     // The metadata is saved already: the form moves onto the latest version of the item, with
-    // only the failed changes still waiting.
+    // only the failed changes still waiting. A kept file carries the name and media type it was
+    // sent under, so the reseeded fields show what the user typed.
     onPendingContentChange(
-      new Map([...sentChanges].filter(([attributeName]) => failures.has(attributeName))),
+      new Map(
+        [...sentChanges].flatMap(([attributeName, file]) => {
+          if (!failures.has(attributeName)) return [];
+          const { filename, mimetype } = sentMetadata.get(attributeName) ?? {};
+          const kept =
+            file && new File([file], filename ?? file.name, { type: mimetype ?? file.type });
+          return [[attributeName, kept] as const];
+        }),
+      ),
     );
+    // After the pending change, which drops the failures of the files it touched.
+    onContentFailuresChange(messages);
     onRefresh();
   }
 
@@ -253,6 +277,7 @@ export function EditEntityItemContainer({
           <EditContentFields
             item={item}
             pendingContent={pendingContent}
+            contentFailures={contentFailures}
             onContentChange={handleContentChange}
             uploadProgress={contentMutation.isPending ? contentMutation.progress : undefined}
             disabled={isSaving}
@@ -274,6 +299,8 @@ export function EditEntityItemContainer({
     </>
   );
 }
+
+type PickedFileMetadata = Map<string, { filename?: string; mimetype?: string }>;
 
 /**
  * Keeps the filename and mimetype fields in step with the file changes, whether they were made in
