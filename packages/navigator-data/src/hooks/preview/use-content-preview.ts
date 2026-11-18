@@ -6,7 +6,7 @@
  *
  * Bytes and rendition requests both go through `contentFetch` — the same authenticated
  * binary client `useDownloadContent`/`useUploadContent` already use — never `apiFetch`. The
- * frontend performs no token exchange; see `preview/rendition-job.ts`'s doc comment.
+ * rendition service gets an exchanged extension token; see `preview/rendition-job.ts`'s doc comment.
  */
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";

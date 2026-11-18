@@ -120,7 +120,7 @@ describe("useAppAuth", () => {
     const ctx = makeAuthCtx({
       isLoading: false,
       error: undefined,
-      user: { expired: true, access_token: "tok" } as unknown as User,
+      user: { expired: true, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
       signinSilent,
     });
     renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
@@ -134,7 +134,7 @@ describe("useAppAuth", () => {
     const ctx = makeAuthCtx({
       isLoading: false,
       error: undefined,
-      user: { expired: true, access_token: "tok" } as unknown as User,
+      user: { expired: true, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
       signinSilent: vi.fn().mockResolvedValue(null),
       removeUser,
     });
@@ -146,7 +146,7 @@ describe("useAppAuth", () => {
     const signinSilent = vi.fn();
     const ctx = makeAuthCtx({
       isLoading: false,
-      user: { expired: false, access_token: "tok" } as unknown as User,
+      user: { expired: false, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
       signinSilent,
     });
     renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
@@ -157,7 +157,7 @@ describe("useAppAuth", () => {
     const signinSilent = vi.fn();
     const ctx = makeAuthCtx({
       isLoading: true,
-      user: { expired: true, access_token: "tok" } as unknown as User,
+      user: { expired: true, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
       signinSilent,
     });
     renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
@@ -169,7 +169,7 @@ describe("useAppAuth", () => {
     const ctx = makeAuthCtx({
       isLoading: false,
       error: Object.assign(new Error("auth error"), { source: "unknown" as const }),
-      user: { expired: true, access_token: "tok" } as unknown as User,
+      user: { expired: true, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
       signinSilent,
     });
     renderHook(() => useAppAuth(), { wrapper: makeWrapper(ctx) });
@@ -182,7 +182,7 @@ describe("isAuthReady", () => {
     const ctx = makeAuthCtx({
       isLoading: false,
       isAuthenticated: true,
-      user: { expired: false, access_token: "tok" } as unknown as User,
+      user: { expired: false, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
     });
     expect(isAuthReady(ctx)).toBe(true);
   });
@@ -194,7 +194,7 @@ describe("isAuthReady", () => {
     const ctx = makeAuthCtx({
       isLoading: false,
       isAuthenticated: true,
-      user: { expired: true, access_token: "tok" } as unknown as User,
+      user: { expired: true, access_token: "tok", profile: { sub: "u1" } } as unknown as User,
       error: Object.assign(new Error("renew failed"), {
         source: "signinSilent" as const,
         args: undefined,
