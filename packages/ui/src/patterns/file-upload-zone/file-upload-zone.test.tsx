@@ -160,6 +160,23 @@ describe("FileUploadZone — file selected view", () => {
     expect(screen.queryByRole("button", { name: /remove file/i })).not.toBeInTheDocument();
   });
 
+  it("exposes the upload progress as a progress bar, in the full and the compact card", () => {
+    const file = makeFile("report.pdf", "application/pdf");
+    const { rerender } = render(
+      <FileUploadZone file={file} onFileChange={vi.fn()} uploadProgress={42} />,
+    );
+    const progressbar = screen.getByRole("progressbar", { name: "Uploading report.pdf" });
+    expect(progressbar).toHaveAttribute("aria-valuenow", "42");
+    expect(progressbar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressbar).toHaveAttribute("aria-valuemax", "100");
+
+    rerender(<FileUploadZone file={file} onFileChange={vi.fn()} compact uploadProgress={100} />);
+    expect(screen.getByRole("progressbar", { name: "Uploading report.pdf" })).toHaveAttribute(
+      "aria-valuenow",
+      "99",
+    );
+  });
+
   it("stops the upload progress at 99% until the upload is confirmed", () => {
     const file = makeFile("report.pdf", "application/pdf");
     render(<FileUploadZone file={file} onFileChange={vi.fn()} uploadProgress={100} />);
