@@ -21,7 +21,11 @@ export type NavigationCall =
       args: [entityName: string] | [entityName: string, options: NavigationOptions];
     }
   | { method: "openClassifyCreate"; args: [] | [options: NavigationOptions] }
-  | { method: "openSettings"; args: [] | [options: NavigationOptions] };
+  | { method: "openSettings"; args: [] | [options: NavigationOptions] }
+  | {
+      method: "openEntityConfiguration";
+      args: [entityName: string] | [entityName: string, options: NavigationOptions];
+    };
 
 export interface RecordingNavigation {
   navigation: Navigation;
@@ -60,10 +64,17 @@ export function createRecordingNavigation(): RecordingNavigation {
     openSettings: (options) => {
       calls.push({ method: "openSettings", args: options ? [options] : [] });
     },
+    openEntityConfiguration: (entityName, options) => {
+      calls.push({
+        method: "openEntityConfiguration",
+        args: options ? [entityName, options] : [entityName],
+      });
+    },
     hrefFor: {
       home: () => "/",
       entityItemCollection: (entityName) => `/${entityName}`,
       item: (entityName, id) => `/${entityName}/${id}`,
+      settings: () => "/~configuration",
     },
   };
   return { navigation, calls };

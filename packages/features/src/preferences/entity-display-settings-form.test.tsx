@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   type AuthenticationTokenSupplier,
   NavigatorDataProvider,
@@ -15,10 +15,10 @@ import {
   makeSearchBarProfiles,
   searchBarHandlers,
 } from "@contentgrid/navigator-data/test-fixtures/msw/search-bar-fixtures";
-import { server } from "../../../test-setup";
-import { makeSearchBarWrapper } from "../../test-utils/search-bar-wrapper";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
-import { EntityConfigurationDetail } from "./entity-configuration-detail";
+import { server } from "../../test-setup";
+import { makeSearchBarWrapper } from "../test-utils/search-bar-wrapper";
+import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
+import { EntityDisplaySettingsForm } from "./entity-display-settings-form";
 
 const API_URL = "https://api.example.com";
 const PROFILE_URL = `${API_URL}/profile`;
@@ -80,7 +80,7 @@ function invoiceProfileJson() {
   };
 }
 
-function renderDetail(onClose = vi.fn()) {
+function renderForm() {
   const profile = makeProfileEntity(invoiceProfileJson(), INVOICE_PROFILE_URL, "invoice");
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const apiFetch = createApiClient(noopSupplier);
@@ -100,9 +100,7 @@ function renderDetail(onClose = vi.fn()) {
     );
   }
 
-  return render(<EntityConfigurationDetail profile={profile} onClose={onClose} />, {
-    wrapper: Wrapper,
-  });
+  return render(<EntityDisplaySettingsForm profile={profile} />, { wrapper: Wrapper });
 }
 
 afterEach(() => {
@@ -110,35 +108,10 @@ afterEach(() => {
   useEntityDisplayPreferencesStore.setState({ overrides: {} });
 });
 
-describe("EntityConfigurationDetail", () => {
-  it("renders the entity's plural name as the title", () => {
-    renderDetail();
-    expect(screen.getByRole("heading", { level: 1, name: "Invoices" })).toBeInTheDocument();
-  });
-
-  it("renders the eyebrow header", () => {
-    renderDetail();
-    expect(screen.getByText("Configure display")).toBeInTheDocument();
-  });
-
-  it("renders a description that names the entity", () => {
-    renderDetail();
-    expect(screen.getByText(/how Invoices are rendered./)).toBeInTheDocument();
-  });
-
-  it("calls onClose when the close button is clicked", async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    renderDetail(onClose);
-
-    await user.click(screen.getByRole("button", { name: "Close" }));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
+describe("EntityDisplaySettingsForm", () => {
   it("lists the id and user-defined attributes as name-attribute options", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Name attribute" }));
 
@@ -148,7 +121,7 @@ describe("EntityConfigurationDetail", () => {
 
   it("lists the id and user-defined attributes as subtitle-attribute options", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Subtitle attribute" }));
 
@@ -158,7 +131,7 @@ describe("EntityConfigurationDetail", () => {
 
   it("persists a subtitle-attribute override when an option is chosen", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Subtitle attribute" }));
     await user.click(screen.getByRole("option", { name: /^Invoice Number/ }));
@@ -173,7 +146,7 @@ describe("EntityConfigurationDetail", () => {
 
   it("lists the id and user-defined attributes as visible-column options", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
 
@@ -183,7 +156,7 @@ describe("EntityConfigurationDetail", () => {
 
   it("lists audit attributes as visible-column options, in a system attributes group", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
 
@@ -196,7 +169,7 @@ describe("EntityConfigurationDetail", () => {
       visibleColumns: [],
     });
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
     await user.click(screen.getByRole("checkbox", { name: /^Created By/ }));
@@ -215,7 +188,7 @@ describe("EntityConfigurationDetail", () => {
       visibleColumns: [],
     });
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Visible columns" }));
     await user.click(screen.getByRole("checkbox", { name: /^Invoice Number/ }));
@@ -229,7 +202,7 @@ describe("EntityConfigurationDetail", () => {
 
   it("offers no content-focus item layout for an entity without content attributes", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     expect(screen.getByRole("combobox", { name: "Item layout" })).toHaveTextContent("Stacked");
     await user.click(screen.getByRole("combobox", { name: "Item layout" }));
@@ -242,14 +215,14 @@ describe("EntityConfigurationDetail", () => {
     useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
       itemLayout: "content",
     });
-    renderDetail();
+    renderForm();
 
     expect(screen.getByRole("combobox", { name: "Item layout" })).toHaveTextContent("Stacked");
   });
 
   it("persists an item-layout override when a layout is chosen", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByRole("combobox", { name: "Item layout" }));
     await user.click(screen.getByRole("option", { name: "Side by side" }));
@@ -263,7 +236,7 @@ describe("EntityConfigurationDetail", () => {
 
   it("persists an icon override when a new icon is chosen", async () => {
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     // Heuristic default icon for a content-less fixture is "Database" (see
     // use-entity-display-preferences.test.tsx) — that's the trigger's label pre-selection.
@@ -278,11 +251,9 @@ describe("EntityConfigurationDetail", () => {
   });
 
   it("persists a color override when a swatch is chosen", async () => {
-    // The sidebar renders ColorPickerContent's swatch grid inline (no trigger/popover needed) —
-    // clicking a swatch there directly, rather than opening the header's ColorPicker popover,
-    // avoids a second ambiguous "Green" swatch when both are mounted at once.
+    // The form renders ColorPickerContent's swatch grid inline (no trigger/popover needed).
     const user = userEvent.setup();
-    renderDetail();
+    renderForm();
 
     await user.click(screen.getByTitle("Green"));
 
@@ -294,18 +265,18 @@ describe("EntityConfigurationDetail", () => {
   });
 });
 
-describe("EntityConfigurationDetail — searchable attributes", () => {
+describe("EntityDisplaySettingsForm — searchable attributes", () => {
   const { searchBar } = makeSearchBarProfiles();
 
-  function renderSearchBarDetail() {
+  function renderSearchBarForm() {
     server.use(...searchBarHandlers());
-    return render(<EntityConfigurationDetail profile={searchBar} onClose={vi.fn()} />, {
+    return render(<EntityDisplaySettingsForm profile={searchBar} />, {
       wrapper: makeSearchBarWrapper(),
     });
   }
 
   it("is not offered for an entity without searchable attributes", () => {
-    renderDetail();
+    renderForm();
     expect(
       screen.queryByRole("combobox", { name: "Searchable attributes" }),
     ).not.toBeInTheDocument();
@@ -313,7 +284,7 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
 
   it("lists the attributes with search parameters, audit dates as system attributes, all included by default", async () => {
     const user = userEvent.setup();
-    renderSearchBarDetail();
+    renderSearchBarForm();
 
     await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
 
@@ -325,7 +296,7 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
 
   it("persists the user's choice as a searchAttributes override", async () => {
     const user = userEvent.setup();
-    renderSearchBarDetail();
+    renderSearchBarForm();
 
     await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
     await user.click(screen.getByRole("checkbox", { name: /^Reference/ }));
@@ -346,7 +317,7 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
     useEntityDisplayPreferencesStore
       .getState()
       .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", { searchAttributes: [] });
-    renderSearchBarDetail();
+    renderSearchBarForm();
 
     await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
 
@@ -362,7 +333,7 @@ describe("EntityConfigurationDetail — searchable attributes", () => {
       .setOverride(SEARCH_BAR_PROFILE_ROOT_URL, "search-bar", {
         searchAttributes: ["id", "renamed_away", "title"],
       });
-    renderSearchBarDetail();
+    renderSearchBarForm();
 
     await user.click(screen.getByRole("combobox", { name: "Searchable attributes" }));
 

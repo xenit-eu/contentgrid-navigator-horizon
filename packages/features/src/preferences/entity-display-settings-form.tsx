@@ -1,0 +1,138 @@
+import { useId } from "react";
+import { type EntityItemLayout, type ProfileEntity } from "@contentgrid/navigator-data";
+import {
+  AttributeMultiSelect,
+  AttributeSelect,
+  ColorPickerContent,
+  IconPicker,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@contentgrid/ui";
+import { toAttributeOption } from "./attribute-options";
+import { useEntityDisplayPreferences } from "./use-entity-display-preferences";
+import { useSearchAttributeInclusion } from "./use-search-attribute-inclusion";
+
+export interface EntityDisplaySettingsFormProps {
+  readonly profile: ProfileEntity;
+}
+
+const ITEM_LAYOUT_LABELS: Record<EntityItemLayout, string> = {
+  content: "Content focus",
+  stacked: "Stacked",
+  columns: "Side by side",
+};
+
+/**
+ * The display settings of one entity, saved as the user's preference overrides as soon as they
+ * change: color, icon, name and subtitle attributes, item layout, visible columns and searchable
+ * attributes. Intentionally sparse; more settings will land here over time. Fills the width it
+ * is given; the view around it (`~configuration/$entity`) draws the page, title and previews.
+ */
+export function EntityDisplaySettingsForm({ profile }: Readonly<EntityDisplaySettingsFormProps>) {
+  const { preferences, setOverride } = useEntityDisplayPreferences(profile);
+  const regularOptions = [profile.idAttribute, ...profile.userDefinedAttributes].map((attribute) =>
+    toAttributeOption(attribute, false),
+  );
+  const systemOptions = profile.auditAttributes.map((attribute) =>
+    toAttributeOption(attribute, true),
+  );
+  // Name/subtitle/visible-columns can all point at any attribute, including audit fields
+  // (e.g. "modified date") — buildColumns() renders a column for any visible audit attribute too.
+  const attributeOptions = [...regularOptions, ...systemOptions];
+  // Only attributes with at least one search parameter can take part in the search bar; relation
+  // search parameters are not configurable here (included unless no attribute is, spec 003 FR-036).
+  const searchableOptions = [
+    ...profile.userDefinedAttributes
+      .filter((attribute) => attribute.searchParams.length > 0)
+      .map((attribute) => toAttributeOption(attribute, false)),
+    ...profile.auditAttributes
+      .filter((attribute) => attribute.searchParams.length > 0)
+      .map((attribute) => toAttributeOption(attribute, true)),
+  ];
+  // Checked = what the search bar actually uses, not the raw saved list (FR-035a).
+  const { includedAttributes } = useSearchAttributeInclusion(profile);
+  const searchableValues = searchableOptions
+    .map((option) => option.name)
+    .filter((name) => includedAttributes === "all" || includedAttributes.has(name));
+  // Content focus shows a content attribute, so it is only offered when the entity has one.
+  const itemLayoutId = useId();
+  const itemLayouts = (Object.keys(ITEM_LAYOUT_LABELS) as EntityItemLayout[]).filter(
+    (layout) => layout !== "content" || profile.hasContentAttributes,
+  );
+  // A saved "content" layout on an entity without content attributes (e.g. one removed by a later
+  // release) renders attribute focus, so the select shows that instead of an empty trigger.
+  const itemLayout =
+    preferences.itemLayout === "content" && !profile.hasContentAttributes
+      ? "stacked"
+      : preferences.itemLayout;
+
+  return (
+    <div className="space-y-4">
+      <ColorPickerContent value={preferences.color} onChange={(color) => setOverride({ color })} />
+
+      <div className="space-y-1.5">
+        <Label>Icon</Label>
+        <IconPicker value={preferences.icon} onChange={(icon) => setOverride({ icon })} />
+      </div>
+
+      <AttributeSelect
+        label="Name attribute"
+        attributes={attributeOptions}
+        value={preferences.nameAttribute}
+        onSelect={(attribute) => setOverride({ nameAttribute: attribute.name })}
+        placeholder="Choose attribute"
+      />
+
+      <AttributeSelect
+        label="Subtitle attribute"
+        attributes={attributeOptions}
+        value={preferences.subtitleAttribute}
+        onSelect={(attribute) => setOverride({ subtitleAttribute: attribute.name })}
+        placeholder="Choose attribute"
+      />
+
+      <div className="space-y-1.5">
+        <Label htmlFor={itemLayoutId}>Item layout</Label>
+        <Select
+          value={itemLayout}
+          onValueChange={(itemLayout) =>
+            setOverride({ itemLayout: itemLayout as EntityItemLayout })
+          }
+        >
+          <SelectTrigger id={itemLayoutId} className="w-full">
+            <SelectValue placeholder="Choose layout" />
+          </SelectTrigger>
+          <SelectContent>
+            {itemLayouts.map((layout) => (
+              <SelectItem key={layout} value={layout}>
+                {ITEM_LAYOUT_LABELS[layout]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <AttributeMultiSelect
+        label="Visible columns"
+        attributes={attributeOptions}
+        values={preferences.visibleColumns ?? []}
+        onChange={(names) => setOverride({ visibleColumns: [...names] })}
+        placeholder="Choose columns"
+      />
+
+      {searchableOptions.length > 0 && (
+        <AttributeMultiSelect
+          label="Searchable attributes"
+          attributes={searchableOptions}
+          values={searchableValues}
+          onChange={(names) => setOverride({ searchAttributes: [...names] })}
+          placeholder="Choose attributes"
+        />
+      )}
+    </div>
+  );
+}

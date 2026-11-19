@@ -71,8 +71,8 @@ Rules:
 ## Page layout
 
 Page frames (`PageLayout`, `BreadCrumbsToolBarLayout`, `SideBarLayout`) and the app shells (router, auth, profile gate,
-sidebar) live in `@contentgrid/views`, not here. Only `RightSidePanelLayout` and `EntityIconBadge` remain in
-`src/layout/`, because features use them. Features do not import `@tanstack/react-router` — the one exception is
+sidebar) live in `@contentgrid/views`, not here. Only `RightSidePanelLayout`, `EntityIconBadge` and
+`EntityProfileSelector` remain in `src/layout/`, because features use them. Features do not import `@tanstack/react-router` — the one exception is
 `unsaved-changes-guard` (its home is open question 3 of the views spec) and the edit-form tests that exercise it.
 
 ([ADR-018](../../docs/adr/ADR-018-views-layer.md), `specs/005-views-layer/contracts/view-toolbar.md`)
@@ -169,8 +169,8 @@ search-parameter selector with a suggestions popover, and quick filters. `x-stab
 - **Inclusion**: `searchAttributes` in `EntityDisplayPreferences` (edited next to "Visible
   columns") limits the selector, suggestions and quick filters; chips always show every active
   filter, and relation parameters are always included. Import `useSearchAttributeInclusion` by
-  file path (`../preferences/use-search-attribute-inclusion`), not through `../preferences` —
-  the preferences previews import the collection view, which imports this feature.
+  file path (`../preferences/use-search-attribute-inclusion`), not through `../preferences`, so
+  this feature doesn't pull in the preferences feature's configuration components.
 
 ---
 

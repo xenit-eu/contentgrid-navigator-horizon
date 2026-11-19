@@ -1,26 +1,6 @@
 import { type ProfileEntity, useLoadedProfileEntities } from "@contentgrid/navigator-data";
-import {
-  type IconBadgeOption,
-  IconBadgeOptionPicker,
-  IconBadgeOptionPickerList,
-} from "@contentgrid/ui";
-import { EntityIconBadge, type EntityIconBadgeProps } from "../layout";
-
-function toOption(
-  profile: ProfileEntity,
-  iconVariant?: EntityIconBadgeProps["variant"],
-): IconBadgeOption {
-  return {
-    name: profile.name,
-    title: profile.title,
-    description: profile.description,
-    icon: <EntityIconBadge profile={profile} variant={iconVariant} muted />,
-  };
-}
-
-function findProfile(profiles: readonly ProfileEntity[], option: IconBadgeOption) {
-  return profiles.find(({ name }) => name === option.name);
-}
+import { IconBadgeOptionPickerList } from "@contentgrid/ui";
+import { EntityProfileSelector, toEntityProfileOption } from "../layout";
 
 export interface CreateEntityItemProfileSelectorProps {
   readonly selectedProfile: ProfileEntity;
@@ -33,22 +13,13 @@ export function CreateEntityItemProfileSelector({
   selectedProfile,
   onSelect,
 }: Readonly<CreateEntityItemProfileSelectorProps>) {
-  const { profiles: loadedProfiles } = useLoadedProfileEntities();
-  const profiles = loadedProfiles.filter((profile) => profile.createTemplate !== null);
-
+  const { profiles } = useLoadedProfileEntities();
   return (
-    <div className="w-56">
-      <IconBadgeOptionPicker
-        options={profiles.map((profile) => toOption(profile, "sm"))}
-        selectedOption={toOption(selectedProfile, "sm")}
-        onSelect={(option) => {
-          const profile = findProfile(profiles, option);
-          if (profile) onSelect(profile);
-        }}
-        placeholder="Select entity"
-        size="sm"
-      />
-    </div>
+    <EntityProfileSelector
+      profiles={profiles.filter((profile) => profile.createTemplate !== null)}
+      selectedProfile={selectedProfile}
+      onSelect={onSelect}
+    />
   );
 }
 
@@ -69,10 +40,10 @@ export function CreateEntityItemProfileSelectorList({
 }: Readonly<CreateEntityItemProfileSelectorListProps>) {
   return (
     <IconBadgeOptionPickerList
-      options={profiles.map((profile) => toOption(profile))}
-      selectedOption={selectedProfile && toOption(selectedProfile)}
+      options={profiles.map((profile) => toEntityProfileOption(profile))}
+      selectedOption={selectedProfile && toEntityProfileOption(selectedProfile)}
       onSelect={(option) => {
-        const profile = findProfile(profiles, option);
+        const profile = profiles.find(({ name }) => name === option.name);
         if (profile) onSelect(profile);
       }}
       label={label}

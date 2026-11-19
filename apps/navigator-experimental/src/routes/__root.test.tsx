@@ -69,10 +69,9 @@ vi.mock("@contentgrid/features/dashboard", () => ({
   EntityCountOverview: () => <div data-testid="entity-overview" />,
 }));
 
-vi.mock("@contentgrid/features/preferences", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@contentgrid/features/preferences")>();
-  return { ...actual, EntityConfigurationDetail: () => <div data-testid="configuration-detail" /> };
-});
+vi.mock("@contentgrid/views/entity-configuration-detail", () => ({
+  EntityConfigurationDetailView: () => <div data-testid="configuration-detail" />,
+}));
 
 vi.mock("@contentgrid/views/entity-item-collection", () => ({
   EntityItemCollectionView: ({ entityName }: { entityName: string }) => (

@@ -55,8 +55,8 @@ export interface EntityItemCollectionTableProps {
   /**
    * Forwarded to the underlying `RecordDataTable`'s root — pass a bounding class (e.g.
    * `"h-full"`) to opt into the pinned-header/scrollable-body layout when this table is
-   * rendered inside a height-constrained parent. Omit it (as `EntityTablePreview` does, inside
-   * its own `max-h-*` capped wrapper) to keep the table's default grow-to-content sizing.
+   * rendered inside a height-constrained parent. Omit it (e.g. inside a `max-h-*` capped
+   * wrapper) to keep the table's default grow-to-content sizing.
    */
   readonly className?: string;
   /** Ids of the selected items. The selection column renders only when `onSelectionChange` is set. */

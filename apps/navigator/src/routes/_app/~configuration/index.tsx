@@ -1,21 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { EntityConfigurationOverview } from "@contentgrid/features/preferences";
-import { PageLayout } from "@contentgrid/views/layout";
+import { createFileRoute } from "@tanstack/react-router";
+import { EntityConfigurationOverviewView } from "@contentgrid/views/entity-configuration-overview";
 
 export const Route = createFileRoute("/_app/~configuration/")({
-  component: ConfigurationOverviewPage,
+  component: EntityConfigurationOverviewView,
 });
-
-function ConfigurationOverviewPage() {
-  const navigate = useNavigate();
-
-  return (
-    <PageLayout>
-      <EntityConfigurationOverview
-        onSelectEntity={(profile) =>
-          navigate({ to: "/~configuration/$entity", params: { entity: profile.name } })
-        }
-      />
-    </PageLayout>
-  );
-}

@@ -12,8 +12,8 @@ import {
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
-import { useEntityDisplayPreferencesStore } from "../entity-display-preferences-store";
-import { EntityConfigurationOverviewTabbed } from "./entity-configuration-overview-tabbed";
+import { EntityConfigurationOverview } from "./entity-configuration-overview";
+import { useEntityDisplayPreferencesStore } from "./entity-display-preferences-store";
 
 vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@contentgrid/navigator-data")>();
@@ -94,7 +94,7 @@ function renderOverview(onSelectEntity: (profile: ProfileEntity) => void = vi.fn
     );
   }
 
-  return render(<EntityConfigurationOverviewTabbed onSelectEntity={onSelectEntity} />, {
+  return render(<EntityConfigurationOverview onSelectEntity={onSelectEntity} />, {
     wrapper: Wrapper,
   });
 }
@@ -105,46 +105,88 @@ afterEach(() => {
   vi.mocked(useLoadedProfileEntities).mockReset();
 });
 
-describe("EntityConfigurationOverviewTabbed", () => {
-  it("renders nothing when there are no entities", () => {
-    mockProfiles([]);
+describe("EntityConfigurationOverview", () => {
+  it("shows loading skeletons while profiles are still loading", () => {
+    mockProfiles([], true);
     const { container } = renderOverview();
 
-    expect(container.querySelector('[data-slot="entity-card"]')).not.toBeInTheDocument();
-    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
-  it("renders one tab per discovered entity, without an entity-card grid", () => {
+  it("shows an empty state when there are no entities", () => {
+    mockProfiles([], false);
+    renderOverview();
+
+    expect(screen.getByText("No entities found")).toBeInTheDocument();
+  });
+
+  it("renders one card per discovered entity", () => {
     mockProfiles([makeProfile("invoice", "Invoices"), makeProfile("product", "Products")]);
     const { container } = renderOverview();
 
-    expect(container.querySelectorAll('[data-slot="entity-card"]')).toHaveLength(1);
-    expect(screen.getByRole("tab", { name: "Invoices" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Products" })).toBeInTheDocument();
+    expect(screen.getByText("Invoices")).toBeInTheDocument();
+    expect(screen.getByText("Products")).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="entity-card"]')).toHaveLength(2);
   });
 
-  it("selects the first entity's tab by default and renders its detail inline (no nested card)", () => {
+  it("calls onSelectEntity with the clicked entity's profile", async () => {
+    const user = userEvent.setup();
+    const onSelectEntity = vi.fn();
+    mockProfiles([makeProfile("invoice", "Invoices")]);
+    const { container } = renderOverview(onSelectEntity);
+
+    await user.click(container.querySelector('[data-slot="entity-card"]')!);
+
+    expect(onSelectEntity).toHaveBeenCalledTimes(1);
+    expect(onSelectEntity.mock.calls[0][0].name).toBe("invoice");
+  });
+
+  it("calls onSelectEntity when the configure (gear) action is clicked", async () => {
+    const user = userEvent.setup();
+    const onSelectEntity = vi.fn();
+    mockProfiles([makeProfile("invoice", "Invoices")]);
+    renderOverview(onSelectEntity);
+
+    await user.click(screen.getByRole("button", { name: "Configure Invoices" }));
+
+    expect(onSelectEntity).toHaveBeenCalledTimes(1);
+  });
+
+  it("dismisses the color hint alert when closed", async () => {
+    const user = userEvent.setup();
+    mockProfiles([]);
+    renderOverview();
+
+    expect(screen.getByText(/Click on an entity icon/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(screen.queryByText(/Click on an entity icon/)).not.toBeInTheDocument();
+  });
+
+  it("disables the apply-theme button when there are no entities", async () => {
+    const user = userEvent.setup();
+    mockProfiles([]);
+    renderOverview();
+
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("radio", { name: "Warm" }));
+
+    expect(screen.getByRole("button", { name: "Apply theme" })).toBeDisabled();
+  });
+
+  it("cycles the selected theme's colors across every entity when applied", async () => {
+    const user = userEvent.setup();
     mockProfiles([makeProfile("invoice", "Invoices"), makeProfile("product", "Products")]);
     renderOverview();
 
-    expect(screen.getByRole("tab", { name: "Invoices", selected: true })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Products", selected: false })).toBeInTheDocument();
-    // showInCard={false} on EntityConfigurationDetail — only the page-level EntityCard exists.
-    expect(screen.queryByText("Configure display")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Name attribute" })).toBeInTheDocument();
-  });
+    await user.click(screen.getByRole("button", { name: "Theme" }));
+    await user.click(screen.getByRole("radio", { name: "Warm" }));
+    await user.click(screen.getByRole("button", { name: "Apply theme" }));
 
-  it("switches the active tab and calls onSelectEntity when a different tab is clicked", async () => {
-    const user = userEvent.setup();
-    const onSelectEntity = vi.fn();
-    mockProfiles([makeProfile("invoice", "Invoices"), makeProfile("product", "Products")]);
-    renderOverview(onSelectEntity);
-
-    await user.click(screen.getByRole("tab", { name: "Products" }));
-
-    expect(screen.getByRole("tab", { name: "Products", selected: true })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Invoices", selected: false })).toBeInTheDocument();
-    expect(onSelectEntity).toHaveBeenCalledTimes(1);
-    expect(onSelectEntity.mock.calls[0][0].name).toBe("product");
+    const overrides = useEntityDisplayPreferencesStore.getState().overrides[PROFILE_URL];
+    expect(overrides?.invoice?.color).toBeDefined();
+    expect(overrides?.product?.color).toBeDefined();
+    expect(overrides?.invoice?.color).not.toBe(overrides?.product?.color);
   });
 });
