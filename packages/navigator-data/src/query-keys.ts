@@ -171,6 +171,6 @@ export const queryKeys = {
    */
   contentPreview: {
     /** Exact key for one content link's preview, scoped to the content's current version. */
-    byUrl: (href: string, version: string | null) => [CONTENT_PREVIEW_KEY, href, version] as const,
+    byUrl: (href: string, version: string) => [CONTENT_PREVIEW_KEY, href, version] as const,
   },
 };
