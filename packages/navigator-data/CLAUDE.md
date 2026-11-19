@@ -489,6 +489,9 @@ Rules:
 > every gate above is `false`; the gates without a template (`canUploadContent`,
 > `toMany.canUnlinkItem`) check `isReadOnly`, and the to-many read hooks return the linked items
 > of a read-only item read-only too. Links stay, so content and relations can still be shown.
+> A collection row's `cg:` links resolve through the page's `curies`, so
+> `EntityItemCollection.items` copies them into each row's own `_links`; without that, a
+> read-only copy of a row loses its content and relation links.
 > Relation capability is exposed on `EntityItemToOneRelation` / `EntityItemToManyRelation`
 > (obtained via `entityItem.getToOneRelation(name)` / `entityItem.getToManyRelation(name)`):
 > `toOne.canSet`, `toOne.canClear`, `toMany.canAdd`, `toMany.canClear` — boolean flags derived from template presence.

@@ -5,7 +5,7 @@ import type { HalObjectShape, HalSliceShape } from "@contentgrid/hal/shape";
 import { server } from "../../test-setup";
 import { type AuthenticationTokenSupplier, createApiClient } from "../api/client";
 import { queryKeys } from "../query-keys";
-import type { ProfileEntityShape } from "../shapes";
+import type { EntityItemShape, ProfileEntityShape } from "../shapes";
 import { EntityItem } from "./entity-item";
 import { EntityItemCollection } from "./entity-item-collection";
 import ProfileEntity from "./entity-profile";
@@ -105,6 +105,33 @@ describe("EntityItemCollection — toReadOnly", () => {
 
     expect(collection.items[0].isReadOnly).toBe(false);
     expect(collection.toReadOnly().items[0].isReadOnly).toBe(true);
+  });
+
+  it("keeps a row's content link when the curies are only on the page", () => {
+    const page: HalSliceShape<EntityItemShape> = {
+      _links: {
+        self: { href: "/invoices" },
+        curies: [
+          { name: "cg", href: "https://contentgrid.cloud/rels/contentgrid/{rel}", templated: true },
+        ],
+      },
+      _embedded: {
+        item: [
+          {
+            id: "inv-001",
+            _links: {
+              self: { href: "/invoices/inv-001" },
+              "cg:content": { href: "/invoices/inv-001/document", name: "document" },
+            },
+          },
+        ],
+      },
+    };
+    const collection = new EntityItemCollection(new HalSlice(page), makeProfileEntity());
+
+    const [row] = collection.toReadOnly().items;
+
+    expect(row.contentLink("document")?.href).toBe("/invoices/inv-001/document");
   });
 });
 
