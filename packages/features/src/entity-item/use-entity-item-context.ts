@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { EntityItem } from "@contentgrid/navigator-data";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 
 /** Reloads the item; the view that owns the item query supplies it. */
 export type EntityItemRefetch = () => Promise<{
@@ -83,6 +83,13 @@ function useEntityItemSectionsState(): EntityItemSectionsState {
  * form, the page moving on to another item), and `false` when the caller unmounts while editing.
  * Pass a stable function (e.g. a `useState` setter): a new one on every render re-runs the
  * reporting effect, firing `false` and `true` again each time.
+ *
+ * `pendingContent` holds the unsaved file changes of the edit form. It lives here so the content
+ * preview next to the form can show them too; `refresh` keeps them. `isSaving` is whether the form
+ * is saving: the preview takes no file while it is. `contentFailures` holds the message of each
+ * file change the last Save could not apply, by attribute name: the form remounts on the refresh
+ * that follows, so they live here too. Changing an attribute's file through `setPendingContent`
+ * clears its message.
  */
 export function useEntityItemContext(
   item: EntityItem,
@@ -91,11 +98,17 @@ export function useEntityItemContext(
 ) {
   const href = item.selfLink.href;
   const [editedItem, setEditedItem] = useState<EntityItem | null>(null);
+  const [pendingContent, setPendingContent] = useState<ContentChanges>(new Map());
+  const [contentFailures, setContentFailures] = useState<ReadonlyMap<string, string>>(new Map());
+  const [isSaving, setIsSaving] = useState(false);
   const [shownHref, setShownHref] = useState(href);
   const sections = useEntityItemSectionsState();
   if (href !== shownHref) {
     setShownHref(href);
     setEditedItem(null);
+    setPendingContent(new Map());
+    setContentFailures(new Map());
+    setIsSaving(false);
     // A toggle is for the item it was made on: every item starts with its sections at their
     // defaults, whether or not the page stayed mounted in between (e.g. a cached item).
     sections.restoreDefaults();
@@ -113,7 +126,24 @@ export function useEntityItemContext(
     return () => onEditingChange?.(false);
   }, [isEditing, onEditingChange]);
 
-  const setIsEditing = (editing: boolean) => setEditedItem(editing ? item : null);
+  const setIsEditing = (editing: boolean) => {
+    setEditedItem(editing ? item : null);
+    setPendingContent(new Map());
+    setContentFailures(new Map());
+    setIsSaving(false);
+  };
+  /** A user's change of the pending files; the failure of a file that changed is out of date. */
+  const changePendingContent = (next: ContentChanges) => {
+    setContentFailures((failures) => {
+      const stillValid = [...failures].filter(
+        ([attributeName]) =>
+          pendingContent.has(attributeName) === next.has(attributeName) &&
+          pendingContent.get(attributeName) === next.get(attributeName),
+      );
+      return stillValid.length === failures.size ? failures : new Map(stillValid);
+    });
+    setPendingContent(next);
+  };
   const refresh = async () => {
     const result = await refetch();
     if (result.isSuccess && result.data) setEditedItem(result.data);
@@ -128,5 +158,11 @@ export function useEntityItemContext(
     setIsEditing,
     refresh,
     sections,
+    pendingContent,
+    setPendingContent: changePendingContent,
+    contentFailures,
+    setContentFailures,
+    isSaving,
+    setIsSaving,
   };
 }
