@@ -162,6 +162,106 @@ export function useUploadContent(
   return { ...mutation, progress };
 }
 
+export type ContentChanges = ReadonlyMap<string, File | null>;
+
+type ApplyContentChangesVariables = {
+  readonly changes: ContentChanges;
+  /**
+   * The name and media type to store a picked file under, by attribute name; the file's own when
+   * absent.
+   */
+  readonly metadata: ReadonlyMap<
+    string,
+    { readonly filename?: string; readonly mimetype?: string }
+  >;
+};
+
+/**
+ * Mutation hook that uploads or removes an item's queued files through their `cg:content` links.
+ *
+ * Each request sends `If-Match` with the content's own ETag (read with a HEAD first), because the
+ * entity item's ETag is not valid for its content.
+ *
+ * A failed change does not stop the others; the mutation resolves with the failures by attribute
+ * name (empty when all succeeded). `progress` (0–100) tracks each upload by attribute name.
+ *
+ * @param entityItem - The item whose content attributes change (must have their cg:content links)
+ */
+export function useApplyContentChanges(entityItem: EntityItem) {
+  const { contentFetch } = useNavigatorData();
+  const queryClient = useQueryClient();
+  const { profileEntity } = entityItem;
+  const [progress, setProgress] = useState<ReadonlyMap<string, number>>(new Map());
+
+  async function fetchContentEtag(attributeName: string): Promise<string | null> {
+    const headRequest = new Request(entityItem.downloadContentRequest(attributeName), {
+      method: "HEAD",
+    });
+    try {
+      // `contentFetch` already turns an error answer into a ProblemDetailError.
+      const response = await contentFetch(headRequest);
+      const etag = response.headers.get("ETag");
+      if (etag === null) {
+        throw new Error(`The stored file of '${attributeName}' has no readable ETag`);
+      }
+      return etag;
+    } catch (error) {
+      if (isProblemWithStatus(error, 404)) return null;
+      throw error;
+    }
+  }
+
+  async function applyContentChange(
+    attributeName: string,
+    file: File | null,
+    metadata: { readonly filename?: string; readonly mimetype?: string } | undefined,
+  ): Promise<void> {
+    const contentEtag = await fetchContentEtag(attributeName);
+    if (file) {
+      const request = entityItem.uploadContentRequest(
+        attributeName,
+        file,
+        contentEtag,
+        metadata?.filename,
+        metadata?.mimetype,
+      );
+      const reportProgress = (percentage: number) =>
+        setProgress((previous) => new Map(previous).set(attributeName, percentage));
+      await fetchVoid(contentFetch.withUploadProgress(reportProgress), request);
+    } else if (contentEtag !== null) {
+      await fetchVoid(contentFetch, entityItem.deleteContentRequest(attributeName, contentEtag));
+    }
+  }
+
+  const mutation = useMutation({
+    mutationFn: async ({
+      changes,
+      metadata,
+    }: ApplyContentChangesVariables): Promise<ReadonlyMap<string, Error>> => {
+      setProgress(new Map());
+      const failures = new Map<string, Error>();
+      for (const [attributeName, file] of changes) {
+        try {
+          await applyContentChange(attributeName, file, metadata.get(attributeName));
+        } catch (error) {
+          failures.set(attributeName, error as Error);
+        }
+      }
+      return failures;
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+      });
+    },
+  });
+
+  return { ...mutation, progress };
+}
+
 // ---------------------------------------------------------------------------
 // useDownloadContent
 // ---------------------------------------------------------------------------

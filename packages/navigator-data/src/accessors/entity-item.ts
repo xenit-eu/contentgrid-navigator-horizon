@@ -459,6 +459,9 @@ export class EntityItem {
    * @param attributeName - The name of the content attribute
    * @param file - The file to upload
    * @param contentEtag - The ETag of the stored content, or null when the attribute holds no file
+   * @param filename - The name to store the file under; the file's own name when omitted
+   * @param mimetype - The media type to store the file under; the file's own type when omitted. A
+   *   different one goes in the multipart part's `Content-Type`.
    * @returns Request ready to be sent with contentFetch
    * @throws Error if the cg:content link is absent (ABAC deny)
    */
@@ -466,6 +469,8 @@ export class EntityItem {
     attributeName: string,
     file: File,
     contentEtag: string | null,
+    filename: string = file.name,
+    mimetype?: string,
   ): Request {
     const link = this.contentLink(attributeName);
     if (link === null) {
@@ -475,7 +480,9 @@ export class EntityItem {
     }
 
     const body = new FormData();
-    body.append("file", file, file.name);
+    const part =
+      mimetype && mimetype !== file.type ? new File([file], filename, { type: mimetype }) : file;
+    body.append("file", part, filename);
 
     return new Request(link.href, {
       method: "PUT",
@@ -484,6 +491,31 @@ export class EntityItem {
       // on the old two-argument signature) must never become a literal `If-Match: undefined`.
       headers: contentEtag ? { "If-Match": contentEtag } : { "If-None-Match": "*" },
     });
+  }
+
+  /**
+   * Builds a DELETE Request that removes the stored file of a content attribute.
+   *
+   * Same exception to the HAL-FORMS template rule as upload and download: binary content has no
+   * `_templates` entry, so the Request is built from the `cg:content` link href, whose presence is
+   * the ABAC gate. Send it with `contentFetch`.
+   *
+   * The request is conditional on the content's own ETag (`If-Match`) — never the entity item's
+   * ETag, which is a different resource.
+   *
+   * @param attributeName - The name of the content attribute
+   * @param contentEtag - The ETag of the stored content
+   * @returns Request ready to be sent with contentFetch
+   * @throws Error if the cg:content link is absent (ABAC deny)
+   */
+  public deleteContentRequest(attributeName: string, contentEtag: string): Request {
+    const link = this.contentLink(attributeName);
+    if (link === null) {
+      throw new Error(
+        `Content removal not permitted for attribute '${attributeName}': cg:content link absent`,
+      );
+    }
+    return new Request(link.href, { method: "DELETE", headers: { "If-Match": contentEtag } });
   }
 
   /**

@@ -772,6 +772,26 @@ describe("EntityItem — uploadContentRequest", () => {
     expect(appendSpy).toHaveBeenCalledWith("file", file, "hello.txt");
   });
 
+  it("sends the file under the given media type and name in the multipart part", () => {
+    const item = makeEntityItemWithEmptyContent();
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    // Read the part off the spy: undici can't parse a multipart body back into jsdom Files.
+    const appendSpy = vi.spyOn(FormData.prototype, "append");
+    item.uploadContentRequest("document", file, null, "renamed.md", "text/markdown");
+    expect(appendSpy).toHaveBeenCalledWith("file", expect.any(File), "renamed.md");
+    const part = appendSpy.mock.calls[0][1] as File;
+    expect(part.type).toBe("text/markdown");
+    expect(part.name).toBe("renamed.md");
+  });
+
+  it("keeps the file itself when the given media type is its own", () => {
+    const item = makeEntityItemWithEmptyContent();
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const appendSpy = vi.spyOn(FormData.prototype, "append");
+    item.uploadContentRequest("document", file, null, "hello.txt", "text/plain");
+    expect(appendSpy).toHaveBeenCalledWith("file", file, "hello.txt");
+  });
+
   it("sends If-None-Match: * instead of the item's ETag when there is no content ETag", () => {
     const item = makeEntityItemWithEmptyContent();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
@@ -800,6 +820,13 @@ describe("EntityItem — uploadContentRequest", () => {
     const item = makeEntityItemWithoutContentLink();
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
     expect(() => item.uploadContentRequest("document", file, null)).toThrow();
+  });
+});
+
+describe("EntityItem — deleteContentRequest", () => {
+  it("throws when the cg:content link is absent", () => {
+    const item = makeEntityItemWithoutContentLink();
+    expect(() => item.deleteContentRequest("document", '"content-v1"')).toThrow();
   });
 });
 
