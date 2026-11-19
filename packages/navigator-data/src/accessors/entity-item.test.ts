@@ -746,6 +746,42 @@ describe("EntityItem — canUploadContent", () => {
   });
 });
 
+describe("EntityItem — toReadOnly", () => {
+  it("drops every template, keeping id and etag; the original keeps its templates", () => {
+    const hal = makeEntityItemHal(
+      { id: "inv-001" },
+      {},
+      {
+        default: {
+          method: "PATCH",
+          target: "/invoices/inv-001",
+          contentType: "application/json",
+          properties: [{ name: "number", type: "text" }],
+        },
+        delete: { method: "DELETE", target: "/invoices/inv-001", properties: [] },
+      },
+    );
+    const item = new EntityItem(hal, makeProfileEntity(), '"v1"');
+
+    const readOnly = item.toReadOnly();
+
+    expect(readOnly.isReadOnly).toBe(true);
+    expect(readOnly.canUpdate).toBe(false);
+    expect(readOnly.canDelete).toBe(false);
+    expect(readOnly.id).toBe("inv-001");
+    expect(readOnly.etag).toBe('"v1"');
+    expect(item.canUpdate).toBe(true);
+    expect(item.canDelete).toBe(true);
+  });
+
+  it("offers no upload but keeps the content link for showing the content", () => {
+    const readOnly = makeEntityItemWithContentLink().toReadOnly();
+
+    expect(readOnly.canUploadContent("document")).toBe(false);
+    expect(readOnly.contentLink("document")?.href).toBe(CONTENT_URL);
+  });
+});
+
 describe("EntityItem — uploadContentRequest", () => {
   afterEach(() => {
     vi.restoreAllMocks();

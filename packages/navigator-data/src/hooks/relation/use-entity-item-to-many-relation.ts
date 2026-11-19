@@ -173,6 +173,13 @@ export function useEntityItemToManyRelation(
       ? EntityItemToManyRelation.fetchQuery(apiFetch, mainUrl, targetProfile, relation.name)
       : PLACEHOLDER),
     enabled: mainEnabled,
+    // A read-only source item (`EntityItem.toReadOnly()`) lists its linked items read-only too.
+    select: relation.source.isReadOnly ? toReadOnlyCollection : undefined,
     ...options?.queryOptionsOverride,
   });
+}
+
+/** Module-level, so TanStack keeps the selected result between renders. */
+function toReadOnlyCollection(collection: EntityItemCollection): EntityItemCollection {
+  return collection.toReadOnly();
 }

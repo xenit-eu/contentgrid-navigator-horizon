@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
-import { HalSlice } from "@contentgrid/hal";
+import { HalObject, HalSlice } from "@contentgrid/hal";
 import type { TypedFetch } from "../api/client";
 import { fetchHalSlice } from "../api/hal-client";
 import { queryKeys } from "../query-keys";
@@ -141,11 +141,21 @@ export class EntityItemCollection {
   /**
    * @param halSlice - The HAL collection resource from the API
    * @param profileEntity - The entity profile providing schema metadata for all items
+   * @param isReadOnly - Whether its items are read-only; see `toReadOnly()`
    */
   public constructor(
     public readonly halSlice: HalSlice<EntityItemShape>,
     public readonly profileEntity: ProfileEntity,
+    public readonly isReadOnly: boolean = false,
   ) {}
+
+  /** The same page whose `items` are read-only (`EntityItem.toReadOnly()`). */
+  public toReadOnly(): EntityItemCollection {
+    if (this.isReadOnly) return this;
+    return new EntityItemCollection(this.halSlice, this.profileEntity, true);
+  }
+
+  private _items?: readonly EntityItem[];
 
   /**
    * Array of entity items in this collection page.
@@ -156,7 +166,20 @@ export class EntityItemCollection {
    * @returns Typed EntityItem instances from the current page
    */
   public get items(): readonly EntityItem[] {
-    return this.halSlice.items.map((halItem) => new EntityItem(halItem, this.profileEntity));
+    // Built once: the page never changes, and each row stays the same object between reads.
+    if (this._items === undefined) {
+      // A row's `cg:content` and `cg:relation` links use the `curies` of the page. Each row gets
+      // them in its own links, so a copy of the row (`toReadOnly()`) still finds those links.
+      const curies = this.halSlice.data._links?.curies;
+      this._items = this.halSlice.items.map((halItem) => {
+        const row = curies
+          ? new HalObject({ ...halItem.data, _links: { curies, ...halItem.data._links } })
+          : halItem;
+        const item = new EntityItem(row, this.profileEntity);
+        return this.isReadOnly ? item.toReadOnly() : item;
+      });
+    }
+    return this._items;
   }
 
   /**

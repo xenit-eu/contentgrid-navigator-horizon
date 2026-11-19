@@ -170,6 +170,21 @@ describe("EntityItemToManyRelation — canClear", () => {
 
 // ─── addRelationRequest ───────────────────────────────────────────────────────
 
+describe("EntityItemToManyRelation — read-only source item", () => {
+  it("offers no add, clear or per-item unlink", () => {
+    const item = makeEntityItemWithRelationTemplates({
+      "add-lineItems": invoiceAddLineItemTemplate,
+    });
+    expect(makeToManyRelation(item).canUnlinkItem).toBe(true);
+
+    const relation = makeToManyRelation(item.toReadOnly());
+
+    expect(relation.canAdd).toBe(false);
+    expect(relation.canClear).toBe(false);
+    expect(relation.canUnlinkItem).toBe(false);
+  });
+});
+
 describe("EntityItemToManyRelation — addRelationRequest", () => {
   it("returns a POST request with text/uri-list containing all target hrefs", async () => {
     const item = makeEntityItemWithRelationTemplates({

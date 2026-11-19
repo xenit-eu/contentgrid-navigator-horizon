@@ -14,7 +14,7 @@ The table's row click previews the row. Its View action calls a new `onEntityIte
 
 Focus: opening the pane leaves focus on the row. Closing it while focus is inside (tracked on the pane, not read from `document.activeElement` afterwards) returns focus to the previewed row, or, when that row is gone, to the region around the table (`tabIndex={-1}`). Escape closes the pane only when focus is inside it and the key was not handled by a control in the pane. Closing the pane from its resize handle hides the handle that had focus, so that path returns focus to the row too. The dialog's focus is set by hand as well: on open it goes to the dialog itself rather than its first button, and on close to the row, with the same fallback to the table's region. The dialog gets the item's name as its title, the same name the pane's region has, and keeps showing the last item while it animates closed. The row and header fills become opaque (`--table-row`, `--table-header`), so the sticky actions column hides what scrolls under it, and that column follows the row's hover.
 
-The pane reuses the content-focus pieces through the `entity-item` entry point: `ContentPreviewPanel` with `allowUpload={false}`, `ContentAttributeSelector`, `EntityItemReference`, `EntityItemAttributes` and a new `EntityItemRelations` with `allowEdit={false}`. `EntityItemRelations` is the "Relations" section that the attribute-focus and content-focus variations each repeat today; both variations use it.
+The pane shows the item read-only. `entityItem.toReadOnly()` is a copy without its HAL-FORMS templates, so every template-gated action (edit, delete, link, unlink, unlink all) is absent; the actions without a template of their own check `isReadOnly`: `canUploadContent` and the to-many `canUnlinkItem` are `false`, and the to-many read hooks return a read-only item's linked items read-only, so their Delete is absent too. `useEntityItemSectionProps({ item, allowEdit: false })` gives that copy, so a variation's `allowEdit={false}` makes the whole item read-only. The pane reuses the item page's pieces through the `entity-item` entry point: `ContentPreviewPanel`, `ContentAttributeSelector`, `EntityItemReference`, and `EntityItemSections` with `useEntityItemSectionProps({ allowEdit: false })` for the details.
 
 ## Layering
 
@@ -30,15 +30,19 @@ The pane reuses the content-focus pieces through the `entity-item` entry point: 
                                     onEntityItemClick -> table's onEntityItemOpen
     entity-item-preview-pane        Preview / Details tabs, chosen attribute; region named after the item
                                     -> ../entity-item (ContentPreviewPanel, ContentAttributeSelector,
-                                       EntityItemAttributes, EntityItemRelations,
+                                       EntityItemSections, useEntityItemSectionProps,
                                        EntityItemReference, selectDefaultContentAttribute)
     entity-item-collection-table    onEntityItemClick (row), onEntityItemOpen (View), currentItem
 
   entity-item/
-    relations/entity-item-relations  the "Relations" section; allowEdit
-                                     -> RelationToOneSection, RelationToManySection (allowEdit)
-    variations/attribute-focus, variations/content-focus  -> EntityItemRelations
-    variations/content-focus/components/content-preview-panel  allowUpload
+    use-entity-item-section-props    allowEdit: false -> item.toReadOnly() for the whole variation
+    relations/relation-to-one-section, relation-to-many-section
+                                     actions follow the (read-only) item; Details only with onItemClick
+
+@contentgrid/navigator-data
+  accessors/entity-item            toReadOnly(), isReadOnly; canUploadContent false when read-only
+  accessors/entity-item-to-many-relation  canUnlinkItem false when the source is read-only
+  hooks/relation/use-entity-item-to-many-relation(-infinite)  linked items of a read-only item read-only
 
 @contentgrid/ui
   patterns/record-table/table-row  current (aria-current); row keys only from the row itself;
@@ -60,6 +64,10 @@ The pane reuses the content-focus pieces through the `entity-item` entry point: 
 
 **`packages/navigator-data`**
 
+- `src/accessors/entity-item.ts`: `toReadOnly()` (no `_templates`, `isReadOnly: true`); `canUploadContent` is `false` on a read-only item
+- `src/accessors/entity-item-collection.ts`: `toReadOnly()`, whose items are read-only
+- `src/accessors/entity-item-to-many-relation.ts`: `canUnlinkItem` is `false` when the source item is read-only
+- `src/hooks/relation/use-entity-item-to-many-relation.ts`, `use-entity-item-to-many-relation-infinite.ts`: a read-only source item's linked items come back read-only
 - `src/hooks/preview/use-content-preview.ts`: `contentPreviewVersion`: the item's ETag, or its content metadata when it has none; used in the preview's query key
 
 **`packages/features`**
@@ -67,9 +75,10 @@ The pane reuses the content-focus pieces through the `entity-item` entry point: 
 - `src/entity-item-collection/entity-item-collection-browser.tsx`: previewed id, width, split layout or dialog (titled with the item's name), focus return to the row or the table's region, Escape in the pane
 - `src/entity-item-collection/entity-item-preview-pane.tsx` (new)
 - `src/entity-item-collection/entity-item-collection-table.tsx`: `onEntityItemOpen` (View shown only with it), `currentItem` → the row's `current`, no actions column when no row has an action
-- `src/entity-item/relations/entity-item-relations.tsx` (new), exported from `src/entity-item/index.ts`; used by `variations/attribute-focus/entity-item-attribute-focus.tsx` and `variations/content-focus/entity-item-content-focus.tsx`
-- `src/entity-item/relations/relation-to-one-section.tsx`, `relation-to-many-section.tsx`: `allowEdit`; a related item is clickable only with `onItemClick`
-- `src/entity-item/variations/content-focus/components/content-preview-panel.tsx`: `allowUpload`; a viewer error is kept until the content changes, not reset by a new item object
+- `src/entity-item/index.ts`: exports `EntityItemSections` and `useEntityItemSectionProps`
+- `src/entity-item/use-entity-item-section-props.ts`: `allowEdit: false` gives the sections `item.toReadOnly()`; the variations (`attribute-focus`, `content-focus`, `side-by-side`) show that item everywhere, and `EntityItemSections` loses its own `allowEdit`
+- `src/entity-item/relations/relation-to-one-section.tsx`, `relation-to-many-section.tsx`: a related item is clickable only with `onItemClick`; a to-many table drops its actions column when no row has an action
+- `src/entity-item/variations/content-focus/components/content-preview-panel.tsx`: a viewer error is kept until the content changes, not reset by a new item object
 - `src/entity-item/variations/content-focus/components/content-preview-frame.tsx`: "No file uploaded yet" with an icon
 - `src/entity-item/variations/content-focus/components/image-video-viewer.tsx`: `scrollbar-subtle`
 - `src/entity-item/attributes/entity-item-attributes.tsx`, `renderers/attribute-value-renderer.tsx`, `renderers/content-attribute-renderer.tsx`: a long value wraps; a cut-off file name shows in full on hover
@@ -96,7 +105,8 @@ The pane reuses the content-focus pieces through the `entity-item` entry point: 
   - collapsing the pane from its handle returns focus to the row
 - `entity-item-collection-table.test.tsx`: View only with `onEntityItemOpen`; the current row has `aria-current`; no actions column when no row has an action.
 - `use-content-preview.test.tsx`: without an ETag, changed content metadata gives a new key; with one, the key is unchanged.
-- `entity-item-relations.test.tsx`, `relation-to-one-section.test.tsx`, `relation-to-many-section.test.tsx`: no edit action with `allowEdit={false}`; no actions column when read-only without `onItemClick`.
+- `entity-item.test.ts`, `entity-item-collection.test.ts`, `entity-item-to-many-relation.test.ts`, `use-entity-item-to-many-relation.test.tsx`: a read-only item has no update, delete, upload, add, clear or unlink, keeps its links, and lists its linked items read-only.
+- `relation-to-one-section.test.tsx`, `relation-to-many-section.test.tsx`: no Link, Unlink, Unlink all or Delete on a read-only relation; no actions column when read-only without `onItemClick`; the reference is not a button without `onItemClick`.
 - `table-row.test.tsx`: Enter or Space on a button inside the row does not call the row's `onClick`; Space on the row does not scroll.
 - `relation-to-many-section.test.tsx`: no Details action without `onItemClick`.
-- `content-preview-panel.test.tsx`: no drop zone with `allowUpload={false}`.
+- `content-preview-panel.test.tsx`: no drop zone when the item may not upload.

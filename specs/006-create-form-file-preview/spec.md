@@ -101,7 +101,7 @@ When the view is narrower than 880 px there is no room beside the form, so a pic
 - The create form opens with a file attached on the Create item page (`004-create-item-page`) → the preview shows that file in the first file field.
 - The user removes the picked file → the preview shows the empty state for that field.
 - Continuous-create mode, after a successful create → the form resets and the preview returns to the first file field.
-- An empty preview that offers a drop zone shows no "No file" caption, as the drop zone already says there is no file; this holds for every content preview, the content-focus item page included. The caption shows only where the user cannot upload.
+- An empty preview that offers a drop zone shows no "No file uploaded yet" caption, as the drop zone already says there is no file; this holds for every content preview, the content-focus item page included. The caption shows only where the user cannot upload.
 - The user picks a different file in the previewed field → the preview starts over for the new file; nothing from the previous file (an error, a password) carries over.
 - The view is resized across 880 px → only one preview (beside the form or in the dialog) exists at a time, so the file is read and the PDF engine started once.
 

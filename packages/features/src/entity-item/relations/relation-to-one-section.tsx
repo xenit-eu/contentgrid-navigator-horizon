@@ -156,7 +156,9 @@ export function RelationToOneSection({
         <LinkedItem
           item={linkedItem.data}
           layout={layout}
-          onClick={(item) => onItemClick?.(item.profileEntity.name, item.id)}
+          onClick={
+            onItemClick ? (item) => onItemClick(item.profileEntity.name, item.id) : undefined
+          }
         />
       )}
     </ActionableAccordion>
@@ -172,7 +174,7 @@ function LinkedItem({
   item,
   layout,
   onClick,
-}: Readonly<{ item: EntityItem; layout: RelationLayout; onClick: (item: EntityItem) => void }>) {
+}: Readonly<{ item: EntityItem; layout: RelationLayout; onClick?: (item: EntityItem) => void }>) {
   const { nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(item.profileEntity);
   const columns = layout.toOneSummaryColumns;
   const shownByReference = [nameAttribute?.name, subtitleAttribute?.name].filter(
@@ -184,7 +186,7 @@ function LinkedItem({
       <EntityItemReference
         item={item}
         size="default"
-        onClick={() => onClick(item)}
+        onClick={onClick ? () => onClick(item) : undefined}
         className="p-1"
       />
       {columns !== 0 && (

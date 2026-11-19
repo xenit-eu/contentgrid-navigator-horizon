@@ -61,11 +61,6 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
   readonly onRelationItemClick?: RelationItemClickHandler;
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
   /**
-   * Whether to show the edit button in the Attributes header (default `true`). The button still
-   * only shows when the item has an update template.
-   */
-  readonly allowEdit?: boolean;
-  /**
    * Which sections to render: `"all"` (default) lists attributes, relations and audit trail in
    * one column; `"details"` only the attributes and audit trail, and `"relations"` only the
    * relations — for a layout that shows the relations apart, e.g. in a side panel.
@@ -103,7 +98,6 @@ export function EntityItemSections({
   onRequiredRelationClick,
   show = "all",
   relationVariant = "row",
-  allowEdit = true,
   openAllByDefault = false,
 }: Readonly<EntityItemSectionsProps>) {
   const isEditing = editedItem !== null;
@@ -125,17 +119,15 @@ export function EntityItemSections({
         isEditing ? (
           <CancelEditEntityItemButton onCancel={() => editFormRef.current?.cancel()} />
         ) : (
-          allowEdit && (
-            <EditEntityItemButton
-              item={item}
-              isEditing={false}
-              onEdit={() => {
-                // The form opens inside this section, so make sure it is expanded.
-                attributesOpen.onOpenChange(true);
-                onEditingChange(true);
-              }}
-            />
-          )
+          <EditEntityItemButton
+            item={item}
+            isEditing={false}
+            onEdit={() => {
+              // The form opens inside this section, so make sure it is expanded.
+              attributesOpen.onOpenChange(true);
+              onEditingChange(true);
+            }}
+          />
         )
       }
       open={attributesOpen.open}

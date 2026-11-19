@@ -62,7 +62,7 @@ hal-forms/render/
 - `src/entity-item/variations/content-focus/components/pdf-preview.tsx` (new; owns its Retry, restarting the viewer with a fresh engine)
 - `src/entity-item/variations/content-focus/components/file-preview.tsx` (new), exported with `ContentAttributeOptionSelector` from `src/entity-item/index.ts`
 - `src/entity-item/variations/content-focus/components/content-preview-panel.tsx`: uses `PdfPreview` keyed by attribute name and the content's own ETag, `cannotDisplayMessageAndIcon`
-- `src/entity-item/variations/content-focus/components/content-preview-frame.tsx`: `cannotDisplayMessageAndIcon`, `fill`; a protected PDF is not a frame state, as the viewer asks for its password; the "No file" caption only when there is no drop zone
+- `src/entity-item/variations/content-focus/components/content-preview-frame.tsx`: `cannotDisplayMessageAndIcon`, `fill`; a protected PDF is not a frame state, as the viewer asks for its password; the "No file uploaded yet" caption only when there is no drop zone
 - `src/entity-item/variations/content-focus/components/content-attribute-selector.tsx`: `ContentAttributeOptionSelector`, plain text without `onChange` or with one option
 - `src/entity-item/variations/content-focus/components/image-video-viewer.tsx`: `source` takes `kind` and `blob` only, so a picked file fits
 - `src/entity-item/variations/content-focus/util/preview-unavailable-message.ts` (new)
