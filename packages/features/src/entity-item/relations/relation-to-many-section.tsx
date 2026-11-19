@@ -61,17 +61,11 @@ export function RelationToManySection({
   variant,
   open,
   onOpenChange,
-  allowEdit = true,
 }: Readonly<{
   relation: EntityItemToManyRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
-  /**
-   * `false` hides Link, Unlink, Unlink all and Delete, even when the relation or item allows them.
-   * Defaults to `true`.
-   */
-  allowEdit?: boolean;
 }> &
   RelationSectionDisplayProps &
   Pick<
@@ -133,12 +127,12 @@ export function RelationToManySection({
   const title = relation.profileRelation.title ?? relation.name;
 
   const total = current.firstPage?.totalItems;
-  const canUnlinkAll = allowEdit && relation.canClear && (current.firstPage?.items.length ?? 0) > 0;
+  const canUnlinkAll = relation.canClear && (current.firstPage?.items.length ?? 0) > 0;
   const [confirmUnlinkAll, setConfirmUnlinkAll] = useState(false);
 
   /** Unlink/delete controls for one linked item, shared by the table rows and the stack. */
   function renderItemActions(item: EntityItem) {
-    if (!targetProfile || !allowEdit) return null;
+    if (!targetProfile) return null;
     const noun = targetProfile.singularName.toLowerCase();
     return (
       <>
@@ -186,7 +180,7 @@ export function RelationToManySection({
         }
         actions={
           <>
-            {allowEdit && relation.canAdd && targetProfile && (
+            {relation.canAdd && targetProfile && (
               <>
                 <Button
                   variant="outline"
@@ -265,7 +259,6 @@ export function RelationToManySection({
             onItemClick={
               onItemClick ? (item) => onItemClick(targetProfile.name, item.id) : undefined
             }
-            showRowActions={Boolean(onItemClick) || allowEdit}
             renderItemActions={renderItemActions}
           />
         )}
@@ -328,14 +321,11 @@ function RelationToManyTable({
   relation,
   targetProfile,
   onItemClick,
-  showRowActions,
   renderItemActions,
 }: Readonly<{
   relation: EntityItemToManyRelation;
   targetProfile: ProfileEntity;
   onItemClick?: (item: EntityItem) => void;
-  /** `false` drops the actions column and its header cell. */
-  showRowActions: boolean;
   renderItemActions: (item: EntityItem) => ReactNode;
 }>) {
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
@@ -382,8 +372,14 @@ function RelationToManyTable({
           onEntityItemClick={onItemClick}
           onPageChange={setPageUrl}
           {...tableProps}
-          // Omitting `renderRowActions` alone would bring back the table's default View/Delete.
-          showRowActions={showRowActions}
+          // Without Details, Unlink or any deletable row (e.g. a read-only item), drop the actions
+          // column and its header cell. Omitting `renderRowActions` alone would bring back the
+          // table's default View/Delete.
+          showRowActions={
+            onItemClick !== undefined ||
+            relation.canUnlinkItem ||
+            collection.data.items.some((item) => item.canDelete)
+          }
           renderRowActions={(item) => (
             <>
               {onItemClick && (

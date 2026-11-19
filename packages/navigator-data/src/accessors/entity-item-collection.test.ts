@@ -96,6 +96,18 @@ describe("EntityItemCollection — items", () => {
   });
 });
 
+describe("EntityItemCollection — toReadOnly", () => {
+  it("returns its items read-only", () => {
+    const collection = new EntityItemCollection(
+      makeHalSlice({ items: [{ id: "inv-001", number: "INV-001" }] }),
+      makeProfileEntity(),
+    );
+
+    expect(collection.items[0].isReadOnly).toBe(false);
+    expect(collection.toReadOnly().items[0].isReadOnly).toBe(true);
+  });
+});
+
 describe("EntityItemCollection — totalItems", () => {
   it("returns exact count when total_items_exact is present", () => {
     const collection = new EntityItemCollection(

@@ -141,11 +141,19 @@ export class EntityItemCollection {
   /**
    * @param halSlice - The HAL collection resource from the API
    * @param profileEntity - The entity profile providing schema metadata for all items
+   * @param isReadOnly - Whether its items are read-only; see `toReadOnly()`
    */
   public constructor(
     public readonly halSlice: HalSlice<EntityItemShape>,
     public readonly profileEntity: ProfileEntity,
+    public readonly isReadOnly: boolean = false,
   ) {}
+
+  /** The same page whose `items` are read-only (`EntityItem.toReadOnly()`). */
+  public toReadOnly(): EntityItemCollection {
+    if (this.isReadOnly) return this;
+    return new EntityItemCollection(this.halSlice, this.profileEntity, true);
+  }
 
   /**
    * Array of entity items in this collection page.
@@ -156,7 +164,10 @@ export class EntityItemCollection {
    * @returns Typed EntityItem instances from the current page
    */
   public get items(): readonly EntityItem[] {
-    return this.halSlice.items.map((halItem) => new EntityItem(halItem, this.profileEntity));
+    return this.halSlice.items.map((halItem) => {
+      const item = new EntityItem(halItem, this.profileEntity);
+      return this.isReadOnly ? item.toReadOnly() : item;
+    });
   }
 
   /**
