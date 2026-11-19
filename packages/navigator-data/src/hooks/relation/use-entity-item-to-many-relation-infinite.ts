@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
+import { type InfiniteData, infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import type { EntityItemCollection } from "../../accessors/entity-item-collection";
 import { EntityItemToManyRelation } from "../../accessors/entity-item-to-many-relation";
 import { queryKeys } from "../../query-keys";
@@ -62,5 +62,14 @@ export function useEntityItemToManyRelationInfinite(
   return useInfiniteQuery({
     ...queryOptions,
     enabled: options?.enabled !== false && !!targetProfile,
+    // A read-only source item (`EntityItem.toReadOnly()`) lists its linked items read-only too.
+    select: relation.source.isReadOnly ? toReadOnlyPages : undefined,
   });
+}
+
+/** Module-level, so TanStack keeps the selected result between renders. */
+function toReadOnlyPages(
+  data: InfiniteData<EntityItemCollection, string | undefined>,
+): InfiniteData<EntityItemCollection, string | undefined> {
+  return { ...data, pages: data.pages.map((page) => page.toReadOnly()) };
 }

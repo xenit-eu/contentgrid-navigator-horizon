@@ -18,8 +18,9 @@ export function EntityItemAttributeFocus({
   onDeleted,
   ...props
 }: Readonly<EntityItemVariationProps>) {
-  const { item } = props;
   const sectionProps = useEntityItemSectionProps(props);
+  // The read-only copy when `allowEdit` is false: use it for everything shown below.
+  const { item } = sectionProps;
   // Delete hides while the edit form is open: deleting would navigate away from unsaved input.
   const showDelete = onDeleted !== undefined && sectionProps.editedItem === null;
   const headerActions = (actions || showDelete) && (

@@ -46,14 +46,11 @@ export function RelationToOneSection({
   variant,
   open,
   onOpenChange,
-  allowEdit = true,
 }: Readonly<{
   relation: EntityItemToOneRelation;
   profiles: readonly ProfileEntity[];
   onItemClick?: RelationItemClickHandler;
   onCreateNew?: RelationItemCreateHandler;
-  /** `false` hides Link and Unlink, even when the relation allows them. Defaults to `true`. */
-  allowEdit?: boolean;
 }> &
   RelationSectionDisplayProps &
   Pick<RelationProblemHandlers, "onMissingRelationTargetClick" | "onBlindRelationOverwriteClick">) {
@@ -84,38 +81,34 @@ export function RelationToOneSection({
       onOpenChange={onOpenChange}
       actions={
         <>
-          {allowEdit &&
-            relation.canSet &&
-            targetProfile &&
-            linkedItem.isSuccess &&
-            linkedItem.data === null && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isSetting}
-                  onClick={() => setLinkOpen(true)}
-                >
-                  Link
-                </Button>
-                <RelationItemSearchDialog
-                  multiple={false}
-                  targetProfile={targetProfile}
-                  open={linkOpen}
-                  onOpenChange={(open) => {
-                    setLinkOpen(open);
-                    if (!open) resetSetRelation();
-                  }}
-                  isLinking={isSetting}
-                  linkError={setError}
-                  onSelect={(item) =>
-                    setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
-                  }
-                  onCreateNew={onCreateNew}
-                />
-              </>
-            )}
-          {allowEdit && relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
+          {relation.canSet && targetProfile && linkedItem.isSuccess && linkedItem.data === null && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSetting}
+                onClick={() => setLinkOpen(true)}
+              >
+                Link
+              </Button>
+              <RelationItemSearchDialog
+                multiple={false}
+                targetProfile={targetProfile}
+                open={linkOpen}
+                onOpenChange={(open) => {
+                  setLinkOpen(open);
+                  if (!open) resetSetRelation();
+                }}
+                isLinking={isSetting}
+                linkError={setError}
+                onSelect={(item) =>
+                  setRelation(item.selfLink.href, { onSuccess: () => setLinkOpen(false) })
+                }
+                onCreateNew={onCreateNew}
+              />
+            </>
+          )}
+          {relation.canClear && linkedItem.isSuccess && linkedItem.data !== null && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button

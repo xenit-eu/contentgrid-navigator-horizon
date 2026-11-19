@@ -23,9 +23,10 @@ export function EntityItemSideBySide({
   onDeleted,
   ...props
 }: Readonly<EntityItemVariationProps>) {
-  const { item } = props;
   // The relations get a column of their own, with room to show them all expanded.
   const sectionProps = useEntityItemSectionProps({ ...props, openAllByDefault: true });
+  // The read-only copy when `allowEdit` is false: use it for everything shown below.
+  const { item } = sectionProps;
   // Delete hides while the edit form is open: deleting would navigate away from unsaved input.
   const showDelete = onDeleted !== undefined && sectionProps.editedItem === null;
   const headerActions = (actions || showDelete) && (

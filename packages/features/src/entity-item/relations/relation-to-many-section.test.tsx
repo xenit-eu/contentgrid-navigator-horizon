@@ -503,72 +503,44 @@ describe("RelationToManySection", () => {
     expect(screen.getByRole("button", { name: /invoices/i })).toHaveTextContent(/^3/);
   });
 
-  describe("allowEdit", () => {
+  describe("read-only relation (the source item's `toReadOnly()`)", () => {
     const EDIT_ACTION_NAMES = ["Link", "Unlink", "Unlink all", "Delete"];
 
-    function mockEditableItems() {
-      mockCollectionState({
-        isSuccess: true,
-        data: makeCollectionData([makeItem("1", 10, true)]),
-      });
+    function readOnlyRelation() {
+      return makeRelation({ canAdd: false, canClear: false, canUnlinkItem: false });
+    }
+
+    function mockLinkedItems() {
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("1", 10)]) });
     }
 
     function queryEditActions() {
       return EDIT_ACTION_NAMES.flatMap((name) => screen.queryAllByRole("button", { name }));
     }
 
-    it("offers Link, Unlink, Unlink all and Delete by default", () => {
-      mockEditableItems();
-      renderSection();
-
-      for (const name of EDIT_ACTION_NAMES) {
-        expect(screen.getAllByRole("button", { name }).length).toBeGreaterThan(0);
-      }
-    });
-
-    it("offers none of Link, Unlink, Unlink all or Delete when allowEdit is false", () => {
-      mockEditableItems();
-      renderSection({ allowEdit: false });
+    it("offers none of Link, Unlink, Unlink all or Delete", () => {
+      mockLinkedItems();
+      renderSection({ relation: readOnlyRelation() });
 
       expect(queryEditActions()).toHaveLength(0);
     });
 
-    it("offers none of them in a narrow pane either", () => {
-      vi.mocked(useRelationLayout).mockReturnValue(
-        relationLayoutForPane({ side: "right", width: 320 }),
-      );
-      vi.mocked(useEntityItemToManyRelationInfinite).mockReturnValue({
-        isPending: false,
-        isSuccess: true,
-        isError: false,
-        error: null,
-        data: { pages: [makeCollectionData([makeItem("1", 10, true)])] },
-        hasNextPage: false,
-        isFetchingNextPage: false,
-        fetchNextPage: vi.fn(),
-      } as unknown as ReturnType<typeof useEntityItemToManyRelationInfinite>);
-      renderSection({ allowEdit: false });
-
-      expect(screen.getByRole("listitem")).toBeInTheDocument();
-      expect(queryEditActions()).toHaveLength(0);
-    });
-
-    it("keeps the Details action when allowEdit is false and onItemClick is set", () => {
-      mockEditableItems();
-      renderSection({ allowEdit: false, onItemClick: vi.fn() });
+    it("keeps the Details action when onItemClick is set", () => {
+      mockLinkedItems();
+      renderSection({ relation: readOnlyRelation(), onItemClick: vi.fn() });
 
       expect(screen.getByRole("button", { name: "Details" })).toBeInTheDocument();
       expect(queryEditActions()).toHaveLength(0);
     });
 
     it("reserves no actions column when there is nothing to put in it", () => {
-      mockEditableItems();
+      mockLinkedItems();
       const editable = renderSection();
       const headers = screen.getAllByRole("columnheader").length;
       const cells = within(screen.getAllByRole("row")[1]!).getAllByRole("cell").length;
       editable.unmount();
 
-      renderSection({ allowEdit: false });
+      renderSection({ relation: readOnlyRelation() });
 
       expect(screen.getAllByRole("columnheader")).toHaveLength(headers - 1);
       expect(within(screen.getAllByRole("row")[1]!).getAllByRole("cell")).toHaveLength(cells - 1);

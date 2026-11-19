@@ -82,12 +82,33 @@ export class EntityItem {
    * @param etag - ETag from the response header; pass as `If-Match` on update/delete requests to
    *   this entity item (RFC 9110). It is the entity-item resource's ETag only — its content
    *   attributes and to-one relations are separate conditional-request resources with their own.
+   * @param isReadOnly - Whether this is a read-only copy; see `toReadOnly()`
    */
   public constructor(
     public readonly halItem: HalObject<EntityItemShape>,
     public readonly profileEntity: ProfileEntity,
     public readonly etag: string | null = null,
+    public readonly isReadOnly: boolean = false,
   ) {}
+
+  /**
+   * A copy of this item that offers no way to change anything: its HAL-FORMS templates are
+   * removed, so every template-gated operation (update, delete, set/clear/add a relation) is
+   * absent, and the operations that have no template of their own (uploading content, unlinking
+   * one item of a to-many relation, deleting a linked item) check `isReadOnly`. Links stay, so
+   * the item's content, relations and linked items can still be shown.
+   */
+  public toReadOnly(): EntityItem {
+    if (this.isReadOnly) return this;
+    const data = { ...this.halItem.data };
+    delete data._templates;
+    return new EntityItem(
+      new HalObject<EntityItemShape>(data),
+      this.profileEntity,
+      this.etag,
+      true,
+    );
+  }
 
   private _updateTemplate?: UpdateHalFormTemplate | null;
   private _updateFormValues?: FieldValueMap | null;
@@ -425,13 +446,14 @@ export class EntityItem {
    * Whether the current user is permitted to upload (PUT) binary content for this attribute.
    *
    * Derived from `contentLink` presence — the platform omits the link when the
-   * ABAC policy denies content access for this item/user combination.
+   * ABAC policy denies content access for this item/user combination. Always `false` on a
+   * read-only item (`toReadOnly()`), whose content link stays for showing the content.
    *
    * @param attributeName - The name of the content attribute
    * @returns true when upload is permitted
    */
   public canUploadContent(attributeName: string): boolean {
-    return this.contentLink(attributeName) !== null;
+    return !this.isReadOnly && this.contentLink(attributeName) !== null;
   }
 
   /**

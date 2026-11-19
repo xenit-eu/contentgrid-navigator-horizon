@@ -233,17 +233,6 @@ describe("ContentPreviewPanel", () => {
     expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
-  it("offers no drop zone with allowUpload={false}, even when the user may upload", () => {
-    const entityItem = makeStubEntityItem({ attributeName: "document", metadata: null });
-    render(
-      <ContentPreviewPanel entityItem={entityItem} attributeName="document" allowUpload={false} />,
-      { wrapper: makeWrapper() },
-    );
-
-    expect(screen.getByText("No file uploaded yet")).toBeInTheDocument();
-    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
-  });
-
   it("uploads a dropped file into the empty attribute, showing the uploading state", async () => {
     const user = userEvent.setup();
     let uploadRequests = 0;

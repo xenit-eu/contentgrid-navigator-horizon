@@ -96,11 +96,11 @@ function makeCustomer(): EntityItem {
   } as unknown as EntityItem;
 }
 
-function makeRelation(): EntityItemToOneRelation {
+function makeRelation({ canSet = true, canClear = true } = {}): EntityItemToOneRelation {
   return {
     name: "customer",
-    canSet: true,
-    canClear: true,
+    canSet,
+    canClear,
     profileRelation: { title: "Customer", getTargetProfile: () => CUSTOMER_PROFILE },
   } as unknown as EntityItemToOneRelation;
 }
@@ -211,21 +211,22 @@ describe("RelationToOneSection", () => {
     expect(screen.getByRole("button", { name: "Link" })).toBeInTheDocument();
   });
 
-  it("offers neither Link nor Unlink when allowEdit is false", () => {
+  it("offers neither Link nor Unlink on a read-only relation", () => {
+    const readOnly = makeRelation({ canSet: false, canClear: false });
     mockLinkedItem(makeCustomer());
-    const linked = renderSection(320, { allowEdit: false });
+    const linked = renderSection(320, { relation: readOnly });
     expect(screen.queryByRole("button", { name: "Unlink" })).not.toBeInTheDocument();
     linked.unmount();
 
     mockLinkedItem(null);
-    renderSection(320, { allowEdit: false });
+    renderSection(320, { relation: readOnly });
     expect(screen.getByText("No item linked")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Link" })).not.toBeInTheDocument();
   });
 
   it("shows the reference as plain text, not a button, without onItemClick", () => {
     mockLinkedItem(makeCustomer());
-    renderSection(320, { allowEdit: false });
+    renderSection(320);
 
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /acme corp/i })).not.toBeInTheDocument();
