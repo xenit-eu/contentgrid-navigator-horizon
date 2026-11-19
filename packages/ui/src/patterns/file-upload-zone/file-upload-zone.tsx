@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CloudArrowUpIcon as CloudArrowUp,
   EyeIcon as Eye,
+  FileTextIcon as FileText,
   UploadSimpleIcon as UploadSimple,
   XIcon as X,
 } from "@phosphor-icons/react";
@@ -34,10 +35,21 @@ function dropZoneStateClassName(isDragActive: boolean, previewed: boolean): stri
 // Selected file
 // ---------------------------------------------------------------------------
 
+/** What the zone shows of a file: a picked `File`, or a file already stored on the server. */
+export interface FileSummary {
+  readonly name: string;
+  /** Size in bytes. */
+  readonly size: number;
+  /** Media type; empty when unknown. */
+  readonly type: string;
+}
+
 interface SelectedFileProps {
-  file: File;
+  file: FileSummary;
   disabled: boolean;
   previewed: boolean;
+  compact: boolean;
+  uploadProgress?: number;
   onPreview?: () => void;
   onFileClick?: () => void;
   onRemove: () => void;
@@ -47,44 +59,105 @@ function SelectedFile({
   file,
   disabled,
   previewed,
+  compact,
+  uploadProgress,
   onPreview,
   onFileClick,
   onRemove,
 }: Readonly<SelectedFileProps>) {
+  const isUploading = uploadProgress !== undefined;
+  // Stops at 99% until the server has confirmed the upload.
+  const shownPercentage = isUploading ? Math.min(uploadProgress, 99) : 0;
+  const uploadingCaption = isUploading && `Uploading… ${shownPercentage}%`;
+  // The caption doubles as a progress bar for assistive technology.
+  const progressbarProps = {
+    role: "progressbar",
+    "aria-valuemin": 0,
+    "aria-valuemax": 100,
+    "aria-valuenow": shownPercentage,
+    "aria-label": `Uploading ${file.name}`,
+  } as const;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const isImage = file.type.startsWith("image/");
 
-  // Image preview URL lifecycle
+  // A thumbnail only for a picked image in the full card: a stored file's bytes are not loaded
+  // here, and the compact card shows an icon.
   useEffect(() => {
-    if (!file.type.startsWith("image/")) {
+    if (compact || !(file instanceof Blob) || !file.type.startsWith("image/")) {
       setPreviewUrl(null);
       return;
     }
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [file, compact]);
 
-  const details = (
-    <>
-      {previewUrl && isImage ? (
-        <img src={previewUrl} alt="Preview" className="h-20 w-20 shrink-0 rounded object-cover" />
-      ) : (
-        <UploadSimple className="h-5 w-5 text-muted-foreground" />
+  const actions = (
+    <TooltipProvider>
+      {onPreview && (
+        <ToolbarIconButton label="Preview file" onClick={onPreview}>
+          <Eye className="h-4 w-4" />
+        </ToolbarIconButton>
       )}
-      <span className="block min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{file.name}</span>
-        <span className="mt-0.5 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-          {file.type && (
-            <Badge variant="outline" className="text-xs shrink-0">
-              {file.type}
-            </Badge>
-          )}
-        </span>
-      </span>
-    </>
+      {!disabled && !isUploading && (
+        <ToolbarIconButton label="Remove file" onClick={onRemove}>
+          <X className="h-4 w-4" />
+        </ToolbarIconButton>
+      )}
+    </TooltipProvider>
   );
+
+  // The file's details are a button when `onFileClick` is given, else plain content.
+  const withClick = (details: React.ReactNode) =>
+    onFileClick ? (
+      <button
+        type="button"
+        aria-current={previewed || undefined}
+        onClick={onFileClick}
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        {details}
+      </button>
+    ) : (
+      <div className="flex min-w-0 flex-1 items-center gap-3">{details}</div>
+    );
+
+  // Two short lines next to a small icon tile: roomier than one line, far smaller than the full card.
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-lg border bg-card py-2 pr-1.5 pl-2",
+          previewed && "border-primary bg-selected",
+        )}
+      >
+        {withClick(
+          <>
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FileText className="size-5" aria-hidden />
+            </span>
+            <span className="block min-w-0 flex-1">
+              <span className="block truncate text-sm leading-5 font-medium" title={file.name}>
+                {file.name}
+              </span>
+              <span className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
+                {uploadingCaption ? (
+                  <span className="tabular-nums" {...progressbarProps}>
+                    {uploadingCaption}
+                  </span>
+                ) : (
+                  <>
+                    <span className="shrink-0 tabular-nums">{formatFileSize(file.size)}</span>
+                    {file.type && <span className="truncate">· {file.type}</span>}
+                  </>
+                )}
+              </span>
+            </span>
+          </>,
+        )}
+        {actions}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -93,30 +166,39 @@ function SelectedFile({
         previewed && "border-primary bg-selected",
       )}
     >
-      {onFileClick ? (
-        <button
-          type="button"
-          aria-current={previewed || undefined}
-          onClick={onFileClick}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-sm text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          {details}
-        </button>
-      ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-3">{details}</div>
+      {withClick(
+        <>
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="h-20 w-20 shrink-0 rounded object-cover"
+            />
+          ) : (
+            <UploadSimple className="h-5 w-5 text-muted-foreground" />
+          )}
+          <span className="block min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">{file.name}</span>
+            <span className="mt-0.5 flex items-center gap-2">
+              {uploadingCaption ? (
+                <span className="text-xs text-muted-foreground tabular-nums" {...progressbarProps}>
+                  {uploadingCaption}
+                </span>
+              ) : (
+                <>
+                  <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+                  {file.type && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {file.type}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </span>
+          </span>
+        </>,
       )}
-      <TooltipProvider>
-        {onPreview && (
-          <ToolbarIconButton label="Preview file" onClick={onPreview}>
-            <Eye className="h-4 w-4" />
-          </ToolbarIconButton>
-        )}
-        {!disabled && (
-          <ToolbarIconButton label="Remove file" onClick={onRemove}>
-            <X className="h-4 w-4" />
-          </ToolbarIconButton>
-        )}
-      </TooltipProvider>
+      {actions}
     </div>
   );
 }
@@ -126,8 +208,8 @@ function SelectedFile({
 // ---------------------------------------------------------------------------
 
 export interface FileUploadZoneProps {
-  /** Currently selected file, or null when no file is selected */
-  file: File | null;
+  /** The picked or stored file, or null when there is none. */
+  file: FileSummary | null;
   /** Called when the user selects or removes a file */
   onFileChange: (file: File | null) => void;
   /**
@@ -149,10 +231,14 @@ export interface FileUploadZoneProps {
   onFileClick?: () => void;
   /** Marks the zone as the selected one of several, e.g. the one whose file is shown elsewhere. */
   previewed?: boolean;
-  /** Shrinks the empty drop zone to a single line, as tall as a text input. */
+  /** Shrinks the empty drop zone to a single line as tall as a text input, and the selected file
+   * to a two-line card. */
   compact?: boolean;
   /** Makes the empty drop zone fill its container. */
   fill?: boolean;
+  /** While the file is being uploaded, its progress (0–100): shown in place of its size and type,
+   * and the file can't be removed. */
+  uploadProgress?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +260,7 @@ export function FileUploadZone({
   previewed = false,
   compact = false,
   fill = false,
+  uploadProgress,
 }: Readonly<FileUploadZoneProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLButtonElement>(null);
@@ -228,6 +315,8 @@ export function FileUploadZone({
         file={file}
         disabled={disabled}
         previewed={previewed}
+        compact={compact}
+        uploadProgress={uploadProgress}
         onPreview={onPreview}
         onFileClick={onFileClick}
         onRemove={() => {
