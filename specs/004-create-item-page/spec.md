@@ -84,7 +84,7 @@ A user opens an item whose content attribute holds no file. The viewer area show
 2. **Given** the upload succeeds, **Then** the viewer shows the new file (a PDF directly, other types through their rendition) and the item's details show the new file's name, size and type, without a manual reload.
 3. **Given** the upload fails, **Then** the error is shown with its title and detail, and the drop zone is offered again.
 4. **Given** the item was changed by someone else in the meantime, **When** the upload is refused for that reason, **Then** the user is told the item was modified, the item is reloaded, and nothing is retried automatically.
-5. **Given** the user may not upload to that content attribute, **Then** only "No file" is shown, without a drop zone.
+5. **Given** the user may not upload to that content attribute, **Then** only "No file uploaded yet" is shown, without a drop zone.
 6. **Given** an item with several content attributes, **When** the user switches to another empty one and drops a file, **Then** the file goes to the attribute currently selected.
 7. **Given** an upload is in progress, **Then** the user cannot start a second upload into the same attribute.
 
@@ -151,7 +151,7 @@ On an entity's create form, the toolbar shows the same entity selector. The user
 
 **Upload into an empty content attribute**
 
-- **FR-014**: The "No file" drop zone MUST be shown only when the user may upload to that content attribute; otherwise only "No file" is shown.
+- **FR-014**: The "No file" drop zone MUST be shown only when the user may upload to that content attribute; otherwise only "No file uploaded yet" is shown.
 - **FR-015**: A file chosen on the drop zone MUST be uploaded to the content attribute currently selected in the viewer.
 - **FR-016**: The upload MUST be refused by the server rather than overwrite a newer version of the item; when that happens the item MUST be reloaded and the user told.
 - **FR-017**: While uploading, the drop zone MUST be replaced by an uploading state that prevents a second upload.
