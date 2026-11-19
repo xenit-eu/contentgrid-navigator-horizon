@@ -405,6 +405,13 @@ describe("RelationToManySection", () => {
     expect(onItemClick).toHaveBeenCalledWith("invoice", "42");
   });
 
+  it("offers no Details action without onItemClick", () => {
+    mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("42", 10)]) });
+    renderSection({ relation: makeRelation() });
+
+    expect(screen.queryByRole("button", { name: "Details" })).not.toBeInTheDocument();
+  });
+
   it("explains why linked items can't be shown when the target profile is unresolved", () => {
     mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("42", 10)]) });
     renderSection({ relation: makeRelation({ targetProfile: undefined }) });
@@ -494,6 +501,78 @@ describe("RelationToManySection", () => {
     });
     // The header still counts every linked item, not just the filtered ones.
     expect(screen.getByRole("button", { name: /invoices/i })).toHaveTextContent(/^3/);
+  });
+
+  describe("allowEdit", () => {
+    const EDIT_ACTION_NAMES = ["Link", "Unlink", "Unlink all", "Delete"];
+
+    function mockEditableItems() {
+      mockCollectionState({
+        isSuccess: true,
+        data: makeCollectionData([makeItem("1", 10, true)]),
+      });
+    }
+
+    function queryEditActions() {
+      return EDIT_ACTION_NAMES.flatMap((name) => screen.queryAllByRole("button", { name }));
+    }
+
+    it("offers Link, Unlink, Unlink all and Delete by default", () => {
+      mockEditableItems();
+      renderSection();
+
+      for (const name of EDIT_ACTION_NAMES) {
+        expect(screen.getAllByRole("button", { name }).length).toBeGreaterThan(0);
+      }
+    });
+
+    it("offers none of Link, Unlink, Unlink all or Delete when allowEdit is false", () => {
+      mockEditableItems();
+      renderSection({ allowEdit: false });
+
+      expect(queryEditActions()).toHaveLength(0);
+    });
+
+    it("offers none of them in a narrow pane either", () => {
+      vi.mocked(useRelationLayout).mockReturnValue(
+        relationLayoutForPane({ side: "right", width: 320 }),
+      );
+      vi.mocked(useEntityItemToManyRelationInfinite).mockReturnValue({
+        isPending: false,
+        isSuccess: true,
+        isError: false,
+        error: null,
+        data: { pages: [makeCollectionData([makeItem("1", 10, true)])] },
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+      } as unknown as ReturnType<typeof useEntityItemToManyRelationInfinite>);
+      renderSection({ allowEdit: false });
+
+      expect(screen.getByRole("listitem")).toBeInTheDocument();
+      expect(queryEditActions()).toHaveLength(0);
+    });
+
+    it("keeps the Details action when allowEdit is false and onItemClick is set", () => {
+      mockEditableItems();
+      renderSection({ allowEdit: false, onItemClick: vi.fn() });
+
+      expect(screen.getByRole("button", { name: "Details" })).toBeInTheDocument();
+      expect(queryEditActions()).toHaveLength(0);
+    });
+
+    it("reserves no actions column when there is nothing to put in it", () => {
+      mockEditableItems();
+      const editable = renderSection();
+      const headers = screen.getAllByRole("columnheader").length;
+      const cells = within(screen.getAllByRole("row")[1]!).getAllByRole("cell").length;
+      editable.unmount();
+
+      renderSection({ allowEdit: false });
+
+      expect(screen.getAllByRole("columnheader")).toHaveLength(headers - 1);
+      expect(within(screen.getAllByRole("row")[1]!).getAllByRole("cell")).toHaveLength(cells - 1);
+    });
   });
 
   describe("in a narrow pane (compact stack)", () => {
