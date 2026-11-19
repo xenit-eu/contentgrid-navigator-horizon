@@ -96,6 +96,7 @@ function makeStubEntityItem(options: {
     },
   ];
   return {
+    id: "item-1",
     attributes,
     // `getContentAttributeMetadata` calls the real `EntityItem.findAttribute` — mirror its
     // lookup here instead of hand-rolling a `.attributes.find(...)` in the stub.
@@ -659,6 +660,36 @@ describe("ContentPreviewPanel", () => {
     screen.getByRole("button", { name: "simulate invalid" }).click();
     expect(await screen.findByText("The document is invalid or corrupted")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a viewer error when the same content arrives as a new item object", async () => {
+    server.use(
+      createContentDownloadHandler({
+        url: CONTENT_URL,
+        body: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+        contentType: "application/pdf",
+      }),
+    );
+    const options = {
+      attributeName: "document",
+      metadata: { filename: "order.pdf", mimetype: "application/pdf", length: 4 },
+      // As an item from a collection page: no ETag, so the content metadata is the version.
+      etag: null,
+    };
+    const { rerender } = render(
+      <ContentPreviewPanel entityItem={makeStubEntityItem(options)} attributeName="document" />,
+      { wrapper: makeWrapper() },
+    );
+
+    await screen.findByText("PDF viewer: order.pdf");
+    screen.getByRole("button", { name: "simulate invalid" }).click();
+    expect(await screen.findByText("The document is invalid or corrupted")).toBeInTheDocument();
+
+    // A list refetch hands over a new, equal item object.
+    rerender(
+      <ContentPreviewPanel entityItem={makeStubEntityItem(options)} attributeName="document" />,
+    );
+    expect(screen.getByText("The document is invalid or corrupted")).toBeInTheDocument();
   });
 
   it("maps a caught render exception (PdfViewerErrorBoundary) to viewerFailure, with a working Retry and the selector still reachable", async () => {

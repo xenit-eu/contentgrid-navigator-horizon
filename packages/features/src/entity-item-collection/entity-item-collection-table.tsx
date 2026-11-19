@@ -8,8 +8,8 @@ import {
   useDeleteEntityItem,
 } from "@contentgrid/navigator-data";
 import {
-  Button,
   RecordDataTable,
+  RecordRowAction,
   RecordRowConfirmAction,
   type RecordTableCell,
   RecordTableRow,
@@ -27,8 +27,12 @@ import { capitalizeFirstLetter } from "../string-utils";
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
   readonly collection: EntityItemCollection;
-  /** Fired when a row (entity item) is clicked, or the row's View action is used; receives the item. */
+  /** Fired when a row (entity item) is clicked, or Enter/Space is pressed on it; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
+  /** Fired by the default View row action, which is shown only with it; receives that row's item. */
+  readonly onEntityItemOpen?: (item: EntityItem) => void;
+  /** The item to mark as the current row, e.g. the one previewed beside the table. */
+  readonly currentItem?: EntityItem;
   /**
    * Fired when the user navigates to another page; receives the target page's
    * href (`collection.nextHref` / `collection.prevHref`). Absent = pagination
@@ -65,7 +69,11 @@ export interface EntityItemCollectionTableProps {
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
   /** Replaces the default per-row View/Delete actions (e.g. a relation's Unlink). */
   readonly renderRowActions?: (item: EntityItem) => ReactNode;
-  /** `false` renders no actions column (e.g. in the relation picker). Defaults to `true`. */
+  /**
+   * `false` renders no actions column (e.g. in the relation picker), `true` always renders one.
+   * By default the column shows when `renderRowActions` is given, or when the default actions
+   * apply: View is available or an item on the page can be deleted.
+   */
   readonly showRowActions?: boolean;
   /** `false` hides the item-count/pagination footer (e.g. for an unpaginated set). Defaults to `true`. */
   readonly paginated?: boolean;
@@ -106,6 +114,8 @@ export function EntityItemCollectionTable({
   profile,
   collection,
   onEntityItemClick,
+  onEntityItemOpen,
+  currentItem,
   onPageChange,
   currentSort,
   onSort,
@@ -116,7 +126,7 @@ export function EntityItemCollectionTable({
   selectedIds = EMPTY_SELECTION,
   onSelectionChange,
   renderRowActions,
-  showRowActions = true,
+  showRowActions,
   paginated = true,
   showItemCount = true,
 }: Readonly<EntityItemCollectionTableProps>) {
@@ -159,6 +169,14 @@ export function EntityItemCollectionTable({
     });
   }
 
+  // Every row gets an actions node while the column shows (even an empty one), so the rows keep
+  // the same grid tracks as the header.
+  const hasActionsColumn =
+    showRowActions ??
+    (renderRowActions !== undefined ||
+      onEntityItemOpen !== undefined ||
+      collection.items.some((item) => item.canDelete));
+
   const selectedCount = collection.items.filter((item) => selectedIds.has(item.id)).length;
   const selectionState: boolean | "indeterminate" =
     selectedCount === 0
@@ -187,7 +205,7 @@ export function EntityItemCollectionTable({
         sortOptions={sortOptions}
         currentSort={currentSort ? [currentSort] : []}
         onSort={onSort}
-        showActionsColumn={showRowActions}
+        showActionsColumn={hasActionsColumn}
         onSelectAll={
           onSelectionChange ? (checked) => toggleSelected(collection.items, checked) : undefined
         }
@@ -230,6 +248,7 @@ export function EntityItemCollectionTable({
               key={item.id}
               cells={cells}
               selected={selectedIds.has(item.id)}
+              current={item.id === currentItem?.id}
               onSelectChange={
                 onSelectionChange ? (checked) => toggleSelected([item], checked) : undefined
               }
@@ -241,21 +260,17 @@ export function EntityItemCollectionTable({
                     : undefined
               }
               actions={
-                !showRowActions ? undefined : renderRowActions ? (
+                !hasActionsColumn ? undefined : renderRowActions ? (
                   renderRowActions(item)
                 ) : (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEntityItemClick?.(item);
-                      }}
-                    >
-                      <Eye className="size-4" aria-hidden />
-                      <span className="sr-only">View</span>
-                    </Button>
+                    {onEntityItemOpen && (
+                      <RecordRowAction
+                        label="View"
+                        icon={<Eye className="size-4" aria-hidden />}
+                        onClick={() => onEntityItemOpen(item)}
+                      />
+                    )}
                     {item.canDelete && (
                       <RecordRowConfirmAction
                         label="Delete"
