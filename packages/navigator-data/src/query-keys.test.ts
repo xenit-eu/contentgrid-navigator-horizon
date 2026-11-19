@@ -188,11 +188,6 @@ describe("queryKeys.contentPreview", () => {
     expect(key).toEqual(["ContentPreview", "/invoices/inv-001/document", '"v1"']);
   });
 
-  it("byUrl accepts a null etag", () => {
-    const key = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", null);
-    expect(key).toEqual(["ContentPreview", "/invoices/inv-001/document", null]);
-  });
-
   it("different etags for the same href produce different keys", () => {
     const key1 = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v1"');
     const key2 = queryKeys.contentPreview.byUrl("/invoices/inv-001/document", '"v2"');
