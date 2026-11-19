@@ -189,7 +189,7 @@ Exists in `packages/navigator-data`:
   returning `{ blob, mimetype, filename, contentLength, isPartial }` via `contentFetch` (Bearer, no HAL
   Accept header). Blobs are not cached.
 - `EntityItemAttributeContent` wraps content values (name, `ContentMetadata | null`, link).
-- Env vars **declared but unused**: `VITE_EXTRACT_SERVICE_URL`, `VITE_RENDITION_URI`
+- Env vars **declared but unused**: `VITE_EXTRACT_SERVICE_URL`, `VITE_RENDITION_URI_TEMPLATE`
   (`packages/navigator-data/src/vite-env.d.ts:6-7`, mirrored in `packages/features`).
 
 Missing:
@@ -255,7 +255,7 @@ EmbedPDF facts relevant to ADR-011 and the spec:
 ## 6. Open questions for the plan
 
 1. **Rendition service authentication and endpoint** — **answered 2026-09-17** (platform side, relayed
-   by Nick): the endpoint goes in deployment configuration (`VITE_RENDITION_URI` / Liaison, not a HAL
+   by Nick): the endpoint goes in deployment configuration (`VITE_RENDITION_URI_TEMPLATE` / Liaison, not a HAL
    link) and "TokenMonger takes care of" the exchange — on the platform side, for the rendition service.
    The frontend performs no exchange: it calls the configured endpoint with the same authenticated
    content client it uses for downloads (user's access token). Encoded in spec FR-023 and its
@@ -347,6 +347,15 @@ npm registry and jsDelivr file listings for `@embedpdf/*@2.15.0`, and the EmbedP
 
 ### 8.3 Rendition authentication: the user's credentials, no exchange in the frontend
 
+> **Superseded 2026-11-18 (ACC-3292).** The frontend now exchanges tokens for the rendition service:
+> `contentFetch` uses `createExtensionAwareTokenSupplier` (`packages/navigator-data/src/auth/token-supplier.ts`).
+> The application origin keeps the user's access token; any other origin gets an extension token from
+> `<application origin>/.contentgrid/authentication/external/token` (contentgrid-system-design
+> `extension-authentication.md`, "User-facing token exchange"), cached per user and origin with
+> `@contentgrid/fetch-hook-authentication`'s `createCachingTokenSupplier` (≥ 0.4.5) and cleared when the
+> user changes. Reason: the user's access token grants access to every application of the organization and
+> must not be sent to an extension. The original decision is kept below for history.
+
 - **Decision**: rendition requests (initial and polls) go through the existing `contentFetch`, so they
   carry the user's access token in the `Authorization` header exactly like content downloads. The
   frontend does not exchange tokens; TokenMonger performs whatever exchange the rendition service needs
@@ -368,7 +377,7 @@ npm registry and jsDelivr file listings for `@embedpdf/*@2.15.0`, and the EmbedP
 - **Decision**: `useContentPreview(entityItem, attributeName)` runs a single `useQuery` keyed
   `queryKeys.contentPreview.byUrl(link.href, entityItem.etag)`; `queryFn({ signal })` returns a
   `PreviewSource`: stored PDF → `contentFetch(downloadContentRequest)` → bytes; non-PDF and
-  `renditionUri` configured → `requestRendition(contentFetch, uriTemplate, link.href, { signal,
+  `renditionUriTemplate` configured → `requestRendition(contentFetch, uriTemplate, link.href, { signal,
 intervalMs, timeoutMs })` → bytes, or `{ kind: "unsupported" }` on `RENDITION_INVALID_CONVERSION`;
   non-PDF without configuration → `{ kind: "unavailable" }`; 404 → `{ kind: "noFile" }`. `retry: false`,
   `staleTime: Infinity`, `gcTime: 5 min`. Polling honours the query's `signal`, so switching attribute
@@ -398,14 +407,18 @@ intervalMs, timeoutMs })` → bytes, or `{ kind: "unsupported" }` on `RENDITION_
 
 ### 8.6 Configuration
 
-- **Decision**: reuse `RuntimeAppConfig.renditionUri` (exists, unused) as a URI template
+- **Decision**: reuse `RuntimeAppConfig.renditionUriTemplate` (exists, unused) as a URI template
   (`…/renditions/get/pdf{?url}`); add `renditionPollIntervalMs?` (default 2000),
   `renditionTimeoutMs?` (default 60000); extend `ContentGridConfigSchema` so Liaison's `config.js`
-  `v1.renditionUri` is honoured (today only `import.meta.env.VITE_RENDITION_URI` is read, i.e. build-time);
-  no new `VITE_*` variables. `NavigatorDataContextValue` gains optional `renditionUri` and
+  `v1.renditionUriTemplate` is honoured (today only `import.meta.env.VITE_RENDITION_URI_TEMPLATE` is read, i.e. build-time);
+  no new `VITE_*` variables. `NavigatorDataContextValue` gains optional `renditionUriTemplate` and
   `renditionPolling`; `makeWrapper()` in tests gains matching optional parameters.
 - **Rationale**: FR-029 wants deployment configuration; `apiBaseUrl`/OIDC already flow through Liaison,
-  the rendition URL should too. Liaison delivering `renditionUri` is a platform task (dependency).
+  the rendition URL should too. Liaison delivering `renditionUriTemplate` is a platform task (dependency).
+- **Revised 2026-11-18 (ACC-3292)**: the setting was renamed from `renditionUri` to `renditionUriTemplate`
+  everywhere (config key, `RuntimeAppConfig`, context, `VITE_RENDITION_URI_TEMPLATE`), because that is the
+  key the deployed `config.js` already delivers (the same one the original Navigator reads, next to
+  `extractServiceBaseUrl`). The old `renditionUri` key is no longer read.
 
 ### 8.7 Problem types and states
 

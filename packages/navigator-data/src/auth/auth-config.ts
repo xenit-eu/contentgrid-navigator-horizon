@@ -24,11 +24,12 @@ const ContentGridConfigSchema = z.object({
     }),
     /**
      * URI template for the PDF rendition service, delivered per deployment via Liaison's
-     * `config.js` (see `specs/002-pdf-viewer/research.md` §8.6). Optional: renditions are
+     * `config.js` under the same key the original Navigator reads (see
+     * `specs/002-pdf-viewer/research.md` §8.6). Optional: renditions are
      * simply disabled (`useContentPreview` returns `{ kind: "unavailable" }` for non-PDF
      * files) when unset.
      */
-    renditionUri: z.string().optional(),
+    renditionUriTemplate: z.string().optional(),
     /** Delay between rendition job polls, in milliseconds. Defaults to 2000 when unset. */
     renditionPollIntervalMs: z.number().optional(),
     /** Rendition polling ceiling, in milliseconds. Defaults to 60000 when unset. */
@@ -41,7 +42,7 @@ const ContentGridConfigSchema = z.object({
  * `config.js`, the dev-config override, or env vars) before they are trusted.
  */
 interface RenditionSettingsCandidate {
-  renditionUri?: string;
+  renditionUriTemplate?: string;
   renditionPollIntervalMs?: number;
   renditionTimeoutMs?: number;
 }
@@ -50,7 +51,7 @@ interface RenditionSettingsCandidate {
  * Validates rendition configuration from any source and drops (with a `console.warn`,
  * never a thrown error — a misconfigured rendition endpoint must not block the rest of
  * the app from loading) any value that fails its rule:
- * - `renditionUri` must be a URI template containing the `{?url}` expansion the rendition
+ * - `renditionUriTemplate` must be a URI template containing the `{?url}` expansion the rendition
  *   client relies on (`preview/rendition-job.ts`).
  * - `renditionPollIntervalMs` must be at least {@link MIN_RENDITION_POLL_INTERVAL_MS} —
  *   below that, polling would hammer the rendition service.
@@ -60,16 +61,16 @@ interface RenditionSettingsCandidate {
 function validateRenditionSettings(
   candidate: RenditionSettingsCandidate,
 ): RenditionSettingsCandidate {
-  let { renditionUri, renditionPollIntervalMs, renditionTimeoutMs } = candidate;
+  let { renditionUriTemplate, renditionPollIntervalMs, renditionTimeoutMs } = candidate;
 
-  if (renditionUri !== undefined && !renditionUri.includes("{?url}")) {
+  if (renditionUriTemplate !== undefined && !renditionUriTemplate.includes("{?url}")) {
     // Intentional: warn-and-drop, not throw — a misconfigured rendition endpoint must
     // not block the rest of the app from loading.
     // eslint-disable-next-line no-console
     console.warn(
-      `Ignoring renditionUri "${renditionUri}": must be a URI template containing "{?url}".`,
+      `Ignoring renditionUriTemplate "${renditionUriTemplate}": must be a URI template containing "{?url}".`,
     );
-    renditionUri = undefined;
+    renditionUriTemplate = undefined;
   }
 
   if (
@@ -92,7 +93,7 @@ function validateRenditionSettings(
     renditionTimeoutMs = undefined;
   }
 
-  return { renditionUri, renditionPollIntervalMs, renditionTimeoutMs };
+  return { renditionUriTemplate, renditionPollIntervalMs, renditionTimeoutMs };
 }
 
 declare global {
@@ -106,7 +107,7 @@ export interface RuntimeAppConfig {
   clientId: string;
   apiBaseUrl: string;
   extractServiceUrl?: string;
-  renditionUri?: string;
+  renditionUriTemplate?: string;
   /** Delay between rendition job polls, in milliseconds. Defaults to 2000 when unset. */
   renditionPollIntervalMs?: number;
   /** Rendition polling ceiling, in milliseconds. Defaults to 60000 when unset. */
@@ -120,7 +121,7 @@ const DevConfigOverrideSchema = z.object({
   authority: z.string().min(1),
   clientId: z.string().min(1),
   extractServiceUrl: z.string().optional(),
-  renditionUri: z.string().optional(),
+  renditionUriTemplate: z.string().optional(),
   renditionPollIntervalMs: z.number().optional(),
   renditionTimeoutMs: z.number().optional(),
 });
@@ -173,8 +174,9 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
         apiBaseUrl: parsed.data.v1.apiBaseUrl,
         extractServiceUrl: import.meta.env.VITE_EXTRACT_SERVICE_URL || undefined,
         ...validateRenditionSettings({
-          renditionUri:
-            parsed.data.v1.renditionUri ?? (import.meta.env.VITE_RENDITION_URI || undefined),
+          renditionUriTemplate:
+            parsed.data.v1.renditionUriTemplate ??
+            (import.meta.env.VITE_RENDITION_URI_TEMPLATE || undefined),
           renditionPollIntervalMs: parsed.data.v1.renditionPollIntervalMs,
           renditionTimeoutMs: parsed.data.v1.renditionTimeoutMs,
         }),
@@ -201,7 +203,7 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
       // still needs a rendition endpoint configured for the PDF viewer's rendition path to
       // engage (see "Content preview and renditions" in this package's CLAUDE.md).
       ...validateRenditionSettings({
-        renditionUri: import.meta.env.VITE_RENDITION_URI || undefined,
+        renditionUriTemplate: import.meta.env.VITE_RENDITION_URI_TEMPLATE || undefined,
       }),
     };
     return cachedConfig;
@@ -218,7 +220,9 @@ export async function loadAppConfig(): Promise<RuntimeAppConfig> {
     clientId,
     apiBaseUrl,
     extractServiceUrl: import.meta.env.VITE_EXTRACT_SERVICE_URL || undefined,
-    ...validateRenditionSettings({ renditionUri: import.meta.env.VITE_RENDITION_URI || undefined }),
+    ...validateRenditionSettings({
+      renditionUriTemplate: import.meta.env.VITE_RENDITION_URI_TEMPLATE || undefined,
+    }),
   };
   return cachedConfig;
 }

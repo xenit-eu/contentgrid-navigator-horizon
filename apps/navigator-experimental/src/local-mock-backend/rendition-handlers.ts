@@ -61,7 +61,7 @@ const DOCX_MIMETYPE = "application/vnd.openxmlformats-officedocument.wordprocess
 /**
  * Dev-only rendition demo data (spec `002-pdf-viewer`, US2): a second item on the "document"
  * entity (registered by `content-focus-handlers.ts`) holding a `.docx` file instead of a PDF, plus
- * the mocked rendition service endpoint `VITE_RENDITION_URI` points at
+ * the mocked rendition service endpoint `VITE_RENDITION_URI_TEMPLATE` points at
  * (`.env.development`: `http://localhost:5174/__mock__/renditions/pdf{?url}`).
  *
  * The *initial* rendition request is a single handler that reads the current dev mode from
