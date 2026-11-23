@@ -114,7 +114,7 @@ export function SideBarLayout({
             height: `calc(100svh - ${BRANDING_HEADER_HEIGHT})`,
           }}
           collapsible="icon"
-          mobileHeader={<PhoneMenuHeader />}
+          mobileHeader={<PhoneMenuHeader onLogoClick={onOpenHome} />}
           mobileFooter={
             auth.user && (
               <PhoneMenuAccount

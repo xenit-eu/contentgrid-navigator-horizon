@@ -18,15 +18,42 @@ function renderInSheet(onOpenChange = vi.fn()) {
 }
 
 describe("PhoneMenuHeader", () => {
-  it("shows the brand with content in the primary colour and grid in sky, 16px bold", () => {
+  it("shows the shared lockup in its on-light tone: dark logo, sky content, ocean grid and tagline", () => {
     renderInSheet();
+    const logo = screen.getByRole("img", { name: "ContentGrid logo" });
+    expect(logo).toHaveClass("size-[30px]");
+    expect(logo.getAttribute("src")).toContain("blue-dark");
     const grid = screen.getByText("grid");
-    expect(grid).toHaveClass("text-[var(--sky)]");
-    const brand = grid.parentElement?.parentElement;
-    expect(brand).toHaveTextContent("contentgrid");
-    expect(brand).toHaveClass("text-primary", "text-base", "font-bold");
-    // On a white drawer: never the header's white / light-sky colours.
-    expect(brand?.className).not.toContain("white");
+    expect(grid).toHaveClass("text-primary");
+    expect(grid.parentElement).toHaveTextContent("contentgrid");
+    expect(grid.parentElement).toHaveClass("text-[var(--sky)]", "text-[17px]", "font-bold");
+    expect(screen.getByText("BY AMEXIO")).toHaveClass("text-primary");
+    // White drawer: never the header's dark strip or white text.
+    const strip = document.querySelector("[data-slot='phone-menu-header']");
+    expect(strip?.className).not.toContain("gradient");
+    expect(grid.parentElement?.className).not.toContain("text-white");
+  });
+
+  it("keeps the lockup non-interactive without onLogoClick", () => {
+    renderInSheet();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("calls onLogoClick and closes the drawer when the logo is clicked", async () => {
+    const onOpenChange = vi.fn();
+    const onLogoClick = vi.fn();
+    render(
+      <Sheet open onOpenChange={onOpenChange}>
+        <SheetContent showCloseButton={false}>
+          <SheetTitle>Menu</SheetTitle>
+          <SheetDescription>Navigation</SheetDescription>
+          <PhoneMenuHeader onLogoClick={onLogoClick} />
+        </SheetContent>
+      </Sheet>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /content.*grid.*by amexio/i }));
+    expect(onLogoClick).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it("has a 44px Close menu button that closes the drawer", async () => {

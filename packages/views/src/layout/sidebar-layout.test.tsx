@@ -212,6 +212,7 @@ describe("SideBarLayout on a phone", () => {
 
     const drawer = screen.getByRole("dialog");
     expect(drawer).toHaveAttribute("data-mobile", "true");
+    expect(within(drawer).getByRole("img", { name: "ContentGrid logo" })).toBeInTheDocument();
     expect(within(drawer).getByText("grid")).toBeInTheDocument();
     expect(within(drawer).getByRole("button", { name: "Close menu" })).toBeInTheDocument();
     for (const name of ["Create", "Home", /invoice/i]) {
@@ -219,6 +220,18 @@ describe("SideBarLayout on a phone", () => {
         "in-data-[mobile=true]:h-[46px]",
       );
     }
+  });
+
+  it("navigates home and closes the drawer when the drawer logo is clicked", async () => {
+    const handlers = renderLayout(null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: /content.*grid.*by amexio/i }),
+    );
+
+    expect(handlers.onOpenHome).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("has one Settings entry on a phone, in the drawer's account block", async () => {

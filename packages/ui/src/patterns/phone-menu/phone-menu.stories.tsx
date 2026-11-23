@@ -60,8 +60,8 @@ const DrawerAccount = ({ settingsCurrent = false }: { settingsCurrent?: boolean 
 /**
  * The navigation drawer on a phone. Tagged `mobile`, so the visual and accessibility specs render
  * it in a 390×844 viewport, where `Sidebar` switches to its sheet; `defaultOpenMobile` opens it.
- * Tagged `axe-no-contrast` because the reference design sets the brand's "grid" in sky on white
- * (3.1:1); WCAG 1.4.3 exempts logotypes. The account block has its own contrast-checked stories.
+ * Tagged `axe-no-contrast` because the brand's "content" is set in sky on white (3.1:1); WCAG 1.4.3
+ * exempts logotypes. The account block has its own contrast-checked stories.
  */
 export const PhoneDrawer: Story = {
   tags: ["mobile", "axe-no-contrast"],
