@@ -76,7 +76,7 @@ test.describe("Storybook accessibility audit (axe-core)", () => {
       // Select listbox) where a semi-transparent scrim/backdrop sits behind the portal.
       // Axe computes background colour by compositing ALL ancestor/sibling backgrounds, so
       // the scrim blends in and the portal surface appears as a mid-grey (~#cbcdcf) instead
-      // of its real white/frost surface (#fafdff). That yields false-positive contrast
+      // of its real white/frost surface (#ffffff). That yields false-positive contrast
       // failures (reported ≤ 4.3:1) for text that genuinely passes WCAG AA on its real
       // surface (verified ≥ 5.2:1, most ≥ 15:1). Each tagged story's violations were
       // individually confirmed to be scrim composites before tagging.

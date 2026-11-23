@@ -62,7 +62,7 @@ function SelectionChip({
           : "px-[14px] py-[7px] rounded-[8px] text-[13px]",
         selected
           ? "bg-[var(--sky-extract)] dark:bg-[var(--dark-accent)] text-foreground font-semibold"
-          : "bg-[#FAFDFF] dark:bg-[#13314A] text-[#0E2436] dark:text-[#EAF4FB] font-normal",
+          : "bg-card dark:bg-[#13314A] text-[#0E2436] dark:text-[#EAF4FB] font-normal",
         // The focused chip sits on top, so its focus ring shows over the shared edge.
         joined && "relative focus-visible:z-10",
         joined === "start" && "rounded-r-none",

@@ -27,6 +27,28 @@ The `--cg-` prefix is deliberate:
 | `--cg-line-height-*` | Matching line heights — always pair with the same size suffix |
 | `--cg-shadow-*`      | Elevation / box-shadow                                        |
 
+## Colour palette notes
+
+Values follow the reference design (light theme). Dark theme is unchanged.
+
+| Token                      | Value     | Role                                                                      |
+| -------------------------- | --------- | ------------------------------------------------------------------------- |
+| `--cg-color-line`          | `#e3e9ef` | Default borders and dividers                                              |
+| `--cg-color-line-strong`   | `#cfd9e2` | The design's "line2": inputs, outlined buttons, switch tracks (`--input`) |
+| `--cg-color-frost`         | `#ffffff` | Card / popover surface                                                    |
+| `--cg-color-text-muted`    | `#4f6f87` | Muted text; design's #557891 is 4.36:1 on mist (below AA), so kept darker |
+| `--cg-color-amber`         | `#b85b1f` | Warning hue (4.61:1 on white, AA for small text)                          |
+| `--cg-color-amber-light`   | `#7a3d14` | Dark text on the amber tint (7.36:1 on `#fbeee3`)                         |
+| `--cg-color-sky-50`        | `#e6f4fc` | Sky tint: selected / active / info (`--secondary`, `--accent`)            |
+| `--cg-color-sky-tint-line` | `#b5def5` | Border that pairs with the sky tint                                       |
+| `--cg-color-amber-tint`    | `#fbeee3` | Warning surface tint                                                      |
+| `--cg-color-danger-tint`   | `#fbe9e7` | Danger surface tint                                                       |
+| `--cg-color-green-tint`    | `#e4f3ea` | Success surface tint                                                      |
+
+The tints are available as unprefixed aliases (`--amber-tint`, `--danger-tint`,
+`--green-tint`, `--sky-tint-line`, `--line-strong`) but are not yet wired to
+Tailwind utilities or consumed by components.
+
 ## How tokens flow to consumers
 
 ```

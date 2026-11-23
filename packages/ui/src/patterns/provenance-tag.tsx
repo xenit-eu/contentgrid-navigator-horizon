@@ -33,7 +33,7 @@ function ProvenanceTag({ kind = "extracted", label, className }: ProvenanceTagPr
         className,
       )}
     >
-      <PencilSimple size={14} className="text-[#D4682A] dark:text-[#E89A63]" aria-hidden />
+      <PencilSimple size={14} className="text-warning" aria-hidden />
       {displayLabel}
     </span>
   );

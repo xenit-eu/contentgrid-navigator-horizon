@@ -24,7 +24,7 @@ function SearchField({
     <div
       data-slot="search-field"
       className={cn(
-        "flex flex-wrap items-center gap-2 px-[14px] py-2 rounded-[9px] border bg-[#FAFDFF] dark:bg-[#0E2738] border-border dark:border-[#335269]",
+        "flex flex-wrap items-center gap-2 px-[14px] py-2 rounded-[9px] border bg-card dark:bg-[#0E2738] border-border dark:border-[#335269]",
         focused && "border-[#019BE3] dark:border-[#5AC4F2] ring-[3px] ring-ring/30",
         className,
       )}
@@ -34,7 +34,7 @@ function SearchField({
       {chips?.map((chip, index) => (
         <span
           key={`${chip.field}:${chip.label}`}
-          className="inline-flex items-center gap-1 rounded-[6px] border bg-[#FAFDFF] dark:bg-[#13314A] border-border dark:border-[#335269] px-[9px] py-[3px] text-[12px]"
+          className="inline-flex items-center gap-1 rounded-[6px] border bg-card dark:bg-[#13314A] border-border dark:border-[#335269] px-[9px] py-[3px] text-[12px]"
         >
           <span className="text-muted-foreground font-normal mr-0.5">{chip.field}:</span>
           <span className="text-foreground font-medium">{chip.label}</span>
