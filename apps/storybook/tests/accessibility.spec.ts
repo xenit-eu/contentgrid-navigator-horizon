@@ -41,6 +41,11 @@ test.describe("Storybook accessibility audit (axe-core)", () => {
       // (see its preview.d.ts / initialGlobals) that gates that hook off; set
       // it through the iframe URL rather than .storybook/preview so the addon
       // panel keeps auto-running axe for devs using Storybook interactively.
+      // Stories tagged `mobile` render at the phone viewport from ADR-009 (390x844), where
+      // layouts such as the sidebar switch to their phone variant.
+      if (story.tags?.includes("mobile")) {
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=a11y.manual:!true`);
       await page.waitForSelector("#storybook-root", { state: "attached" });
       // Wait for web fonts so text-rendering is stable before axe runs.

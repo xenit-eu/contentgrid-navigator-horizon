@@ -4,6 +4,7 @@ import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-dat
 import {
   BRANDING_HEADER_HEIGHT,
   BrandingHeader,
+  PhoneMenuHeader,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -86,6 +87,7 @@ export function SideBarLayout({
             height: `calc(100svh - ${BRANDING_HEADER_HEIGHT})`,
           }}
           collapsible="icon"
+          mobileHeader={<PhoneMenuHeader />}
         >
           <SidebarContent>
             <SidebarGroup className="pb-0">

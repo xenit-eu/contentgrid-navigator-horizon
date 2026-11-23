@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockSidebarData } from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
@@ -192,5 +192,41 @@ describe("SideBarLayout", () => {
     fireEvent.keyDown(window, { key: "[" });
 
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+});
+
+describe("SideBarLayout on a phone", () => {
+  const desktopWidth = window.innerWidth;
+  beforeEach(() => {
+    document.cookie = "sidebar_state=; path=/; max-age=0";
+    window.innerWidth = 390;
+  });
+  afterEach(() => {
+    window.innerWidth = desktopWidth;
+  });
+
+  it("has a header toggle named Open menu that opens a drawer with brand, close button and 46px rows", async () => {
+    renderLayout(null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    const drawer = screen.getByRole("dialog");
+    expect(drawer).toHaveAttribute("data-mobile", "true");
+    expect(within(drawer).getByText("grid")).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Close menu" })).toBeInTheDocument();
+    for (const name of ["Create", "Home", /invoice/i]) {
+      expect(within(drawer).getByRole("button", { name })).toHaveClass(
+        "in-data-[mobile=true]:h-[46px]",
+      );
+    }
+  });
+
+  it("closes the drawer from its Close menu button", async () => {
+    renderLayout(null);
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Close menu" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
