@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
-import { SidebarMenuButton, SidebarProvider, SidebarTrigger } from "./sidebar";
+import { SidebarMenuButton, SidebarMenuSkeleton, SidebarProvider, SidebarTrigger } from "./sidebar";
 
 beforeAll(() => {
   // jsdom does not implement window.matchMedia; SidebarProvider uses useIsMobile
@@ -81,5 +81,13 @@ describe("sidebar rows", () => {
       "data-active",
       "false",
     );
+  });
+});
+
+describe("SidebarMenuSkeleton", () => {
+  it("uses the width it is given", () => {
+    const { container } = render(<SidebarMenuSkeleton width="55%" />);
+    const bar = container.querySelector<HTMLElement>("[data-sidebar='menu-skeleton-text']");
+    expect(bar?.style.getPropertyValue("--skeleton-width")).toBe("55%");
   });
 });

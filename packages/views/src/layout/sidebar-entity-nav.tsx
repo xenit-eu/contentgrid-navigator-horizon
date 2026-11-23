@@ -1,9 +1,9 @@
-import { BracketsSquareIcon, StackIcon } from "@phosphor-icons/react";
+import { StackIcon } from "@phosphor-icons/react";
 import {
   resolveEntityCardIcon,
   useEntityDisplayPreferences,
 } from "@contentgrid/features/preferences";
-import { type ProfileEntity, useCachedEntityItemCollection } from "@contentgrid/navigator-data";
+import { type ProfileEntity, useEntityItemCollection } from "@contentgrid/navigator-data";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -14,6 +14,8 @@ import {
   SidebarMenuItem,
   SidebarMenuSkeleton,
   SidebarSeparator,
+  Skeleton,
+  formatCount,
 } from "@contentgrid/ui";
 import { handleNavigationClick } from "../navigation";
 
@@ -28,10 +30,13 @@ interface SidebarEntityNavProps {
   readonly entityHref?: (entityName: string) => string;
 }
 
+/** Widths of the three placeholder bars while the entity list loads. */
+const LOADING_BAR_WIDTHS = ["70%", "55%", "64%"] as const;
+
 /**
  * "Entities" sidebar group: one row per discovered profile, showing an icon,
- * the plural name, and — once available — an item count. The count is never
- * fetched from here; see `SidebarEntityNavItem`.
+ * the plural name and its item count. Every row loads its own count (see
+ * `SidebarEntityNavItem`).
  */
 export function SidebarEntityNav({
   profiles,
@@ -48,9 +53,9 @@ export function SidebarEntityNav({
       <SidebarGroupContent>
         <SidebarMenu>
           {isLoading
-            ? [1, 2, 3].map((i) => (
-                <SidebarMenuItem key={i}>
-                  <SidebarMenuSkeleton />
+            ? LOADING_BAR_WIDTHS.map((width) => (
+                <SidebarMenuItem key={width}>
+                  <SidebarMenuSkeleton width={width} />
                 </SidebarMenuItem>
               ))
             : profiles.map((profile) => (
@@ -79,12 +84,14 @@ function SidebarEntityNavItem({
   readonly onOpen: () => void;
   readonly href: string | undefined;
 }) {
-  // Read-only: shows a count only if some other query already cached it
-  // (e.g. the user previously opened this entity's collection page). Never
-  // fetches on its own, so mounting the sidebar never fires one collection
-  // request per entity.
-  const { data: collection } = useCachedEntityItemCollection(profile);
-  const total = collection?.totalItems;
+  // The same query Home's cards run (same key, same options), so the count is fetched once per
+  // entity and shared through the cache: opening Home after the sidebar, or the other way round,
+  // costs no second request.
+  const { data: collection, isLoading: isLoadingCount } = useEntityItemCollection(
+    { profileEntity: profile },
+    { queryOptionsOverride: { refetchOnWindowFocus: false, refetchOnMount: false } },
+  );
+  const count = formatCount(collection?.totalItems);
 
   const { preferences } = useEntityDisplayPreferences(profile);
   const EntityIcon = resolveEntityCardIcon(preferences.icon);
@@ -123,16 +130,14 @@ function SidebarEntityNavItem({
           </a>
         )}
       </SidebarMenuButton>
-      <SidebarMenuBadge className="text-sidebar-foreground/50">
-        {total !== undefined ? (
-          <>
-            {total.isEstimated ? "~" : ""}
-            {total.count}
-          </>
-        ) : (
-          <BracketsSquareIcon />
-        )}
-      </SidebarMenuBadge>
+      {/* Unknown or not allowed: nothing, no placeholder. */}
+      {isLoadingCount ? (
+        <SidebarMenuBadge aria-hidden>
+          <Skeleton className="h-2.5 w-6.5 rounded-full" />
+        </SidebarMenuBadge>
+      ) : (
+        count !== undefined && <SidebarMenuBadge>{count}</SidebarMenuBadge>
+      )}
     </SidebarMenuItem>
   );
 }
