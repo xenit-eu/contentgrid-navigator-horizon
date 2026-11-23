@@ -96,11 +96,11 @@ function makeCustomer(): EntityItem {
   } as unknown as EntityItem;
 }
 
-function makeRelation(): EntityItemToOneRelation {
+function makeRelation({ canSet = true, canClear = true } = {}): EntityItemToOneRelation {
   return {
     name: "customer",
-    canSet: true,
-    canClear: true,
+    canSet,
+    canClear,
     profileRelation: { title: "Customer", getTargetProfile: () => CUSTOMER_PROFILE },
   } as unknown as EntityItemToOneRelation;
 }
@@ -164,7 +164,7 @@ afterEach(() => {
 describe("RelationToOneSection", () => {
   it("in a narrow pane, shows only the linked item's reference", () => {
     mockLinkedItem(makeCustomer());
-    renderSection(320);
+    renderSection(320, { onItemClick: vi.fn() });
 
     expect(screen.getByRole("button", { name: /acme corp/i })).toBeInTheDocument();
     expect(screen.queryByText("Email")).not.toBeInTheDocument();
@@ -198,6 +198,39 @@ describe("RelationToOneSection", () => {
     await user.click(screen.getByRole("button", { name: /acme corp/i }));
 
     expect(onItemClick).toHaveBeenCalledWith("customer", "c-1");
+  });
+
+  it("offers Unlink when an item is linked and Link when none is, by default", () => {
+    mockLinkedItem(makeCustomer());
+    const linked = renderSection(320);
+    expect(screen.getByRole("button", { name: "Unlink" })).toBeInTheDocument();
+    linked.unmount();
+
+    mockLinkedItem(null);
+    renderSection(320);
+    expect(screen.getByRole("button", { name: "Link" })).toBeInTheDocument();
+  });
+
+  it("offers neither Link nor Unlink on a read-only relation", () => {
+    const readOnly = makeRelation({ canSet: false, canClear: false });
+    mockLinkedItem(makeCustomer());
+    const linked = renderSection(320, { relation: readOnly });
+    expect(screen.queryByRole("button", { name: "Unlink" })).not.toBeInTheDocument();
+    linked.unmount();
+
+    mockLinkedItem(null);
+    renderSection(320, { relation: readOnly });
+    expect(screen.getByText("No item linked")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Link" })).not.toBeInTheDocument();
+  });
+
+  it("shows the reference as plain text, not a button, without onItemClick", () => {
+    mockLinkedItem(makeCustomer());
+    renderSection(320);
+
+    expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /acme corp/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /acme corp/i })).not.toBeInTheDocument();
   });
 
   it("shows the empty state when nothing is linked", () => {

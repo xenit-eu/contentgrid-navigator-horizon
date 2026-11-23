@@ -405,6 +405,13 @@ describe("RelationToManySection", () => {
     expect(onItemClick).toHaveBeenCalledWith("invoice", "42");
   });
 
+  it("offers no Details action without onItemClick", () => {
+    mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("42", 10)]) });
+    renderSection({ relation: makeRelation() });
+
+    expect(screen.queryByRole("button", { name: "Details" })).not.toBeInTheDocument();
+  });
+
   it("explains why linked items can't be shown when the target profile is unresolved", () => {
     mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("42", 10)]) });
     renderSection({ relation: makeRelation({ targetProfile: undefined }) });
@@ -494,6 +501,50 @@ describe("RelationToManySection", () => {
     });
     // The header still counts every linked item, not just the filtered ones.
     expect(screen.getByRole("button", { name: /invoices/i })).toHaveTextContent(/^3/);
+  });
+
+  describe("read-only relation (the source item's `toReadOnly()`)", () => {
+    const EDIT_ACTION_NAMES = ["Link", "Unlink", "Unlink all", "Delete"];
+
+    function readOnlyRelation() {
+      return makeRelation({ canAdd: false, canClear: false, canUnlinkItem: false });
+    }
+
+    function mockLinkedItems() {
+      mockCollectionState({ isSuccess: true, data: makeCollectionData([makeItem("1", 10)]) });
+    }
+
+    function queryEditActions() {
+      return EDIT_ACTION_NAMES.flatMap((name) => screen.queryAllByRole("button", { name }));
+    }
+
+    it("offers none of Link, Unlink, Unlink all or Delete", () => {
+      mockLinkedItems();
+      renderSection({ relation: readOnlyRelation() });
+
+      expect(queryEditActions()).toHaveLength(0);
+    });
+
+    it("keeps the Details action when onItemClick is set", () => {
+      mockLinkedItems();
+      renderSection({ relation: readOnlyRelation(), onItemClick: vi.fn() });
+
+      expect(screen.getByRole("button", { name: "Details" })).toBeInTheDocument();
+      expect(queryEditActions()).toHaveLength(0);
+    });
+
+    it("reserves no actions column when there is nothing to put in it", () => {
+      mockLinkedItems();
+      const editable = renderSection();
+      const headers = screen.getAllByRole("columnheader").length;
+      const cells = within(screen.getAllByRole("row")[1]!).getAllByRole("cell").length;
+      editable.unmount();
+
+      renderSection({ relation: readOnlyRelation() });
+
+      expect(screen.getAllByRole("columnheader")).toHaveLength(headers - 1);
+      expect(within(screen.getAllByRole("row")[1]!).getAllByRole("cell")).toHaveLength(cells - 1);
+    });
   });
 
   describe("in a narrow pane (compact stack)", () => {

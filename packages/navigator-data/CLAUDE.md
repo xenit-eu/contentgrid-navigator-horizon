@@ -485,6 +485,13 @@ Rules:
 > `entityItem.deleteTemplate !== null → delete is permitted (canDelete getter)`.
 > Both `canUpdate` and `canDelete` are implemented as boolean getters on `EntityItem`.
 > `canCreate` is not yet implemented.
+> `entityItem.toReadOnly()` returns a copy without `_templates` and with `isReadOnly: true`, so
+> every gate above is `false`; the gates without a template (`canUploadContent`,
+> `toMany.canUnlinkItem`) check `isReadOnly`, and the to-many read hooks return the linked items
+> of a read-only item read-only too. Links stay, so content and relations can still be shown.
+> A collection row's `cg:` links resolve through the page's `curies`, so
+> `EntityItemCollection.items` copies them into each row's own `_links`; without that, a
+> read-only copy of a row loses its content and relation links.
 > Relation capability is exposed on `EntityItemToOneRelation` / `EntityItemToManyRelation`
 > (obtained via `entityItem.getToOneRelation(name)` / `entityItem.getToManyRelation(name)`):
 > `toOne.canSet`, `toOne.canClear`, `toMany.canAdd`, `toMany.canClear` — boolean flags derived from template presence.
@@ -942,8 +949,8 @@ For pagination of search results use `{ url: collection.nextHref }` — the serv
 The server does NOT yet emit a per-item HAL-FORMS delete template for to-many relation members.
 Until it does, `EntityItemToManyRelation` exposes:
 
-- `canUnlinkItem: boolean` — always `true` (no template to gate on; server returns 403 if ABAC
-  denies the operation)
+- `canUnlinkItem: boolean` — `true` unless the source item is read-only (no template to gate on;
+  server returns 403 if ABAC denies the operation)
 - `unlinkItemRequest(itemId: string): Request` — builds `DELETE ${this.link.href}/${itemId}`
 
 `relation.link.href` is the **original** relation navigation link (e.g. `/invoices/123/products`),

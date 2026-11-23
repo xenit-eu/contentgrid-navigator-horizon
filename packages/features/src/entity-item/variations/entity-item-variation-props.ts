@@ -32,8 +32,9 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    */
   readonly actions?: ReactNode;
   /**
-   * Whether to show the edit button (default `true`). The button still only shows when the item
-   * has an update template.
+   * `false` shows the item read-only (default `true`): the variation renders `item.toReadOnly()`,
+   * so no edit, delete, upload or relation change is offered. With `true`, each action still only
+   * shows when the item's templates and links permit it.
    */
   readonly allowEdit?: boolean;
   /**

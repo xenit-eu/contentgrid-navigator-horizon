@@ -256,7 +256,9 @@ export function RelationToManySection({
           <RelationToManyTable
             relation={relation}
             targetProfile={targetProfile}
-            onItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+            onItemClick={
+              onItemClick ? (item) => onItemClick(targetProfile.name, item.id) : undefined
+            }
             renderItemActions={renderItemActions}
           />
         )}
@@ -269,7 +271,9 @@ export function RelationToManySection({
               hasNextPage={loadedPages.hasNextPage}
               isFetchingNextPage={loadedPages.isFetchingNextPage}
               fetchNextPage={() => void loadedPages.fetchNextPage()}
-              onItemClick={(item) => onItemClick?.(targetProfile.name, item.id)}
+              onItemClick={
+                onItemClick ? (item) => onItemClick(targetProfile.name, item.id) : undefined
+              }
               renderItemActions={renderItemActions}
             />
           )}
@@ -321,7 +325,7 @@ function RelationToManyTable({
 }: Readonly<{
   relation: EntityItemToManyRelation;
   targetProfile: ProfileEntity;
-  onItemClick: (item: EntityItem) => void;
+  onItemClick?: (item: EntityItem) => void;
   renderItemActions: (item: EntityItem) => ReactNode;
 }>) {
   const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
@@ -368,13 +372,23 @@ function RelationToManyTable({
           onEntityItemClick={onItemClick}
           onPageChange={setPageUrl}
           {...tableProps}
+          // Without Details, Unlink or any deletable row (e.g. a read-only item), drop the actions
+          // column and its header cell. Omitting `renderRowActions` alone would bring back the
+          // table's default View/Delete.
+          showRowActions={
+            onItemClick !== undefined ||
+            relation.canUnlinkItem ||
+            collection.data.items.some((item) => item.canDelete)
+          }
           renderRowActions={(item) => (
             <>
-              <RecordRowAction
-                label="Details"
-                icon={<Eye className="size-4" aria-hidden />}
-                onClick={() => onItemClick(item)}
-              />
+              {onItemClick && (
+                <RecordRowAction
+                  label="Details"
+                  icon={<Eye className="size-4" aria-hidden />}
+                  onClick={() => onItemClick(item)}
+                />
+              )}
               {renderItemActions(item)}
             </>
           )}

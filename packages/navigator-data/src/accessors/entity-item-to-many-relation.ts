@@ -156,10 +156,11 @@ export class EntityItemToManyRelation {
    * relation members, so there is no HAL-FORMS gate to check. The server returns 403 if
    * ABAC denies the operation.
    *
-   * Replace with a template-presence check when the server adds the template.
+   * Replace with a template-presence check when the server adds the template. `false` when the
+   * source item is read-only (`EntityItem.toReadOnly()`).
    */
   get canUnlinkItem(): boolean {
-    return true;
+    return !this.source.isReadOnly;
   }
 
   /**

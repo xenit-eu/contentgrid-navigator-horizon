@@ -281,6 +281,28 @@ describe("useEntityItemToManyRelation — returns collection when target profile
   });
 });
 
+describe("to-many relation hooks — read-only source item", () => {
+  it("return its linked items read-only, from both the page and the load-more query", async () => {
+    setupProfileHandlers();
+    server.use(
+      createListHandler({
+        url: LINE_ITEMS_RELATION_URL,
+        items: sampleLineItemList._embedded!.item as Record<string, unknown>[],
+      }),
+    );
+    const relation = makeInvoiceItem().toReadOnly().getToManyRelation("lineItems")!;
+    const wrapper = makeWrapper();
+
+    const page = renderHook(() => useEntityItemToManyRelation(relation), { wrapper });
+    const pages = renderHook(() => useEntityItemToManyRelationInfinite(relation), { wrapper });
+    await waitFor(() => expect(page.result.current.isSuccess).toBe(true), { timeout: 5000 });
+    await waitFor(() => expect(pages.result.current.isSuccess).toBe(true), { timeout: 5000 });
+
+    expect(page.result.current.data?.items.every((item) => item.isReadOnly)).toBe(true);
+    expect(pages.result.current.data?.pages[0]?.items.every((item) => item.isReadOnly)).toBe(true);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // (b) Query is disabled until the target profile resolves
 // ---------------------------------------------------------------------------
