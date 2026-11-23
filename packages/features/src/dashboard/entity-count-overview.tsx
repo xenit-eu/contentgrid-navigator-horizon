@@ -1,11 +1,17 @@
-import { ArrowRightIcon } from "@phosphor-icons/react";
 import {
   type ProfileEntity,
   toProblemDisplayModel,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { EntityCard, Skeleton } from "@contentgrid/ui";
+import {
+  EntityCard,
+  EntityCardArrow,
+  EntityCardDescription,
+  EntityCardSkeleton,
+  EntityCardText,
+  EntityCardTitle,
+} from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 import { ProblemAlert } from "../problem-details";
 
@@ -40,7 +46,7 @@ function EntityOverview({
         <OverviewHeader count={0} loading />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+            <EntityCardSkeleton key={i} className="h-36" />
           ))}
         </div>
       </div>
@@ -99,21 +105,23 @@ function EntityCardConnected({
   );
 
   return (
-    <EntityCard
-      name={profile.name}
-      title={profile.pluralName}
-      description={profile.description || undefined}
-      icon={<EntityIconBadge profile={profile} />}
-      onCardClick={onSelect}
-    >
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
-          <p className="text-xs text-muted-foreground">items</p>
-        </div>
-        {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
-        <ArrowRightIcon aria-hidden className="h-5 w-5 text-muted-foreground" />
+    <EntityCard onOpen={onSelect}>
+      <div className="flex items-start justify-between gap-2">
+        <EntityIconBadge profile={profile} tinted />
+        <EntityCardArrow />
       </div>
+      <EntityCardText>
+        <EntityCardTitle>{profile.pluralName}</EntityCardTitle>
+        {profile.description && (
+          <EntityCardDescription>{profile.description}</EntityCardDescription>
+        )}
+      </EntityCardText>
+      <p className="mt-auto text-ui text-muted-foreground">
+        <span className="font-bold text-card-foreground">
+          {collection.data?.totalItems?.count ?? "—"}
+        </span>{" "}
+        items
+      </p>
     </EntityCard>
   );
 }

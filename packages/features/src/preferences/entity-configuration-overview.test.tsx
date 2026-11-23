@@ -129,19 +129,7 @@ describe("EntityConfigurationOverview", () => {
     expect(container.querySelectorAll('[data-slot="entity-card"]')).toHaveLength(2);
   });
 
-  it("calls onSelectEntity with the clicked entity's profile", async () => {
-    const user = userEvent.setup();
-    const onSelectEntity = vi.fn();
-    mockProfiles([makeProfile("invoice", "Invoices")]);
-    const { container } = renderOverview(onSelectEntity);
-
-    await user.click(container.querySelector('[data-slot="entity-card"]')!);
-
-    expect(onSelectEntity).toHaveBeenCalledTimes(1);
-    expect(onSelectEntity.mock.calls[0][0].name).toBe("invoice");
-  });
-
-  it("calls onSelectEntity when the configure (gear) action is clicked", async () => {
+  it("opens the entity's configuration from Configure", async () => {
     const user = userEvent.setup();
     const onSelectEntity = vi.fn();
     mockProfiles([makeProfile("invoice", "Invoices")]);
@@ -149,7 +137,25 @@ describe("EntityConfigurationOverview", () => {
 
     await user.click(screen.getByRole("button", { name: "Configure Invoices" }));
 
-    expect(onSelectEntity).toHaveBeenCalledTimes(1);
+    expect(onSelectEntity).toHaveBeenCalledOnce();
+    expect(onSelectEntity.mock.calls[0][0].name).toBe("invoice");
+  });
+
+  it("sums up the display settings as Defaults until the user changes them", () => {
+    mockProfiles([makeProfile("invoice", "Invoices")]);
+    renderOverview();
+
+    expect(screen.getByText("Defaults")).toBeInTheDocument();
+  });
+
+  it("sums up the title and subtitle once the user changed the settings", () => {
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(PROFILE_URL, "invoice", { nameAttribute: "id" });
+    mockProfiles([makeProfile("invoice", "Invoices")]);
+    renderOverview();
+
+    expect(screen.getByText("Title: ID · No subtitle")).toBeInTheDocument();
   });
 
   it("dismisses the color hint alert when closed", async () => {
