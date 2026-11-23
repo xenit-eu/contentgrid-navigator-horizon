@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
+  SidebarSeparator,
 } from "@contentgrid/ui";
 import { handleNavigationClick } from "../navigation";
 
@@ -41,6 +42,8 @@ export function SidebarEntityNav({
 }: SidebarEntityNavProps) {
   return (
     <SidebarGroup className="pt-0">
+      {/* Collapsed: a 1px divider between the top actions and the entity icons. */}
+      <SidebarSeparator className="mx-auto my-1 hidden w-7 group-data-[collapsible=icon]:block" />
       <SidebarGroupLabel icon={<StackIcon aria-hidden />}>Entities</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
@@ -111,13 +114,6 @@ function SidebarEntityNavItem({
         onClick={href === undefined ? onOpen : undefined}
         isActive={isActive}
         tooltip={tooltip}
-        className="gap-3"
-        // Overrides the default `border-l-sidebar-primary` active-state border color with
-        // the entity's chosen color. Inline style wins over the Tailwind class regardless of
-        // stylesheet order. Only applied when active + a color is set — otherwise the
-        // default border color (transparent when inactive, sidebar-primary when active)
-        // is untouched.
-        style={isActive && preferences.color ? { borderLeftColor: preferences.color } : undefined}
       >
         {href === undefined ? (
           entityContent
