@@ -21,6 +21,16 @@ describe("ResizableSplitLayout", () => {
     expect(screen.getByRole("separator", { name: "Resize" })).toBeInTheDocument();
   });
 
+  it("leaves the handle out of the accessibility tree when it is hidden", () => {
+    const { rerender } = render(
+      <ResizableSplitLayout left="Left" right="Right" handleLabel="Resize" handleHidden />,
+    );
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+
+    rerender(<ResizableSplitLayout left="Left" right="Right" handleLabel="Resize" />);
+    expect(screen.getByRole("separator", { name: "Resize" })).toBeInTheDocument();
+  });
+
   it("tells each pane's descendants which side they are on", () => {
     render(<ResizableSplitLayout left={<PaneProbe />} right={<PaneProbe />} />);
     expect(screen.getByText("side:left")).toBeInTheDocument();

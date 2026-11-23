@@ -102,6 +102,11 @@ export interface ResizableSplitLayoutProps extends SplitPaneSizes {
   readonly resizable?: boolean;
   /** Accessible name for the drag handle. */
   readonly handleLabel?: string;
+  /**
+   * Hides the handle: no divider is drawn, it takes no width and it is not in the accessibility
+   * tree, e.g. while the right pane is collapsed and there is nothing to separate. Defaults to `false`.
+   */
+  readonly handleHidden?: boolean;
   /** Renders a visible grip on the drag handle. */
   readonly withHandle?: boolean;
   /** Called with both pane widths in pixels whenever either changes. */
@@ -130,6 +135,7 @@ function ResizableSplitLayout({
   onRightCollapsedChange,
   resizable = true,
   handleLabel = "Resize panes",
+  handleHidden = false,
   withHandle = true,
   onWidthsChange,
   className,
@@ -236,6 +242,7 @@ function ResizableSplitLayout({
                 withHandle={withHandle && resizable}
                 disabled={!resizable}
                 aria-label={handleLabel}
+                hidden={handleHidden}
                 className={handleClassName}
               />
             )}

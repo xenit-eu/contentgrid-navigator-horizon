@@ -13,6 +13,8 @@ export interface RecordTableRowProps {
   readonly cells: readonly RecordTableCell[];
   readonly actions?: ReactNode;
   readonly selected?: boolean;
+  /** Marks the row as the current one (`aria-current`), e.g. the item shown beside the table. */
+  readonly current?: boolean;
   readonly onClick?: () => void;
   /** Renders a leading selection checkbox (checked per `selected`) when present. */
   readonly onSelectChange?: (checked: boolean) => void;
@@ -23,21 +25,26 @@ function RecordTableRow({
   cells,
   actions,
   selected = false,
+  current = false,
   onClick,
   onSelectChange,
   className,
 }: RecordTableRowProps) {
-  const rowBackground = selected ? "bg-selected" : "bg-card/50";
+  const highlighted = selected || current;
+  const rowBackground = highlighted ? "bg-selected" : "bg-table-row";
 
   return (
     <div
       role="row"
       data-slot="table-row"
+      aria-current={current || undefined}
       onClick={onClick}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={
         onClick
           ? (e) => {
+              // Keys pressed on the row's own buttons and checkbox belong to them, not to the row.
+              if (e.target !== e.currentTarget) return;
               if (e.key === "Enter") {
                 onClick();
               } else if (e.key === " ") {
@@ -60,14 +67,14 @@ function RecordTableRow({
         // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
         // to its content's actual width when that's wider than the container (matching what the
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
-        "relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
+        "group/row relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
         onClick && "cursor-pointer",
-        onClick && !selected && "hover:bg-hover",
+        onClick && !highlighted && "hover:bg-hover",
         rowBackground,
         className,
       )}
     >
-      {selected && (
+      {highlighted && (
         <span className="absolute left-0 top-0 h-full w-[3px] bg-ring rounded-r-sm" aria-hidden />
       )}
 
@@ -102,7 +109,12 @@ function RecordTableRow({
       {actions && (
         <div
           role="cell"
-          className={cn("sticky right-0 flex items-center justify-end gap-1", rowBackground)}
+          className={cn(
+            "sticky right-0 flex items-center justify-end gap-1 transition-colors",
+            rowBackground,
+            // Follows the row's hover, so the sticky cell doesn't stand out from it.
+            onClick && !highlighted && "group-hover/row:bg-hover",
+          )}
         >
           {actions}
         </div>
