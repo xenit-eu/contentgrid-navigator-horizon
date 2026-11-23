@@ -41,10 +41,11 @@ On 412 the form shows "This item has been updated by someone else" (`VersionConf
 
 ### Pending file changes
 
-`ContentChanges` (attribute name → `File` to store, or `null` to remove), held by
+`ContentChanges` (attribute name → `ContentChange`: `file`, the `File` to store or `null` to
+remove, and optionally the `filename`/`mimetype` to store it under), held by
 `useEntityItemContext` so the form and the content-focus preview read the same map.
 
-- Picking a file sets the entry to the `File`. Removing means "no file here": `null` when the
+- Picking a file sets the entry to `{ file }`. Removing means "no file here": `{ file: null }` when the
   attribute holds a stored file (removed on Save), else the entry is deleted. Cancel brings the
   stored file back (FR-008, FR-009).
 - The attribute's `<attr>.filename`/`<attr>.mimetype` fields follow the entry: the picked file's
@@ -63,14 +64,14 @@ On 412 the form shows "This item has been updated by someone else" (`VersionConf
    changed since the form opened changed the item's ETag too, so this fails with 412 before any
    file is sent. With files to follow it doesn't refresh the cache (`invalidateOnSuccess: false`):
    the file step refreshes the item and its lists once, at the end.
-2. **Files**: `useApplyContentChanges` with the map and, for each picked file, the values of its
-   filename and mimetype fields, which the file is stored under (FR-015). Each change reads the content's own ETag with a HEAD;
+2. **Files**: `useApplyContentChanges` with the map, each picked file's change carrying the values
+   of its filename and mimetype fields, which the file is stored under (FR-015). Each change reads the content's own ETag with a HEAD;
    removing a file that is already gone (HEAD 404) sends nothing and counts as done.
 3. **Result**: no failure → toast, form closes. Failures → one error toast per failed attribute,
    saying the other changes were saved, and the message of each failure is kept per attribute
    (`contentFailures`, next to the map) and shown on that attribute's card. The map keeps only the
    failed entries, and `refresh` moves the form onto the latest item; Save then sends only those
-   again (FR-024). A kept failed file keeps the name and media type it was sent under, so the
+   again (FR-024). A kept failed change keeps the name and media type it was sent under, so the
    reseeded filename and mimetype fields show what the user typed. A failure is cleared when the
    user changes that attribute's file again and when a new Save starts. Cancel is disabled while
    Save runs.

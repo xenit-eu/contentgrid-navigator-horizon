@@ -73,8 +73,8 @@ interface EditContentFieldsProps {
   /** The message of each failed file change, by attribute name; shown on that attribute's card. */
   readonly contentFailures: ReadonlyMap<string, string>;
   readonly onContentChange: (attributeName: string, file: File | null) => void;
-  /** While Save stores the picked files, each one's upload progress, by attribute name. */
-  readonly uploadProgress?: ReadonlyMap<string, number>;
+  /** While Save applies the file changes, how far each one got; a card shows its upload progress. */
+  readonly contentResults?: ContentChangeResults;
   /** Makes every file field read-only. */
   readonly disabled?: boolean;
   readonly renderMetadataFields: (attributeName: string) => ReactNode;

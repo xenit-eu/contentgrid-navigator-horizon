@@ -72,32 +72,44 @@ class UpdateHalFormTemplate {
 ### `useApplyContentChanges` (hooks/item/use-content.ts)
 
 ```ts
-/** Attribute name → `File` to store, or `null` to remove the stored file. */
-type ContentChanges = ReadonlyMap<string, File | null>;
+interface ContentChange {
+  /** The file to store, or `null` to remove the stored file. */
+  readonly file: File | null;
+  /** The name and media type to store `file` under; the file's own when absent. */
+  readonly filename?: string;
+  readonly mimetype?: string;
+}
+/** Attribute name → its queued change. */
+type ContentChanges = ReadonlyMap<string, ContentChange>;
+
+interface ContentChangeResult {
+  /** Percentage (0–100) of the file sent; absent for a removal. */
+  readonly progress?: number;
+  /** Why the change failed; absent unless it did. */
+  readonly error?: Error;
+}
+/** Attribute name → how far its change got. */
+type ContentChangeResults = ReadonlyMap<string, ContentChangeResult>;
 
 function useApplyContentChanges(entityItem: EntityItem): UseMutationResult<
-  ReadonlyMap<string, Error>,
+  ContentChangeResults,
   Error,
-  {
-    changes: ContentChanges;
-    /**
-     * Attribute name → name and media type to store the picked file under; the file's own when
-     * absent.
-     */
-    metadata: ReadonlyMap<string, { readonly filename?: string; readonly mimetype?: string }>;
-  }
->;
+  ContentChanges
+> & {
+  /** Follows the changes while they run. */
+  results: ContentChangeResults;
+};
 ```
 
 Behaviour:
 
 - Changes run one after the other. Before each, a HEAD on the `cg:content` link reads the content's
   own ETag (404 → no file; a 200 without a readable ETag fails the change).
-- A `File` is sent with `uploadContentRequest(attr, file, contentEtag, filename, mimetype)`: `If-Match` when
-  a file is stored, `If-None-Match: *` when none is. `null` is sent with
+- A `file` is sent with `uploadContentRequest(attr, file, contentEtag, filename, mimetype)`: `If-Match` when
+  a file is stored, `If-None-Match: *` when none is. A `null` file is sent with
   `deleteContentRequest(attr, contentEtag)`, or not at all when no file is stored.
-- A failed change does not stop the others; the mutation resolves with the failures keyed by
-  attribute name (empty map: all applied).
+- A failed change does not stop the others; the mutation resolves with the results keyed by
+  attribute name (no `error` in any of them: all applied).
 - Once settled: invalidate `entityItem.byUrl` for the item and `entityItemCollection.forEntity`.
 
 `useUpdateEntityItem` gains `invalidateOnSuccess` (default `true`). The update form calls it
