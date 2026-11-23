@@ -490,8 +490,9 @@ const sidebarMenuButtonVariants = cva(
     // bar is an inset shadow, so it takes no space and the icon lines up with the other rows.
     "data-[active=true]:bg-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-[inset_2px_0_0_var(--primary)] dark:data-[active=true]:bg-selected",
     "data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
-    // Collapsed: a 40px icon target in the 56px rail.
-    "group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!",
+    // Collapsed: a 40px icon target in the 56px rail. The label is visually hidden (sr-only, not
+    // display:none) so it still names the row for assistive tech and takes no flex space.
+    "group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:[&>span:last-child]:sr-only",
     "[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   ].join(" "),
   {
