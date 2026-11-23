@@ -17,7 +17,7 @@ export function withContentChange(
   if (file === null && !hasStoredFile) {
     next.delete(attributeName);
   } else {
-    next.set(attributeName, file);
+    next.set(attributeName, { file });
   }
   return next;
 }

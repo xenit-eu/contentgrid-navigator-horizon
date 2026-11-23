@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   type AuthenticationTokenSupplier,
+  type ContentChanges,
   type EntityItem,
   EntityItemAttributeContent,
   type EntityItemLayout,
@@ -82,7 +83,7 @@ vi.mock("../relations/relation-to-many-section", () => ({
 vi.mock("../attributes/editable-entity-item-attributes", () => ({
   EditableEntityItemAttributes: (props: {
     onEditingChange: (isEditing: boolean) => void;
-    onPendingContentChange: (pendingContent: ReadonlyMap<string, File | null>) => void;
+    onPendingContentChange: (pendingContent: ContentChanges) => void;
     onSavingChange?: (isSaving: boolean) => void;
   }) => (
     <>
@@ -94,7 +95,7 @@ vi.mock("../attributes/editable-entity-item-attributes", () => ({
       </button>
       <button
         type="button"
-        onClick={() => props.onPendingContentChange(new Map([["receipt", null]]))}
+        onClick={() => props.onPendingContentChange(new Map([["receipt", { file: null }]]))}
       >
         remove receipt in the form
       </button>
@@ -102,7 +103,7 @@ vi.mock("../attributes/editable-entity-item-attributes", () => ({
         type="button"
         onClick={() =>
           props.onPendingContentChange(
-            new Map([["receipt", new File(["x"], "new.txt", { type: "text/plain" })]]),
+            new Map([["receipt", { file: new File(["x"], "new.txt", { type: "text/plain" }) }]]),
           )
         }
       >

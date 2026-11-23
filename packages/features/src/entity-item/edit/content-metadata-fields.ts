@@ -1,5 +1,6 @@
 import {
   AttributeKind,
+  type ContentChange,
   type ContentChanges,
   type FieldValue,
   type FieldValueMap,
@@ -45,18 +46,20 @@ export function startingMetadataValues(
 }
 
 /**
- * The values of a content attribute's filename and mimetype fields for a file change: the picked
- * file's own name and type, or none when the file is removed (`null`).
+ * The values of a content attribute's filename and mimetype fields for a file change: the name and
+ * type the change stores the file under (the picked file's own unless given), or none when the file
+ * is removed.
  */
 export function changedFileMetadataValues(
   item: EditableEntityItem,
   attributeName: string,
-  file: File | null,
+  { file, filename, mimetype }: ContentChange,
 ): Record<string, FieldValue> {
-  const { filename, mimetype } = item.updateTemplate.contentMetadataPropertyNames(attributeName);
+  const names = item.updateTemplate.contentMetadataPropertyNames(attributeName);
   const values: Record<string, FieldValue> = {};
-  if (filename) values[filename] = file?.name;
-  if (mimetype) values[mimetype] = file?.type || undefined;
+  if (names.filename) values[names.filename] = file ? (filename ?? file.name) : undefined;
+  if (names.mimetype)
+    values[names.mimetype] = file ? mimetype || file.type || undefined : undefined;
   return values;
 }
 
@@ -66,8 +69,8 @@ export function initialFormValues(
   pendingContent: ContentChanges,
 ): FieldValueMap {
   const values = { ...item.updateFormValues };
-  for (const [attributeName, file] of pendingContent) {
-    Object.assign(values, changedFileMetadataValues(item, attributeName, file));
+  for (const [attributeName, change] of pendingContent) {
+    Object.assign(values, changedFileMetadataValues(item, attributeName, change));
   }
   return values;
 }

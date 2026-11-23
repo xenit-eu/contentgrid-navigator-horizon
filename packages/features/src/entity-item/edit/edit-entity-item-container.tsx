@@ -8,6 +8,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import {
+  type ContentChangeResults,
   type ContentChanges,
   type FieldValueMap,
   getValidationFieldErrors,
@@ -142,20 +143,16 @@ export function EditEntityItemContainer({
     // Each Save reports its own failures.
     onContentFailuresChange(new Map());
     // The file fields are read-only from here on, but a failure is judged against what was sent.
-    const sentChanges = pendingContent;
-    const sentMetadata = pickedFileMetadata(sentChanges);
+    const sentChanges = withPickedFileMetadata(pendingContent);
     updateMutation.mutate(valuesToSave(), {
       onSuccess: () => {
         if (sentChanges.size === 0) {
           finishSave();
           return;
         }
-        contentMutation.mutate(
-          { changes: sentChanges, metadata: sentMetadata },
-          {
-            onSuccess: (failures) => handleContentChangesSaved(failures, sentChanges, sentMetadata),
-          },
-        );
+        contentMutation.mutate(sentChanges, {
+          onSuccess: (results) => handleContentChangesSaved(results, sentChanges),
+        });
       },
     });
   }
@@ -173,55 +170,43 @@ export function EditEntityItemContainer({
     );
   }
 
-  /** The name and media type in each picked file's filename and mimetype fields, which the file
-   * is stored under. */
-  function pickedFileMetadata(changes: ContentChanges): PickedFileMetadata {
-    const metadata: PickedFileMetadata = new Map();
+  /** The file changes, each picked file with the name and media type in its filename and mimetype
+   * fields, which the file is stored under. */
+  function withPickedFileMetadata(changes: ContentChanges): ContentChanges {
     const textOf = (fieldName: string | undefined) => {
       const value = fieldName === undefined ? undefined : formState.values[fieldName];
       return typeof value === "string" && value !== "" ? value : undefined;
     };
-    for (const [attributeName, file] of changes) {
-      if (!file) continue;
-      const names = updateTemplate.contentMetadataPropertyNames(attributeName);
-      metadata.set(attributeName, {
-        filename: textOf(names.filename),
-        mimetype: textOf(names.mimetype),
-      });
-    }
-    return metadata;
+    return new Map(
+      [...changes].map(([attributeName, { file }]) => {
+        const names = updateTemplate.contentMetadataPropertyNames(attributeName);
+        const change = file
+          ? { file, filename: textOf(names.filename), mimetype: textOf(names.mimetype) }
+          : { file };
+        return [attributeName, change] as const;
+      }),
+    );
   }
 
-  function handleContentChangesSaved(
-    failures: ReadonlyMap<string, Error>,
-    sentChanges: ContentChanges,
-    sentMetadata: PickedFileMetadata,
-  ) {
-    if (failures.size === 0) {
+  function handleContentChangesSaved(results: ContentChangeResults, sentChanges: ContentChanges) {
+    const failedChanges = [...sentChanges].filter(
+      ([attributeName]) => results.get(attributeName)?.error !== undefined,
+    );
+    if (failedChanges.length === 0) {
       finishSave();
       return;
     }
     const messages = new Map<string, string>();
-    for (const [attributeName, error] of failures) {
-      const { title } = toProblemDisplayModel(error);
+    for (const [attributeName] of failedChanges) {
+      const { title } = toProblemDisplayModel(results.get(attributeName)?.error);
       const label = contentAttributeLabel(item, attributeName);
       toast.error(`Changes saved, but the file of ${label} was not: ${title}`);
       messages.set(attributeName, `This file was not saved: ${title}. Save to try again.`);
     }
     // The metadata is saved already: the form moves onto the latest version of the item, with
-    // only the failed changes still waiting. A kept file carries the name and media type it was
+    // only the failed changes still waiting. A kept change carries the name and media type it was
     // sent under, so the reseeded fields show what the user typed.
-    onPendingContentChange(
-      new Map(
-        [...sentChanges].flatMap(([attributeName, file]) => {
-          if (!failures.has(attributeName)) return [];
-          const { filename, mimetype } = sentMetadata.get(attributeName) ?? {};
-          const kept =
-            file && new File([file], filename ?? file.name, { type: mimetype ?? file.type });
-          return [[attributeName, kept] as const];
-        }),
-      ),
-    );
+    onPendingContentChange(new Map(failedChanges));
     // After the pending change, which drops the failures of the files it touched.
     onContentFailuresChange(messages);
     onRefresh();
@@ -280,7 +265,7 @@ export function EditEntityItemContainer({
             pendingContent={pendingContent}
             contentFailures={contentFailures}
             onContentChange={handleContentChange}
-            uploadProgress={contentMutation.isPending ? contentMutation.progress : undefined}
+            contentResults={contentMutation.isPending ? contentMutation.results : undefined}
             disabled={isSaving}
             renderMetadataFields={(attributeName) => (
               <HalFormsContainer
@@ -301,8 +286,6 @@ export function EditEntityItemContainer({
   );
 }
 
-type PickedFileMetadata = Map<string, { filename?: string; mimetype?: string }>;
-
 /**
  * Keeps the filename and mimetype fields in step with the file changes, whether they were made in
  * the form or in the content preview: a changed file's fields show the picked file (none for a
@@ -320,12 +303,12 @@ function useSyncFileMetadataFields(
   setPreviousPendingContent(pendingContent);
   const attributeNames = new Set([...previousPendingContent.keys(), ...pendingContent.keys()]);
   for (const attributeName of attributeNames) {
-    const file = pendingContent.get(attributeName);
-    if (file === previousPendingContent.get(attributeName)) continue;
+    const change = pendingContent.get(attributeName);
+    if (change === previousPendingContent.get(attributeName)) continue;
     setValues(
-      file === undefined
+      change === undefined
         ? startingMetadataValues(item, attributeName)
-        : changedFileMetadataValues(item, attributeName, file),
+        : changedFileMetadataValues(item, attributeName, change),
     );
   }
 }

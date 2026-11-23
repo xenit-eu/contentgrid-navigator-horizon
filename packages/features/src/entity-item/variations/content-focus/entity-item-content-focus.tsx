@@ -154,11 +154,11 @@ function ContentFocusPreview({
   attributeSelector,
 }: Readonly<ContentFocusPreviewProps>) {
   const fileChange = pendingContent.get(attributeName);
-  if (fileChange instanceof File) {
-    return <FilePreview file={fileChange} toolbarStart={attributeSelector} />;
+  if (fileChange?.file) {
+    return <FilePreview file={fileChange.file} toolbarStart={attributeSelector} />;
   }
 
-  const isRemoved = fileChange === null;
+  const isRemoved = fileChange !== undefined;
   const hasStoredFile = Boolean(getContentAttributeMetadata(shownItem, attributeName));
   if (isEditing && (isRemoved || !hasStoredFile)) {
     const pickFile = (file: File | null) =>

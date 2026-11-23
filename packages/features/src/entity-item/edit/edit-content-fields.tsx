@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
-import { AttributeKind, type ContentChanges, type EntityItem } from "@contentgrid/navigator-data";
+import {
+  AttributeKind,
+  type ContentChangeResults,
+  type ContentChanges,
+  type EntityItem,
+} from "@contentgrid/navigator-data";
 import { Card, CardContent, FileRenderer } from "@contentgrid/ui";
 import { formatFieldName } from "../../format-field-name";
 import type { EditableEntityItem } from "./editable-entity-item";
@@ -11,8 +16,8 @@ interface EditContentFieldsProps {
   /** The message of each failed file change, by attribute name; shown on the attribute's card. */
   readonly contentFailures: ReadonlyMap<string, string>;
   readonly onContentChange: (attributeName: string, file: File | null) => void;
-  /** While Save stores the picked files, each one's upload progress, by attribute name. */
-  readonly uploadProgress?: ReadonlyMap<string, number>;
+  /** While Save applies the file changes, how far each one got; a card shows its upload progress. */
+  readonly contentResults?: ContentChangeResults;
   /** Makes every file field read-only, e.g. while Save runs: no file can be picked or removed. */
   readonly disabled?: boolean;
   /** The attribute's filename and mimetype fields, shown under its file while it has one. */
@@ -35,7 +40,7 @@ export function EditContentFields({
   pendingContent,
   contentFailures,
   onContentChange,
-  uploadProgress,
+  contentResults,
   disabled = false,
   renderMetadataFields,
   previewedAttributeName,
@@ -53,7 +58,8 @@ export function EditContentFields({
       size: metadata.length,
       type: metadata.mimetype,
     };
-    const file = pendingContent.has(name) ? pendingContent.get(name) : storedFile;
+    const change = pendingContent.get(name);
+    const file = change ? change.file : storedFile;
     const isPreviewed = canChoosePreview && name === previewedAttributeName;
 
     return (
@@ -68,7 +74,7 @@ export function EditContentFields({
             onChange={(picked) => onContentChange(name, picked ?? null)}
             previewed={isPreviewed}
             onPreview={canChoosePreview && !isPreviewed ? () => onPreview(name) : undefined}
-            uploadProgress={uploadProgress?.get(name)}
+            uploadProgress={contentResults?.get(name)?.progress}
             error={contentFailures.get(name)}
             compact
           />

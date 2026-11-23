@@ -91,8 +91,9 @@ the shown item. It returns:
   — toggles last while the page stays on the item; on another item every section is back at its
   default (`defaultSectionOpen` in `entity-item-sections.tsx`)
 - `pendingContent`, `setPendingContent` — the file changes made in the edit form and not saved yet,
-  per content attribute: a new file to store, or `null` to remove the stored one. Save sends them
-  after the other fields are saved.
+  per content attribute (`ContentChange`): a new `file` to store, or `file: null` to remove the
+  stored one. Save sends them after the other fields are saved, each picked file with the name and
+  media type in its filename and mimetype fields.
   - Why here and not in the form: the content preview next to the form needs them too. It shows a
     picked file before it is uploaded, and a drop zone when there is no file (removed, or none
     stored); a file dropped there is added to the same list (`withContentChange`).
