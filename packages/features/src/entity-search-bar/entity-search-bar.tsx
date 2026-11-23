@@ -20,12 +20,15 @@ import { type EntitySearchBarProps, useEntitySearchBar } from "./use-entity-sear
 
 const UNRESOLVED_FILTER_WARNING = "Not applied by this search form";
 const SEARCH_BUTTON_TOOLTIP = "Apply current value as filter";
+// A single chip already has its own remove button, so "Clear all" only adds something from two.
+const CLEAR_ALL_MIN_CHIPS = 2;
 
 export type { EntitySearchBarProps } from "./use-entity-search-bar";
 
 /**
- * The single search bar of an entity item collection (spec 003): three stacked rows — active
- * filter chips, the search-parameter selector with the free-text input, and quick filters.
+ * The single search bar of an entity item collection (spec 003): three stacked rows — the
+ * search-parameter selector with the free-text input, quick filters, and active filter chips.
+ * The chips sit last so the input does not move down when the first filter is added.
  * Fully controlled by the collection's `filters`; every change goes out through
  * `onFiltersChange`. A row with nothing to show takes no space; the whole bar renders nothing
  * when all three rows are empty.
@@ -42,45 +45,6 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
   });
 
   const rows: ReactNode[] = [];
-
-  if (searchBar.chips.length > 0) {
-    rows.push(
-      <FilterChips
-        key="chips"
-        onRemove={searchBar.removeChip}
-        onSelect={(id) => {
-          if (searchBar.chipTargets.get(id)?.kind === "input") {
-            // Focus first: the input's focus handler may ask for the popover, which editing closes.
-            inputRef.current?.focus();
-          }
-          const target = searchBar.editChip(id);
-          if (target?.kind === "quick-filter") {
-            // The quick-filter row scrolls; bring the trigger the popover anchors to into view.
-            const slot = Array.from(
-              rootRef.current?.querySelectorAll<HTMLElement>("[data-quick-filter]") ?? [],
-            ).find((el) => el.dataset.quickFilter === target.groupKey);
-            slot
-              ?.querySelector("button")
-              ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-          }
-        }}
-        chips={searchBar.chips.map((chip) => ({
-          id: chip.id,
-          field: chip.field,
-          mode: chip.mode,
-          value: chip.value,
-          modeIcon: chip.valueKind ? searchTypeIcon(chip.valueKind, chip.searchType) : undefined,
-          valueIcon:
-            chip.booleanValue === undefined ? undefined : booleanValueIcon(chip.booleanValue),
-          selectable: searchBar.chipTargets.has(chip.id),
-          // The search request only encodes the form's own, preferred properties, so any other key
-          // (a stale or hand-edited link, a hidden property, or a range bound superseded by an
-          // inclusive one such as `~after` next to `~from`) is dropped: show it, but as not applied.
-          warning: chip.isUnresolved ? UNRESOLVED_FILTER_WARNING : undefined,
-        }))}
-      />,
-    );
-  }
 
   // Only the modes group means there is no parameter to type into (edge case: nothing searchable).
   if (searchBar.selectorGroups.length > 1) {
@@ -189,6 +153,58 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
           }
         }}
       />,
+    );
+  }
+
+  if (searchBar.chips.length > 0) {
+    rows.push(
+      <div key="chips" data-slot="search-chips-row" className="flex items-start gap-2">
+        <FilterChips
+          className="min-w-0 flex-1"
+          onRemove={searchBar.removeChip}
+          onSelect={(id) => {
+            if (searchBar.chipTargets.get(id)?.kind === "input") {
+              // Focus first: the input's focus handler may ask for the popover, which editing closes.
+              inputRef.current?.focus();
+            }
+            const target = searchBar.editChip(id);
+            if (target?.kind === "quick-filter") {
+              // The quick-filter row scrolls; bring the trigger the popover anchors to into view.
+              const slot = Array.from(
+                rootRef.current?.querySelectorAll<HTMLElement>("[data-quick-filter]") ?? [],
+              ).find((el) => el.dataset.quickFilter === target.groupKey);
+              slot
+                ?.querySelector("button")
+                ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+            }
+          }}
+          chips={searchBar.chips.map((chip) => ({
+            id: chip.id,
+            field: chip.field,
+            mode: chip.mode,
+            value: chip.value,
+            modeIcon: chip.valueKind ? searchTypeIcon(chip.valueKind, chip.searchType) : undefined,
+            valueIcon:
+              chip.booleanValue === undefined ? undefined : booleanValueIcon(chip.booleanValue),
+            selectable: searchBar.chipTargets.has(chip.id),
+            // The search request only encodes the form's own, preferred properties, so any other key
+            // (a stale or hand-edited link, a hidden property, or a range bound superseded by an
+            // inclusive one such as `~after` next to `~from`) is dropped: show it, but as not applied.
+            warning: chip.isUnresolved ? UNRESOLVED_FILTER_WARNING : undefined,
+          }))}
+        />
+        {searchBar.chips.length >= CLEAR_ALL_MIN_CHIPS && (
+          <Button
+            type="button"
+            size="sm"
+            variant="link"
+            className="h-6 shrink-0 px-2 text-sm text-muted-foreground"
+            onClick={() => props.onFiltersChange({})}
+          >
+            Clear all
+          </Button>
+        )}
+      </div>,
     );
   }
 

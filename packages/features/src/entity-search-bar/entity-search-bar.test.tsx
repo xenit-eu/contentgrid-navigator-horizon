@@ -43,7 +43,7 @@ describe("EntitySearchBar", () => {
     useEntityDisplayPreferencesStore.setState({ overrides: {} });
   });
 
-  it("renders the three rows: chips, selector + input, quick filters", () => {
+  it("renders the selector + input, the quick filters and the chips", () => {
     renderBar({ "title~prefix": "Al" });
     expect(screen.getByRole("list", { name: "Active filters" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Search in" })).toBeInTheDocument();
@@ -124,6 +124,18 @@ describe("EntitySearchBar", () => {
     const { onFiltersChange } = renderBar({ "title~prefix": "Al", urgent: "true" });
     await user.click(screen.getByRole("button", { name: "Remove filter Title starts with Al" }));
     expect(onFiltersChange).toHaveBeenCalledWith({ urgent: "true" });
+  });
+
+  it("offers Clear all from two chips, and it clears every filter at once", async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar({ "title~prefix": "Al", urgent: "true" });
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(onFiltersChange).toHaveBeenCalledWith({});
+  });
+
+  it("leaves Clear all out for a single chip, even a range covering two parameters", () => {
+    renderBar({ "quantity~gte": "3", "quantity~lte": "9" });
+    expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument();
   });
 
   it("closes a range chip by clearing both bounds", async () => {

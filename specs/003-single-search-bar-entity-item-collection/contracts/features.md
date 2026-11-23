@@ -28,8 +28,8 @@ interface EntitySearchBarProps {
 function EntitySearchBar(props: EntitySearchBarProps): JSX.Element | null;
 ```
 
-- Renders the three rows of FR-001: `FilterChips`, then selector + input + suggestions popover,
-  then the quick-filter row.
+- Renders the three rows of FR-001: selector + input + suggestions popover, then the quick-filter
+  row, then `FilterChips` with "Clear all" from two chips up (FR-004c).
 - Each row collapses when it has nothing to show (no active filters / no selector-eligible
   params / no quick filters). Returns `null` when all three are empty.
 - Never mutates anything except through `onFiltersChange`, always passing the complete next map.
