@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   Sidebar,
+  SidebarLinkButton,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -187,6 +188,36 @@ describe("SidebarMenuButton tooltips", () => {
     );
     await userEvent.hover(screen.getByRole("button", { name: "Invoices" }));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Invoices · 12");
+  });
+
+  it("keeps the label in the accessible name but visually hides it while collapsed", () => {
+    render(
+      <SidebarProvider defaultOpen={false}>
+        <SidebarMenuButton>
+          <svg aria-hidden />
+          <span>Invoices</span>
+        </SidebarMenuButton>
+      </SidebarProvider>,
+    );
+    const button = screen.getByRole("button", { name: "Invoices" });
+    expect(button).toHaveClass("group-data-[collapsible=icon]:[&>span:last-child]:sr-only");
+    expect(button).toHaveClass("group-data-[collapsible=icon]:size-10!");
+    expect(button.querySelector("span:last-child")).toHaveTextContent("Invoices");
+  });
+
+  it.each([
+    ["Create", "primary" as const],
+    ["Home", "default" as const],
+    ["Settings", "default" as const],
+  ])("shows the %s link-button label as a tooltip while collapsed", async (label, variant) => {
+    render(
+      <SidebarProvider defaultOpen={false}>
+        <SidebarLinkButton icon={<svg aria-hidden />} label={label} variant={variant} />
+      </SidebarProvider>,
+    );
+    const button = screen.getByRole("button", { name: label });
+    await userEvent.hover(button);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(label);
   });
 });
 
