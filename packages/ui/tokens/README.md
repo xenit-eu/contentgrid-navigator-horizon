@@ -41,6 +41,9 @@ Values follow the reference design (light theme). Dark theme is unchanged.
 | `--cg-color-amber-light`   | `#7a3d14` | Dark text on the amber tint (7.36:1 on `#fbeee3`)                         |
 | `--cg-color-sky-50`        | `#e6f4fc` | Sky tint: selected / active / info (`--secondary`, `--accent`)            |
 | `--cg-color-sky-tint-line` | `#b5def5` | Border that pairs with the sky tint                                       |
+| `--cg-color-header-end`    | `#0b6aa6` | End of the app header gradient (`ocean-700` > `ocean` at 55% > this)      |
+| `--cg-color-brand-accent`  | `#7fd0f7` | "grid" half of the brand name in the header                               |
+| `--cg-color-header-sub`    | `#bcd6e8` | "BY AMEXIO" line under the brand name                                     |
 | `--cg-color-amber-tint`    | `#fbeee3` | Warning surface tint                                                      |
 | `--cg-color-danger-tint`   | `#fbe9e7` | Danger surface tint                                                       |
 | `--cg-color-green-tint`    | `#e4f3ea` | Success surface tint                                                      |
