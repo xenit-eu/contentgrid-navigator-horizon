@@ -81,5 +81,5 @@ export type {
 } from "./item/use-content";
 export { useEntityDisplayDefaults } from "./preferences/use-entity-display-defaults";
 export type { UseEntityDisplayDefaultsResult } from "./preferences/use-entity-display-defaults";
-export { useContentPreview } from "./preview/use-content-preview";
+export { contentPreviewVersion, useContentPreview } from "./preview/use-content-preview";
 export type { PreviewSource, UseContentPreviewOptions } from "./preview/use-content-preview";

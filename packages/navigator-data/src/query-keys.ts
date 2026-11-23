@@ -159,17 +159,18 @@ export const queryKeys = {
   },
 
   /**
-   * `useContentPreview`'s query key — one entry per content link + ETag combination.
+   * `useContentPreview`'s query key — one entry per content link + version combination.
    *
-   * The ETag is part of the key (not just the link href) so that re-uploading a file
-   * onto the same content attribute produces a new key automatically: the entity item's
-   * ETag changes on any mutation, including a content upload, so a stale preview is never
-   * served from cache after a re-upload. Deliberately its own root — never invalidated by
+   * The version (`contentPreviewVersion(entityItem, attributeName)`) is part of the key (not
+   * just the link href) so that re-uploading a file onto the same content attribute produces
+   * a new key automatically: it is the item's ETag, or for an item without one a string built
+   * from the content attribute's metadata. A stale preview is never served from cache after a
+   * re-upload. Deliberately its own root — never invalidated by
    * an entity item or collection mutation; see `packages/navigator-data/CLAUDE.md`
    * "Content preview and renditions".
    */
   contentPreview: {
-    /** Exact key for one content link's preview, scoped to the item's current ETag. */
-    byUrl: (href: string, etag: string | null) => [CONTENT_PREVIEW_KEY, href, etag] as const,
+    /** Exact key for one content link's preview, scoped to the content's current version. */
+    byUrl: (href: string, version: string) => [CONTENT_PREVIEW_KEY, href, version] as const,
   },
 };
