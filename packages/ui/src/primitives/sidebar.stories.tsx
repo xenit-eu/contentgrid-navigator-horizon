@@ -208,7 +208,11 @@ const EntityRows = () => (
         <SidebarMenu>
           {entityRows.map(({ name, count, color, Icon, active }) => (
             <SidebarMenuItem key={name}>
-              <SidebarMenuButton isActive={active} tooltip={name}>
+              <SidebarMenuButton
+                isActive={active}
+                tooltip={`${name} · ${count}`}
+                expandedTooltip={`${name}: description of the entity.`}
+              >
                 <Icon aria-hidden style={{ color }} />
                 <span>{name}</span>
               </SidebarMenuButton>

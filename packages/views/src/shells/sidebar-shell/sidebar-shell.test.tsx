@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   RecordingNavigationProvider,
   createRecordingNavigation,
@@ -61,6 +61,11 @@ function renderShell(initialEntry = "/") {
 }
 
 describe("SidebarShell", () => {
+  // The sidebar remembers its state in a cookie; do not let one test's toggle leak into the next.
+  beforeEach(() => {
+    document.cookie = "sidebar_state=; path=/; max-age=0";
+  });
+
   it("renders the routed page inside the sidebar frame", async () => {
     renderShell();
 

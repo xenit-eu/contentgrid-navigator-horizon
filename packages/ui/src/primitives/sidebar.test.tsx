@@ -1,7 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SidebarMenuButton, SidebarMenuSkeleton, SidebarProvider, SidebarTrigger } from "./sidebar";
+
+beforeEach(() => {
+  document.cookie = "sidebar_state=; path=/; max-age=0";
+});
 
 beforeAll(() => {
   // jsdom does not implement window.matchMedia; SidebarProvider uses useIsMobile
@@ -89,5 +93,91 @@ describe("SidebarMenuSkeleton", () => {
     const { container } = render(<SidebarMenuSkeleton width="55%" />);
     const bar = container.querySelector<HTMLElement>("[data-sidebar='menu-skeleton-text']");
     expect(bar?.style.getPropertyValue("--skeleton-width")).toBe("55%");
+  });
+});
+
+describe("sidebar state cookie", () => {
+  it("starts expanded without a cookie", () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+  });
+
+  it("starts collapsed when the cookie says so", () => {
+    document.cookie = "sidebar_state=false; path=/";
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+
+  it("remembers a toggle for the next mount", async () => {
+    const first = render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    first.unmount();
+
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+
+  it("lets an explicit defaultOpen win over the cookie", () => {
+    document.cookie = "sidebar_state=false; path=/";
+    render(
+      <SidebarProvider defaultOpen>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+  });
+
+  it("keeps the [ shortcut working", async () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    fireEvent.keyDown(window, { key: "[" });
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+});
+
+describe("SidebarMenuButton tooltips", () => {
+  it("shows the expanded tooltip while expanded", async () => {
+    render(
+      <SidebarProvider defaultOpen>
+        <SidebarMenuButton tooltip="Invoices · 12" expandedTooltip="Invoices: what we bill.">
+          Invoices
+        </SidebarMenuButton>
+      </SidebarProvider>,
+    );
+    await userEvent.hover(screen.getByRole("button", { name: "Invoices" }));
+    expect(await screen.findByRole("tooltip", {}, { timeout: 2000 })).toHaveTextContent(
+      "Invoices: what we bill.",
+    );
+  });
+
+  it("shows the collapsed tooltip while collapsed", async () => {
+    render(
+      <SidebarProvider defaultOpen={false}>
+        <SidebarMenuButton tooltip="Invoices · 12" expandedTooltip="Invoices: what we bill.">
+          Invoices
+        </SidebarMenuButton>
+      </SidebarProvider>,
+    );
+    await userEvent.hover(screen.getByRole("button", { name: "Invoices" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Invoices · 12");
   });
 });

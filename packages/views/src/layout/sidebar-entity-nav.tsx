@@ -96,9 +96,12 @@ function SidebarEntityNavItem({
   const { preferences } = useEntityDisplayPreferences(profile);
   const EntityIcon = resolveEntityCardIcon(preferences.icon);
 
-  const tooltip = profile.description
+  // Expanded: the description, when the entity has one. Collapsed: the name and, when known, the count.
+  const expandedTooltip = profile.description
     ? `${profile.pluralName}: ${profile.description}`
-    : profile.pluralName;
+    : undefined;
+  const collapsedTooltip =
+    count === undefined ? profile.pluralName : `${profile.pluralName} · ${count}`;
 
   const entityContent = (
     <>
@@ -120,7 +123,8 @@ function SidebarEntityNavItem({
         asChild={href !== undefined}
         onClick={href === undefined ? onOpen : undefined}
         isActive={isActive}
-        tooltip={tooltip}
+        tooltip={collapsedTooltip}
+        expandedTooltip={expandedTooltip}
       >
         {href === undefined ? (
           entityContent

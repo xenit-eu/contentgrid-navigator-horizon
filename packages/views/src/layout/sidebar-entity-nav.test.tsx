@@ -1,6 +1,8 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { useEntityItemCollection } from "@contentgrid/navigator-data";
+import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { SidebarProvider } from "@contentgrid/ui";
 import { invoiceProfile } from "../test-fixtures/sidebar-harness";
 import { SidebarEntityNav } from "./sidebar-entity-nav";
@@ -17,16 +19,16 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
 
 function renderNav(
   collection: { data?: unknown; isLoading?: boolean },
-  props: { isLoading?: boolean } = {},
+  props: { isLoading?: boolean; open?: boolean; profile?: typeof invoiceProfile } = {},
 ) {
   vi.mocked(useEntityItemCollection).mockReturnValue({
     isLoading: false,
     ...collection,
   } as unknown as ReturnType<typeof useEntityItemCollection>);
   return render(
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={props.open ?? true}>
       <SidebarEntityNav
-        profiles={[invoiceProfile]}
+        profiles={[props.profile ?? invoiceProfile]}
         isLoading={props.isLoading ?? false}
         activeEntity={undefined}
         onOpenEntity={vi.fn()}
@@ -87,5 +89,53 @@ describe("SidebarEntityNav counts", () => {
       "55%",
       "64%",
     ]);
+  });
+});
+
+describe("SidebarEntityNav tooltips", () => {
+  const contracts = makeProfileEntity(
+    {
+      name: "contract",
+      title: "Contracts",
+      description: "agreements with a supplier or customer.",
+    },
+    "https://example.com/profile/contracts",
+    "Contracts",
+  );
+  const count = { data: { totalItems: { count: 1284, isEstimated: false } } };
+
+  it("shows the description of the entity on hover while expanded", async () => {
+    renderNav(count, { profile: contracts });
+
+    await userEvent.hover(screen.getByRole("button", { name: /contracts/i }));
+
+    expect(await screen.findByRole("tooltip", {}, { timeout: 2000 })).toHaveTextContent(
+      "Contracts: agreements with a supplier or customer.",
+    );
+  });
+
+  it("shows nothing on hover while expanded when the entity has no description", async () => {
+    renderNav(count);
+
+    await userEvent.hover(screen.getByRole("button", { name: /invoice/i }));
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it("shows name and count while collapsed", async () => {
+    renderNav(count, { open: false, profile: contracts });
+
+    await userEvent.hover(screen.getByRole("button", { name: /contracts/i }));
+
+    expect((await screen.findByRole("tooltip")).textContent).toBe("Contracts · 1\u202f284");
+  });
+
+  it("leaves the count out of the collapsed tooltip when it is unknown", async () => {
+    renderNav({ data: undefined }, { open: false, profile: contracts });
+
+    await userEvent.hover(screen.getByRole("button", { name: /contracts/i }));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(/^Contracts$/);
   });
 });
