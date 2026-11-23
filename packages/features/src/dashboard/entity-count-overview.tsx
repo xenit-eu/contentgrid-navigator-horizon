@@ -36,13 +36,10 @@ function EntityOverview({
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <OverviewHeader count={0} loading />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
-          ))}
-        </div>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-36 w-full rounded-xl" />
+        ))}
       </div>
     );
   }
@@ -57,34 +54,14 @@ function EntityOverview({
   }
 
   return (
-    <div className="space-y-6">
-      <OverviewHeader count={loadedProfiles.length} />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {loadedProfiles.map((profile) => (
-          <EntityCardConnected
-            key={profile.name}
-            profile={profile}
-            onSelect={() => onSelectEntity(profile)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OverviewHeader({
-  count,
-  loading = false,
-}: Readonly<{ count: number; loading?: boolean }>) {
-  const typeLabel = `entity type${count === 1 ? "" : "s"}`;
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Entities</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {loading ? "Loading…" : `${count} ${typeLabel} available`}
-        </p>
-      </div>
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
+      {loadedProfiles.map((profile) => (
+        <EntityCardConnected
+          key={profile.name}
+          profile={profile}
+          onSelect={() => onSelectEntity(profile)}
+        />
+      ))}
     </div>
   );
 }

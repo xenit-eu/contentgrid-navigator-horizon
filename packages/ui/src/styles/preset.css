@@ -20,6 +20,8 @@
  * `useContainerWidthAtLeast`; `static` also sets it on :root so that hook can read it. */
 @theme static {
   --container-side-by-side: 55rem;
+  /* Widest a page's content runs (1180px). */
+  --container-page: 73.75rem;
 }
 
 @theme inline {
