@@ -480,11 +480,11 @@ const sidebarMenuButtonVariants = cva(
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
-        // The sidebar's main action: a soft primary tint with a full frame, distinct from the
-        // active entity row (sidebar accent, left border only). The frame is an outline, which
-        // takes no space, so the icon lines up with the other rows and stays centred collapsed.
+        // The sidebar's main action: outlined, a 1px primary frame on the page background with
+        // bold primary text. The frame is an outline, which takes no space, so the icon lines up
+        // with the other rows and stays centred collapsed. 40px high (see compoundVariants).
         primary:
-          "cursor-pointer rounded-md bg-primary/10 font-medium text-primary outline-1 -outline-offset-1 outline-solid outline-primary/25 transition-[width,height,padding,color,background-color] hover:bg-primary/15 hover:text-primary active:bg-primary/15 active:text-primary",
+          "cursor-pointer rounded-sm bg-background font-bold text-primary outline-1 -outline-offset-1 outline-solid outline-primary transition-[width,height,padding,color,background-color] hover:bg-accent hover:text-primary active:bg-accent active:text-primary",
       },
       size: {
         default: "h-9 text-sm",
@@ -492,6 +492,7 @@ const sidebarMenuButtonVariants = cva(
         lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
       },
     },
+    compoundVariants: [{ variant: "primary", size: "default", class: "h-10" }],
     defaultVariants: {
       variant: "default",
       size: "default",

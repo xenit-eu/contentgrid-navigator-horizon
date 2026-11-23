@@ -15,6 +15,8 @@ export function SidebarShell({ topChildren }: Readonly<{ topChildren?: ReactNode
   const currentPath = useLocation({ select: (location) => location.href.split(/[?#]/)[0] });
   const settingsHref = hrefFor?.settings?.();
   const settingsCurrent = settingsHref !== undefined && isWithin(currentPath, settingsHref);
+  const homeHref = hrefFor?.home();
+  const homeCurrent = homeHref !== undefined && isSamePath(currentPath, homeHref);
 
   return (
     <SideBarLayout
@@ -27,7 +29,8 @@ export function SidebarShell({ topChildren }: Readonly<{ topChildren?: ReactNode
       onOpenCreate={() => navigation.openClassifyCreate()}
       onOpenSettings={() => navigation.openSettings()}
       settingsCurrent={settingsCurrent}
-      homeHref={hrefFor?.home()}
+      homeCurrent={homeCurrent}
+      homeHref={homeHref}
       entityHref={hrefFor && ((entityName) => hrefFor.entityItemCollection(entityName))}
     >
       <Outlet />
@@ -35,8 +38,14 @@ export function SidebarShell({ topChildren }: Readonly<{ topChildren?: ReactNode
   );
 }
 
+const trimSlashes = (value: string) => value.replace(/\/+$/, "");
+
+/** `path` is exactly `target` (trailing slashes ignored): the home page has no sub-pages to include. */
+function isSamePath(path: string, target: string): boolean {
+  return trimSlashes(path) === trimSlashes(target);
+}
+
 /** `path` is `base` itself or one of its sub-pages (trailing slashes ignored). */
 function isWithin(path: string, base: string): boolean {
-  const trim = (value: string) => value.replace(/\/+$/, "");
-  return trim(path) === trim(base) || trim(path).startsWith(`${trim(base)}/`);
+  return isSamePath(path, base) || trimSlashes(path).startsWith(`${trimSlashes(base)}/`);
 }
