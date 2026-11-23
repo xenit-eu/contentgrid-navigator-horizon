@@ -32,6 +32,8 @@ export interface SideBarLayoutProps {
   readonly onOpenEntity: (entityName: string) => void;
   readonly onOpenCreate: () => void;
   readonly onOpenSettings: () => void;
+  /** A settings page is open: the user menu's Settings item shows its "current" state. */
+  readonly settingsCurrent?: boolean;
   /** Real addresses, when the host has them: the home and entity links then render as `<a href>`. */
   readonly homeHref?: string;
   readonly entityHref?: (entityName: string) => string;
@@ -45,6 +47,7 @@ export function SideBarLayout({
   onOpenEntity,
   onOpenCreate,
   onOpenSettings,
+  settingsCurrent,
   homeHref,
   entityHref,
 }: SideBarLayoutProps) {
@@ -62,6 +65,7 @@ export function SideBarLayout({
               <UserMenu
                 name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
                 email={auth.user.profile.email ?? ""}
+                settingsCurrent={settingsCurrent}
                 onSettingsClick={onOpenSettings}
                 onLogOut={() => auth.signoutRedirect()}
               />
