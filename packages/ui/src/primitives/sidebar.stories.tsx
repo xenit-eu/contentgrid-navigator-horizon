@@ -102,7 +102,7 @@ const LinkButtons = () => (
       label="Home"
       render={(content) => <a href="#home">{content}</a>}
     />
-    <SidebarLinkButton icon={<Plus aria-hidden />} label="Create Item" />
+    <SidebarLinkButton icon={<Plus aria-hidden />} label="Create" />
   </SidebarMenu>
 );
 

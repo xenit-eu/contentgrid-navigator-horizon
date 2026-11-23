@@ -56,12 +56,27 @@ describe("SideBarLayout", () => {
     const handlers = renderLayout(null);
 
     await userEvent.click(screen.getByRole("button", { name: /invoice/i }));
-    await userEvent.click(screen.getByRole("button", { name: "Create Item" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await userEvent.click(screen.getByRole("button", { name: "Home" }));
 
     expect(handlers.onOpenEntity).toHaveBeenCalledWith("invoice");
     expect(handlers.onOpenCreate).toHaveBeenCalledTimes(1);
     expect(handlers.onOpenHome).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Home as a labelled row under Create, current on the home page", async () => {
+    renderLayout(null, { homeCurrent: true });
+
+    const rows = screen.getAllByRole("button", { name: /^(Create|Home)$/ });
+    expect(rows.map((row) => row.textContent)).toEqual(["Create", "Home"]);
+    expect(screen.getByRole("button", { name: "Home" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Home" })).toHaveAttribute("data-active", "true");
+    expect(screen.getByRole("button", { name: "Create" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("does not mark Home as current elsewhere", () => {
+    renderLayout(null);
+    expect(screen.getByRole("button", { name: "Home" })).not.toHaveAttribute("aria-current");
   });
 
   it("opens settings from the user menu", async () => {
