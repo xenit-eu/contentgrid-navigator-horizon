@@ -71,6 +71,8 @@ export const PhoneDrawer: Story = {
 /** The same drawer in dark mode: the lockup takes the page header's white and accent colours. */
 export const PhoneDrawerDark: Story = {
   tags: ["mobile"],
+  // The Storybook theme toolbar's own mechanism (`withThemeByClassName`), plus next-themes forced.
+  globals: { theme: "dark" },
   parameters: { forcedTheme: "dark" },
   render: () => <Drawer />,
 };
