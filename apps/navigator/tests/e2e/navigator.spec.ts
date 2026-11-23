@@ -5,7 +5,7 @@
  *   - Date pickers:  MUI popup + gridcell/option clicks  →  native <input type="date"> filled directly
  *   - Row actions:   inline icon buttons (getByLabel/getByTestId)  →  "Open menu" dropdown + menuitem
  *   - Pagination:    KeyboardArrowRight/LeftIcon testIds  →  aria-label "Go to next/previous page"
- *   - Sidebar:       "Expand sidebar" button  →  "Toggle Sidebar" (SidebarTrigger sr-only)
+ *   - Sidebar:       "Expand sidebar" button  →  "Expand sidebar" / "Collapse sidebar" (SidebarTrigger in the header)
  *   - Clear field:   .MuiInputBase-root > .MuiButtonBase-root  →  getByRole('button', { name: 'Clear' })
  *   - Backdrop:      .MuiBackdrop-root.click()  →  keyboard.press('Escape')
  *   - EntityPicker:  "Link entity Items"  →  "Select" (single) / "Link" (multi)

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
 import { SidebarProvider, SidebarTrigger } from "./sidebar";
 
@@ -32,12 +33,34 @@ describe("SidebarTrigger", () => {
     expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
-  it("renders the sr-only Toggle Sidebar label", () => {
+  it("is named Collapse sidebar while the sidebar is open", () => {
     render(
       <SidebarProvider>
         <SidebarTrigger />
       </SidebarProvider>,
     );
-    expect(screen.getByText("Toggle Sidebar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+  });
+
+  it("is named Expand sidebar after toggling, and is 32px", async () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    const trigger = screen.getByRole("button", { name: "Expand sidebar" });
+    expect(trigger).toHaveClass("size-8");
+  });
+
+  it("shows the label with the [ shortcut hint in a tooltip", async () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+      </SidebarProvider>,
+    );
+    await userEvent.hover(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect((await screen.findAllByText("[")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Collapse sidebar/)).length).toBeGreaterThan(1);
   });
 });

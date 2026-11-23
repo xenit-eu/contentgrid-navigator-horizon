@@ -96,4 +96,15 @@ describe("SideBarLayout", () => {
 
     expect(handlers.onOpenEntity).not.toHaveBeenCalled();
   });
+
+  it("has one sidebar toggle, in the header next to the logo, that collapses and expands", async () => {
+    renderLayout(null);
+
+    const toggles = screen.getAllByRole("button", { name: /(collapse|expand) sidebar/i });
+    expect(toggles).toHaveLength(1);
+    expect(screen.getByRole("banner")).toContainElement(toggles[0]);
+
+    await userEvent.click(toggles[0]);
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
 });

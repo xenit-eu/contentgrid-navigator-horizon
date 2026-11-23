@@ -146,7 +146,7 @@ export const WithInteraction: Story = {
         </SidebarContent>
       </Sidebar>
       <main className="flex flex-1 flex-col gap-4 p-4">
-        <SidebarTrigger aria-label="Toggle sidebar" />
+        <SidebarTrigger />
         <p className="text-sm text-muted-foreground">Main content</p>
       </main>
     </SidebarProvider>
@@ -155,13 +155,12 @@ export const WithInteraction: Story = {
     const canvas = within(canvasElement);
     // Sidebar is open by default — menu items should be visible
     await expect(canvas.getByText("Dashboard")).toBeInTheDocument();
-    const trigger = canvas.getByRole("button", { name: /toggle sidebar/i });
-    await userEvent.click(trigger);
+    await userEvent.click(canvas.getByRole("button", { name: /collapse sidebar/i }));
     // After collapse, the sidebar should have state=collapsed
     const sidebar = canvasElement.querySelector("[data-sidebar='sidebar']");
     await expect(sidebar).toBeTruthy();
     // Re-open
-    await userEvent.click(trigger);
+    await userEvent.click(canvas.getByRole("button", { name: /expand sidebar/i }));
     await expect(canvas.getByText("Dashboard")).toBeVisible();
   },
 };
