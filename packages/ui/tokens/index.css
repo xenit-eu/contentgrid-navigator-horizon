@@ -28,7 +28,11 @@
   --cg-color-ocean: #084772;
   --cg-color-ocean-700: #0a3d62;
   --cg-color-sky: #019be3;
-  --cg-color-sky-50: #eef7fc;
+  /* sky-50 is the selected / active / info tint (secondary + accent). Takes the
+   * design's "sky tint" value #e6f4fc rather than a duplicate token. */
+  --cg-color-sky-50: #e6f4fc;
+  /* Border that pairs with the sky tint. */
+  --cg-color-sky-tint-line: #b5def5;
   --cg-color-steel: #557891;
   --cg-color-midnight: #021826;
 
@@ -40,30 +44,37 @@
 
   /* Greys / neutrals */
   --cg-color-mist: #f4f7fa;
-  --cg-color-frost: #fafdff;
-  --cg-color-line: #ebeef2;
+  --cg-color-frost: #ffffff;
+  --cg-color-line: #e3e9ef;
+  /* The design's "line2": inputs, outlined buttons, switch tracks. */
+  --cg-color-line-strong: #cfd9e2;
   --cg-color-line-soft: #f1f4f7;
 
   /* Text */
   --cg-color-text: #0e2436;
   --cg-color-text-dim: #405b6d;
+  /* Reference design uses #557891 (4.36:1 on mist #f4f7fa, below AA); the darker value is kept. */
   --cg-color-text-muted: #4f6f87;
   --cg-color-header-dim: #b1cfe7;
   --cg-color-link-text: #064c79;
 
   /* Accent / status */
-  /* Amber corrected to design-spec value #D4682A (was #b85b1f).
-   * Contrast on white: 3.3:1 — adequate for large/bold UI elements (icons,
-   * badges) but below WCAG AA for small body text. Use amber only for
-   * decorative or large-text roles; pair with --cg-color-amber-text
-   * (#a34e1a) for small-text contexts where AA is required. */
-  --cg-color-amber: #d4682a;
-  /* amber-light retains the previous value — it was already a dark text
-   * variant intended for use on light amber backgrounds. Renamed mentally to
-   * "amber-text" but kept as amber-light for backward compatibility. */
+  /* Amber follows the reference design (#b85b1f). An earlier revision moved to
+   * #d4682a, but the design is the newer source and returns to #b85b1f.
+   * Contrast on white: 4.61:1 — clears WCAG AA (4.5:1) for small text, unlike
+   * #d4682a (3.61:1). On --cg-color-amber-tint (#fbeee3) it is 4.05:1, so use
+   * amber-light below for small text on the tint. */
+  --cg-color-amber: #b85b1f;
+  /* Dark text variant for use on the amber tint: 7.36:1 on #fbeee3, 8.38:1 on
+   * white. Still valid as the "text on amber" colour with the new amber. */
   --cg-color-amber-light: #7a3d14;
   --cg-color-danger: #b3261e;
   --cg-color-green: #2f7a55;
+
+  /* Status tints: soft backgrounds for warning / danger / success surfaces. */
+  --cg-color-amber-tint: #fbeee3;
+  --cg-color-danger-tint: #fbe9e7;
+  --cg-color-green-tint: #e4f3ea;
 
   /* UI chrome */
   --cg-color-card-border: #7899b0;

@@ -102,6 +102,7 @@
   --ocean-700: var(--cg-color-ocean-700);
   --sky: var(--cg-color-sky);
   --sky-50: var(--cg-color-sky-50);
+  --sky-tint-line: var(--cg-color-sky-tint-line);
   --steel: var(--cg-color-steel);
   --midnight: var(--cg-color-midnight);
   --breeze: var(--cg-color-breeze);
@@ -109,6 +110,7 @@
   --mist: var(--cg-color-mist);
   --frost: var(--cg-color-frost);
   --line: var(--cg-color-line);
+  --line-strong: var(--cg-color-line-strong);
   --line-soft: var(--cg-color-line-soft);
   --text: var(--cg-color-text);
   --text-dim: var(--cg-color-text-dim);
@@ -119,6 +121,9 @@
   --amber-light: var(--cg-color-amber-light);
   --danger: var(--cg-color-danger);
   --green: var(--cg-color-green);
+  --amber-tint: var(--cg-color-amber-tint);
+  --danger-tint: var(--cg-color-danger-tint);
+  --green-tint: var(--cg-color-green-tint);
   --card-border: var(--cg-color-card-border);
   --sky-extract: var(--cg-color-sky-extract);
   --sky-extract-ring: var(--cg-color-sky-extract-ring);
@@ -177,10 +182,11 @@
   /* Warning — one orange for every warning surface (StatusPill, Chip, Alert, Banner). `--warning`
    * is the opaque hue: components tint with an opacity modifier (`bg-warning/12`,
    * `border-warning/30`); `--warning-foreground` is the text colour on those tints. */
-  --warning: #d4682a;
+  --warning: #b85b1f;
+  /* #a4501f is 5.61:1 on white and 4.92:1 on --amber-tint (#fbeee3), above the 4.5:1 AA bar. */
   --warning-foreground: #a4501f;
   --border: var(--line);
-  --input: var(--line);
+  --input: var(--line-strong);
   --ring: var(--sky);
   --chart-1: var(--sky);
   --chart-2: var(--ocean);
