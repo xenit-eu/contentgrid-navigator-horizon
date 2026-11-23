@@ -81,7 +81,7 @@ describe("SidebarShell", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await userEvent.click(screen.getByRole("link", { name: "Home" }));
     await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
-    await userEvent.click(await screen.findByText("Settings"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Settings" }));
 
     expect(recording.calls).toEqual([
       { method: "openEntityItemCollection", args: ["invoice", { restoreState: false }] },
@@ -132,5 +132,19 @@ describe("SidebarShell", () => {
   it("does not mark Home as current on an entity page", async () => {
     renderShell("/invoice");
     expect(await screen.findByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("marks the bottom Settings row as current on a settings page only", async () => {
+    renderShell("/~configuration");
+    const link = await screen.findByRole("link", { name: "Settings" });
+    expect(link).toHaveAttribute("aria-current", "page");
+    expect(link.closest("[data-slot='sidebar-footer']")).toBeInTheDocument();
+  });
+
+  it("does not mark the bottom Settings row as current elsewhere", async () => {
+    renderShell("/invoice");
+    expect(await screen.findByRole("link", { name: "Settings" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 });
