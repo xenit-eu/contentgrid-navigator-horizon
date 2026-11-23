@@ -29,6 +29,7 @@ export function SidebarShell({ topChildren }: Readonly<{ topChildren?: ReactNode
       onOpenCreate={() => navigation.openClassifyCreate()}
       onOpenSettings={() => navigation.openSettings()}
       settingsCurrent={settingsCurrent}
+      settingsHref={settingsHref}
       homeCurrent={homeCurrent}
       homeHref={homeHref}
       entityHref={hrefFor && ((entityName) => hrefFor.entityItemCollection(entityName))}

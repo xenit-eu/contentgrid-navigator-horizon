@@ -14,6 +14,7 @@ import { formatCount } from "../lib/format-count";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -181,6 +182,17 @@ const entityRows = [
   { name: "Framework agreement annexes", count: "9", color: "#5a6b8c", Icon: Buildings },
 ];
 
+const SettingsRow = () => (
+  <SidebarFooter className="px-3 pb-3 group-data-[collapsible=icon]:px-2">
+    <SidebarMenu>
+      <SidebarLinkButton
+        icon={<Gear aria-hidden className="text-muted-foreground" />}
+        label="Settings"
+      />
+    </SidebarMenu>
+  </SidebarFooter>
+);
+
 const EntityRows = () => (
   <>
     <SidebarGroup className="pb-0">
@@ -212,10 +224,11 @@ const EntityRows = () => (
 export const EntityRowsExpanded: Story = {
   render: () => (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" style={{ top: 0 }}>
+      <Sidebar collapsible="icon" style={{ top: 0, height: "100svh" }}>
         <SidebarContent>
           <EntityRows />
         </SidebarContent>
+        <SettingsRow />
       </Sidebar>
       <main className="flex flex-1 flex-col gap-4 p-4" />
     </SidebarProvider>
@@ -225,10 +238,11 @@ export const EntityRowsExpanded: Story = {
 export const EntityRowsCollapsed: Story = {
   render: () => (
     <SidebarProvider defaultOpen={false}>
-      <Sidebar collapsible="icon" style={{ top: 0 }}>
+      <Sidebar collapsible="icon" style={{ top: 0, height: "100svh" }}>
         <SidebarContent>
           <EntityRows />
         </SidebarContent>
+        <SettingsRow />
       </Sidebar>
       <main className="flex flex-1 flex-col gap-4 p-4" />
     </SidebarProvider>
@@ -239,7 +253,7 @@ export const EntityRowsCollapsed: Story = {
 export const CountStates: Story = {
   render: () => (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" style={{ top: 0 }}>
+      <Sidebar collapsible="icon" style={{ top: 0, height: "100svh" }}>
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -276,7 +290,7 @@ export const CountStates: Story = {
 export const LoadingEntityList: Story = {
   render: () => (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" style={{ top: 0 }}>
+      <Sidebar collapsible="icon" style={{ top: 0, height: "100svh" }}>
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
