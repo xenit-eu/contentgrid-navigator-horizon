@@ -64,6 +64,8 @@ describe("PhoneMenuAccount", () => {
         .map((r) => r.textContent),
     ).toEqual(["Light", "Dark", "System"]);
     expect(within(group).getByRole("radio", { name: "Light" })).toBeChecked();
+    // Selected segment: readable dark text on the primary fill in dark mode (white was 2.96:1).
+    expect(within(group).getByRole("radio", { name: "Light" })).toHaveClass("dark:text-background");
 
     await userEvent.click(within(group).getByRole("radio", { name: "Dark" }));
 

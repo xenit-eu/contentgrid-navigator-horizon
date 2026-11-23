@@ -47,7 +47,7 @@ const SEGMENT_BASE_CLASS =
   "border-input bg-popover text-popover-foreground -ml-px h-8 flex-none justify-center rounded-none border px-3.5 py-0 text-[13px] font-semibold first:ml-0 first:rounded-l-lg last:rounded-r-lg";
 
 /** Segment styling for the dropdown's radio items (they hide the check-mark span themselves). */
-export const SEGMENT_CLASS = `${SEGMENT_BASE_CLASS} [&>span:first-child]:hidden data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:focus:bg-primary data-[state=checked]:focus:text-primary-foreground`;
+export const SEGMENT_CLASS = `${SEGMENT_BASE_CLASS} [&>span:first-child]:hidden data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:focus:bg-primary data-[state=checked]:focus:text-primary-foreground dark:data-[state=checked]:text-background dark:data-[state=checked]:focus:text-background`;
 
 /**
  * The Light / Dark / System segmented control for places that are not a dropdown menu (the phone
@@ -90,7 +90,7 @@ export function AppearanceControl({
             className={cn(
               SEGMENT_BASE_CLASS,
               "focus-visible:ring-ring cursor-pointer outline-hidden focus-visible:z-10 focus-visible:ring-[3px]",
-              checked && "border-primary bg-primary text-primary-foreground",
+              checked && "border-primary bg-primary text-primary-foreground dark:text-background",
             )}
           >
             {option.label}
