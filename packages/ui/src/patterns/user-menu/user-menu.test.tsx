@@ -4,10 +4,47 @@ import { describe, expect, it, vi } from "vitest";
 import { UserMenu } from "./user-menu";
 
 describe("UserMenu", () => {
-  it("renders the user's name and email", () => {
+  it("shows only the avatar in the trigger: no name, e-mail or caret", () => {
     render(<UserMenu name="John Doe" email="john.doe@example.com" />);
+    const trigger = screen.getByRole("button", { name: /john doe/i });
+    expect(trigger).toHaveTextContent(/^JD$/);
+    expect(trigger.querySelector("svg")).not.toBeInTheDocument();
+    expect(trigger).toHaveClass("bg-white/15", "rounded-lg");
+    expect(screen.queryByText("john.doe@example.com")).not.toBeInTheDocument();
+  });
+
+  it("opens with an account block holding the avatar, name and e-mail", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu name="John Doe" email="john.doe@example.com" />);
+    await user.click(screen.getByRole("button", { name: /john doe/i }));
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.getByText("john.doe@example.com")).toBeInTheDocument();
+    expect(screen.getByText("john.doe@example.com")).toHaveClass("truncate");
+    expect(screen.getAllByText("JD")).toHaveLength(2); // trigger + account block
+  });
+
+  it("sizes the menu 264px wide with 34px items", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu name="John Doe" email="john.doe@example.com" />);
+    await user.click(screen.getByRole("button", { name: /john doe/i }));
+    expect(screen.getByRole("menu")).toHaveClass("w-[264px]", "rounded-[10px]", "p-1.5");
+    for (const item of screen.getAllByRole("menuitem")) {
+      expect(item).toHaveClass("h-[34px]", "text-[13.5px]");
+    }
+  });
+
+  it("marks Settings as current only when a settings page is open", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<UserMenu name="John Doe" email="john.doe@example.com" />);
+    await user.click(screen.getByRole("button", { name: /john doe/i }));
+    expect(screen.getByRole("menuitem", { name: "Settings" })).not.toHaveAttribute("aria-current");
+    unmount();
+
+    render(<UserMenu name="John Doe" email="john.doe@example.com" settingsCurrent />);
+    await user.click(screen.getByRole("button", { name: /john doe/i }));
+    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("renders initials derived from the name", () => {

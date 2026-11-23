@@ -36,13 +36,18 @@ function renderShell(initialEntry = "/") {
     path: "/",
     component: () => <div>routed page</div>,
   });
+  const settingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/~configuration",
+    component: () => <div>settings page</div>,
+  });
   const entityRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/$entity",
     component: () => <div>entity page</div>,
   });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, entityRoute]),
+    routeTree: rootRoute.addChildren([indexRoute, settingsRoute, entityRoute]),
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
   render(
@@ -75,7 +80,7 @@ describe("SidebarShell", () => {
     await userEvent.click(await screen.findByRole("link", { name: /invoice/i }));
     await userEvent.click(screen.getByRole("button", { name: "Create Item" }));
     await userEvent.click(screen.getByRole("link", { name: "Home" }));
-    await userEvent.click(screen.getByText("Jane Doe"));
+    await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
     await userEvent.click(await screen.findByText("Settings"));
 
     expect(recording.calls).toEqual([
@@ -92,6 +97,27 @@ describe("SidebarShell", () => {
     expect(await screen.findByRole("link", { name: /invoice/i })).toHaveAttribute(
       "href",
       "/invoice",
+    );
+  });
+
+  it("shows Settings as current in the user menu on a settings page", async () => {
+    renderShell("/~configuration");
+
+    await userEvent.click(await screen.findByRole("button", { name: /jane doe/i }));
+
+    expect(await screen.findByRole("menuitem", { name: "Settings" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("does not mark Settings as current on other pages", async () => {
+    renderShell("/invoice");
+
+    await userEvent.click(await screen.findByRole("button", { name: /jane doe/i }));
+
+    expect(await screen.findByRole("menuitem", { name: "Settings" })).not.toHaveAttribute(
+      "aria-current",
     );
   });
 });

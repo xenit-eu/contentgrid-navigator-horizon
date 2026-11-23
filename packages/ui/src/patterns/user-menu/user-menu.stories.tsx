@@ -8,7 +8,7 @@ const meta = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <div className="flex h-14 items-center bg-gradient-to-r from-[var(--ocean-700)] to-[var(--sky)] px-4">
+      <div className="flex h-[59px] items-center justify-end border-b-[3px] border-[var(--sky)] bg-[linear-gradient(90deg,var(--ocean-700),var(--ocean)_55%,var(--header-end))] px-5">
         <Story />
       </div>
     ),
@@ -25,6 +25,14 @@ export const Default: Story = {
     onSettingsClick: fn(),
     onLogOut: fn(),
   },
+};
+
+export const Open: Story = {
+  args: { ...Default.args, defaultOpen: true },
+};
+
+export const SettingsCurrent: Story = {
+  args: { ...Default.args, defaultOpen: true, settingsCurrent: true },
 };
 
 export const LongNameAndEmail: Story = {
