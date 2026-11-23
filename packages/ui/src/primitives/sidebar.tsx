@@ -30,6 +30,21 @@ type SidebarContextProps = {
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 
+/** The remembered open state from the `sidebar_state` cookie, or `undefined` when there is none. */
+function readSidebarCookie(): boolean | undefined {
+  if (typeof document === "undefined") {
+    return undefined;
+  }
+  const entry = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SIDEBAR_COOKIE_NAME}=`));
+  const value = entry?.slice(SIDEBAR_COOKIE_NAME.length + 1);
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return undefined;
+}
+
 function useSidebar() {
   const context = React.useContext(SidebarContext);
   if (!context) {
@@ -39,8 +54,13 @@ function useSidebar() {
   return context;
 }
 
+/**
+ * `defaultOpen` forces the initial state; leave it out and the state remembered in the
+ * `sidebar_state` cookie (written on every toggle) is used, expanded when there is none.
+ * Client-side only: the cookie is read on the first render, there is no server rendering.
+ */
 function SidebarProvider({
-  defaultOpen = true,
+  defaultOpen,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -55,7 +75,7 @@ function SidebarProvider({
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
 
-  const [_open, _setOpen] = React.useState(defaultOpen);
+  const [_open, _setOpen] = React.useState(() => defaultOpen ?? readSidebarCookie() ?? true);
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -506,12 +526,16 @@ function SidebarMenuButton({
   variant = "default",
   size = "default",
   tooltip,
+  expandedTooltip,
   className,
   ...props
 }: React.ComponentProps<"button"> & {
   asChild?: boolean;
   isActive?: boolean;
+  /** Shown on hover while the sidebar is collapsed to icons (where the label is not visible). */
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+  /** Shown on hover while the sidebar is expanded, e.g. a description. Nothing when absent. */
+  expandedTooltip?: React.ReactNode;
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot.Root : "button";
   const { isMobile, state } = useSidebar();
@@ -527,25 +551,21 @@ function SidebarMenuButton({
     />
   );
 
-  if (!tooltip) {
+  if (!tooltip && !expandedTooltip) {
     return button;
   }
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    };
-  }
+  const collapsed = state === "collapsed" && !isMobile;
+  const collapsedProps = typeof tooltip === "string" ? { children: tooltip } : tooltip;
+  const content = collapsed ? collapsedProps : { children: expandedTooltip };
+  const hidden = isMobile || !content?.children;
 
   return (
-    <Tooltip>
+    // Collapsed icons have no other label, so their tooltip is instant; an expanded row's
+    // description waits a moment so it does not flash while the pointer passes over the list.
+    <Tooltip delayDuration={collapsed ? 0 : 500}>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent
-        side="right"
-        align="center"
-        hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
-      />
+      <TooltipContent side="right" align="center" hidden={hidden} {...content} />
     </Tooltip>
   );
 }
