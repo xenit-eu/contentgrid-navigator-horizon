@@ -78,7 +78,7 @@ describe("SidebarShell", () => {
     const recording = renderShell();
 
     await userEvent.click(await screen.findByRole("link", { name: /invoice/i }));
-    await userEvent.click(screen.getByRole("button", { name: "Create Item" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await userEvent.click(screen.getByRole("link", { name: "Home" }));
     await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
     await userEvent.click(await screen.findByText("Settings"));
@@ -119,5 +119,18 @@ describe("SidebarShell", () => {
     expect(await screen.findByRole("menuitem", { name: "Settings" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+
+  it("marks Home as current on the home page only", async () => {
+    renderShell("/");
+    expect(await screen.findByRole("link", { name: "Home" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("does not mark Home as current on an entity page", async () => {
+    renderShell("/invoice");
+    expect(await screen.findByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
   });
 });
