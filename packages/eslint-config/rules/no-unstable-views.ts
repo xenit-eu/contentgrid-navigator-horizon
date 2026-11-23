@@ -47,64 +47,53 @@ function findPackageDir(startDir: string, scopedName: string): string | null {
   return null;
 }
 
-function resolveStability(pkgDir: string, subpath: string): StabilityResult {
-  const cacheKey = `${pkgDir}:${subpath}`;
-  if (stabilityCache.has(cacheKey)) return stabilityCache.get(cacheKey)!;
-
-  let pkg: Record<string, unknown>;
+function readJson(file: string): Record<string, unknown> | null {
   try {
-    pkg = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf-8")) as Record<
-      string,
-      unknown
-    >;
+    return JSON.parse(readFileSync(file, "utf-8")) as Record<string, unknown>;
   } catch {
-    stabilityCache.set(cacheKey, null);
     return null;
   }
+}
 
-  const exports = pkg["exports"] as Record<string, unknown> | undefined;
-  const exportEntry = exports?.[`./${subpath}`];
-
-  let resolvedRelative: string | undefined;
-  if (typeof exportEntry === "string") {
-    resolvedRelative = exportEntry;
-  } else if (exportEntry && typeof exportEntry === "object") {
+function resolveExportTarget(exportEntry: unknown): string | undefined {
+  if (typeof exportEntry === "string") return exportEntry;
+  if (exportEntry && typeof exportEntry === "object") {
     const entry = exportEntry as Record<string, unknown>;
-    resolvedRelative =
-      (entry["import"] as string | undefined) ?? (entry["default"] as string | undefined);
+    return (entry["import"] as string | undefined) ?? (entry["default"] as string | undefined);
   }
+  return undefined;
+}
 
-  if (!resolvedRelative) {
-    stabilityCache.set(cacheKey, null);
-    return null;
-  }
-
+function findStabilityAbove(pkgDir: string, resolvedRelative: string): StabilityResult {
   let dir = dirname(join(pkgDir, resolvedRelative));
   for (let i = 0; i < 10; i++) {
     if (!dir.startsWith(pkgDir)) break;
-    try {
-      const nested = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8")) as Record<
-        string,
-        unknown
-      >;
-      if ("x-stability" in nested) {
-        const rawValue = String(nested["x-stability"]);
-        const result: StabilityResult = VALID_STABILITY_LEVELS.has(rawValue)
-          ? { kind: "valid", stability: rawValue as StabilityLevel }
-          : { kind: "invalid", rawValue };
-        stabilityCache.set(cacheKey, result);
-        return result;
-      }
-    } catch {
-      // No package.json here, keep walking up
+    // No package.json here is fine, keep walking up
+    const nested = readJson(join(dir, "package.json"));
+    if (nested && "x-stability" in nested) {
+      const rawValue = String(nested["x-stability"]);
+      return VALID_STABILITY_LEVELS.has(rawValue)
+        ? { kind: "valid", stability: rawValue as StabilityLevel }
+        : { kind: "invalid", rawValue };
     }
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-
-  stabilityCache.set(cacheKey, null);
   return null;
+}
+
+function resolveStability(pkgDir: string, subpath: string): StabilityResult {
+  const cacheKey = `${pkgDir}:${subpath}`;
+  if (stabilityCache.has(cacheKey)) return stabilityCache.get(cacheKey)!;
+
+  const pkg = readJson(join(pkgDir, "package.json"));
+  const exports = pkg?.["exports"] as Record<string, unknown> | undefined;
+  const resolvedRelative = pkg ? resolveExportTarget(exports?.[`./${subpath}`]) : undefined;
+
+  const result = resolvedRelative ? findStabilityAbove(pkgDir, resolvedRelative) : null;
+  stabilityCache.set(cacheKey, result);
+  return result;
 }
 
 export const rule = createRule<[RuleOptions], "unstableView" | "invalidStability">({
@@ -140,40 +129,38 @@ export const rule = createRule<[RuleOptions], "unstableView" | "invalidStability
     const allowedStability = options.allowedStability;
 
     const check = (node: TSESTree.Node, source: unknown) => {
-      {
-        if (typeof source !== "string") return;
-        if (!source.startsWith(VIEWS_PREFIX)) return;
+      if (typeof source !== "string") return;
+      if (!source.startsWith(VIEWS_PREFIX)) return;
 
-        const subpath = source.slice(VIEWS_PREFIX.length);
-        if (!subpath) return;
+      const subpath = source.slice(VIEWS_PREFIX.length);
+      if (!subpath) return;
 
-        const currentFile = context.filename;
-        const pkgDir = findPackageDir(dirname(currentFile), VIEWS_PACKAGE);
-        if (!pkgDir) return;
+      const currentFile = context.filename;
+      const pkgDir = findPackageDir(dirname(currentFile), VIEWS_PACKAGE);
+      if (!pkgDir) return;
 
-        const result = resolveStability(pkgDir, subpath);
-        if (!result) return;
+      const result = resolveStability(pkgDir, subpath);
+      if (!result) return;
 
-        if (result.kind === "invalid") {
-          context.report({
-            node,
-            messageId: "invalidStability",
-            data: { view: source, rawValue: result.rawValue },
-          });
-          return;
-        }
+      if (result.kind === "invalid") {
+        context.report({
+          node,
+          messageId: "invalidStability",
+          data: { view: source, rawValue: result.rawValue },
+        });
+        return;
+      }
 
-        if (!allowedStability.includes(result.stability)) {
-          context.report({
-            node,
-            messageId: "unstableView",
-            data: {
-              view: source,
-              stability: result.stability,
-              allowed: allowedStability.join(", "),
-            },
-          });
-        }
+      if (!allowedStability.includes(result.stability)) {
+        context.report({
+          node,
+          messageId: "unstableView",
+          data: {
+            view: source,
+            stability: result.stability,
+            allowed: allowedStability.join(", "),
+          },
+        });
       }
     };
 

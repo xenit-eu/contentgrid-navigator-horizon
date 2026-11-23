@@ -15,7 +15,7 @@ const PENDING_VIEW_FEATURES = ["app-info-pages", "entity-item-create", "preferen
 // restriction together.
 const LOCAL_MOCK_BACKEND_EXEMPT = ["src/main.tsx", "src/local-mock-backend/**"];
 const LOCAL_MOCK_BACKEND = {
-  specifier: String.raw`(^|/)local-mock-backend(/|$)`,
+  specifier: `(^|/)local-mock-backend(/|$)`,
   message:
     "local-mock-backend is dev-only; only main.tsx's DEV-gated enableMocking() may import it.",
 };

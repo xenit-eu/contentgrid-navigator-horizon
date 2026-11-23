@@ -21,23 +21,23 @@ import type { Restriction } from "./rules/no-restricted-sources.js";
 
 // Relative paths are matched on the path they resolve to, so a file never matches a restriction
 // on its own package. `views/src` also covers `packages/views` checked out under another name.
-const PACKAGE_VIEWS = String.raw`(^|/)(packages/views|views/src)(/|$)`;
-const PACKAGE_FEATURES = String.raw`(^|/)(packages/features|features/src)(/|$)`;
+const PACKAGE_VIEWS = `(^|/)(packages/views|views/src)(/|$)`;
+const PACKAGE_FEATURES = `(^|/)(packages/features|features/src)(/|$)`;
 
 const noRouter: Restriction = {
-  specifier: String.raw`^@tanstack/(react-router[^/]*|router-[^/]*|history)(/|$)`,
+  specifier: `^@tanstack/(react-router[^/]*|router-[^/]*|history)(/|$)`,
   message:
     "L2: only apps/* and the router-setup host code in packages/views/src/shells/ may import the router. Views reach navigation through useViewNavigation(); features report actions through callback props.",
 };
 
 const noViews = (layer: string): Restriction => ({
-  specifier: String.raw`^@contentgrid/views(/|$)`,
+  specifier: `^@contentgrid/views(/|$)`,
   resolved: PACKAGE_VIEWS,
   message: `L4: ${layer} must not import packages/views — each layer imports only from the layers below it.`,
 });
 
 const uiNoFeatures: Restriction = {
-  specifier: String.raw`^@contentgrid/features(/|$)`,
+  specifier: `^@contentgrid/features(/|$)`,
   resolved: PACKAGE_FEATURES,
   message: "L3: the UI package must not import features.",
 };
@@ -53,8 +53,8 @@ export function appsViewsOnly(pendingViewFeatures: readonly string[]): Restricti
     "L1: apps import features only through views (@contentgrid/views/<view>). A feature with no view yet must be on the app's pending-view allowlist.";
   return [
     {
-      specifier: String.raw`^@contentgrid/features$|^@contentgrid/features/(?!${allowed}(/|$))`,
-      resolved: String.raw`(^|/)packages/features(/|$)(?!src/${allowed}(/|$))`,
+      specifier: `^@contentgrid/features$|^@contentgrid/features/(?!${allowed}(/|$))`,
+      resolved: `(^|/)packages/features(/|$)(?!src/${allowed}(/|$))`,
       message,
     },
   ];
