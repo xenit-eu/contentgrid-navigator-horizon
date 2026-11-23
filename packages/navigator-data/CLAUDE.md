@@ -830,14 +830,15 @@ Implemented hooks: `useUploadContent`, `useDownloadContent` and `useApplyContent
   response is 206 (Range request); `etag` is the content's own ETag — the value to pass as
   `contentEtag` when replacing that file.
 - `useApplyContentChanges(entityItem)` applies the update form's queued file changes
-  (`ContentChanges`: attribute name → `File` to store, or `null` to remove), one after the other,
-  each picked file under the name and media type in its `metadata` entry when given. The content's
+  (`ContentChanges`: attribute name → `ContentChange { file, filename?, mimetype? }`, with `file`
+  the `File` to store or `null` to remove), one after the other, each picked file under the
+  change's `filename`/`mimetype` when given, else the file's own. The content's
   ETag is read with a HEAD on the `cg:content` link just before each PUT/DELETE (404 → no file:
   `If-None-Match: *` on the PUT, nothing sent for a removal); the PUT goes through
   `uploadContentRequest`, the DELETE through `deleteContentRequest`. A failed change doesn't stop
-  the others: the mutation resolves with the failures keyed by attribute name. Like
-  `useUploadContent`, it returns `progress` (0–100) for each file being stored, keyed by attribute
-  name. Once settled it invalidates the item's `entityItem.byUrl` and the entity's collections. The
+  the others. One map, `ContentChangeResults`, follows every change by attribute name: `progress`
+  (0–100) while a file is stored, `error` when a change failed. The hook returns it as `results`
+  while it runs, and the mutation resolves with it. Once settled it invalidates the item's `entityItem.byUrl` and the entity's collections. The
   caller saves the metadata first, conditional on the item's ETag — that is what catches a file
   changed since the form was opened, because the item's ETag changes with its file.
 - Content helpers live in `src/api/content-types.ts`: `parseContentDisposition(header)`.

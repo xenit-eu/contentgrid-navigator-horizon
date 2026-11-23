@@ -75,7 +75,10 @@ export { useUploadContent, useApplyContentChanges, useDownloadContent } from "./
 export type {
   UseUploadContentOptions,
   UploadContentVariables,
+  ContentChange,
   ContentChanges,
+  ContentChangeResult,
+  ContentChangeResults,
   UseDownloadContentOptions,
   DownloadContentVariables,
   ContentDownload,

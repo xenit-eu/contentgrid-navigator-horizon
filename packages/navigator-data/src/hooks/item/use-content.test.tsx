@@ -30,7 +30,12 @@ import { isProblemWithStatus } from "../../api/problem-details/guards";
 import { queryKeys } from "../../query-keys";
 import type { EntityItemShape, ProfileEntityShape } from "../../shapes";
 import { BASE, makeQueryClient, makeWrapper, noopSupplier } from "../test-utils";
-import { useApplyContentChanges, useDownloadContent, useUploadContent } from "./use-content";
+import {
+  type ContentChanges,
+  useApplyContentChanges,
+  useDownloadContent,
+  useUploadContent,
+} from "./use-content";
 
 // ---------------------------------------------------------------------------
 // Fixture URLs
@@ -678,16 +683,12 @@ describe("useApplyContentChanges", () => {
     return http.head(url, () => new HttpResponse(null, { status: 200, headers: { ETag: etag } }));
   }
 
-  async function apply(
-    entityItem: EntityItem,
-    changes: Map<string, File | null>,
-    metadata: ReadonlyMap<string, { filename?: string; mimetype?: string }> = new Map(),
-  ) {
+  async function apply(entityItem: EntityItem, changes: ContentChanges) {
     const { result } = renderHook(() => useApplyContentChanges(entityItem), {
       wrapper: makeWrapper(),
     });
     await act(async () => {
-      result.current.mutate({ changes, metadata });
+      result.current.mutate(changes);
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     return result.current.data;
@@ -703,9 +704,12 @@ describe("useApplyContentChanges", () => {
       }),
     );
 
-    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
+    const results = await apply(
+      makeItemWithTwoContentLinks(),
+      new Map([["document", { file: null }]]),
+    );
 
-    expect(failures?.size).toBe(0);
+    expect(results?.get("document")?.error).toBeUndefined();
     expect(ifMatch).toBe('"content-v1"');
   });
 
@@ -715,19 +719,24 @@ describe("useApplyContentChanges", () => {
       http.head(CONTENT_URL, () => new HttpResponse(null, { status: 404, headers: PROBLEM_JSON })),
     );
 
-    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
+    const results = await apply(
+      makeItemWithTwoContentLinks(),
+      new Map([["document", { file: null }]]),
+    );
 
-    expect(failures?.size).toBe(0);
+    expect(results?.get("document")?.error).toBeUndefined();
   });
 
   it("fails the change, sending nothing, when the stored file's HEAD has no ETag", async () => {
     // A DELETE would be an unhandled request and fail the test.
     server.use(http.head(CONTENT_URL, () => new HttpResponse(null, { status: 200 })));
 
-    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["document", null]]));
+    const results = await apply(
+      makeItemWithTwoContentLinks(),
+      new Map([["document", { file: null }]]),
+    );
 
-    expect(failures?.size).toBe(1);
-    expect(failures?.get("document")?.message).toMatch(/no readable ETag/);
+    expect(results?.get("document")?.error?.message).toMatch(/no readable ETag/);
   });
 
   it("reports a HEAD failure other than 404 as that attribute's failure, sending nothing", async () => {
@@ -735,13 +744,12 @@ describe("useApplyContentChanges", () => {
       http.head(CONTENT_URL, () => new HttpResponse(null, { status: 403, headers: PROBLEM_JSON })),
     );
 
-    const failures = await apply(
+    const results = await apply(
       makeItemWithTwoContentLinks(),
-      new Map([["document", new File(["x"], "x.txt", { type: "text/plain" })]]),
+      new Map([["document", { file: new File(["x"], "x.txt", { type: "text/plain" }) }]]),
     );
 
-    expect(failures?.size).toBe(1);
-    expect(isProblemWithStatus(failures?.get("document"), 403)).toBe(true);
+    expect(isProblemWithStatus(results?.get("document")?.error, 403)).toBe(true);
   });
 
   it("stores a file with If-None-Match: * when the attribute holds no file (HEAD 404)", async () => {
@@ -758,13 +766,13 @@ describe("useApplyContentChanges", () => {
     );
 
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const failures = await apply(makeItemWithTwoContentLinks(), new Map([["attachment", file]]));
+    const results = await apply(makeItemWithTwoContentLinks(), new Map([["attachment", { file }]]));
 
-    expect(failures?.size).toBe(0);
+    expect(results?.get("attachment")?.error).toBeUndefined();
     expect(ifNoneMatch).toBe("*");
   });
 
-  it("stores a picked file under the media type in its metadata entry", async () => {
+  it("stores a picked file under the name and media type of its change", async () => {
     server.use(
       http.head(
         OTHER_CONTENT_URL,
@@ -776,13 +784,12 @@ describe("useApplyContentChanges", () => {
     const appendSpy = vi.spyOn(FormData.prototype, "append");
 
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const failures = await apply(
+    const results = await apply(
       makeItemWithTwoContentLinks(),
-      new Map([["attachment", file]]),
-      new Map([["attachment", { filename: "hello.md", mimetype: "text/markdown" }]]),
+      new Map([["attachment", { file, filename: "hello.md", mimetype: "text/markdown" }]]),
     );
 
-    expect(failures?.size).toBe(0);
+    expect(results?.get("attachment")?.error).toBeUndefined();
     expect(appendSpy).toHaveBeenCalledWith("file", expect.any(File), "hello.md");
     expect((appendSpy.mock.calls[0][1] as File).type).toBe("text/markdown");
     appendSpy.mockRestore();
@@ -810,20 +817,20 @@ describe("useApplyContentChanges", () => {
     );
 
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const failures = await apply(
+    const results = await apply(
       makeItemWithTwoContentLinks(),
-      new Map<string, File | null>([
-        ["document", null],
-        ["attachment", file],
+      new Map([
+        ["document", { file: null }],
+        ["attachment", { file }],
       ]),
     );
 
     expect(attachmentStored).toBe(true);
-    expect([...(failures?.keys() ?? [])]).toEqual(["document"]);
-    expect(failures?.get("document")).toBeInstanceOf(ProblemDetailError);
+    expect(results?.get("document")?.error).toBeInstanceOf(ProblemDetailError);
+    expect(results?.get("attachment")?.error).toBeUndefined();
   });
 
-  it("reports the progress of each stored file under its attribute name", async () => {
+  it("reports the progress of each stored file, and none for a removal", async () => {
     server.use(
       headWithEtag(CONTENT_URL, '"content-v1"'),
       http.delete(CONTENT_URL, () => new HttpResponse(null, { status: 204 })),
@@ -845,16 +852,15 @@ describe("useApplyContentChanges", () => {
 
     const file = new File(["hello"], "hello.txt", { type: "text/plain" });
     await act(async () => {
-      result.current.mutate({
-        changes: new Map<string, File | null>([
-          ["document", null],
-          ["attachment", file],
+      result.current.mutate(
+        new Map([
+          ["document", { file: null }],
+          ["attachment", { file }],
         ]),
-        metadata: new Map(),
-      });
+      );
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.progress).toEqual(new Map([["attachment", 50]]));
+    expect(result.current.results).toEqual(new Map([["attachment", { progress: 50 }]]));
   });
 });

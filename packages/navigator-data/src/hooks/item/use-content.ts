@@ -162,19 +162,29 @@ export function useUploadContent(
   return { ...mutation, progress };
 }
 
-export type ContentChanges = ReadonlyMap<string, File | null>;
+/** A file change queued for one content attribute. */
+export interface ContentChange {
+  /** The file to store, or null to remove the stored file. */
+  readonly file: File | null;
+  /** The name to store `file` under; the file's own name when absent. */
+  readonly filename?: string;
+  /** The media type to store `file` under; the file's own type when absent. */
+  readonly mimetype?: string;
+}
 
-type ApplyContentChangesVariables = {
-  readonly changes: ContentChanges;
-  /**
-   * The name and media type to store a picked file under, by attribute name; the file's own when
-   * absent.
-   */
-  readonly metadata: ReadonlyMap<
-    string,
-    { readonly filename?: string; readonly mimetype?: string }
-  >;
-};
+/** Queued file changes, by attribute name. */
+export type ContentChanges = ReadonlyMap<string, ContentChange>;
+
+/** How far one file change got. */
+export interface ContentChangeResult {
+  /** Percentage (0–100) of the file sent; absent for a removal. */
+  readonly progress?: number;
+  /** Why the change failed; absent unless it did. */
+  readonly error?: Error;
+}
+
+/** The results of file changes, by attribute name. */
+export type ContentChangeResults = ReadonlyMap<string, ContentChangeResult>;
 
 /**
  * Mutation hook that uploads or removes an item's queued files through their `cg:content` links.
@@ -182,8 +192,9 @@ type ApplyContentChangesVariables = {
  * Each request sends `If-Match` with the content's own ETag (read with a HEAD first), because the
  * entity item's ETag is not valid for its content.
  *
- * A failed change does not stop the others; the mutation resolves with the failures by attribute
- * name (empty when all succeeded). `progress` (0–100) tracks each upload by attribute name.
+ * A failed change does not stop the others. `results` follows each change by attribute name: the
+ * progress of an upload, and the error of a failed change. The mutation resolves with the same
+ * results once every change has run.
  *
  * @param entityItem - The item whose content attributes change (must have their cg:content links)
  */
@@ -191,7 +202,7 @@ export function useApplyContentChanges(entityItem: EntityItem) {
   const { contentFetch } = useNavigatorData();
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
-  const [progress, setProgress] = useState<ReadonlyMap<string, number>>(new Map());
+  const [results, setResults] = useState<ContentChangeResults>(new Map());
 
   async function fetchContentEtag(attributeName: string): Promise<string | null> {
     const headRequest = new Request(entityItem.downloadContentRequest(attributeName), {
@@ -213,8 +224,8 @@ export function useApplyContentChanges(entityItem: EntityItem) {
 
   async function applyContentChange(
     attributeName: string,
-    file: File | null,
-    metadata: { readonly filename?: string; readonly mimetype?: string } | undefined,
+    { file, filename, mimetype }: ContentChange,
+    reportProgress: (percentage: number) => void,
   ): Promise<void> {
     const contentEtag = await fetchContentEtag(attributeName);
     if (file) {
@@ -222,11 +233,9 @@ export function useApplyContentChanges(entityItem: EntityItem) {
         attributeName,
         file,
         contentEtag,
-        metadata?.filename,
-        metadata?.mimetype,
+        filename,
+        mimetype,
       );
-      const reportProgress = (percentage: number) =>
-        setProgress((previous) => new Map(previous).set(attributeName, percentage));
       await fetchVoid(contentFetch.withUploadProgress(reportProgress), request);
     } else if (contentEtag !== null) {
       await fetchVoid(contentFetch, entityItem.deleteContentRequest(attributeName, contentEtag));
@@ -234,20 +243,23 @@ export function useApplyContentChanges(entityItem: EntityItem) {
   }
 
   const mutation = useMutation({
-    mutationFn: async ({
-      changes,
-      metadata,
-    }: ApplyContentChangesVariables): Promise<ReadonlyMap<string, Error>> => {
-      setProgress(new Map());
-      const failures = new Map<string, Error>();
-      for (const [attributeName, file] of changes) {
+    mutationFn: async (changes: ContentChanges): Promise<ContentChangeResults> => {
+      const latestResults = new Map<string, ContentChangeResult>();
+      const record = (attributeName: string, result: ContentChangeResult) => {
+        latestResults.set(attributeName, result);
+        setResults(new Map(latestResults));
+      };
+      setResults(new Map());
+      for (const [attributeName, change] of changes) {
         try {
-          await applyContentChange(attributeName, file, metadata.get(attributeName));
+          await applyContentChange(attributeName, change, (progress) =>
+            record(attributeName, { progress }),
+          );
         } catch (error) {
-          failures.set(attributeName, error as Error);
+          record(attributeName, { ...latestResults.get(attributeName), error: error as Error });
         }
       }
-      return failures;
+      return latestResults;
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
@@ -259,7 +271,7 @@ export function useApplyContentChanges(entityItem: EntityItem) {
     },
   });
 
-  return { ...mutation, progress };
+  return { ...mutation, results };
 }
 
 // ---------------------------------------------------------------------------
