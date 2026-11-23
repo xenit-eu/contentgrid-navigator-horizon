@@ -87,6 +87,16 @@ describe("SideBarLayout", () => {
     );
   });
 
+  it("has no theme switch in the header; the choice is in the user menu", async () => {
+    renderLayout({ profile: { name: "Jane Doe", email: "j@example.com" } });
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
+
+    expect(await screen.findByText("Appearance")).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitemradio")).toHaveLength(3);
+  });
+
   it("renders real links when hrefs are given, and still opens through the callbacks on a plain click", async () => {
     const handlers = renderLayout(null, {
       homeHref: "/",
