@@ -212,7 +212,8 @@ describe("SideBarLayout on a phone", () => {
 
     const drawer = screen.getByRole("dialog");
     expect(drawer).toHaveAttribute("data-mobile", "true");
-    expect(within(drawer).getByRole("img", { name: "ContentGrid logo" })).toBeInTheDocument();
+    // jsdom applies no CSS, so both theme variants (one is display:none in a browser) are present.
+    expect(within(drawer).getAllByRole("img", { name: "ContentGrid logo" })).toHaveLength(2);
     expect(within(drawer).getByText("grid")).toBeInTheDocument();
     expect(within(drawer).getByRole("button", { name: "Close menu" })).toBeInTheDocument();
     for (const name of ["Create", "Home", /invoice/i]) {

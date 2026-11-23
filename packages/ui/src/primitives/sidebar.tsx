@@ -205,6 +205,17 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          onOpenAutoFocus={(event) => {
+            // Start on the element marked `data-autofocus` (e.g. the phone menu's Close button)
+            // instead of the first focusable one (the logo); otherwise keep Radix's default.
+            const target = (event.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>(
+              "[data-autofocus]",
+            );
+            if (target) {
+              event.preventDefault();
+              target.focus();
+            }
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>

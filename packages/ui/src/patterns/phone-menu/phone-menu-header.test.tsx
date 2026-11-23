@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../../primitives/sheet";
+import { Sidebar, SidebarContent, SidebarProvider } from "../../primitives/sidebar";
 import { PhoneMenuHeader } from "./phone-menu-header";
 
 function renderInSheet(onOpenChange = vi.fn()) {
@@ -20,9 +21,8 @@ function renderInSheet(onOpenChange = vi.fn()) {
 describe("PhoneMenuHeader", () => {
   it("shows the shared lockup in its on-light tone: dark logo, sky content, ocean grid and tagline", () => {
     renderInSheet();
-    const logo = screen.getByRole("img", { name: "ContentGrid logo" });
-    expect(logo).toHaveClass("size-[30px]");
-    expect(logo.getAttribute("src")).toContain("blue-dark");
+    const logo = document.querySelector("img[src*='blue-dark']");
+    expect(logo).toHaveClass("size-[30px]", "dark:hidden");
     const grid = screen.getByText("grid");
     expect(grid).toHaveClass("text-primary");
     expect(grid.parentElement).toHaveTextContent("contentgrid");
@@ -31,7 +31,28 @@ describe("PhoneMenuHeader", () => {
     // White drawer: never the header's dark strip or white text.
     const strip = document.querySelector("[data-slot='phone-menu-header']");
     expect(strip?.className).not.toContain("gradient");
-    expect(grid.parentElement?.className).not.toContain("text-white");
+    expect(grid.parentElement?.className.split(" ")).not.toContain("text-white");
+  });
+
+  it("puts initial focus on Close menu, not the logo, when opened through Sidebar", async () => {
+    vi.stubGlobal("innerWidth", 390);
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    render(
+      <SidebarProvider defaultOpenMobile>
+        <Sidebar mobileHeader={<PhoneMenuHeader onLogoClick={() => {}} />}>
+          <SidebarContent />
+        </Sidebar>
+      </SidebarProvider>,
+    );
+    try {
+      expect(await screen.findByRole("button", { name: "Close menu" })).toHaveFocus();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("keeps the lockup non-interactive without onLogoClick", () => {

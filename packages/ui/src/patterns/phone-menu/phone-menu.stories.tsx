@@ -29,8 +29,8 @@ const meta = {
   component: PhoneMenuHeader,
   parameters: { layout: "fullscreen" },
   decorators: [
-    (Story) => (
-      <ThemeProvider defaultTheme="light">
+    (Story, { parameters }) => (
+      <ThemeProvider defaultTheme="light" forcedTheme={parameters.forcedTheme}>
         <Story />
       </ThemeProvider>
     ),
@@ -65,42 +65,47 @@ const DrawerAccount = ({ settingsCurrent = false }: { settingsCurrent?: boolean 
  */
 export const PhoneDrawer: Story = {
   tags: ["mobile", "axe-no-contrast"],
-  render: () => (
-    <SidebarProvider defaultOpenMobile>
-      <Sidebar
-        collapsible="icon"
-        mobileHeader={<PhoneMenuHeader />}
-        mobileFooter={<DrawerAccount />}
-      >
-        <SidebarContent>
-          <SidebarGroup className="pb-0">
-            <SidebarMenu>
-              <SidebarLinkButton icon={<Plus aria-hidden />} label="Create" variant="primary" />
-              <SidebarLinkButton icon={<House aria-hidden />} label="Home" />
-            </SidebarMenu>
-          </SidebarGroup>
-          <SidebarGroup className="pt-0">
-            <SidebarGroupLabel icon={<Stack aria-hidden />}>Entities</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {entities.map(({ name, count, Icon, active }) => (
-                  <SidebarMenuItem key={name}>
-                    <SidebarMenuButton isActive={active}>
-                      <Icon aria-hidden />
-                      <span>{name}</span>
-                    </SidebarMenuButton>
-                    <SidebarMenuBadge>{count}</SidebarMenuBadge>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-      <main className="flex-1" />
-    </SidebarProvider>
-  ),
+  render: () => <Drawer />,
 };
+
+/** The same drawer in dark mode: the lockup takes the page header's white and accent colours. */
+export const PhoneDrawerDark: Story = {
+  tags: ["mobile"],
+  parameters: { forcedTheme: "dark" },
+  render: () => <Drawer />,
+};
+
+const Drawer = () => (
+  <SidebarProvider defaultOpenMobile>
+    <Sidebar collapsible="icon" mobileHeader={<PhoneMenuHeader />} mobileFooter={<DrawerAccount />}>
+      <SidebarContent>
+        <SidebarGroup className="pb-0">
+          <SidebarMenu>
+            <SidebarLinkButton icon={<Plus aria-hidden />} label="Create" variant="primary" />
+            <SidebarLinkButton icon={<House aria-hidden />} label="Home" />
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup className="pt-0">
+          <SidebarGroupLabel icon={<Stack aria-hidden />}>Entities</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {entities.map(({ name, count, Icon, active }) => (
+                <SidebarMenuItem key={name}>
+                  <SidebarMenuButton isActive={active}>
+                    <Icon aria-hidden />
+                    <span>{name}</span>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge>{count}</SidebarMenuBadge>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+    <main className="flex-1" />
+  </SidebarProvider>
+);
 
 /** The drawer's footer on its own, at the drawer's width (300px). */
 export const AccountBlock: Story = {
