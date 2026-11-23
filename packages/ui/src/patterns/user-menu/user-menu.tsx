@@ -1,4 +1,5 @@
 import { GearIcon as Gear, SignOutIcon as SignOut } from "@phosphor-icons/react";
+import { useTheme } from "next-themes";
 import { cn } from "../../lib/utils";
 import { Avatar, AvatarFallback } from "../../primitives/avatar";
 import {
@@ -6,6 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../primitives/dropdown-menu";
@@ -45,6 +48,15 @@ function getInitials(name: string): string {
 const AVATAR_FALLBACK_CLASS =
   "border border-[var(--sky-tint-line)] bg-[var(--sky-50)] font-bold text-[var(--ocean)]";
 
+const APPEARANCE_OPTIONS = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+] as const;
+
+const SEGMENT_CLASS =
+  "border-input bg-popover text-popover-foreground -ml-px h-8 flex-none justify-center rounded-none border px-3.5 py-0 text-[13px] font-semibold first:ml-0 first:rounded-l-lg last:rounded-r-lg [&>span:first-child]:hidden data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:focus:bg-primary data-[state=checked]:focus:text-primary-foreground";
+
 const ITEM_CLASS = "h-[34px] gap-2.5 rounded-md px-2.5 py-0 text-[13.5px]";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +73,7 @@ export function UserMenu({
   className,
 }: Readonly<UserMenuProps>) {
   const initials = getInitials(name);
+  const { theme, setTheme } = useTheme();
 
   return (
     <DropdownMenu defaultOpen={defaultOpen}>
@@ -97,6 +110,28 @@ export function UserMenu({
             </span>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator className="mx-0 my-1" />
+        <DropdownMenuLabel className="text-muted-foreground px-2.5 pt-2 pb-1 text-[11px] font-bold tracking-widest uppercase">
+          Appearance
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          aria-label="Appearance"
+          value={theme ?? "system"}
+          onValueChange={setTheme}
+          className="flex px-2.5 pb-1.5"
+        >
+          {APPEARANCE_OPTIONS.map((option) => (
+            <DropdownMenuRadioItem
+              key={option.value}
+              value={option.value}
+              className={SEGMENT_CLASS}
+              // Keep the menu open so the change is visible straight away.
+              onSelect={(event) => event.preventDefault()}
+            >
+              {option.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator className="mx-0 my-1" />
         <DropdownMenuItem
           className={cn(

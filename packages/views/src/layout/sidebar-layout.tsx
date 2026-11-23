@@ -12,7 +12,6 @@ import {
   SidebarLinkButton,
   SidebarProvider,
   SidebarTrigger,
-  ThemeToggle,
   UserMenu,
   useSidebar,
 } from "@contentgrid/ui";
@@ -60,7 +59,6 @@ export function SideBarLayout({
         leading={<SidebarTrigger className="text-white hover:bg-white/10 hover:text-white" />}
         actions={
           <>
-            <ThemeToggle />
             {auth.user && (
               <UserMenu
                 name={auth.user.profile.name ?? auth.user.profile.email ?? ""}

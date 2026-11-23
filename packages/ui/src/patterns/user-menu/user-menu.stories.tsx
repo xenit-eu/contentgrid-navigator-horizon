@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { ThemeProvider } from "../../primitives/theme-provider";
 import { UserMenu } from "./user-menu";
 
 const meta = {
@@ -8,9 +9,11 @@ const meta = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <div className="flex h-[59px] items-center justify-end border-b-[3px] border-[var(--sky)] bg-[linear-gradient(90deg,var(--ocean-700),var(--ocean)_55%,var(--header-end))] px-5">
-        <Story />
-      </div>
+      <ThemeProvider defaultTheme="light">
+        <div className="flex h-[59px] items-center justify-end border-b-[3px] border-[var(--sky)] bg-[linear-gradient(90deg,var(--ocean-700),var(--ocean)_55%,var(--header-end))] px-5">
+          <Story />
+        </div>
+      </ThemeProvider>
     ),
   ],
 } satisfies Meta<typeof UserMenu>;
