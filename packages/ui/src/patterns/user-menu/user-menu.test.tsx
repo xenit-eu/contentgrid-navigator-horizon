@@ -1,7 +1,32 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { ThemeProvider } from "../../primitives/theme-provider";
 import { UserMenu } from "./user-menu";
+
+beforeAll(() => {
+  // jsdom does not implement window.matchMedia; next-themes listens for the system preference.
+  if (!window.matchMedia) {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: (query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }),
+    });
+  }
+});
+
+afterEach(() => {
+  localStorage.clear();
+  document.documentElement.className = "";
+});
 
 describe("UserMenu", () => {
   it("shows only the avatar in the trigger: no name, e-mail or caret", () => {
@@ -97,5 +122,56 @@ describe("UserMenu", () => {
     await user.click(screen.getByRole("button", { name: /john doe/i }));
     await user.click(screen.getByText("Settings"));
     expect(onSettingsClick).toHaveBeenCalledTimes(1);
+  });
+
+  describe("Appearance", () => {
+    async function openMenu(defaultTheme = "light") {
+      const user = userEvent.setup();
+      render(
+        <ThemeProvider defaultTheme={defaultTheme}>
+          <UserMenu name="John Doe" email="john.doe@example.com" />
+        </ThemeProvider>,
+      );
+      await user.click(screen.getByRole("button", { name: /john doe/i }));
+      return user;
+    }
+
+    it("offers Light, Dark and System as a segmented choice, filled for the active one", async () => {
+      await openMenu("light");
+      const options = screen.getAllByRole("menuitemradio");
+      expect(options.map((option) => option.textContent)).toEqual(["Light", "Dark", "System"]);
+      expect(screen.getByRole("menuitemradio", { name: "Light" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      expect(screen.getByRole("menuitemradio", { name: "Light" })).toHaveClass(
+        "data-[state=checked]:bg-primary",
+      );
+      expect(screen.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+    });
+
+    it("switches the document to dark and keeps the menu open", async () => {
+      const user = await openMenu("light");
+      await user.click(screen.getByRole("menuitemradio", { name: "Dark" }));
+      expect(document.documentElement).toHaveClass("dark");
+      expect(screen.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      expect(screen.getByText("Log out")).toBeInTheDocument();
+    });
+
+    it("stores System as the choice, so the OS setting is followed", async () => {
+      const user = await openMenu("dark");
+      await user.click(screen.getByRole("menuitemradio", { name: "System" }));
+      expect(localStorage.getItem("theme")).toBe("system");
+      expect(screen.getByRole("menuitemradio", { name: "System" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    });
   });
 });
