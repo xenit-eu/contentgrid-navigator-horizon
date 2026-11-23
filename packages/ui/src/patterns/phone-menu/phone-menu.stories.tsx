@@ -1,6 +1,7 @@
 import {
   BuildingsIcon as Buildings,
   FileTextIcon as FileText,
+  GearIcon as Gear,
   HouseIcon as House,
   PlusIcon as Plus,
   StackIcon as Stack,
@@ -19,12 +20,21 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "../../primitives/sidebar";
+import { ThemeProvider } from "../../primitives/theme-provider";
+import { PhoneMenuAccount } from "./phone-menu-account";
 import { PhoneMenuHeader } from "./phone-menu-header";
 
 const meta = {
   title: "Patterns/PhoneMenu",
   component: PhoneMenuHeader,
   parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <ThemeProvider defaultTheme="light">
+        <Story />
+      </ThemeProvider>
+    ),
+  ],
 } satisfies Meta<typeof PhoneMenuHeader>;
 
 export default meta;
@@ -36,6 +46,17 @@ const entities = [
   { name: "Suppliers", count: "87", Icon: Buildings },
 ];
 
+const DrawerAccount = ({ settingsCurrent = false }: { settingsCurrent?: boolean }) => (
+  <PhoneMenuAccount name="Sam Peeters" email="sam.peeters@example.com" onLogOut={() => {}}>
+    <SidebarLinkButton
+      icon={<Gear aria-hidden className="text-muted-foreground" />}
+      label="Settings"
+      isActive={settingsCurrent}
+      aria-current={settingsCurrent ? "page" : undefined}
+    />
+  </PhoneMenuAccount>
+);
+
 /**
  * The navigation drawer on a phone. Tagged `mobile`, so the visual and accessibility specs render
  * it in a 390×844 viewport, where `Sidebar` switches to its sheet; `defaultOpenMobile` opens it.
@@ -46,7 +67,11 @@ export const PhoneDrawer: Story = {
   tags: ["mobile", "axe-no-contrast"],
   render: () => (
     <SidebarProvider defaultOpenMobile>
-      <Sidebar collapsible="icon" mobileHeader={<PhoneMenuHeader />}>
+      <Sidebar
+        collapsible="icon"
+        mobileHeader={<PhoneMenuHeader />}
+        mobileFooter={<DrawerAccount />}
+      >
         <SidebarContent>
           <SidebarGroup className="pb-0">
             <SidebarMenu>
@@ -73,6 +98,29 @@ export const PhoneDrawer: Story = {
         </SidebarContent>
       </Sidebar>
       <main className="flex-1" />
+    </SidebarProvider>
+  ),
+};
+
+/** The drawer's footer on its own, at the drawer's width (300px). */
+export const AccountBlock: Story = {
+  parameters: { layout: "centered" },
+  render: () => (
+    <SidebarProvider>
+      <div className="bg-sidebar w-[300px]">
+        <DrawerAccount />
+      </div>
+    </SidebarProvider>
+  ),
+};
+
+export const AccountBlockSettingsCurrent: Story = {
+  parameters: { layout: "centered" },
+  render: () => (
+    <SidebarProvider>
+      <div className="bg-sidebar w-[300px]">
+        <DrawerAccount settingsCurrent />
+      </div>
     </SidebarProvider>
   ),
 };

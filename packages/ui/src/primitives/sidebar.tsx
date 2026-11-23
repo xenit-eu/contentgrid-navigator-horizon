@@ -160,6 +160,7 @@ function Sidebar({
   className,
   children,
   mobileHeader,
+  mobileFooter,
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right";
@@ -170,6 +171,8 @@ function Sidebar({
    * hidden), e.g. the brand and a close button. It sits inside the sheet, so it may use `SheetClose`.
    */
   mobileHeader?: React.ReactNode;
+  /** Rendered below the content in the phone drawer only, e.g. the account block. */
+  mobileFooter?: React.ReactNode;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
@@ -210,6 +213,7 @@ function Sidebar({
           <div className="flex h-full w-full flex-col">
             {mobileHeader}
             {children}
+            {mobileFooter}
           </div>
         </SheetContent>
       </Sheet>
