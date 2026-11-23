@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockSidebarData } from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
@@ -35,6 +35,11 @@ function renderLayout(user: unknown, props: Partial<SideBarLayoutProps> = {}) {
 }
 
 describe("SideBarLayout", () => {
+  // The sidebar remembers its state in a cookie; do not let one test's toggle leak into the next.
+  beforeEach(() => {
+    document.cookie = "sidebar_state=; path=/; max-age=0";
+  });
+
   it("hides the user menu when there is no authenticated user", () => {
     renderLayout(null);
     expect(screen.getByTestId("banner")).toBeInTheDocument();
@@ -167,6 +172,25 @@ describe("SideBarLayout", () => {
     expect(screen.getByRole("banner")).toContainElement(toggles[0]);
 
     await userEvent.click(toggles[0]);
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+
+  it("opens collapsed after a reload when it was collapsed, and keeps toggling", async () => {
+    document.cookie = "sidebar_state=false; path=/";
+    renderLayout(null);
+
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand sidebar" }));
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    expect(document.cookie).toContain("sidebar_state=true");
+  });
+
+  it("toggles with the [ key", async () => {
+    renderLayout(null);
+
+    fireEvent.keyDown(window, { key: "[" });
+
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
   });
 });
