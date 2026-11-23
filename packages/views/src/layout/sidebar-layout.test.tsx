@@ -41,9 +41,9 @@ describe("SideBarLayout", () => {
     expect(screen.queryByText("Log out")).not.toBeInTheDocument();
   });
 
-  it("shows the signed-in user's name in the user menu", () => {
+  it("names the user menu after the signed-in user", () => {
     renderLayout({ profile: { name: "Jane Doe", email: "jane@example.com" }, expired: false });
-    expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /jane doe/i })).toBeInTheDocument();
   });
 
   it("renders topChildren above the routed page", () => {
@@ -67,10 +67,24 @@ describe("SideBarLayout", () => {
   it("opens settings from the user menu", async () => {
     const handlers = renderLayout({ profile: { name: "Jane Doe", email: "j@example.com" } });
 
-    await userEvent.click(screen.getByText("Jane Doe"));
+    await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
     await userEvent.click(await screen.findByText("Settings"));
 
     expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Settings as current in the user menu when told a settings page is open", async () => {
+    renderLayout(
+      { profile: { name: "Jane Doe", email: "j@example.com" } },
+      { settingsCurrent: true },
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
+
+    expect(await screen.findByRole("menuitem", { name: "Settings" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("renders real links when hrefs are given, and still opens through the callbacks on a plain click", async () => {
