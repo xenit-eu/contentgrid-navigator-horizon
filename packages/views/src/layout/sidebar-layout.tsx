@@ -54,7 +54,7 @@ export function SideBarLayout({
   return (
     <SidebarProvider className="h-svh flex-col">
       <BrandingHeader
-        mobileLeading={<SidebarTrigger className="text-white hover:bg-white/10 hover:text-white" />}
+        leading={<SidebarTrigger className="text-white hover:bg-white/10 hover:text-white" />}
         actions={
           <>
             <ThemeToggle />
@@ -105,9 +105,8 @@ export function SideBarLayout({
   );
 }
 
-// The mobile sidebar always renders as a full-width Sheet with no icon-only
-// mode, so it's treated the same as "expanded" here — only the desktop
-// `open` state ever switches to the collapsed, icon-stacked layout.
+// The sidebar toggle lives in the header; the top of the sidebar only holds Home.
+// Collapsed (icon-only) the button is centred, expanded it sits at the start.
 function SideBarTopControls({
   onOpenHome,
   homeHref,
@@ -136,18 +135,8 @@ function SideBarTopControls({
       </Button>
     );
 
-  if (open || isMobile) {
-    return (
-      <div className="flex items-center justify-between gap-2 p-2">
-        {home}
-        <SidebarTrigger />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col items-center justify-center gap-2 p-2">
-      <SidebarTrigger />
+    <div className={`flex items-center p-2 ${open || isMobile ? "" : "justify-center"}`}>
       {home}
     </div>
   );

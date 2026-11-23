@@ -21,11 +21,10 @@ export interface BrandingHeaderProps {
   /** Called when the logo or brand text is clicked (e.g. to navigate home) */
   onLogoClick?: () => void;
   /**
-   * Optional slot rendered in place of the logo/brand text on narrow
-   * (mobile) viewports — e.g. a sidebar toggle, so it isn't lost when the
-   * sidebar itself collapses off-screen.
+   * Optional slot rendered right after the logo, at every width — e.g. the
+   * sidebar toggle. The logo stays visible next to it on narrow screens.
    */
-  mobileLeading?: React.ReactNode;
+  leading?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,7 +36,7 @@ export function BrandingHeader({
   className,
   title,
   onLogoClick,
-  mobileLeading,
+  leading,
 }: Readonly<BrandingHeaderProps>) {
   return (
     <header
@@ -47,17 +46,11 @@ export function BrandingHeader({
       )}
       style={{ height: BRANDING_HEADER_HEIGHT }}
     >
-      {/* Mobile leading slot (e.g. sidebar toggle) — replaces the logo below md */}
-      {mobileLeading && <div className="shrink-0 md:hidden">{mobileLeading}</div>}
-
       {/* Logo + brand text */}
       <button
         type="button"
         onClick={onLogoClick}
-        className={cn(
-          "flex min-w-0 shrink-0 items-center gap-2.5 border-0 bg-transparent p-0 text-left",
-          mobileLeading && "hidden md:flex",
-        )}
+        className="flex min-w-0 shrink-0 items-center gap-2.5 border-0 bg-transparent p-0 text-left"
       >
         <img
           src={contentGridLogo}
@@ -73,6 +66,9 @@ export function BrandingHeader({
           </span>
         </span>
       </button>
+
+      {/* Leading slot (e.g. sidebar toggle), right after the logo */}
+      {leading && <div className="shrink-0">{leading}</div>}
 
       {title && <span className="font-semibold text-white">{title}</span>}
 

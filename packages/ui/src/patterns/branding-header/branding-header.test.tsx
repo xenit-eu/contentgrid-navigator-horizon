@@ -63,4 +63,13 @@ describe("BrandingHeader", () => {
       "text-[var(--header-sub)]",
     );
   });
+
+  it("renders the leading slot right after the logo, with the logo still visible", () => {
+    render(<BrandingHeader leading={<button type="button">Toggle</button>} />);
+    const logo = screen.getByRole("button", { name: /content.*grid.*by amexio/i });
+    const toggle = screen.getByRole("button", { name: "Toggle" });
+    expect(logo.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(logo).not.toHaveClass("hidden");
+    expect(toggle.parentElement).not.toHaveClass("md:hidden");
+  });
 });

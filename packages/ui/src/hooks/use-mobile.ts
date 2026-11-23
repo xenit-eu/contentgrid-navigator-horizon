@@ -1,6 +1,7 @@
 import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768;
+// Matches Tailwind's `sm` breakpoint: the sidebar's desktop markup switches on `sm:`.
+const MOBILE_BREAKPOINT = 640;
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
