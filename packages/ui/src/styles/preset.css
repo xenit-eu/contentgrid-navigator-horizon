@@ -117,6 +117,9 @@
   --text-muted: var(--cg-color-text-muted);
   --header-dim: var(--cg-color-header-dim);
   --link-text: var(--cg-color-link-text);
+  --header-end: var(--cg-color-header-end);
+  --brand-accent: var(--cg-color-brand-accent);
+  --header-sub: var(--cg-color-header-sub);
   --amber: var(--cg-color-amber);
   --amber-light: var(--cg-color-amber-light);
   --danger: var(--cg-color-danger);

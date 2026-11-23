@@ -57,6 +57,11 @@
   --cg-color-text-muted: #4f6f87;
   --cg-color-header-dim: #b1cfe7;
   --cg-color-link-text: #064c79;
+  /* App header (reference design): gradient end, brand accent ("grid") and the
+   * "BY AMEXIO" line. */
+  --cg-color-header-end: #0b6aa6;
+  --cg-color-brand-accent: #7fd0f7;
+  --cg-color-header-sub: #bcd6e8;
 
   /* Accent / status */
   /* Amber follows the reference design (#b85b1f). An earlier revision moved to

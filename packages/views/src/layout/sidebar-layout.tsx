@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { FilePlusIcon, HouseIcon } from "@phosphor-icons/react";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
+  BRANDING_HEADER_HEIGHT,
   BrandingHeader,
   Button,
   Sidebar,
@@ -71,7 +72,13 @@ export function SideBarLayout({
         onLogoClick={onOpenHome}
       />
       <div className="flex min-h-0 w-full flex-1">
-        <Sidebar style={{ top: "3.75rem", height: "calc(100svh - 3.75rem)" }} collapsible="icon">
+        <Sidebar
+          style={{
+            top: BRANDING_HEADER_HEIGHT,
+            height: `calc(100svh - ${BRANDING_HEADER_HEIGHT})`,
+          }}
+          collapsible="icon"
+        >
           <SideBarTopControls onOpenHome={onOpenHome} homeHref={homeHref} />
           <SidebarContent>
             <SidebarGroup className="pb-0 mb-0">
