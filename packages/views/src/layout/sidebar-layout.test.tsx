@@ -79,11 +79,34 @@ describe("SideBarLayout", () => {
     expect(screen.getByRole("button", { name: "Home" })).not.toHaveAttribute("aria-current");
   });
 
+  it("has a Settings row at the bottom of the sidebar, outside the scrolling list", async () => {
+    const handlers = renderLayout(null, { settingsCurrent: true });
+
+    const row = screen.getByRole("button", { name: "Settings" });
+    const footer = row.closest("[data-slot='sidebar-footer']");
+    expect(footer).toBeInTheDocument();
+    expect(footer?.closest("[data-slot='sidebar-inner']")?.lastElementChild).toBe(footer);
+    expect(row.closest("[data-slot='sidebar-content']")).toBeNull();
+    expect(row).toHaveAttribute("aria-current", "page");
+    expect(row).toHaveAttribute("data-active", "true");
+
+    await userEvent.click(row);
+    expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the Settings row as a link when the host has an address", () => {
+    renderLayout(null, { settingsHref: "/~configuration" });
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/~configuration",
+    );
+  });
+
   it("opens settings from the user menu", async () => {
     const handlers = renderLayout({ profile: { name: "Jane Doe", email: "j@example.com" } });
 
     await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
-    await userEvent.click(await screen.findByText("Settings"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Settings" }));
 
     expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
   });

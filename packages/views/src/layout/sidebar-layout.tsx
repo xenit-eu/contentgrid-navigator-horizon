@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { HouseIcon, PlusIcon } from "@phosphor-icons/react";
+import { GearIcon, HouseIcon, PlusIcon } from "@phosphor-icons/react";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   BRANDING_HEADER_HEIGHT,
   BrandingHeader,
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarInset,
   SidebarLinkButton,
@@ -32,6 +33,8 @@ export interface SideBarLayoutProps {
   readonly onOpenSettings: () => void;
   /** A settings page is open: the user menu's Settings item shows its "current" state. */
   readonly settingsCurrent?: boolean;
+  /** The settings page's real address, when the host has one: the Settings row then renders as `<a href>`. */
+  readonly settingsHref?: string;
   /** The home page is open: the Home row shows its "current" state. */
   readonly homeCurrent?: boolean;
   /** Real addresses, when the host has them: the home and entity links then render as `<a href>`. */
@@ -48,6 +51,7 @@ export function SideBarLayout({
   onOpenCreate,
   onOpenSettings,
   settingsCurrent,
+  settingsHref,
   homeCurrent,
   homeHref,
   entityHref,
@@ -122,6 +126,31 @@ export function SideBarLayout({
               entityHref={entityHref}
             />
           </SidebarContent>
+          {/* Outside the scrolling content: the sidebar is as tall as the window, so Settings stays
+              at the bottom and only the entity list scrolls when it is longer than the window. */}
+          <SidebarFooter className="px-3 pb-3 group-data-[collapsible=icon]:px-2">
+            <SidebarMenu>
+              <SidebarLinkButton
+                icon={<GearIcon aria-hidden className="text-muted-foreground" />}
+                label="Settings"
+                isActive={settingsCurrent}
+                aria-current={settingsCurrent ? "page" : undefined}
+                onClick={settingsHref === undefined ? onOpenSettings : undefined}
+                render={
+                  settingsHref === undefined
+                    ? undefined
+                    : (content) => (
+                        <a
+                          href={settingsHref}
+                          onClick={(event) => handleNavigationClick(event, onOpenSettings)}
+                        >
+                          {content}
+                        </a>
+                      )
+                }
+              />
+            </SidebarMenu>
+          </SidebarFooter>
         </Sidebar>
 
         <SidebarInset className="min-h-0 overflow-hidden">
