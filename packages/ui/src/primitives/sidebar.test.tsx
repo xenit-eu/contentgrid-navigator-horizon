@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
-import { SidebarProvider, SidebarTrigger } from "./sidebar";
+import { SidebarMenuButton, SidebarProvider, SidebarTrigger } from "./sidebar";
 
 beforeAll(() => {
   // jsdom does not implement window.matchMedia; SidebarProvider uses useIsMobile
@@ -62,5 +62,24 @@ describe("SidebarTrigger", () => {
     await userEvent.hover(screen.getByRole("button", { name: "Collapse sidebar" }));
     expect((await screen.findAllByText("[")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText(/Collapse sidebar/)).length).toBeGreaterThan(1);
+  });
+});
+
+describe("sidebar rows", () => {
+  it("marks the active row and keeps rows 36px with 14px text", () => {
+    render(
+      <SidebarProvider>
+        <SidebarMenuButton isActive>Invoices</SidebarMenuButton>
+        <SidebarMenuButton>Contracts</SidebarMenuButton>
+      </SidebarProvider>,
+    );
+    const active = screen.getByRole("button", { name: "Invoices" });
+    expect(active).toHaveAttribute("data-active", "true");
+    expect(active).toHaveClass("h-9", "text-sm", "data-[active=true]:font-semibold");
+    expect(active.className).not.toContain("text-xs");
+    expect(screen.getByRole("button", { name: "Contracts" })).toHaveAttribute(
+      "data-active",
+      "false",
+    );
   });
 });
