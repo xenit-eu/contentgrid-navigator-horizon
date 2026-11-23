@@ -23,7 +23,7 @@ interface EditContentFieldsProps {
   /** The attribute's filename and mimetype fields, shown under its file while it has one. */
   readonly renderMetadataFields: (attributeName: string) => ReactNode;
   /** The attribute shown in the content preview next to the form, if any. */
-  readonly previewedAttributeName?: string;
+  readonly previewedContentAttributeName?: string;
   /** Shows an attribute's file in the content preview; omitted when there is no preview. */
   readonly onPreview?: (attributeName: string) => void;
 }
@@ -43,7 +43,7 @@ export function EditContentFields({
   contentResults,
   disabled = false,
   renderMetadataFields,
-  previewedAttributeName,
+  previewedContentAttributeName,
   onPreview,
 }: Readonly<EditContentFieldsProps>) {
   const contentAttributes = item.attributes.flatMap((attr) =>
@@ -60,7 +60,7 @@ export function EditContentFields({
     };
     const change = pendingContent.get(name);
     const file = change ? change.file : storedFile;
-    const isPreviewed = canChoosePreview && name === previewedAttributeName;
+    const isPreviewed = canChoosePreview && name === previewedContentAttributeName;
 
     return (
       <Card key={name} className="py-4">

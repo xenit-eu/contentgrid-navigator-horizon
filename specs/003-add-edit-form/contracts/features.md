@@ -78,7 +78,7 @@ interface EditContentFieldsProps {
   /** Makes every file field read-only. */
   readonly disabled?: boolean;
   readonly renderMetadataFields: (attributeName: string) => ReactNode;
-  readonly previewedAttributeName?: string;
+  readonly previewedContentAttributeName?: string;
   readonly onPreview?: (attributeName: string) => void;
 }
 ```

@@ -73,7 +73,7 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
   readonly isSaving: boolean;
   readonly onSavingChange: (isSaving: boolean) => void;
   /** The attribute shown in the content preview, and how to show another; content focus only. */
-  readonly previewedAttributeName?: string;
+  readonly previewedContentAttributeName?: string;
   readonly onPreview?: (attributeName: string) => void;
   readonly onRelationItemClick?: RelationItemClickHandler;
   readonly onRelationItemCreateNew?: RelationItemCreateHandler;
@@ -113,7 +113,7 @@ export function EntityItemSections({
   contentFailures,
   onContentFailuresChange,
   onSavingChange,
-  previewedAttributeName,
+  previewedContentAttributeName,
   onPreview,
   onRelationItemClick,
   onRelationItemCreateNew,
@@ -171,7 +171,7 @@ export function EntityItemSections({
         contentFailures={contentFailures}
         onContentFailuresChange={onContentFailuresChange}
         onSavingChange={onSavingChange}
-        previewedAttributeName={previewedAttributeName}
+        previewedContentAttributeName={previewedContentAttributeName}
         onPreview={onPreview}
         auditTrail={false}
         editFormRef={editFormRef}

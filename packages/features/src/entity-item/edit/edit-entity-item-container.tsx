@@ -63,7 +63,7 @@ interface EditEntityItemContainerProps {
   /** Hears whether the form is saving, so the content preview can stop taking files meanwhile. */
   readonly onSavingChange?: (isSaving: boolean) => void;
   /** See `EditContentFields`. */
-  readonly previewedAttributeName?: string;
+  readonly previewedContentAttributeName?: string;
   readonly onPreview?: (attributeName: string) => void;
   readonly ref?: Ref<EditEntityItemFormHandle>;
 }
@@ -94,7 +94,7 @@ export function EditEntityItemContainer({
   contentFailures,
   onContentFailuresChange,
   onSavingChange,
-  previewedAttributeName,
+  previewedContentAttributeName,
   onPreview,
   ref,
 }: Readonly<EditEntityItemContainerProps>) {
@@ -277,7 +277,7 @@ export function EditEntityItemContainer({
                 fieldState={formState.fieldState}
               />
             )}
-            previewedAttributeName={previewedAttributeName}
+            previewedContentAttributeName={previewedContentAttributeName}
             onPreview={onPreview}
           />
         }

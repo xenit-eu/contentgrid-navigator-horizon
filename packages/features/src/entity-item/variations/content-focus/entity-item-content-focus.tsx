@@ -98,7 +98,7 @@ export function EntityItemContentFocus({
       sidePanel={
         <EntityItemSections
           {...sectionProps}
-          previewedAttributeName={attributeName}
+          previewedContentAttributeName={attributeName}
           onPreview={setUserSelectedAttribute}
         />
       }

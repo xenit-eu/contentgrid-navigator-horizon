@@ -28,7 +28,7 @@ interface EditableEntityItemAttributesProps {
   /** Hears whether the form is saving. */
   readonly onSavingChange?: (isSaving: boolean) => void;
   /** The attribute shown in the content preview, and how to show another; content focus only. */
-  readonly previewedAttributeName?: string;
+  readonly previewedContentAttributeName?: string;
   readonly onPreview?: (attributeName: string) => void;
 }
 
@@ -48,7 +48,7 @@ export function EditableEntityItemAttributes({
   contentFailures,
   onContentFailuresChange,
   onSavingChange,
-  previewedAttributeName,
+  previewedContentAttributeName,
   onPreview,
 }: Readonly<EditableEntityItemAttributesProps>) {
   if (isEditing && isEditableEntityItem(item)) {
@@ -64,7 +64,7 @@ export function EditableEntityItemAttributes({
         contentFailures={contentFailures}
         onContentFailuresChange={onContentFailuresChange}
         onSavingChange={onSavingChange}
-        previewedAttributeName={previewedAttributeName}
+        previewedContentAttributeName={previewedContentAttributeName}
         onPreview={onPreview}
       />
     );
