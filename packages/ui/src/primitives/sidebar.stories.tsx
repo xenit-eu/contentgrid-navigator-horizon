@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
+import { formatCount } from "../lib/format-count";
 import {
   Sidebar,
   SidebarContent,
@@ -21,10 +22,12 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarProvider,
   SidebarSeparator,
   SidebarTrigger,
 } from "./sidebar";
+import { Skeleton } from "./skeleton";
 
 const meta = {
   title: "Primitives/Sidebar",
@@ -225,6 +228,65 @@ export const EntityRowsCollapsed: Story = {
       <Sidebar collapsible="icon" style={{ top: 0 }}>
         <SidebarContent>
           <EntityRows />
+        </SidebarContent>
+      </Sidebar>
+      <main className="flex flex-1 flex-col gap-4 p-4" />
+    </SidebarProvider>
+  ),
+};
+
+// Count states: exact, estimated, zero, loading (a skeleton pill) and unknown (nothing at all).
+export const CountStates: Story = {
+  render: () => (
+    <SidebarProvider defaultOpen>
+      <Sidebar collapsible="icon" style={{ top: 0 }}>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              {[
+                { label: "Exact", count: formatCount({ count: 412, isEstimated: false }) },
+                { label: "Thousands", count: formatCount({ count: 1284, isEstimated: false }) },
+                { label: "Estimated", count: formatCount({ count: 1204, isEstimated: true }) },
+                { label: "Zero", count: formatCount({ count: 0, isEstimated: false }) },
+                { label: "Loading", count: null },
+                { label: "Unknown or not allowed", count: undefined },
+              ].map(({ label, count }) => (
+                <SidebarMenuItem key={label}>
+                  <SidebarMenuButton>
+                    <span>{label}</span>
+                  </SidebarMenuButton>
+                  {count === null ? (
+                    <SidebarMenuBadge aria-hidden>
+                      <Skeleton className="h-2.5 w-6.5 rounded-full" />
+                    </SidebarMenuBadge>
+                  ) : (
+                    count !== undefined && <SidebarMenuBadge>{count}</SidebarMenuBadge>
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+      <main className="flex flex-1 flex-col gap-4 p-4" />
+    </SidebarProvider>
+  ),
+};
+
+export const LoadingEntityList: Story = {
+  render: () => (
+    <SidebarProvider defaultOpen>
+      <Sidebar collapsible="icon" style={{ top: 0 }}>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              {["70%", "55%", "64%"].map((width) => (
+                <SidebarMenuItem key={width}>
+                  <SidebarMenuSkeleton width={width} />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
         </SidebarContent>
       </Sidebar>
       <main className="flex flex-1 flex-col gap-4 p-4" />
