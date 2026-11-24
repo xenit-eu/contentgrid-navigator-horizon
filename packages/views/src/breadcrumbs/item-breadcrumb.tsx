@@ -3,7 +3,7 @@ import type { EntityItem } from "@contentgrid/navigator-data";
 import { BreadcrumbItem, BreadcrumbPage, BreadcrumbSeparator } from "@contentgrid/ui";
 
 /**
- * One item, shown as its reference, as the current page. Draws nothing until the item has
+ * One item, shown as its title in plain text, as the current page. Draws nothing until the item has
  * loaded — but it still counts as a following crumb, so the collection before it stays a link
  * while the item loads or after it failed.
  */
@@ -15,7 +15,7 @@ export function ItemBreadcrumb({ entityItem }: Readonly<{ entityItem: EntityItem
       <BreadcrumbSeparator />
       <BreadcrumbItem>
         <BreadcrumbPage>
-          <EntityItemReference item={entityItem} size="sm" />
+          <EntityItemReference item={entityItem} titleOnly />
         </BreadcrumbPage>
       </BreadcrumbItem>
     </>

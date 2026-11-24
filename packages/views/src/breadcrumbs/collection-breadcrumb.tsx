@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { EntityIconBadge } from "@contentgrid/features/layout";
 import type { ProfileEntity } from "@contentgrid/navigator-data";
 import {
   BreadcrumbItem,
@@ -10,9 +9,8 @@ import {
 import { NavigationLink, useViewNavigation } from "../navigation";
 
 /**
- * The entity's collection — its icon badge and plural name — followed by its `children` crumbs:
- * a link to the list (outlined badge) when crumbs follow it, the current page (solid badge) when
- * it is last. Draws nothing (nor its children) until the profile is known.
+ * The entity's collection — its plural name as plain text — followed by its `children` crumbs:
+ * a link to the list when crumbs follow it, the current page when it is last. Draws nothing (nor its children) until the profile is known.
  */
 export function CollectionBreadcrumb({
   profileEntity,
@@ -30,17 +28,12 @@ export function CollectionBreadcrumb({
             <NavigationLink
               href={navigation.hrefFor?.entityItemCollection(profileEntity.name)}
               onNavigate={() => navigation.openEntityItemCollection(profileEntity.name)}
-              className="inline-flex items-center gap-2"
             >
-              <EntityIconBadge profile={profileEntity} variant="sm" outlined />
               {profileEntity.pluralName}
             </NavigationLink>
           </BreadcrumbLink>
         ) : (
-          <BreadcrumbPage className="inline-flex items-center gap-2">
-            <EntityIconBadge profile={profileEntity} variant="sm" />
-            {profileEntity.pluralName}
-          </BreadcrumbPage>
+          <BreadcrumbPage>{profileEntity.pluralName}</BreadcrumbPage>
         )}
       </BreadcrumbItem>
       {children}

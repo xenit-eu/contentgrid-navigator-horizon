@@ -16,6 +16,8 @@ export interface EntityItemReferenceProps {
    * fully transparent — see `IconBadge`'s doc comment. */
   readonly outlined?: boolean;
   readonly className?: string;
+  /** Renders just the title as inline text, with no icon, subtitle or box (e.g. in a breadcrumb). */
+  readonly titleOnly?: boolean;
 }
 
 /** Hard limit on the characters of the title and the subtitle (plus an ellipsis). */
@@ -36,6 +38,7 @@ export function EntityItemReference({
   muted,
   outlined,
   className,
+  titleOnly,
 }: Readonly<EntityItemReferenceProps>) {
   const { preferences, nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(
     item.profileEntity,
@@ -52,6 +55,10 @@ export function EntityItemReference({
   ) : (
     item.id
   );
+
+  if (titleOnly) {
+    return <span data-slot="item-title">{title}</span>;
+  }
 
   const subtitleAttr = subtitleAttribute ? item.findAttribute(subtitleAttribute.name) : undefined;
   const subtitle = subtitleAttr ? (

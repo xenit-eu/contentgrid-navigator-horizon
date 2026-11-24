@@ -42,7 +42,7 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
           <button
             type="button"
             onClick={() => go({ to: "/", search: {} })}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-primary underline-offset-4 transition-colors hover:underline focus-visible:underline dark:text-[var(--breeze)]"
           >
             Home
           </button>
@@ -52,7 +52,7 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
           <button
             type="button"
             onClick={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-primary underline-offset-4 transition-colors hover:underline focus-visible:underline dark:text-[var(--breeze)]"
           >
             {profile.pluralName}
           </button>
