@@ -210,4 +210,22 @@ describe("ResizableSplitLayout", () => {
     expect(screen.getByText("no-pane")).toBeInTheDocument();
     expect(screen.getByText("no-widths")).toBeInTheDocument();
   });
+
+  it("takes its content's height, without a vertical scroll in the left pane, when asked to", () => {
+    const { container, rerender } = render(
+      <ResizableSplitLayout left="Left" right="Right" fitContentHeight />,
+    );
+    const layout = container.querySelector("[data-slot='resizable-split-layout']");
+    const group = container.querySelector("[data-slot='resizable-panel-group']");
+    // The library puts the pane's own class and style on the element around its content.
+    const leftPane = screen.getByText("Left");
+    expect(layout).not.toHaveClass("h-full");
+    expect(group).toHaveStyle({ height: "auto", overflow: "visible" });
+    expect(leftPane).toHaveStyle({ maxHeight: "none", overflow: "clip" });
+    expect(leftPane).toHaveClass("min-w-0");
+
+    rerender(<ResizableSplitLayout left="Left" right="Right" />);
+    expect(layout).toHaveClass("h-full");
+    expect(leftPane).not.toHaveClass("min-w-0");
+  });
 });

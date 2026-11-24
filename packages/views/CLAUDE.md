@@ -96,7 +96,8 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   (`useProfileEntityTarget`) and owns the `CollectionViewState` (`filters`, `sort`, `pageUrl`), controlled or internal;
   the `entity-item-collection` feature gets the loaded profile and the state, and fetches the page itself. A link
   starts as the shown page, with the filter values it carries for the search template's own fields. Toolbar: Home ›
-  collection, plus a create action gated on `profileEntity.createTemplate`.
+  collection, plus a "New <entity>" create action (plus icon) gated on `profileEntity.createTemplate`. The page title
+  (entity name, count pill, "Filtered from N items") is drawn by the feature, which has the result and the filters.
 
 - `@contentgrid/views/entity-configuration-overview`: `EntityConfigurationOverviewView()`, the settings page
   around the preferences feature's `EntityConfigurationOverview`; a card opens

@@ -11,6 +11,13 @@ function setup(options?: Parameters<typeof createCollectionFixtureFetch>[0]) {
   return { ...createItemDetailTestHarness({ fetchFn: fixture.fetch }), fixture };
 }
 
+/**
+ * The requests that carry a query. A list opened on a filtering link also reads the entity's
+ * unfiltered total (the plain collection URL) for its "Filtered from" line.
+ */
+const filteredRequests = (fixture: { collectionRequests: string[] }) =>
+  fixture.collectionRequests.filter((url) => url !== CUSTOMER_COLLECTION_URL);
+
 // The item name can show more than once in its row.
 const findFirstItem = async () => (await screen.findAllByText("Acme Corp"))[0];
 
@@ -38,8 +45,94 @@ describe("EntityItemCollectionView", () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
-    await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "New customer" }));
     expect(recording.calls).toEqual([{ method: "openCreateItem", args: ["customer"] }]);
+  });
+
+  it("names the create action 'New' plus the lower-cased singular name, with a plus icon", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    const button = await screen.findByRole("button", { name: "New customer" });
+    expect(button.querySelector("svg")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create customer" })).not.toBeInTheDocument();
+  });
+
+  it("titles the page with the plural name and the count", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(document.querySelector("[data-slot='collection-count']")).toHaveTextContent("2"),
+    );
+    expect(screen.queryByText(/Filtered from/)).not.toBeInTheDocument();
+  });
+
+  it("shows the filtered count and the unfiltered total while a filter is active", async () => {
+    const { Wrapper } = setup({
+      unfilteredPage: { size: 2, total_items_exact: 1284 },
+      filteredPage: { size: 2, total_items_exact: 37 },
+    });
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: { "name~prefix": "acme" } }}
+        onStateChange={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(await screen.findByText(/^Filtered from 1\s284 items$/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(document.querySelector("[data-slot='collection-count']")).toHaveTextContent("37"),
+    );
+  });
+
+  it("asks for the unfiltered total once, and not at all without a filter", async () => {
+    const plain = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: plain.Wrapper });
+    await findFirstItem();
+    expect(plain.fixture.collectionRequests).toEqual([CUSTOMER_COLLECTION_URL]);
+
+    const filtered = setup({ filteredPage: { size: 2, total_items_exact: 1 } });
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: { "name~prefix": "acme" } }}
+        onStateChange={vi.fn()}
+      />,
+      { wrapper: filtered.Wrapper },
+    );
+    await screen.findByText(/^Filtered from 2 items$/);
+    expect(
+      filtered.fixture.collectionRequests.filter((url) => url === CUSTOMER_COLLECTION_URL),
+    ).toHaveLength(1);
+  });
+
+  it("words an estimated total as 'about'", async () => {
+    const { Wrapper } = setup({
+      unfilteredPage: { size: 2, total_items_estimate: 1204 },
+      filteredPage: { size: 2, total_items_exact: 3 },
+    });
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: { "name~prefix": "acme" } }}
+        onStateChange={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(await screen.findByText(/^Filtered from about 1\s204 items$/)).toBeInTheDocument();
+  });
+
+  it("keeps the title above the empty collection", async () => {
+    const { Wrapper } = setup({ empty: true });
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
+    expect(await screen.findByText(/No Customers found/)).toBeInTheDocument();
   });
 
   it("draws no create action without a create form", async () => {
@@ -91,7 +184,8 @@ describe("EntityItemCollectionView by link", () => {
 
     expect(await findFirstItem()).toBeInTheDocument();
     expect(document.querySelector("[aria-current='page']")).toHaveTextContent("Customers");
-    expect(fixture.collectionRequests).toEqual([link]);
+    expect(fixture.collectionRequests).toContain(link);
+    expect(filteredRequests(fixture)).toEqual([link]);
   });
 
   it("shows not-found for a link no profile describes", async () => {
@@ -113,7 +207,7 @@ describe("EntityItemCollectionView by link", () => {
     expect(await findFirstItem()).toBeInTheDocument();
     // Not the plain collection URL: the link's own filter/page must reach the feature even
     // though the host hasn't echoed a `state` back yet.
-    expect(fixture.collectionRequests).toEqual([link]);
+    expect(filteredRequests(fixture)).toEqual([link]);
   });
 
   it("uncontrolled, switches to a new link's own page and filters when the collectionUrl prop changes", async () => {
@@ -125,7 +219,7 @@ describe("EntityItemCollectionView by link", () => {
       wrapper: Wrapper,
     });
     await findFirstItem();
-    expect(fixture.collectionRequests).toEqual([firstLink]);
+    expect(filteredRequests(fixture)).toEqual([firstLink]);
 
     rerender(<EntityItemCollectionView collectionUrl={secondLink} />);
 

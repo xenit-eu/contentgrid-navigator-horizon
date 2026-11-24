@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import { PlusIcon } from "@phosphor-icons/react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import { EntityItemCollectionBrowser as EntityItemCollectionFeature } from "@contentgrid/features/entity-item-collection";
 import { resolveHalFormsFields } from "@contentgrid/features/hal-forms";
@@ -63,7 +64,7 @@ function initialStateForLink(profileEntity: ProfileEntity, url: string): Collect
 
 /**
  * One entity's list: filters, table and pagination, under a Home, collection breadcrumb toolbar
- * with a create action when the profile allows creating. Resolves the target's profile itself
+ * with a "New <entity>" create action when the profile allows creating. Resolves the target's profile itself
  * (`useProfileEntityTarget`) and draws the loading and not-found states inside the toolbar; the
  * feature gets the loaded profile and the state, and fetches the page itself. Every click that
  * opens something calls `useViewNavigation()`.
@@ -116,7 +117,8 @@ export function EntityItemCollectionView({
         <>
           {profileEntity?.createTemplate && (
             <Button onClick={() => navigation.openCreateItem(profileEntity.name)}>
-              Create {profileEntity.singularName}
+              <PlusIcon aria-hidden />
+              New {profileEntity.singularName.toLowerCase()}
             </Button>
           )}
           {toolbar?.actions}

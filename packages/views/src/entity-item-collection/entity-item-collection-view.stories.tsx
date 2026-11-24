@@ -11,13 +11,19 @@ import { createCollectionFixtureFetch } from "../test-fixtures/collection";
 import { PROFILE_URL } from "../test-fixtures/item-detail";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
+type FixtureOptions = Parameters<typeof createCollectionFixtureFetch>[0];
+
 /**
- * Mounts the view on an empty collection in a fixed-size box (ADR-009): the view fills the box
- * and never sizes itself to the window. The view's loading pages are `aria-busy`, so the visual
- * harness's `async-content` wait covers the profile and collection fetches.
+ * Mounts the view on the collection fixture (empty unless `fixtureOptions` says otherwise) in a
+ * fixed-size box (ADR-009): the view fills the box and never sizes itself to the window. The
+ * view's loading pages are `aria-busy`, so the visual harness's `async-content` wait covers the
+ * profile and collection fetches.
  */
-function EmptyCollectionStoryHarness({ children }: Readonly<{ children: ReactNode }>) {
-  const [fixture] = useState(() => createCollectionFixtureFetch({ empty: true }));
+function CollectionStoryHarness({
+  children,
+  fixtureOptions = { empty: true },
+}: Readonly<{ children: ReactNode; fixtureOptions?: FixtureOptions }>) {
+  const [fixture] = useState(() => createCollectionFixtureFetch(fixtureOptions));
   const [queryClient] = useState(() => new QueryClient());
   const [recording] = useState(() => createRecordingNavigation());
   const apiFetch = fixture.fetch as unknown as TypedFetch;
@@ -46,9 +52,9 @@ const meta = {
   tags: ["autodocs", "async-content"],
   parameters: { layout: "centered" },
   render: (args) => (
-    <EmptyCollectionStoryHarness>
+    <CollectionStoryHarness>
       <EntityItemCollectionView {...args} />
-    </EmptyCollectionStoryHarness>
+    </CollectionStoryHarness>
   ),
 } satisfies Meta<typeof EntityItemCollectionView>;
 
@@ -57,4 +63,62 @@ type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = {
   args: { entityName: "customer" },
+};
+
+/** Renders the view on a collection with items; the title shows the entity name and its count. */
+export const Titled: Story = {
+  args: { entityName: "customer" },
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{ unfilteredPage: { size: 2, total_items_exact: 1284 } }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
+/** A filter is active: the filtered count in the pill and the unfiltered total under the title. */
+export const Filtered: Story = {
+  args: {
+    entityName: "customer",
+    state: { filters: { "name~prefix": "acme" } },
+    onStateChange: () => {},
+  },
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{
+        unfilteredPage: { size: 2, total_items_exact: 1284 },
+        filteredPage: { size: 2, total_items_exact: 37 },
+      }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
+/** The API only estimates the total: the pill and the "Filtered from" line say "about". */
+export const EstimatedCount: Story = {
+  args: Filtered.args,
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{
+        unfilteredPage: { size: 2, total_items_estimate: 1204 },
+        filteredPage: { size: 2, total_items_estimate: 40 },
+      }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
+/** More rows than fit: the page scrolls, not the table, and the header row sticks to its top. */
+export const ManyRows: Story = {
+  args: { entityName: "customer" },
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{ itemCount: 30, unfilteredPage: { size: 30, total_items_exact: 30 } }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
 };
