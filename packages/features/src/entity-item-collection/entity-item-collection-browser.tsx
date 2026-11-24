@@ -51,6 +51,8 @@ export interface EntityItemCollectionBrowserProps {
   readonly onSortChange?: (sort: string | undefined) => void;
   /** Fired when the user clicks create; offered when the collection has no items. */
   readonly onCreateItemClick?: () => void;
+  /** When `false`, rows don't have delete buttons and the empty state has no create button. Defaults to `true`. */
+  readonly allowEdit?: boolean;
 }
 
 /**
@@ -84,6 +86,7 @@ export function EntityItemCollectionBrowser({
   currentSort,
   onSortChange,
   onCreateItemClick,
+  allowEdit = true,
 }: Readonly<EntityItemCollectionBrowserProps>) {
   const { collection, toolbarActions, filterDialog, tableProps } = useEntityItemCollectionSearch({
     profile,
@@ -95,6 +98,8 @@ export function EntityItemCollectionBrowser({
     onSortChange,
   });
 
+  const data = allowEdit ? collection.data : collection.data?.toReadOnly();
+
   // Start screen only for an unfiltered first page with no items; it replaces the search bar and
   // the table, as there is nothing to search, filter or sort. A filtered search keeps both so its
   // filters stay reachable. Placeholder data is the previous search's result, so it
@@ -103,8 +108,9 @@ export function EntityItemCollectionBrowser({
   const isEmptyCollection =
     collection.isSuccess &&
     !collection.isPlaceholderData &&
-    collection.data.items.length === 0 &&
-    !collection.data.hasPrevious &&
+    data !== undefined &&
+    data.items.length === 0 &&
+    !data.hasPrevious &&
     activeFilterCount === 0;
 
   // The preview: beside the table when this browser is at least the `side-by-side` width, in a
@@ -134,8 +140,8 @@ export function EntityItemCollectionBrowser({
   // The item as the shown page has it, so a refetch shows its new values. When the shown page
   // no longer has it (filter, sort, page change, delete), the preview closes. While a new page
   // loads, the previous page stays shown, so this happens once the new page is in.
-  const previewedItem = previewedId ? collection.data?.findById(previewedId) : undefined;
-  if (previewedId && collection.data && !previewedItem) {
+  const previewedItem = previewedId ? data?.findById(previewedId) : undefined;
+  if (previewedId && data && !previewedItem) {
     setPreviewedId(undefined);
   }
   const isPreviewOpen = previewedItem !== undefined;
@@ -200,14 +206,17 @@ export function EntityItemCollectionBrowser({
       {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
 
       {isEmptyCollection && (
-        <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
+        <EntityItemCollectionEmptyState
+          profile={profile}
+          onCreateItemClick={allowEdit ? onCreateItemClick : undefined}
+        />
       )}
 
-      {collection.isSuccess && !isEmptyCollection && (
+      {collection.isSuccess && data && !isEmptyCollection && (
         <EntityItemCollectionTable
           className="h-full"
           profile={profile}
-          collection={collection.data}
+          collection={data}
           onEntityItemClick={handlePreview}
           onEntityItemOpen={onEntityItemClick}
           currentItem={previewedItem}

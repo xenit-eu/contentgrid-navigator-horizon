@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
+import { EntityItemCollectionBrowser } from "@contentgrid/features/entity-item-collection";
 import {
   EntityCreateFormPreview,
   EntityDisplaySettingsForm,
@@ -12,7 +13,6 @@ import {
   useEntityItemCollection,
 } from "@contentgrid/navigator-data";
 import { Alert, AlertDescription, TabLink, TabbedLayout } from "@contentgrid/ui";
-import { EntityItemCollectionView } from "../entity-item-collection";
 import { EntityItemDetailView } from "../entity-item-detail";
 
 const PREVIEW_TABS = [
@@ -25,10 +25,10 @@ type PreviewTab = (typeof PREVIEW_TABS)[number]["key"];
 
 /**
  * One entity's configuration: preview tabs on the left, the display settings
- * (`EntityDisplaySettingsForm`) on the right — stacked in a narrow container. The item and
- * collection previews are the real item detail and collection views, without their
- * toolbar, so a setting shows exactly as it will on those pages. Drawn inside the
- * configuration detail page's card.
+ * (`EntityDisplaySettingsForm`) on the right — stacked in a narrow container. The item preview is
+ * the real item detail view and the collection preview the collection page's browser, both
+ * read-only and without a toolbar, so a setting shows exactly as it will on those pages. Drawn
+ * inside the configuration detail page's card.
  */
 export function EntityConfigurationPanel({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const [activeTab, setActiveTab] = useState<PreviewTab>("item");
@@ -90,17 +90,18 @@ function PreviewFrame({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * The collection page. Its Columns choice is seeded from "Visible columns" once, when it mounts,
+ * Readonly collection browser. Its Columns choice is seeded from "Visible columns" once, when it mounts,
  * so the preview remounts whenever that setting changes.
  */
+
 function CollectionPreview({ profile }: Readonly<{ profile: ProfileEntity }>) {
   const { visibleColumns } = useColumnVisibility(profile);
   return (
     <PreviewFrame>
-      <EntityItemCollectionView
+      <EntityItemCollectionBrowser
         key={visibleColumns.join(",")}
-        entityName={profile.name}
-        toolbar={false}
+        profile={profile}
+        allowEdit={false}
       />
     </PreviewFrame>
   );
