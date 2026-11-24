@@ -11,6 +11,15 @@ describe("TruncatedText", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Annual maintenance contract");
   });
 
+  it("gives screen readers the full text instead of the cut one", () => {
+    render(
+      <button type="button">
+        <TruncatedText text="Annual maintenance contract" maxCharLength={7} />
+      </button>,
+    );
+    expect(screen.getByRole("button")).toHaveAccessibleName("Annual maintenance contract");
+  });
+
   it("shows text within maxCharLength as it is, without a tooltip", async () => {
     render(<TruncatedText text="Annual" maxCharLength={6} />);
     await userEvent.hover(screen.getByText("Annual"));

@@ -18,8 +18,9 @@ function truncateText(text: string, maxCharLength: number | undefined): string {
 }
 
 /**
- * Text truncated to `maxCharLength` characters, with the full text in a tooltip on hover. Text
- * within the limit renders as it is.
+ * Text truncated to `maxCharLength` characters, with the full text in a tooltip on hover. Screen
+ * readers get the full text instead of the cut one, since the tooltip needs a mouse. Text within the
+ * limit renders as it is.
  */
 function TruncatedText({ text, maxCharLength }: Readonly<TruncatedTextProps>) {
   const shown = truncateText(text, maxCharLength);
@@ -31,7 +32,10 @@ function TruncatedText({ text, maxCharLength }: Readonly<TruncatedTextProps>) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span>{shown}</span>
+          <span>
+            <span aria-hidden="true">{shown}</span>
+            <span className="sr-only">{text}</span>
+          </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-80 break-words">{text}</TooltipContent>
       </Tooltip>

@@ -73,8 +73,9 @@ function makeWidgetProfile() {
 
 const LONG_NAME = "N".repeat(130);
 const LONG_EMAIL = `${"e".repeat(130)}@example.com`;
+const LONG_ID = "i".repeat(60);
 
-// Item 2 deliberately omits "name" — the profile still declares it, but the response has no
+// Items 2 and 4 deliberately omit "name" — the profile still declares it, but the response has no
 // value for it — so `item.findAttribute("name")` returns undefined and EntityItemReference
 // falls back to `item.id` as the title.
 function collectionBody() {
@@ -98,10 +99,15 @@ function collectionBody() {
           email: LONG_EMAIL,
           _links: { self: { href: `${COLLECTION_URL}/3` } },
         },
+        {
+          id: LONG_ID,
+          email: "carol@example.com",
+          _links: { self: { href: `${COLLECTION_URL}/${LONG_ID}` } },
+        },
       ],
     },
     _links: { self: { href: COLLECTION_URL } },
-    page: { size: 3, total_items_exact: 3 },
+    page: { size: 4, total_items_exact: 4 },
   };
 }
 
@@ -131,7 +137,7 @@ function makeWrapper() {
   return Wrapper;
 }
 
-async function fetchItems(): Promise<[EntityItem, EntityItem, EntityItem]> {
+async function fetchItems(): Promise<[EntityItem, EntityItem, EntityItem, EntityItem]> {
   setupHandler();
   const profile = makeWidgetProfile();
   const Wrapper = makeWrapper();
@@ -139,8 +145,8 @@ async function fetchItems(): Promise<[EntityItem, EntityItem, EntityItem]> {
     wrapper: Wrapper,
   });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
-  const [itemA, itemB, itemC] = result.current.data!.items;
-  return [itemA, itemB, itemC];
+  const [itemA, itemB, itemC, itemD] = result.current.data!.items;
+  return [itemA, itemB, itemC, itemD];
 }
 
 afterEach(() => {
@@ -186,7 +192,27 @@ describe("EntityItemReference", () => {
 
     expect(await screen.findByText(`${LONG_NAME.slice(0, 120)}…`)).toBeInTheDocument();
     expect(screen.getByText(`${LONG_EMAIL.slice(0, 120)}…`)).toBeInTheDocument();
-    expect(screen.queryByText(LONG_EMAIL)).not.toBeInTheDocument();
+    // The full value is only there for screen readers.
+    expect(screen.getByText(LONG_EMAIL)).toHaveClass("sr-only");
+  });
+
+  it("truncates the title at titleMaxCharLength, with the full title on hover", async () => {
+    const [, , itemC] = await fetchItems();
+    render(<EntityItemReference item={itemC} titleMaxCharLength={40} />, {
+      wrapper: makeWrapper(),
+    });
+
+    await userEvent.hover(await screen.findByText(`${LONG_NAME.slice(0, 40)}…`));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(LONG_NAME);
+  });
+
+  it("truncates a long id at titleMaxCharLength when it stands in for the title", async () => {
+    const [, , , itemD] = await fetchItems();
+    render(<EntityItemReference item={itemD} titleMaxCharLength={40} />, {
+      wrapper: makeWrapper(),
+    });
+
+    expect(await screen.findByText(`${LONG_ID.slice(0, 40)}…`)).toBeInTheDocument();
   });
 
   it("renders as a clickable button and calls onClick", async () => {
