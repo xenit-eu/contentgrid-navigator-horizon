@@ -12,6 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../primitives/dropdown-menu";
+import {
+  APPEARANCE_OPTIONS,
+  AVATAR_FALLBACK_CLASS,
+  AccountIdentity,
+  SEGMENT_CLASS,
+  getInitials,
+} from "./account-parts";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -33,29 +40,6 @@ export interface UserMenuProps {
   /** Extra class names applied to the trigger button */
   className?: string;
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
-
-const AVATAR_FALLBACK_CLASS =
-  "border border-[var(--sky-tint-line)] bg-[var(--sky-50)] font-bold text-[var(--ocean)]";
-
-const APPEARANCE_OPTIONS = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
-] as const;
-
-const SEGMENT_CLASS =
-  "border-input bg-popover text-popover-foreground -ml-px h-8 flex-none justify-center rounded-none border px-3.5 py-0 text-[13px] font-semibold first:ml-0 first:rounded-l-lg last:rounded-r-lg [&>span:first-child]:hidden data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:focus:bg-primary data-[state=checked]:focus:text-primary-foreground";
 
 const ITEM_CLASS = "h-[34px] gap-2.5 rounded-md px-2.5 py-0 text-[13.5px]";
 
@@ -98,17 +82,7 @@ export function UserMenu({
         className="flex w-[264px] flex-col gap-0.5 rounded-[10px] p-1.5 shadow-[0_12px_32px_rgba(14,36,54,0.15)]"
       >
         <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-2">
-          <Avatar className="size-9">
-            <AvatarFallback className={cn("text-sm", AVATAR_FALLBACK_CLASS)}>
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-[13.5px] leading-tight font-bold">{name}</span>
-            <span className="text-muted-foreground truncate text-[13px] leading-tight font-normal">
-              {email}
-            </span>
-          </div>
+          <AccountIdentity name={name} email={email} />
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="mx-0 my-1" />
         <DropdownMenuLabel className="text-muted-foreground px-2.5 pt-2 pb-1 text-[11px] font-bold tracking-widest uppercase">

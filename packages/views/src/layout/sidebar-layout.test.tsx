@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockSidebarData } from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
@@ -192,5 +192,98 @@ describe("SideBarLayout", () => {
     fireEvent.keyDown(window, { key: "[" });
 
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+});
+
+describe("SideBarLayout on a phone", () => {
+  const desktopWidth = window.innerWidth;
+  beforeEach(() => {
+    document.cookie = "sidebar_state=; path=/; max-age=0";
+    window.innerWidth = 390;
+  });
+  afterEach(() => {
+    window.innerWidth = desktopWidth;
+  });
+
+  it("has a header toggle named Open menu that opens a drawer with brand, close button and 46px rows", async () => {
+    renderLayout(null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    const drawer = screen.getByRole("dialog");
+    expect(drawer).toHaveAttribute("data-mobile", "true");
+    // jsdom applies no CSS, so both theme variants (one is display:none in a browser) are present.
+    expect(within(drawer).getAllByRole("img", { name: "ContentGrid logo" })).toHaveLength(2);
+    expect(within(drawer).getByText("grid")).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Close menu" })).toBeInTheDocument();
+    for (const name of ["Create", "Home", /invoice/i]) {
+      expect(within(drawer).getByRole("button", { name })).toHaveClass(
+        "in-data-[mobile=true]:h-[46px]",
+      );
+    }
+  });
+
+  it("navigates home and closes the drawer when the drawer logo is clicked", async () => {
+    const handlers = renderLayout(null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: /content.*grid.*by amexio/i }),
+    );
+
+    expect(handlers.onOpenHome).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("has one Settings entry on a phone, in the drawer's account block", async () => {
+    const handlers = renderLayout(
+      { profile: { name: "Jane Doe", email: "jane@example.com" } },
+      { settingsCurrent: true },
+    );
+    // Closed drawer: nothing from the desktop footer leaks into the page.
+    expect(screen.queryByRole("button", { name: "Settings" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    const settings = screen.getAllByRole("button", { name: "Settings" });
+    expect(settings).toHaveLength(1);
+    const block = settings[0].closest("[data-slot='phone-menu-account']");
+    expect(block).toBeInTheDocument();
+    expect(settings[0]).toHaveAttribute("aria-current", "page");
+    expect(settings[0]).toHaveClass("in-data-[mobile=true]:h-[46px]");
+    await userEvent.click(settings[0]);
+    expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the account, appearance and Log out in the drawer and keeps the header avatar menu", async () => {
+    renderLayout({ profile: { name: "Jane Doe", email: "jane@example.com" } });
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    const drawer = screen.getByRole("dialog");
+    expect(within(drawer).getByText("Jane Doe")).toBeInTheDocument();
+    expect(within(drawer).getByText("jane@example.com")).toBeInTheDocument();
+    expect(within(drawer).getByRole("radiogroup", { name: "Appearance" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Log out" })).toBeInTheDocument();
+    // Still rendered behind the drawer's overlay (hidden from the accessibility tree while open).
+    expect(
+      screen.getByRole("button", { name: /account menu, jane doe/i, hidden: true }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps Settings in the drawer when nobody is signed in (no account block)", async () => {
+    renderLayout(null);
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(screen.getAllByRole("button", { name: "Settings" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Log out" })).not.toBeInTheDocument();
+  });
+
+  it("closes the drawer from its Close menu button", async () => {
+    renderLayout(null);
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Close menu" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

@@ -1,9 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  Sidebar,
   SidebarLinkButton,
+  SidebarMenuBadge,
   SidebarMenuButton,
+  SidebarMenuItem,
   SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
@@ -215,5 +218,73 @@ describe("SidebarMenuButton tooltips", () => {
     const button = screen.getByRole("button", { name: label });
     await userEvent.hover(button);
     expect(await screen.findByRole("tooltip")).toHaveTextContent(label);
+  });
+});
+
+describe("phone drawer", () => {
+  const desktopWidth = window.innerWidth;
+  beforeEach(() => {
+    window.innerWidth = 390;
+  });
+  afterEach(() => {
+    window.innerWidth = desktopWidth;
+  });
+
+  it("is 300px wide, marked data-mobile, and shows the mobile header", () => {
+    render(
+      <SidebarProvider defaultOpenMobile>
+        <Sidebar mobileHeader={<p>Drawer header</p>}>
+          <SidebarMenuButton>Invoices</SidebarMenuButton>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+    const drawer = screen.getByRole("dialog");
+    expect(drawer).toHaveAttribute("data-mobile", "true");
+    expect(drawer.style.getPropertyValue("--sidebar-width")).toBe("18.75rem");
+    expect(screen.getByText("Drawer header")).toBeInTheDocument();
+    // The sheet's own close button stays hidden; the header brings its own.
+    expect(drawer).toHaveClass("[&>button]:hidden");
+  });
+
+  it("makes rows 46px on the drawer only (a desktop row keeps its 36px)", () => {
+    render(
+      <SidebarProvider defaultOpenMobile>
+        <Sidebar>
+          <SidebarMenuButton>Invoices</SidebarMenuButton>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+    const row = screen.getByRole("button", { name: "Invoices" });
+    expect(row).toHaveClass("h-9", "in-data-[mobile=true]:h-[46px]");
+  });
+
+  it("keeps a row's count centred in the taller drawer row", () => {
+    render(
+      <SidebarProvider defaultOpenMobile>
+        <Sidebar>
+          <SidebarMenuItem>
+            <SidebarMenuButton>Invoices</SidebarMenuButton>
+            <SidebarMenuBadge>12</SidebarMenuBadge>
+          </SidebarMenuItem>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+    expect(screen.getByText("12")).toHaveClass(
+      "in-data-[mobile=true]:peer-data-[size=default]/menu-button:top-[13px]",
+    );
+  });
+
+  it("names the toggle Open menu / Close menu", async () => {
+    render(
+      <SidebarProvider>
+        <SidebarTrigger />
+        <Sidebar>
+          <SidebarMenuButton>Invoices</SidebarMenuButton>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /(collapse|expand) sidebar/i })).toBeNull();
   });
 });

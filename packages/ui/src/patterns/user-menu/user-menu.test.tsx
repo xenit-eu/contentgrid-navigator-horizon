@@ -146,6 +146,8 @@ describe("UserMenu", () => {
       );
       expect(screen.getByRole("menuitemradio", { name: "Light" })).toHaveClass(
         "data-[state=checked]:bg-primary",
+        "dark:data-[state=checked]:text-background",
+        "dark:data-[state=checked]:focus:text-background",
       );
       expect(screen.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute(
         "aria-checked",

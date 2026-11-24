@@ -4,6 +4,8 @@ import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-dat
 import {
   BRANDING_HEADER_HEIGHT,
   BrandingHeader,
+  PhoneMenuAccount,
+  PhoneMenuHeader,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -14,6 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
   UserMenu,
+  useSidebar,
 } from "@contentgrid/ui";
 import { handleNavigationClick } from "../navigation";
 import { SidebarEntityNav } from "./sidebar-entity-nav";
@@ -59,6 +62,31 @@ export function SideBarLayout({
   const { auth } = useAppAuth();
   const { profiles: loadedProfiles, isLoading: isLoadingProfiles } = useLoadedProfileEntities();
 
+  const userName = auth.user?.profile.name ?? auth.user?.profile.email ?? "";
+  const userEmail = auth.user?.profile.email ?? "";
+
+  const settingsRow = (
+    <SidebarLinkButton
+      icon={<GearIcon aria-hidden className="text-muted-foreground" />}
+      label="Settings"
+      isActive={settingsCurrent}
+      aria-current={settingsCurrent ? "page" : undefined}
+      onClick={settingsHref === undefined ? onOpenSettings : undefined}
+      render={
+        settingsHref === undefined
+          ? undefined
+          : (content) => (
+              <a
+                href={settingsHref}
+                onClick={(event) => handleNavigationClick(event, onOpenSettings)}
+              >
+                {content}
+              </a>
+            )
+      }
+    />
+  );
+
   return (
     <SidebarProvider className="h-svh flex-col">
       <BrandingHeader
@@ -67,8 +95,8 @@ export function SideBarLayout({
           <>
             {auth.user && (
               <UserMenu
-                name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
-                email={auth.user.profile.email ?? ""}
+                name={userName}
+                email={userEmail}
                 settingsCurrent={settingsCurrent}
                 onSettingsClick={onOpenSettings}
                 onLogOut={() => auth.signoutRedirect()}
@@ -86,6 +114,18 @@ export function SideBarLayout({
             height: `calc(100svh - ${BRANDING_HEADER_HEIGHT})`,
           }}
           collapsible="icon"
+          mobileHeader={<PhoneMenuHeader onLogoClick={onOpenHome} />}
+          mobileFooter={
+            auth.user && (
+              <PhoneMenuAccount
+                name={userName}
+                email={userEmail}
+                onLogOut={() => auth.signoutRedirect()}
+              >
+                {settingsRow}
+              </PhoneMenuAccount>
+            )
+          }
         >
           <SidebarContent>
             <SidebarGroup className="pb-0">
@@ -126,31 +166,7 @@ export function SideBarLayout({
               entityHref={entityHref}
             />
           </SidebarContent>
-          {/* Outside the scrolling content: the sidebar is as tall as the window, so Settings stays
-              at the bottom and only the entity list scrolls when it is longer than the window. */}
-          <SidebarFooter className="px-3 pb-3 group-data-[collapsible=icon]:px-2">
-            <SidebarMenu>
-              <SidebarLinkButton
-                icon={<GearIcon aria-hidden className="text-muted-foreground" />}
-                label="Settings"
-                isActive={settingsCurrent}
-                aria-current={settingsCurrent ? "page" : undefined}
-                onClick={settingsHref === undefined ? onOpenSettings : undefined}
-                render={
-                  settingsHref === undefined
-                    ? undefined
-                    : (content) => (
-                        <a
-                          href={settingsHref}
-                          onClick={(event) => handleNavigationClick(event, onOpenSettings)}
-                        >
-                          {content}
-                        </a>
-                      )
-                }
-              />
-            </SidebarMenu>
-          </SidebarFooter>
+          <SidebarSettingsFooter hideOnPhone={!!auth.user}>{settingsRow}</SidebarSettingsFooter>
         </Sidebar>
 
         <SidebarInset className="min-h-0 overflow-hidden">
@@ -161,5 +177,27 @@ export function SideBarLayout({
         </SidebarInset>
       </div>
     </SidebarProvider>
+  );
+}
+
+/**
+ * The sidebar's footer, outside the scrolling content: the sidebar is as tall as the window, so
+ * Settings stays at the bottom and only the entity list scrolls when it is longer than the
+ * window. With `hideOnPhone` it is absent in the phone drawer, whose account block carries the
+ * one Settings row (without a signed-in user there is no account block, so it stays).
+ */
+function SidebarSettingsFooter({
+  children,
+  hideOnPhone,
+}: {
+  readonly children: ReactNode;
+  readonly hideOnPhone: boolean;
+}) {
+  const { isMobile } = useSidebar();
+  if (isMobile && hideOnPhone) return null;
+  return (
+    <SidebarFooter className="px-3 pb-3 group-data-[collapsible=icon]:px-2">
+      <SidebarMenu>{children}</SidebarMenu>
+    </SidebarFooter>
   );
 }

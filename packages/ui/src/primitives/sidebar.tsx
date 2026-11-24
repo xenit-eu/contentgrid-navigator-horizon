@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tool
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "15.5rem"; // 248px
-const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_MOBILE = "18.75rem"; // 300px
 const SIDEBAR_WIDTH_ICON = "3.5rem"; // 56px: 8px padding around 40px targets
 const SIDEBAR_KEYBOARD_SHORTCUT = "[";
 
@@ -61,6 +61,7 @@ function useSidebar() {
  */
 function SidebarProvider({
   defaultOpen,
+  defaultOpenMobile = false,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -69,11 +70,13 @@ function SidebarProvider({
   ...props
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean;
+  /** Start with the phone drawer open (stories and visual snapshots). */
+  defaultOpenMobile?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
-  const [openMobile, setOpenMobile] = React.useState(false);
+  const [openMobile, setOpenMobile] = React.useState(defaultOpenMobile);
 
   const [_open, _setOpen] = React.useState(() => defaultOpen ?? readSidebarCookie() ?? true);
   const open = openProp ?? _open;
@@ -156,11 +159,20 @@ function Sidebar({
   collapsible = "offcanvas",
   className,
   children,
+  mobileHeader,
+  mobileFooter,
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
+  /**
+   * Rendered above the content in the phone drawer only (where the sheet's own close button is
+   * hidden), e.g. the brand and a close button. It sits inside the sheet, so it may use `SheetClose`.
+   */
+  mobileHeader?: React.ReactNode;
+  /** Rendered below the content in the phone drawer only, e.g. the account block. */
+  mobileFooter?: React.ReactNode;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
@@ -193,12 +205,27 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          onOpenAutoFocus={(event) => {
+            // Start on the element marked `data-autofocus` (e.g. the phone menu's Close button)
+            // instead of the first focusable one (the logo); otherwise keep Radix's default.
+            const target = (event.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>(
+              "[data-autofocus]",
+            );
+            if (target) {
+              event.preventDefault();
+              target.focus();
+            }
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col">
+            {mobileHeader}
+            {children}
+            {mobileFooter}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -253,7 +280,9 @@ function Sidebar({
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar, open, openMobile, isMobile } = useSidebar();
   const expanded = isMobile ? openMobile : open;
-  const label = expanded ? "Collapse sidebar" : "Expand sidebar";
+  // On phones the sidebar is a drawer: it opens and closes, it does not collapse.
+  let label = expanded ? "Collapse sidebar" : "Expand sidebar";
+  if (isMobile) label = expanded ? "Close menu" : "Open menu";
 
   return (
     <Tooltip>
@@ -508,12 +537,15 @@ const sidebarMenuButtonVariants = cva(
           "cursor-pointer rounded-sm bg-background font-bold text-primary outline-1 -outline-offset-1 outline-solid outline-primary transition-[width,height,padding,color,background-color] hover:bg-accent hover:text-primary active:bg-accent active:text-primary",
       },
       size: {
-        default: "h-9 text-sm",
+        // 46px on the phone drawer (touch targets); the sheet marks itself `data-mobile`.
+        default: "h-9 text-sm in-data-[mobile=true]:h-[46px]",
         sm: "h-8 text-xs",
         lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
       },
     },
-    compoundVariants: [{ variant: "primary", size: "default", class: "h-10" }],
+    compoundVariants: [
+      { variant: "primary", size: "default", class: "h-10 in-data-[mobile=true]:h-[46px]" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
@@ -650,6 +682,8 @@ function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">) 
         "text-muted-foreground pointer-events-none absolute right-2.5 flex h-5 min-w-5 items-center justify-center rounded-sm px-1 text-xs font-normal tabular-nums select-none",
         "peer-data-[size=sm]/menu-button:top-1.5",
         "peer-data-[size=default]/menu-button:top-2",
+        // 46px rows on the phone drawer: keep the 20px badge centred (13px = (46 - 20) / 2).
+        "in-data-[mobile=true]:peer-data-[size=default]/menu-button:top-[13px]",
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         className,

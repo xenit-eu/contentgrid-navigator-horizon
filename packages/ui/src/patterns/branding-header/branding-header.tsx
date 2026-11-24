@@ -1,6 +1,6 @@
 import * as React from "react";
-import contentGridLogo from "../../assets/icons/ContentgridLogo-blue-white.svg";
 import { cn } from "../../lib/utils";
+import { BrandLockup } from "./brand-lockup";
 
 /** Total height of the header: 56px of content plus its 3px sky bottom border. */
 export const BRANDING_HEADER_HEIGHT = "59px";
@@ -52,19 +52,7 @@ export function BrandingHeader({
         onClick={onLogoClick}
         className="flex min-w-0 shrink-0 items-center gap-2.5 border-0 bg-transparent p-0 text-left"
       >
-        <img
-          src={contentGridLogo}
-          alt="ContentGrid logo"
-          className="size-[30px] shrink-0 object-contain"
-        />
-        <span className="flex min-w-0 flex-col justify-center">
-          <span className="text-[17px] leading-none font-bold tracking-[0.01em] text-white">
-            content<span className="text-[var(--brand-accent)]">grid</span>
-          </span>
-          <span className="mt-0.5 text-[8px] leading-none font-semibold tracking-[0.22em] text-[var(--header-sub)]">
-            BY AMEXIO
-          </span>
-        </span>
+        <BrandLockup />
       </button>
 
       {/* Leading slot (e.g. sidebar toggle), right after the logo */}
