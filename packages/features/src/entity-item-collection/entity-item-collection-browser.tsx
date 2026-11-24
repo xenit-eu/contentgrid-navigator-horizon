@@ -247,7 +247,7 @@ export function EntityItemCollectionBrowser({
 
       {onFiltersChange && !isEmptyCollection && (
         <EntitySearchBar
-          className="shrink-0 p-4"
+          className="shrink-0 py-4"
           profileEntity={profile}
           filters={filters}
           onFiltersChange={onFiltersChange}
@@ -257,7 +257,7 @@ export function EntityItemCollectionBrowser({
       )}
 
       <div
-        className={`px-4 pb-4 ${pageScroll ? "" : "min-h-0 flex-1"} ${onFiltersChange ? "" : "pt-4"}`}
+        className={`pb-4 ${pageScroll ? "" : "min-h-0 flex-1"} ${onFiltersChange ? "" : "pt-4"}`}
       >
         {isWide ? (
           // The pane's panel is always there, collapsed while nothing is previewed, so opening
