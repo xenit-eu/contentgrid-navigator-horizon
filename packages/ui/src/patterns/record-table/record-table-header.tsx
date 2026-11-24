@@ -25,6 +25,14 @@ export interface RecordTableColumn {
 
 export type RecordTableSortKind = "text" | "number" | "date";
 
+/**
+ * The table's look. `"default"` is the compact table used inside other surfaces (relation
+ * sections, pickers); `"collection"` is the collection page's: taller header and rows, bolder
+ * header text, primary-coloured sort icons and a right-aligned footer bar. Pass the same value to
+ * `RecordDataTable`, which hands it down to its header; set it on each `RecordTableRow` too.
+ */
+export type RecordTableChrome = "default" | "collection";
+
 export interface RecordTableSortOption {
   /** Exact token to send as the active sort, e.g. "name,asc" */
   readonly value: string;
@@ -51,6 +59,8 @@ export interface RecordTableHeaderProps {
   selectionState?: boolean | "indeterminate";
   /** Called when the "select all" checkbox is toggled */
   onSelectAll?: (checked: boolean) => void;
+  /** The table's look; see `RecordTableChrome`. Defaults to `"default"`. */
+  chrome?: RecordTableChrome;
   className?: string;
 }
 
@@ -82,6 +92,12 @@ function sortTooltip(
 }
 
 function sortIcon(direction: "asc" | "desc" | undefined) {
+  if (direction === "asc") return <ArrowUp className="ml-1 size-3.5" aria-hidden />;
+  if (direction === "desc") return <ArrowDown className="ml-1 size-3.5" aria-hidden />;
+  return <ArrowsDownUp className="ml-1 size-3.5 text-muted-foreground/50" aria-hidden />;
+}
+
+function collectionSortIcon(direction: "asc" | "desc" | undefined) {
   if (direction === "asc") return <ArrowUp className="size-3.5 text-primary" aria-hidden />;
   if (direction === "desc") return <ArrowDown className="size-3.5 text-primary" aria-hidden />;
   return <ArrowsDownUp className="size-3.5 text-muted-foreground/60" aria-hidden />;
@@ -95,8 +111,10 @@ function RecordTableHeader({
   showActionsColumn,
   selectionState = false,
   onSelectAll,
+  chrome = "default",
   className,
 }: Readonly<RecordTableHeaderProps>) {
+  const collection = chrome === "collection";
   const gridTemplateColumns = getRecordTableGridTemplate(columns.length, {
     hasActions: showActionsColumn,
     hasSelection: !!onSelectAll,
@@ -112,7 +130,8 @@ function RecordTableHeader({
             // Matches RecordTableRow's `w-fit min-w-full`: without it this row's background
             // stays clamped to the (unscrolled) container width instead of growing to match the
             // rows' actual overflow width, desyncing the frozen-header scrollLeft trick visually.
-            "grid h-[38px] w-fit min-w-full items-center gap-7 px-3.5 border-b border-border bg-table-header",
+            "grid w-fit min-w-full items-center border-b border-border bg-table-header",
+            collection ? "h-[38px] gap-7 px-3.5" : "gap-3 px-4 py-2",
           )}
         >
           {onSelectAll && (
@@ -134,16 +153,18 @@ function RecordTableHeader({
                 key={column.key}
                 role="columnheader"
                 aria-sort={
-                  activeOption?.direction === "asc"
+                  collection && activeOption?.direction === "asc"
                     ? "ascending"
-                    : activeOption?.direction === "desc"
+                    : collection && activeOption?.direction === "desc"
                       ? "descending"
                       : undefined
                 }
                 className={cn(
-                  "text-[12.5px] font-semibold text-muted-foreground",
-                  column.align === "end" && "text-right",
-                  activeOption && "text-primary",
+                  collection
+                    ? "text-[12.5px] font-semibold text-muted-foreground"
+                    : "text-[13px] font-medium text-muted-foreground",
+                  collection && column.align === "end" && "text-right",
+                  collection && activeOption && "text-primary",
                 )}
               >
                 {columnOptions.length > 0 && onSort ? (
@@ -152,19 +173,29 @@ function RecordTableHeader({
                       <button
                         type="button"
                         onClick={() => onSort(next)}
-                        className={cn(
-                          "flex cursor-pointer items-center gap-1 whitespace-nowrap transition-colors",
-                          column.align === "end" && "ml-auto",
-                          !activeOption && "hover:text-foreground",
-                        )}
+                        className={
+                          collection
+                            ? cn(
+                                "flex cursor-pointer items-center gap-1 whitespace-nowrap transition-colors",
+                                column.align === "end" && "ml-auto",
+                                !activeOption && "hover:text-foreground",
+                              )
+                            : "flex items-center hover:text-foreground transition-colors"
+                        }
                       >
                         {column.header}
-                        {sortIcon(activeOption?.direction)}
+                        {collection
+                          ? collectionSortIcon(activeOption?.direction)
+                          : sortIcon(activeOption?.direction)}
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {sortTooltip(next, column.sortKind)}
-                    </TooltipContent>
+                    {collection ? (
+                      <TooltipContent side="bottom">
+                        {sortTooltip(next, column.sortKind)}
+                      </TooltipContent>
+                    ) : (
+                      next && <TooltipContent side="bottom">{next.prompt}</TooltipContent>
+                    )}
                   </Tooltip>
                 ) : (
                   column.header

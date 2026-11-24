@@ -16,9 +16,9 @@ export function BooleanAttributeRenderer({
   label,
   variant = "default",
 }: Readonly<BooleanAttributeRendererProps>) {
-  // A collection column shows a pill per state, with no icon; the detail page's attribute table
-  // keeps the value as plain text.
-  if (variant === "table") {
+  // The collection page's column shows a pill per state, with no icon; every other table keeps
+  // the value as plain text.
+  if (variant === "collection-table") {
     if (value === true)
       return <StatusPill status="success" label="True" icon={false} className={TABLE_PILL} />;
     if (value === false)

@@ -6,7 +6,6 @@ import {
   UploadSimpleIcon as UploadSimple,
   XIcon as X,
 } from "@phosphor-icons/react";
-import { formatFileSize } from "../../lib/format-file-size";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../primitives/badge";
 import { buttonVariants } from "../../primitives/button";
@@ -16,6 +15,14 @@ import { ToolbarIconButton } from "../toolbar-icon-button";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const size = bytes / Math.pow(1024, i);
+  return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
 
 function dropZoneStateClassName(isDragActive: boolean, previewed: boolean): string {
   if (isDragActive) return "border-primary bg-primary/10";

@@ -227,6 +227,9 @@ export function EntityItemCollectionBrowser({
         <EntityItemCollectionTable
           className={pageScroll ? undefined : "h-full"}
           pageScroll={pageScroll}
+          look="collection"
+          // The page title shows the count.
+          showItemCount={false}
           profile={profile}
           collection={collection.data}
           onEntityItemClick={handlePreview}

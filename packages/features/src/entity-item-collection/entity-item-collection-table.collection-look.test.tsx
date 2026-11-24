@@ -1,0 +1,694 @@
+import { type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { HttpResponse, type JsonBodyType, http } from "msw";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  type AuthenticationTokenSupplier,
+  type EntityItemCollection,
+  NavigatorDataProvider,
+  type ProfileEntity,
+  createApiClient,
+  createContentClient,
+  useEntityItemCollection,
+} from "@contentgrid/navigator-data";
+import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
+import { server } from "../../test-setup";
+import { useEntityDisplayPreferencesStore } from "../preferences";
+import { EntityItemCollectionTable } from "./entity-item-collection-table";
+
+const API_URL = "https://api.example.com";
+const PROFILE_URL = `${API_URL}/profile/widgets`;
+const COLLECTION_URL = `${API_URL}/widgets`;
+const ITEM1_URL = `${COLLECTION_URL}/1`;
+const ITEM2_URL = `${COLLECTION_URL}/2`;
+
+const noopSupplier: AuthenticationTokenSupplier = async () => null;
+
+const widgetProfileJson = {
+  name: "widget",
+  title: "Widget",
+  _links: {
+    self: { href: PROFILE_URL },
+    describes: [
+      { href: COLLECTION_URL, name: "collection" },
+      { href: `${COLLECTION_URL}/{id}`, name: "item", templated: true },
+    ],
+    curies: [
+      {
+        name: "blueprint",
+        href: "https://contentgrid.cloud/rels/blueprint/{rel}",
+        templated: true,
+      },
+    ],
+  },
+  _embedded: {
+    "blueprint:attribute": [
+      {
+        name: "name",
+        title: "Name",
+        type: "string",
+        readOnly: false,
+        _embedded: { "blueprint:constraint": [], "blueprint:search-param": [] },
+        _links: {},
+      },
+    ],
+    "blueprint:relation": [],
+  },
+  _templates: {
+    default: { method: "HEAD", target: COLLECTION_URL, properties: [] },
+    search: {
+      method: "GET",
+      target: COLLECTION_URL,
+      properties: [
+        { name: "name", type: "text" },
+        {
+          name: "_sort",
+          type: "text",
+          options: {
+            minItems: 0,
+            inline: [{ property: "name", direction: "asc", value: "name,asc", prompt: "Name A→Z" }],
+          },
+        },
+      ],
+    },
+  },
+};
+
+function makeWidgetProfile(): ProfileEntity {
+  return makeProfileEntity(widgetProfileJson, PROFILE_URL, "widget");
+}
+
+// Item 1 has a delete template (canDelete=true, ABAC grants delete); item 2 has none
+// (canDelete=false) — this is what drives the per-row Delete button gating.
+function collectionBody() {
+  return {
+    _embedded: {
+      widget: [
+        {
+          id: "1",
+          name: "Acme",
+          _links: { self: { href: ITEM1_URL } },
+          _templates: { delete: { method: "DELETE", target: ITEM1_URL, properties: [] } },
+        },
+        {
+          id: "2",
+          name: "Beta",
+          _links: { self: { href: ITEM2_URL } },
+        },
+      ],
+    },
+    _links: {
+      self: { href: COLLECTION_URL },
+      next: { href: `${COLLECTION_URL}?_cursor=next-token` },
+    },
+    page: { size: 2, total_items_exact: 2 },
+  };
+}
+
+function setupHandler(body: JsonBodyType = collectionBody()) {
+  server.use(http.get(COLLECTION_URL, () => HttpResponse.json(body)));
+}
+
+/** The same page with no item deletable. */
+function collectionBodyWithoutDelete() {
+  const body = collectionBody();
+  for (const widget of body._embedded.widget) {
+    delete (widget as { _templates?: unknown })._templates;
+  }
+  return body;
+}
+
+function makeWrapper() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const apiFetch = createApiClient(noopSupplier);
+  const contentFetch = createContentClient(noopSupplier);
+
+  function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <NavigatorDataProvider
+          apiFetch={apiFetch}
+          contentFetch={contentFetch}
+          profileUrl={PROFILE_URL}
+        >
+          {children}
+        </NavigatorDataProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return Wrapper;
+}
+
+async function fetchCollection(body?: JsonBodyType): Promise<{
+  profile: ProfileEntity;
+  collection: EntityItemCollection;
+  Wrapper: ReturnType<typeof makeWrapper>;
+}> {
+  setupHandler(body);
+  const profile = makeWidgetProfile();
+  const Wrapper = makeWrapper();
+  const { result } = renderHook(() => useEntityItemCollection({ profileEntity: profile }), {
+    wrapper: Wrapper,
+  });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  return { profile, collection: result.current.data!, Wrapper };
+}
+
+afterEach(() => {
+  localStorage.clear();
+  useEntityDisplayPreferencesStore.setState({ overrides: {} });
+});
+
+describe('EntityItemCollectionTable look="collection"', () => {
+  it("renders a row per item and no item-count text with showItemCount={false}", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        showItemCount={false}
+        profile={profile}
+        collection={collection}
+      />,
+      {
+        wrapper: Wrapper,
+      },
+    );
+
+    expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2 items
+    expect(screen.queryByText(/showing/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+  });
+
+  it("shows the item count in the footer when showItemCount is set", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        showItemCount
+      />,
+      {
+        wrapper: Wrapper,
+      },
+    );
+
+    expect(screen.getByText("Showing 2 of 2 items")).toBeInTheDocument();
+  });
+
+  it("keeps the entity icon and has no file line for an entity without a content attribute", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const { container } = render(
+      <EntityItemCollectionTable look="collection" profile={profile} collection={collection} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(container.querySelectorAll('[data-slot="icon-badge"]')).toHaveLength(2);
+    expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+    expect(screen.queryByText("No file")).not.toBeInTheDocument();
+  });
+
+  it("links each row's title to the item page when entityItemHref is given", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
+        entityItemHref={(item) => `/widget/${item.id}`}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const link = screen.getByRole("link", { name: "Acme" });
+    expect(link).toHaveAttribute("href", "/widget/1");
+    await user.click(link);
+    expect(onEntityItemOpen).toHaveBeenCalledOnce();
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
+  it("calls onEntityItemClick with the item when a row is clicked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onEntityItemClick = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={onEntityItemClick}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    // Row order matches collection order — index 0 is the header row, 1 is item "1" (Acme).
+    await user.click(screen.getAllByRole("row")[1]);
+    expect(onEntityItemClick).toHaveBeenCalledOnce();
+    expect(onEntityItemClick.mock.calls[0][0].id).toBe("1");
+  });
+
+  it("calls onEntityItemOpen, not onEntityItemClick, when the row menu's Open is chosen", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
+    await user.click(screen.getByRole("menuitem", { name: "Open" }));
+    expect(onEntityItemOpen).toHaveBeenCalledWith(collection.items[0]);
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
+  it("opens the row menu without previewing the row", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onEntityItemClick = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Open" }));
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
+  it("offers Open, a separator and a destructive Delete… in that order", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemOpen={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
+    const menu = screen.getByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Open", "Delete…"]);
+    expect(within(menu).getByRole("separator")).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Delete…" })).toHaveAttribute(
+      "data-variant",
+      "destructive",
+    );
+  });
+
+  it("lists only Open, with no separator, for an item that cannot be deleted", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemOpen={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Actions for Beta" }));
+    const menu = screen.getByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Open"]);
+    expect(within(menu).queryByRole("separator")).not.toBeInTheDocument();
+  });
+
+  it("shows no menu for an item with nothing to offer", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable look="collection" profile={profile} collection={collection} />,
+      {
+        wrapper: Wrapper,
+      },
+    );
+
+    // Without onEntityItemOpen only Acme can be deleted; Beta has no actions at all.
+    expect(screen.getByRole("button", { name: "Actions for Acme" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Actions for Beta" })).not.toBeInTheDocument();
+  });
+
+  it("shows no Open item without onEntityItemOpen", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.queryByRole("menuitem", { name: "Open" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Actions for Beta" })).not.toBeInTheDocument();
+  });
+
+  describe("actions column", () => {
+    const ACTIONS_TRACK = "72px";
+    const gridOf = (row: HTMLElement) => row.style.gridTemplateColumns;
+
+    it("is absent without onEntityItemOpen when no item can be deleted", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
+      render(
+        <EntityItemCollectionTable look="collection" profile={profile} collection={collection} />,
+        {
+          wrapper: Wrapper,
+        },
+      );
+
+      for (const row of screen.getAllByRole("row")) {
+        expect(gridOf(row)).not.toContain(ACTIONS_TRACK);
+      }
+    });
+
+    it("is present when Open is available", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
+      render(
+        <EntityItemCollectionTable
+          look="collection"
+          profile={profile}
+          collection={collection}
+          onEntityItemOpen={vi.fn()}
+        />,
+        { wrapper: Wrapper },
+      );
+
+      for (const row of screen.getAllByRole("row")) {
+        expect(gridOf(row)).toContain(ACTIONS_TRACK);
+      }
+    });
+
+    it("is present, on every row, when only some items can be deleted", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection();
+      render(
+        <EntityItemCollectionTable look="collection" profile={profile} collection={collection} />,
+        {
+          wrapper: Wrapper,
+        },
+      );
+
+      for (const row of screen.getAllByRole("row")) {
+        expect(gridOf(row)).toContain(ACTIONS_TRACK);
+      }
+    });
+
+    it("follows an explicit showRowActions and custom renderRowActions", async () => {
+      const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
+      const { rerender } = render(
+        <EntityItemCollectionTable
+          look="collection"
+          profile={profile}
+          collection={collection}
+          showRowActions
+        />,
+        { wrapper: Wrapper },
+      );
+      expect(gridOf(screen.getAllByRole("row")[0])).toContain(ACTIONS_TRACK);
+
+      rerender(
+        <EntityItemCollectionTable
+          look="collection"
+          profile={profile}
+          collection={collection}
+          renderRowActions={() => <button>Unlink</button>}
+        />,
+      );
+      expect(gridOf(screen.getAllByRole("row")[0])).toContain(ACTIONS_TRACK);
+      expect(screen.getAllByRole("button", { name: "Unlink" })).toHaveLength(2);
+
+      rerender(
+        <EntityItemCollectionTable
+          look="collection"
+          profile={profile}
+          collection={collection}
+          onEntityItemOpen={vi.fn()}
+          showRowActions={false}
+        />,
+      );
+      expect(gridOf(screen.getAllByRole("row")[0])).not.toContain(ACTIONS_TRACK);
+    });
+  });
+
+  it("marks only the row of currentItem as current", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        currentItem={collection.items[1]}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const currentRows = screen
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-current"));
+    expect(currentRows).toHaveLength(1);
+    expect(currentRows[0]).toHaveTextContent(collection.items[1].id);
+  });
+
+  it("only offers Delete… for items the user is permitted to delete (ABAC)", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onEntityItemOpen={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    // Item 1 (Acme) has a delete template; item 2 (Beta) does not.
+    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
+    expect(screen.getByRole("menuitem", { name: "Delete…" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Actions for Beta" }));
+    expect(screen.queryByRole("menuitem", { name: "Delete…" })).not.toBeInTheDocument();
+  });
+
+  it("deletes the item when the confirm dialog is accepted", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    let deleteCallCount = 0;
+    server.use(
+      http.delete(ITEM1_URL, () => {
+        deleteCallCount++;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    render(
+      <EntityItemCollectionTable look="collection" profile={profile} collection={collection} />,
+      {
+        wrapper: Wrapper,
+      },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete…" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("Delete item")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(deleteCallCount).toBe(1));
+  });
+
+  it("closes the confirm dialog without deleting when Cancel is clicked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    let deleteCallCount = 0;
+    server.use(
+      http.delete(ITEM1_URL, () => {
+        deleteCallCount++;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    render(
+      <EntityItemCollectionTable look="collection" profile={profile} collection={collection} />,
+      {
+        wrapper: Wrapper,
+      },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete…" }));
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel" }),
+    );
+
+    expect(screen.queryByText("Delete item")).not.toBeInTheDocument();
+    expect(deleteCallCount).toBe(0);
+  });
+
+  it("calls onSort with the next sort option when the sortable column header is clicked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSort = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onSort={onSort}
+        currentSort={undefined}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Name/ }));
+    expect(onSort).toHaveBeenCalledWith(
+      expect.objectContaining({ value: "name,asc", property: "name" }),
+    );
+  });
+
+  it("calls onPageChange with collection.nextHref when Next is clicked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onPageChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onPageChange={onPageChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Next/ }));
+    expect(onPageChange).toHaveBeenCalledWith(collection.nextHref);
+  });
+
+  it("calls onSelectionChange with the row's id added when its checkbox is checked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    // First checkbox is the header "select all" — row checkboxes follow in collection order.
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[1]);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1"]));
+  });
+
+  it("calls onSelectionChange with the row's id removed when an already-selected checkbox is unchecked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        selectedIds={new Set(["1"])}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[1]);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
+
+  it("selects every item's id when the header checkbox is checked", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set(["1", "2"]));
+  });
+
+  it("toggles a row's selection on row click when there is no onEntityItemClick", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onSelectionChange = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        selectedIds={new Set(["1"])}
+        onSelectionChange={onSelectionChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await user.click(screen.getAllByRole("row")[1]!);
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
+
+  it("disables Previous when the collection has no previous page", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(
+      <EntityItemCollectionTable
+        look="collection"
+        profile={profile}
+        collection={collection}
+        onPageChange={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByRole("button", { name: /Previous/ })).toBeDisabled();
+  });
+});

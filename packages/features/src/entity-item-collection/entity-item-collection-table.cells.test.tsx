@@ -63,9 +63,14 @@ afterEach(() => {
   useEntityDisplayPreferencesStore.setState({ overrides: {} });
 });
 
-function renderTable(profile: ProfileEntity, collection: EntityItemCollection) {
+function renderTable(
+  profile: ProfileEntity,
+  collection: EntityItemCollection,
+  look: "default" | "collection" = "collection",
+) {
   return render(
     <EntityItemCollectionTable
+      look={look}
       profile={profile}
       collection={collection}
       visibleColumnNames={ALL_COLUMNS}
@@ -131,5 +136,37 @@ describe("EntityItemCollectionTable — cell values", () => {
     expect(screen.getByRole("button", { name: /amount/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /issue date/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^paid$/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("EntityItemCollectionTable — default look keeps the relation tables as they were", () => {
+  it("keeps the header as the singular name and the compact header and row classes", async () => {
+    const { profile, collection } = await fetchInvoices();
+    renderTable(profile, collection, "default");
+
+    expect(screen.getByRole("columnheader", { name: "invoice" })).toBeInTheDocument();
+    const [headerRow, firstRow] = screen.getAllByRole("row");
+    expect(headerRow).toHaveClass("gap-3", "px-4", "py-2");
+    expect(firstRow).toHaveClass("gap-3", "px-4", "py-3");
+    expect(firstRow).not.toHaveClass("min-h-11");
+  });
+
+  it("shows no pills, file tiles or right-aligned numbers, and the old file size", async () => {
+    const { profile, collection } = await fetchInvoices();
+    const { container } = renderTable(profile, collection, "default");
+
+    expect(container.querySelector('[data-slot="status-pill"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /amount/i })).not.toHaveClass("text-right");
+    expect(within(rowOf("INV-2026-04812")).getByText("terms.pdf · 88.0 kB")).toBeInTheDocument();
+  });
+
+  it("keeps the View and Delete buttons and the item count, with no row menu or title link", async () => {
+    const { profile, collection } = await fetchInvoices();
+    renderTable(profile, collection, "default");
+
+    expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText(/^Showing \d+ of/)).toBeInTheDocument();
   });
 });

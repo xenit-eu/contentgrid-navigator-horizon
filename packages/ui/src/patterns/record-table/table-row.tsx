@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { Checkbox } from "../../primitives/checkbox";
 import { getRecordTableGridTemplate } from "./grid-template";
+import type { RecordTableChrome } from "./record-table-header";
 
 export interface RecordTableCell {
   readonly key: string;
@@ -18,6 +19,8 @@ export interface RecordTableRowProps {
   readonly onClick?: () => void;
   /** Renders a leading selection checkbox (checked per `selected`) when present. */
   readonly onSelectChange?: (checked: boolean) => void;
+  /** The table's look; match the table's `chrome`. Defaults to `"default"`. */
+  readonly chrome?: RecordTableChrome;
   readonly className?: string;
 }
 
@@ -28,6 +31,7 @@ function RecordTableRow({
   current = false,
   onClick,
   onSelectChange,
+  chrome = "default",
   className,
 }: RecordTableRowProps) {
   const highlighted = selected || current;
@@ -67,7 +71,8 @@ function RecordTableRow({
         // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
         // to its content's actual width when that's wider than the container (matching what the
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
-        "group/row relative grid min-h-11 w-fit min-w-full items-center gap-7 px-3.5 py-2 border-b border-border transition-colors last:border-b-0",
+        "group/row relative grid w-fit min-w-full items-center border-b border-border transition-colors",
+        chrome === "collection" ? "min-h-11 gap-7 px-3.5 py-2 last:border-b-0" : "gap-3 px-4 py-3",
         onClick && "cursor-pointer",
         onClick && !highlighted && "hover:bg-hover",
         rowBackground,

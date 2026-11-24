@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, type JsonBodyType, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -163,59 +163,14 @@ afterEach(() => {
 });
 
 describe("EntityItemCollectionTable", () => {
-  it("renders a row per item and no item-count text by default", async () => {
+  it("renders a row per item plus the item-count footer", async () => {
     const { profile, collection, Wrapper } = await fetchCollection();
     render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
       wrapper: Wrapper,
     });
 
     expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2 items
-    expect(screen.queryByText(/showing/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
-  });
-
-  it("shows the item count in the footer when showItemCount is set", async () => {
-    const { profile, collection, Wrapper } = await fetchCollection();
-    render(<EntityItemCollectionTable profile={profile} collection={collection} showItemCount />, {
-      wrapper: Wrapper,
-    });
-
     expect(screen.getByText("Showing 2 of 2 items")).toBeInTheDocument();
-  });
-
-  it("keeps the entity icon and has no file line for an entity without a content attribute", async () => {
-    const { profile, collection, Wrapper } = await fetchCollection();
-    const { container } = render(
-      <EntityItemCollectionTable profile={profile} collection={collection} />,
-      { wrapper: Wrapper },
-    );
-
-    expect(container.querySelectorAll('[data-slot="icon-badge"]')).toHaveLength(2);
-    expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
-    expect(screen.queryByText("No file")).not.toBeInTheDocument();
-  });
-
-  it("links each row's title to the item page when entityItemHref is given", async () => {
-    const user = userEvent.setup();
-    const { profile, collection, Wrapper } = await fetchCollection();
-    const onEntityItemClick = vi.fn();
-    const onEntityItemOpen = vi.fn();
-    render(
-      <EntityItemCollectionTable
-        profile={profile}
-        collection={collection}
-        onEntityItemClick={onEntityItemClick}
-        onEntityItemOpen={onEntityItemOpen}
-        entityItemHref={(item) => `/widget/${item.id}`}
-      />,
-      { wrapper: Wrapper },
-    );
-
-    const link = screen.getByRole("link", { name: "Acme" });
-    expect(link).toHaveAttribute("href", "/widget/1");
-    await user.click(link);
-    expect(onEntityItemOpen).toHaveBeenCalledOnce();
-    expect(onEntityItemClick).not.toHaveBeenCalled();
   });
 
   it("calls onEntityItemClick with the item when a row is clicked", async () => {
@@ -237,7 +192,7 @@ describe("EntityItemCollectionTable", () => {
     expect(onEntityItemClick.mock.calls[0][0].id).toBe("1");
   });
 
-  it("calls onEntityItemOpen, not onEntityItemClick, when the row menu's Open is chosen", async () => {
+  it("calls onEntityItemOpen, not onEntityItemClick, when the row's View action is used", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();
     const onEntityItemClick = vi.fn();
@@ -252,92 +207,13 @@ describe("EntityItemCollectionTable", () => {
       { wrapper: Wrapper },
     );
 
-    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
-    await user.click(screen.getByRole("menuitem", { name: "Open" }));
+    const viewButtons = screen.getAllByRole("button", { name: "View" });
+    await user.click(viewButtons[0]);
     expect(onEntityItemOpen).toHaveBeenCalledWith(collection.items[0]);
     expect(onEntityItemClick).not.toHaveBeenCalled();
   });
 
-  it("opens the row menu without previewing the row", async () => {
-    const user = userEvent.setup();
-    const { profile, collection, Wrapper } = await fetchCollection();
-    const onEntityItemClick = vi.fn();
-    render(
-      <EntityItemCollectionTable
-        profile={profile}
-        collection={collection}
-        onEntityItemClick={onEntityItemClick}
-        onEntityItemOpen={vi.fn()}
-      />,
-      { wrapper: Wrapper },
-    );
-
-    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
-    expect(screen.getByRole("menu")).toBeInTheDocument();
-    await user.click(screen.getByRole("menuitem", { name: "Open" }));
-    expect(onEntityItemClick).not.toHaveBeenCalled();
-  });
-
-  it("offers Open, a separator and a destructive Delete… in that order", async () => {
-    const user = userEvent.setup();
-    const { profile, collection, Wrapper } = await fetchCollection();
-    render(
-      <EntityItemCollectionTable
-        profile={profile}
-        collection={collection}
-        onEntityItemOpen={vi.fn()}
-      />,
-      { wrapper: Wrapper },
-    );
-
-    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
-    const menu = screen.getByRole("menu");
-    expect(
-      within(menu)
-        .getAllByRole("menuitem")
-        .map((item) => item.textContent),
-    ).toEqual(["Open", "Delete…"]);
-    expect(within(menu).getByRole("separator")).toBeInTheDocument();
-    expect(within(menu).getByRole("menuitem", { name: "Delete…" })).toHaveAttribute(
-      "data-variant",
-      "destructive",
-    );
-  });
-
-  it("lists only Open, with no separator, for an item that cannot be deleted", async () => {
-    const user = userEvent.setup();
-    const { profile, collection, Wrapper } = await fetchCollection();
-    render(
-      <EntityItemCollectionTable
-        profile={profile}
-        collection={collection}
-        onEntityItemOpen={vi.fn()}
-      />,
-      { wrapper: Wrapper },
-    );
-
-    await user.click(screen.getByRole("button", { name: "Actions for Beta" }));
-    const menu = screen.getByRole("menu");
-    expect(
-      within(menu)
-        .getAllByRole("menuitem")
-        .map((item) => item.textContent),
-    ).toEqual(["Open"]);
-    expect(within(menu).queryByRole("separator")).not.toBeInTheDocument();
-  });
-
-  it("shows no menu for an item with nothing to offer", async () => {
-    const { profile, collection, Wrapper } = await fetchCollection();
-    render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
-      wrapper: Wrapper,
-    });
-
-    // Without onEntityItemOpen only Acme can be deleted; Beta has no actions at all.
-    expect(screen.getByRole("button", { name: "Actions for Acme" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Actions for Beta" })).not.toBeInTheDocument();
-  });
-
-  it("shows no Open item without onEntityItemOpen", async () => {
+  it("shows no View action without onEntityItemOpen", async () => {
     const { profile, collection, Wrapper } = await fetchCollection();
     render(
       <EntityItemCollectionTable
@@ -348,8 +224,7 @@ describe("EntityItemCollectionTable", () => {
       { wrapper: Wrapper },
     );
 
-    expect(screen.queryByRole("menuitem", { name: "Open" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Actions for Beta" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
   });
 
   describe("actions column", () => {
@@ -367,7 +242,7 @@ describe("EntityItemCollectionTable", () => {
       }
     });
 
-    it("is present when Open is available", async () => {
+    it("is present when View is available", async () => {
       const { profile, collection, Wrapper } = await fetchCollection(collectionBodyWithoutDelete());
       render(
         <EntityItemCollectionTable
@@ -442,24 +317,14 @@ describe("EntityItemCollectionTable", () => {
     expect(currentRows[0]).toHaveTextContent(collection.items[1].id);
   });
 
-  it("only offers Delete… for items the user is permitted to delete (ABAC)", async () => {
-    const user = userEvent.setup();
+  it("only renders the Delete action for items the user is permitted to delete (ABAC)", async () => {
     const { profile, collection, Wrapper } = await fetchCollection();
-    render(
-      <EntityItemCollectionTable
-        profile={profile}
-        collection={collection}
-        onEntityItemOpen={vi.fn()}
-      />,
-      { wrapper: Wrapper },
-    );
+    render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
+      wrapper: Wrapper,
+    });
 
     // Item 1 (Acme) has a delete template; item 2 (Beta) does not.
-    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
-    expect(screen.getByRole("menuitem", { name: "Delete…" })).toBeInTheDocument();
-    await user.keyboard("{Escape}");
-    await user.click(screen.getByRole("button", { name: "Actions for Beta" }));
-    expect(screen.queryByRole("menuitem", { name: "Delete…" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Delete" })).toHaveLength(1);
   });
 
   it("deletes the item when the confirm dialog is accepted", async () => {
@@ -477,12 +342,10 @@ describe("EntityItemCollectionTable", () => {
       wrapper: Wrapper,
     });
 
-    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
-    await user.click(screen.getByRole("menuitem", { name: "Delete…" }));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText("Delete item")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(screen.getByText("Delete item")).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(deleteCallCount).toBe(1));
   });
@@ -502,11 +365,8 @@ describe("EntityItemCollectionTable", () => {
       wrapper: Wrapper,
     });
 
-    await user.click(screen.getByRole("button", { name: "Actions for Acme" }));
-    await user.click(screen.getByRole("menuitem", { name: "Delete…" }));
-    await user.click(
-      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByText("Delete item")).not.toBeInTheDocument();
     expect(deleteCallCount).toBe(0);

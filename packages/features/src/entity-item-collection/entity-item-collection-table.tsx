@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo } from "react";
+import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   type EntityItem,
@@ -8,11 +9,18 @@ import {
 } from "@contentgrid/navigator-data";
 import {
   RecordDataTable,
+  RecordRowAction,
+  RecordRowConfirmAction,
   type RecordTableCell,
+  type RecordTableColumn,
   RecordTableRow,
   type RecordTableSortOption,
 } from "@contentgrid/ui";
-import { AttributeValueRenderer, TABLE_ATTRIBUTE_MAX_CHAR_LENGTH } from "../entity-item";
+import {
+  AttributeValueRenderer,
+  EntityItemReference,
+  TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
+} from "../entity-item";
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 import { notifyProblem } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
@@ -25,12 +33,15 @@ export interface EntityItemCollectionTableProps {
   readonly collection: EntityItemCollection;
   /** Fired when a row (entity item) is clicked, or Enter/Space is pressed on it; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
-  /** Opens an item's own page: from the title link and the row menu's "Open", which exist only with it; receives that row's item. */
+  /**
+   * Fired by the default View row action (`look="default"`), or by the title link and the row
+   * menu's "Open" (`look="collection"`); shown only with it; receives that row's item.
+   */
   readonly onEntityItemOpen?: (item: EntityItem) => void;
   /**
-   * The address of an item's own page, when the host has one. With it each row's title is a real
-   * link (cmd/middle-click and "copy link" work); a plain click still goes through
-   * `onEntityItemOpen`. Without it the title is a button when `onEntityItemOpen` is set.
+   * The address of an item's own page, when the host has one. Only with `look="collection"`: each
+   * row's title is then a real link (cmd/middle-click and "copy link" work); a plain click still
+   * goes through `onEntityItemOpen`. Without it the title is a button when `onEntityItemOpen` is set.
    */
   readonly entityItemHref?: (item: EntityItem) => string | undefined;
   /** The item to mark as the current row, e.g. the one previewed beside the table. */
@@ -74,21 +85,25 @@ export interface EntityItemCollectionTableProps {
   readonly selectedIds?: ReadonlySet<string>;
   /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
-  /** Replaces the default per-row actions menu (Open, Delete…), e.g. with a relation's Unlink. */
+  /** Replaces the default per-row actions (View/Delete, or the collection look's menu), e.g. with a relation's Unlink. */
   readonly renderRowActions?: (item: EntityItem) => ReactNode;
   /**
    * `false` renders no actions column (e.g. in the relation picker), `true` always renders one.
-   * By default the column shows when `renderRowActions` is given, or when the default menu
-   * applies: Open is available or an item on the page can be deleted.
+   * By default the column shows when `renderRowActions` is given, or when the default actions
+   * apply: View/Open is available or an item on the page can be deleted.
    */
   readonly showRowActions?: boolean;
   /** `false` hides the item-count/pagination footer (e.g. for an unpaginated set). Defaults to `true`. */
   readonly paginated?: boolean;
-  /**
-   * Shows "Showing N of M items" at the start of the footer bar. Defaults to `false`: the
-   * collection page shows the count in its title. Pass `true` where nothing else shows it.
-   */
+  /** `false` hides the "Showing N of M items" text, keeping the page controls. Defaults to `true`. */
   readonly showItemCount?: boolean;
+  /**
+   * The table's look. `"default"` is the compact table of relation sections and pickers.
+   * `"collection"` is the collection page's: taller header and rows with the new sort icons and
+   * tooltips, a title cell with a link and subtitle, pills and file tiles in the cells, number
+   * columns right-aligned, and a "⋮" row menu instead of the View/Delete buttons.
+   */
+  readonly look?: "default" | "collection";
 }
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
@@ -140,7 +155,8 @@ export function EntityItemCollectionTable({
   renderRowActions,
   showRowActions,
   paginated = true,
-  showItemCount = false,
+  showItemCount = true,
+  look = "default",
 }: Readonly<EntityItemCollectionTableProps>) {
   const persistedVisibility = useColumnVisibility(profile);
   // Union a session-local override and any actively-filtered attribute on top of the persisted
@@ -163,20 +179,28 @@ export function EntityItemCollectionTable({
   );
   const attributeColumns = useMemo(() => buildColumns(profile, visibility), [profile, visibility]);
   const sortOptions = useMemo(() => toRecordTableSortOptions(profile), [profile]);
-  const attributeColumnsWithTraits = useMemo(
+  const isCollectionLook = look === "collection";
+  const attributeColumnsWithTraits = useMemo<RecordTableColumn[]>(
     () =>
-      attributeColumns.map((column) => ({
-        ...column,
-        ...columnTraits(profile.getAttribute(column.key)),
-      })),
-    [profile, attributeColumns],
+      isCollectionLook
+        ? attributeColumns.map((column) => ({
+            ...column,
+            ...columnTraits(profile.getAttribute(column.key)),
+          }))
+        : attributeColumns,
+    [profile, attributeColumns, isCollectionLook],
   );
   const columns = useMemo(
     () => [
-      { key: REFERENCE_COLUMN_KEY, header: capitalizeFirstLetter(profile.singularName) },
+      {
+        key: REFERENCE_COLUMN_KEY,
+        header: isCollectionLook
+          ? capitalizeFirstLetter(profile.singularName)
+          : profile.singularName,
+      },
       ...attributeColumnsWithTraits,
     ],
-    [profile.singularName, attributeColumnsWithTraits],
+    [profile.singularName, attributeColumnsWithTraits, isCollectionLook],
   );
 
   const deleteMutation = useDeleteEntityItem();
@@ -222,6 +246,7 @@ export function EntityItemCollectionTable({
       <RecordDataTable
         className={className}
         pageScroll={pageScroll}
+        chrome={look}
         entityName={profile.name}
         entityTitle={profile.pluralName}
         columns={columns}
@@ -248,12 +273,14 @@ export function EntityItemCollectionTable({
           const cells: RecordTableCell[] = [
             {
               key: REFERENCE_COLUMN_KEY,
-              content: (
+              content: isCollectionLook ? (
                 <EntityItemTitleCell
                   item={item}
                   onOpen={onEntityItemOpen}
                   href={entityItemHref?.(item)}
                 />
+              ) : (
+                <EntityItemReference item={item} />
               ),
             },
             ...attributeColumnsWithTraits.map((col) => {
@@ -267,7 +294,7 @@ export function EntityItemCollectionTable({
                 content: attr ? (
                   <AttributeValueRenderer
                     attr={attr}
-                    variant="table"
+                    variant={isCollectionLook ? "collection-table" : "table"}
                     maxCharLength={TABLE_ATTRIBUTE_MAX_CHAR_LENGTH}
                   />
                 ) : (
@@ -281,6 +308,7 @@ export function EntityItemCollectionTable({
             <RecordTableRow
               key={item.id}
               cells={cells}
+              chrome={look}
               selected={selectedIds.has(item.id)}
               current={item.id === currentItem?.id}
               onSelectChange={
@@ -296,13 +324,33 @@ export function EntityItemCollectionTable({
               actions={
                 !hasActionsColumn ? undefined : renderRowActions ? (
                   renderRowActions(item)
-                ) : (
+                ) : isCollectionLook ? (
                   <EntityItemRowMenu
                     item={item}
                     onOpen={onEntityItemOpen}
                     onDelete={deleteItem}
                     deleting={deleteMutation.isPending}
                   />
+                ) : (
+                  <>
+                    {onEntityItemOpen && (
+                      <RecordRowAction
+                        label="View"
+                        icon={<Eye className="size-4" aria-hidden />}
+                        onClick={() => onEntityItemOpen(item)}
+                      />
+                    )}
+                    {item.canDelete && (
+                      <RecordRowConfirmAction
+                        label="Delete"
+                        icon={<Trash className="size-4" aria-hidden />}
+                        title="Delete item"
+                        description={`Are you sure you want to delete this ${profile.singularName.toLowerCase()}? This action cannot be undone.`}
+                        disabled={deleteMutation.isPending}
+                        onConfirm={() => deleteItem(item)}
+                      />
+                    )}
+                  </>
                 )
               }
             />

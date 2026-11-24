@@ -161,8 +161,6 @@ function RelationItemSearch(selection: Readonly<RelationItemSearchProps>) {
             collection={collection.data}
             className="h-full"
             showRowActions={false}
-            // No page title here, so the footer keeps the count.
-            showItemCount
             onPageChange={setPageUrl}
             {...tableProps}
             {...(selection.multiple

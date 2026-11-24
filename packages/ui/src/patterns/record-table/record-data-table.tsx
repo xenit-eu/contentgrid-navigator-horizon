@@ -6,7 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../primitives/button";
-import { RecordTableHeader } from "./record-table-header";
+import { type RecordTableChrome, RecordTableHeader } from "./record-table-header";
 import type { RecordTableColumn, RecordTableSortOption } from "./record-table-header";
 
 export interface RecordDataTableProps {
@@ -29,10 +29,8 @@ export interface RecordDataTableProps {
   /** Renders the previous button as enabled when passed */
   onPreviousPageClick?: () => void;
   /**
-   * Optional text at the start of the pagination footer bar (e.g. a "Showing 20 of 100 items"
-   * summary), for tables whose page shows no count of its own. The footer bar renders whenever
-   * this is set, even with no next/previous page; without it the bar holds only Previous and Next,
-   * on the right.
+   * Rendered at the start of the pagination footer bar (e.g. a "Showing 20 of 100 items"
+   * summary). The footer bar renders whenever this is set, even with no next/previous page.
    */
   footerContent?: ReactNode;
 
@@ -71,6 +69,13 @@ export interface RecordDataTableProps {
    * header sticks to that one instead. Defaults to `false`: the existing contract above.
    */
   pageScroll?: boolean;
+
+  /**
+   * The table's look, passed on to the header: `"default"` (the compact table of relation
+   * sections and pickers) or `"collection"` (the collection page's; see `RecordTableChrome`).
+   * Rows take the same value on their own `chrome` prop.
+   */
+  chrome?: RecordTableChrome;
 }
 
 /** The nearest ancestor that scrolls or clips vertically: what a `position: sticky` child sticks to. */
@@ -99,6 +104,7 @@ function RecordDataTable({
   children,
   className,
   pageScroll = false,
+  chrome = "default",
 }: Readonly<RecordDataTableProps>) {
   const isEmpty = Children.count(children) === 0;
   const headerScrollRef = useRef<HTMLDivElement>(null);
@@ -182,6 +188,7 @@ function RecordDataTable({
               showActionsColumn={showActionsColumn}
               selectionState={selectionState}
               onSelectAll={onSelectAll}
+              chrome={chrome}
             />
           </div>
 
@@ -234,12 +241,23 @@ function RecordDataTable({
         </div>
 
         {(onNextPageClick || onPreviousPageClick || footerContent) && (
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-table-header px-3.5 py-2.5">
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-between gap-2 border-t",
+              chrome === "collection" ? "bg-table-header px-3.5 py-2.5" : "bg-muted/70 p-2",
+            )}
+          >
             {footerContent && (
               <div className="px-2 text-xs text-muted-foreground">{footerContent}</div>
             )}
-            {/* Previous and Next sit at the right end, with or without footer content. */}
-            <div className="ml-auto flex items-center gap-2">
+            {/* Collection: Previous and Next sit at the right end, with or without footer content.
+                Default: without footer content they spread to the footer's two ends. */}
+            <div
+              className={cn(
+                "flex items-center gap-2",
+                chrome === "collection" ? "ml-auto" : !footerContent && "w-full justify-between",
+              )}
+            >
               <Button
                 variant="outline"
                 size="sm"

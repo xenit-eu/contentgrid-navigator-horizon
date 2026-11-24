@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ProfileAttributeType } from "@contentgrid/navigator-data";
+import { BooleanAttributeRenderer } from "./boolean-attribute-renderer";
 import { CreatedByAttributeRenderer } from "./created-by-attribute-renderer";
 import { CreatedDateAttributeRenderer } from "./created-date-attribute-renderer";
 import { ModifiedByAttributeRenderer } from "./modified-by-attribute-renderer";
@@ -9,19 +10,20 @@ import { ModifiedDateAttributeRenderer } from "./modified-date-attribute-rendere
 import { type AttributeRendererVariant, isTableVariant } from "./variant";
 
 describe("isTableVariant", () => {
-  it("is true for both table variants only", () => {
+  it("is true for every table variant only", () => {
     expect(isTableVariant("table")).toBe(true);
+    expect(isTableVariant("collection-table")).toBe(true);
     expect(isTableVariant("attribute-table")).toBe(true);
     expect(isTableVariant("default")).toBe(false);
     expect(isTableVariant("item-reference")).toBe(false);
   });
 });
 
-// Every renderer except the string-set and the boolean one renders the detail page's attribute
-// table exactly like the collection table. The boolean one shows pills only in the collection
-// table (see its own test).
+// Every renderer except the string-set one renders the detail page's attribute table exactly
+// like the collection table.
 const DATE = "2021-03-04T05:06:07.000Z";
 const cases: Record<string, (variant: AttributeRendererVariant) => ReactElement> = {
+  boolean: (variant) => <BooleanAttributeRenderer value={true} label="Active" variant={variant} />,
   createdBy: (variant) => (
     <CreatedByAttributeRenderer value="alice" label="Creator" variant={variant} />
   ),
