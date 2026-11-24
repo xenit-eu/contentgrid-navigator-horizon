@@ -1,12 +1,13 @@
 import type * as React from "react";
 import { cn } from "../lib/utils";
 
-/** Any other `<span>` prop is passed on, so the value can be e.g. a tooltip trigger. */
-interface AttributeValueProps extends React.ComponentProps<"span"> {
+interface AttributeValueProps {
+  readonly children?: React.ReactNode;
   readonly emptyText?: string;
   readonly variant?: "default" | "numeric";
   /** Wrap onto multiple lines instead of the default single-line ellipsis truncation. */
   readonly wrap?: boolean;
+  readonly className?: string;
 }
 
 function AttributeValue({
@@ -15,12 +16,10 @@ function AttributeValue({
   variant = "default",
   wrap = false,
   className,
-  ...props
 }: AttributeValueProps) {
   const isEmpty = children == null || children === "";
   return (
     <span
-      {...props}
       data-slot="attribute-value"
       className={cn(
         "block text-sm",

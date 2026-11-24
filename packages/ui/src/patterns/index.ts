@@ -27,6 +27,7 @@ export * from "./icon-color-picker";
 export * from "./theme-selector";
 export * from "./pdf-viewer";
 export * from "./toolbar-icon-button";
+export * from "./truncated-text";
 export * from "./tabbed-layout";
 export * from "./autocomplete-renderer";
 export * from "./search-suggestions-popover";

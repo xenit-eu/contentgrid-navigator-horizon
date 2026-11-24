@@ -1,5 +1,5 @@
 import type { PlainAttributeValue } from "@contentgrid/navigator-data";
-import { TruncatedAttributeValue } from "./truncated-attribute-value";
+import { AttributeValue, TruncatedText } from "@contentgrid/ui";
 
 export interface StringAttributeRendererProps {
   readonly value: PlainAttributeValue;
@@ -16,6 +16,10 @@ export function StringAttributeRenderer({
   wrap = true,
   maxCharLength,
 }: Readonly<StringAttributeRendererProps>) {
-  const text = value == null ? undefined : String(value);
-  return <TruncatedAttributeValue text={text} maxCharLength={maxCharLength} wrap={wrap} />;
+  const text = value == null ? "" : String(value);
+  return (
+    <AttributeValue wrap={wrap}>
+      {text && <TruncatedText text={text} maxCharLength={maxCharLength} />}
+    </AttributeValue>
+  );
 }

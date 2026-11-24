@@ -15,7 +15,7 @@ export interface EntityItemReferenceProps {
    * fill. Combined with `muted`, the background keeps the soft muted fill instead of going
    * fully transparent — see `IconBadge`'s doc comment. */
   readonly outlined?: boolean;
-  /** Characters of the title shown before it is cut with "…"; the full title shows on hover. */
+  /** Characters of the title shown before it is truncated with "…"; the full title shows on hover. */
   readonly titleMaxCharLength?: number;
   readonly className?: string;
 }

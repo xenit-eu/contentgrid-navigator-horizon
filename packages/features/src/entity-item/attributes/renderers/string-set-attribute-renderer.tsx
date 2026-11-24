@@ -1,6 +1,5 @@
 import { Fragment } from "react";
-import { AttributeValue, Chip } from "@contentgrid/ui";
-import { TruncatedAttributeValue } from "./truncated-attribute-value";
+import { AttributeValue, Chip, TruncatedText, truncateText } from "@contentgrid/ui";
 import type { AttributeRendererVariant } from "./variant";
 
 export interface StringSetAttributeRendererProps {
@@ -19,12 +18,6 @@ export interface StringSetAttributeRendererProps {
   readonly variant?: AttributeRendererVariant;
 }
 
-function truncate(text: string, maxCharLength: number | undefined): string {
-  return maxCharLength != null && text.length > maxCharLength
-    ? `${text.slice(0, maxCharLength)}…`
-    : text;
-}
-
 export function StringSetAttributeRenderer({
   value,
   wrap = true,
@@ -37,7 +30,9 @@ export function StringSetAttributeRenderer({
 
   if (variant !== "attribute-table") {
     return (
-      <TruncatedAttributeValue text={value.join(", ")} maxCharLength={maxCharLength} wrap={wrap} />
+      <AttributeValue wrap={wrap}>
+        <TruncatedText text={value.join(", ")} maxCharLength={maxCharLength} />
+      </AttributeValue>
     );
   }
 
@@ -52,7 +47,7 @@ export function StringSetAttributeRenderer({
       className={`block min-w-0 leading-7 ${wrap ? "whitespace-normal" : "overflow-hidden whitespace-nowrap"}`}
     >
       {value.map((item, index) => {
-        const label = truncate(item, maxCharLength);
+        const label = truncateText(item, maxCharLength);
         return (
           // Values in a set are unique, but the index keeps keys stable if the server ever repeats one.
           <Fragment key={`${index}:${item}`}>
