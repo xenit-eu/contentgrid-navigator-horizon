@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   RecordingNavigationProvider,
   createRecordingNavigation,
@@ -61,6 +61,11 @@ function renderShell(initialEntry = "/") {
 }
 
 describe("SidebarShell", () => {
+  // The sidebar remembers its state in a cookie; do not let one test's toggle leak into the next.
+  beforeEach(() => {
+    document.cookie = "sidebar_state=; path=/; max-age=0";
+  });
+
   it("renders the routed page inside the sidebar frame", async () => {
     renderShell();
 
@@ -78,10 +83,10 @@ describe("SidebarShell", () => {
     const recording = renderShell();
 
     await userEvent.click(await screen.findByRole("link", { name: /invoice/i }));
-    await userEvent.click(screen.getByRole("button", { name: "Create Item" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await userEvent.click(screen.getByRole("link", { name: "Home" }));
     await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
-    await userEvent.click(await screen.findByText("Settings"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Settings" }));
 
     expect(recording.calls).toEqual([
       { method: "openEntityItemCollection", args: ["invoice", { restoreState: false }] },
@@ -117,6 +122,33 @@ describe("SidebarShell", () => {
     await userEvent.click(await screen.findByRole("button", { name: /jane doe/i }));
 
     expect(await screen.findByRole("menuitem", { name: "Settings" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("marks Home as current on the home page only", async () => {
+    renderShell("/");
+    expect(await screen.findByRole("link", { name: "Home" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("does not mark Home as current on an entity page", async () => {
+    renderShell("/invoice");
+    expect(await screen.findByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("marks the bottom Settings row as current on a settings page only", async () => {
+    renderShell("/~configuration");
+    const link = await screen.findByRole("link", { name: "Settings" });
+    expect(link).toHaveAttribute("aria-current", "page");
+    expect(link.closest("[data-slot='sidebar-footer']")).toBeInTheDocument();
+  });
+
+  it("does not mark the bottom Settings row as current elsewhere", async () => {
+    renderShell("/invoice");
+    expect(await screen.findByRole("link", { name: "Settings" })).not.toHaveAttribute(
       "aria-current",
     );
   });

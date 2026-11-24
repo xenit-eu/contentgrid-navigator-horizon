@@ -15,6 +15,11 @@ test.describe("Storybook visual regression", () => {
       // current month / today) are deterministic across CI runs. setFixedTime pins
       // Date without pausing timers, so document.fonts.ready still resolves.
       await page.clock.setFixedTime(new Date("2025-01-15T12:00:00Z"));
+      // Stories tagged `mobile` render at the phone viewport from ADR-009 (390x844), where
+      // layouts such as the sidebar switch to their phone variant.
+      if (story.tags?.includes("mobile")) {
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story`);
       await page.waitForSelector("#storybook-root", { state: "attached" });
       // Wait for web fonts so text-rendering diffs don't flake (ADR-009).

@@ -34,3 +34,4 @@ export * from "./grouped-select";
 export * from "./date-range-filter";
 export * from "./searchable-option-list";
 export * from "./resizable-split-layout";
+export * from "./phone-menu";
