@@ -1,4 +1,5 @@
 import {
+  type CollectionTotalCount,
   type ProfileEntity,
   toProblemDisplayModel,
   useEntityItemCollection,
@@ -94,17 +95,31 @@ function EntityCardConnected({
           <EntityCardDescription>{profile.description}</EntityCardDescription>
         )}
       </EntityCardText>
-      <ItemCountLine count={collection.data?.totalItems?.count} />
+      <ItemCountLine total={collection.data?.totalItems} loading={collection.isFetching} />
     </EntityCard>
   );
 }
 
-/** "1 item", "1,284 items"; a dash while the count is unknown. */
-function ItemCountLine({ count }: Readonly<{ count: number | undefined }>) {
+/**
+ * "1 item", "1,284 items", "about 1,204 items" for an estimate; a dash while the count loads, and
+ * "Count not available" when there is none (the request failed, or the entity can't be searched).
+ */
+function ItemCountLine({
+  total,
+  loading,
+}: Readonly<{ total: CollectionTotalCount | undefined; loading: boolean }>) {
+  if (!total) {
+    return (
+      <p className="mt-auto text-ui text-muted-foreground">
+        {loading ? "—" : "Count not available"}
+      </p>
+    );
+  }
   return (
     <p className="mt-auto text-ui text-muted-foreground">
-      <span className="font-bold text-card-foreground">{count?.toLocaleString() ?? "—"}</span>{" "}
-      {count === 1 ? "item" : "items"}
+      {total.isEstimated && "about "}
+      <span className="font-bold text-card-foreground">{total.count.toLocaleString()}</span>{" "}
+      {total.count === 1 ? "item" : "items"}
     </p>
   );
 }

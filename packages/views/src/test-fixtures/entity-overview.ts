@@ -3,7 +3,7 @@ import { API, PROFILE_URL } from "./item-detail";
 /**
  * Hand-built HAL responses and a fetch over them, for the Home and Settings overview stories:
  * four entities, each with an empty search template (so Home's count request runs) and a
- * collection that reports its total. The first three fill one row of a 960px-wide page and put a
+ * collection that reports its total (one of them as an estimate). The first three fill one row of a 960px-wide page and put a
  * long title, a long description and no description side by side, so the stories show that the
  * text clamps and the count line stays at the bottom of the card.
  */
@@ -22,6 +22,7 @@ const overviewEntities = [
     description:
       "Bills sent to customers, with their order lines, the due date, the payment status and every reminder that was sent while the invoice stayed unpaid.",
     count: 1284,
+    estimated: true,
   },
   { name: "supplier", title: "Supplier", pluralTitle: "Suppliers", description: null, count: 37 },
   {
@@ -98,7 +99,10 @@ function collectionBody(entity: (typeof overviewEntities)[number]) {
   return {
     _embedded: { item: [] },
     _links: { self: { href: collectionUrlOf(entity.name) } },
-    page: { size: 20, total_items_exact: entity.count },
+    page:
+      "estimated" in entity
+        ? { size: 20, total_items_estimate: entity.count }
+        : { size: 20, total_items_exact: entity.count },
   };
 }
 
