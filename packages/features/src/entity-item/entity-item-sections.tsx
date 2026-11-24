@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { type RefObject, useRef } from "react";
 import { ClockCounterClockwiseIcon, ListBulletsIcon } from "@phosphor-icons/react";
 import type { EntityItem, ProfileEntity, ProfileRelation } from "@contentgrid/navigator-data";
 import { ActionableAccordion } from "@contentgrid/ui";
@@ -15,7 +15,8 @@ import { RelationToManySection } from "./relations/relation-to-many-section";
 import { RelationToOneSection } from "./relations/relation-to-one-section";
 import { type EntityItemSectionsState, relationSection } from "./use-entity-item-context";
 
-const ATTRIBUTES_SECTION = "attributes";
+/** The open-state key of the Attributes section, which holds the update form. */
+export const ATTRIBUTES_SECTION = "attributes";
 const AUDIT_SECTION = "audit";
 
 /**
@@ -56,6 +57,16 @@ export type EntityItemSectionsProps = RelationProblemHandlers & {
    */
   readonly editedItem: EntityItem | null;
   readonly onEditingChange: (isEditing: boolean) => void;
+  /**
+   * Handle to the update form, for cancelling it from outside the form. Optional: the sections
+   * keep their own when it is not passed.
+   */
+  readonly editFormRef?: RefObject<EditEntityItemFormHandle | null>;
+  /**
+   * The caller draws the Edit and Cancel edit buttons itself (see `EntityItemEditHandle`), so the
+   * Attributes header draws none.
+   */
+  readonly externalEditControl?: boolean;
   /** Reloads the item after a version conflict and moves the form onto it. */
   readonly onRefresh: () => void;
   readonly onRelationItemClick?: RelationItemClickHandler;
@@ -90,6 +101,8 @@ export function EntityItemSections({
   state,
   editedItem,
   onEditingChange,
+  editFormRef: externalEditFormRef,
+  externalEditControl = false,
   onRefresh,
   onRelationItemClick,
   onRelationItemCreateNew,
@@ -101,7 +114,8 @@ export function EntityItemSections({
   openAllByDefault = false,
 }: Readonly<EntityItemSectionsProps>) {
   const isEditing = editedItem !== null;
-  const editFormRef = useRef<EditEntityItemFormHandle>(null);
+  const ownEditFormRef = useRef<EditEntityItemFormHandle>(null);
+  const editFormRef = externalEditFormRef ?? ownEditFormRef;
   const attributesOpen = state.openProps(
     ATTRIBUTES_SECTION,
     defaultSectionOpen("attributes", openAllByDefault),
@@ -116,7 +130,7 @@ export function EntityItemSections({
       }
       variant="row"
       actions={
-        isEditing ? (
+        externalEditControl ? undefined : isEditing ? (
           <CancelEditEntityItemButton onCancel={() => editFormRef.current?.cancel()} />
         ) : (
           <EditEntityItemButton

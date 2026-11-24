@@ -59,6 +59,11 @@ Every variation takes `EntityItemVariationProps`:
   where to go after a delete. The view passes it only when it has no toolbar to put Delete in.
 - `onEditingChange` — hears edit mode open and close, so the view can hide its toolbar Delete
   while the edit form is open
+- `editHandleRef` — a ref to an `EntityItemEditHandle` (`startEdit()`, `cancelEdit()`): the view
+  drives edit mode from its own toolbar buttons, and the Attributes header then draws no Edit or
+  Cancel edit button. `cancelEdit` goes through the form's own Cancel, so unsaved changes are still
+  confirmed. The view gates Edit with `isEditableEntityItem(item)`. Without the ref (toolbar
+  hidden) the Attributes header keeps its own Edit button.
 
 ### Adding a variation
 

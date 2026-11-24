@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { type Ref, useImperativeHandle, useMemo, useRef } from "react";
 import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
-import type { EntityItemSectionsProps } from "./entity-item-sections";
+import type { EditEntityItemFormHandle } from "./edit/edit-entity-item-container";
+import type { EntityItemEditHandle } from "./edit/entity-item-edit-handle";
+import { ATTRIBUTES_SECTION, type EntityItemSectionsProps } from "./entity-item-sections";
 import { type EntityItemRefetch, useEntityItemContext } from "./use-entity-item-context";
 
 export type UseEntityItemSectionPropsOptions = Pick<
@@ -25,6 +27,13 @@ export type UseEntityItemSectionPropsOptions = Pick<
    * `EntityItemSections`, whose own `onEditingChange` opens and closes the form.
    */
   readonly onEditingChange?: (isEditing: boolean) => void;
+  /**
+   * Fills the handle through which the caller opens and cancels the edit form (see
+   * `EntityItemEditHandle`). Passing it also makes the sections draw no Edit or Cancel button.
+   */
+  readonly editHandleRef?: Ref<EntityItemEditHandle>;
+  /** Fired when the handle's `startEdit` runs, e.g. for a variation to reveal a collapsed panel. */
+  readonly onStartEdit?: () => void;
 };
 
 /**
@@ -40,11 +49,26 @@ export function useEntityItemSectionProps({
   allowEdit = true,
   openAllByDefault = false,
   onEditingChange,
+  editHandleRef,
+  onStartEdit,
   ...handlers
 }: Readonly<UseEntityItemSectionPropsOptions>): EntityItemSectionsProps {
   const { profiles } = useLoadedProfileEntities();
   const sectionItem = useMemo(() => (allowEdit ? item : item.toReadOnly()), [item, allowEdit]);
   const itemContext = useEntityItemContext(sectionItem, refetch, onEditingChange);
+  const editFormRef = useRef<EditEntityItemFormHandle>(null);
+
+  useImperativeHandle(editHandleRef, () => ({
+    startEdit: () => {
+      // The form opens inside the Attributes section, so make sure it is expanded.
+      itemContext.sections.openProps(ATTRIBUTES_SECTION, true).onOpenChange(true);
+      onStartEdit?.();
+      itemContext.setIsEditing(true);
+    },
+    // Without a mounted form (e.g. its panel is collapsed) there is nothing to confirm.
+    cancelEdit: () =>
+      editFormRef.current ? editFormRef.current.cancel() : itemContext.setIsEditing(false),
+  }));
 
   return {
     item: sectionItem,
@@ -52,6 +76,8 @@ export function useEntityItemSectionProps({
     state: itemContext.sections,
     editedItem: itemContext.editedItem,
     onEditingChange: itemContext.setIsEditing,
+    editFormRef,
+    externalEditControl: editHandleRef !== undefined,
     onRefresh: () => void itemContext.refresh(),
     openAllByDefault,
     ...handlers,

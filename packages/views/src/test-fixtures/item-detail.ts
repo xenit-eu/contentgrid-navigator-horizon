@@ -70,6 +70,31 @@ export const customerItemBody = {
   _links: { self: { href: CUSTOMER_ITEM_URL } },
 };
 
+/** The item's mutation templates, by name: present only when the user may do that to the item. */
+export type ItemTemplate = "default" | "delete";
+
+/** `customerItemBody` plus the named templates (`default` is the update form). */
+export function customerItemBodyWith(templates: readonly ItemTemplate[]) {
+  return {
+    ...customerItemBody,
+    _templates: {
+      ...(templates.includes("default")
+        ? {
+            default: {
+              method: "PUT",
+              target: CUSTOMER_ITEM_URL,
+              contentType: "application/json",
+              properties: [{ name: "name", type: "text" }],
+            },
+          }
+        : {}),
+      ...(templates.includes("delete")
+        ? { delete: { method: "DELETE", target: CUSTOMER_ITEM_URL, properties: [] } }
+        : {}),
+    },
+  };
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -79,7 +104,9 @@ const json = (body: unknown, status = 200) =>
   });
 
 /** A `TypedFetch`-shaped function that answers from the bodies above and counts item requests. */
-export function createFixtureFetch() {
+export function createFixtureFetch(
+  options: Readonly<{ templates?: readonly ItemTemplate[] }> = {},
+) {
   const counts = { item: 0 };
   const fetchFn = async (input: Request | string | URL): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input);
@@ -87,7 +114,7 @@ export function createFixtureFetch() {
     if (url === CUSTOMER_PROFILE_URL) return json(customerProfileBody);
     if (url === CUSTOMER_ITEM_URL) {
       counts.item++;
-      return json(customerItemBody);
+      return json(customerItemBodyWith(options.templates ?? []));
     }
     return json(
       {
