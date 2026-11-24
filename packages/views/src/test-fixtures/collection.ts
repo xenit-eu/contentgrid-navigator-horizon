@@ -71,6 +71,13 @@ const emptyCustomerCollectionBody = {
   page: { size: 20, total_items_exact: 0 },
 };
 
+const manyCustomers = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `cust-${String(i + 1).padStart(3, "0")}`,
+    name: `Customer ${i + 1}`,
+    _links: { self: { href: `${CUSTOMER_COLLECTION_URL}/cust-${String(i + 1).padStart(3, "0")}` } },
+  }));
+
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { "Content-Type": "application/hal+json" } });
 
@@ -91,6 +98,8 @@ export function createCollectionFixtureFetch(
     searchable?: boolean;
     creatable?: boolean;
     empty?: boolean;
+    /** Lists this many items (default: two), for a page that needs to scroll. */
+    itemCount?: number;
     unfilteredPage?: CollectionPageFixture;
     filteredPage?: CollectionPageFixture;
   }> = {},
@@ -99,6 +108,7 @@ export function createCollectionFixtureFetch(
     searchable = true,
     creatable = true,
     empty = false,
+    itemCount,
     unfilteredPage,
     filteredPage,
   } = options;
@@ -124,7 +134,11 @@ export function createCollectionFixtureFetch(
       collectionRequests.push(url);
       if (empty) return json(emptyCustomerCollectionBody);
       const page = decodeURIComponent(url).includes("name~prefix=") ? filteredPage : unfilteredPage;
-      return json(page ? { ...customerCollectionBody, page } : customerCollectionBody);
+      const body =
+        itemCount === undefined
+          ? customerCollectionBody
+          : { ...customerCollectionBody, _embedded: { item: manyCustomers(itemCount) } };
+      return json(page ? { ...body, page } : body);
     }
     return itemFixture.fetch(input);
   };

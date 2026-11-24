@@ -110,3 +110,15 @@ export const EstimatedCount: Story = {
     </CollectionStoryHarness>
   ),
 };
+
+/** More rows than fit: the page scrolls, not the table, and the header row sticks to its top. */
+export const ManyRows: Story = {
+  args: { entityName: "customer" },
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{ itemCount: 30, unfilteredPage: { size: 30, total_items_exact: 30 } }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};

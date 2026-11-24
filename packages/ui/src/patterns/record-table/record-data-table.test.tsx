@@ -185,3 +185,35 @@ describe("RecordDataTable — pagination", () => {
     expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
   });
 });
+
+describe("RecordDataTable — page scroll", () => {
+  it("keeps its own scrolling by default: no sticky header, the rows scroll in both directions", () => {
+    renderTable();
+    expect(screen.getByRole("table").firstElementChild).not.toHaveClass("sticky");
+    expect(screen.getAllByRole("rowgroup")[1]).toHaveClass("overflow-auto");
+  });
+
+  it("sticks the header and scrolls the rows sideways only when the page scrolls", () => {
+    renderTable({ pageScroll: true });
+    expect(screen.getByRole("table").firstElementChild).toHaveClass("sticky");
+    const rows = screen.getAllByRole("rowgroup")[1];
+    expect(rows).toHaveClass("overflow-x-auto", "overflow-y-hidden");
+    expect(rows).not.toHaveClass("overflow-auto");
+  });
+
+  it("clips the frame's corners without making it a scroll container", () => {
+    const { container } = renderTable({ pageScroll: true });
+    expect(container.querySelector(".rounded-md.border")).toHaveClass("overflow-clip");
+  });
+
+  it("sticks flush at the top of a padded scroller by cancelling that padding", () => {
+    render(
+      <div style={{ overflowY: "auto", paddingTop: "24px" }}>
+        <RecordDataTable entityName="user" columns={COLUMNS} pageScroll>
+          <div role="row">Alice</div>
+        </RecordDataTable>
+      </div>,
+    );
+    expect(screen.getByRole("table").firstElementChild).toHaveStyle({ top: "-24px" });
+  });
+});

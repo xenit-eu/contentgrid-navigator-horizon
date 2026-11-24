@@ -21,6 +21,13 @@ export interface PaneWidth {
 /** A plain stack's panes take their content's height instead of a share of the layout's. */
 const PLAIN_STACK_PANE_STYLE: React.CSSProperties = { maxHeight: "none", overflow: "visible" };
 
+/**
+ * `fitContentHeight`: no height cap and no vertical scrolling in the left pane. `clip` clips
+ * like the library's default `hidden` but creates no scroll container, so `position: sticky`
+ * inside the pane still follows the page.
+ */
+const FIT_HEIGHT_LEFT_PANE_STYLE: React.CSSProperties = { maxHeight: "none", overflow: "clip" };
+
 /** Imperative handle to the right pane: `collapse()`, `expand()`, `isCollapsed()`, `resize()`. */
 export type SplitPaneHandle = PanelImperativeHandle;
 
@@ -109,6 +116,14 @@ export interface ResizableSplitLayoutProps extends SplitPaneSizes {
   readonly handleHidden?: boolean;
   /** Renders a visible grip on the drag handle. */
   readonly withHandle?: boolean;
+  /**
+   * Side by side only: the layout takes its content's height instead of its parent's, and the
+   * left pane neither scrolls nor clips vertically, so the surrounding page does the scrolling
+   * and a `position: sticky` element inside the left pane sticks to that page. Meant for while
+   * the right pane is collapsed; an open right pane is still clipped to the left pane's height.
+   * Defaults to `false`.
+   */
+  readonly fitContentHeight?: boolean;
   /** Called with both pane widths in pixels whenever either changes. */
   readonly onWidthsChange?: (widths: SplitLayoutWidths) => void;
   readonly className?: string;
@@ -137,6 +152,7 @@ function ResizableSplitLayout({
   handleLabel = "Resize panes",
   handleHidden = false,
   withHandle = true,
+  fitContentHeight = false,
   onWidthsChange,
   className,
   leftClassName,
@@ -201,6 +217,8 @@ function ResizableSplitLayout({
   };
 
   const plainStack = stacked && !resizableStacked;
+  // Stacked panes already follow the layout's own sizing rules; this is for side by side only.
+  const fitHeight = fitContentHeight && !stacked;
 
   // The library writes panel ids into the DOM (`id`, `data-testid`, the handle's
   // `aria-controls`), so they must be unique per instance.
@@ -211,7 +229,7 @@ function ResizableSplitLayout({
       ref={setElement}
       data-slot="resizable-split-layout"
       data-stacked={stacked || undefined}
-      className={cn("w-full min-h-0", !plainStack && "h-full", className)}
+      className={cn("w-full min-h-0", !plainStack && !fitHeight && "h-full", className)}
     >
       {layoutWidth !== undefined && (
         <SplitLayoutWidthsContext.Provider value={widths}>
@@ -221,7 +239,7 @@ function ResizableSplitLayout({
               natural height (`flex-none!` beats the inline flex values) — and drops the handle. */}
           <ResizablePanelGroup
             orientation={stacked ? "vertical" : "horizontal"}
-            style={plainStack ? { height: "auto", overflow: "visible" } : undefined}
+            style={plainStack || fitHeight ? { height: "auto", overflow: "visible" } : undefined}
             className={cn(plainStack && "[&>[data-panel]]:flex-none!")}
           >
             <ResizablePanel
@@ -232,8 +250,16 @@ function ResizableSplitLayout({
               minSize={sizes.minLeftSize}
               maxSize={sizes.maxLeftSize}
               onResize={(size) => updateWidth("left", size)}
-              style={plainStack ? PLAIN_STACK_PANE_STYLE : undefined}
-              className={leftClassName}
+              style={
+                plainStack
+                  ? PLAIN_STACK_PANE_STYLE
+                  : fitHeight
+                    ? FIT_HEIGHT_LEFT_PANE_STYLE
+                    : undefined
+              }
+              // `clip` (unlike `visible`) keeps the pane's own sides clipped without making it a
+              // scroll container; `min-w-0` stops its content from stretching it past the layout.
+              className={cn(fitHeight && "min-w-0", leftClassName)}
             >
               <PaneSideContext.Provider value="left">{left}</PaneSideContext.Provider>
             </ResizablePanel>

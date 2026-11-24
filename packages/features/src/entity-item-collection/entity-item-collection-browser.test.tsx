@@ -761,6 +761,80 @@ describe("EntityItemCollectionBrowser — item preview", () => {
     expect(row).toHaveFocus();
   });
 
+  it("lets the page scroll, with a sticky header, while no pane is open", async () => {
+    stubWidth(false);
+    renderBrowser({ profile: makeItemProfile() });
+
+    await findRow("ABC-0");
+    const table = screen.getByRole("table");
+    expect(table.firstElementChild).toHaveClass("sticky");
+    // Not as tall as its parent: the page scrolls, the table has no scroll of its own.
+    expect(screen.getByRole("region", { name: /table$/ })).not.toHaveClass("h-full");
+  });
+
+  it("keeps the table as tall as the pane, with its own scroll, while the wide pane is open, without remounting it", async () => {
+    stubWidth(true);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    const row = await findRow("ABC-0");
+    const table = screen.getByRole("table");
+    expect(table.firstElementChild).toHaveClass("sticky");
+    expect(splitLayoutSpy.props).toMatchObject({ fitContentHeight: true });
+
+    row.focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("region", paneRegion)).toBeInTheDocument();
+    expect(splitLayoutSpy.props).toMatchObject({ fitContentHeight: false });
+    expect(table.firstElementChild).not.toHaveClass("sticky");
+    expect(screen.getByRole("region", { name: /table$/ })).toHaveClass("h-full");
+
+    within(screen.getByRole("region", paneRegion)).getByRole("button", { name: "Close" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(table.firstElementChild).toHaveClass("sticky"));
+    // The same table element throughout: opening and closing the pane never remounts it.
+    expect(screen.getByRole("table")).toBe(table);
+  });
+
+  it("keeps the previewed row in view when the pane switches the table's scroll, in both directions", async () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    stubWidth(true);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    const row = await findRow("ABC-0");
+    row.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("region", paneRegion);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView.mock.contexts[0]).toBe(row);
+
+    within(screen.getByRole("region", paneRegion)).getByRole("button", { name: "Close" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("region", paneRegion)).not.toBeInTheDocument());
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(scrollIntoView.mock.contexts[1]).toBe(row);
+    Element.prototype.scrollIntoView = original;
+  });
+
+  it("does not move the scroll when a narrow preview opens in a dialog", async () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    stubWidth(false);
+    const user = userEvent.setup();
+    renderBrowser({ profile: makeItemProfile() });
+
+    const row = await findRow("ABC-0");
+    row.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("dialog");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    Element.prototype.scrollIntoView = original;
+  });
+
   it("closes the preview when the width crosses the side-by-side width", async () => {
     const width = stubWidth(true);
     const user = userEvent.setup();

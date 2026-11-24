@@ -59,6 +59,24 @@ export interface RecordDataTableProps {
    * height, the table simply grows to fit its content instead.
    */
   className?: string;
+
+  /**
+   * Lets the page do the vertical scrolling instead of the table: the table grows with its rows,
+   * and the column header sticks to the top of the nearest scrolling ancestor (the page) while
+   * the rows scroll past; the footer follows the last row. Only horizontal overflow still
+   * scrolls inside the table. Don't combine with a bounding `className`; and no ancestor between
+   * the table and the page may scroll or clip vertically (`overflow: hidden/auto`), or the
+   * header sticks to that one instead. Defaults to `false`: the existing contract above.
+   */
+  pageScroll?: boolean;
+}
+
+/** The nearest ancestor that scrolls or clips vertically: what a `position: sticky` child sticks to. */
+function findScrollContainer(element: HTMLElement | null): HTMLElement | undefined {
+  for (let parent = element?.parentElement; parent; parent = parent.parentElement) {
+    if (/auto|scroll|hidden|overlay/.test(getComputedStyle(parent).overflowY)) return parent;
+  }
+  return undefined;
 }
 
 function RecordDataTable({
@@ -78,10 +96,12 @@ function RecordDataTable({
   onCreateClick,
   children,
   className,
+  pageScroll = false,
 }: Readonly<RecordDataTableProps>) {
   const isEmpty = Children.count(children) === 0;
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const rowGroupRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // The rowgroup's own vertical scrollbar (when one is rendered) eats into its content width,
   // shrinking the space available to its rows — but the header wrapper never scrolls vertically,
@@ -104,13 +124,36 @@ function RecordDataTable({
     return () => observer.disconnect();
   }, []);
 
+  // Page scroll: a sticky header sticks `top` below the scroller's padding edge, so under a
+  // padded page it would stop that far below the toolbar, with the rows scrolling past in the
+  // gap above it. Pull it up by the scroller's own top padding so it sticks flush at its edge.
+  const [stickyTop, setStickyTop] = useState(0);
+  useEffect(() => {
+    if (!pageScroll) return;
+    const scroller = findScrollContainer(rootRef.current);
+    if (!scroller) return;
+
+    const measure = () => setStickyTop(-parseFloat(getComputedStyle(scroller).paddingTop) || 0);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [pageScroll]);
+
   return (
-    <div className={cn("flex min-h-0 flex-col gap-2", className)}>
+    <div ref={rootRef} className={cn("flex min-h-0 flex-col gap-2", className)}>
       {tableActions && (
         <div className="flex shrink-0 items-center justify-end gap-2">{tableActions}</div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-md border overflow-hidden">
+      {/* `overflow-clip` rounds the corners like `overflow-hidden`, but is no scroll container,
+          which would otherwise become the sticky header's scroller. */}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col rounded-md border",
+          pageScroll ? "overflow-clip" : "overflow-hidden",
+        )}
+      >
         <div role="table" className="flex min-h-0 flex-1 flex-col">
           {/* An element with `overflow-y` set to anything but `visible` forces its `overflow-x`
               to become non-visible too (CSS overflow spec) — so the rowgroup below, which must
@@ -126,8 +169,8 @@ function RecordDataTable({
               cells below them instead of drifting by the scrollbar's width. */}
           <div
             ref={headerScrollRef}
-            className="shrink-0 overflow-x-hidden"
-            style={{ paddingRight: scrollbarWidth }}
+            className={cn("shrink-0 overflow-x-hidden", pageScroll && "sticky z-10")}
+            style={{ paddingRight: scrollbarWidth, top: pageScroll ? stickyTop : undefined }}
           >
             <RecordTableHeader
               columns={columns}
@@ -149,7 +192,13 @@ function RecordDataTable({
             // flags: a sighted mouse user can drag-scroll a tall list, but a keyboard-only user
             // has no way to reach it otherwise.
             tabIndex={0}
-            className="scrollbar-subtle min-h-0 flex-1 overflow-auto"
+            // Page scroll: the rows are as tall as they are, so only horizontal overflow scrolls
+            // here (`overflow-y` can't stay `visible` next to a scrolling `overflow-x`, but with
+            // no height cap it never has anything to scroll).
+            className={cn(
+              "scrollbar-subtle min-h-0 flex-1",
+              pageScroll ? "overflow-x-auto overflow-y-hidden" : "overflow-auto",
+            )}
             onScroll={(event) => {
               if (headerScrollRef.current) {
                 headerScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;

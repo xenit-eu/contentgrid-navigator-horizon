@@ -20,6 +20,7 @@ import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-s
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 import { EntityItemCollectionTitle } from "./entity-item-collection-title";
 import { EntityItemPreviewPane } from "./entity-item-preview-pane";
+import { revealRow } from "./reveal-row";
 import { useEntityItemCollectionSearch } from "./use-entity-item-collection-search";
 
 /** Width the preview pane opens at, beside the table. */
@@ -174,7 +175,13 @@ export function EntityItemCollectionBrowser({
     // Closing the pane removes what had focus inside it; give focus back to the row. Focus that
     // was somewhere else stays there.
     const justClosed = wasPreviewOpenRef.current && !isPreviewOpen;
+    const justOpened = !wasPreviewOpenRef.current && isPreviewOpen;
     wasPreviewOpenRef.current = isPreviewOpen;
+    // Beside the table, the pane switches the table between the page's scroll and its own, which
+    // resets both: keep the row the pane belongs to where the user can see it.
+    if (isWide && (justOpened || justClosed) && previewRowRef.current?.isConnected) {
+      revealRow(previewRowRef.current);
+    }
     if (justClosed && (paneHasFocusRef.current || closedFromHandleRef.current)) {
       focusRowOrTableRegion();
     }
@@ -183,6 +190,12 @@ export function EntityItemCollectionBrowser({
       closedFromHandleRef.current = false;
     }
   }, [isPreviewOpen]);
+
+  // Page scroll: a listed table grows with its rows and the page scrolls, its header sticking to
+  // the top of it. With the pane open beside it (wide) the table is as tall as the pane and
+  // scrolls on its own; the loading, error and empty states fill the height as before. Only
+  // classes and props change between the two, so the table never remounts.
+  const pageScroll = collection.isSuccess && !isEmptyCollection && !(isWide && isPreviewOpen);
 
   const previewPane = previewedItem && (
     <EntityItemPreviewPane entityItem={previewedItem} onClose={closePreview} />
@@ -194,7 +207,7 @@ export function EntityItemCollectionBrowser({
       role="region"
       aria-label={`${profile.pluralName} table`}
       tabIndex={-1}
-      className="h-full outline-none"
+      className={pageScroll ? "outline-none" : "h-full outline-none"}
     >
       {collection.isPending && <LoadingPage />}
 
@@ -206,7 +219,8 @@ export function EntityItemCollectionBrowser({
 
       {collection.isSuccess && !isEmptyCollection && (
         <EntityItemCollectionTable
-          className="h-full"
+          className={pageScroll ? undefined : "h-full"}
+          pageScroll={pageScroll}
           profile={profile}
           collection={collection.data}
           onEntityItemClick={handlePreview}
@@ -222,7 +236,7 @@ export function EntityItemCollectionBrowser({
   );
 
   return (
-    <div ref={rootRef} className="flex h-full min-h-0 flex-col">
+    <div ref={rootRef} className={pageScroll ? "flex flex-col" : "flex h-full min-h-0 flex-col"}>
       {/* From the profile on, so it is there while the page loads, fails or is empty too. The
           count is the shown search's own total; while a new search loads, the previous one's. */}
       <EntityItemCollectionTitle
@@ -242,7 +256,9 @@ export function EntityItemCollectionBrowser({
         />
       )}
 
-      <div className={`min-h-0 flex-1 px-4 pb-4 ${onFiltersChange ? "" : "pt-4"}`}>
+      <div
+        className={`px-4 pb-4 ${pageScroll ? "" : "min-h-0 flex-1"} ${onFiltersChange ? "" : "pt-4"}`}
+      >
         {isWide ? (
           // The pane's panel is always there, collapsed while nothing is previewed, so opening
           // the pane never remounts the table.
@@ -287,6 +303,8 @@ export function EntityItemCollectionBrowser({
             // While closed there is nothing to separate: no line, no gutter, no separator.
             handleHidden={!isPreviewOpen}
             handleClassName="mx-2"
+            // The page scrolls while the pane is closed, so the layout is as tall as the table.
+            fitContentHeight={pageScroll}
           />
         ) : (
           table

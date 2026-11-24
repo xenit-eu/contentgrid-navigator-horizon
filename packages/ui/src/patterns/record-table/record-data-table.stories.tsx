@@ -235,3 +235,51 @@ export const ScrollableWithFixedHeight: Story = {
     children: buildManyRows(40),
   },
 };
+
+const WIDE_COLUMNS = [
+  { key: "reference", header: "Reference" },
+  { key: "supplier", header: "Supplier" },
+  { key: "total", header: "Total" },
+  { key: "currency", header: "Currency" },
+  { key: "issued", header: "Issue date" },
+  { key: "received", header: "Received" },
+  { key: "terms", header: "Payment terms" },
+  { key: "annex", header: "Annex" },
+];
+
+function buildWideRows(count: number) {
+  return Array.from({ length: count }, (_, i) => (
+    <RecordTableRow
+      key={i}
+      cells={WIDE_COLUMNS.map((column) => ({
+        key: column.key,
+        content: `${column.header} ${i + 1}`,
+      }))}
+    />
+  ));
+}
+
+/**
+ * Page scroll: the table has no height of its own; the scrolling ancestor (here a fixed box
+ * standing in for the page) scrolls and the column header sticks to the top of it. The columns
+ * are wider than the box, so only horizontal overflow scrolls inside the table, with the header
+ * following.
+ */
+export const PageScroll: Story = {
+  args: {
+    entityName: "invoice",
+    entityTitle: "Invoices",
+    columns: WIDE_COLUMNS,
+    pageScroll: true,
+    onNextPageClick: fn(),
+    onPreviousPageClick: fn(),
+    children: buildWideRows(40),
+  },
+  decorators: [
+    (Story) => (
+      <div className="h-96 w-[640px] overflow-auto rounded-md border p-4">
+        <Story />
+      </div>
+    ),
+  ],
+};

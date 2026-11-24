@@ -63,6 +63,11 @@ export interface EntityItemCollectionTableProps {
    * wrapper) to keep the table's default grow-to-content sizing.
    */
   readonly className?: string;
+  /**
+   * The table grows with its rows and the page scrolls, with the column header sticking to the
+   * top of it; see `RecordDataTable`'s `pageScroll`. Leave `className` without a bounding class.
+   */
+  readonly pageScroll?: boolean;
   /** Ids of the selected items. The selection column renders only when `onSelectionChange` is set. */
   readonly selectedIds?: ReadonlySet<string>;
   /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
@@ -123,6 +128,7 @@ export function EntityItemCollectionTable({
   visibleColumnNames,
   forcedVisibleColumnNames,
   className,
+  pageScroll,
   selectedIds = EMPTY_SELECTION,
   onSelectionChange,
   renderRowActions,
@@ -198,6 +204,7 @@ export function EntityItemCollectionTable({
     <>
       <RecordDataTable
         className={className}
+        pageScroll={pageScroll}
         entityName={profile.name}
         entityTitle={profile.pluralName}
         columns={columns}
