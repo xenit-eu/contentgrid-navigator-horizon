@@ -23,12 +23,14 @@ export function EntityItemCollectionTitle({
 
   return (
     <div className="px-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-[26px] leading-8 font-bold text-foreground">{profile.pluralName}</h1>
+      <div className="flex items-center gap-2.5">
+        <h1 className="text-[26px] leading-[1.2] font-bold text-foreground">
+          {profile.pluralName}
+        </h1>
         {count !== undefined && (
           <span
             data-slot="collection-count"
-            className="rounded-full border bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground"
+            className="inline-grid h-6 min-w-[22px] place-items-center rounded-full border bg-muted px-[7px] text-[13px] font-bold text-muted-foreground"
           >
             {count}
           </span>
