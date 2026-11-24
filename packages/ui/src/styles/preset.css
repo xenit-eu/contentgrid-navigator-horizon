@@ -183,8 +183,9 @@
    * is the opaque hue: components tint with an opacity modifier (`bg-warning/12`,
    * `border-warning/30`); `--warning-foreground` is the text colour on those tints. */
   --warning: #b85b1f;
-  /* #a4501f is 5.61:1 on white and 4.92:1 on --amber-tint (#fbeee3), above the 4.5:1 AA bar. */
-  --warning-foreground: #a4501f;
+  /* #994a1d is 5.00:1 on the darkest light surface it sits on (the 12% tint over --mist, #ede4e0),
+   * 5.35:1 on that tint over white and 6.27:1 on white, above the 4.5:1 AA bar. */
+  --warning-foreground: #994a1d;
   --border: var(--line);
   --input: var(--line-strong);
   --ring: var(--sky);
