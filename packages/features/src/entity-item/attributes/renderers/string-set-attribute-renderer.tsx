@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { AttributeValue, Chip } from "@contentgrid/ui";
+import { TruncatedAttributeValue } from "./truncated-attribute-value";
 import type { AttributeRendererVariant } from "./variant";
 
 export interface StringSetAttributeRendererProps {
@@ -35,7 +36,9 @@ export function StringSetAttributeRenderer({
   }
 
   if (variant !== "attribute-table") {
-    return <AttributeValue wrap={wrap}>{truncate(value.join(", "), maxCharLength)}</AttributeValue>;
+    return (
+      <TruncatedAttributeValue text={value.join(", ")} maxCharLength={maxCharLength} wrap={wrap} />
+    );
   }
 
   // Chips are inline-level (inline-flex) inside a plain inline-flow container, not a flex

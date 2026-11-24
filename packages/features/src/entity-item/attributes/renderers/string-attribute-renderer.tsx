@@ -1,10 +1,13 @@
 import type { PlainAttributeValue } from "@contentgrid/navigator-data";
-import { AttributeValue } from "@contentgrid/ui";
+import { TruncatedAttributeValue } from "./truncated-attribute-value";
 
 export interface StringAttributeRendererProps {
   readonly value: PlainAttributeValue;
   readonly wrap?: boolean;
-  /** Hard-truncates the value to this many characters (plus an ellipsis) before rendering. */
+  /**
+   * Hard-truncates the value to this many characters (plus an ellipsis) before rendering; the full
+   * value then shows in a tooltip on hover.
+   */
   readonly maxCharLength?: number;
 }
 
@@ -14,9 +17,5 @@ export function StringAttributeRenderer({
   maxCharLength,
 }: Readonly<StringAttributeRendererProps>) {
   const text = value == null ? undefined : String(value);
-  const truncated =
-    text != null && maxCharLength != null && text.length > maxCharLength
-      ? `${text.slice(0, maxCharLength)}…`
-      : text;
-  return <AttributeValue wrap={wrap}>{truncated}</AttributeValue>;
+  return <TruncatedAttributeValue text={text} maxCharLength={maxCharLength} wrap={wrap} />;
 }

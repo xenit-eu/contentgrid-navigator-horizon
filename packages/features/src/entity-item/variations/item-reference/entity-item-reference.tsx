@@ -15,6 +15,8 @@ export interface EntityItemReferenceProps {
    * fill. Combined with `muted`, the background keeps the soft muted fill instead of going
    * fully transparent — see `IconBadge`'s doc comment. */
   readonly outlined?: boolean;
+  /** Characters of the title shown before it is cut with "…"; the full title shows on hover. */
+  readonly titleMaxCharLength?: number;
   readonly className?: string;
 }
 
@@ -35,6 +37,7 @@ export function EntityItemReference({
   size,
   muted,
   outlined,
+  titleMaxCharLength = STRING_REFERENCE_MAX_CHAR_LENGTH,
   className,
 }: Readonly<EntityItemReferenceProps>) {
   const { preferences, nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(
@@ -46,7 +49,7 @@ export function EntityItemReference({
   const title = nameAttr ? (
     <AttributeValueRenderer
       attr={nameAttr}
-      maxCharLength={STRING_REFERENCE_MAX_CHAR_LENGTH}
+      maxCharLength={titleMaxCharLength}
       variant="item-reference"
     />
   ) : (
