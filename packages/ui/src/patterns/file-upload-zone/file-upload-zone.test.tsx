@@ -134,7 +134,7 @@ describe("FileUploadZone — file selected view", () => {
   it("renders formatted file size", () => {
     const file = makeFile("report.pdf", "application/pdf", 2048);
     render(<FileUploadZone file={file} onFileChange={vi.fn()} />);
-    expect(screen.getByText("2.0 KB")).toBeInTheDocument();
+    expect(screen.getByText("2 KB")).toBeInTheDocument();
   });
 
   it("renders the MIME type badge", () => {

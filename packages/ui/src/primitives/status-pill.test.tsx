@@ -13,6 +13,12 @@ describe("StatusPill", () => {
     expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
+  it("renders the label alone when icon is false", () => {
+    const { container } = render(<StatusPill label="True" icon={false} />);
+    expect(screen.getByText("True")).toBeInTheDocument();
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
+  });
+
   it("renders success status without throwing", () => {
     const { container } = render(<StatusPill status="success" label="Approved" />);
     expect(container.querySelector("[data-slot='status-pill']")).toBeInTheDocument();

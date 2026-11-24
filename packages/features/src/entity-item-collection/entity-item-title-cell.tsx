@@ -1,9 +1,8 @@
 import type { MouseEvent, ReactNode } from "react";
 import { AttributeKind, type ContentMetadata, type EntityItem } from "@contentgrid/navigator-data";
-import { IconBadge } from "@contentgrid/ui";
+import { IconBadge, formatFileSize } from "@contentgrid/ui";
 import { AttributeValueRenderer } from "../entity-item";
 import { FileTile } from "../entity-item/attributes/renderers/file-tile";
-import { formatFileSize } from "../entity-item/attributes/renderers/format-file-size";
 import { selectDefaultContentAttribute } from "../entity-item/variations/content-focus";
 import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
 

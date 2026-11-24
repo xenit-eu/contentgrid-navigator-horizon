@@ -52,7 +52,7 @@ export function AttributeValueRenderer({
   const components = defaultAttributeRendererComponents;
 
   if (attr.value.kind === AttributeKind.CONTENT) {
-    return <components.content metadata={attr.value.metadata} wrap={wrap} />;
+    return <components.content metadata={attr.value.metadata} wrap={wrap} variant={variant} />;
   }
   if (attr.value.kind === AttributeKind.NESTED) {
     return null;

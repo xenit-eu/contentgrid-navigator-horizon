@@ -165,15 +165,20 @@ export function EntityItemCollectionTable({
   );
   const attributeColumns = useMemo(() => buildColumns(profile, visibility), [profile, visibility]);
   const sortOptions = useMemo(() => toRecordTableSortOptions(profile), [profile]);
-  const columns = useMemo(
-    () => [
-      { key: REFERENCE_COLUMN_KEY, header: profile.singularName },
-      ...attributeColumns.map((column) => ({
+  const attributeColumnsWithTraits = useMemo(
+    () =>
+      attributeColumns.map((column) => ({
         ...column,
         ...columnTraits(profile.getAttribute(column.key)),
       })),
-    ],
     [profile, attributeColumns],
+  );
+  const columns = useMemo(
+    () => [
+      { key: REFERENCE_COLUMN_KEY, header: capitalizeFirstLetter(profile.singularName) },
+      ...attributeColumnsWithTraits,
+    ],
+    [profile.singularName, attributeColumnsWithTraits],
   );
 
   const deleteMutation = useDeleteEntityItem();
@@ -253,13 +258,14 @@ export function EntityItemCollectionTable({
                 />
               ),
             },
-            ...attributeColumns.map((col) => {
+            ...attributeColumnsWithTraits.map((col) => {
               if (col.key === "id") {
                 return { key: col.key, content: item.id };
               }
               const attr = item.findAttribute(col.key);
               return {
                 key: col.key,
+                align: col.align,
                 content: attr ? (
                   <AttributeValueRenderer
                     attr={attr}

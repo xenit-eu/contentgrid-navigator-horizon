@@ -15,12 +15,12 @@ describe("ContentAttributeRenderer", () => {
 
   it("falls back to 'Untitled' when filename is null", () => {
     render(<ContentAttributeRenderer metadata={{ filename: null, length: 512 }} />);
-    expect(screen.getByText("Untitled · 0.5 kB")).toBeInTheDocument();
+    expect(screen.getByText("Untitled · 512 B")).toBeInTheDocument();
   });
 
-  it("formats sizes under 1 MB in kB", () => {
+  it("formats sizes under 1 MB in whole KB", () => {
     render(<ContentAttributeRenderer metadata={{ filename: "invoice.pdf", length: 2048 }} />);
-    expect(screen.getByText("invoice.pdf · 2.0 kB")).toBeInTheDocument();
+    expect(screen.getByText("invoice.pdf · 2 KB")).toBeInTheDocument();
   });
 
   it("formats sizes at or above 1 MB in MB", () => {
@@ -45,7 +45,7 @@ describe("ContentAttributeRenderer", () => {
         metadata={{ filename: "huge.bin", length: 5000 * 1024 * 1024 * 1024 }}
       />,
     );
-    expect(screen.getByText("huge.bin · 5000.0 GB")).toBeInTheDocument();
+    expect(screen.getByText("huge.bin · 5,000.0 GB")).toBeInTheDocument();
   });
 
   it("renders the icon alongside the value when provided", () => {
@@ -56,6 +56,29 @@ describe("ContentAttributeRenderer", () => {
       />,
     );
     expect(screen.getByTestId("icon")).toBeInTheDocument();
-    expect(screen.getByText("invoice.pdf · 1.0 kB")).toBeInTheDocument();
+    expect(screen.getByText("invoice.pdf · 1 KB")).toBeInTheDocument();
+  });
+
+  describe("in a collection column (table variant)", () => {
+    const metadata = { filename: "terms.pdf", length: 90112, mimetype: "application/pdf" };
+
+    it("shows a 24px file tile before the name and size", () => {
+      const { container } = render(
+        <ContentAttributeRenderer metadata={metadata} variant="table" />,
+      );
+      expect(screen.getByText("terms.pdf · 88 KB")).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="file-tile"]')).toHaveClass("size-6");
+    });
+
+    it("shows a dash and no tile when the attribute has no file", () => {
+      const { container } = render(<ContentAttributeRenderer metadata={null} variant="table" />);
+      expect(screen.getByText("—")).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+    });
+
+    it("shows no tile in the other variants", () => {
+      const { container } = render(<ContentAttributeRenderer metadata={metadata} />);
+      expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+    });
   });
 });

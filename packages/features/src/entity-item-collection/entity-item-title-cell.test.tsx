@@ -66,7 +66,7 @@ describe("EntityItemTitleCell", () => {
     });
 
     expect(await screen.findByText("INV-2026-04812")).toBeInTheDocument();
-    expect(screen.getByText("document.pdf · 412.0 kB")).toBeInTheDocument();
+    expect(screen.getByText("document.pdf · 412 KB")).toBeInTheDocument();
     expect(container.querySelector('[data-slot="file-tile"]')).toBeInTheDocument();
   });
 
