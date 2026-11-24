@@ -902,7 +902,13 @@ describe("EntityItemCollectionBrowser — item preview", () => {
     renderBrowser({ profile: makeItemProfile() });
 
     async function deleteFromRow(code: string) {
-      await user.click(within(await findRow(code)).getByRole("button", { name: "Delete" }));
+      // By keyboard: in jsdom nothing has a size, so the pane's resize handle takes every pointer
+      // press (react-resizable-panels thinks the pointer is on it) and the menu never opens.
+      within(await findRow(code))
+        .getByRole("button", { name: `Actions for ${code}` })
+        .focus();
+      await user.keyboard("{Enter}");
+      await user.click(await screen.findByRole("menuitem", { name: "Delete…" }));
       const confirm = await screen.findByRole("alertdialog");
       await user.click(within(confirm).getByRole("button", { name: "Delete" }));
       // The last delete leaves an empty collection, which shows the empty state instead.
@@ -943,7 +949,7 @@ describe("EntityItemCollectionBrowser — item preview", () => {
     ["Enter", "{Enter}"],
     ["Space", " "],
   ])(
-    "opens the item's page without previewing when %s is pressed on a row's View button",
+    "opens the item's page without previewing when %s is pressed on a row menu's Open item",
     async (_, key) => {
       stubWidth(true);
       const user = userEvent.setup();
@@ -952,10 +958,14 @@ describe("EntityItemCollectionBrowser — item preview", () => {
 
       const row = await findRow("ABC-0");
       row.focus();
-      // The title button comes first, then the View action.
+      // The title button comes first, then the row menu's button.
       await user.tab();
       await user.tab();
-      expect(within(row).getByRole("button", { name: "View" })).toHaveFocus();
+      expect(within(row).getByRole("button", { name: "Actions for ABC-0" })).toHaveFocus();
+      await user.keyboard("{Enter}");
+      expect(screen.queryByRole("region", paneRegion)).not.toBeInTheDocument();
+      expect(onEntityItemClick).not.toHaveBeenCalled();
+      // Opening it with the keyboard focuses its first item.
       await user.keyboard(key);
 
       expect(onEntityItemClick).toHaveBeenCalledOnce();
@@ -965,13 +975,13 @@ describe("EntityItemCollectionBrowser — item preview", () => {
     },
   );
 
-  it("shows no View action without onEntityItemClick, and a row still previews", async () => {
+  it("shows no Open item without onEntityItemClick, and a row still previews", async () => {
     stubWidth(true);
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile() });
 
     const row = await findRow("ABC-0");
-    expect(screen.queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Open" })).not.toBeInTheDocument();
     await user.click(row);
     expect(await screen.findByRole("region", paneRegion)).toBeInTheDocument();
   });

@@ -1,5 +1,4 @@
 import { type ReactNode, useMemo } from "react";
-import { EyeIcon as Eye, TrashIcon as Trash } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   type EntityItem,
@@ -9,8 +8,6 @@ import {
 } from "@contentgrid/navigator-data";
 import {
   RecordDataTable,
-  RecordRowAction,
-  RecordRowConfirmAction,
   type RecordTableCell,
   RecordTableRow,
   type RecordTableSortOption,
@@ -20,6 +17,7 @@ import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "
 import { notifyProblem } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
 import { columnTraits } from "./column-traits";
+import { EntityItemRowMenu } from "./entity-item-row-menu";
 import { EntityItemTitleCell } from "./entity-item-title-cell";
 
 export interface EntityItemCollectionTableProps {
@@ -27,7 +25,7 @@ export interface EntityItemCollectionTableProps {
   readonly collection: EntityItemCollection;
   /** Fired when a row (entity item) is clicked, or Enter/Space is pressed on it; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
-  /** Fired by the default View row action, which is shown only with it; receives that row's item. */
+  /** Opens an item's own page: from the title link and the row menu's "Open", which exist only with it; receives that row's item. */
   readonly onEntityItemOpen?: (item: EntityItem) => void;
   /**
    * The address of an item's own page, when the host has one. With it each row's title is a real
@@ -76,12 +74,12 @@ export interface EntityItemCollectionTableProps {
   readonly selectedIds?: ReadonlySet<string>;
   /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
-  /** Replaces the default per-row View/Delete actions (e.g. a relation's Unlink). */
+  /** Replaces the default per-row actions menu (Open, Delete…), e.g. with a relation's Unlink. */
   readonly renderRowActions?: (item: EntityItem) => ReactNode;
   /**
    * `false` renders no actions column (e.g. in the relation picker), `true` always renders one.
-   * By default the column shows when `renderRowActions` is given, or when the default actions
-   * apply: View is available or an item on the page can be deleted.
+   * By default the column shows when `renderRowActions` is given, or when the default menu
+   * applies: Open is available or an item on the page can be deleted.
    */
   readonly showRowActions?: boolean;
   /** `false` hides the item-count/pagination footer (e.g. for an unpaginated set). Defaults to `true`. */
@@ -299,25 +297,12 @@ export function EntityItemCollectionTable({
                 !hasActionsColumn ? undefined : renderRowActions ? (
                   renderRowActions(item)
                 ) : (
-                  <>
-                    {onEntityItemOpen && (
-                      <RecordRowAction
-                        label="View"
-                        icon={<Eye className="size-4" aria-hidden />}
-                        onClick={() => onEntityItemOpen(item)}
-                      />
-                    )}
-                    {item.canDelete && (
-                      <RecordRowConfirmAction
-                        label="Delete"
-                        icon={<Trash className="size-4" aria-hidden />}
-                        title="Delete item"
-                        description={`Are you sure you want to delete this ${profile.singularName.toLowerCase()}? This action cannot be undone.`}
-                        disabled={deleteMutation.isPending}
-                        onConfirm={() => deleteItem(item)}
-                      />
-                    )}
-                  </>
+                  <EntityItemRowMenu
+                    item={item}
+                    onOpen={onEntityItemOpen}
+                    onDelete={deleteItem}
+                    deleting={deleteMutation.isPending}
+                  />
                 )
               }
             />

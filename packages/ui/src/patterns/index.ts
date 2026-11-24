@@ -35,3 +35,4 @@ export * from "./date-range-filter";
 export * from "./searchable-option-list";
 export * from "./resizable-split-layout";
 export * from "./phone-menu";
+export * from "./record-table/record-row-menu";

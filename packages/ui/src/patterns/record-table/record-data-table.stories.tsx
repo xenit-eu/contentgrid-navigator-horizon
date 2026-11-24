@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "storybook/test";
 import { Button } from "../../primitives/button";
 import { RecordDataTable } from "./record-data-table";
-import type { RecordTableSortOption } from "./record-table-header";
+import type { RecordTableColumn, RecordTableSortOption } from "./record-table-header";
 import { RecordTableRow } from "./table-row";
 
 const meta = {
@@ -16,10 +16,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const COLUMNS = [
+const COLUMNS: RecordTableColumn[] = [
   { key: "reference", header: "Reference" },
-  { key: "supplier", header: "Supplier" },
-  { key: "total", header: "Total" },
+  { key: "supplier", header: "Supplier", sortKind: "text" },
+  { key: "total", header: "Total", align: "end" },
 ];
 
 const SORT_OPTIONS: RecordTableSortOption[] = [
@@ -236,9 +236,9 @@ export const ScrollableWithFixedHeight: Story = {
   },
 };
 
-const WIDE_COLUMNS = [
+const WIDE_COLUMNS: RecordTableColumn[] = [
   { key: "reference", header: "Reference" },
-  { key: "supplier", header: "Supplier" },
+  { key: "supplier", header: "Supplier", sortKind: "text" },
   { key: "total", header: "Total" },
   { key: "currency", header: "Currency" },
   { key: "issued", header: "Issue date" },
