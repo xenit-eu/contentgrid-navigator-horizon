@@ -168,9 +168,9 @@
       "name": "entity-card",
       "type": "registry:ui",
       "title": "Entity Card",
-      "description": "Card displaying a ContentGrid entity with item count and create action.",
-      "dependencies": ["lucide-react"],
-      "registryDependencies": ["button", "card"],
+      "description": "Parts for a ContentGrid entity card: a card that opens as a whole, title, description, arrow, grid and loading skeleton.",
+      "dependencies": ["@phosphor-icons/react"],
+      "registryDependencies": ["card", "skeleton", "utils"],
       "files": [
         { "path": "src/patterns/entity-card/entity-card.tsx", "type": "registry:ui" },
         { "path": "src/patterns/entity-card/index.ts", "type": "registry:ui" }

@@ -1,127 +1,118 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, KeyboardEvent } from "react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import { cn } from "../../lib/utils";
-import { PageTitle, type PageTitleProps } from "../../primitives";
-import { Card, CardContent, CardHeader } from "../../primitives/card";
+import { Card } from "../../primitives/card";
+import { Skeleton } from "../../primitives/skeleton";
 
-interface EntityCardBaseProps {
-  /** Unique identifier / URL-safe name for this entity (passed to `onCardClick`) */
-  name: string;
-  /** Small eyebrow label rendered above the title. Omitted entirely when not provided. */
-  header?: string;
-  /** Optional description shown below the title */
-  description?: string;
-  /** Forwarded to the title block's `PageTitle` as its `size`. Defaults to `"compact"` —
-   * EntityCard's normal density. */
-  titleVariant?: NonNullable<PageTitleProps["size"]>;
-  /** Rendered left of the title. Defaults to a generic Database icon. Interactive content
-   * inside it (e.g. a color picker trigger) does not trigger `onCardClick`. */
-  icon?: ReactNode;
+/**
+ * An entity card is built from small parts: `EntityCard` draws the card, and a page places
+ * `EntityCardText` (holding `EntityCardTitle` and `EntityCardDescription`), `EntityCardArrow` and
+ * its own content in it, in the order its design asks for. Cards go in an `EntityCardGrid`, and
+ * `EntityCardSkeleton` stands in for a card while it loads.
+ */
+
+export interface EntityCardProps extends ComponentProps<"div"> {
   /**
-   * Rendered in the header's top-right corner (e.g. a "create" button). Independently
-   * clickable — does not trigger `onCardClick`. Omitted entirely when not provided.
+   * Makes the whole card one button that calls `onOpen` on a click, Enter or Space. Leave it out
+   * for a card whose own controls (a link, an icon button) do the work; a clickable card should
+   * hold no other controls, since a control inside a button is not reachable on its own.
    */
-  action?: ReactNode;
-  /** Card body — a stat, a preview, or anything else. Omitted entirely when not provided. */
-  children?: ReactNode;
-  /** Called when the user clicks anywhere on the card outside `action`/interactive icon
-   * content. Omitted entirely (a plain, non-interactive card) when not provided. */
-  onCardClick?: (name: string) => void;
-
-  indentSubtitle?: boolean;
-  /** Renders `children` edge to edge — no horizontal padding, no bottom gutter, and a tighter
-   * header — e.g. for a list of full-width rows that should run to the card's border. */
-  flushContent?: boolean;
+  readonly onOpen?: () => void;
 }
 
-export type EntityCardProps = EntityCardBaseProps &
-  (
-    | {
-        /** Human-readable title */
-        title: string;
-        heading?: undefined;
-      }
-    | {
-        /** Custom title block rendered in place of the default one (`header`, `title`,
-         * `description`, `icon`) — e.g. an item reference with a summary below it. */
-        heading: ReactNode;
-        title?: undefined;
-      }
-  );
-
-export function EntityCard({
-  name,
-  header,
-  title,
-  heading,
-  description,
-  icon,
-  action,
-  children,
-  onCardClick,
-  indentSubtitle = true,
-  titleVariant = "compact",
-  flushContent = false,
-}: Readonly<EntityCardProps>) {
+/** The card an entity is shown in: a line border, rounded corners, no shadow. */
+export function EntityCard({ onOpen, className, ...props }: Readonly<EntityCardProps>) {
   return (
     <Card
       data-slot="entity-card"
-      role={onCardClick ? "button" : undefined}
-      tabIndex={onCardClick ? 0 : undefined}
+      {...openProps(onOpen)}
       className={cn(
-        "group relative transition-colors",
-        // Cards in a grid stretch to the tallest one; a flush card keeps its content's height.
-        !flushContent && "h-full",
-        onCardClick && "hover:border-primary/50",
-        flushContent && children && "gap-1 overflow-hidden pt-4 pb-0",
+        "h-full gap-3 rounded-lg p-4 shadow-none",
+        onOpen && "cursor-pointer transition-colors hover:border-primary/50",
+        className,
       )}
-      onClick={onCardClick ? () => onCardClick(name) : undefined}
-      onKeyDown={
-        onCardClick
-          ? (event) => {
-              if (event.key === "Enter") {
-                onCardClick(name);
-              } else if (event.key === " ") {
-                event.preventDefault();
-                onCardClick(name);
-              }
-            }
-          : undefined
-      }
-    >
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
-        {title !== undefined ? (
-          <PageTitle
-            size={titleVariant}
-            header={header}
-            title={title}
-            subtitle={description}
-            indentSubtitle={indentSubtitle}
-            clamp
-            className="min-w-0 flex-1"
-            icon={
-              icon && (
-                <span role="presentation" onClick={(event) => event.stopPropagation()}>
-                  {icon}
-                </span>
-              )
-            }
-          />
-        ) : (
-          <div className="min-w-0 flex-1">{heading}</div>
-        )}
-        {action && (
-          <div
-            role="presentation"
-            className="relative z-10"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {action}
-          </div>
-        )}
-      </CardHeader>
-      {children && (
-        <CardContent className={cn("mt-auto", flushContent && "px-0")}>{children}</CardContent>
-      )}
-    </Card>
+      {...props}
+    />
   );
+}
+
+function openProps(onOpen: (() => void) | undefined) {
+  if (!onOpen) return {};
+  return {
+    role: "button",
+    tabIndex: 0,
+    onClick: onOpen,
+    onKeyDown: (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onOpen();
+      }
+    },
+  };
+}
+
+/** Groups the title with the lines under it, close together. */
+export function EntityCardText({ className, ...props }: Readonly<ComponentProps<"div">>) {
+  return (
+    <div data-slot="entity-card-text" className={cn("min-w-0 space-y-0.5", className)} {...props} />
+  );
+}
+
+/** The entity's name, on one line; the full name shows on hover when it is cut. */
+export function EntityCardTitle({
+  children,
+  className,
+}: Readonly<{ children: string; className?: string }>) {
+  return (
+    <h2
+      data-slot="entity-card-title"
+      title={children}
+      className={cn("line-clamp-1 text-card-title font-bold", className)}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/** A muted line under the title, at most two lines; the full text shows on hover when it is cut. */
+export function EntityCardDescription({
+  children,
+  className,
+}: Readonly<{ children: string; className?: string }>) {
+  return (
+    <p
+      data-slot="entity-card-description"
+      title={children}
+      className={cn("line-clamp-2 text-ui text-muted-foreground", className)}
+    >
+      {children}
+    </p>
+  );
+}
+
+/** The muted arrow that marks a card as opening something. Decorative. */
+export function EntityCardArrow({ className }: Readonly<{ className?: string }>) {
+  return (
+    <ArrowRightIcon
+      data-slot="entity-card-arrow"
+      aria-hidden
+      className={cn("size-4 shrink-0 text-muted-foreground", className)}
+    />
+  );
+}
+
+/** The grid entity cards are laid out in: as many columns of at least 250px as fit. */
+export function EntityCardGrid({ className, ...props }: Readonly<ComponentProps<"div">>) {
+  return (
+    <div
+      data-slot="entity-card-grid"
+      className={cn("grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4", className)}
+      {...props}
+    />
+  );
+}
+
+/** Stands in for an entity card while it loads; give it the height of the card it replaces. */
+export function EntityCardSkeleton({ className }: Readonly<{ className?: string }>) {
+  return <Skeleton className={cn("w-full rounded-lg", className)} />;
 }

@@ -11,6 +11,8 @@ export interface EntityIconBadgeProps {
   readonly muted?: boolean;
   /** A border and an icon in the entity's color instead of a solid fill (see `IconBadge`). */
   readonly outlined?: boolean;
+  /** The icon in the entity's color on a soft tint of it (see `IconBadge`). */
+  readonly tinted?: boolean;
   /** Overrides the default accessible label (the entity's plural name) — e.g. to describe
    * what clicking the badge does, when it's used as a popover trigger. */
   readonly "aria-label"?: string;
@@ -27,6 +29,7 @@ export function EntityIconBadge({
   onClick,
   muted = false,
   outlined = false,
+  tinted = false,
   "aria-label": ariaLabel,
 }: Readonly<EntityIconBadgeProps>) {
   const { preferences } = useEntityDisplayPreferences(profile);
@@ -41,6 +44,7 @@ export function EntityIconBadge({
       aria-label={ariaLabel ?? (onClick ? profile.pluralName : undefined)}
       muted={muted}
       outlined={outlined}
+      tinted={tinted}
     />
   );
 }

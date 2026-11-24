@@ -1,11 +1,19 @@
-import { ArrowRightIcon } from "@phosphor-icons/react";
 import {
+  type CollectionTotalCount,
   type ProfileEntity,
   toProblemDisplayModel,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
-import { EntityCard, Skeleton } from "@contentgrid/ui";
+import {
+  EntityCard,
+  EntityCardArrow,
+  EntityCardDescription,
+  EntityCardGrid,
+  EntityCardSkeleton,
+  EntityCardText,
+  EntityCardTitle,
+} from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 import { ProblemAlert } from "../problem-details";
 
@@ -36,14 +44,11 @@ function EntityOverview({
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <OverviewHeader count={0} loading />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
-          ))}
-        </div>
-      </div>
+      <EntityCardGrid>
+        {[1, 2, 3, 4].map((i) => (
+          <EntityCardSkeleton key={i} className="h-36" />
+        ))}
+      </EntityCardGrid>
     );
   }
 
@@ -57,35 +62,15 @@ function EntityOverview({
   }
 
   return (
-    <div className="space-y-6">
-      <OverviewHeader count={loadedProfiles.length} />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {loadedProfiles.map((profile) => (
-          <EntityCardConnected
-            key={profile.name}
-            profile={profile}
-            onSelect={() => onSelectEntity(profile)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OverviewHeader({
-  count,
-  loading = false,
-}: Readonly<{ count: number; loading?: boolean }>) {
-  const typeLabel = `entity type${count === 1 ? "" : "s"}`;
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Entities</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {loading ? "Loading…" : `${count} ${typeLabel} available`}
-        </p>
-      </div>
-    </div>
+    <EntityCardGrid>
+      {loadedProfiles.map((profile) => (
+        <EntityCardConnected
+          key={profile.name}
+          profile={profile}
+          onSelect={() => onSelectEntity(profile)}
+        />
+      ))}
+    </EntityCardGrid>
   );
 }
 
@@ -99,21 +84,42 @@ function EntityCardConnected({
   );
 
   return (
-    <EntityCard
-      name={profile.name}
-      title={profile.pluralName}
-      description={profile.description || undefined}
-      icon={<EntityIconBadge profile={profile} />}
-      onCardClick={onSelect}
-    >
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <div className="text-2xl font-bold">{collection.data?.totalItems?.count ?? "—"}</div>
-          <p className="text-xs text-muted-foreground">items</p>
-        </div>
-        {/* Decorative: the whole card is the one click target (EntityCard's own button role). */}
-        <ArrowRightIcon aria-hidden className="h-5 w-5 text-muted-foreground" />
+    <EntityCard onOpen={onSelect}>
+      <div className="flex items-start justify-between gap-2">
+        <EntityIconBadge profile={profile} tinted />
+        <EntityCardArrow />
       </div>
+      <EntityCardText>
+        <EntityCardTitle>{profile.pluralName}</EntityCardTitle>
+        {profile.description && (
+          <EntityCardDescription>{profile.description}</EntityCardDescription>
+        )}
+      </EntityCardText>
+      <ItemCountLine total={collection.data?.totalItems} loading={collection.isFetching} />
     </EntityCard>
+  );
+}
+
+/**
+ * "1 item", "1,284 items", "about 1,204 items" for an estimate; a dash while the count loads, and
+ * "Count not available" when there is none (the request failed, or the entity can't be searched).
+ */
+function ItemCountLine({
+  total,
+  loading,
+}: Readonly<{ total: CollectionTotalCount | undefined; loading: boolean }>) {
+  if (!total) {
+    return (
+      <p className="mt-auto text-ui text-muted-foreground">
+        {loading ? "—" : "Count not available"}
+      </p>
+    );
+  }
+  return (
+    <p className="mt-auto text-ui text-muted-foreground">
+      {total.isEstimated && "about "}
+      <span className="font-bold text-card-foreground">{total.count.toLocaleString()}</span>{" "}
+      {total.count === 1 ? "item" : "items"}
+    </p>
   );
 }

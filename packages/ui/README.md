@@ -109,12 +109,12 @@ All seven patterns declare `registryDependencies` referencing our **own copies**
 
 ## Available patterns
 
-| Registry name           | Component              | npm deps     | Primitives used                                                          |
-| ----------------------- | ---------------------- | ------------ | ------------------------------------------------------------------------ |
-| `autocomplete-renderer` | `AutocompleteRenderer` | —            | input, label, popover                                                    |
-| `branding-header`       | `BrandingHeader`       | —            | separator                                                                |
-| `data-table`            | `DataTable`            | lucide-react | alert-dialog, button, dropdown-menu, table, tooltip                      |
-| `entity-card`           | `EntityCard`           | lucide-react | button, card                                                             |
-| `entity-item-picker`    | `EntityItemPicker`     | lucide-react | button, dialog, input, skeleton, table                                   |
-| `file-upload-zone`      | `FileUploadZone`       | lucide-react | badge, button                                                            |
-| `relation-section`      | `RelationSection`      | lucide-react | alert-dialog, badge, button, card, collapsible, skeleton, table, tooltip |
+| Registry name           | Component              | npm deps              | Primitives used                                                          |
+| ----------------------- | ---------------------- | --------------------- | ------------------------------------------------------------------------ |
+| `autocomplete-renderer` | `AutocompleteRenderer` | —                     | input, label, popover                                                    |
+| `branding-header`       | `BrandingHeader`       | —                     | separator                                                                |
+| `data-table`            | `DataTable`            | lucide-react          | alert-dialog, button, dropdown-menu, table, tooltip                      |
+| `entity-card`           | `EntityCard`           | @phosphor-icons/react | card, skeleton                                                           |
+| `entity-item-picker`    | `EntityItemPicker`     | lucide-react          | button, dialog, input, skeleton, table                                   |
+| `file-upload-zone`      | `FileUploadZone`       | lucide-react          | badge, button                                                            |
+| `relation-section`      | `RelationSection`      | lucide-react          | alert-dialog, badge, button, card, collapsible, skeleton, table, tooltip |
