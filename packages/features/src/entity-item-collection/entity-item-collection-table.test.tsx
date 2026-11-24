@@ -163,13 +163,23 @@ afterEach(() => {
 });
 
 describe("EntityItemCollectionTable", () => {
-  it("renders a row per item plus the item-count footer", async () => {
+  it("renders a row per item and no item-count text by default", async () => {
     const { profile, collection, Wrapper } = await fetchCollection();
     render(<EntityItemCollectionTable profile={profile} collection={collection} />, {
       wrapper: Wrapper,
     });
 
     expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2 items
+    expect(screen.queryByText(/showing/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+  });
+
+  it("shows the item count in the footer when showItemCount is set", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    render(<EntityItemCollectionTable profile={profile} collection={collection} showItemCount />, {
+      wrapper: Wrapper,
+    });
+
     expect(screen.getByText("Showing 2 of 2 items")).toBeInTheDocument();
   });
 

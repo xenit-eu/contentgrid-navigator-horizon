@@ -186,6 +186,16 @@ describe("RecordDataTable — pagination", () => {
   });
 });
 
+describe("RecordDataTable — footer layout", () => {
+  it("renders no item-count text without footerContent, with Previous and Next together at the right", () => {
+    renderTable({ onNextPageClick: vi.fn() });
+    const previous = screen.getByRole("button", { name: /previous/i });
+    expect(previous.parentElement).toHaveClass("ml-auto");
+    expect(previous.parentElement).toContainElement(screen.getByRole("button", { name: /next/i }));
+    expect(previous.parentElement?.parentElement).not.toHaveTextContent(/showing/i);
+  });
+});
+
 describe("RecordDataTable — page scroll", () => {
   it("keeps its own scrolling by default: no sticky header, the rows scroll in both directions", () => {
     renderTable();

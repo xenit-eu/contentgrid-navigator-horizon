@@ -23,6 +23,7 @@ import {
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 import { notifyProblem } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
+import { columnTraits } from "./column-traits";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
@@ -82,7 +83,10 @@ export interface EntityItemCollectionTableProps {
   readonly showRowActions?: boolean;
   /** `false` hides the item-count/pagination footer (e.g. for an unpaginated set). Defaults to `true`. */
   readonly paginated?: boolean;
-  /** `false` hides the "Showing N of M items" text, keeping the page controls. Defaults to `true`. */
+  /**
+   * Shows "Showing N of M items" at the start of the footer bar. Defaults to `false`: the
+   * collection page shows the count in its title. Pass `true` where nothing else shows it.
+   */
   readonly showItemCount?: boolean;
 }
 
@@ -134,7 +138,7 @@ export function EntityItemCollectionTable({
   renderRowActions,
   showRowActions,
   paginated = true,
-  showItemCount = true,
+  showItemCount = false,
 }: Readonly<EntityItemCollectionTableProps>) {
   const persistedVisibility = useColumnVisibility(profile);
   // Union a session-local override and any actively-filtered attribute on top of the persisted
@@ -158,8 +162,14 @@ export function EntityItemCollectionTable({
   const attributeColumns = useMemo(() => buildColumns(profile, visibility), [profile, visibility]);
   const sortOptions = useMemo(() => toRecordTableSortOptions(profile), [profile]);
   const columns = useMemo(
-    () => [{ key: REFERENCE_COLUMN_KEY, header: profile.singularName }, ...attributeColumns],
-    [profile.singularName, attributeColumns],
+    () => [
+      { key: REFERENCE_COLUMN_KEY, header: profile.singularName },
+      ...attributeColumns.map((column) => ({
+        ...column,
+        ...columnTraits(profile.getAttribute(column.key)),
+      })),
+    ],
+    [profile, attributeColumns],
   );
 
   const deleteMutation = useDeleteEntityItem();

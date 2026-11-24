@@ -29,8 +29,10 @@ export interface RecordDataTableProps {
   /** Renders the previous button as enabled when passed */
   onPreviousPageClick?: () => void;
   /**
-   * Rendered at the start of the pagination footer bar (e.g. a "Showing 20 of 100 items"
-   * summary). The footer bar renders whenever this is set, even with no next/previous page.
+   * Optional text at the start of the pagination footer bar (e.g. a "Showing 20 of 100 items"
+   * summary), for tables whose page shows no count of its own. The footer bar renders whenever
+   * this is set, even with no next/previous page; without it the bar holds only Previous and Next,
+   * on the right.
    */
   footerContent?: ReactNode;
 
@@ -232,14 +234,12 @@ function RecordDataTable({
         </div>
 
         {(onNextPageClick || onPreviousPageClick || footerContent) && (
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-muted/70 p-2">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-table-header px-3.5 py-2.5">
             {footerContent && (
               <div className="px-2 text-xs text-muted-foreground">{footerContent}</div>
             )}
-            {/* Without footer content, Previous and Next spread to the footer's two ends. */}
-            <div
-              className={cn("flex items-center gap-2", !footerContent && "w-full justify-between")}
-            >
+            {/* Previous and Next sit at the right end, with or without footer content. */}
+            <div className="ml-auto flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"

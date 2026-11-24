@@ -45,6 +45,41 @@ export const WithSort: Story = {
   },
 };
 
+const TYPED_COLUMNS: RecordTableColumn[] = [
+  { key: "reference", header: "Invoice", sortKind: "text" },
+  { key: "amount", header: "Amount", sortKind: "number", align: "end" },
+  { key: "issued", header: "Issue date", sortKind: "date" },
+  { key: "notes", header: "Notes" },
+];
+
+const TYPED_SORT_OPTIONS: RecordTableSortOption[] = [
+  { value: "reference,asc", property: "reference", prompt: "Invoice A→Z", direction: "asc" },
+  { value: "reference,desc", property: "reference", prompt: "Invoice Z→A", direction: "desc" },
+  { value: "amount,asc", property: "amount", prompt: "Amount low→high", direction: "asc" },
+  { value: "amount,desc", property: "amount", prompt: "Amount high→low", direction: "desc" },
+  { value: "issued,asc", property: "issued", prompt: "Issue date oldest", direction: "asc" },
+  { value: "issued,desc", property: "issued", prompt: "Issue date newest", direction: "desc" },
+];
+
+/** Sortable headers show two arrows; the sorted one a single arrow in the accent colour. Notes can't be sorted. */
+export const SortedColumn: Story = {
+  args: {
+    columns: TYPED_COLUMNS,
+    sortOptions: TYPED_SORT_OPTIONS,
+    currentSort: ["amount,asc"],
+    onSort: fn(),
+  },
+};
+
+export const SortedDescending: Story = {
+  args: {
+    columns: TYPED_COLUMNS,
+    sortOptions: TYPED_SORT_OPTIONS,
+    currentSort: ["issued,desc"],
+    onSort: fn(),
+  },
+};
+
 export const WithActionsColumn: Story = {
   args: {
     columns: COLUMNS,

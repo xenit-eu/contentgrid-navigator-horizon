@@ -67,7 +67,7 @@ function RecordTableRow({
         // width while the (unclipped) grid content spills out past it. `w-fit` lets the row grow
         // to its content's actual width when that's wider than the container (matching what the
         // rowgroup ends up scrolling to); `min-w-full` keeps it at 100% when content is narrower.
-        "group/row relative grid w-fit min-w-full items-center gap-3 px-4 py-3 border-b border-border transition-colors",
+        "group/row relative grid min-h-11 w-fit min-w-full items-center gap-7 px-3.5 py-2 border-b border-border transition-colors last:border-b-0",
         onClick && "cursor-pointer",
         onClick && !highlighted && "hover:bg-hover",
         rowBackground,

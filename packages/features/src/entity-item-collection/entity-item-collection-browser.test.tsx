@@ -262,13 +262,22 @@ function renderBrowser(props: {
   };
 }
 
+/** Resolves once the page title shows the search's total, i.e. the collection has loaded. */
+async function findTotal(total: number) {
+  await waitFor(() =>
+    expect(document.querySelector('[data-slot="collection-count"]')).toHaveTextContent(
+      new RegExp(`^${total}\\b`),
+    ),
+  );
+}
+
 describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () => {
   it("fetches via searchValues when no pageUrl is given", async () => {
     setupCollectionHandler();
 
     renderBrowser({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
-    expect(await screen.findByText((text) => text.endsWith("of 2 items"))).toBeInTheDocument();
+    await findTotal(2);
   });
 
   it("uses pageUrl directly when it encodes the SAME filters — preserves pagination", async () => {
@@ -281,7 +290,7 @@ describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () 
       filters: { "code~prefix": "abc" },
     });
 
-    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
+    await findTotal(5);
     expect(onRequest).toHaveBeenCalled();
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
@@ -300,7 +309,7 @@ describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () 
       pageUrl: `${COLLECTION_URL}?created~after=2024-01-01T10:00:00.000Z&_cursor=page2token`,
     });
 
-    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
+    await findTotal(5);
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -317,7 +326,7 @@ describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () 
       pageUrl: `${COLLECTION_URL}?amount=10.5&_cursor=page2token`,
     });
 
-    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
+    await findTotal(5);
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBe("page2token");
   });
@@ -335,7 +344,7 @@ describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () 
     });
 
     // Falls back to searchValues (page 1 of the CURRENT filters), not the mismatched page.
-    expect(await screen.findByText((text) => text.endsWith("of 2 items"))).toBeInTheDocument();
+    await findTotal(2);
     const requested = onRequest.mock.calls.at(-1)?.[0] as URL;
     expect(requested.searchParams.get("_cursor")).toBeNull();
     expect(requested.searchParams.get("code~prefix")).toBe("abc");
@@ -350,7 +359,7 @@ describe("EntityItemCollectionBrowser — pageUrl / filters reconciliation", () 
       // filters omitted entirely — defaults to {}, which matches what this pageUrl encodes (none).
     });
 
-    expect(await screen.findByText((text) => text.endsWith("of 5 items"))).toBeInTheDocument();
+    await findTotal(5);
   });
 });
 
@@ -364,7 +373,7 @@ describe("EntityItemCollectionBrowser — Columns selector", () => {
     setupCollectionHandler();
     renderBrowser({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
 
     expect(screen.getByRole("button", { name: /columns/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /filters/i })).toBeInTheDocument();
@@ -375,7 +384,7 @@ describe("EntityItemCollectionBrowser — Columns selector", () => {
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /columns/i }));
@@ -389,7 +398,7 @@ describe("EntityItemCollectionBrowser — Columns selector", () => {
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
 
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
@@ -402,14 +411,14 @@ describe("EntityItemCollectionBrowser — Columns selector", () => {
     const user = userEvent.setup();
     const { unmount } = renderBrowser({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
     expect(screen.queryByRole("columnheader", { name: "Code" })).not.toBeInTheDocument();
     unmount();
 
     renderBrowser({ profile: makeItemProfile() });
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
 
     expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
   });
@@ -419,7 +428,7 @@ describe("EntityItemCollectionBrowser — Columns selector", () => {
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile(), filters: { "code~prefix": "abc" } });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
 
     await user.click(screen.getByRole("button", { name: /columns/i }));
     await user.click(screen.getByRole("checkbox", { name: /^Code/ }));
@@ -434,7 +443,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByLabelText(/Code/)).toBeInTheDocument();
@@ -447,7 +456,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile() });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByRole("combobox", { name: /Code/ })).toBeInTheDocument();
@@ -459,7 +468,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     const onFiltersChange = vi.fn();
     renderBrowser({ profile: makeItemProfile(), onFiltersChange });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
     const combobox = screen.getByRole("combobox", { name: /Code/ });
     await user.type(combobox, "abc");
@@ -478,7 +487,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     const onFiltersChange = vi.fn();
     renderBrowser({ profile: makeItemProfile(), onFiltersChange });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
     fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: "42" } });
 
@@ -490,7 +499,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile(), filters: { amount: "42" } });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByLabelText(/Amount/)).toHaveValue(42);
@@ -501,7 +510,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
     const user = userEvent.setup();
     renderBrowser({ profile: makeItemProfile(), filters: { amount: "not-a-number" } });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByText(/Enter a valid number/i)).toBeInTheDocument();
@@ -517,7 +526,7 @@ describe("EntityItemCollectionBrowser — filter form (HalFormsContainer)", () =
       onFiltersChange,
     });
 
-    await screen.findByText((text) => text.endsWith("of 2 items"));
+    await findTotal(2);
     await user.click(screen.getByRole("button", { name: /filters/i }));
     await user.click(screen.getByRole("button", { name: /clear all/i }));
 
@@ -627,7 +636,7 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
 
     expect(screen.queryByRole("heading", emptyStateHeading(profile))).not.toBeInTheDocument();
     releaseUnfiltered();
-    expect(await screen.findByText((text) => text.endsWith("of 2 items"))).toBeInTheDocument();
+    await findTotal(2);
   });
 });
 
@@ -858,7 +867,7 @@ describe("EntityItemCollectionBrowser — item preview", () => {
     expect(await screen.findByRole("region", paneRegion)).toBeInTheDocument();
 
     rerender(<EntityItemCollectionBrowser profile={profile} filters={{ "code~prefix": "ABC" }} />);
-    expect(await screen.findByText((text) => text.endsWith("of 1 items"))).toBeInTheDocument();
+    await findTotal(1);
     expect(screen.getByRole("region", paneRegion)).toBeInTheDocument();
 
     rerender(<EntityItemCollectionBrowser profile={profile} filters={{ "code~prefix": "XYZ" }} />);
@@ -898,7 +907,10 @@ describe("EntityItemCollectionBrowser — item preview", () => {
       await user.click(within(confirm).getByRole("button", { name: "Delete" }));
       // The last delete leaves an empty collection, which shows the empty state instead.
       await (items.length > 0
-        ? screen.findByText((text) => text.endsWith(`of ${items.length} items`))
+        ? waitFor(() => {
+            const [table] = screen.getAllByRole("table");
+            expect(within(table).getAllByRole("row")).toHaveLength(items.length + 1);
+          })
         : screen.findByRole("heading", { name: /^No .+ found$/ }));
     }
 
