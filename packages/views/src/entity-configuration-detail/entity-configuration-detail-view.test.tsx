@@ -163,6 +163,7 @@ describe("EntityConfigurationDetailView", () => {
       entityName: "invoice",
       itemId: "inv-1",
       toolbar: false,
+      allowEdit: false,
     });
   });
 

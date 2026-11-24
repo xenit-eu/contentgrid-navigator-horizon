@@ -14,7 +14,7 @@ import type { ViewProps } from "../types/view";
 import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
 
 /** Opened by entity name and item id, or by the item's own link. */
-export type EntityItemDetailViewProps = ViewProps & EntityItemTarget;
+export type EntityItemDetailViewProps = ViewProps & EntityItemTarget & { allowEdit?: boolean };
 
 function describeTarget(target: EntityItemTarget): string {
   return "itemUrl" in target
@@ -31,7 +31,11 @@ function describeTarget(target: EntityItemTarget): string {
  * `onBlindRelationOverwriteClick`/`onRequiredRelationClick` fill `RelationProblemDialogState`.
  * Every click that opens something calls `useViewNavigation()`.
  */
-export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItemDetailViewProps>) {
+export function EntityItemDetailView({
+  toolbar,
+  allowEdit,
+  ...target
+}: Readonly<EntityItemDetailViewProps>) {
   const navigation = useViewNavigation();
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
@@ -43,7 +47,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   // With a toolbar, Delete goes in it. Without one, the variation draws its own next to Edit
   // (`onDeleted`).
   const deleteAction =
-    result.status === "success" && toolbar !== false && !isEditing ? (
+    result.status === "success" && toolbar !== false && (allowEdit ?? true) && !isEditing ? (
       <DeleteEntityItemButton
         item={result.entityItem}
         label="Delete"
@@ -62,6 +66,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
       <EntityItemAutoVariation
         entityItem={result.entityItem}
         refetch={result.refetch}
+        allowEdit={allowEdit}
         onRelationItemClick={({ entityName: relatedEntityName, itemId: relatedItemId }) =>
           navigation.openItem(relatedEntityName, relatedItemId)
         }

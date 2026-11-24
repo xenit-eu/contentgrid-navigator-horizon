@@ -133,7 +133,12 @@ function ItemPreview({ profile }: Readonly<{ profile: ProfileEntity }>) {
   }
   return (
     <PreviewFrame>
-      <EntityItemDetailView entityName={profile.name} itemId={firstItem.id} toolbar={false} />
+      <EntityItemDetailView
+        entityName={profile.name}
+        itemId={firstItem.id}
+        toolbar={false}
+        allowEdit={false}
+      />
     </PreviewFrame>
   );
 }
