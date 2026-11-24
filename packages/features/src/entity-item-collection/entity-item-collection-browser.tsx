@@ -39,6 +39,11 @@ export interface EntityItemCollectionBrowserProps {
    */
   readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
+   * The address of an item's own page, when the host has one: the row titles become real links to
+   * it, the plain click still going through `onEntityItemClick`.
+   */
+  readonly entityItemHref?: (item: EntityItem) => string | undefined;
+  /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).
    */
@@ -80,6 +85,7 @@ export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
+  entityItemHref,
   onPageChange,
   filters = EMPTY_FILTERS,
   onFiltersChange,
@@ -225,6 +231,7 @@ export function EntityItemCollectionBrowser({
           collection={collection.data}
           onEntityItemClick={handlePreview}
           onEntityItemOpen={onEntityItemClick}
+          entityItemHref={entityItemHref}
           currentItem={previewedItem}
           onPageChange={onPageChange}
           {...tableProps}

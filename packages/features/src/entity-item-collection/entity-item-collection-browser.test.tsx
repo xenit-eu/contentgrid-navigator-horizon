@@ -952,6 +952,8 @@ describe("EntityItemCollectionBrowser — item preview", () => {
 
       const row = await findRow("ABC-0");
       row.focus();
+      // The title button comes first, then the View action.
+      await user.tab();
       await user.tab();
       expect(within(row).getByRole("button", { name: "View" })).toHaveFocus();
       await user.keyboard(key);

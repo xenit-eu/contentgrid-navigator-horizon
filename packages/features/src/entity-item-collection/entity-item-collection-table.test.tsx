@@ -183,6 +183,41 @@ describe("EntityItemCollectionTable", () => {
     expect(screen.getByText("Showing 2 of 2 items")).toBeInTheDocument();
   });
 
+  it("keeps the entity icon and has no file line for an entity without a content attribute", async () => {
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const { container } = render(
+      <EntityItemCollectionTable profile={profile} collection={collection} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(container.querySelectorAll('[data-slot="icon-badge"]')).toHaveLength(2);
+    expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+    expect(screen.queryByText("No file")).not.toBeInTheDocument();
+  });
+
+  it("links each row's title to the item page when entityItemHref is given", async () => {
+    const user = userEvent.setup();
+    const { profile, collection, Wrapper } = await fetchCollection();
+    const onEntityItemClick = vi.fn();
+    const onEntityItemOpen = vi.fn();
+    render(
+      <EntityItemCollectionTable
+        profile={profile}
+        collection={collection}
+        onEntityItemClick={onEntityItemClick}
+        onEntityItemOpen={onEntityItemOpen}
+        entityItemHref={(item) => `/widget/${item.id}`}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const link = screen.getByRole("link", { name: "Acme" });
+    expect(link).toHaveAttribute("href", "/widget/1");
+    await user.click(link);
+    expect(onEntityItemOpen).toHaveBeenCalledOnce();
+    expect(onEntityItemClick).not.toHaveBeenCalled();
+  });
+
   it("calls onEntityItemClick with the item when a row is clicked", async () => {
     const user = userEvent.setup();
     const { profile, collection, Wrapper } = await fetchCollection();

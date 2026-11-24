@@ -41,6 +41,21 @@ describe("EntityItemCollectionView", () => {
     expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
   });
 
+  it("makes a row's title a link to the item page and opens it through the navigation object", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    const link = screen.getAllByRole("link", { name: "Acme Corp" })[0];
+    expect(link).toHaveAttribute(
+      "href",
+      recording.navigation.hrefFor?.item("customer", "cust-001"),
+    );
+    await userEvent.click(link);
+
+    expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
+  });
+
   it("offers create only when the profile has a create form", async () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });

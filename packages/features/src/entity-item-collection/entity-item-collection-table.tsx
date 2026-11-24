@@ -15,15 +15,12 @@ import {
   RecordTableRow,
   type RecordTableSortOption,
 } from "@contentgrid/ui";
-import {
-  AttributeValueRenderer,
-  EntityItemReference,
-  TABLE_ATTRIBUTE_MAX_CHAR_LENGTH,
-} from "../entity-item";
+import { AttributeValueRenderer, TABLE_ATTRIBUTE_MAX_CHAR_LENGTH } from "../entity-item";
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 import { notifyProblem } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
 import { columnTraits } from "./column-traits";
+import { EntityItemTitleCell } from "./entity-item-title-cell";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
@@ -32,6 +29,12 @@ export interface EntityItemCollectionTableProps {
   readonly onEntityItemClick?: (item: EntityItem) => void;
   /** Fired by the default View row action, which is shown only with it; receives that row's item. */
   readonly onEntityItemOpen?: (item: EntityItem) => void;
+  /**
+   * The address of an item's own page, when the host has one. With it each row's title is a real
+   * link (cmd/middle-click and "copy link" work); a plain click still goes through
+   * `onEntityItemOpen`. Without it the title is a button when `onEntityItemOpen` is set.
+   */
+  readonly entityItemHref?: (item: EntityItem) => string | undefined;
   /** The item to mark as the current row, e.g. the one previewed beside the table. */
   readonly currentItem?: EntityItem;
   /**
@@ -124,6 +127,7 @@ export function EntityItemCollectionTable({
   collection,
   onEntityItemClick,
   onEntityItemOpen,
+  entityItemHref,
   currentItem,
   onPageChange,
   currentSort,
@@ -239,7 +243,16 @@ export function EntityItemCollectionTable({
       >
         {collection.items.map((item) => {
           const cells: RecordTableCell[] = [
-            { key: REFERENCE_COLUMN_KEY, content: <EntityItemReference item={item} /> },
+            {
+              key: REFERENCE_COLUMN_KEY,
+              content: (
+                <EntityItemTitleCell
+                  item={item}
+                  onOpen={onEntityItemOpen}
+                  href={entityItemHref?.(item)}
+                />
+              ),
+            },
             ...attributeColumns.map((col) => {
               if (col.key === "id") {
                 return { key: col.key, content: item.id };
