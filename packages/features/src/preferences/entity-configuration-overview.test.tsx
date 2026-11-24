@@ -148,7 +148,17 @@ describe("EntityConfigurationOverview", () => {
     expect(screen.getByText("Defaults")).toBeInTheDocument();
   });
 
-  it("sums up the title and subtitle once the user changed the settings", () => {
+  it("still sums up as Defaults after only a colour or icon change", () => {
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(PROFILE_URL, "invoice", { color: "#ff0000", icon: "star" });
+    mockProfiles([makeProfile("invoice", "Invoices")]);
+    renderOverview();
+
+    expect(screen.getByText("Defaults")).toBeInTheDocument();
+  });
+
+  it("sums up the title and subtitle once the user picked one of them", () => {
     useEntityDisplayPreferencesStore
       .getState()
       .setOverride(PROFILE_URL, "invoice", { nameAttribute: "id" });

@@ -49,7 +49,8 @@ function OpenableCard({
         {description && <EntityCardDescription>{description}</EntityCardDescription>}
       </EntityCardText>
       <p className="mt-auto text-ui text-muted-foreground">
-        <span className="font-bold text-card-foreground">{count}</span> items
+        <span className="font-bold text-card-foreground">{count.toLocaleString()}</span>{" "}
+        {count === 1 ? "item" : "items"}
       </p>
     </EntityCard>
   );
@@ -82,13 +83,14 @@ export const WithOwnControls: Story = {
   render: () => (
     <div className="w-72">
       <EntityCard className="flex-row items-start">
-        <IconBadge
-          icon={<PackageIcon aria-hidden />}
-          color={sampleColor}
-          tinted
+        <button
+          type="button"
+          aria-label="Change icon and color for Products"
+          className="inline-flex shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={fn()}
-          aria-label="Change icon"
-        />
+        >
+          <IconBadge icon={<PackageIcon aria-hidden />} color={sampleColor} tinted />
+        </button>
         <EntityCardText className="flex-1">
           <EntityCardTitle>Products</EntityCardTitle>
           <EntityCardDescription>Defaults</EntityCardDescription>
@@ -101,18 +103,22 @@ export const WithOwnControls: Story = {
   ),
 };
 
+/**
+ * A long title, a long description and a card without a description in one row: the text clamps
+ * and every count line stays at the bottom of its card.
+ */
 export const Grid: Story = {
   render: () => (
     <EntityCardGrid>
       <OpenableCard
-        title="Invoices"
-        description="Supplier invoices with line items and the scanned document."
-        count={1284}
+        title="Purchase order confirmations from external suppliers"
+        description="Replies from suppliers to a purchase order."
+        count={1}
         icon={<FileTextIcon aria-hidden />}
       />
       <OpenableCard
         title="Products"
-        description="Catalogue items that can appear on invoices."
+        description="Catalogue items that can appear on invoices, with their prices, the units they are sold in, the suppliers that deliver them and the stock that is left in every warehouse."
         count={1204}
         icon={<PackageIcon aria-hidden />}
       />

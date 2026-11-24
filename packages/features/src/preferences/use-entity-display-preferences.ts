@@ -15,8 +15,8 @@ export interface UseEntityDisplayPreferencesResult {
   readonly nameAttribute: ProfileAttribute | undefined;
   /** `preferences.subtitleAttribute` resolved against the profile, or `undefined` if unresolvable. */
   readonly subtitleAttribute: ProfileAttribute | undefined;
-  /** Whether the user changed any of this entity's display settings on the current backend. */
-  readonly hasOverride: boolean;
+  /** Whether the user picked this entity's title or subtitle attribute on the current backend. */
+  readonly hasNamingOverride: boolean;
   /** Persist a partial override for this entity, scoped to the current backend. */
   readonly setOverride: (partial: Partial<EntityDisplayPreferences>) => void;
 }
@@ -67,7 +67,8 @@ export function useEntityDisplayPreferences(
     subtitleAttribute: preferences.subtitleAttribute
       ? profileEntity?.getAttribute(preferences.subtitleAttribute)
       : undefined,
-    hasOverride: override !== undefined && Object.keys(override).length > 0,
+    hasNamingOverride:
+      override?.nameAttribute !== undefined || override?.subtitleAttribute !== undefined,
     setOverride: (partial) => {
       if (!entityName) return; // no resolved entity to scope this override to
       setOverrideRaw(profileUrl, entityName, partial);

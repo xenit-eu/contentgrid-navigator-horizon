@@ -96,7 +96,7 @@ export function EntityConfigurationCard({
   profile,
   onSelect,
 }: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {
-  const { preferences, nameAttribute, subtitleAttribute, hasOverride, setOverride } =
+  const { preferences, nameAttribute, subtitleAttribute, hasNamingOverride, setOverride } =
     useEntityDisplayPreferences(profile);
 
   return (
@@ -127,7 +127,9 @@ export function EntityConfigurationCard({
       <EntityCardText className="flex-1">
         <EntityCardTitle>{profile.pluralName}</EntityCardTitle>
         <EntityCardDescription>
-          {hasOverride ? describeTitleAndSubtitle(nameAttribute, subtitleAttribute) : "Defaults"}
+          {hasNamingOverride
+            ? describeTitleAndSubtitle(nameAttribute, subtitleAttribute)
+            : "Defaults"}
         </EntityCardDescription>
         <Button
           variant="link"

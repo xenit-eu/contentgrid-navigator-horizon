@@ -8,6 +8,7 @@ import {
   EntityCard,
   EntityCardArrow,
   EntityCardDescription,
+  EntityCardGrid,
   EntityCardSkeleton,
   EntityCardText,
   EntityCardTitle,
@@ -42,11 +43,11 @@ function EntityOverview({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
+      <EntityCardGrid>
         {[1, 2, 3, 4].map((i) => (
           <EntityCardSkeleton key={i} className="h-36" />
         ))}
-      </div>
+      </EntityCardGrid>
     );
   }
 
@@ -60,7 +61,7 @@ function EntityOverview({
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
+    <EntityCardGrid>
       {loadedProfiles.map((profile) => (
         <EntityCardConnected
           key={profile.name}
@@ -68,7 +69,7 @@ function EntityOverview({
           onSelect={() => onSelectEntity(profile)}
         />
       ))}
-    </div>
+    </EntityCardGrid>
   );
 }
 
@@ -93,12 +94,17 @@ function EntityCardConnected({
           <EntityCardDescription>{profile.description}</EntityCardDescription>
         )}
       </EntityCardText>
-      <p className="mt-auto text-ui text-muted-foreground">
-        <span className="font-bold text-card-foreground">
-          {collection.data?.totalItems?.count ?? "—"}
-        </span>{" "}
-        items
-      </p>
+      <ItemCountLine count={collection.data?.totalItems?.count} />
     </EntityCard>
+  );
+}
+
+/** "1 item", "1,284 items"; a dash while the count is unknown. */
+function ItemCountLine({ count }: Readonly<{ count: number | undefined }>) {
+  return (
+    <p className="mt-auto text-ui text-muted-foreground">
+      <span className="font-bold text-card-foreground">{count?.toLocaleString() ?? "—"}</span>{" "}
+      {count === 1 ? "item" : "items"}
+    </p>
   );
 }

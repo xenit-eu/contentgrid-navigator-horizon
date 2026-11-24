@@ -10,7 +10,7 @@ export interface EntityItemCardProps {
   /** The variation's `actions`, drawn in the card header's top-right corner. */
   readonly actions?: ReactNode;
   /** The card body, edge to edge — e.g. `EntityItemSections`. */
-  readonly children?: ReactNode;
+  readonly children: ReactNode;
 }
 
 /**
@@ -37,7 +37,7 @@ export function EntityItemCard({
           </div>
         )}
       </CardHeader>
-      {children && <CardContent className="mt-auto px-0">{children}</CardContent>}
+      <CardContent className="mt-auto px-0">{children}</CardContent>
     </Card>
   );
 }
