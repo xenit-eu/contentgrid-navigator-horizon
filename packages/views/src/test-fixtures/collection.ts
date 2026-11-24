@@ -74,11 +74,34 @@ const emptyCustomerCollectionBody = {
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { "Content-Type": "application/hal+json" } });
 
-/** A fetch that answers the collection fixture; anything else goes to the item-detail fixture. */
+/** The `page` object of a HAL response: its size and total (`total_items_exact` or `_estimate`). */
+export type CollectionPageFixture = Readonly<{
+  size: number;
+  total_items_exact?: number;
+  total_items_estimate?: number;
+}>;
+
+/**
+ * A fetch that answers the collection fixture; anything else goes to the item-detail fixture.
+ * `unfilteredPage` and `filteredPage` set the `page` object of the plain collection and of a
+ * request that filters by `name~prefix`.
+ */
 export function createCollectionFixtureFetch(
-  options: Readonly<{ searchable?: boolean; creatable?: boolean; empty?: boolean }> = {},
+  options: Readonly<{
+    searchable?: boolean;
+    creatable?: boolean;
+    empty?: boolean;
+    unfilteredPage?: CollectionPageFixture;
+    filteredPage?: CollectionPageFixture;
+  }> = {},
 ) {
-  const { searchable = true, creatable = true, empty = false } = options;
+  const {
+    searchable = true,
+    creatable = true,
+    empty = false,
+    unfilteredPage,
+    filteredPage,
+  } = options;
   const itemFixture = createFixtureFetch();
   const collectionRequests: string[] = [];
 
@@ -99,7 +122,9 @@ export function createCollectionFixtureFetch(
     }
     if (url === CUSTOMER_COLLECTION_URL || url.startsWith(`${CUSTOMER_COLLECTION_URL}?`)) {
       collectionRequests.push(url);
-      return json(empty ? emptyCustomerCollectionBody : customerCollectionBody);
+      if (empty) return json(emptyCustomerCollectionBody);
+      const page = decodeURIComponent(url).includes("name~prefix=") ? filteredPage : unfilteredPage;
+      return json(page ? { ...customerCollectionBody, page } : customerCollectionBody);
     }
     return itemFixture.fetch(input);
   };

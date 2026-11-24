@@ -18,6 +18,7 @@ import { EntityItemReference } from "../entity-item";
 import { EntitySearchBar } from "../entity-search-bar";
 import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
+import { EntityItemCollectionTitle } from "./entity-item-collection-title";
 import { EntityItemPreviewPane } from "./entity-item-preview-pane";
 import { useEntityItemCollectionSearch } from "./use-entity-item-collection-search";
 
@@ -222,6 +223,14 @@ export function EntityItemCollectionBrowser({
 
   return (
     <div ref={rootRef} className="flex h-full min-h-0 flex-col">
+      {/* From the profile on, so it is there while the page loads, fails or is empty too. The
+          count is the shown search's own total; while a new search loads, the previous one's. */}
+      <EntityItemCollectionTitle
+        profile={profile}
+        total={collection.data?.totalItems}
+        isFiltered={activeFilterCount > 0}
+      />
+
       {onFiltersChange && !isEmptyCollection && (
         <EntitySearchBar
           className="shrink-0 p-4"

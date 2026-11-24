@@ -15,6 +15,15 @@ describe("formatCount", () => {
     expect(formatCount({ count: 1204, isEstimated: true })).toBe("~1 204");
   });
 
+  it("marks an estimate with a word when asked to", () => {
+    expect(formatCount({ count: 1204, isEstimated: true }, { estimate: "word" })).toBe(
+      "about 1\u202f204",
+    );
+    expect(formatCount({ count: 1204, isEstimated: false }, { estimate: "word" })).toBe(
+      "1\u202f204",
+    );
+  });
+
   it("shows zero", () => {
     expect(formatCount({ count: 0, isEstimated: false })).toBe("0");
   });
