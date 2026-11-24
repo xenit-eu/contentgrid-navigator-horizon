@@ -82,7 +82,13 @@ export const WithOwnControls: Story = {
   render: () => (
     <div className="w-72">
       <EntityCard className="flex-row items-start">
-        <IconBadge icon={<PackageIcon aria-hidden />} color={sampleColor} tinted onClick={fn()} />
+        <IconBadge
+          icon={<PackageIcon aria-hidden />}
+          color={sampleColor}
+          tinted
+          onClick={fn()}
+          aria-label="Change icon"
+        />
         <EntityCardText className="flex-1">
           <EntityCardTitle>Products</EntityCardTitle>
           <EntityCardDescription>Defaults</EntityCardDescription>
