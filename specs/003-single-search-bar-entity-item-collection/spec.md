@@ -34,7 +34,7 @@
 - Q: Do filters set through a quick filter also appear as chips in the top row? → A: Yes. The chip row lists every active filter from any source; quick-filter buttons show their active state as well.
 - Q: Where does a user choose which attributes take part in search? → A: In the existing column/display preferences control, next to the visible-columns choice. No extra control on the search surface.
 - Q (after implementation review): Where do the collection's "Columns" and "Filters" buttons go? → A: On the quick-filter row, right-aligned where they were; the quick filters to their left scroll horizontally.
-- Q (after implementation review): Does the collection page keep its page title above the search bar? → A: No, it is removed to give the list more height; the breadcrumbs and the table footer's item count remain.
+- Q (after implementation review): Does the collection page keep its page title above the search bar? → A: No, it is removed to give the list more height; the breadcrumbs and the table footer's item count remain. (Superseded by the newer reference design: the page shows a title block with the item count, see FR-001a.)
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -209,7 +209,7 @@ A configuration layer sets which attributes take part in the search surface for 
 **Layout**
 
 - **FR-001**: The search surface MUST consist of three stacked rows on the entity item collection page: active-filter chips (top), the main search bar (middle), quick filters (bottom).
-- **FR-001a**: The entity item collection page MUST NOT show a page title block (heading, entity icon, item count) above the search surface, so the list gets that height; the breadcrumbs still name the entity and the table footer still shows the item count.
+- **FR-001a**: The entity item collection page MUST show a title block above the search surface: the entity's plural name with its item count, and, while a search or filter is active, a line with the unfiltered total. The title block has no entity icon.
 - **FR-002**: The search surface MUST only offer search parameters that the entity's search form provides; it MUST NOT invent parameters or operators.
 
 **Active-filter chips**
