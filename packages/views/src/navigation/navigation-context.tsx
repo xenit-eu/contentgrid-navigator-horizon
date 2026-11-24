@@ -27,7 +27,7 @@ export interface Navigation {
   openItem(entityName: string, id: string, options?: NavigationOptions): void;
   /** Opens the create form for an entity (a missing relation target is opened with `openInNewTab`). */
   openCreateItem(entityName: string, options?: NavigationOptions): void;
-  /** Opens the create page where the user first picks which entity to create (the sidebar's "Create Item"). */
+  /** Opens the create page where the user first picks which entity to create (the sidebar's "Create"). */
   openClassifyCreate(options?: NavigationOptions): void;
   /** Opens the application's settings (the user menu's "Settings"). */
   openSettings(options?: NavigationOptions): void;

@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
-import { FilePlusIcon, HouseIcon } from "@phosphor-icons/react";
+import { GearIcon, HouseIcon, PlusIcon } from "@phosphor-icons/react";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
   BRANDING_HEADER_HEIGHT,
   BrandingHeader,
-  Button,
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarInset,
   SidebarLinkButton,
+  SidebarMenu,
   SidebarProvider,
   SidebarTrigger,
   UserMenu,
-  useSidebar,
 } from "@contentgrid/ui";
 import { handleNavigationClick } from "../navigation";
 import { SidebarEntityNav } from "./sidebar-entity-nav";
@@ -33,6 +33,10 @@ export interface SideBarLayoutProps {
   readonly onOpenSettings: () => void;
   /** A settings page is open: the user menu's Settings item shows its "current" state. */
   readonly settingsCurrent?: boolean;
+  /** The settings page's real address, when the host has one: the Settings row then renders as `<a href>`. */
+  readonly settingsHref?: string;
+  /** The home page is open: the Home row shows its "current" state. */
+  readonly homeCurrent?: boolean;
   /** Real addresses, when the host has them: the home and entity links then render as `<a href>`. */
   readonly homeHref?: string;
   readonly entityHref?: (entityName: string) => string;
@@ -47,6 +51,8 @@ export function SideBarLayout({
   onOpenCreate,
   onOpenSettings,
   settingsCurrent,
+  settingsHref,
+  homeCurrent,
   homeHref,
   entityHref,
 }: SideBarLayoutProps) {
@@ -81,10 +87,36 @@ export function SideBarLayout({
           }}
           collapsible="icon"
         >
-          <SideBarTopControls onOpenHome={onOpenHome} homeHref={homeHref} />
           <SidebarContent>
-            <SidebarGroup className="pb-0 mb-0">
-              <SidebarCreateItemButton onOpenCreate={onOpenCreate} />
+            <SidebarGroup className="pb-0">
+              <SidebarMenu>
+                <SidebarLinkButton
+                  icon={<PlusIcon aria-hidden />}
+                  label="Create"
+                  variant="primary"
+                  className="mb-2.5"
+                  onClick={onOpenCreate}
+                />
+                <SidebarLinkButton
+                  icon={<HouseIcon aria-hidden />}
+                  label="Home"
+                  isActive={homeCurrent}
+                  aria-current={homeCurrent ? "page" : undefined}
+                  onClick={homeHref === undefined ? onOpenHome : undefined}
+                  render={
+                    homeHref === undefined
+                      ? undefined
+                      : (content) => (
+                          <a
+                            href={homeHref}
+                            onClick={(event) => handleNavigationClick(event, onOpenHome)}
+                          >
+                            {content}
+                          </a>
+                        )
+                  }
+                />
+              </SidebarMenu>
             </SidebarGroup>
             <SidebarEntityNav
               profiles={loadedProfiles}
@@ -94,6 +126,31 @@ export function SideBarLayout({
               entityHref={entityHref}
             />
           </SidebarContent>
+          {/* Outside the scrolling content: the sidebar is as tall as the window, so Settings stays
+              at the bottom and only the entity list scrolls when it is longer than the window. */}
+          <SidebarFooter className="px-3 pb-3 group-data-[collapsible=icon]:px-2">
+            <SidebarMenu>
+              <SidebarLinkButton
+                icon={<GearIcon aria-hidden className="text-muted-foreground" />}
+                label="Settings"
+                isActive={settingsCurrent}
+                aria-current={settingsCurrent ? "page" : undefined}
+                onClick={settingsHref === undefined ? onOpenSettings : undefined}
+                render={
+                  settingsHref === undefined
+                    ? undefined
+                    : (content) => (
+                        <a
+                          href={settingsHref}
+                          onClick={(event) => handleNavigationClick(event, onOpenSettings)}
+                        >
+                          {content}
+                        </a>
+                      )
+                }
+              />
+            </SidebarMenu>
+          </SidebarFooter>
         </Sidebar>
 
         <SidebarInset className="min-h-0 overflow-hidden">
@@ -104,53 +161,5 @@ export function SideBarLayout({
         </SidebarInset>
       </div>
     </SidebarProvider>
-  );
-}
-
-// The sidebar toggle lives in the header; the top of the sidebar only holds Home.
-// Collapsed (icon-only) the button is centred, expanded it sits at the start.
-function SideBarTopControls({
-  onOpenHome,
-  homeHref,
-}: {
-  readonly onOpenHome: () => void;
-  readonly homeHref?: string;
-}) {
-  const { open, isMobile } = useSidebar();
-
-  const homeContent = (
-    <>
-      <HouseIcon aria-hidden />
-      <span className="sr-only">Home</span>
-    </>
-  );
-  const home =
-    homeHref === undefined ? (
-      <Button variant="ghost" size="icon" className="size-7" onClick={onOpenHome}>
-        {homeContent}
-      </Button>
-    ) : (
-      <Button asChild variant="ghost" size="icon" className="size-7">
-        <a href={homeHref} onClick={(event) => handleNavigationClick(event, onOpenHome)}>
-          {homeContent}
-        </a>
-      </Button>
-    );
-
-  return (
-    <div className={`flex items-center p-2 ${open || isMobile ? "" : "justify-center"}`}>
-      {home}
-    </div>
-  );
-}
-
-function SidebarCreateItemButton({ onOpenCreate }: { readonly onOpenCreate: () => void }) {
-  return (
-    <SidebarLinkButton
-      icon={<FilePlusIcon aria-hidden />}
-      label="Create Item"
-      variant="primary"
-      onClick={onOpenCreate}
-    />
   );
 }

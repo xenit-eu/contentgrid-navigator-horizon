@@ -21,6 +21,6 @@ export async function sidebarNavigatorDataMock(
     ...actual,
     useAppAuth: vi.fn(),
     useLoadedProfileEntities: vi.fn(),
-    useCachedEntityItemCollection: () => ({ data: undefined }),
+    useEntityItemCollection: vi.fn(() => ({ data: undefined, isLoading: false })),
   };
 }

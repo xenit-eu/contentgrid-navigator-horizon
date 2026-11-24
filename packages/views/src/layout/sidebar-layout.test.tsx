@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockSidebarData } from "../test-fixtures/sidebar-harness";
 import { SideBarLayout, type SideBarLayoutProps } from "./sidebar-layout";
 
@@ -35,6 +35,11 @@ function renderLayout(user: unknown, props: Partial<SideBarLayoutProps> = {}) {
 }
 
 describe("SideBarLayout", () => {
+  // The sidebar remembers its state in a cookie; do not let one test's toggle leak into the next.
+  beforeEach(() => {
+    document.cookie = "sidebar_state=; path=/; max-age=0";
+  });
+
   it("hides the user menu when there is no authenticated user", () => {
     renderLayout(null);
     expect(screen.getByTestId("banner")).toBeInTheDocument();
@@ -56,7 +61,7 @@ describe("SideBarLayout", () => {
     const handlers = renderLayout(null);
 
     await userEvent.click(screen.getByRole("button", { name: /invoice/i }));
-    await userEvent.click(screen.getByRole("button", { name: "Create Item" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await userEvent.click(screen.getByRole("button", { name: "Home" }));
 
     expect(handlers.onOpenEntity).toHaveBeenCalledWith("invoice");
@@ -64,11 +69,49 @@ describe("SideBarLayout", () => {
     expect(handlers.onOpenHome).toHaveBeenCalledTimes(1);
   });
 
+  it("shows Home as a labelled row under Create, current on the home page", async () => {
+    renderLayout(null, { homeCurrent: true });
+
+    const rows = screen.getAllByRole("button", { name: /^(Create|Home)$/ });
+    expect(rows.map((row) => row.textContent)).toEqual(["Create", "Home"]);
+    expect(screen.getByRole("button", { name: "Home" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Home" })).toHaveAttribute("data-active", "true");
+    expect(screen.getByRole("button", { name: "Create" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("does not mark Home as current elsewhere", () => {
+    renderLayout(null);
+    expect(screen.getByRole("button", { name: "Home" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("has a Settings row at the bottom of the sidebar, outside the scrolling list", async () => {
+    const handlers = renderLayout(null, { settingsCurrent: true });
+
+    const row = screen.getByRole("button", { name: "Settings" });
+    const footer = row.closest("[data-slot='sidebar-footer']");
+    expect(footer).toBeInTheDocument();
+    expect(footer?.closest("[data-slot='sidebar-inner']")?.lastElementChild).toBe(footer);
+    expect(row.closest("[data-slot='sidebar-content']")).toBeNull();
+    expect(row).toHaveAttribute("aria-current", "page");
+    expect(row).toHaveAttribute("data-active", "true");
+
+    await userEvent.click(row);
+    expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the Settings row as a link when the host has an address", () => {
+    renderLayout(null, { settingsHref: "/~configuration" });
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/~configuration",
+    );
+  });
+
   it("opens settings from the user menu", async () => {
     const handlers = renderLayout({ profile: { name: "Jane Doe", email: "j@example.com" } });
 
     await userEvent.click(screen.getByRole("button", { name: /jane doe/i }));
-    await userEvent.click(await screen.findByText("Settings"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Settings" }));
 
     expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
   });
@@ -129,6 +172,25 @@ describe("SideBarLayout", () => {
     expect(screen.getByRole("banner")).toContainElement(toggles[0]);
 
     await userEvent.click(toggles[0]);
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+
+  it("opens collapsed after a reload when it was collapsed, and keeps toggling", async () => {
+    document.cookie = "sidebar_state=false; path=/";
+    renderLayout(null);
+
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand sidebar" }));
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
+    expect(document.cookie).toContain("sidebar_state=true");
+  });
+
+  it("toggles with the [ key", async () => {
+    renderLayout(null);
+
+    fireEvent.keyDown(window, { key: "[" });
+
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
   });
 });
