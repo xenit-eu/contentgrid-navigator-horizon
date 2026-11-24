@@ -15,11 +15,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Font sizes of the reference design that Tailwind's scale (12, 14, 16px…) lacks. A name added
+ * here also goes into `fontSizes` in `src/lib/utils.ts`, so `cn` merges it like `text-sm`. */
+@theme {
+  /* 13px: the standard text of the interface, e.g. a card's details. */
+  --text-ui: 0.8125rem;
+  /* 15px: the title of a card. */
+  --text-card-title: 0.9375rem;
+}
+
 /* Container width — 880px, from which a view has room for two panes side by side, e.g. a form
  * and its file preview. Used by the `@side-by-side:` classes inside an `@container`, and read by
  * `useContainerWidthAtLeast`; `static` also sets it on :root so that hook can read it. */
 @theme static {
   --container-side-by-side: 55rem;
+  /* Widest a page's content runs (1180px). */
+  --container-page: 73.75rem;
 }
 
 @theme inline {

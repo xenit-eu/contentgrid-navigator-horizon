@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { useEntityItemCollection, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { EntityCountOverview } from "./entity-count-overview";
 
@@ -12,9 +12,15 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   return {
     ...actual,
     useLoadedProfileEntities: vi.fn(),
-    useEntityItemCollection: () => ({ data: { totalItems: { count: 7 } } }),
+    useEntityItemCollection: vi.fn(() => ({ data: { totalItems: { count: 7 } } })),
   };
 });
+
+function mockCollection(collection: unknown) {
+  vi.mocked(useEntityItemCollection).mockReturnValue(
+    collection as ReturnType<typeof useEntityItemCollection>,
+  );
+}
 
 function invoiceProfile() {
   return makeProfileEntity(
@@ -60,6 +66,37 @@ describe("EntityCountOverview", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /^Create/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Create/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { name: "a single item", total: { count: 1, isEstimated: false }, text: "1 item" },
+    {
+      name: "a formatted count",
+      total: { count: 1284, isEstimated: false },
+      text: `${(1284).toLocaleString()} items`,
+    },
+    {
+      name: "an estimate",
+      total: { count: 1204, isEstimated: true },
+      text: `about ${(1204).toLocaleString()} items`,
+    },
+  ])("shows $name on the card's count line", ({ total, text }) => {
+    mockCollection({ data: { totalItems: total }, isFetching: false });
+    mockProfiles([invoiceProfile()]);
+    render(<EntityCountOverview onOpenEntity={vi.fn()} />);
+
+    expect(screen.getByRole("button")).toHaveTextContent(new RegExp(`${text}$`));
+  });
+
+  it("shows a dash while the count loads, then says when there is none", () => {
+    mockProfiles([invoiceProfile()]);
+    mockCollection({ data: undefined, isFetching: true });
+    const { rerender } = render(<EntityCountOverview onOpenEntity={vi.fn()} />);
+    expect(screen.getByText("—")).toBeInTheDocument();
+
+    mockCollection({ data: undefined, isFetching: false });
+    rerender(<EntityCountOverview onOpenEntity={vi.fn()} />);
+    expect(screen.getByText("Count not available")).toBeInTheDocument();
   });
 
   it("shows an empty state without entities", () => {

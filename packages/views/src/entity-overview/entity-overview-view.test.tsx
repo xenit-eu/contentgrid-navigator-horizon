@@ -20,24 +20,36 @@ vi.mock("@contentgrid/navigator-data", async (importOriginal) => {
   };
 });
 
+function renderWithOneEntity() {
+  vi.mocked(useLoadedProfileEntities).mockReturnValue({
+    profiles: [
+      makeProfileEntity(
+        { name: "invoice", title: "Invoice", description: "" },
+        "https://example.com/profile/invoices",
+        "invoice",
+      ),
+    ],
+    isLoading: false,
+  } as unknown as ReturnType<typeof useLoadedProfileEntities>);
+  const recording = createRecordingNavigation();
+  render(
+    <RecordingNavigationProvider recording={recording}>
+      <EntityOverviewView />
+    </RecordingNavigationProvider>,
+  );
+  return recording;
+}
+
 describe("EntityOverviewView", () => {
+  it("has a page heading for screen readers that is visually hidden", () => {
+    renderWithOneEntity();
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Home" });
+    expect(heading).toHaveClass("sr-only");
+  });
+
   it("opens an entity's collection through the navigation context", async () => {
-    vi.mocked(useLoadedProfileEntities).mockReturnValue({
-      profiles: [
-        makeProfileEntity(
-          { name: "invoice", title: "Invoice", description: "" },
-          "https://example.com/profile/invoices",
-          "invoice",
-        ),
-      ],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useLoadedProfileEntities>);
-    const recording = createRecordingNavigation();
-    render(
-      <RecordingNavigationProvider recording={recording}>
-        <EntityOverviewView />
-      </RecordingNavigationProvider>,
-    );
+    const recording = renderWithOneEntity();
 
     await userEvent.click(screen.getByText("3"));
 

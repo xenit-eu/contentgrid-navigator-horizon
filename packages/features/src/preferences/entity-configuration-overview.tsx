@@ -1,17 +1,25 @@
 import { type ReactNode, useState } from "react";
-import { GearIcon as Gear, WrenchIcon } from "@phosphor-icons/react";
-import { type ProfileEntity, useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import { WrenchIcon } from "@phosphor-icons/react";
+import {
+  type ProfileAttribute,
+  type ProfileEntity,
+  useLoadedProfileEntities,
+} from "@contentgrid/navigator-data";
 import {
   Alert,
   Button,
   EntityCard,
+  EntityCardDescription,
+  EntityCardGrid,
+  EntityCardSkeleton,
+  EntityCardText,
+  EntityCardTitle,
   IconBadge,
   IconColorPickerContent,
   PageTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Skeleton,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 import { EntityColorThemeSelector } from "./entity-color-theme-selector";
@@ -23,10 +31,9 @@ export interface EntityConfigurationOverviewProps {
 
 /**
  * Entity selector for the `~configuration` area: a theme selector (bulk-assigns a color per
- * entity, cycling with duplicates allowed) above one `EntityCard` per discovered entity,
- * each showing its configured icon/color with a configuration (gear) action instead of the
- * dashboard's "create" action — selecting a card (title or gear) opens that entity's
- * configuration detail page.
+ * entity, cycling with duplicates allowed) above one card per discovered entity. A card's icon
+ * opens the icon and color picker, a line sums up its display settings, and "Configure" opens
+ * that entity's configuration page.
  */
 export function EntityConfigurationOverview({
   onSelectEntity,
@@ -37,11 +44,11 @@ export function EntityConfigurationOverview({
   let content: ReactNode;
   if (isLoading && profiles.length === 0) {
     content = (
-      <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <EntityCardGrid>
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          <EntityCardSkeleton key={i} className="h-28" />
         ))}
-      </div>
+      </EntityCardGrid>
     );
   } else if (profiles.length === 0) {
     content = (
@@ -52,7 +59,7 @@ export function EntityConfigurationOverview({
     );
   } else {
     content = (
-      <div className="grid grid-cols-4 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <EntityCardGrid>
         {profiles.map((profile) => (
           <EntityConfigurationCard
             key={profile.name}
@@ -60,7 +67,7 @@ export function EntityConfigurationOverview({
             onSelect={() => onSelectEntity(profile)}
           />
         ))}
-      </div>
+      </EntityCardGrid>
     );
   }
 
@@ -89,52 +96,67 @@ export function EntityConfigurationCard({
   profile,
   onSelect,
 }: Readonly<{ profile: ProfileEntity; onSelect: () => void }>) {
-  const { preferences, setOverride } = useEntityDisplayPreferences(profile);
+  const { preferences, nameAttribute, subtitleAttribute, hasNamingOverride, setOverride } =
+    useEntityDisplayPreferences(profile);
 
   return (
-    <EntityCard
-      name={profile.name}
-      title={profile.pluralName}
-      description={profile.description || undefined}
-      icon={
-        <Popover>
-          <PopoverTrigger asChild>
-            {/* The asChild target must be a real DOM element so Radix can anchor/position
-                the popover off it — EntityIconBadge/IconBadge don't forward refs, so they
-                can't be the target directly. A plain button wrapping the (non-interactive)
-                badge mirrors ColorPicker's own custom-trigger pattern. */}
-            <button
-              type="button"
-              aria-label={`Change icon and color for ${profile.pluralName}`}
-              className="inline-flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <EntityIconBadge variant="sm" profile={profile} />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-80">
-            <IconColorPickerContent
-              icon={preferences.icon}
-              onIconChange={(icon) => setOverride({ icon })}
-              color={preferences.color}
-              onColorChange={(color) => setOverride({ color })}
-            />
-          </PopoverContent>
-        </Popover>
-      }
-      onCardClick={onSelect}
-      action={
+    <EntityCard className="flex-row items-start">
+      <Popover>
+        <PopoverTrigger asChild>
+          {/* The asChild target must be a real DOM element so Radix can anchor/position
+              the popover off it — EntityIconBadge/IconBadge don't forward refs, so they
+              can't be the target directly. A plain button wrapping the (non-interactive)
+              badge mirrors ColorPicker's own custom-trigger pattern. */}
+          <button
+            type="button"
+            aria-label={`Change icon and color for ${profile.pluralName}`}
+            className="inline-flex shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <EntityIconBadge profile={profile} tinted />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80">
+          <IconColorPickerContent
+            icon={preferences.icon}
+            onIconChange={(icon) => setOverride({ icon })}
+            color={preferences.color}
+            onColorChange={(color) => setOverride({ color })}
+          />
+        </PopoverContent>
+      </Popover>
+      <EntityCardText className="flex-1">
+        <EntityCardTitle>{profile.pluralName}</EntityCardTitle>
+        <EntityCardDescription>
+          {hasNamingOverride
+            ? describeTitleAndSubtitle(nameAttribute, subtitleAttribute)
+            : "Defaults"}
+        </EntityCardDescription>
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={(event) => {
-            event.stopPropagation();
-            onSelect();
-          }}
+          variant="link"
+          size="xs"
+          className="h-auto p-0 text-ui font-semibold"
+          aria-label={`Configure ${profile.pluralName}`}
+          onClick={onSelect}
         >
-          <Gear className="h-4 w-4" aria-hidden />
-          <span className="sr-only">Configure {profile.pluralName}</span>
+          Configure
         </Button>
-      }
-    />
+      </EntityCardText>
+    </EntityCard>
   );
+}
+
+/** "Title: Reference · Subtitle: Supplier": which attributes name the entity's items. */
+function describeTitleAndSubtitle(
+  nameAttribute: ProfileAttribute | undefined,
+  subtitleAttribute: ProfileAttribute | undefined,
+) {
+  const title = nameAttribute ? `Title: ${attributeLabel(nameAttribute)}` : "No title";
+  const subtitle = subtitleAttribute
+    ? `Subtitle: ${attributeLabel(subtitleAttribute)}`
+    : "No subtitle";
+  return `${title} · ${subtitle}`;
+}
+
+function attributeLabel(attribute: ProfileAttribute) {
+  return attribute.title ?? attribute.name;
 }
