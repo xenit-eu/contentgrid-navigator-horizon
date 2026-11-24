@@ -1,3 +1,4 @@
+import { SidebarSimpleIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "storybook/test";
 import { Button } from "../../primitives/button";
@@ -50,12 +51,12 @@ export const WithInteraction: Story = {
   },
 };
 
-export const WithMobileLeading: Story = {
-  tags: ["no-visual-test"],
+export const WithLeading: Story = {
   args: {
-    mobileLeading: (
-      <Button variant="ghost" size="icon">
-        ☰
+    leading: (
+      <Button variant="ghost" size="icon" className="size-8 text-white hover:bg-white/10">
+        <SidebarSimpleIcon aria-hidden />
+        <span className="sr-only">Collapse sidebar</span>
       </Button>
     ),
   },

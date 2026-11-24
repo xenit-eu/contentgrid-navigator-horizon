@@ -3,7 +3,7 @@ import type { Locator, Page, TestInfo } from "@playwright/test";
 import { LoginPage } from "./LoginPage";
 
 async function expandSidebarAndClick(page: Page, link: Locator): Promise<void> {
-  const toggleBtn = page.getByRole("button", { name: "Toggle Sidebar" });
+  const toggleBtn = page.getByRole("button", { name: /^(Expand|Collapse) sidebar$/ });
   await toggleBtn.or(link).first().waitFor();
   if (await page.locator('[data-slot="sidebar"][data-state="collapsed"]').isVisible()) {
     await toggleBtn.click();

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { FilePlusIcon, HouseIcon } from "@phosphor-icons/react";
 import { useAppAuth, useLoadedProfileEntities } from "@contentgrid/navigator-data";
 import {
+  BRANDING_HEADER_HEIGHT,
   BrandingHeader,
   Button,
   Sidebar,
@@ -11,7 +12,6 @@ import {
   SidebarLinkButton,
   SidebarProvider,
   SidebarTrigger,
-  ThemeToggle,
   UserMenu,
   useSidebar,
 } from "@contentgrid/ui";
@@ -31,6 +31,8 @@ export interface SideBarLayoutProps {
   readonly onOpenEntity: (entityName: string) => void;
   readonly onOpenCreate: () => void;
   readonly onOpenSettings: () => void;
+  /** A settings page is open: the user menu's Settings item shows its "current" state. */
+  readonly settingsCurrent?: boolean;
   /** Real addresses, when the host has them: the home and entity links then render as `<a href>`. */
   readonly homeHref?: string;
   readonly entityHref?: (entityName: string) => string;
@@ -44,6 +46,7 @@ export function SideBarLayout({
   onOpenEntity,
   onOpenCreate,
   onOpenSettings,
+  settingsCurrent,
   homeHref,
   entityHref,
 }: SideBarLayoutProps) {
@@ -53,14 +56,14 @@ export function SideBarLayout({
   return (
     <SidebarProvider className="h-svh flex-col">
       <BrandingHeader
-        mobileLeading={<SidebarTrigger className="text-white hover:bg-white/10 hover:text-white" />}
+        leading={<SidebarTrigger className="text-white hover:bg-white/10 hover:text-white" />}
         actions={
           <>
-            <ThemeToggle />
             {auth.user && (
               <UserMenu
                 name={auth.user.profile.name ?? auth.user.profile.email ?? ""}
                 email={auth.user.profile.email ?? ""}
+                settingsCurrent={settingsCurrent}
                 onSettingsClick={onOpenSettings}
                 onLogOut={() => auth.signoutRedirect()}
               />
@@ -71,7 +74,13 @@ export function SideBarLayout({
         onLogoClick={onOpenHome}
       />
       <div className="flex min-h-0 w-full flex-1">
-        <Sidebar style={{ top: "3.75rem", height: "calc(100svh - 3.75rem)" }} collapsible="icon">
+        <Sidebar
+          style={{
+            top: BRANDING_HEADER_HEIGHT,
+            height: `calc(100svh - ${BRANDING_HEADER_HEIGHT})`,
+          }}
+          collapsible="icon"
+        >
           <SideBarTopControls onOpenHome={onOpenHome} homeHref={homeHref} />
           <SidebarContent>
             <SidebarGroup className="pb-0 mb-0">
@@ -98,9 +107,8 @@ export function SideBarLayout({
   );
 }
 
-// The mobile sidebar always renders as a full-width Sheet with no icon-only
-// mode, so it's treated the same as "expanded" here — only the desktop
-// `open` state ever switches to the collapsed, icon-stacked layout.
+// The sidebar toggle lives in the header; the top of the sidebar only holds Home.
+// Collapsed (icon-only) the button is centred, expanded it sits at the start.
 function SideBarTopControls({
   onOpenHome,
   homeHref,
@@ -129,18 +137,8 @@ function SideBarTopControls({
       </Button>
     );
 
-  if (open || isMobile) {
-    return (
-      <div className="flex items-center justify-between gap-2 p-2">
-        {home}
-        <SidebarTrigger />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col items-center justify-center gap-2 p-2">
-      <SidebarTrigger />
+    <div className={`flex items-center p-2 ${open || isMobile ? "" : "justify-center"}`}>
       {home}
     </div>
   );
