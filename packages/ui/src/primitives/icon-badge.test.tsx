@@ -109,6 +109,17 @@ describe("IconBadge", () => {
     expect(badge.style.color).toBe("oklch(0.55 0.17 155)");
   });
 
+  it("puts the icon in the given color on a soft tint of it, without a border, when tinted", () => {
+    const { container } = render(
+      <IconBadge icon={<span />} color="oklch(0.55 0.17 155)" tinted outlined />,
+    );
+    const badge = container.querySelector('[data-slot="icon-badge"]') as HTMLElement;
+    expect(badge.style.getPropertyValue("--badge-color")).toBe("oklch(0.55 0.17 155)");
+    expect(badge).toHaveClass("bg-(--badge-color)/15", "text-(--badge-color)");
+    expect(badge).not.toHaveClass("border");
+    expect(badge).not.toHaveClass("text-white");
+  });
+
   it("only renders as a hoverable button when clickable", () => {
     const { container: withoutClick } = render(<IconBadge icon={<span />} />);
     const plain = withoutClick.querySelector('[data-slot="icon-badge"]');

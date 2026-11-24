@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { EntityCard } from "@contentgrid/ui";
+import { Card, CardContent, CardHeader } from "@contentgrid/ui";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 
 export interface EntityItemCardProps {
@@ -10,7 +10,7 @@ export interface EntityItemCardProps {
   /** The variation's `actions`, drawn in the card header's top-right corner. */
   readonly actions?: ReactNode;
   /** The card body, edge to edge — e.g. `EntityItemSections`. */
-  readonly children?: ReactNode;
+  readonly children: ReactNode;
 }
 
 /**
@@ -25,24 +25,19 @@ export function EntityItemCard({
   children,
 }: Readonly<EntityItemCardProps>) {
   return (
-    <EntityCard
-      name={item.id}
-      flushContent
-      heading={
-        <div className="space-y-1">
+    <Card data-slot="entity-item-card" className="gap-1 overflow-hidden pt-4 pb-0">
+      <CardHeader className="flex flex-row items-start justify-between pb-2">
+        <div className="min-w-0 flex-1 space-y-1">
           <EntityItemReference item={item} size="lg" />
           {summary}
         </div>
-      }
-      action={
-        actions && (
+        {actions && (
           <div data-slot="item-actions" className="flex shrink-0 items-center gap-2">
             {actions}
           </div>
-        )
-      }
-    >
-      {children}
-    </EntityCard>
+        )}
+      </CardHeader>
+      <CardContent className="mt-auto px-0">{children}</CardContent>
+    </Card>
   );
 }

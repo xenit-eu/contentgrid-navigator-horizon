@@ -1,5 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/** The `--text-*` font sizes `preset.css` adds to the theme. */
+const fontSizes = ["ui", "card-title"];
+
+const twMerge = extendTailwindMerge({ extend: { theme: { text: fontSizes } } });
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

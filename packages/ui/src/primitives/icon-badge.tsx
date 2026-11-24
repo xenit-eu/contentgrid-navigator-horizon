@@ -34,6 +34,9 @@ export interface IconBadgeProps extends VariantProps<typeof iconBadgeVariants> {
    * background keeps the soft muted fill; without `muted` the background is fully
    * transparent instead. */
   outlined?: boolean;
+  /** A soft tint of `color` (or the `muted-foreground` default) as the fill, with the icon in
+   * `color` itself and no border — e.g. an entity's icon tile. Ignores `muted` and `outlined`. */
+  tinted?: boolean;
   /** Renders the badge as a `<button>` with a hover/focus affordance instead of a plain
    * `<span>`. Omitted entirely when not provided. */
   onClick?: () => void;
@@ -46,6 +49,7 @@ function IconBadge({
   color,
   muted = false,
   outlined = false,
+  tinted = false,
   variant = "default",
   onClick,
   className,
@@ -58,17 +62,24 @@ function IconBadge({
     outlined && !muted
       ? "transparent"
       : `color-mix(in oklch, ${badgeColor} ${muted ? 30 : 65}%, transparent)`;
-  const style: React.CSSProperties = outlined
-    ? { backgroundColor, borderColor: badgeColor, color: badgeColor }
-    : { backgroundColor };
+  let style: React.CSSProperties;
+  if (tinted) {
+    // The classes below tint with it, like `bg-warning/12` does with a theme color.
+    style = { "--badge-color": badgeColor } as React.CSSProperties;
+  } else if (outlined) {
+    style = { backgroundColor, borderColor: badgeColor, color: badgeColor };
+  } else {
+    style = { backgroundColor };
+  }
   const sharedProps = {
     "data-slot": "icon-badge",
     "data-variant": variant,
     "aria-label": ariaLabel,
     className: cn(
       iconBadgeVariants({ variant }),
-      outlined && "border",
-      !outlined && !muted && "text-white",
+      outlined && !tinted && "border",
+      !outlined && !muted && !tinted && "text-white",
+      tinted && "bg-(--badge-color)/15 text-(--badge-color)",
       onClick &&
         "transition-[filter,background-color] hover:bg-accent hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
       className,

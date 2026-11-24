@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PAGE_GUTTER_X, type PagePadding, pagePaddingClass } from "./page-padding";
 
 export interface BreadCrumbsToolBarLayoutProps {
   /**
@@ -22,7 +23,7 @@ export interface BreadCrumbsToolBarLayoutProps {
    * already has its own bottom padding, so `"vertical"`'s extra top gutter would just double
    * that gap.
    */
-  readonly contentPadded?: boolean | "vertical" | "bottom";
+  readonly contentPadded?: PagePadding;
   /** Scrollable page content rendered beneath the toolbar. */
   readonly children: ReactNode;
 }
@@ -42,18 +43,15 @@ export function BreadCrumbsToolBarLayout({
   contentPadded = true,
   children,
 }: Readonly<BreadCrumbsToolBarLayoutProps>) {
-  const contentClasses = [
-    "min-h-0 flex-1 overflow-auto",
-    contentPadded === true ? "px-4 py-6 sm:px-6 lg:px-8" : undefined,
-    contentPadded === "vertical" ? "py-6" : undefined,
-    contentPadded === "bottom" ? "pb-6" : undefined,
-  ]
+  const contentClasses = ["min-h-0 flex-1 overflow-auto", pagePaddingClass(contentPadded)]
     .filter(Boolean)
     .join(" ");
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b bg-background px-4 py-3 sm:px-6 lg:px-8">
+      <div
+        className={`flex shrink-0 items-center justify-between gap-4 border-b bg-background py-3 ${PAGE_GUTTER_X}`}
+      >
         {breadcrumbs && <div className="flex min-w-0 items-center">{breadcrumbs}</div>}
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>

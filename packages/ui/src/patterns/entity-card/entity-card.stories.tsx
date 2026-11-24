@@ -1,9 +1,17 @@
-import { ArrowRightIcon, DatabaseIcon, FileTextIcon, PlusIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
+import { FileTextIcon, PackageIcon, ShoppingCartIcon } from "@phosphor-icons/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "storybook/test";
 import { Button } from "../../primitives/button";
 import { IconBadge } from "../../primitives/icon-badge";
-import { EntityCard } from "./entity-card";
+import {
+  EntityCard,
+  EntityCardArrow,
+  EntityCardDescription,
+  EntityCardGrid,
+  EntityCardText,
+  EntityCardTitle,
+} from "./entity-card";
 
 const meta = {
   title: "Patterns/EntityCard",
@@ -14,214 +22,127 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function createAction(title: string) {
+const sampleColor = "oklch(0.55 0.17 155)";
+
+/** A card that opens a collection: icon and arrow on top, then the name, description and count. */
+function OpenableCard({
+  title,
+  description,
+  count,
+  icon,
+  onOpen,
+}: Readonly<{
+  title: string;
+  description?: string;
+  count: number;
+  icon: ReactNode;
+  onOpen?: () => void;
+}>) {
   return (
-    <Button variant="ghost" size="icon" onClick={fn()}>
-      <PlusIcon className="h-4 w-4" aria-hidden />
-      <span className="sr-only">Create {title}</span>
-    </Button>
+    <EntityCard onOpen={onOpen ?? fn()}>
+      <div className="flex items-start justify-between gap-2">
+        <IconBadge icon={icon} color={sampleColor} tinted />
+        <EntityCardArrow />
+      </div>
+      <EntityCardText>
+        <EntityCardTitle>{title}</EntityCardTitle>
+        {description && <EntityCardDescription>{description}</EntityCardDescription>}
+      </EntityCardText>
+      <p className="mt-auto text-ui text-muted-foreground">
+        <span className="font-bold text-card-foreground">{count.toLocaleString()}</span>{" "}
+        {count === 1 ? "item" : "items"}
+      </p>
+    </EntityCard>
   );
 }
 
-export const Default: Story = {
-  args: {
-    name: "invoice",
-    title: "Invoices",
-    action: createAction("Invoices"),
-    children: (
-      <>
-        <div className="text-2xl font-bold">42</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-export const WithHeader: Story = {
-  args: {
-    name: "invoice",
-    header: "Entity Collection",
-    title: "Invoices",
-    action: createAction("Invoices"),
-    children: (
-      <>
-        <div className="text-2xl font-bold">42</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-export const WithDescription: Story = {
-  args: {
-    name: "invoice",
-    title: "Invoices",
-    description: "Outgoing invoices linked to suppliers and customers.",
-    action: createAction("Invoices"),
-    children: (
-      <>
-        <div className="text-2xl font-bold">42</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-export const WithCustomIcon: Story = {
-  args: {
-    name: "document",
-    title: "Documents",
-    description: "Uploaded PDF and Office documents.",
-    icon: <FileTextIcon className="h-5 w-5 text-muted-foreground" aria-hidden />,
-    action: createAction("Documents"),
-    children: (
-      <>
-        <div className="text-2xl font-bold">7</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-export const WithColor: Story = {
-  args: {
-    name: "invoice",
-    title: "Invoices",
-    description: "Outgoing invoices linked to suppliers and customers.",
-    icon: <IconBadge icon={<DatabaseIcon aria-hidden />} color="oklch(0.55 0.17 155)" />,
-    action: createAction("Invoices"),
-    children: (
-      <>
-        <div className="text-2xl font-bold">42</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-export const DefaultTitleVariant: Story = {
-  args: {
-    name: "invoice",
-    title: "Invoices",
-    description: "Outgoing invoices linked to suppliers and customers.",
-    titleVariant: "default",
-    action: createAction("Invoices"),
-    children: (
-      <>
-        <div className="text-2xl font-bold">42</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-export const NoBody: Story = {
-  args: {
-    name: "supplier",
-    title: "Suppliers",
-  },
-};
-
-export const NoAction: Story = {
-  args: {
-    name: "supplier",
-    title: "Suppliers",
-    children: (
-      <>
-        <div className="text-2xl font-bold">0</div>
-        <p className="text-xs text-muted-foreground">items</p>
-      </>
-    ),
-  },
-};
-
-const gridCards = [
-  { name: "a", title: "Companies" },
-  { name: "b", title: "Invoices", description: "Outgoing invoices." },
-  {
-    name: "c",
-    title: "Suppliers",
-    description:
-      "Every supplier we buy from, including their contact persons, payment terms, delivery addresses and the full history of purchase orders placed with them.",
-  },
-  { name: "d", title: "No content no relationses", description: "Wrapping title." },
-  { name: "e", title: "Products", description: "Catalogue of products and their prices." },
-  { name: "f", title: "Contracts", description: "Signed agreements with customers." },
-  { name: "g", title: "Shipments" },
-  { name: "h", title: "Warehouses", description: "Where stock is kept." },
-];
-
-/** Regression story: titles, descriptions and count rows must align across a grid row. */
-export const Grid: Story = {
-  args: { name: "grid", title: "Grid" },
+export const Openable: Story = {
   render: () => (
-    <div className="grid w-[1000px] grid-cols-4 gap-4">
-      {gridCards.map((card, index) => (
-        <EntityCard
-          key={card.name}
-          {...card}
-          icon={
-            <IconBadge
-              icon={index % 2 === 0 ? <DatabaseIcon aria-hidden /> : <FileTextIcon aria-hidden />}
-            />
-          }
-        >
-          <div className="flex items-end justify-between gap-2">
-            <div>
-              <div className="text-2xl font-bold">99</div>
-              <p className="text-xs text-muted-foreground">items</p>
-            </div>
-            <ArrowRightIcon aria-hidden className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </EntityCard>
-      ))}
+    <div className="w-72">
+      <OpenableCard
+        title="Invoices"
+        description="Supplier invoices with line items and the scanned document."
+        count={1284}
+        icon={<FileTextIcon aria-hidden />}
+      />
     </div>
+  ),
+};
+
+/** Without a description the line is left out. */
+export const OpenableWithoutDescription: Story = {
+  render: () => (
+    <div className="w-72">
+      <OpenableCard title="Purchase orders" count={0} icon={<ShoppingCartIcon aria-hidden />} />
+    </div>
+  ),
+};
+
+/** A card that isn't one button: its own controls do the work. */
+export const WithOwnControls: Story = {
+  render: () => (
+    <div className="w-72">
+      <EntityCard className="flex-row items-start">
+        <button
+          type="button"
+          aria-label="Change icon and color for Products"
+          className="inline-flex shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={fn()}
+        >
+          <IconBadge icon={<PackageIcon aria-hidden />} color={sampleColor} tinted />
+        </button>
+        <EntityCardText className="flex-1">
+          <EntityCardTitle>Products</EntityCardTitle>
+          <EntityCardDescription>Defaults</EntityCardDescription>
+          <Button variant="link" size="xs" className="h-auto p-0 text-ui font-semibold">
+            Configure
+          </Button>
+        </EntityCardText>
+      </EntityCard>
+    </div>
+  ),
+};
+
+/**
+ * A long title, a long description and a card without a description in one row: the text clamps
+ * and every count line stays at the bottom of its card.
+ */
+export const Grid: Story = {
+  render: () => (
+    <EntityCardGrid>
+      <OpenableCard
+        title="Purchase order confirmations from external suppliers"
+        description="Replies from suppliers to a purchase order."
+        count={1}
+        icon={<FileTextIcon aria-hidden />}
+      />
+      <OpenableCard
+        title="Products"
+        description="Catalogue items that can appear on invoices, with their prices, the units they are sold in, the suppliers that deliver them and the stock that is left in every warehouse."
+        count={1204}
+        icon={<PackageIcon aria-hidden />}
+      />
+      <OpenableCard title="Purchase orders" count={0} icon={<ShoppingCartIcon aria-hidden />} />
+    </EntityCardGrid>
   ),
 };
 
 export const WithInteraction: Story = {
   tags: ["no-visual-test"],
-  args: {
-    name: "invoice",
-    title: "Invoices",
-    onCardClick: fn(),
-  },
+  args: { onOpen: fn() },
   render: (args) => (
-    <EntityCard
-      {...args}
-      action={
-        <Button variant="ghost" size="icon" onClick={fn()}>
-          <PlusIcon className="h-4 w-4" aria-hidden />
-          <span className="sr-only">Create Invoices</span>
-        </Button>
-      }
-    >
-      <div className="text-2xl font-bold">5</div>
-      <p className="text-xs text-muted-foreground">items</p>
-    </EntityCard>
+    <div className="w-72">
+      <OpenableCard
+        title="Invoices"
+        count={5}
+        icon={<FileTextIcon aria-hidden />}
+        onOpen={args.onOpen}
+      />
+    </div>
   ),
   play: async ({ canvasElement, args }) => {
     const card = canvasElement.querySelector('[data-slot="entity-card"]') as HTMLElement;
     await userEvent.click(card);
-    await expect(args.onCardClick).toHaveBeenCalledWith("invoice");
-  },
-};
-
-export const WithHeadingAndFlushContent: Story = {
-  args: {
-    name: "invoice-42",
-    heading: (
-      <div className="space-y-1">
-        <p className="text-lg font-semibold">Invoice #42</p>
-        <p className="text-xs text-muted-foreground">3 suppliers · 1 customer</p>
-      </div>
-    ),
-    flushContent: true,
-    children: (
-      <ul>
-        <li className="border-t px-6 py-3 text-sm font-semibold">Attributes</li>
-        <li className="border-t px-6 py-3 text-sm font-semibold">Suppliers</li>
-      </ul>
-    ),
+    await expect(args.onOpen).toHaveBeenCalledOnce();
   },
 };

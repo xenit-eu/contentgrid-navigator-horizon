@@ -26,8 +26,8 @@ test("boots and renders an entity overview from the stubbed HAL endpoint", async
   // Entities discovered at runtime from the profile root's cg:entity links (the recorded model).
   await expect(page.getByRole("heading", { name: "Customers", level: 2 })).toBeVisible();
 
-  // Overview header shows the count of entity types discovered from the profile.
-  await expect(page.getByText("11 entity types available")).toBeVisible();
+  // The page heading is for screen readers only; the page opens straight on the cards.
+  await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeAttached();
 
   // EntityCard shows the collection's total item count from the recorded customers page.
   await expect(page.getByRole("button", { name: /^Customers .*97 items$/ })).toBeVisible();

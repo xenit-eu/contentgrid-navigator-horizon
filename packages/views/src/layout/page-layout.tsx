@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { type PagePadding, pagePaddingClass } from "./page-padding";
 
 export interface PageLayoutProps {
   /** Page content. */
@@ -12,7 +13,7 @@ export interface PageLayoutProps {
    * bottom gutter — for content directly beneath a toolbar/header that already has its own
    * bottom padding, where `"vertical"`'s extra top gutter would just double that gap.
    */
-  readonly padded?: boolean | "vertical" | "bottom";
+  readonly padded?: PagePadding;
   /**
    * Fills the available height and scrolls internally (keeps the surrounding
    * chrome fixed). Defaults to `true`. Set to `false` for pages that should
@@ -36,9 +37,7 @@ export function PageLayout({
 }: Readonly<PageLayoutProps>) {
   const classes = [
     scroll ? "h-full min-h-0 overflow-auto" : undefined,
-    padded === true ? "px-4 py-6 sm:px-6 lg:px-8" : undefined,
-    padded === "vertical" ? "py-6" : undefined,
-    padded === "bottom" ? "pb-6" : undefined,
+    pagePaddingClass(padded),
     className,
   ]
     .filter(Boolean)
