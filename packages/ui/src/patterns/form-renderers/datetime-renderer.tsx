@@ -119,6 +119,8 @@ export function DateTimeRenderer({
             id={name}
             name={name}
             type="button"
+            // combobox (not button) so aria-readonly / aria-required are allowed (axe aria-allowed-attr).
+            role="combobox"
             aria-readonly={readOnly || undefined}
             aria-required={required || undefined}
             onFocus={onFocus}

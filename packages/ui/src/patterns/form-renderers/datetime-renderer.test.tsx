@@ -117,6 +117,7 @@ describe("DateTimeRenderer", () => {
         onChange={vi.fn()}
       />,
     );
+    expect(screen.getByLabelText("Due date")).toHaveAttribute("aria-readonly", "true");
     await userEvent.click(screen.getByLabelText("Due date"));
     expect(screen.queryByRole("grid")).not.toBeInTheDocument();
   });
