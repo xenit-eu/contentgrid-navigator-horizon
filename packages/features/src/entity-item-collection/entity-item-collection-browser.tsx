@@ -13,7 +13,7 @@ import {
   type SplitPaneHandle,
   useContainerWidthAtLeast,
 } from "@contentgrid/ui";
-import { ErrorPage, LoadingPage } from "../app-info-pages";
+import { ErrorPage } from "../app-info-pages";
 import { EntityItemReference } from "../entity-item";
 import { EntitySearchBar } from "../entity-search-bar";
 import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
@@ -197,11 +197,14 @@ export function EntityItemCollectionBrowser({
     }
   }, [isPreviewOpen]);
 
-  // Page scroll: a listed table grows with its rows and the page scrolls, its header sticking to
-  // the top of it. With the pane open beside it (wide) the table is as tall as the pane and
-  // scrolls on its own; the loading, error and empty states fill the height as before. Only
-  // classes and props change between the two, so the table never remounts.
-  const pageScroll = collection.isSuccess && !isEmptyCollection && !(isWide && isPreviewOpen);
+  // Page scroll: a listed table (or the skeleton rows standing in for it) grows with its rows and
+  // the page scrolls, its header sticking to the top of it. With the pane open beside it (wide)
+  // the table is as tall as the pane and scrolls on its own; the error and empty states fill the
+  // height as before. Only classes and props change between the two, so the table never remounts.
+  const pageScroll =
+    (collection.isSuccess || collection.isPending) &&
+    !isEmptyCollection &&
+    !(isWide && isPreviewOpen);
 
   const previewPane = previewedItem && (
     <EntityItemPreviewPane entityItem={previewedItem} onClose={closePreview} />
@@ -213,17 +216,16 @@ export function EntityItemCollectionBrowser({
       role="region"
       aria-label={`${profile.pluralName} table`}
       tabIndex={-1}
+      aria-busy={collection.isPending || undefined}
       className={pageScroll ? "outline-none" : "h-full outline-none"}
     >
-      {collection.isPending && <LoadingPage />}
-
       {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
 
       {isEmptyCollection && (
         <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
       )}
 
-      {collection.isSuccess && !isEmptyCollection && (
+      {(collection.isPending || (collection.isSuccess && !isEmptyCollection)) && (
         <EntityItemCollectionTable
           className={pageScroll ? undefined : "h-full"}
           pageScroll={pageScroll}
@@ -231,7 +233,10 @@ export function EntityItemCollectionBrowser({
           // The page title shows the count.
           showItemCount={false}
           profile={profile}
+          // Undefined while the first page loads: skeleton rows.
           collection={collection.data}
+          // The previous search's rows, dimmed until the new ones arrive.
+          stale={collection.isPlaceholderData}
           onEntityItemClick={handlePreview}
           onEntityItemOpen={onEntityItemClick}
           entityItemHref={entityItemHref}
@@ -252,6 +257,7 @@ export function EntityItemCollectionBrowser({
       <EntityItemCollectionTitle
         profile={profile}
         total={collection.data?.totalItems}
+        loading={collection.isPending}
         isFiltered={activeFilterCount > 0}
       />
 
