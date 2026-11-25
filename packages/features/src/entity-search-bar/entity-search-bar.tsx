@@ -199,7 +199,10 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
             size="sm"
             variant="link"
             className="h-6 shrink-0 px-2 text-sm text-muted-foreground"
-            onClick={() => props.onFiltersChange({})}
+            onClick={() => {
+              props.onFiltersChange({});
+              inputRef.current?.focus();
+            }}
           >
             Clear all
           </Button>

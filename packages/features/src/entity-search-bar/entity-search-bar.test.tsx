@@ -133,6 +133,13 @@ describe("EntitySearchBar", () => {
     expect(onFiltersChange).toHaveBeenCalledWith({});
   });
 
+  it("moves focus to the search input after Clear all", async () => {
+    const user = userEvent.setup();
+    renderBar({ "title~prefix": "Al", urgent: "true" });
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(screen.getByRole("combobox", { name: SEARCH_INPUT })).toHaveFocus();
+  });
+
   it("leaves Clear all out for a single chip, even a range covering two parameters", () => {
     renderBar({ "quantity~gte": "3", "quantity~lte": "9" });
     expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument();
