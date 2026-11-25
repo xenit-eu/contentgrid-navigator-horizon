@@ -123,6 +123,22 @@ export const Filtered: Story = {
   ),
 };
 
+/** The filters match nothing: the notice takes the table's place, the title says 0 of 1 284. */
+export const NoMatch: Story = {
+  args: Filtered.args,
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{
+        unfilteredPage: { size: 2, total_items_exact: 1284 },
+        filteredPage: { size: 0, total_items_exact: 0 },
+        filteredEmpty: true,
+      }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
 /** The API only estimates the total: the pill and the "Filtered from" line say "about". */
 export const EstimatedCount: Story = {
   args: Filtered.args,

@@ -102,6 +102,8 @@ export function createCollectionFixtureFetch(
     itemCount?: number;
     unfilteredPage?: CollectionPageFixture;
     filteredPage?: CollectionPageFixture;
+    /** A request that filters by `name~prefix` lists no item (its `page` still from `filteredPage`). */
+    filteredEmpty?: boolean;
   }> = {},
 ) {
   const {
@@ -111,6 +113,7 @@ export function createCollectionFixtureFetch(
     itemCount,
     unfilteredPage,
     filteredPage,
+    filteredEmpty = false,
   } = options;
   const itemFixture = createFixtureFetch();
   const collectionRequests: string[] = [];
@@ -133,7 +136,14 @@ export function createCollectionFixtureFetch(
     if (url === CUSTOMER_COLLECTION_URL || url.startsWith(`${CUSTOMER_COLLECTION_URL}?`)) {
       collectionRequests.push(url);
       if (empty) return json(emptyCustomerCollectionBody);
-      const page = decodeURIComponent(url).includes("name~prefix=") ? filteredPage : unfilteredPage;
+      const isFiltered = decodeURIComponent(url).includes("name~prefix=");
+      if (isFiltered && filteredEmpty) {
+        return json({
+          ...emptyCustomerCollectionBody,
+          page: filteredPage ?? emptyCustomerCollectionBody.page,
+        });
+      }
+      const page = isFiltered ? filteredPage : unfilteredPage;
       const body =
         itemCount === undefined
           ? customerCollectionBody

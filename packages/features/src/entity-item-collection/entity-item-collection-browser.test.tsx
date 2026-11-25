@@ -651,7 +651,7 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     expect(screen.queryByRole("button", { name: /^New / })).not.toBeInTheDocument();
   });
 
-  it("keeps the table when filters are active", async () => {
+  it("keeps the table when filters are active but there is no way to clear them", async () => {
     setupEmptyCollectionHandler();
     const profile = makeItemProfile();
 
@@ -659,6 +659,45 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(screen.queryByRole("heading", emptyStateHeading(profile))).not.toBeInTheDocument();
+  });
+
+  it("shows a no-match notice instead of the table when filters match nothing, and Clear all filters drops them", async () => {
+    setupEmptyCollectionHandler();
+    const profile = makeItemProfile();
+    const onFiltersChange = vi.fn();
+
+    renderBrowser({ profile, filters: { "code~prefix": "zzz" }, onFiltersChange });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: `No ${profile.pluralName.toLowerCase()} match these filters`,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Remove a filter or clear them all.")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Filters/ })).toBeInTheDocument();
+    expect(document.querySelector("[data-slot='collection-count']")).toHaveTextContent("0");
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear all filters" }));
+    expect(onFiltersChange).toHaveBeenCalledExactlyOnceWith({});
+  });
+
+  it("shows only the notice's Clear all filters button with two or more filters", async () => {
+    setupEmptyCollectionHandler();
+    const profile = makeItemProfile();
+
+    renderBrowser({
+      profile,
+      filters: { "code~prefix": "zzz", "created~after": "2026-01-01T00:00:00Z" },
+      onFiltersChange: vi.fn(),
+    });
+
+    await screen.findByRole("heading", {
+      name: `No ${profile.pluralName.toLowerCase()} match these filters`,
+    });
+    const clearButtons = screen.getAllByRole("button", { name: /clear all/i });
+    expect(clearButtons).toHaveLength(1);
+    expect(clearButtons[0]).toHaveAccessibleName("Clear all filters");
   });
 
   it("keeps the table on a page that has a previous page", async () => {

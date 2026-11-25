@@ -193,7 +193,7 @@ export function EntitySearchBar(props: Readonly<EntitySearchBarProps>) {
             warning: chip.isUnresolved ? UNRESOLVED_FILTER_WARNING : undefined,
           }))}
         />
-        {searchBar.chips.length >= CLEAR_ALL_MIN_CHIPS && (
+        {!props.hideClearAll && searchBar.chips.length >= CLEAR_ALL_MIN_CHIPS && (
           <Button
             type="button"
             size="sm"

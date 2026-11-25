@@ -13,6 +13,7 @@ import { EntityItemReference } from "../entity-item";
 import { EntitySearchBar } from "../entity-search-bar";
 import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
 import { EntityItemCollectionLoadError } from "./entity-item-collection-load-error";
+import { EntityItemCollectionNoMatch } from "./entity-item-collection-no-match";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 import { EntityItemCollectionTitle } from "./entity-item-collection-title";
 import { EntityItemPreviewPane } from "./entity-item-preview-pane";
@@ -117,6 +118,16 @@ export function EntityItemCollectionBrowser({
     collection.data.items.length === 0 &&
     !collection.data.hasPrevious &&
     activeFilterCount === 0;
+
+  // Filters that match nothing: the table gives way to a notice, the search bar stays. Without
+  // `onFiltersChange` there is nothing to clear, so the table keeps its own empty row.
+  const isNoMatch =
+    collection.isSuccess &&
+    !collection.isPlaceholderData &&
+    collection.data.items.length === 0 &&
+    !collection.data.hasPrevious &&
+    activeFilterCount > 0 &&
+    onFiltersChange !== undefined;
 
   const onEmptyChangeRef = useRef(onEmptyChange);
   onEmptyChangeRef.current = onEmptyChange;
@@ -243,7 +254,11 @@ export function EntityItemCollectionBrowser({
         <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
       )}
 
-      {(collection.isPending || (collection.isSuccess && !isEmptyCollection)) && (
+      {isNoMatch && (
+        <EntityItemCollectionNoMatch profile={profile} onClearFilters={() => onFiltersChange({})} />
+      )}
+
+      {(collection.isPending || (collection.isSuccess && !isEmptyCollection && !isNoMatch)) && (
         <EntityItemCollectionTable
           className={pageScroll ? undefined : "h-full"}
           pageScroll={pageScroll}
@@ -288,6 +303,7 @@ export function EntityItemCollectionBrowser({
           onFiltersChange={onFiltersChange}
           currentSort={currentSort}
           actions={toolbarActions}
+          hideClearAll={isNoMatch}
         />
       )}
 

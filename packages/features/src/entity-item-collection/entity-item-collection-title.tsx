@@ -71,7 +71,7 @@ function UnfilteredTotalLine({ profile }: Readonly<{ profile: ProfileEntity }>) 
   if (!total || count === undefined) return null;
 
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="mt-0.5 text-[13px] text-muted-foreground">
       Filtered from {count} {total.count === 1 && !total.isEstimated ? "item" : "items"}
     </p>
   );

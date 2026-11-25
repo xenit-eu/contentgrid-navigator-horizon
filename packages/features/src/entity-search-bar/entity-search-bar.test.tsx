@@ -15,7 +15,11 @@ import { EntitySearchBar } from "./entity-search-bar";
 const { searchBar } = makeSearchBarProfiles();
 const SEARCH_INPUT = `Search ${searchBar.title}`;
 
-function renderBar(filters: Record<string, string> = {}, actions?: ReactNode) {
+function renderBar(
+  filters: Record<string, string> = {},
+  actions?: ReactNode,
+  hideClearAll?: boolean,
+) {
   const onFiltersChange = vi.fn();
   const Wrapper = makeSearchBarWrapper();
   render(
@@ -25,6 +29,7 @@ function renderBar(filters: Record<string, string> = {}, actions?: ReactNode) {
         filters={filters}
         onFiltersChange={onFiltersChange}
         actions={actions}
+        hideClearAll={hideClearAll}
       />
     </Wrapper>,
   );
@@ -131,6 +136,11 @@ describe("EntitySearchBar", () => {
     const { onFiltersChange } = renderBar({ "title~prefix": "Al", urgent: "true" });
     await user.click(screen.getByRole("button", { name: "Clear all" }));
     expect(onFiltersChange).toHaveBeenCalledWith({});
+  });
+
+  it("leaves Clear all out from two chips when the host hides it", () => {
+    renderBar({ "title~prefix": "Al", urgent: "true" }, undefined, true);
+    expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument();
   });
 
   it("moves focus to the search input after Clear all", async () => {

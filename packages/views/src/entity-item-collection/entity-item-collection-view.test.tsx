@@ -105,6 +105,38 @@ describe("EntityItemCollectionView", () => {
     );
   });
 
+  it("replaces the table with a no-match notice, keeping the title counts and the search bar, and clears all filters", async () => {
+    const { Wrapper } = setup({
+      unfilteredPage: { size: 2, total_items_exact: 1284 },
+      filteredPage: { size: 0, total_items_exact: 0 },
+      filteredEmpty: true,
+    });
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: { "name~prefix": "zzz" } }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "No customers match these filters" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Remove a filter or clear them all.")).toBeInTheDocument();
+    expect(await screen.findByText(/^Filtered from 1\s284 items$/)).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByText("0 items")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear all filters" }));
+    expect(onStateChange).toHaveBeenCalledWith({
+      filters: {},
+      sort: undefined,
+      pageUrl: undefined,
+    });
+  });
+
   it("asks for the unfiltered total once, and not at all without a filter", async () => {
     const plain = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: plain.Wrapper });
