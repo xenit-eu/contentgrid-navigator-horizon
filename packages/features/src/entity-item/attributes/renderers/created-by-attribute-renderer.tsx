@@ -19,12 +19,7 @@ export function CreatedByAttributeRenderer({
   const displayValue = value == null ? undefined : String(value);
 
   if (isTableVariant(variant)) {
-    return (
-      <span className="flex min-w-0 items-center gap-1.5">
-        <UserIcon size={14} className="shrink-0 text-muted-foreground" aria-hidden />
-        <AttributeValue wrap={wrap}>{displayValue}</AttributeValue>
-      </span>
-    );
+    return <AttributeValue wrap={wrap}>{displayValue}</AttributeValue>;
   }
 
   const pillLabel =

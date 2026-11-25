@@ -29,9 +29,12 @@ export function CreatedDateAttributeRenderer({
     return <AttributeValue>{value}</AttributeValue>;
   }
 
-  const text = isTableVariant(variant)
-    ? formatAbsoluteDate(parsed, type)
-    : variant === "item-reference"
+  if (isTableVariant(variant)) {
+    return <AttributeValue wrap={wrap}>{formatAbsoluteDate(parsed, type)}</AttributeValue>;
+  }
+
+  const text =
+    variant === "item-reference"
       ? formatRelativeOrAbsoluteDate(parsed)
       : `${label}: ${formatRelativeOrAbsoluteDate(parsed)}`;
 

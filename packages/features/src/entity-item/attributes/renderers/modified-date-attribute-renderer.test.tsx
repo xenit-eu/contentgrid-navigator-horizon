@@ -37,4 +37,22 @@ describe("ModifiedDateAttributeRenderer", () => {
     expect(screen.getByText(expected)).toBeInTheDocument();
     expect(screen.queryByText(`Modified: ${expected}`)).not.toBeInTheDocument();
   });
+
+  it("renders plain text without an icon in the table variant", () => {
+    const { container } = render(
+      <ModifiedDateAttributeRenderer
+        value={"2016-06-21T00:00:00.000Z"}
+        label="Modified"
+        variant="table"
+      />,
+    );
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("still renders the icon in the default variant", () => {
+    const { container } = render(
+      <ModifiedDateAttributeRenderer value={"2016-06-21T00:00:00.000Z"} label="Modified" />,
+    );
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
 });

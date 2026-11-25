@@ -55,4 +55,18 @@ describe("CreatedByAttributeRenderer", () => {
     render(<CreatedByAttributeRenderer value={null} label="Created by" variant="table" />);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
+
+  it("renders plain text without an icon in the table variant", () => {
+    const { container } = render(
+      <CreatedByAttributeRenderer value={"jane@example.com"} label="Created by" variant="table" />,
+    );
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("still renders the icon in the default variant", () => {
+    const { container } = render(
+      <CreatedByAttributeRenderer value={"jane@example.com"} label="Created by" />,
+    );
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
 });
