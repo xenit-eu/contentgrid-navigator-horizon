@@ -24,7 +24,8 @@ variations/
   side-by-side/      EntityItemSideBySide — attributes card + resizable column of relation cards
   item-card/         EntityItemCard — the card attribute-focus and side-by-side share
   attribute-summary/ EntityItemAttributeSummary — compact label/value grid (relation cards)
-  item-reference/    EntityItemReference — icon, title, subtitle row
+  item-reference/    EntityItemReference — icon, title, subtitle row; useEntityItemHeading, the
+                     icon/title/subtitle hook it shares with the collection title cell
 ```
 
 ## Variations

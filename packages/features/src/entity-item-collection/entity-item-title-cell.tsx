@@ -1,13 +1,9 @@
 import type { MouseEvent, ReactNode } from "react";
 import { AttributeKind, type ContentMetadata, type EntityItem } from "@contentgrid/navigator-data";
 import { IconBadge, formatFileSize } from "@contentgrid/ui";
-import { AttributeValueRenderer } from "../entity-item";
 import { FileTile } from "../entity-item/attributes/renderers/file-tile";
 import { selectDefaultContentAttribute } from "../entity-item/variations/content-focus";
-import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../preferences";
-
-/** Hard limit on the characters of the title and the subtitle (plus an ellipsis). */
-const MAX_CHAR_LENGTH = 120;
+import { useEntityItemHeading } from "../entity-item/variations/item-reference/use-entity-item-heading";
 
 export interface EntityItemTitleCellProps {
   readonly item: EntityItem;
@@ -34,37 +30,14 @@ function findFile(item: EntityItem): { metadata: ContentMetadata | null } | unde
  * The link never reaches the row: following it must not also preview the item.
  */
 export function EntityItemTitleCell({ item, onOpen, href }: Readonly<EntityItemTitleCellProps>) {
-  const { preferences, nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(
-    item.profileEntity,
-  );
-  const Icon = resolveEntityCardIcon(preferences.icon);
+  const { preferences, Icon, title, subtitle: itemSubtitle } = useEntityItemHeading(item);
   const file = findFile(item);
 
-  const nameAttr = nameAttribute ? item.findAttribute(nameAttribute.name) : undefined;
-  const title: ReactNode = nameAttr ? (
-    <AttributeValueRenderer
-      attr={nameAttr}
-      maxCharLength={MAX_CHAR_LENGTH}
-      variant="item-reference"
-    />
-  ) : (
-    item.id
-  );
-
-  let subtitle: ReactNode;
+  let subtitle: ReactNode = itemSubtitle;
   if (file) {
     subtitle = file.metadata
       ? `${file.metadata.filename ?? "Untitled"} · ${formatFileSize(file.metadata.length)}`
       : "No file";
-  } else {
-    const subtitleAttr = subtitleAttribute ? item.findAttribute(subtitleAttribute.name) : undefined;
-    subtitle = subtitleAttr ? (
-      <AttributeValueRenderer
-        attr={subtitleAttr}
-        maxCharLength={MAX_CHAR_LENGTH}
-        variant="item-reference"
-      />
-    ) : undefined;
   }
 
   function handleClick(event: MouseEvent<HTMLElement>) {
