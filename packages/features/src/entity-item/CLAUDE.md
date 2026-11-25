@@ -115,12 +115,12 @@ save of a stale version is refused (412). `noRefetch` is the default when the ca
 Carried by any app that mounts the content-focus variation (spec `002-pdf-viewer`):
 
 - **CSP** — `worker-src blob:` (PDFium worker), `img-src blob:` and `media-src blob:` (stored
-  images/videos), and `connect-src` including the rendition service origin when `renditionUri` is
+  images/videos), and `connect-src` including the rendition service origin when `renditionUriTemplate` is
   set.
 - **No CDN** — the PDFium WASM binary is self-hosted (`util/pdfium-wasm-url.ts`).
 - **Rendition service CORS** — allow the Navigator origin, accept the content download
   `Authorization` header, and expose the `Location` response header (the `202`'s job URL).
-- **Liaison delivers `v1.renditionUri`** in `config.js`; without it renditions are silently
+- **Liaison delivers `v1.renditionUriTemplate`** in `config.js`; without it renditions are silently
   unavailable (`useContentPreview` → `{ kind: "unavailable" }`).
 - **Not settled until ACC-2960 closes** — the rendition response contract (`202` + `Location` →
   poll → `200`/`invalid-conversion`/error) and the CORS requirements above are assumptions pending

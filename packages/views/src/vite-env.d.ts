@@ -6,7 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_OIDC_CLIENT_ID?: string;
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_EXTRACT_SERVICE_URL?: string;
-  readonly VITE_RENDITION_URI?: string;
+  readonly VITE_RENDITION_URI_TEMPLATE?: string;
   /** Vite's built-in dev-mode flag; a missing navigation provider throws only when it is set. */
   readonly DEV: boolean;
 }

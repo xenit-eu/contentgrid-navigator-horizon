@@ -1,7 +1,7 @@
 import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { ItemReference } from "@contentgrid/ui";
-import { useEntityItemHeading } from "./use-entity-item-heading";
+import { STRING_REFERENCE_MAX_CHAR_LENGTH, useEntityItemHeading } from "./use-entity-item-heading";
 
 export interface EntityItemReferenceProps {
   readonly item: EntityItem;
@@ -14,6 +14,11 @@ export interface EntityItemReferenceProps {
    * fill. Combined with `muted`, the background keeps the soft muted fill instead of going
    * fully transparent — see `IconBadge`'s doc comment. */
   readonly outlined?: boolean;
+  /**
+   * Characters of the title shown before it is truncated with "…", also when the title is the
+   * item's id; the full title shows on hover.
+   */
+  readonly titleMaxCharLength?: number;
   readonly className?: string;
 }
 
@@ -31,9 +36,10 @@ export function EntityItemReference({
   size,
   muted,
   outlined,
+  titleMaxCharLength = STRING_REFERENCE_MAX_CHAR_LENGTH,
   className,
 }: Readonly<EntityItemReferenceProps>) {
-  const { preferences, Icon, title, subtitle } = useEntityItemHeading(item);
+  const { preferences, Icon, title, subtitle } = useEntityItemHeading(item, titleMaxCharLength);
 
   return (
     <ItemReference

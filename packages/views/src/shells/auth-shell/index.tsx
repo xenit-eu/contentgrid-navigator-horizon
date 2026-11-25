@@ -20,7 +20,8 @@ interface AuthShellProps {
  * `AuthShell`'s other auth-reactive UI decisions.
  */
 export function AuthShell({ children }: Readonly<AuthShellProps>) {
-  const { auth, apiFetch, contentFetch, profileUrl, renditionUri, renditionPolling } = useAppAuth();
+  const { auth, apiFetch, contentFetch, profileUrl, renditionUriTemplate, renditionPolling } =
+    useAppAuth();
   useCrossTabSignOut();
 
   if (isAuthReady(auth)) {
@@ -29,7 +30,7 @@ export function AuthShell({ children }: Readonly<AuthShellProps>) {
         apiFetch={apiFetch}
         contentFetch={contentFetch}
         profileUrl={profileUrl}
-        renditionUri={renditionUri}
+        renditionUriTemplate={renditionUriTemplate}
         renditionPolling={renditionPolling}
       >
         {children}

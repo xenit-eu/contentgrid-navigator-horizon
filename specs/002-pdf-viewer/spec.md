@@ -147,7 +147,7 @@ A user searches for a word inside the document, steps through the matches, and p
 - **FR-020**: When a rendition is displayed the system MUST indicate that a converted preview is shown, MUST deliver the original file on Download, and MUST print the rendition as displayed.
 - **FR-021**: The system MUST stop polling for a rendition as soon as the viewer is closed, the attribute changes or the item changes.
 - **FR-022**: When no rendition endpoint is configured the system MUST show "Preview not available" with Download for files that need a rendition (FR-016) and MUST NOT contact any service.
-- **FR-023**: The system MUST call the rendition service (the initial request and each poll) with the same authenticated content client it uses to download files, sending the user's access token in the `Authorization` header only. It MUST NOT perform a token exchange itself and MUST NOT call the service unauthenticated; any exchange the service needs to read the source file is the platform's responsibility (TokenMonger).
+- **FR-023**: The system MUST call the rendition service (the initial request and each poll) with the same authenticated content client it uses to download files, sending a Bearer token in the `Authorization` header only. Because the rendition service is on another origin, that token MUST be an extension token obtained from the application's token exchange endpoint (cached per user and origin), never the user's own access token; the system MUST NOT call the service unauthenticated. _(Revised 2026-11-18, ACC-3292: originally "the user's access token, no exchange in the frontend" — see research.md §8.3.)_
 
 **States and errors**
 

@@ -14,7 +14,7 @@ import {
   clearDevConfig,
   getAppConfig,
   getDefaultExtractServiceUrl,
-  getDefaultRenditionUri,
+  getDefaultRenditionUriTemplate,
   productionApps,
   sandboxApps,
   signinWithNewConfig,
@@ -72,7 +72,7 @@ function getInitialConfig(): DevAppConfig | null {
       authority: rc.authority,
       clientId: rc.clientId,
       extractServiceUrl: rc.extractServiceUrl,
-      renditionUri: rc.renditionUri,
+      renditionUriTemplate: rc.renditionUriTemplate,
     };
   } catch {
     return null;
@@ -119,7 +119,7 @@ export function ApplicationSelectorPage() {
         } else {
           cfg.extractServiceUrl ??= getDefaultExtractServiceUrl(environment, useMockExtract);
         }
-        cfg.renditionUri ??= getDefaultRenditionUri(environment);
+        cfg.renditionUriTemplate ??= getDefaultRenditionUriTemplate(environment);
         setLoadedEnvironment(environment);
       } else {
         setLoadedEnvironment(null);
@@ -138,7 +138,7 @@ export function ApplicationSelectorPage() {
           authority: selectedConfig.authority,
           clientId: selectedConfig.clientId,
           extractServiceUrl: selectedConfig.extractServiceUrl,
-          renditionUri: selectedConfig.renditionUri,
+          renditionUriTemplate: selectedConfig.renditionUriTemplate,
         });
       } else {
         await auth.signinRedirect();
@@ -284,8 +284,8 @@ function ReviewPanel({
             {selectedConfig.extractServiceUrl && (
               <ReviewField label="Extract Service" value={selectedConfig.extractServiceUrl} />
             )}
-            {selectedConfig.renditionUri && (
-              <ReviewField label="Rendition URI" value={selectedConfig.renditionUri} />
+            {selectedConfig.renditionUriTemplate && (
+              <ReviewField label="Rendition URI" value={selectedConfig.renditionUriTemplate} />
             )}
           </dl>
         ) : (
@@ -431,7 +431,7 @@ const EMPTY_CONFIG: DevAppConfig = {
   authority: "",
   clientId: "",
   extractServiceUrl: undefined,
-  renditionUri: undefined,
+  renditionUriTemplate: undefined,
 };
 
 function CustomConfigForm({
@@ -478,10 +478,10 @@ function CustomConfigForm({
         onChange={(v) => update({ extractServiceUrl: v || undefined })}
       />
       <FormField
-        id="rendition-uri"
+        id="rendition-uri-template"
         label="Rendition URI Template"
-        value={formConfig.renditionUri ?? ""}
-        onChange={(v) => update({ renditionUri: v || undefined })}
+        value={formConfig.renditionUriTemplate ?? ""}
+        onChange={(v) => update({ renditionUriTemplate: v || undefined })}
       />
       <Button
         variant="outline"
