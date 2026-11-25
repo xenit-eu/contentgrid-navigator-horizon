@@ -50,4 +50,19 @@ describe("EntityItemCollectionTitle", () => {
     expect(document.querySelector("[data-slot='collection-count-skeleton']")).toBeInTheDocument();
     expect(pill()).toBeNull();
   });
+
+  it("says '0 items' under the heading, with no pill, for an empty collection", () => {
+    render(
+      <EntityItemCollectionTitle
+        profile={profile}
+        total={{ count: 0, isEstimated: false }}
+        isFiltered={false}
+        empty
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 1, name: "Invoices" })).toBeInTheDocument();
+    expect(screen.getByText("0 items")).toBeInTheDocument();
+    expect(pill()).toBeNull();
+  });
 });

@@ -9,18 +9,21 @@ export interface EntityItemCollectionTitleProps {
   readonly isFiltered: boolean;
   /** The first page is still loading, so there is no count yet: a skeleton pill stands in. */
   readonly loading?: boolean;
+  /** The collection has no item to show: a muted "0 items" line stands in for the count pill. */
+  readonly empty?: boolean;
 }
 
 /**
- * The collection page's heading: the entity's plural name with its item count as a pill. While a
- * search or filter is active, a muted line under it gives the unfiltered total. A count the API
- * doesn't give shows nothing, no placeholder.
+ * The collection page's heading: the entity's plural name with its item count as a pill (an empty
+ * collection says "0 items" under it instead). While a search or filter is active, a muted line
+ * under it gives the unfiltered total. A count the API doesn't give shows nothing, no placeholder.
  */
 export function EntityItemCollectionTitle({
   profile,
   total,
   isFiltered,
   loading = false,
+  empty = false,
 }: Readonly<EntityItemCollectionTitleProps>) {
   const count = formatCount(total, { estimate: "word" });
 
@@ -37,7 +40,7 @@ export function EntityItemCollectionTitle({
             className="h-6 w-10 animate-none rounded-full bg-[#dfe8f0] dark:bg-border"
           />
         )}
-        {count !== undefined && (
+        {count !== undefined && !empty && (
           <span
             data-slot="collection-count"
             className="inline-grid h-6 min-w-[22px] place-items-center rounded-full border bg-muted px-[7px] text-[13px] font-bold text-muted-foreground"
@@ -46,6 +49,7 @@ export function EntityItemCollectionTitle({
           </span>
         )}
       </div>
+      {empty && <p className="mt-0.5 text-[13px] text-muted-foreground">0 items</p>}
       {isFiltered && <UnfilteredTotalLine profile={profile} />}
     </div>
   );

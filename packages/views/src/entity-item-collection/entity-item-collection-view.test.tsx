@@ -148,7 +148,25 @@ describe("EntityItemCollectionView", () => {
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
     expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
-    expect(await screen.findByText(/No Customers found/)).toBeInTheDocument();
+    expect(await screen.findByText("0 items")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "No customers yet" })).toBeInTheDocument();
+  });
+
+  it("hides the toolbar's New action while the list is empty, as the empty state offers create", async () => {
+    const { Wrapper } = setup({ empty: true });
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    expect(await screen.findByRole("heading", { name: "No customers yet" })).toBeInTheDocument();
+    // One button: the empty state's own, not also the toolbar's.
+    expect(screen.getAllByRole("button", { name: "New customer" })).toHaveLength(1);
+  });
+
+  it("shows the toolbar's New action when the list has items", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    expect(screen.getAllByRole("button", { name: "New customer" })).toHaveLength(1);
   });
 
   it("draws no create action without a create form", async () => {
@@ -166,7 +184,7 @@ describe("EntityItemCollectionView", () => {
       wrapper: Wrapper,
     });
 
-    await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "New customer" }));
     expect(recording.calls).toEqual([
       { method: "openCreateItem", args: ["customer", { openInNewTab: true }] },
     ]);

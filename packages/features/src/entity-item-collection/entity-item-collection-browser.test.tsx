@@ -234,6 +234,7 @@ function renderBrowser(props: {
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
   onCreateItemClick?: () => void;
+  onEmptyChange?: (empty: boolean) => void;
   onEntityItemClick?: (item: EntityItem) => void;
   profileUrl?: string;
 }) {
@@ -551,8 +552,9 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     server.use(http.get(COLLECTION_URL, () => HttpResponse.json(body)));
   }
 
+  // Without a create form the heading has no "yet".
   const emptyStateHeading = (profile: ProfileEntity) => ({
-    name: `No ${profile.pluralName} found`,
+    name: `No ${profile.pluralName.toLowerCase()}`,
   });
 
   it("shows the empty state instead of the search bar and table on an unfiltered first page", async () => {
@@ -581,8 +583,61 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     renderBrowser({ profile, onCreateItemClick: vi.fn() });
 
     expect(
-      await screen.findByRole("button", { name: `Create ${profile.singularName}` }),
+      await screen.findByRole("heading", { name: `No ${profile.pluralName.toLowerCase()} yet` }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `Create the first ${profile.singularName.toLowerCase()}. It will appear here.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `New ${profile.singularName.toLowerCase()}` }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("0 items")).toBeInTheDocument();
+    expect(document.querySelector("[data-slot='collection-count']")).toBeNull();
+  });
+
+  it("calls onCreateItemClick from the empty state's button", async () => {
+    setupEmptyCollectionHandler();
+    const createForm = { method: "POST", target: COLLECTION_URL, properties: [] };
+    const profile = makeProfileEntity(
+      {
+        ...itemProfileJson,
+        _templates: { ...itemProfileJson._templates, "create-form": createForm },
+      },
+      PROFILE_URL,
+      "item",
+    );
+    const onCreateItemClick = vi.fn();
+
+    renderBrowser({ profile, onCreateItemClick });
+    await userEvent.click(
+      await screen.findByRole("button", { name: `New ${profile.singularName.toLowerCase()}` }),
+    );
+
+    expect(onCreateItemClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports the empty state through onEmptyChange, and its end on unmount", async () => {
+    setupEmptyCollectionHandler();
+    const onEmptyChange = vi.fn();
+
+    const { unmount } = renderBrowser({ profile: makeItemProfile(), onEmptyChange });
+    await screen.findByText("0 items");
+    expect(onEmptyChange).toHaveBeenCalledExactlyOnceWith(true);
+
+    unmount();
+    expect(onEmptyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("does not report anything for a collection with items", async () => {
+    setupCollectionHandler();
+    const onEmptyChange = vi.fn();
+
+    renderBrowser({ profile: makeItemProfile(), onEmptyChange });
+    await findTotal(2);
+
+    expect(onEmptyChange).not.toHaveBeenCalled();
   });
 
   it("offers no create in the empty state when the profile has no create form", async () => {
@@ -592,9 +647,8 @@ describe("EntityItemCollectionBrowser — empty collection", () => {
     renderBrowser({ profile, onCreateItemClick: vi.fn() });
 
     expect(await screen.findByRole("heading", emptyStateHeading(profile))).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: `Create ${profile.singularName}` }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("There is nothing here that you have access to.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^New / })).not.toBeInTheDocument();
   });
 
   it("keeps the table when filters are active", async () => {
@@ -920,7 +974,7 @@ describe("EntityItemCollectionBrowser — item preview", () => {
             const [table] = screen.getAllByRole("table");
             expect(within(table).getAllByRole("row")).toHaveLength(items.length + 1);
           })
-        : screen.findByRole("heading", { name: /^No .+ found$/ }));
+        : screen.findByRole("heading", { name: /^No .+( yet)?$/ }));
     }
 
     await user.click(await findRow("ABC-0"));

@@ -82,6 +82,16 @@ export const Empty: Story = {
   args: { entityName: "customer" },
 };
 
+/** An empty collection the user may not create in: the same screen, without the button. */
+export const EmptyReadOnly: Story = {
+  args: { entityName: "customer" },
+  render: (args) => (
+    <CollectionStoryHarness fixtureOptions={{ empty: true, creatable: false }}>
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
 /** Renders the view on a collection with items; the title shows the entity name and its count. */
 export const Titled: Story = {
   args: { entityName: "customer" },
