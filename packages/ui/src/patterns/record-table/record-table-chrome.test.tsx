@@ -35,7 +35,7 @@ describe("RecordTableHeader chrome", () => {
     expect(row).not.toHaveClass("h-[38px]");
     const header = screen.getByRole("columnheader");
     expect(header).toHaveClass("text-[13px]", "font-medium");
-    expect(header).not.toHaveAttribute("aria-sort");
+    expect(header).toHaveAttribute("aria-sort", "ascending");
     expect(header).not.toHaveClass("text-primary");
   });
 

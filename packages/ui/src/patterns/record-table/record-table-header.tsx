@@ -153,9 +153,9 @@ function RecordTableHeader({
                 key={column.key}
                 role="columnheader"
                 aria-sort={
-                  collection && activeOption?.direction === "asc"
+                  activeOption?.direction === "asc"
                     ? "ascending"
-                    : collection && activeOption?.direction === "desc"
+                    : activeOption?.direction === "desc"
                       ? "descending"
                       : undefined
                 }
