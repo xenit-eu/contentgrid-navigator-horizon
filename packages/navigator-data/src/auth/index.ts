@@ -14,7 +14,7 @@ export {
   productionApps,
   sandboxApps,
   getDefaultExtractServiceUrl,
-  getDefaultRenditionUri,
+  getDefaultRenditionUriTemplate,
 } from "./dev-apps";
 export type { DevApp, DevAppConfig, AppCategory } from "./dev-apps";
 export { isDevTokenMode, getDevToken } from "./dev-token";

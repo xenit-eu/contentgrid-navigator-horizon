@@ -105,35 +105,35 @@ describe("loadAppConfig — env var path", () => {
     await expect(loadAppConfig()).rejects.toThrow("VITE_API_BASE_URL is required");
   });
 
-  it("reads VITE_RENDITION_URI in dev token mode", async () => {
+  it("reads VITE_RENDITION_URI_TEMPLATE in dev token mode", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 404 }));
     vi.stubEnv("VITE_DEV_TOKEN", "my-dev-token");
     vi.stubEnv("VITE_API_BASE_URL", "https://api.local");
-    vi.stubEnv("VITE_RENDITION_URI", "https://renditions.example.com/get/pdf{?url}");
+    vi.stubEnv("VITE_RENDITION_URI_TEMPLATE", "https://renditions.example.com/get/pdf{?url}");
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBe("https://renditions.example.com/get/pdf{?url}");
+    expect(cfg.renditionUriTemplate).toBe("https://renditions.example.com/get/pdf{?url}");
   });
 
-  it("leaves renditionUri undefined in dev token mode when VITE_RENDITION_URI is unset", async () => {
+  it("leaves renditionUriTemplate undefined in dev token mode when VITE_RENDITION_URI_TEMPLATE is unset", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 404 }));
     vi.stubEnv("VITE_DEV_TOKEN", "my-dev-token");
     vi.stubEnv("VITE_API_BASE_URL", "https://api.local");
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBeUndefined();
+    expect(cfg.renditionUriTemplate).toBeUndefined();
   });
 
-  it("drops an invalid VITE_RENDITION_URI in dev token mode and warns, same as the env-var branch", async () => {
+  it("drops an invalid VITE_RENDITION_URI_TEMPLATE in dev token mode and warns, same as the env-var branch", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 404 }));
     vi.stubEnv("VITE_DEV_TOKEN", "my-dev-token");
     vi.stubEnv("VITE_API_BASE_URL", "https://api.local");
-    vi.stubEnv("VITE_RENDITION_URI", "https://renditions.example.com/get/pdf"); // missing {?url}
+    vi.stubEnv("VITE_RENDITION_URI_TEMPLATE", "https://renditions.example.com/get/pdf"); // missing {?url}
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUri"));
+    expect(cfg.renditionUriTemplate).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUriTemplate"));
   });
 });
 
@@ -298,31 +298,34 @@ describe("getOidcConfig", () => {
 });
 
 describe("loadAppConfig — rendition settings validation", () => {
-  it("accepts a valid renditionUri, poll interval, and timeout from window.contentGridConfig", async () => {
+  it("accepts a valid renditionUriTemplate, poll interval, and timeout from window.contentGridConfig", async () => {
     window.contentGridConfig = {
       v1: {
         ...VALID_WINDOW_CONFIG.v1,
-        renditionUri: "https://renditions.example.com/get/pdf{?url}",
+        renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}",
         renditionPollIntervalMs: 500,
         renditionTimeoutMs: 5000,
       },
     };
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBe("https://renditions.example.com/get/pdf{?url}");
+    expect(cfg.renditionUriTemplate).toBe("https://renditions.example.com/get/pdf{?url}");
     expect(cfg.renditionPollIntervalMs).toBe(500);
     expect(cfg.renditionTimeoutMs).toBe(5000);
   });
 
-  it("drops a renditionUri missing the {?url} expansion and warns", async () => {
+  it("drops a renditionUriTemplate missing the {?url} expansion and warns", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     window.contentGridConfig = {
-      v1: { ...VALID_WINDOW_CONFIG.v1, renditionUri: "https://renditions.example.com/get/pdf" },
+      v1: {
+        ...VALID_WINDOW_CONFIG.v1,
+        renditionUriTemplate: "https://renditions.example.com/get/pdf",
+      },
     };
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUri"));
+    expect(cfg.renditionUriTemplate).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUriTemplate"));
   });
 
   it("drops a renditionPollIntervalMs below 250ms and warns", async () => {
@@ -330,14 +333,14 @@ describe("loadAppConfig — rendition settings validation", () => {
     window.contentGridConfig = {
       v1: {
         ...VALID_WINDOW_CONFIG.v1,
-        renditionUri: "https://renditions.example.com/get/pdf{?url}",
+        renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}",
         renditionPollIntervalMs: 100,
       },
     };
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
     expect(cfg.renditionPollIntervalMs).toBeUndefined();
-    expect(cfg.renditionUri).toBe("https://renditions.example.com/get/pdf{?url}");
+    expect(cfg.renditionUriTemplate).toBe("https://renditions.example.com/get/pdf{?url}");
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionPollIntervalMs"));
   });
 
@@ -346,7 +349,7 @@ describe("loadAppConfig — rendition settings validation", () => {
     window.contentGridConfig = {
       v1: {
         ...VALID_WINDOW_CONFIG.v1,
-        renditionUri: "https://renditions.example.com/get/pdf{?url}",
+        renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}",
         renditionTimeoutMs: 100, // below the default 2000ms poll interval
       },
     };
@@ -361,7 +364,7 @@ describe("loadAppConfig — rendition settings validation", () => {
     window.contentGridConfig = {
       v1: {
         ...VALID_WINDOW_CONFIG.v1,
-        renditionUri: "https://renditions.example.com/get/pdf{?url}",
+        renditionUriTemplate: "https://renditions.example.com/get/pdf{?url}",
         renditionPollIntervalMs: 4000,
         renditionTimeoutMs: 3000,
       },
@@ -373,47 +376,47 @@ describe("loadAppConfig — rendition settings validation", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionTimeoutMs"));
   });
 
-  it("prefers config.js's v1.renditionUri over the VITE_RENDITION_URI env fallback", async () => {
-    vi.stubEnv("VITE_RENDITION_URI", "https://env.example.com/get/pdf{?url}");
+  it("prefers config.js's v1.renditionUriTemplate over the VITE_RENDITION_URI_TEMPLATE env fallback", async () => {
+    vi.stubEnv("VITE_RENDITION_URI_TEMPLATE", "https://env.example.com/get/pdf{?url}");
     window.contentGridConfig = {
       v1: {
         ...VALID_WINDOW_CONFIG.v1,
-        renditionUri: "https://configjs.example.com/get/pdf{?url}",
+        renditionUriTemplate: "https://configjs.example.com/get/pdf{?url}",
       },
     };
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBe("https://configjs.example.com/get/pdf{?url}");
+    expect(cfg.renditionUriTemplate).toBe("https://configjs.example.com/get/pdf{?url}");
   });
 
-  it("falls back to VITE_RENDITION_URI when config.js does not set v1.renditionUri", async () => {
-    vi.stubEnv("VITE_RENDITION_URI", "https://env.example.com/get/pdf{?url}");
+  it("falls back to VITE_RENDITION_URI_TEMPLATE when config.js does not set v1.renditionUriTemplate", async () => {
+    vi.stubEnv("VITE_RENDITION_URI_TEMPLATE", "https://env.example.com/get/pdf{?url}");
     window.contentGridConfig = VALID_WINDOW_CONFIG;
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBe("https://env.example.com/get/pdf{?url}");
+    expect(cfg.renditionUriTemplate).toBe("https://env.example.com/get/pdf{?url}");
   });
 
-  it("validates renditionUri from the localStorage dev override too", async () => {
+  it("validates renditionUriTemplate from the localStorage dev override too", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { loadAppConfig, DEV_CONFIG_STORAGE_KEY } = await import("./auth-config");
     const override = {
       apiBaseUrl: "https://dev.api.com",
       authority: "https://dev.auth.com",
       clientId: "dev-client",
-      renditionUri: "not-a-template",
+      renditionUriTemplate: "not-a-template",
     };
     localStorage.setItem(DEV_CONFIG_STORAGE_KEY, JSON.stringify(override));
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUri"));
+    expect(cfg.renditionUriTemplate).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("renditionUriTemplate"));
   });
 
-  it("leaves renditionUri unset when no source configures it", async () => {
+  it("leaves renditionUriTemplate unset when no source configures it", async () => {
     window.contentGridConfig = VALID_WINDOW_CONFIG;
     const { loadAppConfig } = await import("./auth-config");
     const cfg = await loadAppConfig();
-    expect(cfg.renditionUri).toBeUndefined();
+    expect(cfg.renditionUriTemplate).toBeUndefined();
     expect(cfg.renditionPollIntervalMs).toBeUndefined();
     expect(cfg.renditionTimeoutMs).toBeUndefined();
   });

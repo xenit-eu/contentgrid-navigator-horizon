@@ -7,7 +7,7 @@
 - Node 20+, `corepack enable` → pnpm 11.5.2 (pinned in `package.json`); `pnpm install --frozen-lockfile`.
 - A ContentGrid application with at least one entity that has a content attribute, a stored PDF item and
   a stored `.docx` item; or the MSW dev stub with the fixtures added by this feature.
-- `.env.development.local` (ignored) in `apps/navigator-experimental` with `VITE_RENDITION_URI=<template with {?url}>`
+- `.env.development.local` (ignored) in `apps/navigator-experimental` with `VITE_RENDITION_URI_TEMPLATE=<template with {?url}>`
   when testing against a real rendition service; leave it unset to validate the "not configured" path.
 
 ## Static checks
@@ -50,11 +50,11 @@ pnpm --filter navigator-experimental dev
 5. Entity without content attribute → attribute-focus layout, no viewer (US1-6).
 6. Download → original filename, request carries the user's token (network tab), works from every state
    that has a file (US1-7, FR-012).
-7. Non-PDF item with `VITE_RENDITION_URI` set → "Preparing preview", then the PDF; the initial and poll
+7. Non-PDF item with `VITE_RENDITION_URI_TEMPLATE` set → "Preparing preview", then the PDF; the initial and poll
    requests go to the rendition origin with the user's Bearer token and no other authentication call is
    made by the frontend; Download still delivers the
    original; a "converted preview" indicator is shown (US2-1, US2-2).
-8. Non-PDF item without `VITE_RENDITION_URI` → "Preview not available" + Download, no request (US2-5).
+8. Non-PDF item without `VITE_RENDITION_URI_TEMPLATE` → "Preview not available" + Download, no request (US2-5).
 9. Search a term: "n of m", Enter / Shift+Enter, match case, whole word, clear (US3-1, US3-2). Print opens
    the browser dialog with all pages (US3-3).
 10. Keyboard only: Tab through every toolbar control, operate each, observe announcements with a screen
@@ -195,4 +195,4 @@ fixture fix is tracked separately.
 
 All checks above green; independent review recorded with `scripts/navigator-review.sh`; SonarCloud
 new-code coverage ≥ 80 %; ADR-011 amended; open items with the platform team tracked (ACC-2960, Liaison
-`renditionUri`, CORS on the rendition service).
+`renditionUriTemplate`, CORS on the rendition service).

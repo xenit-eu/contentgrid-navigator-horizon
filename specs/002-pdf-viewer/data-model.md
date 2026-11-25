@@ -75,7 +75,7 @@ sees the real `problem | Error`.
 **Rules**
 
 - Poll first, then wait: a ready job is never delayed by a sleep.
-- Every request goes through `contentFetch` (the user's credentials; any exchange happens on the platform side). The content href is passed only as
+- Every request goes through `contentFetch` (an exchanged extension token for the rendition service, cached per user and origin — ACC-3292). The content href is passed only as
   the `url` parameter value; nothing else is built.
 - `cancelled` (abort) rejects with `AbortError` and is not shown as an error.
 
@@ -115,10 +115,10 @@ displayed (FR-006).
 
 ## Configuration (extended, `RuntimeAppConfig`)
 
-| Field                     | Type    | Source                                                                    | Default                              |
-| ------------------------- | ------- | ------------------------------------------------------------------------- | ------------------------------------ |
-| `renditionUri`            | string? | Liaison `config.js` `v1.renditionUri`, dev override, `VITE_RENDITION_URI` | unset → renditions disabled (FR-022) |
-| `renditionPollIntervalMs` | number? | Liaison / dev override                                                    | 2000                                 |
-| `renditionTimeoutMs`      | number? | Liaison / dev override                                                    | 60000                                |
+| Field                     | Type    | Source                                                                                     | Default                              |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------ | ------------------------------------ |
+| `renditionUriTemplate`    | string? | Liaison `config.js` `v1.renditionUriTemplate`, dev override, `VITE_RENDITION_URI_TEMPLATE` | unset → renditions disabled (FR-022) |
+| `renditionPollIntervalMs` | number? | Liaison / dev override                                                                     | 2000                                 |
+| `renditionTimeoutMs`      | number? | Liaison / dev override                                                                     | 60000                                |
 
-Validation: `renditionUri` must contain the `{?url}` expression; interval ≥ 250 ms; timeout ≥ interval.
+Validation: `renditionUriTemplate` must contain the `{?url}` expression; interval ≥ 250 ms; timeout ≥ interval.

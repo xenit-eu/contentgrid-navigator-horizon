@@ -7,7 +7,7 @@ import {
   DEFAULT_RENDITION_TIMEOUT_MS,
 } from "../preview/rendition-job";
 import { getAppConfig } from "./auth-config";
-import { createOidcTokenSupplier } from "./token-supplier";
+import { createExtensionAwareTokenSupplier, createOidcTokenSupplier } from "./token-supplier";
 
 export interface AppAuthResult {
   auth: ReturnType<typeof useAuth>;
@@ -15,16 +15,18 @@ export interface AppAuthResult {
   apiFetch: TypedFetch;
   /**
    * Authenticated fetch client for binary content requests (no Accept: hal+json header).
-   * Use exclusively for PUT/GET to cg:content links.
+   * Use exclusively for PUT/GET to cg:content links and rendition requests: the application
+   * origin gets the user's token, any other origin (the rendition service) an exchanged
+   * extension token — see `createExtensionAwareTokenSupplier`.
    */
   contentFetch: ContentFetch;
   profileUrl: string;
-  /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUri`. */
-  renditionUri?: string;
+  /** URI template for the PDF rendition service, from `RuntimeAppConfig.renditionUriTemplate`. */
+  renditionUriTemplate?: string;
   /**
    * Poll interval/ceiling for rendition jobs, populated with `RuntimeAppConfig`'s
    * `renditionPollIntervalMs`/`renditionTimeoutMs` (defaulting to 2000ms/60000ms) whenever
-   * `renditionUri` is configured; `undefined` when renditions are disabled.
+   * `renditionUriTemplate` is configured; `undefined` when renditions are disabled.
    */
   renditionPolling?: { intervalMs: number; timeoutMs: number };
 }
@@ -53,15 +55,27 @@ export function useAppAuth(): AppAuthResult {
   const authRef = useRef(auth);
   authRef.current = auth;
 
-  const { apiFetch, contentFetch } = useMemo(() => {
-    const supplier = createOidcTokenSupplier(async () => authRef.current.user ?? null);
+  const { apiFetch, contentFetch, clearExtensionTokens } = useMemo(() => {
+    const getUser = async () => authRef.current.user ?? null;
+    const supplier = createOidcTokenSupplier(getUser);
+    const contentSupplier = createExtensionAwareTokenSupplier({
+      applicationUrl: getAppConfig().apiBaseUrl,
+      getUser,
+    });
     return {
       apiFetch: createApiClient(supplier),
-      contentFetch: createContentClient(supplier),
+      contentFetch: createContentClient(contentSupplier),
+      clearExtensionTokens: contentSupplier.clear,
     };
   }, []); // created once; token is read via ref on each request
 
-  const { apiBaseUrl, renditionUri, renditionPollIntervalMs, renditionTimeoutMs } = getAppConfig();
+  // Drop the cached extension tokens when the user signs out or changes (and on unmount), so a
+  // previous user's tokens don't stay in memory until they expire.
+  const userSub = auth.user?.profile.sub;
+  useEffect(() => clearExtensionTokens, [userSub, clearExtensionTokens]);
+
+  const { apiBaseUrl, renditionUriTemplate, renditionPollIntervalMs, renditionTimeoutMs } =
+    getAppConfig();
 
   useEffect(() => {
     if (!auth.isLoading && !auth.error && auth.user?.expired) {
@@ -80,13 +94,13 @@ export function useAppAuth(): AppAuthResult {
   // every useNavigatorData() consumer on every AuthShell render.
   const renditionPolling = useMemo(
     () =>
-      renditionUri
+      renditionUriTemplate
         ? {
             intervalMs: renditionPollIntervalMs ?? DEFAULT_RENDITION_POLL_INTERVAL_MS,
             timeoutMs: renditionTimeoutMs ?? DEFAULT_RENDITION_TIMEOUT_MS,
           }
         : undefined,
-    [renditionUri, renditionPollIntervalMs, renditionTimeoutMs],
+    [renditionUriTemplate, renditionPollIntervalMs, renditionTimeoutMs],
   );
 
   return {
@@ -94,7 +108,7 @@ export function useAppAuth(): AppAuthResult {
     apiFetch,
     contentFetch,
     profileUrl: `${apiBaseUrl}/profile`,
-    renditionUri,
+    renditionUriTemplate,
     renditionPolling,
   };
 }

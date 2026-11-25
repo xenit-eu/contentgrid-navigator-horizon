@@ -95,7 +95,7 @@ export function makeQueryClient() {
  *                        Defaults to a real client using noopSupplier so MSW intercepts requests.
  * @param contentFetch  - Optional ContentFetch for binary content (cg:content) requests.
  *                        Defaults to a real content client using noopSupplier.
- * @param renditionUri  - Optional rendition URI template (must contain `{?url}`) to enable
+ * @param renditionUriTemplate  - Optional rendition URI template (must contain `{?url}`) to enable
  *                        `useContentPreview`'s rendition path. When provided, `renditionPolling`
  *                        is populated with the same defaults `useAppAuth` applies (2000ms /
  *                        60000ms) — pass a custom poll interval by registering MSW handlers
@@ -105,9 +105,9 @@ export function makeWrapper(
   queryClient = makeQueryClient(),
   apiFetch: TypedFetch = createApiClient(noopSupplier),
   contentFetch: ContentFetch = createContentClient(noopSupplier),
-  renditionUri?: string,
+  renditionUriTemplate?: string,
 ) {
-  const renditionPolling = renditionUri
+  const renditionPolling = renditionUriTemplate
     ? { intervalMs: DEFAULT_RENDITION_POLL_INTERVAL_MS, timeoutMs: DEFAULT_RENDITION_TIMEOUT_MS }
     : undefined;
 
@@ -118,7 +118,7 @@ export function makeWrapper(
           apiFetch={apiFetch}
           contentFetch={contentFetch}
           profileUrl={PROFILE_URL}
-          renditionUri={renditionUri}
+          renditionUriTemplate={renditionUriTemplate}
           renditionPolling={renditionPolling}
         >
           {children}
