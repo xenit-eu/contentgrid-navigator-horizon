@@ -20,4 +20,9 @@ describe("DateAttributeRenderer", () => {
     );
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
+
+  it("renders plain text without an icon", () => {
+    const { container } = render(<DateAttributeRenderer value="2021-06-15T09:12:00Z" />);
+    expect(container.querySelector("svg")).toBeNull();
+  });
 });

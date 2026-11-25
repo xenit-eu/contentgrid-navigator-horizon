@@ -1,4 +1,3 @@
-import { CalendarIcon } from "@phosphor-icons/react";
 import { ProfileAttributeType } from "@contentgrid/navigator-data";
 import { AttributeValue } from "@contentgrid/ui";
 import { formatAbsoluteDate } from "./format-date-value";
@@ -22,11 +21,8 @@ export function DateTimeAttributeRenderer({
   }
 
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <CalendarIcon size={14} className="shrink-0 text-muted-foreground" aria-hidden />
-      <AttributeValue wrap={wrap}>
-        {formatAbsoluteDate(parsed, ProfileAttributeType.datetime)}
-      </AttributeValue>
-    </span>
+    <AttributeValue wrap={wrap}>
+      {formatAbsoluteDate(parsed, ProfileAttributeType.datetime)}
+    </AttributeValue>
   );
 }
