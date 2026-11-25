@@ -1,9 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import {
-  type EntityItem,
-  type ProfileEntity,
-  toProblemDisplayModel,
-} from "@contentgrid/navigator-data";
+import { type EntityItem, type ProfileEntity } from "@contentgrid/navigator-data";
 import {
   Dialog,
   DialogContent,
@@ -13,10 +9,10 @@ import {
   type SplitPaneHandle,
   useContainerWidthAtLeast,
 } from "@contentgrid/ui";
-import { ErrorPage } from "../app-info-pages";
 import { EntityItemReference } from "../entity-item";
 import { EntitySearchBar } from "../entity-search-bar";
 import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
+import { EntityItemCollectionLoadError } from "./entity-item-collection-load-error";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 import { EntityItemCollectionTitle } from "./entity-item-collection-title";
 import { EntityItemPreviewPane } from "./entity-item-preview-pane";
@@ -219,7 +215,13 @@ export function EntityItemCollectionBrowser({
       aria-busy={collection.isPending || undefined}
       className={pageScroll ? "outline-none" : "h-full outline-none"}
     >
-      {collection.isError && <ErrorPage model={toProblemDisplayModel(collection.error)} />}
+      {collection.isError && (
+        <EntityItemCollectionLoadError
+          pluralName={profile.pluralName}
+          error={collection.error}
+          onRetry={() => void collection.refetch()}
+        />
+      )}
 
       {isEmptyCollection && (
         <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
