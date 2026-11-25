@@ -1,7 +1,6 @@
-import { UserIcon } from "@phosphor-icons/react";
 import type { PlainAttributeValue } from "@contentgrid/navigator-data";
-import { AttributeValue, StatusPill } from "@contentgrid/ui";
-import { type AttributeRendererVariant, isTableVariant } from "./variant";
+import { AuditUserAttributeRenderer } from "./audit-user-attribute-renderer";
+import type { AttributeRendererVariant } from "./variant";
 
 export interface ModifiedByAttributeRendererProps {
   readonly value: PlainAttributeValue;
@@ -10,26 +9,6 @@ export interface ModifiedByAttributeRendererProps {
   readonly variant?: AttributeRendererVariant;
 }
 
-export function ModifiedByAttributeRenderer({
-  value,
-  label,
-  wrap,
-  variant = "default",
-}: Readonly<ModifiedByAttributeRendererProps>) {
-  const displayValue = value == null ? undefined : String(value);
-
-  if (isTableVariant(variant)) {
-    return <AttributeValue wrap={wrap}>{displayValue}</AttributeValue>;
-  }
-
-  const pillLabel =
-    variant === "item-reference" ? (displayValue ?? "—") : `${label}: ${displayValue ?? "—"}`;
-  return (
-    <StatusPill
-      status="neutral"
-      icon={<UserIcon size={14} aria-hidden />}
-      label={pillLabel}
-      className={wrap ? "text-xs whitespace-normal break-words" : "text-xs"}
-    />
-  );
+export function ModifiedByAttributeRenderer(props: Readonly<ModifiedByAttributeRendererProps>) {
+  return <AuditUserAttributeRenderer {...props} pillClassName="text-xs" />;
 }
