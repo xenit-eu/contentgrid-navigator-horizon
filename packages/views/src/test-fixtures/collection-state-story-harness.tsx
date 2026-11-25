@@ -13,8 +13,11 @@ import {
 import { INVOICE_COLLECTION_URL, createInvoiceCollectionFixtureFetch } from "./invoice-collection";
 import { PROFILE_URL } from "./item-detail";
 
-/** What the collection request does in a story: never answers, answers once, or fails. */
-export type CollectionStoryState = "loading" | "paging" | "failed";
+/**
+ * What the collection request does in a story: never answers, answers once, fails with no answer
+ * ("failed", a network error), or fails with an HTTP problem ("problem").
+ */
+export type CollectionStoryState = "loading" | "paging" | "failed" | "problem";
 
 const NEXT_PAGE_URL = `${INVOICE_COLLECTION_URL}?_cursor=page2`;
 const NEVER = new Promise<Response>(() => {});
@@ -27,10 +30,17 @@ function fixtureFetch(state: CollectionStoryState) {
       url === INVOICE_COLLECTION_URL || url.startsWith(`${INVOICE_COLLECTION_URL}?`);
     if (isCollection && state === "loading") return NEVER;
     if (isCollection && state === "paging" && url === NEXT_PAGE_URL) return NEVER;
-    if (isCollection && state === "failed") {
+    if (isCollection && state === "failed") throw new TypeError("Failed to fetch");
+    if (isCollection && state === "problem") {
       return new Response(
-        JSON.stringify({ type: "about:blank", title: "Internal Server Error", status: 500 }),
-        { status: 500, headers: { "Content-Type": "application/problem+json" } },
+        JSON.stringify({
+          type: "https://contentgrid.cloud/problems/invalid-query-parameter/filter/format",
+          title: "Invalid filter",
+          detail: "The value of the filter 'issued' is not a valid date.",
+          status: 400,
+          format_error: "not a valid date",
+        }),
+        { status: 400, headers: { "Content-Type": "application/problem+json" } },
       );
     }
     return answer(input);

@@ -218,3 +218,25 @@ export const PagingDimmed: Story = {
     </CollectionStateStoryHarness>
   ),
 };
+
+/** The page request got no answer (a network error): the title stays, under it a red alert with Try again. */
+export const FailedToLoad: Story = {
+  args: { entityName: "invoice" },
+  beforeEach: useStateStoryColumns,
+  render: (args) => (
+    <CollectionStateStoryHarness state="failed">
+      {() => <EntityItemCollectionView {...args} />}
+    </CollectionStateStoryHarness>
+  ),
+};
+
+/** The server answered with a problem: the alert shows the problem's detail instead. */
+export const FailedToLoadWithProblem: Story = {
+  args: { entityName: "invoice" },
+  beforeEach: useStateStoryColumns,
+  render: (args) => (
+    <CollectionStateStoryHarness state="problem">
+      {() => <EntityItemCollectionView {...args} />}
+    </CollectionStateStoryHarness>
+  ),
+};
