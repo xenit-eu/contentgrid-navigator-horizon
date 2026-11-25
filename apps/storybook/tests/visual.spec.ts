@@ -46,6 +46,11 @@ test.describe("Storybook visual regression", () => {
           { timeout: 30_000 },
         );
       }
+      // A story tagged `pending-state` holds a request for good (a loading or paging state), so
+      // it is busy for ever: instead it sets `data-story-ready` on an element once the state shows.
+      if (story.tags?.includes("pending-state")) {
+        await page.waitForSelector("[data-story-ready]", { state: "attached", timeout: 30_000 });
+      }
       // Defensively kill animations/transitions in case a story enables them.
       await page.addStyleTag({
         content:

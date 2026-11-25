@@ -40,4 +40,14 @@ describe("EntityItemCollectionTitle", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Invoices" })).toBeInTheDocument();
     expect(pill()).toBeNull();
   });
+
+  it("shows a skeleton pill while the first page loads, and no count", () => {
+    render(
+      <EntityItemCollectionTitle profile={profile} total={undefined} isFiltered={false} loading />,
+    );
+
+    expect(screen.getByRole("heading", { level: 1, name: "Invoices" })).toBeInTheDocument();
+    expect(document.querySelector("[data-slot='collection-count-skeleton']")).toBeInTheDocument();
+    expect(pill()).toBeNull();
+  });
 });
