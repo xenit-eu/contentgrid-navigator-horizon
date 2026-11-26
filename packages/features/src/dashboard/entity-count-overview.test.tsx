@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { useEntityItemCollection, useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import {
+  type ProfileEntity,
+  useEntityItemCollection,
+  useLoadedProfileEntities,
+} from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { EntityCountOverview } from "./entity-count-overview";
 
@@ -30,11 +34,16 @@ function invoiceProfile() {
   );
 }
 
-function mockProfiles(profiles: unknown[], isLoading = false) {
+function mockProfiles(
+  profiles: readonly ProfileEntity[],
+  { error = null, refetch = vi.fn() }: { error?: Error | null; refetch?: () => void } = {},
+) {
   vi.mocked(useLoadedProfileEntities).mockReturnValue({
     profiles,
-    isLoading,
-  } as unknown as ReturnType<typeof useLoadedProfileEntities>);
+    isLoading: false,
+    error,
+    refetch,
+  });
 }
 
 describe("EntityCountOverview", () => {
@@ -100,6 +109,17 @@ describe("EntityCountOverview", () => {
     mockProfiles([]);
     render(<EntityCountOverview onOpenEntity={vi.fn()} />);
 
-    expect(screen.getByText("No entities found")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nothing to show yet" })).toBeInTheDocument();
+  });
+
+  it("offers to try again when the profile fails to load", async () => {
+    const refetch = vi.fn();
+    mockProfiles([], { error: new Error("Network error"), refetch });
+    render(<EntityCountOverview onOpenEntity={vi.fn()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The application couldn't be loaded");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(refetch).toHaveBeenCalledOnce();
   });
 });
