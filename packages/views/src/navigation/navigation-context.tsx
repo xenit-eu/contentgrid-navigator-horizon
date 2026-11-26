@@ -33,8 +33,8 @@ export interface Navigation {
   openSettings(options?: NavigationOptions): void;
   /** Opens one entity's display configuration, from the settings page. */
   openEntityConfiguration(entityName: string, options?: NavigationOptions): void;
-  /** Go to the previous history item. If unavailable, go to otherwise() */
-  goBack(options?: { otherwise?: () => void }): void;
+  /** Goes back to the previous page in history. Returns `false` if unavailable. */
+  goBack(): boolean;
   /**
    * The real address for each `open*` above, when the host has one to give (contract
    * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so
@@ -62,7 +62,7 @@ const noopNavigation: Navigation = {
   openClassifyCreate: () => {},
   openSettings: () => {},
   openEntityConfiguration: () => {},
-  goBack: () => {},
+  goBack: () => false,
 };
 
 export function NavigationProvider({

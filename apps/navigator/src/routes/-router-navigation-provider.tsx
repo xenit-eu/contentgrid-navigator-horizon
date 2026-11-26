@@ -112,12 +112,12 @@ export function RouterNavigationProvider({ children }: Readonly<{ children: Reac
               search: {},
             }),
         ),
-      goBack: (options?: { otherwise?: () => void }) => {
-        if (router.history.canGoBack()) {
-          router.history.back();
-        } else if (options?.otherwise) {
-          options.otherwise();
+      goBack: () => {
+        if (!router.history.canGoBack()) {
+          return false;
         }
+        router.history.back();
+        return true;
       },
       hrefFor: {
         home: hrefs.home,

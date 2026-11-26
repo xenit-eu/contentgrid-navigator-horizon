@@ -67,7 +67,7 @@ describe("useViewNavigation", () => {
       openClassifyCreate: vi.fn(),
       openSettings: vi.fn(),
       openEntityConfiguration: vi.fn(),
-      goBack: vi.fn(),
+      goBack: vi.fn(() => false),
     };
     render(
       <NavigationProvider navigation={navigation}>

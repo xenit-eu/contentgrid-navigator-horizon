@@ -6,7 +6,11 @@ export function ClassifyCreateEntityItemView() {
   return (
     <ClassifyCreateEntityItemPanel
       onSelect={(profile) => navigation.openCreateItem(profile.name)}
-      onCancel={() => navigation.goBack({ otherwise: () => navigation.openHome() })}
+      onCancel={() => {
+        if (!navigation.goBack()) {
+          navigation.openHome();
+        }
+      }}
     />
   );
 }
