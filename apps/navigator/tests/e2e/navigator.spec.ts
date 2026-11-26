@@ -2,7 +2,7 @@
  * E2E navigator spec — ported from the original navigator (HZN-5D.9).
  *
  * MUI-specific selectors replaced with shadcn/ui equivalents:
- *   - Date pickers:  MUI popup + gridcell/option clicks  →  trigger button + Calendar popover (month/year dropdowns, then the day)
+ *   - Date pickers:  MUI popup + gridcell/option clicks  →  text input that accepts a typed ISO date (plus a Calendar popover behind the calendar button)
  *   - Row actions:   inline icon buttons (getByLabel/getByTestId)  →  "Open menu" dropdown + menuitem
  *   - Pagination:    KeyboardArrowRight/LeftIcon testIds  →  aria-label "Go to next/previous page"
  *   - Sidebar:       "Expand sidebar" button  →  "Expand sidebar" / "Collapse sidebar" (SidebarTrigger in the header)
@@ -20,19 +20,11 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { ENTITY } from "./testData";
 
-/** Opens a date field's calendar popover and picks a day (`month` is 1-12). */
+/** Types an ISO date (`yyyy-mm-dd`, accepted in every locale) into a date field and commits it. */
 async function pickDate(page: Page, label: string, year: number, month: number, day: number) {
-  await page.getByLabel(label).click();
-  await page.getByLabel("Choose the Year").selectOption(String(year));
-  await page.getByLabel("Choose the Month").selectOption(String(month - 1));
-  await page
-    .getByRole("button", { name: new RegExp(`${monthName(month)} ${day}\\w{2}, ${year}`) })
-    .click();
-  await page.keyboard.press("Escape");
-}
-
-function monthName(month: number): string {
-  return new Date(2000, month - 1, 1).toLocaleString("en-US", { month: "long" });
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  await page.getByLabel(label).fill(iso);
+  await page.getByLabel(label).press("Tab");
 }
 
 test.beforeEach(async ({ page }) => {
@@ -97,7 +89,7 @@ test("search form test", async ({ page, login, selectSidebarEntity }) => {
   await page.getByRole("option", { name: "Unset" }).click();
   await expect(page.getByRole("combobox", { name: /Boolean/i })).toContainText("Unset");
 
-  // Date/datetime filter — a trigger button that opens a Calendar popover.
+  // Date/datetime filter — a text input (typed ISO date) with a Calendar popover behind its button.
   // FilterSidebar labels: "Datetime after" / "Datetime before" (from field name + direction).
   await pickDate(page, "Datetime after", 2024, 1, 15);
   await pickDate(page, "Datetime before", 2024, 1, 20);
