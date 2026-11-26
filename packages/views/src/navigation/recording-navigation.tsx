@@ -25,7 +25,8 @@ export type NavigationCall =
   | {
       method: "openEntityConfiguration";
       args: [entityName: string] | [entityName: string, options: NavigationOptions];
-    };
+    }
+  | { method: "goBack"; args: [] };
 
 export interface RecordingNavigation {
   navigation: Navigation;
@@ -69,6 +70,11 @@ export function createRecordingNavigation(): RecordingNavigation {
         method: "openEntityConfiguration",
         args: options ? [entityName, options] : [entityName],
       });
+    },
+    // There is no history to go back to, so a view's fallback runs too and shows up in `calls`.
+    goBack: () => {
+      calls.push({ method: "goBack", args: [] });
+      return false;
     },
     hrefFor: {
       home: () => "/",
