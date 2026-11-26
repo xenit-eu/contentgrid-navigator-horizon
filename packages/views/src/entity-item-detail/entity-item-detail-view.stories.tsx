@@ -62,6 +62,8 @@ interface ItemDetailStoryHarnessProps {
   readonly templates?: readonly ItemTemplate[];
   /** `"columns"` renders the side-by-side layout instead of the stacked sections. */
   readonly itemLayout?: "columns";
+  /** Gives the customer an `orders` relation, so the side-by-side layout has a relations column. */
+  readonly withRelation?: boolean;
   /** Clicks the toolbar's Edit once it shows, so the story captures edit mode. */
   readonly startEditing?: boolean;
 }
@@ -76,14 +78,16 @@ function ItemDetailStoryHarness({
   children,
   templates,
   itemLayout,
+  withRelation = false,
   startEditing = false,
 }: Readonly<ItemDetailStoryHarnessProps>) {
-  const [fixture] = useState(() => createFixtureFetch({ templates }));
+  const [fixture] = useState(() => createFixtureFetch({ templates, withRelation }));
   const [queryClient] = useState(() => new QueryClient());
   const [recording] = useState(() => createRecordingNavigation());
   const [ready, setReady] = useState(false);
   const [routed, setRouted] = useState(false);
   const [editing, setEditing] = useState(!startEditing);
+  const [relationShown, setRelationShown] = useState(!withRelation);
   const box = useRef<HTMLDivElement>(null);
   const apiFetch = fixture.fetch as unknown as TypedFetch;
   const contentFetch = Object.assign(apiFetch, { withUploadProgress: () => apiFetch });
@@ -120,10 +124,19 @@ function ItemDetailStoryHarness({
     return () => clearInterval(timer);
   }, [ready, routed, editing]);
 
+  // The relations load after the item, so wait until the first order shows.
+  useEffect(() => {
+    if (relationShown) return;
+    const timer = setInterval(() => {
+      if (box.current?.textContent?.includes("ORD-1001")) setRelationShown(true);
+    }, 20);
+    return () => clearInterval(timer);
+  }, [relationShown]);
+
   return (
     <div
       ref={box}
-      aria-busy={!ready || !routed || !editing}
+      aria-busy={!ready || !routed || !editing || !relationShown}
       className="overflow-hidden rounded-md border"
       style={{ width: 960, height: 560 }}
     >
@@ -188,10 +201,15 @@ export const Editing: Story = {
   parameters: { harness: { templates: ["default", "delete"], startEditing: true } },
 };
 
-/** The side-by-side layout keeps the same actions in the same place. */
+/**
+ * The side-by-side layout keeps the same actions in the same place. The customer has an `orders`
+ * relation, which is what moves the layout into two columns (the card, and the relations).
+ */
 export const SideBySideEditAndDelete: Story = {
   args: { entityName, itemId },
-  parameters: { harness: { templates: ["default", "delete"], itemLayout: "columns" } },
+  parameters: {
+    harness: { templates: ["default", "delete"], itemLayout: "columns", withRelation: true },
+  },
 };
 
 export const ToolbarHidden: Story = {
