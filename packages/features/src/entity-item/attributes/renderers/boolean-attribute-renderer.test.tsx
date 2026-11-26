@@ -25,4 +25,28 @@ describe("BooleanAttributeRenderer", () => {
     render(<BooleanAttributeRenderer value={true} label="Custom label" />);
     expect(screen.getByText("Custom label")).toBeInTheDocument();
   });
+
+  it("keeps plain text in every table variant except the collection page's", () => {
+    for (const variant of ["table", "attribute-table"] as const) {
+      const { container, unmount } = render(
+        <BooleanAttributeRenderer value={true} label="Yes" variant={variant} />,
+      );
+      expect(screen.getByText("True")).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="status-pill"]')).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  describe('in the collection page\'s table ("collection-table")', () => {
+    it.each([
+      [true, "True", "text-[#266B49]"],
+      [false, "False", "text-[#B3261E]"],
+      [null, "Not set", "text-[#3C5667]"],
+    ])("renders %s as a %s pill without an icon", (value, text, colour) => {
+      render(<BooleanAttributeRenderer value={value} label="ignored" variant="collection-table" />);
+      const pill = screen.getByText(text).closest('[data-slot="status-pill"]');
+      expect(pill).toHaveClass(colour);
+      expect(pill?.querySelector("svg")).not.toBeInTheDocument();
+    });
+  });
 });

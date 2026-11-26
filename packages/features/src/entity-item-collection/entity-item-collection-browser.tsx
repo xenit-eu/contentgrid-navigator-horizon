@@ -39,6 +39,11 @@ export interface EntityItemCollectionBrowserProps {
    */
   readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
+   * The address of an item's own page, when the host has one: the row titles become real links to
+   * it, the plain click still going through `onEntityItemClick`.
+   */
+  readonly entityItemHref?: (item: EntityItem) => string | undefined;
+  /**
    * Fired when the user paginates; receives the target page's href
    * (`collection.nextHref` / `collection.prevHref`).
    */
@@ -80,6 +85,7 @@ export function EntityItemCollectionBrowser({
   profile,
   pageUrl,
   onEntityItemClick,
+  entityItemHref,
   onPageChange,
   filters = EMPTY_FILTERS,
   onFiltersChange,
@@ -221,10 +227,14 @@ export function EntityItemCollectionBrowser({
         <EntityItemCollectionTable
           className={pageScroll ? undefined : "h-full"}
           pageScroll={pageScroll}
+          look="collection"
+          // The page title shows the count.
+          showItemCount={false}
           profile={profile}
           collection={collection.data}
           onEntityItemClick={handlePreview}
           onEntityItemOpen={onEntityItemClick}
+          entityItemHref={entityItemHref}
           currentItem={previewedItem}
           onPageChange={onPageChange}
           {...tableProps}
@@ -247,7 +257,7 @@ export function EntityItemCollectionBrowser({
 
       {onFiltersChange && !isEmptyCollection && (
         <EntitySearchBar
-          className="shrink-0 p-4"
+          className="shrink-0 py-4"
           profileEntity={profile}
           filters={filters}
           onFiltersChange={onFiltersChange}
@@ -257,7 +267,7 @@ export function EntityItemCollectionBrowser({
       )}
 
       <div
-        className={`px-4 pb-4 ${pageScroll ? "" : "min-h-0 flex-1"} ${onFiltersChange ? "" : "pt-4"}`}
+        className={`pb-4 ${pageScroll ? "" : "min-h-0 flex-1"} ${onFiltersChange ? "" : "pt-4"}`}
       >
         {isWide ? (
           // The pane's panel is always there, collapsed while nothing is previewed, so opening
