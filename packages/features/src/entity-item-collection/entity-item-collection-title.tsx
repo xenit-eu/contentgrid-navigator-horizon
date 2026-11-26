@@ -22,7 +22,7 @@ export function EntityItemCollectionTitle({
   const count = formatCount(total, { estimate: "word" });
 
   return (
-    <div className="px-4">
+    <div>
       <div className="flex items-center gap-2.5">
         <h1 className="text-[26px] leading-[1.2] font-bold text-foreground">
           {profile.pluralName}

@@ -46,3 +46,12 @@ export const CustomIcon: Story = {
     icon: <Star size={14} />,
   },
 };
+
+/** `icon={false}`: the label alone, as the collection table's True / False / Not set pills. */
+export const LabelOnly: Story = {
+  args: {
+    status: "success",
+    label: "True",
+    icon: false,
+  },
+};

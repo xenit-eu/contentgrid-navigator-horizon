@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEntityDisplayPreferencesStore } from "@contentgrid/features/preferences";
 import { NavigatorDataProvider } from "@contentgrid/navigator-data";
 import type { TypedFetch } from "@contentgrid/navigator-data";
 import {
@@ -8,6 +9,7 @@ import {
   createRecordingNavigation,
 } from "../navigation/recording-navigation";
 import { createCollectionFixtureFetch } from "../test-fixtures/collection";
+import { createInvoiceCollectionFixtureFetch } from "../test-fixtures/invoice-collection";
 import { PROFILE_URL } from "../test-fixtures/item-detail";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
 
@@ -22,15 +24,29 @@ type FixtureOptions = Parameters<typeof createCollectionFixtureFetch>[0];
 function CollectionStoryHarness({
   children,
   fixtureOptions = { empty: true },
-}: Readonly<{ children: ReactNode; fixtureOptions?: FixtureOptions }>) {
-  const [fixture] = useState(() => createCollectionFixtureFetch(fixtureOptions));
+  invoices = false,
+  height = 560,
+  width = 960,
+}: Readonly<{
+  children: ReactNode;
+  fixtureOptions?: FixtureOptions;
+  /** Answers the invoice fixture (text, number, date, boolean and file columns) instead. */
+  invoices?: boolean;
+  height?: number;
+  width?: number;
+}>) {
+  const [fixture] = useState(() =>
+    invoices
+      ? { fetch: createInvoiceCollectionFixtureFetch() }
+      : createCollectionFixtureFetch(fixtureOptions),
+  );
   const [queryClient] = useState(() => new QueryClient());
   const [recording] = useState(() => createRecordingNavigation());
   const apiFetch = fixture.fetch as unknown as TypedFetch;
   const contentFetch = Object.assign(apiFetch, { withUploadProgress: () => apiFetch });
 
   return (
-    <div className="overflow-hidden rounded-md border" style={{ width: 960, height: 560 }}>
+    <div className="overflow-hidden rounded-md border" style={{ width, height }}>
       <QueryClientProvider client={queryClient}>
         <NavigatorDataProvider
           apiFetch={apiFetch}
@@ -120,5 +136,48 @@ export const ManyRows: Story = {
     >
       <EntityItemCollectionView {...args} />
     </CollectionStoryHarness>
+  ),
+};
+
+/**
+ * The invoice stories show the columns of board 02: the title cell with its file tile and file
+ * line (also "No file"), booleans as True / False / Not set pills, a file column with a dash when
+ * empty, right-aligned numbers, the two-arrow icon on sortable headers, and Previous / Next at the
+ * right of the paging bar.
+ */
+function InvoiceStoryHarness({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <CollectionStoryHarness invoices height={820} width={1240}>
+      {children}
+    </CollectionStoryHarness>
+  );
+}
+
+/** The title shows the invoice reference; the display settings pick the other columns. */
+function useInvoiceDisplaySettings() {
+  useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+    nameAttribute: "reference",
+    visibleColumns: ["amount", "issued", "paid", "annex"],
+  });
+}
+
+export const Invoices: Story = {
+  args: { entityName: "invoice" },
+  beforeEach: useInvoiceDisplaySettings,
+  render: (args) => (
+    <InvoiceStoryHarness>
+      <EntityItemCollectionView {...args} />
+    </InvoiceStoryHarness>
+  ),
+};
+
+/** Sorted by amount ascending: its arrow and label are in the accent colour. */
+export const InvoicesSortedByAmount: Story = {
+  args: { entityName: "invoice", state: { sort: "amount,asc" }, onStateChange: () => {} },
+  beforeEach: useInvoiceDisplaySettings,
+  render: (args) => (
+    <InvoiceStoryHarness>
+      <EntityItemCollectionView {...args} />
+    </InvoiceStoryHarness>
   ),
 };

@@ -10,7 +10,8 @@ import { cn } from "../lib/utils";
 interface StatusPillProps {
   readonly status?: "success" | "danger" | "warning" | "neutral";
   readonly label: string;
-  readonly icon?: React.ReactNode;
+  /** Replaces the status's default icon; `false` shows the label alone. */
+  readonly icon?: React.ReactNode | false;
   readonly className?: string;
 }
 
@@ -39,7 +40,7 @@ const statusConfig = {
 
 function StatusPill({ status = "neutral", label, icon, className }: StatusPillProps) {
   const config = statusConfig[status];
-  const renderedIcon = icon ?? config.defaultIcon;
+  const renderedIcon = icon === false ? null : (icon ?? config.defaultIcon);
 
   return (
     <span

@@ -58,4 +58,35 @@ describe("ContentAttributeRenderer", () => {
     expect(screen.getByTestId("icon")).toBeInTheDocument();
     expect(screen.getByText("invoice.pdf · 1.0 kB")).toBeInTheDocument();
   });
+
+  describe('in the collection page\'s table ("collection-table")', () => {
+    const metadata = { filename: "terms.pdf", length: 90112, mimetype: "application/pdf" };
+
+    it("shows a 24px file tile before the name and the new size format", () => {
+      const { container } = render(
+        <ContentAttributeRenderer metadata={metadata} variant="collection-table" />,
+      );
+      expect(screen.getByText("terms.pdf · 88 KB")).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="file-tile"]')).toHaveClass("size-6");
+    });
+
+    it("shows a dash and no tile when the attribute has no file", () => {
+      const { container } = render(
+        <ContentAttributeRenderer metadata={null} variant="collection-table" />,
+      );
+      expect(screen.getByText("—")).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+    });
+
+    it("shows no tile and the old size format in the other variants", () => {
+      for (const variant of ["default", "table", "attribute-table"] as const) {
+        const { container, unmount } = render(
+          <ContentAttributeRenderer metadata={metadata} variant={variant} />,
+        );
+        expect(container.querySelector('[data-slot="file-tile"]')).not.toBeInTheDocument();
+        expect(screen.getByText("terms.pdf · 88.0 kB")).toBeInTheDocument();
+        unmount();
+      }
+    });
+  });
 });
