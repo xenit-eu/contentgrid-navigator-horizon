@@ -353,7 +353,7 @@ describe("ApplicationSelectorPage", () => {
         authority: "https://issuer.example.com",
         clientId: "custom-client",
         extractServiceUrl: "https://extract.example.com",
-        renditionUri: "https://rendition.example.com{?url}",
+        renditionUriTemplate: "https://rendition.example.com{?url}",
       });
 
       // Once saved, "Load saved config" becomes enabled.

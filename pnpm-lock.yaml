@@ -66,11 +66,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/features
       '@contentgrid/fetch-hook-authentication':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@contentgrid/fetch-hooks':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@contentgrid/hal':
         specifier: ^0.4.4
         version: 0.4.4
@@ -169,11 +169,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/features
       '@contentgrid/fetch-hook-authentication':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@contentgrid/fetch-hooks':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@contentgrid/hal':
         specifier: ^0.4.4
         version: 0.4.4
@@ -465,11 +465,11 @@ importers:
   packages/navigator-data:
     dependencies:
       '@contentgrid/fetch-hook-authentication':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@contentgrid/fetch-hooks':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       '@contentgrid/hal':
         specifier: ^0.4.4
         version: 0.4.4
@@ -879,11 +879,11 @@ packages:
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
 
-  '@contentgrid/fetch-hook-authentication@0.4.4':
-    resolution: {integrity: sha512-OJGHRJ4PpCXSfA+qggqP9dx14Uam8TFUGCG4mlzup0hj+fev6kCyfI9iOZTGDIjobkkUKxz+83mbKKSZyJveTQ==}
+  '@contentgrid/fetch-hook-authentication@0.4.5':
+    resolution: {integrity: sha512-5ZitMRsslF4sik8iKPwJrpuX3UMKD3felcoavVndG/t/srFDxN+UMKpuQ95XtTdXFWby+4nGP7MrPsoctFWQYg==}
 
-  '@contentgrid/fetch-hooks@0.4.4':
-    resolution: {integrity: sha512-6ZZcwAu56jnsMMqgpclbv49+wsVM5/ZpqiWEpe/2kXcb/VBSIxtk4XrhUESdWRT77Px6YxBvR83SzP8XYyxF5w==}
+  '@contentgrid/fetch-hooks@0.4.5':
+    resolution: {integrity: sha512-a3m92L5h9UeYLT8l6j/hYQsB1dTt2tHULC1dNPDlDadJvmbl7vxCQO+B3R7TUKmL7GPAHW972hEB++GPkeQVeg==}
 
   '@contentgrid/hal-forms@0.4.4':
     resolution: {integrity: sha512-d1BsXTdv5rtuYg9tq4v74wmyTPhesSZmqdvNUy513yu4rsex+tTDJv2y44ZEc3yRh8DojBvWuz5kpeaPVzA5MQ==}
@@ -5822,15 +5822,15 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@contentgrid/fetch-hook-authentication@0.4.4':
+  '@contentgrid/fetch-hook-authentication@0.4.5':
     dependencies:
       '@babel/runtime': 8.0.7
-      '@contentgrid/fetch-hooks': 0.4.4
+      '@contentgrid/fetch-hooks': 0.4.5
       '@types/whatwg-mimetype': 5.0.0
       tslib: 2.8.1
       whatwg-mimetype: 5.0.0
 
-  '@contentgrid/fetch-hooks@0.4.4':
+  '@contentgrid/fetch-hooks@0.4.5':
     dependencies:
       '@babel/runtime': 8.0.7
       tslib: 2.8.1

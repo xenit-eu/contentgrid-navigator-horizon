@@ -5,12 +5,17 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
+  TruncatedText,
 } from "@contentgrid/ui";
 import { NavigationLink, useViewNavigation } from "../navigation";
 
+/** Characters of a crumb's title before it is truncated with "…"; the full title shows on hover. */
+export const BREADCRUMB_TITLE_MAX_CHAR_LENGTH = 40;
+
 /**
  * The entity's collection — its plural name as plain text — followed by its `children` crumbs:
- * a link to the list when crumbs follow it, the current page when it is last. Draws nothing (nor its children) until the profile is known.
+ * a link to the list when crumbs follow it, the current page when it is last. A long name is
+ * truncated, with the full name on hover. Draws nothing (nor its children) until the profile is known.
  */
 export function CollectionBreadcrumb({
   profileEntity,
@@ -29,11 +34,19 @@ export function CollectionBreadcrumb({
               href={navigation.hrefFor?.entityItemCollection(profileEntity.name)}
               onNavigate={() => navigation.openEntityItemCollection(profileEntity.name)}
             >
-              {profileEntity.pluralName}
+              <TruncatedText
+                text={profileEntity.pluralName}
+                maxCharLength={BREADCRUMB_TITLE_MAX_CHAR_LENGTH}
+              />
             </NavigationLink>
           </BreadcrumbLink>
         ) : (
-          <BreadcrumbPage>{profileEntity.pluralName}</BreadcrumbPage>
+          <BreadcrumbPage>
+            <TruncatedText
+              text={profileEntity.pluralName}
+              maxCharLength={BREADCRUMB_TITLE_MAX_CHAR_LENGTH}
+            />
+          </BreadcrumbPage>
         )}
       </BreadcrumbItem>
       {children}

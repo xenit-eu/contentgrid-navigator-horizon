@@ -1,6 +1,6 @@
 import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
-import { ItemReference } from "@contentgrid/ui";
+import { ItemReference, TruncatedText } from "@contentgrid/ui";
 import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../../preferences";
 import { AttributeValueRenderer } from "../../attributes/renderers/attribute-value-renderer";
 
@@ -15,6 +15,11 @@ export interface EntityItemReferenceProps {
    * fill. Combined with `muted`, the background keeps the soft muted fill instead of going
    * fully transparent — see `IconBadge`'s doc comment. */
   readonly outlined?: boolean;
+  /**
+   * Characters of the title shown before it is truncated with "…", also when the title is the
+   * item's id; the full title shows on hover.
+   */
+  readonly titleMaxCharLength?: number;
   readonly className?: string;
   /** Renders just the title as inline text, with no icon, subtitle or box (e.g. in a breadcrumb). */
   readonly titleOnly?: boolean;
@@ -37,6 +42,7 @@ export function EntityItemReference({
   size,
   muted,
   outlined,
+  titleMaxCharLength = STRING_REFERENCE_MAX_CHAR_LENGTH,
   className,
   titleOnly,
 }: Readonly<EntityItemReferenceProps>) {
@@ -49,11 +55,11 @@ export function EntityItemReference({
   const title = nameAttr ? (
     <AttributeValueRenderer
       attr={nameAttr}
-      maxCharLength={STRING_REFERENCE_MAX_CHAR_LENGTH}
+      maxCharLength={titleMaxCharLength}
       variant="item-reference"
     />
   ) : (
-    item.id
+    <TruncatedText text={item.id} maxCharLength={titleMaxCharLength} />
   );
 
   if (titleOnly) {

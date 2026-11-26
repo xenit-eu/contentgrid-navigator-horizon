@@ -63,7 +63,7 @@ export const PreviewUnavailable: Story = {
 
 /**
  * The rendition path's own flavor of `previewUnavailable` (spec 002-pdf-viewer US2): either no
- * `renditionUri` is configured, or the rendition service itself reported `invalid-conversion` for
+ * `renditionUriTemplate` is configured, or the rendition service itself reported `invalid-conversion` for
  * this file. `ContentPreviewPanel` names the actual mimetype in the message via a `labels`
  * override (`content-preview-panel.tsx`'s `buildPreviewUnavailableMessage`) rather than the
  * generic "this file type" default shown by the plain `PreviewUnavailable` story above.

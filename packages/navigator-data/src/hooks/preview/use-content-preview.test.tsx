@@ -8,7 +8,7 @@
  * - null metadata → noFile without any request
  * - Rendition ready → pdf/origin:"rendition"
  * - Rendition invalid-conversion → unsupported
- * - No renditionUri configured → unavailable (no request at all)
+ * - No renditionUriTemplate configured → unavailable (no request at all)
  * - Rendition "never" outcome → RenditionTimeoutError after the ceiling
  * - A poll-time 500 → isError (ProblemDetailError)
  * - Key change (attribute/item switch) aborts in-flight polling — no further handler calls
@@ -227,7 +227,7 @@ describe("useContentPreview — stored image or video", () => {
 // Non-PDF: unavailable / rendition
 // ---------------------------------------------------------------------------
 
-describe("useContentPreview — no renditionUri configured", () => {
+describe("useContentPreview — no renditionUriTemplate configured", () => {
   it("returns unavailable without any request", async () => {
     const entityItem = makeItem({
       metadata: { filename: "report.docx", mimetype: "application/msword", length: 10 },
