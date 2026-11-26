@@ -13,6 +13,7 @@ draws a toolbar or page chrome (see "Page layout" in `packages/features/CLAUDE.m
 use-entity-item-context.ts   item context hook (item, refetch, edit mode, section state)
 use-entity-item-section-props.ts  EntityItemSections props for a variation
 entity-item-sections.tsx     attributes, relations and audit trail as collapsible sections
+content-attribute-metadata.ts  a content attribute's stored-file metadata, read off the item
 attributes/                  attribute list, editable attributes, value renderers
 relations/                   to-one / to-many relation sections, relation picker, relation summary
 edit/                        edit button, update form
@@ -80,16 +81,37 @@ Every variation takes `EntityItemVariationProps`:
 the shown item. It returns:
 
 - `item`, `refetch` — passed through
-- `shownItem` — the version being edited while the form is open, `item` otherwise; pass this to
-  `EditableEntityItemAttributes`
+- `shownItem` — while editing, the version the edit form was opened on; `item` otherwise. Pass this
+  to `EditableEntityItemAttributes`
 - `isEditing`, `setIsEditing` — edit mode; it ends when the item changes and stays closed when the
   page comes back to it
-- `refresh` — refetches and moves the open form onto the latest version (the form's Refresh after
+- `refresh` — refetches and moves the edit form onto the latest version (the form's Refresh after
   a 412)
 - `sections` — open/closed state of the collapsible sections; pass it to `EntityItemSections` as
   `state`, and use its `revealRelation` to expand and scroll to a relation (the relation summary)
   — toggles last while the page stays on the item; on another item every section is back at its
   default (`defaultSectionOpen` in `entity-item-sections.tsx`)
+- `pendingContent`, `setPendingContent` — the file changes made in the edit form and not saved yet,
+  per content attribute (`ContentChange`): a new `file` to store, or `file: null` to remove the
+  stored one. Save sends them after the other fields are saved, each picked file with the name and
+  media type in its filename and mimetype fields.
+  - Why here and not in the form: the content preview next to the form needs them too. It shows a
+    picked file before it is uploaded, and a drop zone when there is no file (removed, or none
+    stored); a file dropped there is added to the same list (`withContentChange`).
+  - When the list is emptied: on opening or closing the edit form (saved or cancelled), and on
+    moving to another item. `refresh` (after a 412) keeps it, so the user can save again without
+    picking the files again.
+- `contentFailures`, `setContentFailures` — the message of each file change the last Save could not
+  apply, by attribute name; the form shows it on that attribute's card (`FileRenderer`'s `error`).
+  - Why here and not in the form: the form remounts when the refresh after a failure lands (new
+    ETag), and the failure has to outlive that.
+  - When an entry goes: when the user changes that attribute's file again (`setPendingContent`
+    drops the failures of the attributes it changes, whether the change comes from the form or the
+    content preview's drop zone), when a new Save starts (the form clears them, then sets the new
+    Save's), on opening or closing the form and on moving to another item. `refresh` keeps them.
+- `isSaving`, `setIsSaving` — whether the edit form is saving; the form reports it through
+  `onSavingChange`. While it is true the file fields and the content preview's drop zone take no
+  file, and the form's Cancel does nothing. Cleared together with `pendingContent`.
 
 While editing, a background refetch does not change `shownItem`, so the user's input stays and a
 save of a stale version is refused (412). `noRefetch` is the default when the caller can't reload.

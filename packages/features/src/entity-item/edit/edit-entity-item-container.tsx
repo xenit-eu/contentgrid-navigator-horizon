@@ -1,19 +1,45 @@
-import { type Ref, type SubmitEvent, useImperativeHandle, useMemo, useState } from "react";
+import {
+  type Ref,
+  type SubmitEvent,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import {
+  type ContentChangeResults,
+  type ContentChanges,
+  type FieldValueMap,
   getValidationFieldErrors,
   isProblemWithStatus,
   isValidationProblem,
   toProblemDisplayModel,
+  useApplyContentChanges,
   useUpdateEntityItem,
 } from "@contentgrid/navigator-data";
 import { UnsavedChangesDialog } from "@contentgrid/ui";
-import { resolveHalFormsFields, toServerFieldErrors, useHalFormsFieldState } from "../../hal-forms";
+import {
+  HalFormsContainer,
+  resolveHalFormsFields,
+  toServerFieldErrors,
+  useHalFormsFieldState,
+} from "../../hal-forms";
 import { ProblemAlert } from "../../problem-details";
 import { capitalizeFirstLetter } from "../../string-utils";
 import { useUnsavedChangesGuard } from "../../unsaved-changes-guard";
+import {
+  changedFileMetadataValues,
+  initialFormValues,
+  layoutWithoutContentMetadata,
+  metadataFieldsLayout,
+  startingMetadataValues,
+  storedMetadataValues,
+} from "./content-metadata-fields";
+import { EditContentFields, contentAttributeLabel } from "./edit-content-fields";
 import { EditEntityItemForm } from "./edit-entity-item-form";
 import type { EditableEntityItem } from "./editable-entity-item";
+import { withContentChange } from "./with-content-change";
 
 /** Lets a control outside the form (e.g. a cancel button in a section header) cancel it. */
 export interface EditEntityItemFormHandle {
@@ -28,6 +54,17 @@ interface EditEntityItemContainerProps {
   readonly onClose: () => void;
   /** Fired from a version conflict's Refresh: the caller reloads the item and passes it back down. */
   readonly onRefresh: () => void;
+  /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
+  readonly pendingContent: ContentChanges;
+  readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** The message of each failed file change, by attribute name; shown on that attribute's card. */
+  readonly contentFailures: ReadonlyMap<string, string>;
+  readonly onContentFailuresChange: (contentFailures: ReadonlyMap<string, string>) => void;
+  /** Hears whether the form is saving, so the content preview can stop taking files meanwhile. */
+  readonly onSavingChange?: (isSaving: boolean) => void;
+  /** See `EditContentFields`. */
+  readonly previewedContentAttributeName?: string;
+  readonly onPreview?: (attributeName: string) => void;
   readonly ref?: Ref<EditEntityItemFormHandle>;
 }
 
@@ -35,34 +72,66 @@ interface EditEntityItemContainerProps {
  * The update form for an item, prefilled from `item.updateFormValues`; a save is conditional on
  * `item`'s ETag. On a version conflict (412) the alert offers Refresh, which asks the caller to
  * reload the item. Navigating away or cancelling with unsaved changes asks for confirmation first.
+ *
+ * Each file's filename and mimetype fields show under its file field, not in the field list.
+ * Picked and removed files wait until Save; meanwhile those fields show the picked file. The
+ * metadata is saved first, with the stored filename and mimetype of every changed file, so a file
+ * that changed since the form was opened fails the save with 412 before any file is sent; then the
+ * file changes are applied, a picked file under the name in its filename field. When one of them
+ * fails, a toast names it, the failure shows on its file's card, and the form moves onto the item
+ * as it is stored now, keeping only the failed changes (each file under the name and media type it
+ * was sent under), so Save tries just those again. Cancel does nothing while Save runs.
+ *
+ * While Save runs the file fields are read-only (`EditContentFields`' `disabled`), and
+ * `onSavingChange` tells the content preview to stop taking files too.
  */
 export function EditEntityItemContainer({
   item,
   onClose,
   onRefresh,
+  pendingContent,
+  onPendingContentChange,
+  contentFailures,
+  onContentFailuresChange,
+  onSavingChange,
+  previewedContentAttributeName,
+  onPreview,
   ref,
 }: Readonly<EditEntityItemContainerProps>) {
   const { updateTemplate } = item;
+  // With file changes queued, the file step refreshes the item once it is done.
   const updateMutation = useUpdateEntityItem(item, {
-    mutationOptions: {
-      onSuccess: () => {
-        toast.success(
-          `${capitalizeFirstLetter(item.profileEntity.singularName)} has been successfully updated!`,
-        );
-        onClose();
-      },
-    },
+    invalidateOnSuccess: pendingContent.size === 0,
   });
-  const { fields, layout } = useMemo(() => resolveHalFormsFields(updateTemplate), [updateTemplate]);
+  const contentMutation = useApplyContentChanges(item);
+  const { fields, layout } = useMemo(() => {
+    const resolved = resolveHalFormsFields(updateTemplate);
+    return { fields: resolved.fields, layout: layoutWithoutContentMetadata(item, resolved.layout) };
+  }, [item, updateTemplate]);
+  const [initialValues] = useState(() => initialFormValues(item, pendingContent));
   const formState = useHalFormsFieldState({
     fields,
-    initialValues: item.updateFormValues ?? undefined,
+    initialValues,
     externalErrors: toServerFieldErrors(getValidationFieldErrors(updateMutation.error)),
   });
 
-  const unsavedChangesGuard = useUnsavedChangesGuard(formState.isDirty);
+  useSyncFileMetadataFields(item, pendingContent, formState.setValues);
+
+  const isSaving = updateMutation.isPending || contentMutation.isPending;
+  useEffect(() => {
+    onSavingChange?.(isSaving);
+    return () => onSavingChange?.(false);
+  }, [isSaving, onSavingChange]);
+
+  const isDirty = formState.isDirty || pendingContent.size > 0;
+  const unsavedChangesGuard = useUnsavedChangesGuard(isDirty);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
-  const cancel = () => (formState.isDirty ? setIsConfirmingCancel(true) : onClose());
+  // Leaving mid-save would unmount the form before the file requests and their follow-up ran.
+  const cancel = () => {
+    if (isSaving) return;
+    if (isDirty) setIsConfirmingCancel(true);
+    else onClose();
+  };
   useImperativeHandle(ref, () => ({ cancel }));
 
   function handleSubmit(event: SubmitEvent) {
@@ -71,7 +140,89 @@ export function EditEntityItemContainer({
     updateMutation.reset();
     if (!formState.validate()) return;
 
-    updateMutation.mutate(formState.buildValues(updateTemplate.template));
+    // Each Save reports its own failures.
+    onContentFailuresChange(new Map());
+    // The file fields are read-only from here on, but a failure is judged against what was sent.
+    const sentChanges = withPickedFileMetadata(pendingContent);
+    updateMutation.mutate(valuesToSave(), {
+      onSuccess: () => {
+        if (sentChanges.size === 0) {
+          finishSave();
+          return;
+        }
+        contentMutation.mutate(sentChanges, {
+          onSuccess: (results) => handleContentChangesSaved(results, sentChanges),
+        });
+      },
+    });
+  }
+
+  /** The form values, with the stored filename and mimetype of every changed file: the file
+   * requests set those, and until they succeed the stored file keeps its own. */
+  function valuesToSave() {
+    const storedMetadata = [...pendingContent.keys()].flatMap((attributeName) =>
+      Object.entries(storedMetadataValues(item, attributeName)),
+    );
+    return storedMetadata.reduce(
+      (values, [name, storedValue]) =>
+        storedValue === undefined ? values.withoutValue(name) : values.withValue(name, storedValue),
+      formState.buildValues(updateTemplate.template),
+    );
+  }
+
+  /** The file changes, each picked file with the name and media type in its filename and mimetype
+   * fields, which the file is stored under. */
+  function withPickedFileMetadata(changes: ContentChanges): ContentChanges {
+    const textOf = (fieldName: string | undefined) => {
+      const value = fieldName === undefined ? undefined : formState.values[fieldName];
+      return typeof value === "string" && value !== "" ? value : undefined;
+    };
+    return new Map(
+      [...changes].map(([attributeName, { file }]) => {
+        const names = updateTemplate.contentMetadataPropertyNames(attributeName);
+        const change = file
+          ? { file, filename: textOf(names.filename), mimetype: textOf(names.mimetype) }
+          : { file };
+        return [attributeName, change] as const;
+      }),
+    );
+  }
+
+  function handleContentChangesSaved(results: ContentChangeResults, sentChanges: ContentChanges) {
+    const failedChanges = [...sentChanges].filter(
+      ([attributeName]) => results.get(attributeName)?.error !== undefined,
+    );
+    if (failedChanges.length === 0) {
+      finishSave();
+      return;
+    }
+    const messages = new Map<string, string>();
+    for (const [attributeName] of failedChanges) {
+      const { title } = toProblemDisplayModel(results.get(attributeName)?.error);
+      const label = contentAttributeLabel(item, attributeName);
+      toast.error(`Changes saved, but the file of ${label} was not: ${title}`);
+      messages.set(attributeName, `This file was not saved: ${title}. Save to try again.`);
+    }
+    // The metadata is saved already: the form moves onto the latest version of the item, with
+    // only the failed changes still waiting. A kept change carries the name and media type it was
+    // sent under, so the reseeded fields show what the user typed.
+    onPendingContentChange(new Map(failedChanges));
+    // After the pending change, which drops the failures of the files it touched.
+    onContentFailuresChange(messages);
+    onRefresh();
+  }
+
+  function finishSave() {
+    toast.success(
+      `${capitalizeFirstLetter(item.profileEntity.singularName)} has been successfully updated!`,
+    );
+    onClose();
+  }
+
+  function handleContentChange(attributeName: string, file: File | null) {
+    onPendingContentChange(withContentChange(pendingContent, item, attributeName, file));
+    // A picked file comes into view in the content preview.
+    if (file) onPreview?.(attributeName);
   }
 
   // A validation problem shows on its fields; every other error goes in the alert.
@@ -99,7 +250,7 @@ export function EditEntityItemContainer({
         onFieldChange={formState.setValue}
         onFieldBlur={formState.touchField}
         onSubmit={handleSubmit}
-        isSaving={updateMutation.isPending}
+        isSaving={isSaving}
         canSave={
           !isProblemWithStatus(updateMutation.error, 404) &&
           !isProblemWithStatus(updateMutation.error, 412)
@@ -108,7 +259,56 @@ export function EditEntityItemContainer({
         nonFieldErrorAlert={
           formAlertError && <ProblemAlert model={formAlertError} onRetryClick={onRefresh} />
         }
+        contentFields={
+          <EditContentFields
+            item={item}
+            pendingContent={pendingContent}
+            contentFailures={contentFailures}
+            onContentChange={handleContentChange}
+            contentResults={contentMutation.isPending ? contentMutation.results : undefined}
+            disabled={isSaving}
+            renderMetadataFields={(attributeName) => (
+              <HalFormsContainer
+                fields={fields}
+                layout={metadataFieldsLayout(item, attributeName)}
+                values={formState.values}
+                onChange={formState.setValue}
+                onFieldBlur={formState.touchField}
+                fieldState={formState.fieldState}
+              />
+            )}
+            previewedContentAttributeName={previewedContentAttributeName}
+            onPreview={onPreview}
+          />
+        }
       />
     </>
   );
+}
+
+/**
+ * Keeps the filename and mimetype fields in step with the file changes, whether they were made in
+ * the form or in the content preview: a changed file's fields show the picked file (none for a
+ * removed one), and a change that is taken back shows the values the form started with.
+ */
+function useSyncFileMetadataFields(
+  item: EditableEntityItem,
+  pendingContent: ContentChanges,
+  setValues: (values: FieldValueMap) => void,
+) {
+  const [previousPendingContent, setPreviousPendingContent] = useState(pendingContent);
+  if (pendingContent === previousPendingContent) return;
+
+  // Updating state while rendering, as React's docs describe for a value that follows a prop.
+  setPreviousPendingContent(pendingContent);
+  const attributeNames = new Set([...previousPendingContent.keys(), ...pendingContent.keys()]);
+  for (const attributeName of attributeNames) {
+    const change = pendingContent.get(attributeName);
+    if (change === previousPendingContent.get(attributeName)) continue;
+    setValues(
+      change === undefined
+        ? startingMetadataValues(item, attributeName)
+        : changedFileMetadataValues(item, attributeName, change),
+    );
+  }
 }

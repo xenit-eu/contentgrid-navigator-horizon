@@ -1,5 +1,5 @@
 import type { Ref } from "react";
-import type { EntityItem } from "@contentgrid/navigator-data";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 import {
   EditEntityItemContainer,
   type EditEntityItemFormHandle,
@@ -19,6 +19,17 @@ interface EditableEntityItemAttributesProps {
   readonly auditTrail?: boolean;
   /** Handle to the update form while editing, e.g. to cancel it from outside. */
   readonly editFormRef?: Ref<EditEntityItemFormHandle>;
+  /** Files picked or removed in the form, applied on Save (see `useEntityItemContext`). */
+  readonly pendingContent: ContentChanges;
+  readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** The failed file changes of the last Save, by attribute name. */
+  readonly contentFailures: ReadonlyMap<string, string>;
+  readonly onContentFailuresChange: (contentFailures: ReadonlyMap<string, string>) => void;
+  /** Hears whether the form is saving. */
+  readonly onSavingChange?: (isSaving: boolean) => void;
+  /** The attribute shown in the content preview, and how to show another; content focus only. */
+  readonly previewedContentAttributeName?: string;
+  readonly onPreview?: (attributeName: string) => void;
 }
 
 /**
@@ -32,6 +43,13 @@ export function EditableEntityItemAttributes({
   onRefresh,
   auditTrail,
   editFormRef,
+  pendingContent,
+  onPendingContentChange,
+  contentFailures,
+  onContentFailuresChange,
+  onSavingChange,
+  previewedContentAttributeName,
+  onPreview,
 }: Readonly<EditableEntityItemAttributesProps>) {
   if (isEditing && isEditableEntityItem(item)) {
     return (
@@ -41,6 +59,13 @@ export function EditableEntityItemAttributes({
         onClose={() => onEditingChange(false)}
         onRefresh={onRefresh}
         ref={editFormRef}
+        pendingContent={pendingContent}
+        onPendingContentChange={onPendingContentChange}
+        contentFailures={contentFailures}
+        onContentFailuresChange={onContentFailuresChange}
+        onSavingChange={onSavingChange}
+        previewedContentAttributeName={previewedContentAttributeName}
+        onPreview={onPreview}
       />
     );
   }

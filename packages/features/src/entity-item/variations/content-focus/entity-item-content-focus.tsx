@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import type { ContentChanges, EntityItem } from "@contentgrid/navigator-data";
 import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { RightSidePanelLayout } from "../../../layout";
+import { getContentAttributeMetadata } from "../../content-attribute-metadata";
+import { withContentChange } from "../../edit/with-content-change";
 import { EntityItemSections } from "../../entity-item-sections";
 import { useEntityItemSectionProps } from "../../use-entity-item-section-props";
 import type { EntityItemVariationProps } from "../entity-item-variation-props";
 import { EntityItemReference } from "../item-reference/entity-item-reference";
 import { ContentAttributeSelector } from "./components/content-attribute-selector";
+import { ContentPreviewFrame } from "./components/content-preview-frame";
 import { ContentPreviewPanel } from "./components/content-preview-panel";
+import { FilePreview } from "./components/file-preview";
 import { selectDefaultContentAttribute } from "./util/select-default-content-attribute";
 
 /**
@@ -90,12 +95,23 @@ export function EntityItemContentFocus({
         </div>
       }
       sidePanelPadded={false}
-      sidePanel={<EntityItemSections {...sectionProps} />}
+      sidePanel={
+        <EntityItemSections
+          {...sectionProps}
+          previewedContentAttributeName={attributeName}
+          onPreview={setUserSelectedAttribute}
+        />
+      }
     >
-      <ContentPreviewPanel
-        entityItem={item}
+      <ContentFocusPreview
+        item={item}
+        shownItem={sectionProps.editedItem ?? item}
         attributeName={attributeName}
-        toolbarStart={
+        isEditing={sectionProps.editedItem !== null}
+        pendingContent={sectionProps.pendingContent}
+        onPendingContentChange={sectionProps.onPendingContentChange}
+        isSaving={sectionProps.isSaving}
+        attributeSelector={
           <ContentAttributeSelector
             entityItem={item}
             value={attributeName}
@@ -104,5 +120,64 @@ export function EntityItemContentFocus({
         }
       />
     </RightSidePanelLayout>
+  );
+}
+
+interface ContentFocusPreviewProps {
+  /** The loaded item, whose stored file the preview shows. */
+  readonly item: EntityItem;
+  /** The version of the item the edit form was opened on (`item` when not editing). */
+  readonly shownItem: EntityItem;
+  readonly attributeName: string;
+  readonly isEditing: boolean;
+  /** The file changes made in the edit form and not saved yet. */
+  readonly pendingContent: ContentChanges;
+  readonly onPendingContentChange: (pendingContent: ContentChanges) => void;
+  /** Whether the edit form is saving; the drop zone takes no file then. */
+  readonly isSaving: boolean;
+  readonly attributeSelector: ReactNode;
+}
+
+/**
+ * The preview of one content attribute. While editing it shows the form's file: the picked file,
+ * or, when there is no file (removed, or none stored), a drop zone that picks one into the form.
+ * Nothing is uploaded before Save. Otherwise it shows the stored file.
+ */
+function ContentFocusPreview({
+  item,
+  shownItem,
+  attributeName,
+  isEditing,
+  pendingContent,
+  onPendingContentChange,
+  isSaving,
+  attributeSelector,
+}: Readonly<ContentFocusPreviewProps>) {
+  const fileChange = pendingContent.get(attributeName);
+  if (fileChange?.file) {
+    return <FilePreview file={fileChange.file} toolbarStart={attributeSelector} />;
+  }
+
+  const isRemoved = fileChange !== undefined;
+  const hasStoredFile = Boolean(getContentAttributeMetadata(shownItem, attributeName));
+  if (isEditing && (isRemoved || !hasStoredFile)) {
+    const pickFile = (file: File | null) =>
+      onPendingContentChange(withContentChange(pendingContent, shownItem, attributeName, file));
+    return (
+      <ContentPreviewFrame
+        state="noFile"
+        fill
+        onFileChange={shownItem.canUploadContent(attributeName) && !isSaving ? pickFile : undefined}
+        toolbarStart={attributeSelector}
+      />
+    );
+  }
+
+  return (
+    <ContentPreviewPanel
+      entityItem={item}
+      attributeName={attributeName}
+      toolbarStart={attributeSelector}
+    />
   );
 }
