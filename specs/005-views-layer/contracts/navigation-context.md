@@ -18,6 +18,8 @@ interface Navigation {
   openEditItem(entityName: string, id: string, options?: NavigationOptions): void;
   openCreateItem(entityName: string, options?: NavigationOptions): void;
   openSettings(options?: NavigationOptions): void;
+  /** Goes back to the previous page in history. Returns `false` if unavailable. */
+  goBack(): boolean;
 }
 
 interface NavigationOptions {
@@ -37,6 +39,7 @@ The set may be extended. The functions are implemented page by page, so the inte
 | `openClassifyCreate`                               | PR 5 — the sidebar's "Create Item" (T041)                                                                                                     |
 | `openSettings`                                     | PR 5 — an extension to the six functions: the user menu's "Settings" (T037)                                                                   |
 | `openEditItem`                                     | The PR that adds the page using it (T041)                                                                                                     |
+| `goBack`                                           | The create page views — the general create page's Cancel goes back, or home when there is no earlier page                                     |
 
 The item detail view's relation popover already reports "create missing target" through the feature's own `onRelationItemCreateNew` callback prop. The view wires that callback straight to `navigation.openCreateItem(targetEntityName)` itself; it does not re-expose a separate `onRelationItemCreateNew` (or similarly named) prop upward to its own caller. For the "create missing target" action the view passes `{ openInNewTab: true }`, which keeps today's new-tab behaviour (open question 6, resolved by this option).
 
@@ -50,6 +53,7 @@ The item detail view's relation popover already reports "create missing target" 
 6. **Children get their own navigation.** A parent view wraps each child in its own provider. When the child calls `openItem`, the parent decides: for the list in a split view it shows that item in the other pane and does not call the route. Children do not know they are side by side.
 7. **Guarding leaving is open.** A function to guard leaving with unsaved changes is proposed (open question 3) and is not part of this contract yet.
 8. **Every `open*` takes the same optional options object.** `openInNewTab` defaults to `false`. The view decides it, for example from a feature callback, or because the action is "create missing related item", which keeps today's new-tab behaviour by passing `{ openInNewTab: true }` to `openCreateItem`. A host that cannot open tabs (chat panel, split view parent) MAY treat it as a hint.
+9. **`goBack` reports whether it went back.** It returns `false` when there is no earlier page or the host cannot go back (chat panel, split view parent), and the view decides the fallback itself, e.g. `openHome`. It takes no options.
 
 ## Hosts
 
@@ -63,4 +67,5 @@ The item detail view's relation popover already reports "create missing target" 
 ## Test obligations
 
 - The recording fake records calls in order with their arguments, including the options argument.
+- The recording fake's `goBack` returns `false`, so a view's fallback shows up in `calls` after it.
 - A view calls the navigation object, and never the router, for every clickable breadcrumb and action (FR-023).

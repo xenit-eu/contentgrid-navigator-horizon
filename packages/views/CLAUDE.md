@@ -53,6 +53,9 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 - Beyond the item/collection functions, `Navigation` has `openClassifyCreate` (the sidebar's "Create"),
   `openSettings` (the user menu's "Settings", with an optional `hrefFor.settings`) and `openEntityConfiguration`
   (a settings card); `openEditItem` arrives with the page that needs it.
+- `goBack()` goes to the previous page in history and returns `false` when there is none (or the host can't go
+  back), so the view picks its own fallback: `if (!navigation.goBack()) { navigation.openHome(); }`. It takes no
+  options. The recording fake records it and returns `false`.
 - `NavigationLink` (from `../navigation`) renders a real `<a href>` when `Navigation.hrefFor` gives one —
   so cmd/middle-click, "copy link" and screen-reader link semantics work — falling back to a `<button>`
   otherwise; a plain left click calls `onNavigate()` itself, every other click is left to the browser.
@@ -109,6 +112,13 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   feature's `EntityDisplaySettingsForm`. The item and collection previews are `EntityItemDetailView` (the first
   item) and `EntityItemCollectionView`, both `toolbar={false}`, stretched to the card's remaining height so the whole
   page shows; the create tab is the feature's placeholder `EntityCreateFormPreview`.
+- `@contentgrid/views/entity-item-create`: `EntityItemCreateView(ViewProps & { entityName })`. Resolves the profile
+  (`useProfileEntityTarget`), draws a Home › collection › Create <entity> toolbar with the feature's
+  `CreateEntityItemProfileSelector` (picking one calls `openCreateItem`) and places `CreateEntityItemPanel`, keyed
+  on the entity. Created → `openItem`, Cancel → `openEntityItemCollection`; a relation's item and "create new" open
+  in a new tab. The form's unsaved-changes guard still needs a router (open question 3), so it has no story.
+- `@contentgrid/views/classify-create-entity-item`: `ClassifyCreateEntityItemView()`, the general create page
+  around `ClassifyCreateEntityItemPanel`. Continue → `openCreateItem`; Cancel → `goBack()`, else `openHome`.
 
 ## Breadcrumbs
 
@@ -117,7 +127,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   itself. A crumb with children is a link; the last one
   is the current page. A crumb draws nothing until its data is known, so pages nest them without conditions. Each
   page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`,
-  `EntityConfigurationBreadcrumbs`); each view draws its
+  `EntityItemCreateBreadcrumbs`, `EntityConfigurationBreadcrumbs`); each view draws its
   own toolbar around it.
 
 ## Testing

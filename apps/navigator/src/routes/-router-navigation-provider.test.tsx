@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -24,8 +25,11 @@ function CurrentLocation() {
 
 function NavigationProbe() {
   const navigation = useViewNavigation();
+  const [wentBack, setWentBack] = useState<boolean>();
   return (
     <>
+      <button onClick={() => setWentBack(navigation.goBack())}>go-back</button>
+      <span data-testid="went-back">{String(wentBack)}</span>
       <button onClick={() => navigation.openHome()}>open-home</button>
       <button onClick={() => navigation.openEntityItemCollection("invoice")}>
         open-collection
@@ -206,5 +210,20 @@ describe("RouterNavigationProvider", () => {
 
     await userEvent.click(screen.getByText("open-collection-fresh"));
     expect(recallCollectionFilters(queryClient, "invoice")).toBeUndefined();
+  });
+
+  it("goes back to the previous page, and returns false when there is none", async () => {
+    renderRouter("/");
+
+    await userEvent.click(await screen.findByText("go-back"));
+    expect(screen.getByTestId("went-back")).toHaveTextContent("false");
+    expect(screen.getByTestId("location")).toHaveTextContent("/");
+
+    await userEvent.click(screen.getByText("open-collection"));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/invoice"));
+
+    await userEvent.click(screen.getByText("go-back"));
+    expect(screen.getByTestId("went-back")).toHaveTextContent("true");
+    await waitFor(() => expect(screen.getByTestId("location")).not.toHaveTextContent("/invoice"));
   });
 });

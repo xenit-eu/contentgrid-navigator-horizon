@@ -76,8 +76,9 @@ Provided by the host through context; only views read it, features get callback 
 | `openClassifyCreate()`                 | The general create page (the sidebar's "Create Item")        | PR 5 — the sidebar's "Create Item" button                                                                |
 | `openSettings()`                       | The application's settings (the user menu's "Settings")      | PR 5 — an extension to the six functions of FR-017                                                       |
 | `openEditItem(entityName, id)`         | An item's edit form                                          | Arrives with the page that uses it                                                                       |
+| `goBack()`                             | The previous page; returns `false` when there is none        | The create page views — the general create page's Cancel                                                 |
 
-Every function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean; restoreState?: boolean }`; `openInNewTab` defaults to `false`; `restoreState` applies to `openEntityItemCollection` only and defaults to `true`), set by the view (see `contracts/navigation-context.md`).
+Every `open*` function also takes an optional trailing `options?: NavigationOptions` (`{ openInNewTab?: boolean; restoreState?: boolean }`; `openInNewTab` defaults to `false`; `restoreState` applies to `openEntityItemCollection` only and defaults to `true`), set by the view (see `contracts/navigation-context.md`).
 
 ## Preload signature
 
