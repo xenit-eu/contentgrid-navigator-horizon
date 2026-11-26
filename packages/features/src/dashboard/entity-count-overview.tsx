@@ -13,6 +13,7 @@ import {
   EntityCardSkeleton,
   EntityCardText,
   EntityCardTitle,
+  formatCount,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 import { ProblemAlert } from "../problem-details";
@@ -101,14 +102,16 @@ function EntityCardConnected({
 }
 
 /**
- * "1 item", "1,284 items", "about 1,204 items" for an estimate; a dash while the count loads, and
- * "Count not available" when there is none (the request failed, or the entity can't be searched).
+ * "1 item", "1 284 items", "about 1 204 items" for an estimate, "0 items"; a dash while the count
+ * loads, and "Count not available" when there is none (the request failed, or the entity can't be
+ * searched). The number is formatted as in the sidebar.
  */
 function ItemCountLine({
   total,
   loading,
 }: Readonly<{ total: CollectionTotalCount | undefined; loading: boolean }>) {
-  if (!total) {
+  const count = formatCount(total, { estimate: "word" });
+  if (!total || count === undefined) {
     return (
       <p className="mt-auto text-ui text-muted-foreground">
         {loading ? "—" : "Count not available"}
@@ -117,9 +120,8 @@ function ItemCountLine({
   }
   return (
     <p className="mt-auto text-ui text-muted-foreground">
-      {total.isEstimated && "about "}
-      <span className="font-bold text-card-foreground">{total.count.toLocaleString()}</span>{" "}
-      {total.count === 1 ? "item" : "items"}
+      <span className="font-bold text-card-foreground">{count}</span>{" "}
+      {total.count === 1 && !total.isEstimated ? "item" : "items"}
     </p>
   );
 }

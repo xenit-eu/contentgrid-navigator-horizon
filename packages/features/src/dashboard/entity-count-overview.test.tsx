@@ -70,15 +70,12 @@ describe("EntityCountOverview", () => {
 
   it.each([
     { name: "a single item", total: { count: 1, isEstimated: false }, text: "1 item" },
-    {
-      name: "a formatted count",
-      total: { count: 1284, isEstimated: false },
-      text: `${(1284).toLocaleString()} items`,
-    },
+    { name: "zero", total: { count: 0, isEstimated: false }, text: "0 items" },
+    { name: "a grouped count", total: { count: 1284, isEstimated: false }, text: "1 284 items" },
     {
       name: "an estimate",
       total: { count: 1204, isEstimated: true },
-      text: `about ${(1204).toLocaleString()} items`,
+      text: "about 1 204 items",
     },
   ])("shows $name on the card's count line", ({ total, text }) => {
     mockCollection({ data: { totalItems: total }, isFetching: false });
