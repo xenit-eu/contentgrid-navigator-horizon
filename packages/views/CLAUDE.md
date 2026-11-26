@@ -66,7 +66,7 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   `onOpenCreate` / `onOpenSettings`, optional `homeHref` / `entityHref` (real `<a href>` links; a plain click still goes
   through the callback, see `handleNavigationClick`).
 - `src/shells/` is host code and the **only** place in this package that may import `@tanstack/react-router`:
-  `router-shell` (`mountNavigatorApp`, `AppRouterContext`, `useOpenInNewTab`), `auth-shell`, `entity-profile-gate` and
+  `router-shell` (`mountNavigatorApp`, `AppRouterContext`), `auth-shell`, `entity-profile-gate` and
   `sidebar-shell`. `SidebarShell` wires `SideBarLayout` to the router (active entity, outlet) and to
   `useViewNavigation()`. The dev-only app-selector link was dropped (the `/config` route is still reachable by URL). `EntityProfileGate` is
   router-free (`entityName`, `onBackHome`, `children`); each app's `$entity` route files read the param and wire it. Each shell is its own `exports` entry (`@contentgrid/views/<name>`). The app's own
