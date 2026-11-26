@@ -25,7 +25,8 @@ export type NavigationCall =
   | {
       method: "openEntityConfiguration";
       args: [entityName: string] | [entityName: string, options: NavigationOptions];
-    };
+    }
+  | { method: "goBack"; args: [options: { otherwise?: () => void }] | [] };
 
 export interface RecordingNavigation {
   navigation: Navigation;
@@ -68,6 +69,12 @@ export function createRecordingNavigation(): RecordingNavigation {
       calls.push({
         method: "openEntityConfiguration",
         args: options ? [entityName, options] : [entityName],
+      });
+    },
+    goBack: (options) => {
+      calls.push({
+        method: "goBack",
+        args: options ? [options] : [],
       });
     },
     hrefFor: {

@@ -33,6 +33,8 @@ export interface Navigation {
   openSettings(options?: NavigationOptions): void;
   /** Opens one entity's display configuration, from the settings page. */
   openEntityConfiguration(entityName: string, options?: NavigationOptions): void;
+  /** Go to the previous history item. If unavailable, go to otherwise() */
+  goBack(options?: { otherwise?: () => void }): void;
   /**
    * The real address for each `open*` above, when the host has one to give (contract
    * `navigation-context.md`). Lets a view render an `<a href>` instead of a `<button>` — so
@@ -60,6 +62,7 @@ const noopNavigation: Navigation = {
   openClassifyCreate: () => {},
   openSettings: () => {},
   openEntityConfiguration: () => {},
+  goBack: () => {},
 };
 
 export function NavigationProvider({
@@ -115,6 +118,7 @@ export function ChildNavigationProvider({
     openClassifyCreate,
     openSettings,
     openEntityConfiguration,
+    goBack,
     hrefFor,
   } = overrides;
   const navigation = useMemo<Navigation>(
@@ -126,6 +130,7 @@ export function ChildNavigationProvider({
       openClassifyCreate: openClassifyCreate ?? parent.openClassifyCreate,
       openSettings: openSettings ?? parent.openSettings,
       openEntityConfiguration: openEntityConfiguration ?? parent.openEntityConfiguration,
+      goBack: goBack ?? parent.goBack,
       hrefFor: hrefFor ?? parent.hrefFor,
     }),
     [
@@ -137,6 +142,7 @@ export function ChildNavigationProvider({
       openClassifyCreate,
       openSettings,
       openEntityConfiguration,
+      goBack,
       hrefFor,
     ],
   );
