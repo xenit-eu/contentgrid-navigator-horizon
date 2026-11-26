@@ -4,7 +4,7 @@ import createBearerAuthenticationHook, {
 import createHook, { type FetchHook, compose } from "@contentgrid/fetch-hooks";
 import { setHeader } from "@contentgrid/fetch-hooks/request";
 import { ValueProviderResolver } from "@contentgrid/fetch-hooks/value-provider";
-import { checkResponse } from "@contentgrid/problem-details";
+import { ProblemDetailError, checkResponse } from "@contentgrid/problem-details";
 import { createTypedFetch } from "@contentgrid/typed-fetch";
 import { ACCEPT_HAL } from "./content-types";
 
@@ -16,6 +16,11 @@ export type { AuthenticationTokenSupplier };
 
 const problemDetailsHook = createHook(async (invocation) => {
   const response = await invocation.next();
+  // A HEAD response has no body, so its problem is read from the status line alone: parsing the
+  // body that its `application/problem+json` Content-Type announces would fail.
+  if (invocation.request.method === "HEAD" && !response.ok) {
+    throw new ProblemDetailError({ status: response.status, title: response.statusText });
+  }
   return checkResponse(response);
 });
 

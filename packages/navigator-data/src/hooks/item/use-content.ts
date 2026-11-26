@@ -162,6 +162,118 @@ export function useUploadContent(
   return { ...mutation, progress };
 }
 
+/** A file change queued for one content attribute. */
+export interface ContentChange {
+  /** The file to store, or null to remove the stored file. */
+  readonly file: File | null;
+  /** The name to store `file` under; the file's own name when absent. */
+  readonly filename?: string;
+  /** The media type to store `file` under; the file's own type when absent. */
+  readonly mimetype?: string;
+}
+
+/** Queued file changes, by attribute name. */
+export type ContentChanges = ReadonlyMap<string, ContentChange>;
+
+/** How far one file change got. */
+export interface ContentChangeResult {
+  /** Percentage (0–100) of the file sent; absent for a removal. */
+  readonly progress?: number;
+  /** Why the change failed; absent unless it did. */
+  readonly error?: Error;
+}
+
+/** The results of file changes, by attribute name. */
+export type ContentChangeResults = ReadonlyMap<string, ContentChangeResult>;
+
+/**
+ * Mutation hook that uploads or removes an item's queued files through their `cg:content` links.
+ *
+ * Each request sends `If-Match` with the content's own ETag (read with a HEAD first), because the
+ * entity item's ETag is not valid for its content.
+ *
+ * A failed change does not stop the others. `results` follows each change by attribute name: the
+ * progress of an upload, and the error of a failed change. The mutation resolves with the same
+ * results once every change has run.
+ *
+ * @param entityItem - The item whose content attributes change (must have their cg:content links)
+ */
+export function useApplyContentChanges(entityItem: EntityItem) {
+  const { contentFetch } = useNavigatorData();
+  const queryClient = useQueryClient();
+  const { profileEntity } = entityItem;
+  const [results, setResults] = useState<ContentChangeResults>(new Map());
+
+  async function fetchContentEtag(attributeName: string): Promise<string | null> {
+    const headRequest = new Request(entityItem.downloadContentRequest(attributeName), {
+      method: "HEAD",
+    });
+    try {
+      // `contentFetch` already turns an error answer into a ProblemDetailError.
+      const response = await contentFetch(headRequest);
+      const etag = response.headers.get("ETag");
+      if (etag === null) {
+        throw new Error(`The stored file of '${attributeName}' has no readable ETag`);
+      }
+      return etag;
+    } catch (error) {
+      if (isProblemWithStatus(error, 404)) return null;
+      throw error;
+    }
+  }
+
+  async function applyContentChange(
+    attributeName: string,
+    { file, filename, mimetype }: ContentChange,
+    reportProgress: (percentage: number) => void,
+  ): Promise<void> {
+    const contentEtag = await fetchContentEtag(attributeName);
+    if (file) {
+      const request = entityItem.uploadContentRequest(
+        attributeName,
+        file,
+        contentEtag,
+        filename,
+        mimetype,
+      );
+      await fetchVoid(contentFetch.withUploadProgress(reportProgress), request);
+    } else if (contentEtag !== null) {
+      await fetchVoid(contentFetch, entityItem.deleteContentRequest(attributeName, contentEtag));
+    }
+  }
+
+  const mutation = useMutation({
+    mutationFn: async (changes: ContentChanges): Promise<ContentChangeResults> => {
+      const latestResults = new Map<string, ContentChangeResult>();
+      const record = (attributeName: string, result: ContentChangeResult) => {
+        latestResults.set(attributeName, result);
+        setResults(new Map(latestResults));
+      };
+      setResults(new Map());
+      for (const [attributeName, change] of changes) {
+        try {
+          await applyContentChange(attributeName, change, (progress) =>
+            record(attributeName, { progress }),
+          );
+        } catch (error) {
+          record(attributeName, { ...latestResults.get(attributeName), error: error as Error });
+        }
+      }
+      return latestResults;
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+      });
+    },
+  });
+
+  return { ...mutation, results };
+}
+
 // ---------------------------------------------------------------------------
 // useDownloadContent
 // ---------------------------------------------------------------------------

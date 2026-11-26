@@ -8,6 +8,11 @@ import { queryKeys } from "../../query-keys";
 import { useNavigatorData } from "../context";
 
 export interface UseUpdateEntityItemOptions {
+  /**
+   * Refresh the item and its lists once the PUT succeeds (default `true`). `false` when another
+   * request follows that refreshes them itself, so they are fetched once, not twice.
+   */
+  readonly invalidateOnSuccess?: boolean;
   readonly mutationOptions?: Omit<
     UseMutationOptions<void, Error, HalFormValues<EntityInstanceUpdateRequestSpec>>,
     "mutationFn"
@@ -24,7 +29,7 @@ export interface UseUpdateEntityItemOptions {
  * On HTTP 412 (ETag mismatch / unsatisfied-version), the error surfaces as `ProblemDetailError`
  * to the caller — the hook does NOT auto-retry. Callers must re-fetch, re-apply, and retry.
  *
- * Cache behaviour on success:
+ * Cache behaviour on success (unless `invalidateOnSuccess` is `false`):
  * - `invalidateQueries` on `entityItem.byUrl`: a shown item is re-fetched (cancelling any fetch
  *   already in flight, which could return the version from before the PUT) and holds the new values
  *   and ETag before the mutation settles. A failed re-fetch shows as the item query's own error.
@@ -40,6 +45,7 @@ export function useUpdateEntityItem(entityItem: EntityItem, options?: UseUpdateE
   const queryClient = useQueryClient();
   const { profileEntity } = entityItem;
 
+  const invalidateOnSuccess = options?.invalidateOnSuccess ?? true;
   const { onSuccess, ...restMutationOptions } = options?.mutationOptions ?? {};
 
   return useMutation({
@@ -48,12 +54,14 @@ export function useUpdateEntityItem(entityItem: EntityItem, options?: UseUpdateE
       await fetchVoid(apiFetch, req);
     },
     onSuccess: async (data, variables, onMutateResult, context) => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
-      });
+      if (invalidateOnSuccess) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entityItem.byUrl(profileEntity, entityItem.selfLink.href),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.entityItemCollection.forEntity(profileEntity),
+        });
+      }
       await onSuccess?.(data, variables, onMutateResult, context);
     },
     ...restMutationOptions,
