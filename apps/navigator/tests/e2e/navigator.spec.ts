@@ -2,7 +2,7 @@
  * E2E navigator spec — ported from the original navigator (HZN-5D.9).
  *
  * MUI-specific selectors replaced with shadcn/ui equivalents:
- *   - Date pickers:  MUI popup + gridcell/option clicks  →  native <input type="date"> filled directly
+ *   - Date pickers:  MUI popup + gridcell/option clicks  →  text input that accepts a typed ISO date (plus a Calendar popover behind the calendar button)
  *   - Row actions:   inline icon buttons (getByLabel/getByTestId)  →  "Open menu" dropdown + menuitem
  *   - Pagination:    KeyboardArrowRight/LeftIcon testIds  →  aria-label "Go to next/previous page"
  *   - Sidebar:       "Expand sidebar" button  →  "Expand sidebar" / "Collapse sidebar" (SidebarTrigger in the header)
@@ -16,8 +16,16 @@
  * Tests that depend on features not yet implemented (sidebar nav, entity collection/detail views,
  * create forms) will fail until those features are built in the other Phase 5D tickets.
  */
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { ENTITY } from "./testData";
+
+/** Types an ISO date (`yyyy-mm-dd`, accepted in every locale) into a date field and commits it. */
+async function pickDate(page: Page, label: string, year: number, month: number, day: number) {
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  await page.getByLabel(label).fill(iso);
+  await page.getByLabel(label).press("Tab");
+}
 
 test.beforeEach(async ({ page }) => {
   // Override matchMedia so headless browsers report pointer:fine — prevents
@@ -81,12 +89,10 @@ test("search form test", async ({ page, login, selectSidebarEntity }) => {
   await page.getByRole("option", { name: "Unset" }).click();
   await expect(page.getByRole("combobox", { name: /Boolean/i })).toContainText("Unset");
 
-  // Date/datetime filter — the new app uses native <input type="date">, no popup picker.
+  // Date/datetime filter — a text input (typed ISO date) with a Calendar popover behind its button.
   // FilterSidebar labels: "Datetime after" / "Datetime before" (from field name + direction).
-  await page.getByLabel("Datetime after").fill("2024-01-15");
-  await page.getByLabel("Datetime after").blur();
-  await page.getByLabel("Datetime before").fill("2024-01-20");
-  await page.getByLabel("Datetime before").blur();
+  await pickDate(page, "Datetime after", 2024, 1, 15);
+  await pickDate(page, "Datetime before", 2024, 1, 20);
 
   // Sort combobox
   await expect(page.getByRole("combobox", { name: "Sort" })).toBeVisible();
@@ -121,9 +127,7 @@ test("search form test2", async ({ page, login, selectSidebarEntity }) => {
   await page.getByRole("option", { name: "True" }).click();
   await expect(page.getByRole("combobox", { name: /Boolean/i })).toContainText("True");
 
-  // Native date input — no popup
-  await page.getByLabel("Datetime after").fill("2024-01-15");
-  await page.getByLabel("Datetime after").blur();
+  await pickDate(page, "Datetime after", 2024, 1, 15);
 
   await page.getByRole("combobox", { name: "Constrained text" }).click();
   await page.getByRole("option", { name: "Constraint A" }).click();

@@ -31,7 +31,23 @@ export const WithTime: Story = {
 export const WithValue: Story = {
   args: {
     ...datetimeField(),
-    value: new Date("2024-03-15T00:00:00.000Z"),
+    value: new Date(2026, 4, 14),
+    onChange: fn(),
+  },
+};
+
+export const WithDateTimeValue: Story = {
+  args: {
+    ...datetimeField({ includesTime: true, name: "scheduledAt", label: "Scheduled at" }),
+    value: new Date(2026, 4, 15, 9, 12),
+    onChange: fn(),
+  },
+};
+
+export const ReadOnly: Story = {
+  args: {
+    ...datetimeField({ readOnly: true }),
+    value: new Date(2026, 4, 14),
     onChange: fn(),
   },
 };
