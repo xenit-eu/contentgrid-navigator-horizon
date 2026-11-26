@@ -21,15 +21,15 @@ export interface NavigatorDataContextValue {
   profileUrl: string;
   /**
    * URI template for the PDF rendition service (contains a `{?url}` expansion), from
-   * `RuntimeAppConfig.renditionUri`. Absent means renditions are disabled —
+   * `RuntimeAppConfig.renditionUriTemplate`. Absent means renditions are disabled —
    * `useContentPreview` returns `{ kind: "unavailable" }` for any non-PDF content
    * attribute instead of requesting a rendition. See `preview/rendition-job.ts`.
    */
-  renditionUri?: string;
+  renditionUriTemplate?: string;
   /**
    * Poll interval and ceiling for rendition jobs, from `RuntimeAppConfig`. Populated
-   * (with defaults applied) by `useAppAuth` whenever `renditionUri` is set; a caller
-   * providing `renditionUri` without `renditionPolling` is a configuration bug, not a
+   * (with defaults applied) by `useAppAuth` whenever `renditionUriTemplate` is set; a caller
+   * providing `renditionUriTemplate` without `renditionPolling` is a configuration bug, not a
    * state `useContentPreview` needs to handle — see `hooks/preview/use-content-preview.ts`.
    */
   renditionPolling?: { intervalMs: number; timeoutMs: number };
@@ -41,13 +41,13 @@ export function NavigatorDataProvider({
   apiFetch,
   contentFetch,
   profileUrl,
-  renditionUri,
+  renditionUriTemplate,
   renditionPolling,
   children,
 }: NavigatorDataContextValue & { children: ReactNode }) {
   const value = useMemo(
-    () => ({ apiFetch, contentFetch, profileUrl, renditionUri, renditionPolling }),
-    [apiFetch, contentFetch, profileUrl, renditionUri, renditionPolling],
+    () => ({ apiFetch, contentFetch, profileUrl, renditionUriTemplate, renditionPolling }),
+    [apiFetch, contentFetch, profileUrl, renditionUriTemplate, renditionPolling],
   );
   return <NavigatorDataContext.Provider value={value}>{children}</NavigatorDataContext.Provider>;
 }

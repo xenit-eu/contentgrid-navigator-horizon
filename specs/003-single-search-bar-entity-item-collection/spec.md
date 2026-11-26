@@ -12,7 +12,7 @@
 
 **In scope**
 
-- One search surface on the entity item collection page, made of three stacked rows: active-filter chips, the main search bar, and quick filters.
+- One search surface on the entity item collection page, made of three stacked rows: the main search bar, quick filters, and active-filter chips.
 - The search-parameter selector, covering every search parameter the entity's search form offers for text (prefix, full-text, exact, allowed values), integer and decimal attributes, on the entity itself and through its relations.
 - Search-as-you-type suggestions for prefix and full-text parameters, and client-side suggestions for allowed-value parameters.
 - Expected-result counts on parameter chips and suggestion group headers.
@@ -34,7 +34,7 @@
 - Q: Do filters set through a quick filter also appear as chips in the top row? → A: Yes. The chip row lists every active filter from any source; quick-filter buttons show their active state as well.
 - Q: Where does a user choose which attributes take part in search? → A: In the existing column/display preferences control, next to the visible-columns choice. No extra control on the search surface.
 - Q (after implementation review): Where do the collection's "Columns" and "Filters" buttons go? → A: On the quick-filter row, right-aligned where they were; the quick filters to their left scroll horizontally.
-- Q (after implementation review): Does the collection page keep its page title above the search bar? → A: No, it is removed to give the list more height; the breadcrumbs and the table footer's item count remain.
+- Q (after implementation review): Does the collection page keep its page title above the search bar? → A: No, it is removed to give the list more height; the breadcrumbs and the table footer's item count remain. (Superseded by the newer reference design: the page shows a title block with the item count, see FR-001a.)
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -80,7 +80,7 @@ The user picks a specific search parameter in the selector (from the dropdown, o
 
 ### User Story 3 - See and remove active filters (Priority: P1)
 
-Above the search bar, every active filter is shown as a chip with the parameter, its search mode and the value. Each chip has a close button. Clicking it removes that filter immediately.
+Below the quick filters, every active filter is shown as a chip with the parameter, its search mode and the value. Each chip has a close button. Clicking it removes that filter immediately. From two chips up, a "Clear all" button removes every filter at once.
 
 **Why this priority**: Without visible, removable filters the user cannot tell why the list is narrowed or undo a search. It is part of the minimal usable slice.
 
@@ -208,8 +208,8 @@ A configuration layer sets which attributes take part in the search surface for 
 
 **Layout**
 
-- **FR-001**: The search surface MUST consist of three stacked rows on the entity item collection page: active-filter chips (top), the main search bar (middle), quick filters (bottom).
-- **FR-001a**: The entity item collection page MUST NOT show a page title block (heading, entity icon, item count) above the search surface, so the list gets that height; the breadcrumbs still name the entity and the table footer still shows the item count.
+- **FR-001**: The search surface MUST consist of three stacked rows on the entity item collection page: the main search bar (top), quick filters (middle), active-filter chips (bottom). The chips sit last so the main search bar does not move when the first filter is added.
+- **FR-001a**: The entity item collection page MUST show a title block above the search surface: the entity's plural name with its item count, and, while a search or filter is active, a line with the unfiltered total. The title block has no entity icon.
 - **FR-002**: The search surface MUST only offer search parameters that the entity's search form provides; it MUST NOT invent parameters or operators.
 
 **Active-filter chips**
@@ -218,6 +218,7 @@ A configuration layer sets which attributes take part in the search surface for 
 - **FR-004**: Each chip MUST have a close button; clicking it MUST remove that filter and update the list immediately.
 - **FR-004a**: The chip row MUST list every active filter, whatever set it: the main search bar, a quick filter, the advanced filter dialog or the page link.
 - **FR-004b**: Clicking a chip (outside its close button) MUST let the user edit that filter where it can be set: a single text, allowed-values or exact-number parameter is selected in the main bar with its value in the input, and Enter replaces the filter; otherwise the quick filter covering the chip's parameters opens. A boolean chip, and a chip whose filter neither offers, MUST NOT be clickable.
+- **FR-004c**: From two chips up, the chip row MUST show a "Clear all" button that removes every active filter at once; with fewer chips it MUST NOT be shown.
 - **FR-005**: The chip row MUST take at most two lines and MUST scroll horizontally beyond that.
 
 **Search-parameter selector**

@@ -13,8 +13,8 @@ search, print, download, fullscreen), and shows non-PDF files through the platfo
 `@embedpdf/core` + plugin viewer with a shadcn toolbar as a `@contentgrid/ui` pattern (self-hosted
 PDFium WASM, no CDN); a `useContentPreview` query hook in `@contentgrid/navigator-data` that turns an
 entity item's content attribute into displayable PDF bytes (stored PDF or rendition); rendition
-requests made with the existing authenticated content client (TokenMonger handles any exchange on the
-platform side); and a
+requests made with the existing authenticated content client (with an exchanged extension token for the
+rendition service since ACC-3292); and a
 new experimental feature `entity-item-content-focus` that composes the existing stable `entity-item`
 attributes and relations into the mockup's two-pane layout, mounted first by
 `apps/navigator-experimental`. Everything is tested with Vitest + MSW (hooks, state machine), Storybook
@@ -71,7 +71,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | III. Two-layer model & package boundaries         | `@embedpdf/*` are plain runtime `dependencies` of `@contentgrid/ui` (presentation libs). The viewer pattern takes `ArrayBuffer`/strings/callbacks only. Data hooks, rendition client, mimetype util and problem type live in `navigator-data`. Features import neither Layer-1 nor apps.                                                                    | PASS   |
 | IV. Three-track delivery                          | New feature dir `packages/features/src/entity-item-content-focus/` with `x-stability: experimental`; consumed by `apps/navigator-experimental` only; imports the stable `entity-item` (allowed direction). Promotion path documented (fold into `EntityItemView`).                                                                                          | PASS   |
 | V. Deny-by-default ABAC                           | Per review: the content link is present for any readable item; 404 on it = no file. 403/404 on the item itself are handled by the existing item gate. No capability inferred client-side.                                                                                                                                                                   | PASS   |
-| VI. Authentication & tokens                       | Rendition requests use the same Bearer credential as content downloads (`contentFetch`), sent only in the `Authorization` header. The frontend performs no token exchange and hardcodes or discovers no token endpoint; TokenMonger does the exchange for the rendition service on the platform side.                                                       | PASS   |
+| VI. Authentication & tokens                       | Rendition requests go through `contentFetch`, Bearer token in the `Authorization` header only. Since ACC-3292 the rendition origin gets an extension token exchanged at the application's token endpoint and cached per user and origin; the user's own token stays on the application origin.                                                              | PASS   |
 | VII. Supply chain                                 | Exact pins ≥ 14 days old; `@embedpdf/*` have no install scripts (verified) → no `onlyBuiltDependencies` change; WASM shipped as a committed npm asset, copied by Vite; no CDN.                                                                                                                                                                              | PASS   |
 | VIII. View-owned data loading / app-view contract | `EntityItemContentFocusView` takes `entityName`, `itemId` and callbacks; resolves profile and item through `navigator-data` hooks; the app route only picks view and layout; the preview panel is an independently loading component (skeleton/error/empty per region) under the existing app-level profile gate; transformations in the feature's `util/`. | PASS   |
 | Error handling & API contracts                    | Rendition and download failures surface as `ProblemDetailError` via `problemDetailsHook`; narrowing with `isProblemOfType`/`isProblemWithStatus`; the new `RENDITION_INVALID_CONVERSION` type is a typed member; user-facing errors rendered through `toProblemDisplayModel` + `ProblemAlert` (generic kind), not a bespoke alert.                          | PASS   |
@@ -105,8 +105,8 @@ packages/navigator-data/src/
 ├── api/
 │   └── problem-details/constants.ts       # + RENDITION_INVALID_CONVERSION
 ├── auth/auth-config.ts                    # + renditionPollIntervalMs, renditionTimeoutMs;
-│                                          #   ContentGridConfigSchema reads v1.renditionUri (Liaison)
-├── hooks/context.tsx                      # NavigatorDataContextValue + renditionUri?, renditionPolling?
+│                                          #   ContentGridConfigSchema reads v1.renditionUriTemplate (Liaison)
+├── hooks/context.tsx                      # NavigatorDataContextValue + renditionUriTemplate?, renditionPolling?
 ├── preview/
 │   ├── content-mimetype.ts                # nativePreviewKind(), needsRendition() (parameters, case)
 │   ├── rendition-job.ts                   # requestRendition(): 202+Location, poll, ceiling, AbortSignal
@@ -158,9 +158,9 @@ and deleting the wrapper.
 
 ## Complexity Tracking
 
-| Violation                                                   | Why Needed                                                                                                                                                                   | Simpler Alternative Rejected Because                                                                           |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Rendition endpoint from configuration instead of a HAL link | Confirmed by the platform side (spec Clarifications): deployment configuration. `RuntimeAppConfig.renditionUri` already exists; Liaison `config.js` gains `v1.renditionUri`. | A link on the content resource would be cleaner but does not exist; the spec records this as the agreed model. |
+| Violation                                                   | Why Needed                                                                                                                                                                                   | Simpler Alternative Rejected Because                                                                           |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Rendition endpoint from configuration instead of a HAL link | Confirmed by the platform side (spec Clarifications): deployment configuration. `RuntimeAppConfig.renditionUriTemplate` already exists; Liaison `config.js` gains `v1.renditionUriTemplate`. | A link on the content resource would be cleaner but does not exist; the spec records this as the agreed model. |
 
 ## Implementation Sequence (input for `/speckit-tasks`)
 
@@ -187,7 +187,7 @@ and deleting the wrapper.
 6. **Docs**: `packages/navigator-data/CLAUDE.md` note on the rendition protocol module; feature
    `CLAUDE.md` pointer; promotion checklist.
 7. **Validation** per [quickstart.md](quickstart.md); independent review; open follow-ups: confirm
-   rendition response contract + CORS with the platform team (ACC-2960), Liaison `renditionUri`
+   rendition response contract + CORS with the platform team (ACC-2960), Liaison `renditionUriTemplate`
    delivery, ACC-2902 ownership.
 
 ## Promotion status (2026-09-28)

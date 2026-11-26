@@ -28,8 +28,8 @@ interface EntitySearchBarProps {
 function EntitySearchBar(props: EntitySearchBarProps): JSX.Element | null;
 ```
 
-- Renders the three rows of FR-001: `FilterChips`, then selector + input + suggestions popover,
-  then the quick-filter row.
+- Renders the three rows of FR-001: selector + input + suggestions popover, then the quick-filter
+  row, then `FilterChips` with "Clear all" from two chips up (FR-004c).
 - Each row collapses when it has nothing to show (no active filters / no selector-eligible
   params / no quick filters). Returns `null` when all three are empty.
 - Never mutates anything except through `onFiltersChange`, always passing the complete next map.
@@ -187,8 +187,9 @@ function useSearchAttributeInclusion(profileEntity: ProfileEntity | undefined): 
 - `EntityItemCollectionBrowser` renders
   `<EntitySearchBar profileEntity filters onFiltersChange currentSort actions />` as the first row
   of the view, above the table, so it stays usable while the table is loading or shows an error.
-- The page title block (heading, entity icon, "N items" subtitle) is removed (FR-001a): the
-  search bar is the first row of the view.
+- The page shows a title block above the search bar (FR-001a): the entity's plural name with its
+  item count, and, while a search or filter is active, a line with the unfiltered total. It has no
+  entity icon. The search bar is the row below it.
 - The "Filters" button and dialog stay (FR-033); they read the same `filters`.
 - The "Columns" popover and the "Filters" button move from the table's toolbar into the search
   bar's `actions` (right-aligned on the quick-filter row, outside its scrolling area; small button

@@ -8,8 +8,9 @@
  * "RenditionJob" state machine for the exact contract this implements.
  *
  * Every request goes through the caller's `contentFetch` — the same authenticated client
- * used for stored-content downloads. The frontend does not exchange tokens; whatever
- * exchange the rendition service needs happens on the platform side (research.md §8.3).
+ * used for stored-content downloads. That client never sends the user's own token to the
+ * rendition service: another origin gets an exchanged, cached extension token instead (see
+ * `auth/token-supplier.ts`'s `createExtensionAwareTokenSupplier`, research.md §8.3).
  */
 import UriTemplate from "@contentgrid/uri-template";
 import type { TypedFetch } from "../api/client";

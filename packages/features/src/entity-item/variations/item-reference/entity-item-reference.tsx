@@ -1,8 +1,7 @@
 import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react";
 import type { EntityItem } from "@contentgrid/navigator-data";
 import { ItemReference } from "@contentgrid/ui";
-import { resolveEntityCardIcon, useEntityDisplayPreferences } from "../../../preferences";
-import { AttributeValueRenderer } from "../../attributes/renderers/attribute-value-renderer";
+import { STRING_REFERENCE_MAX_CHAR_LENGTH, useEntityItemHeading } from "./use-entity-item-heading";
 
 export interface EntityItemReferenceProps {
   readonly item: EntityItem;
@@ -15,11 +14,13 @@ export interface EntityItemReferenceProps {
    * fill. Combined with `muted`, the background keeps the soft muted fill instead of going
    * fully transparent — see `IconBadge`'s doc comment. */
   readonly outlined?: boolean;
+  /**
+   * Characters of the title shown before it is truncated with "…", also when the title is the
+   * item's id; the full title shows on hover.
+   */
+  readonly titleMaxCharLength?: number;
   readonly className?: string;
 }
-
-/** Hard limit on the characters of the title and the subtitle (plus an ellipsis). */
-const STRING_REFERENCE_MAX_CHAR_LENGTH = 120;
 
 /**
  * Renders an EntityItem as an ItemReference — icon and color from entity display
@@ -35,32 +36,10 @@ export function EntityItemReference({
   size,
   muted,
   outlined,
+  titleMaxCharLength = STRING_REFERENCE_MAX_CHAR_LENGTH,
   className,
 }: Readonly<EntityItemReferenceProps>) {
-  const { preferences, nameAttribute, subtitleAttribute } = useEntityDisplayPreferences(
-    item.profileEntity,
-  );
-  const Icon = resolveEntityCardIcon(preferences.icon);
-
-  const nameAttr = nameAttribute ? item.findAttribute(nameAttribute.name) : undefined;
-  const title = nameAttr ? (
-    <AttributeValueRenderer
-      attr={nameAttr}
-      maxCharLength={STRING_REFERENCE_MAX_CHAR_LENGTH}
-      variant="item-reference"
-    />
-  ) : (
-    item.id
-  );
-
-  const subtitleAttr = subtitleAttribute ? item.findAttribute(subtitleAttribute.name) : undefined;
-  const subtitle = subtitleAttr ? (
-    <AttributeValueRenderer
-      attr={subtitleAttr}
-      maxCharLength={STRING_REFERENCE_MAX_CHAR_LENGTH}
-      variant="item-reference"
-    />
-  ) : undefined;
+  const { preferences, Icon, title, subtitle } = useEntityItemHeading(item, titleMaxCharLength);
 
   return (
     <ItemReference

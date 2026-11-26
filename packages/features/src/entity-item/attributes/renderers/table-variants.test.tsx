@@ -10,8 +10,9 @@ import { ModifiedDateAttributeRenderer } from "./modified-date-attribute-rendere
 import { type AttributeRendererVariant, isTableVariant } from "./variant";
 
 describe("isTableVariant", () => {
-  it("is true for both table variants only", () => {
+  it("is true for every table variant only", () => {
     expect(isTableVariant("table")).toBe(true);
+    expect(isTableVariant("collection-table")).toBe(true);
     expect(isTableVariant("attribute-table")).toBe(true);
     expect(isTableVariant("default")).toBe(false);
     expect(isTableVariant("item-reference")).toBe(false);

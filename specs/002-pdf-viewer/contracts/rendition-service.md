@@ -5,25 +5,26 @@ authentication and configuration (spec Clarifications). Items marked _confirm_ a
 
 ## Configuration
 
-- `renditionUri`: URI template, e.g. `https://renditions.<zone>.contentgrid.cloud/renditions/get/pdf{?url}`.
-  Delivered per deployment (Liaison `config.js` → `v1.renditionUri`; env fallback).
+- `renditionUriTemplate`: URI template, e.g. `https://renditions.<zone>.contentgrid.cloud/renditions/get/pdf{?url}`.
+  Delivered per deployment (Liaison `config.js` → `v1.renditionUriTemplate`; env fallback).
 - The `url` parameter value is the content attribute's `cg:content` href, passed opaque.
 
 ## Authentication
 
 Every request (initial and polls) is made with the same authenticated content client the viewer uses
-for downloads: `Authorization: Bearer <user access token>`, header only. The frontend performs no
-token exchange. Whatever exchange the rendition service needs to read the source file is done on the
-platform side by TokenMonger (the platform's token-exchange component). _Confirm_: the service accepts
-the user's access token for the Navigator's realm, and its CORS policy allows the Navigator origin
-with an `Authorization` header.
+for downloads, with the Bearer token in the `Authorization` header only. The rendition service is on
+another origin, so it gets an extension token, not the user's access token: the client exchanges the
+user's token at `<application origin>/.contentgrid/authentication/external/token` (grant type
+`https://contentgrid.cloud/oauth2/grant/extension-token`, `resource` = the request URL) and caches the
+result per user and origin until shortly before it expires (ACC-3292). _Confirm_: the service's CORS
+policy allows the Navigator origin with an `Authorization` header.
 
 ## Request / response
 
-| Step     | Request                       | Expected responses                                                                                                                                                                                                                           |
-| -------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Initiate | `GET <renditionUri expanded>` | `202 Accepted` + `Location: <job url>` (job created); `200 OK` `application/pdf` (already available, _confirm_); `application/problem+json` with `type` `…/problems/renditions/invalid-conversion` (cannot convert); other 4xx/5xx = failure |
-| Poll     | `GET <job url>`               | `202` (pending, poll again after `intervalMs`); `200 OK` `application/pdf` body; problem `invalid-conversion`; other = failure                                                                                                               |
+| Step     | Request                               | Expected responses                                                                                                                                                                                                                           |
+| -------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initiate | `GET <renditionUriTemplate expanded>` | `202 Accepted` + `Location: <job url>` (job created); `200 OK` `application/pdf` (already available, _confirm_); `application/problem+json` with `type` `…/problems/renditions/invalid-conversion` (cannot convert); other 4xx/5xx = failure |
+| Poll     | `GET <job url>`                       | `202` (pending, poll again after `intervalMs`); `200 OK` `application/pdf` body; problem `invalid-conversion`; other = failure                                                                                                               |
 
 - Polling stops at the first terminal response, on abort, or when `now ≥ start + timeoutMs`.
 - _Confirm_: `Access-Control-Expose-Headers: Location` and CORS allowing the Navigator origin with

@@ -12,6 +12,7 @@ import {
   RecordRowAction,
   RecordRowConfirmAction,
   type RecordTableCell,
+  type RecordTableColumn,
   RecordTableRow,
   type RecordTableSortOption,
 } from "@contentgrid/ui";
@@ -23,14 +24,26 @@ import {
 import { type ColumnVisibilityConfig, buildColumns, useColumnVisibility } from "../preferences";
 import { notifyProblem } from "../problem-details";
 import { capitalizeFirstLetter } from "../string-utils";
+import { columnTraits } from "./column-traits";
+import { EntityItemRowMenu } from "./entity-item-row-menu";
+import { EntityItemTitleCell } from "./entity-item-title-cell";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
   readonly collection: EntityItemCollection;
   /** Fired when a row (entity item) is clicked, or Enter/Space is pressed on it; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
-  /** Fired by the default View row action, which is shown only with it; receives that row's item. */
+  /**
+   * Fired by the default View row action (`look="default"`), or by the title link and the row
+   * menu's "Open" (`look="collection"`); shown only with it; receives that row's item.
+   */
   readonly onEntityItemOpen?: (item: EntityItem) => void;
+  /**
+   * The address of an item's own page, when the host has one. Only with `look="collection"`: each
+   * row's title is then a real link (cmd/middle-click and "copy link" work); a plain click still
+   * goes through `onEntityItemOpen`. Without it the title is a button when `onEntityItemOpen` is set.
+   */
+  readonly entityItemHref?: (item: EntityItem) => string | undefined;
   /** The item to mark as the current row, e.g. the one previewed beside the table. */
   readonly currentItem?: EntityItem;
   /**
@@ -72,18 +85,25 @@ export interface EntityItemCollectionTableProps {
   readonly selectedIds?: ReadonlySet<string>;
   /** Fired with the next selected-id set when a row or the header "select all" is toggled. */
   readonly onSelectionChange?: (selectedIds: ReadonlySet<string>) => void;
-  /** Replaces the default per-row View/Delete actions (e.g. a relation's Unlink). */
+  /** Replaces the default per-row actions (View/Delete, or the collection look's menu), e.g. with a relation's Unlink. */
   readonly renderRowActions?: (item: EntityItem) => ReactNode;
   /**
    * `false` renders no actions column (e.g. in the relation picker), `true` always renders one.
    * By default the column shows when `renderRowActions` is given, or when the default actions
-   * apply: View is available or an item on the page can be deleted.
+   * apply: View/Open is available or an item on the page can be deleted.
    */
   readonly showRowActions?: boolean;
   /** `false` hides the item-count/pagination footer (e.g. for an unpaginated set). Defaults to `true`. */
   readonly paginated?: boolean;
   /** `false` hides the "Showing N of M items" text, keeping the page controls. Defaults to `true`. */
   readonly showItemCount?: boolean;
+  /**
+   * The table's look. `"default"` is the compact table of relation sections and pickers.
+   * `"collection"` is the collection page's: taller header and rows with the new sort icons and
+   * tooltips, a title cell with a link and subtitle, pills and file tiles in the cells, number
+   * columns right-aligned, and a "⋮" row menu instead of the View/Delete buttons.
+   */
+  readonly look?: "default" | "collection";
 }
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
@@ -120,6 +140,7 @@ export function EntityItemCollectionTable({
   collection,
   onEntityItemClick,
   onEntityItemOpen,
+  entityItemHref,
   currentItem,
   onPageChange,
   currentSort,
@@ -135,6 +156,7 @@ export function EntityItemCollectionTable({
   showRowActions,
   paginated = true,
   showItemCount = true,
+  look = "default",
 }: Readonly<EntityItemCollectionTableProps>) {
   const persistedVisibility = useColumnVisibility(profile);
   // Union a session-local override and any actively-filtered attribute on top of the persisted
@@ -157,9 +179,28 @@ export function EntityItemCollectionTable({
   );
   const attributeColumns = useMemo(() => buildColumns(profile, visibility), [profile, visibility]);
   const sortOptions = useMemo(() => toRecordTableSortOptions(profile), [profile]);
+  const isCollectionLook = look === "collection";
+  const attributeColumnsWithTraits = useMemo<RecordTableColumn[]>(
+    () =>
+      isCollectionLook
+        ? attributeColumns.map((column) => ({
+            ...column,
+            ...columnTraits(profile.getAttribute(column.key)),
+          }))
+        : attributeColumns,
+    [profile, attributeColumns, isCollectionLook],
+  );
   const columns = useMemo(
-    () => [{ key: REFERENCE_COLUMN_KEY, header: profile.singularName }, ...attributeColumns],
-    [profile.singularName, attributeColumns],
+    () => [
+      {
+        key: REFERENCE_COLUMN_KEY,
+        header: isCollectionLook
+          ? capitalizeFirstLetter(profile.singularName)
+          : profile.singularName,
+      },
+      ...attributeColumnsWithTraits,
+    ],
+    [profile.singularName, attributeColumnsWithTraits, isCollectionLook],
   );
 
   const deleteMutation = useDeleteEntityItem();
@@ -205,6 +246,7 @@ export function EntityItemCollectionTable({
       <RecordDataTable
         className={className}
         pageScroll={pageScroll}
+        chrome={look}
         entityName={profile.name}
         entityTitle={profile.pluralName}
         columns={columns}
@@ -229,18 +271,30 @@ export function EntityItemCollectionTable({
       >
         {collection.items.map((item) => {
           const cells: RecordTableCell[] = [
-            { key: REFERENCE_COLUMN_KEY, content: <EntityItemReference item={item} /> },
-            ...attributeColumns.map((col) => {
+            {
+              key: REFERENCE_COLUMN_KEY,
+              content: isCollectionLook ? (
+                <EntityItemTitleCell
+                  item={item}
+                  onOpen={onEntityItemOpen}
+                  href={entityItemHref?.(item)}
+                />
+              ) : (
+                <EntityItemReference item={item} />
+              ),
+            },
+            ...attributeColumnsWithTraits.map((col) => {
               if (col.key === "id") {
                 return { key: col.key, content: item.id };
               }
               const attr = item.findAttribute(col.key);
               return {
                 key: col.key,
+                align: col.align,
                 content: attr ? (
                   <AttributeValueRenderer
                     attr={attr}
-                    variant="table"
+                    variant={isCollectionLook ? "collection-table" : "table"}
                     maxCharLength={TABLE_ATTRIBUTE_MAX_CHAR_LENGTH}
                   />
                 ) : (
@@ -254,6 +308,7 @@ export function EntityItemCollectionTable({
             <RecordTableRow
               key={item.id}
               cells={cells}
+              chrome={look}
               selected={selectedIds.has(item.id)}
               current={item.id === currentItem?.id}
               onSelectChange={
@@ -269,6 +324,13 @@ export function EntityItemCollectionTable({
               actions={
                 !hasActionsColumn ? undefined : renderRowActions ? (
                   renderRowActions(item)
+                ) : isCollectionLook ? (
+                  <EntityItemRowMenu
+                    item={item}
+                    onOpen={onEntityItemOpen}
+                    onDelete={deleteItem}
+                    deleting={deleteMutation.isPending}
+                  />
                 ) : (
                   <>
                     {onEntityItemOpen && (
