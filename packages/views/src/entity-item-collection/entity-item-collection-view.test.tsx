@@ -31,12 +31,28 @@ describe("EntityItemCollectionView", () => {
     expect(document.querySelector("[aria-current='page']")).toHaveTextContent("Customers");
   });
 
-  it("opens an item from its row's View action through the navigation object", async () => {
+  it("opens an item from its row menu's Open item through the navigation object", async () => {
     const { Wrapper, recording } = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
     await findFirstItem();
-    await userEvent.click(screen.getAllByRole("button", { name: "View" })[0]);
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Acme Corp" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Open" }));
+
+    expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
+  });
+
+  it("makes a row's title a link to the item page and opens it through the navigation object", async () => {
+    const { Wrapper, recording } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    const link = screen.getAllByRole("link", { name: "Acme Corp" })[0];
+    expect(link).toHaveAttribute(
+      "href",
+      recording.navigation.hrefFor?.item("customer", "cust-001"),
+    );
+    await userEvent.click(link);
 
     expect(recording.calls).toEqual([{ method: "openItem", args: ["customer", "cust-001"] }]);
   });

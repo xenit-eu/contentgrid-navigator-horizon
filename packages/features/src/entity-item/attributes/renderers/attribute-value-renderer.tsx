@@ -26,6 +26,8 @@ export interface AttributeValueRendererProps {
    * - `"table"` — for `EntityItemCollectionTable` columns: plain,
    *   single-color text (no chips, no backgrounds); only a user icon or a date
    *   icon may accompany the text. String sets are comma-separated text.
+   * - `"collection-table"` — for the collection page's table: the same as `"table"`, plus a
+   *   pill per boolean state and a file tile before file names.
    * - `"attribute-table"` — for the detail view's attribute table: the same
    *   as `"table"`, except that string sets show every value as a chip.
    */
@@ -52,7 +54,7 @@ export function AttributeValueRenderer({
   const components = defaultAttributeRendererComponents;
 
   if (attr.value.kind === AttributeKind.CONTENT) {
-    return <components.content metadata={attr.value.metadata} wrap={wrap} />;
+    return <components.content metadata={attr.value.metadata} wrap={wrap} variant={variant} />;
   }
   if (attr.value.kind === AttributeKind.NESTED) {
     return null;
