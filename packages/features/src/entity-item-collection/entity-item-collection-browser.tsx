@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   type EntityItem,
   type ProfileEntity,
@@ -98,7 +98,10 @@ export function EntityItemCollectionBrowser({
     onSortChange,
   });
 
-  const data = allowEdit ? collection.data : collection.data?.toReadOnly();
+  const data = useMemo(
+    () => (allowEdit ? collection.data : collection.data?.toReadOnly()),
+    [collection.data, allowEdit],
+  );
 
   // Start screen only for an unfiltered first page with no items; it replaces the search bar and
   // the table, as there is nothing to search, filter or sort. A filtered search keeps both so its
