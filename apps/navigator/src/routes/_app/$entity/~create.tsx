@@ -8,6 +8,7 @@ import { type ProfileEntity, useProfileEntity } from "@contentgrid/navigator-dat
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -39,23 +40,22 @@ function CreateEntityItemRoute({ profile }: Readonly<{ profile: ProfileEntity }>
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <button
-            type="button"
-            onClick={() => go({ to: "/", search: {} })}
-            className="text-primary underline-offset-4 transition-colors hover:underline focus-visible:underline dark:text-[var(--breeze)]"
-          >
-            Home
-          </button>
+          <BreadcrumbLink asChild>
+            <button type="button" onClick={() => go({ to: "/", search: {} })}>
+              Home
+            </button>
+          </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <button
-            type="button"
-            onClick={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
-            className="text-primary underline-offset-4 transition-colors hover:underline focus-visible:underline dark:text-[var(--breeze)]"
-          >
-            {profile.pluralName}
-          </button>
+          <BreadcrumbLink asChild>
+            <button
+              type="button"
+              onClick={() => go({ to: "/$entity", params: { entity: profile.name }, search: {} })}
+            >
+              {profile.pluralName}
+            </button>
+          </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
