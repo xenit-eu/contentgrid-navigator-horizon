@@ -55,6 +55,14 @@
     "./entity-configuration-detail": {
       "import": "./src/entity-configuration-detail/index.ts",
       "types": "./src/entity-configuration-detail/index.ts"
+    },
+    "./entity-item-create": {
+      "import": "./src/entity-item-create/index.ts",
+      "types": "./src/entity-item-create/index.ts"
+    },
+    "./classify-create-entity-item": {
+      "import": "./src/classify-create-entity-item/index.ts",
+      "types": "./src/classify-create-entity-item/index.ts"
     }
   },
   "scripts": {
