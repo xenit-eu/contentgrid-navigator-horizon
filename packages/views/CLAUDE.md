@@ -110,9 +110,10 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   Resolves the profile (`useProfileEntityTarget`), draws a Settings › entity toolbar with an `EntityProfileSelector`
   (every entity; picking one calls `openEntityConfiguration`) and a card (title,
   `EntityColorBadge`, Close → `openSettings`) around `EntityConfigurationPanel`: preview tabs next to the
-  feature's `EntityDisplaySettingsForm`. The item and collection previews are `EntityItemDetailView` (the first
-  item) and `EntityItemCollectionView`, both `toolbar={false}`, stretched to the card's remaining height so the whole
-  page shows; the create tab is the feature's placeholder `EntityCreateFormPreview`.
+  feature's `EntityDisplaySettingsForm`. The item preview is `EntityItemDetailView` (the first item,
+  `toolbar={false}`) and the collection preview the feature's `EntityItemCollectionBrowser`, both `allowEdit={false}`
+  and stretched to the card's remaining height so the whole page shows; the create tab is the feature's placeholder
+  `EntityCreateFormPreview`.
 
 ## Breadcrumbs
 

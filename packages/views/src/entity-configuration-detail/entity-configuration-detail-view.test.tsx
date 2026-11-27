@@ -13,19 +13,29 @@ import { PROFILE_URL } from "../test-fixtures/item-detail";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityConfigurationDetailView } from "./entity-configuration-detail-view";
 
-// The previews are the real child views; here they are stand-ins that show the props they got.
+// The previews are the real item detail view and collection browser; here they are stand-ins that
+// show the props they got.
 vi.mock("../entity-item-detail", () => ({
   EntityItemDetailView: (props: object) => (
     <div data-testid="item-detail-view">{JSON.stringify(props)}</div>
   ),
 }));
-const collectionViewMounts = vi.hoisted(() => ({ count: 0 }));
-vi.mock("../entity-item-collection", () => ({
-  EntityItemCollectionView: function CollectionViewStub(props: object) {
+const collectionBrowserMounts = vi.hoisted(() => ({ count: 0 }));
+vi.mock("@contentgrid/features/entity-item-collection", () => ({
+  EntityItemCollectionBrowser: function CollectionBrowserStub({
+    profile,
+    ...props
+  }: {
+    profile: ProfileEntity;
+  }) {
     useEffect(() => {
-      collectionViewMounts.count += 1;
+      collectionBrowserMounts.count += 1;
     }, []);
-    return <div data-testid="collection-view">{JSON.stringify(props)}</div>;
+    return (
+      <div data-testid="collection-browser">
+        {JSON.stringify({ profile: profile.name, ...props })}
+      </div>
+    );
   },
 }));
 
@@ -163,6 +173,7 @@ describe("EntityConfigurationDetailView", () => {
       entityName: "invoice",
       itemId: "inv-1",
       toolbar: false,
+      allowEdit: false,
     });
   });
 
@@ -175,16 +186,16 @@ describe("EntityConfigurationDetailView", () => {
     expect(screen.queryByTestId("item-detail-view")).not.toBeInTheDocument();
   });
 
-  it("previews the collection page, without its toolbar", async () => {
+  it("previews the collection page's browser, read-only", async () => {
     mockProfiles([makeInvoiceProfile()]);
     mockFirstPage([]);
     renderView();
 
     await userEvent.click(screen.getByRole("tab", { name: "Collection Preview" }));
 
-    expect(JSON.parse(screen.getByTestId("collection-view").textContent ?? "")).toEqual({
-      entityName: "invoice",
-      toolbar: false,
+    expect(JSON.parse(screen.getByTestId("collection-browser").textContent ?? "")).toEqual({
+      profile: "invoice",
+      allowEdit: false,
     });
   });
 
@@ -194,7 +205,7 @@ describe("EntityConfigurationDetailView", () => {
     mockFirstPage([]);
     renderView();
     await userEvent.click(screen.getByRole("tab", { name: "Collection Preview" }));
-    const mountsBefore = collectionViewMounts.count;
+    const mountsBefore = collectionBrowserMounts.count;
 
     act(() => {
       useEntityDisplayPreferencesStore
@@ -202,7 +213,7 @@ describe("EntityConfigurationDetailView", () => {
         .setOverride(PROFILE_URL, profile.name, { visibleColumns: ["id", "total"] });
     });
 
-    expect(collectionViewMounts.count).toBe(mountsBefore + 1);
+    expect(collectionBrowserMounts.count).toBe(mountsBefore + 1);
   });
 
   it("shows the display settings next to the previews", () => {
