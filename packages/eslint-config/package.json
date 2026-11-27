@@ -6,7 +6,8 @@
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
-    "./rules/no-unstable-features": "./dist/rules/no-unstable-features.js"
+    "./plugin": "./dist/plugin.js",
+    "./layers": "./dist/layers.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

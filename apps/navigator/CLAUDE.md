@@ -1,7 +1,7 @@
 # apps/navigator — CLAUDE.md
 
 App: `navigator` (package name in `package.json`)
-Track: **GENERIC** — production; feature-stability gated (suspended pre-GA — see Track rules below).
+Track: **GENERIC** — production; view-stability gated (suspended pre-GA — see Track rules below).
 ([ADR-006](../../docs/adr/ADR-006-three-track-delivery-model.md))
 
 Platform-wide conventions: see root [`CLAUDE.md`](../../CLAUDE.md).
@@ -13,15 +13,16 @@ Per-package rules: [`packages/ui/CLAUDE.md`](../../packages/ui/CLAUDE.md),
 
 ## Track rules
 
-- **Allowed feature stability levels: `stable` only — suspended pre-GA.**
-  While the product is pre-GA, the ESLint rule (`apps/navigator/eslint.config.js`)
-  is configured to allow `experimental`, `candidate`, and `stable` — see the
+- **Allowed view stability levels: `stable` only — suspended pre-GA.**
+  Stability is tagged on views (`x-stability` in each `packages/views/src/<view>/package.json`),
+  not on features. While the product is pre-GA, the ESLint rule (`apps/navigator/eslint.config.js`)
+  is configured to allow `experimental`, `candidate`, and `stable` views — see the
   [ADR-006 amendment](../../docs/adr/ADR-006-three-track-delivery-model.md#amendment-2026-09-23-stability-gate-suspended-pre-ga).
   The `stable`-only boundary is reinstated at production go-live (CI bundle
   audit, HZN-1.9, still not yet wired).
 - **Forbidden: half-built work.** No in-flight demos, no half-built features,
   no customer-specific code — regardless of the pre-GA `x-stability` exception
-  above, a feature landing in this app should still be something you'd stand
+  above, a view or feature landing in this app should still be something you'd stand
   behind.
 - **Forbidden: customer-specific code.** This app is the OSS-publishable generic
   navigator. No prospect names, no NDA-bound logic, no bespoke UI decisions.
