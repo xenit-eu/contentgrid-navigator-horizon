@@ -82,6 +82,16 @@ export const Empty: Story = {
   args: { entityName: "customer" },
 };
 
+/** An empty collection the user may not create in: the same screen, without the button. */
+export const EmptyReadOnly: Story = {
+  args: { entityName: "customer" },
+  render: (args) => (
+    <CollectionStoryHarness fixtureOptions={{ empty: true, creatable: false }}>
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
 /** Renders the view on a collection with items; the title shows the entity name and its count. */
 export const Titled: Story = {
   args: { entityName: "customer" },
@@ -106,6 +116,22 @@ export const Filtered: Story = {
       fixtureOptions={{
         unfilteredPage: { size: 2, total_items_exact: 1284 },
         filteredPage: { size: 2, total_items_exact: 37 },
+      }}
+    >
+      <EntityItemCollectionView {...args} />
+    </CollectionStoryHarness>
+  ),
+};
+
+/** The filters match nothing: the notice takes the table's place, the title says 0 of 1 284. */
+export const NoMatch: Story = {
+  args: Filtered.args,
+  render: (args) => (
+    <CollectionStoryHarness
+      fixtureOptions={{
+        unfilteredPage: { size: 2, total_items_exact: 1284 },
+        filteredPage: { size: 0, total_items_exact: 0 },
+        filteredEmpty: true,
       }}
     >
       <EntityItemCollectionView {...args} />

@@ -51,6 +51,8 @@ export interface EntitySearchBarProps {
    * row; only the quick filters scroll.
    */
   readonly actions?: ReactNode;
+  /** Hides the "Clear all" button: the host shows its own clear action instead (e.g. the collection's no-match notice). */
+  readonly hideClearAll?: boolean;
 }
 
 const ALL: SelectorMode = { kind: "all" };

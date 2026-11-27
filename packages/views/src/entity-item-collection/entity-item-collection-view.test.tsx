@@ -105,6 +105,38 @@ describe("EntityItemCollectionView", () => {
     );
   });
 
+  it("replaces the table with a no-match notice, keeping the title counts and the search bar, and clears all filters", async () => {
+    const { Wrapper } = setup({
+      unfilteredPage: { size: 2, total_items_exact: 1284 },
+      filteredPage: { size: 0, total_items_exact: 0 },
+      filteredEmpty: true,
+    });
+    const onStateChange = vi.fn();
+    render(
+      <EntityItemCollectionView
+        entityName="customer"
+        state={{ filters: { "name~prefix": "zzz" } }}
+        onStateChange={onStateChange}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "No customers match these filters" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Remove a filter or clear them all.")).toBeInTheDocument();
+    expect(await screen.findByText(/^Filtered from 1\s284 items$/)).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByText("0 items")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear all filters" }));
+    expect(onStateChange).toHaveBeenCalledWith({
+      filters: {},
+      sort: undefined,
+      pageUrl: undefined,
+    });
+  });
+
   it("asks for the unfiltered total once, and not at all without a filter", async () => {
     const plain = setup();
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: plain.Wrapper });
@@ -148,7 +180,25 @@ describe("EntityItemCollectionView", () => {
     render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
 
     expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
-    expect(await screen.findByText(/No Customers found/)).toBeInTheDocument();
+    expect(await screen.findByText("0 items")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "No customers yet" })).toBeInTheDocument();
+  });
+
+  it("hides the toolbar's New action while the list is empty, as the empty state offers create", async () => {
+    const { Wrapper } = setup({ empty: true });
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    expect(await screen.findByRole("heading", { name: "No customers yet" })).toBeInTheDocument();
+    // One button: the empty state's own, not also the toolbar's.
+    expect(screen.getAllByRole("button", { name: "New customer" })).toHaveLength(1);
+  });
+
+  it("shows the toolbar's New action when the list has items", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemCollectionView entityName="customer" />, { wrapper: Wrapper });
+
+    await findFirstItem();
+    expect(screen.getAllByRole("button", { name: "New customer" })).toHaveLength(1);
   });
 
   it("draws no create action without a create form", async () => {
@@ -166,7 +216,7 @@ describe("EntityItemCollectionView", () => {
       wrapper: Wrapper,
     });
 
-    await userEvent.click(await screen.findByRole("button", { name: "Create customer" }));
+    await userEvent.click(await screen.findByRole("button", { name: "New customer" }));
     expect(recording.calls).toEqual([
       { method: "openCreateItem", args: ["customer", { openInNewTab: true }] },
     ]);

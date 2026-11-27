@@ -64,7 +64,8 @@ function initialStateForLink(profileEntity: ProfileEntity, url: string): Collect
 
 /**
  * One entity's list: filters, table and pagination, under a Home, collection breadcrumb toolbar
- * with a "New <entity>" create action when the profile allows creating. Resolves the target's profile itself
+ * with a "New <entity>" create action when the profile allows creating (hidden while the list is
+ * empty, as its empty state offers create itself). Resolves the target's profile itself
  * (`useProfileEntityTarget`) and draws the loading and not-found states inside the toolbar; the
  * feature gets the loaded profile and the state, and fetches the page itself. Every click that
  * opens something calls `useViewNavigation()`.
@@ -76,6 +77,8 @@ export function EntityItemCollectionView({
   ...target
 }: Readonly<EntityItemCollectionViewProps>) {
   const navigation = useViewNavigation();
+  // While the list is empty, its own empty state offers create, so the toolbar doesn't.
+  const [collectionEmpty, setCollectionEmpty] = useState(false);
   const result = useProfileEntityTarget(
     "collectionUrl" in target ? { url: target.collectionUrl } : target,
   );
@@ -101,6 +104,7 @@ export function EntityItemCollectionView({
         }
         state={state}
         onStateChange={onStateChange}
+        onEmptyChange={setCollectionEmpty}
       />
     );
   }
@@ -115,7 +119,7 @@ export function EntityItemCollectionView({
       breadcrumbs={<EntityItemCollectionBreadcrumbs profileEntity={profileEntity} />}
       actions={
         <>
-          {profileEntity?.createTemplate && (
+          {profileEntity?.createTemplate && !collectionEmpty && (
             <Button onClick={() => navigation.openCreateItem(profileEntity.name)}>
               <PlusIcon aria-hidden />
               New {profileEntity.singularName.toLowerCase()}
@@ -135,11 +139,13 @@ function CollectionBody({
   initialState,
   state,
   onStateChange,
+  onEmptyChange,
 }: Readonly<{
   profileEntity: ProfileEntity;
   initialState: CollectionViewState;
   state: CollectionViewState | undefined;
   onStateChange: ((state: CollectionViewState) => void) | undefined;
+  onEmptyChange: (empty: boolean) => void;
 }>) {
   const navigation = useViewNavigation();
   const [internalState, setInternalState] = useState(initialState);
@@ -168,6 +174,7 @@ function CollectionBody({
       onCreateItemClick={() =>
         navigation.openCreateItem(profileEntity.name, { openInNewTab: true })
       }
+      onEmptyChange={onEmptyChange}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { type EntityItem, type ProfileEntity } from "@contentgrid/navigator-data";
 import {
   Dialog,
@@ -13,6 +13,7 @@ import { EntityItemReference } from "../entity-item";
 import { EntitySearchBar } from "../entity-search-bar";
 import { EntityItemCollectionEmptyState } from "./entity-item-collection-empty-state";
 import { EntityItemCollectionLoadError } from "./entity-item-collection-load-error";
+import { EntityItemCollectionNoMatch } from "./entity-item-collection-no-match";
 import { EntityItemCollectionTable } from "./entity-item-collection-table";
 import { EntityItemCollectionTitle } from "./entity-item-collection-title";
 import { EntityItemPreviewPane } from "./entity-item-preview-pane";
@@ -54,6 +55,12 @@ export interface EntityItemCollectionBrowserProps {
   readonly onSortChange?: (sort: string | undefined) => void;
   /** Fired when the user clicks create; offered when the collection has no items. */
   readonly onCreateItemClick?: () => void;
+  /**
+   * Fired when the browser starts or stops showing the empty-collection state, so the host can
+   * drop its own create action while the state offers one. Fires `false` again when the state
+   * goes or the browser unmounts; nothing fires for a collection that is never empty.
+   */
+  readonly onEmptyChange?: (empty: boolean) => void;
 }
 
 /**
@@ -88,6 +95,7 @@ export function EntityItemCollectionBrowser({
   currentSort,
   onSortChange,
   onCreateItemClick,
+  onEmptyChange,
 }: Readonly<EntityItemCollectionBrowserProps>) {
   const { collection, toolbarActions, filterDialog, tableProps } = useEntityItemCollectionSearch({
     profile,
@@ -110,6 +118,25 @@ export function EntityItemCollectionBrowser({
     collection.data.items.length === 0 &&
     !collection.data.hasPrevious &&
     activeFilterCount === 0;
+
+  // Filters that match nothing: the table gives way to a notice, the search bar stays. Without
+  // `onFiltersChange` there is nothing to clear, so the table keeps its own empty row.
+  const isNoMatch =
+    collection.isSuccess &&
+    !collection.isPlaceholderData &&
+    collection.data.items.length === 0 &&
+    !collection.data.hasPrevious &&
+    activeFilterCount > 0 &&
+    onFiltersChange !== undefined;
+
+  const onEmptyChangeRef = useRef(onEmptyChange);
+  onEmptyChangeRef.current = onEmptyChange;
+  useEffect(() => {
+    if (!isEmptyCollection) return;
+    onEmptyChangeRef.current?.(true);
+    // Also on unmount, so a host never keeps a state this browser no longer shows.
+    return () => onEmptyChangeRef.current?.(false);
+  }, [isEmptyCollection]);
 
   // The preview: beside the table when this browser is at least the `side-by-side` width, in a
   // dialog otherwise. The width is this browser's own, so a sidebar or a split pane counts.
@@ -227,7 +254,11 @@ export function EntityItemCollectionBrowser({
         <EntityItemCollectionEmptyState profile={profile} onCreateItemClick={onCreateItemClick} />
       )}
 
-      {(collection.isPending || (collection.isSuccess && !isEmptyCollection)) && (
+      {isNoMatch && (
+        <EntityItemCollectionNoMatch profile={profile} onClearFilters={() => onFiltersChange({})} />
+      )}
+
+      {(collection.isPending || (collection.isSuccess && !isEmptyCollection && !isNoMatch)) && (
         <EntityItemCollectionTable
           className={pageScroll ? undefined : "h-full"}
           pageScroll={pageScroll}
@@ -260,6 +291,7 @@ export function EntityItemCollectionBrowser({
         profile={profile}
         total={collection.data?.totalItems}
         loading={collection.isPending}
+        empty={isEmptyCollection}
         isFiltered={activeFilterCount > 0}
       />
 
@@ -271,6 +303,7 @@ export function EntityItemCollectionBrowser({
           onFiltersChange={onFiltersChange}
           currentSort={currentSort}
           actions={toolbarActions}
+          hideClearAll={isNoMatch}
         />
       )}
 
