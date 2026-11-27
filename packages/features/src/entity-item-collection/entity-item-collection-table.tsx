@@ -15,6 +15,7 @@ import {
   type RecordTableColumn,
   RecordTableRow,
   type RecordTableSortOption,
+  Skeleton,
 } from "@contentgrid/ui";
 import {
   AttributeValueRenderer,
@@ -30,7 +31,16 @@ import { EntityItemTitleCell } from "./entity-item-title-cell";
 
 export interface EntityItemCollectionTableProps {
   readonly profile: ProfileEntity;
-  readonly collection: EntityItemCollection;
+  /**
+   * The page to show. Omitted while the first page loads: the header shows at once, over
+   * skeleton rows in the table's shape (`look="collection"`).
+   */
+  readonly collection?: EntityItemCollection;
+  /**
+   * The rows are the previous search's, kept while the new ones load: they show dimmed.
+   * `look="collection"` only.
+   */
+  readonly stale?: boolean;
   /** Fired when a row (entity item) is clicked, or Enter/Space is pressed on it; receives the item. */
   readonly onEntityItemClick?: (item: EntityItem) => void;
   /**
@@ -107,6 +117,25 @@ export interface EntityItemCollectionTableProps {
 }
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
+const NO_ITEMS: readonly EntityItem[] = [];
+
+/** The platform's default page size, which the collection request doesn't override. */
+const LOADING_ROW_COUNT = 20;
+
+/** Skeleton bar widths (px) per kind of column, one per row, repeating down the page. */
+const SKELETON_WIDTHS = {
+  title: [120, 100, 130, 110],
+  text: [140, 110, 150, 120],
+  number: [60, 70, 50, 64],
+  date: [80, 80, 80, 80],
+} as const;
+
+function skeletonKind(column: RecordTableColumn): keyof typeof SKELETON_WIDTHS {
+  if (column.key === REFERENCE_COLUMN_KEY) return "title";
+  if (column.align === "end") return "number";
+  if (column.sortKind === "date") return "date";
+  return "text";
+}
 
 const REFERENCE_COLUMN_KEY = "__reference";
 
@@ -138,6 +167,7 @@ function itemCountLabel(collection: EntityItemCollection): string {
 export function EntityItemCollectionTable({
   profile,
   collection,
+  stale = false,
   onEntityItemClick,
   onEntityItemOpen,
   entityItemHref,
@@ -203,6 +233,7 @@ export function EntityItemCollectionTable({
     [profile.singularName, attributeColumnsWithTraits, isCollectionLook],
   );
 
+  const items = collection?.items ?? NO_ITEMS;
   const deleteMutation = useDeleteEntityItem();
 
   function deleteItem(item: EntityItem) {
@@ -222,15 +253,11 @@ export function EntityItemCollectionTable({
     showRowActions ??
     (renderRowActions !== undefined ||
       onEntityItemOpen !== undefined ||
-      collection.items.some((item) => item.canDelete));
+      items.some((item) => item.canDelete));
 
-  const selectedCount = collection.items.filter((item) => selectedIds.has(item.id)).length;
+  const selectedCount = items.filter((item) => selectedIds.has(item.id)).length;
   const selectionState: boolean | "indeterminate" =
-    selectedCount === 0
-      ? false
-      : selectedCount === collection.items.length
-        ? true
-        : "indeterminate";
+    selectedCount === 0 ? false : selectedCount === items.length ? true : "indeterminate";
 
   function toggleSelected(items: readonly EntityItem[], checked: boolean) {
     const next = new Set(selectedIds);
@@ -255,21 +282,47 @@ export function EntityItemCollectionTable({
         currentSort={currentSort ? [currentSort] : []}
         onSort={onSort}
         showActionsColumn={hasActionsColumn}
-        onSelectAll={
-          onSelectionChange ? (checked) => toggleSelected(collection.items, checked) : undefined
-        }
+        onSelectAll={onSelectionChange ? (checked) => toggleSelected(items, checked) : undefined}
         selectionState={selectionState}
-        footerContent={paginated && showItemCount ? itemCountLabel(collection) : undefined}
+        footerContent={
+          collection && paginated && showItemCount ? itemCountLabel(collection) : undefined
+        }
         onNextPageClick={
-          paginated && collection.hasNext ? () => onPageChange?.(collection.nextHref) : undefined
+          collection && paginated && collection.hasNext
+            ? () => onPageChange?.(collection.nextHref)
+            : undefined
         }
         onPreviousPageClick={
-          paginated && collection.hasPrevious
+          collection && paginated && collection.hasPrevious
             ? () => onPageChange?.(collection.prevHref)
             : undefined
         }
       >
-        {collection.items.map((item) => {
+        {!collection &&
+          Array.from({ length: LOADING_ROW_COUNT }, (_, index) => (
+            <RecordTableRow
+              key={index}
+              chrome={look}
+              cells={columns.map((column) => ({
+                key: column.key,
+                align: column.align,
+                content: (
+                  <Skeleton
+                    aria-hidden
+                    className={`block h-3 animate-none rounded-[6px] bg-[#dfe8f0] dark:bg-border ${column.align === "end" ? "ml-auto" : ""}`}
+                    style={{
+                      width:
+                        SKELETON_WIDTHS[skeletonKind(column)][
+                          index % SKELETON_WIDTHS[skeletonKind(column)].length
+                        ],
+                    }}
+                  />
+                ),
+              }))}
+              actions={hasActionsColumn ? <></> : undefined}
+            />
+          ))}
+        {items.map((item) => {
           const cells: RecordTableCell[] = [
             {
               key: REFERENCE_COLUMN_KEY,
@@ -309,6 +362,7 @@ export function EntityItemCollectionTable({
               key={item.id}
               cells={cells}
               chrome={look}
+              className={stale ? "opacity-45" : undefined}
               selected={selectedIds.has(item.id)}
               current={item.id === currentItem?.id}
               onSelectChange={

@@ -238,7 +238,10 @@ function renderBrowser(props: {
   profileUrl?: string;
 }) {
   const { profileUrl = PROFILE_URL, ...browserProps } = props;
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = new QueryClient({
+    // The collection query sets its own retry count; no delay keeps a failing one quick.
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+  });
   const apiFetch = createApiClient(noopSupplier);
   const contentFetch = createContentClient(noopSupplier);
 
@@ -1517,5 +1520,125 @@ describe("EntityItemCollectionBrowser — item preview", () => {
       expect(within(pane).queryByRole("link")).not.toBeInTheDocument();
       expect(within(pane).getByText("Widget").closest("a")).toBeNull();
     });
+  });
+});
+
+describe("EntityItemCollectionBrowser — loading", () => {
+  /** Answers the collection once `release` is called; until then the request stays open. */
+  function holdCollection() {
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(COLLECTION_URL, async () => {
+        await released;
+        return HttpResponse.json(SEARCH_MODE_BODY);
+      }),
+    );
+    return release;
+  }
+
+  it("shows the headers over skeleton rows, busy, until the first page arrives", async () => {
+    const release = holdCollection();
+    renderBrowser({ profile: makeItemProfile() });
+
+    const region = screen.getByRole("region", { name: /table$/ });
+    expect(region).toHaveAttribute("aria-busy", "true");
+    expect(within(region).getAllByRole("columnheader").length).toBeGreaterThan(1);
+    // One page of placeholder rows: the platform's default page size, 20.
+    expect(region.querySelectorAll("[data-slot='table-row'] [data-slot='skeleton']")).toHaveLength(
+      20 * within(region).getAllByRole("columnheader").length,
+    );
+    expect(document.querySelector("[data-slot='collection-count-skeleton']")).toBeInTheDocument();
+
+    release();
+    await findTotal(2);
+    expect(region).not.toHaveAttribute("aria-busy");
+    expect(region.querySelector("[data-slot='skeleton']")).toBeNull();
+    expect(document.querySelector("[data-slot='collection-count-skeleton']")).toBeNull();
+  });
+
+  it("keeps the previous rows, dimmed, while a new search loads", async () => {
+    setupCollectionHandler();
+    const view = renderBrowser({ profile: makeItemProfile() });
+    await findTotal(2);
+    const rows = () => [...document.querySelectorAll("[data-slot='table-row']")];
+    expect(rows()).toHaveLength(2);
+    expect(rows().every((row) => !row.classList.contains("opacity-45"))).toBe(true);
+
+    const release = holdCollection();
+    view.rerender(
+      <EntityItemCollectionBrowser
+        profile={makeItemProfile()}
+        filters={{ "code~prefix": "abc" }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(rows().every((row) => row.classList.contains("opacity-45"))).toBe(true),
+    );
+    expect(rows()).toHaveLength(2);
+
+    release();
+    await waitFor(() =>
+      expect(rows().every((row) => !row.classList.contains("opacity-45"))).toBe(true),
+    );
+  });
+});
+
+describe("EntityItemCollectionBrowser — failed to load", () => {
+  function problem(body: Record<string, unknown>, status = 400) {
+    return HttpResponse.json(body, {
+      status,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+  }
+
+  it("with no answer, says to check the connection; Try again fetches the page again", async () => {
+    let failing = true;
+    server.use(
+      http.get(COLLECTION_URL, () =>
+        failing ? HttpResponse.error() : HttpResponse.json(SEARCH_MODE_BODY),
+      ),
+    );
+    renderBrowser({ profile: makeItemProfile() });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/The item couldn't be loaded/);
+    expect(alert).toHaveTextContent("Check your connection and try again.");
+
+    failing = false;
+    await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    await findTotal(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("shows the problem's detail when the server answered with one", async () => {
+    server.use(
+      http.get(COLLECTION_URL, () =>
+        problem({
+          title: "Bad filter",
+          detail: "The filter value is not a valid date.",
+          status: 400,
+        }),
+      ),
+    );
+    renderBrowser({ profile: makeItemProfile() });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The filter value is not a valid date.");
+    expect(alert).not.toHaveTextContent("Check your connection");
+    expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("falls back to the problem's title without a detail", async () => {
+    server.use(http.get(COLLECTION_URL, () => problem({ title: "Service unavailable" }, 503)));
+    renderBrowser({ profile: makeItemProfile() });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Service unavailable");
+    expect(alert).not.toHaveTextContent("Check your connection");
   });
 });

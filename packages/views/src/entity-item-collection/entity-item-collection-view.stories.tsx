@@ -9,6 +9,7 @@ import {
   createRecordingNavigation,
 } from "../navigation/recording-navigation";
 import { createCollectionFixtureFetch } from "../test-fixtures/collection";
+import { CollectionStateStoryHarness } from "../test-fixtures/collection-state-story-harness";
 import { createInvoiceCollectionFixtureFetch } from "../test-fixtures/invoice-collection";
 import { PROFILE_URL } from "../test-fixtures/item-detail";
 import { EntityItemCollectionView } from "./entity-item-collection-view";
@@ -179,5 +180,63 @@ export const InvoicesSortedByAmount: Story = {
     <InvoiceStoryHarness>
       <EntityItemCollectionView {...args} />
     </InvoiceStoryHarness>
+  ),
+};
+
+/** Design columns of board 25: Invoice, Supplier, Amount, Issue date. */
+function useStateStoryColumns() {
+  useEntityDisplayPreferencesStore.getState().setOverride(PROFILE_URL, "invoice", {
+    nameAttribute: "reference",
+    visibleColumns: ["supplier", "amount", "issued"],
+  });
+}
+
+/**
+ * First load: the title with a skeleton count pill and the column headers show at once, over
+ * placeholder rows in the table's shape. The page request never answers.
+ */
+export const Loading: Story = {
+  args: { entityName: "invoice" },
+  tags: ["!async-content", "pending-state"],
+  beforeEach: useStateStoryColumns,
+  render: (args) => (
+    <CollectionStateStoryHarness state="loading">
+      {() => <EntityItemCollectionView {...args} />}
+    </CollectionStateStoryHarness>
+  ),
+};
+
+/** Paging: the previous page's rows stay, dimmed, until the next page arrives (it never does here). */
+export const PagingDimmed: Story = {
+  args: { entityName: "invoice" },
+  // The design dims the rows to 0.45, which axe reads as low contrast.
+  tags: ["!async-content", "pending-state", "axe-no-contrast"],
+  beforeEach: useStateStoryColumns,
+  render: (args) => (
+    <CollectionStateStoryHarness state="paging">
+      {(viewState) => <EntityItemCollectionView {...args} {...viewState} />}
+    </CollectionStateStoryHarness>
+  ),
+};
+
+/** The page request got no answer (a network error): the title stays, under it a red alert with Try again. */
+export const FailedToLoad: Story = {
+  args: { entityName: "invoice" },
+  beforeEach: useStateStoryColumns,
+  render: (args) => (
+    <CollectionStateStoryHarness state="failed">
+      {() => <EntityItemCollectionView {...args} />}
+    </CollectionStateStoryHarness>
+  ),
+};
+
+/** The server answered with a problem: the alert shows the problem's detail instead. */
+export const FailedToLoadWithProblem: Story = {
+  args: { entityName: "invoice" },
+  beforeEach: useStateStoryColumns,
+  render: (args) => (
+    <CollectionStateStoryHarness state="problem">
+      {() => <EntityItemCollectionView {...args} />}
+    </CollectionStateStoryHarness>
   ),
 };
