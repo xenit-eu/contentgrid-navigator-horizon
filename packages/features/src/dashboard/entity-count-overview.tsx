@@ -19,7 +19,7 @@ import {
   EntityCardText,
   EntityCardTitle,
   formatCount,
-  itemNoun,
+  pluralize,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 
@@ -85,7 +85,7 @@ function EntityOverview({
 function NoEntitiesState() {
   return (
     <div className="flex flex-col items-center gap-2.5 px-6 py-14 text-center text-muted-foreground">
-      <span className="grid size-14 place-items-center rounded-[14px] border-[1.5px] border-dashed border-info-line bg-info-tint text-primary">
+      <span className="grid size-14 place-items-center rounded-[14px] border-[1.5px] border-dashed border-info-border bg-info text-info-foreground">
         <StackIcon aria-hidden className="size-6" />
       </span>
       <h2 className="text-[17px] font-bold text-foreground">Nothing to show yet</h2>
@@ -141,7 +141,8 @@ function ItemCountLine({
   }
   return (
     <p className="mt-auto text-ui text-muted-foreground">
-      <span className="font-bold text-card-foreground">{count}</span> {itemNoun(total)}
+      <span className="font-bold text-card-foreground">{count}</span>{" "}
+      {pluralize(total.count, "item")}
     </p>
   );
 }

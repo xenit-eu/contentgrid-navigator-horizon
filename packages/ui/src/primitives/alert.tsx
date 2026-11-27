@@ -17,9 +17,8 @@ type AlertTone = "info" | "warning" | "error";
  */
 const toneConfig = {
   info: {
-    boxClass:
-      "bg-[rgba(1,155,227,0.08)] dark:bg-[rgba(90,196,242,0.12)] border-[rgba(1,155,227,0.3)] dark:border-[rgba(90,196,242,0.34)]",
-    accentClass: "text-[#084772] dark:text-[#7CCDF4]",
+    boxClass: "bg-info border-info-border",
+    accentClass: "text-info-foreground",
     titleClass: "text-foreground",
     icon: <Info aria-hidden />,
     role: "status" as const,
@@ -71,7 +70,7 @@ function Alert({ tone = "info", onClose, className, children, ...props }: AlertP
         data-tone={tone}
         role={config.role}
         className={cn(
-          "flex gap-2.5 rounded-[10px] border px-3.5 py-3 text-[13.5px] text-foreground",
+          "flex gap-2.5 rounded-md border px-3.5 py-3 text-ui text-foreground",
           config.boxClass,
           className,
         )}
