@@ -1,4 +1,4 @@
-import { forwardRef, useRef, useState } from "react";
+import { type Ref, forwardRef, useImperativeHandle, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { CaretRightIcon, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import {
@@ -46,6 +46,8 @@ export interface RightSidePanelLayoutProps {
   /** Pads the side panel's body. Turn off for content that runs edge to edge, such as a list of
    * full-width rows. Defaults to `true`. */
   readonly sidePanelPadded?: boolean;
+  /** Lets the caller expand a collapsed side panel, e.g. before it shows a form in it. */
+  readonly sidePanelHandleRef?: Ref<{ readonly expand: () => void }>;
 }
 
 /**
@@ -81,6 +83,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
       defaultSidePanelOpen = true,
       resizable = true,
       sidePanelPadded = true,
+      sidePanelHandleRef,
     },
     ref,
   ) {
@@ -95,6 +98,7 @@ export const RightSidePanelLayout = forwardRef<HTMLDivElement, RightSidePanelLay
       if (nextOpen) panelRef.current?.expand();
       else panelRef.current?.collapse();
     };
+    useImperativeHandle(sidePanelHandleRef, () => ({ expand: () => toggle(true) }));
     // Initial sizes only; changing them later would make the library re-register the panel.
     const [initiallyOpen] = useState(defaultSidePanelOpen);
 

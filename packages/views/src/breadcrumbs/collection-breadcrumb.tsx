@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { EntityIconBadge } from "@contentgrid/features/layout";
 import type { ProfileEntity } from "@contentgrid/navigator-data";
 import {
   BreadcrumbItem,
@@ -14,10 +13,9 @@ import { NavigationLink, useViewNavigation } from "../navigation";
 export const BREADCRUMB_TITLE_MAX_CHAR_LENGTH = 40;
 
 /**
- * The entity's collection — its icon badge and plural name — followed by its `children` crumbs:
- * a link to the list (outlined badge) when crumbs follow it, the current page (solid badge) when
- * it is last. A long name is truncated, with the full name on hover. Draws nothing (nor its children)
- * until the profile is known.
+ * The entity's collection — its plural name as plain text — followed by its `children` crumbs:
+ * a link to the list when crumbs follow it, the current page when it is last. A long name is
+ * truncated, with the full name on hover. Draws nothing (nor its children) until the profile is known.
  */
 export function CollectionBreadcrumb({
   profileEntity,
@@ -35,9 +33,7 @@ export function CollectionBreadcrumb({
             <NavigationLink
               href={navigation.hrefFor?.entityItemCollection(profileEntity.name)}
               onNavigate={() => navigation.openEntityItemCollection(profileEntity.name)}
-              className="inline-flex items-center gap-2"
             >
-              <EntityIconBadge profile={profileEntity} variant="sm" outlined />
               <TruncatedText
                 text={profileEntity.pluralName}
                 maxCharLength={BREADCRUMB_TITLE_MAX_CHAR_LENGTH}
@@ -45,8 +41,7 @@ export function CollectionBreadcrumb({
             </NavigationLink>
           </BreadcrumbLink>
         ) : (
-          <BreadcrumbPage className="inline-flex items-center gap-2">
-            <EntityIconBadge profile={profileEntity} variant="sm" />
+          <BreadcrumbPage>
             <TruncatedText
               text={profileEntity.pluralName}
               maxCharLength={BREADCRUMB_TITLE_MAX_CHAR_LENGTH}

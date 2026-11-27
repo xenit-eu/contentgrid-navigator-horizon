@@ -20,6 +20,8 @@ export interface EntityItemReferenceProps {
    */
   readonly titleMaxCharLength?: number;
   readonly className?: string;
+  /** Renders just the title as inline text, with no icon, subtitle or box (e.g. in a breadcrumb). */
+  readonly titleOnly?: boolean;
 }
 
 /**
@@ -38,8 +40,13 @@ export function EntityItemReference({
   outlined,
   titleMaxCharLength = STRING_REFERENCE_MAX_CHAR_LENGTH,
   className,
+  titleOnly,
 }: Readonly<EntityItemReferenceProps>) {
   const { preferences, Icon, title, subtitle } = useEntityItemHeading(item, titleMaxCharLength);
+
+  if (titleOnly) {
+    return <span data-slot="item-title">{title}</span>;
+  }
 
   return (
     <ItemReference

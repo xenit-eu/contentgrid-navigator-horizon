@@ -1,17 +1,32 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { ErrorPage, LoadingPage } from "@contentgrid/features/app-info-pages";
 import {
   EntityItemAutoVariation,
+  type EntityItemEditHandle,
+  isEditableEntityItem,
   useEntityItemDetailPadding,
 } from "@contentgrid/features/entity-item";
 import { DeleteEntityItemButton } from "@contentgrid/features/entity-item-delete";
 import { toProblemDisplayModel } from "@contentgrid/navigator-data";
+import { Button } from "@contentgrid/ui";
 import { EntityItemDetailBreadcrumbs } from "../breadcrumbs";
 import { type EntityItemTarget, useEntityItemTarget } from "../hooks/use-entity-item-target";
 import { BreadCrumbsToolBarLayout, PageLayout } from "../layout";
 import { useViewNavigation } from "../navigation";
 import type { ViewProps } from "../types/view";
 import { RelationProblemDialog, type RelationProblemDialogState } from "./relation-problem-dialog";
+
+/**
+ * The toolbar's Edit and Delete as the design draws them (`.b`): 36px high, 8px radius, 14px side
+ * padding, 8px between icon and label, 13.5px semibold, no shadow, strong (`--input`) border.
+ * Local to these two buttons: the shared Button variants differ.
+ */
+const TOOLBAR_BUTTON_CLASS =
+  "h-9 gap-2 rounded-sm px-3.5 has-[>svg]:px-3.5 text-[13.5px] font-semibold shadow-none";
+
+/** Delete is the same outline button as Edit with its text and icon in the destructive colour. */
+const DELETE_BUTTON_CLASS = `${TOOLBAR_BUTTON_CLASS} border-input`;
 
 /** Opened by entity name and item id, or by the item's own link. */
 export type EntityItemDetailViewProps = ViewProps & EntityItemTarget;
@@ -36,9 +51,29 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
   const result = useEntityItemTarget(target);
   const [problemDialog, setProblemDialog] = useState<RelationProblemDialogState | null>(null);
 
-  // Hides the toolbar's Delete while the item's edit form is open: deleting would navigate away
-  // and run into the unsaved-changes prompt.
+  // The toolbar's Edit and Cancel edit drive the feature's edit mode through this handle (the
+  // feature then draws no Edit button of its own); `isEditing` follows the feature's
+  // `onEditingChange`. It also hides the toolbar's Delete while the edit form is open: deleting
+  // would navigate away and run into the unsaved-changes prompt.
+  const editHandle = useRef<EntityItemEditHandle>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Gated on the item's update template, like the Delete below on its delete template.
+  const editAction =
+    result.status === "success" && toolbar !== false && isEditableEntityItem(result.entityItem) ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="default"
+        className={`${TOOLBAR_BUTTON_CLASS} border-input`}
+        onClick={() =>
+          isEditing ? editHandle.current?.cancelEdit() : editHandle.current?.startEdit()
+        }
+      >
+        <PencilSimpleIcon />
+        {isEditing ? "Cancel edit" : "Edit"}
+      </Button>
+    ) : null;
 
   // With a toolbar, Delete goes in it. Without one, the variation draws its own next to Edit
   // (`onDeleted`).
@@ -47,6 +82,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
       <DeleteEntityItemButton
         item={result.entityItem}
         label="Delete"
+        className={DELETE_BUTTON_CLASS}
         onDeleted={() => navigation.openEntityItemCollection(result.profileEntity.name)}
         onRefresh={() => void result.refetch()}
       />
@@ -83,6 +119,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
             : undefined
         }
         onEditingChange={setIsEditing}
+        editHandleRef={toolbar === false ? undefined : editHandle}
       />
     );
   } else {
@@ -113,7 +150,7 @@ export function EntityItemDetailView({ toolbar, ...target }: Readonly<EntityItem
       }
       actions={
         <>
-          {toolbar?.actions} {deleteAction}
+          {toolbar?.actions} {editAction} {deleteAction}
         </>
       }
       contentPadded={contentPadding}

@@ -1,31 +1,106 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import { useEntityDisplayPreferencesStore } from "@contentgrid/features/preferences";
 import { NavigatorDataProvider } from "@contentgrid/navigator-data";
 import type { TypedFetch } from "@contentgrid/navigator-data";
 import {
   RecordingNavigationProvider,
   createRecordingNavigation,
 } from "../navigation/recording-navigation";
-import { PROFILE_URL, createFixtureFetch } from "../test-fixtures/item-detail";
+import { type ItemTemplate, PROFILE_URL, createFixtureFetch } from "../test-fixtures/item-detail";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 import { preloadEntityItemDetail } from "./preload";
 
 const entityName = "customer";
 const itemId = "cust-001";
 
+const StoryContent = createContext<{ content: ReactNode; onMount: () => void }>({
+  content: null,
+  onMount: () => {},
+});
+
+function StoryPage() {
+  const { content, onMount } = useContext(StoryContent);
+  useEffect(onMount, [onMount]);
+  return content;
+}
+
+/**
+ * The edit form guards unsaved changes through the router, so the story needs one: a memory router
+ * whose only page is the story. `onMount` fires once the page has rendered.
+ */
+function StoryRouter({
+  children,
+  onMount,
+}: Readonly<{ children: ReactNode; onMount: () => void }>) {
+  const [router] = useState(() => {
+    const root = createRootRoute();
+    const index = createRoute({ getParentRoute: () => root, path: "/", component: StoryPage });
+    return createRouter({
+      routeTree: root.addChildren([index]),
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+  });
+  return (
+    <StoryContent value={{ content: children, onMount }}>
+      <RouterProvider router={router} />
+    </StoryContent>
+  );
+}
+
+interface ItemDetailStoryHarnessProps {
+  readonly children: ReactNode;
+  /** The item's templates: Edit shows with `default`, Delete with `delete`. */
+  readonly templates?: readonly ItemTemplate[];
+  /** `"columns"` renders the side-by-side layout instead of the stacked sections. */
+  readonly itemLayout?: "columns";
+  /** Gives the customer an `orders` relation, so the side-by-side layout has a relations column. */
+  readonly withRelation?: boolean;
+  /** Clicks the toolbar's Edit once it shows, so the story captures edit mode. */
+  readonly startEditing?: boolean;
+}
+
 /**
  * Preloads the item, then mounts the view in a fixed-size box (ADR-009): the view fills the box
- * and never sizes itself to the window. `aria-busy` covers the preload, so the visual harness's
- * `async-content` wait has no gap between the empty root and the view.
+ * and never sizes itself to the window. `aria-busy` covers the preload (and, with `startEditing`,
+ * the click on Edit), so the visual harness's `async-content` wait has no gap between the empty
+ * root and the final state.
  */
-function ItemDetailStoryHarness({ children }: Readonly<{ children: ReactNode }>) {
-  const [fixture] = useState(() => createFixtureFetch());
+function ItemDetailStoryHarness({
+  children,
+  templates,
+  itemLayout,
+  withRelation = false,
+  startEditing = false,
+}: Readonly<ItemDetailStoryHarnessProps>) {
+  const [fixture] = useState(() => createFixtureFetch({ templates, withRelation }));
   const [queryClient] = useState(() => new QueryClient());
   const [recording] = useState(() => createRecordingNavigation());
   const [ready, setReady] = useState(false);
+  const [routed, setRouted] = useState(false);
+  const [editing, setEditing] = useState(!startEditing);
+  const [relationShown, setRelationShown] = useState(!withRelation);
+  const box = useRef<HTMLDivElement>(null);
   const apiFetch = fixture.fetch as unknown as TypedFetch;
   const contentFetch = Object.assign(apiFetch, { withUploadProgress: () => apiFetch });
+
+  useEffect(() => {
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(PROFILE_URL, entityName, { itemLayout });
+    return () =>
+      useEntityDisplayPreferencesStore
+        .getState()
+        .setOverride(PROFILE_URL, entityName, { itemLayout: undefined });
+  }, [itemLayout]);
 
   useEffect(() => {
     void preloadEntityItemDetail(
@@ -35,25 +110,51 @@ function ItemDetailStoryHarness({ children }: Readonly<{ children: ReactNode }>)
     ).then(() => setReady(true));
   }, [queryClient, apiFetch]);
 
+  useEffect(() => {
+    if (!ready || !routed || editing) return;
+    const timer = setInterval(() => {
+      const edit = [...(box.current?.querySelectorAll("button") ?? [])].find(
+        (button) => button.textContent === "Edit",
+      );
+      if (edit) {
+        edit.click();
+        setEditing(true);
+      }
+    }, 20);
+    return () => clearInterval(timer);
+  }, [ready, routed, editing]);
+
+  // The relations load after the item, so wait until the first order shows.
+  useEffect(() => {
+    if (relationShown) return;
+    const timer = setInterval(() => {
+      if (box.current?.textContent?.includes("ORD-1001")) setRelationShown(true);
+    }, 20);
+    return () => clearInterval(timer);
+  }, [relationShown]);
+
   return (
     <div
-      aria-busy={!ready}
+      ref={box}
+      aria-busy={!ready || !routed || !editing || !relationShown}
       className="overflow-hidden rounded-md border"
       style={{ width: 960, height: 560 }}
     >
-      {ready && (
-        <QueryClientProvider client={queryClient}>
-          <NavigatorDataProvider
-            apiFetch={apiFetch}
-            contentFetch={contentFetch}
-            profileUrl={PROFILE_URL}
-          >
-            <RecordingNavigationProvider recording={recording}>
-              {children}
-            </RecordingNavigationProvider>
-          </NavigatorDataProvider>
-        </QueryClientProvider>
-      )}
+      <StoryRouter onMount={() => setRouted(true)}>
+        {ready && (
+          <QueryClientProvider client={queryClient}>
+            <NavigatorDataProvider
+              apiFetch={apiFetch}
+              contentFetch={contentFetch}
+              profileUrl={PROFILE_URL}
+            >
+              <RecordingNavigationProvider recording={recording}>
+                {children}
+              </RecordingNavigationProvider>
+            </NavigatorDataProvider>
+          </QueryClientProvider>
+        )}
+      </StoryRouter>
     </div>
   );
 }
@@ -63,8 +164,8 @@ const meta = {
   component: EntityItemDetailView,
   tags: ["autodocs", "async-content"],
   parameters: { layout: "centered" },
-  render: (args) => (
-    <ItemDetailStoryHarness>
+  render: (args, { parameters }) => (
+    <ItemDetailStoryHarness {...parameters.harness}>
       <EntityItemDetailView {...args} />
     </ItemDetailStoryHarness>
   ),
@@ -73,8 +174,42 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The item allows neither Edit nor Delete: the breadcrumb bar has no actions. */
 export const Default: Story = {
   args: { entityName, itemId },
+};
+
+/** The item allows both: Edit and Delete sit side by side in the breadcrumb bar. */
+export const EditAndDelete: Story = {
+  args: { entityName, itemId },
+  parameters: { harness: { templates: ["default", "delete"] } },
+};
+
+export const EditOnly: Story = {
+  args: { entityName, itemId },
+  parameters: { harness: { templates: ["default"] } },
+};
+
+export const DeleteOnly: Story = {
+  args: { entityName, itemId },
+  parameters: { harness: { templates: ["delete"] } },
+};
+
+/** Edit mode: the button reads "Cancel edit" and Delete is out of the way. */
+export const Editing: Story = {
+  args: { entityName, itemId },
+  parameters: { harness: { templates: ["default", "delete"], startEditing: true } },
+};
+
+/**
+ * The side-by-side layout keeps the same actions in the same place. The customer has an `orders`
+ * relation, which is what moves the layout into two columns (the card, and the relations).
+ */
+export const SideBySideEditAndDelete: Story = {
+  args: { entityName, itemId },
+  parameters: {
+    harness: { templates: ["default", "delete"], itemLayout: "columns", withRelation: true },
+  },
 };
 
 export const ToolbarHidden: Story = {

@@ -1,5 +1,5 @@
 import { type ProfileEntity, useEntityItemCollection } from "@contentgrid/navigator-data";
-import { type CountLike, formatCount, pluralize } from "@contentgrid/ui";
+import { type CountLike, Skeleton, formatCount, pluralize } from "@contentgrid/ui";
 
 export interface EntityItemCollectionTitleProps {
   readonly profile: ProfileEntity;
@@ -7,6 +7,8 @@ export interface EntityItemCollectionTitleProps {
   readonly total: CountLike | undefined;
   /** Whether a search or filter is active; adds the "Filtered from N items" line. */
   readonly isFiltered: boolean;
+  /** The first page is still loading, so there is no count yet: a skeleton pill stands in. */
+  readonly loading?: boolean;
 }
 
 /**
@@ -18,6 +20,7 @@ export function EntityItemCollectionTitle({
   profile,
   total,
   isFiltered,
+  loading = false,
 }: Readonly<EntityItemCollectionTitleProps>) {
   const count = formatCount(total, { estimate: "word" });
 
@@ -27,6 +30,13 @@ export function EntityItemCollectionTitle({
         <h1 className="text-[26px] leading-[1.2] font-bold text-foreground">
           {profile.pluralName}
         </h1>
+        {loading && (
+          <Skeleton
+            data-slot="collection-count-skeleton"
+            aria-hidden
+            className="h-6 w-10 animate-none rounded-full bg-[#dfe8f0] dark:bg-border"
+          />
+        )}
         {count !== undefined && (
           <span
             data-slot="collection-count"
