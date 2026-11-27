@@ -15,15 +15,16 @@ import {
   EntityCardArrow,
   EntityCardDescription,
   EntityCardGrid,
+  EntityCardSkeleton,
   EntityCardText,
   EntityCardTitle,
-  Skeleton,
   formatCount,
+  itemNoun,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
 
 // ---------------------------------------------------------------------------
-// EntityOverviewPage — index route component (grid of entity cards)
+// EntityCountOverview — the Home page body (grid of entity cards)
 // ---------------------------------------------------------------------------
 
 export function EntityCountOverview({
@@ -43,7 +44,7 @@ function EntityOverview({
 
   if (error) {
     return (
-      <Alert tone="error" className="text-sm">
+      <Alert tone="error">
         <AlertTitle>The application couldn't be loaded</AlertTitle>
         <AlertDescription>Try again in a moment.</AlertDescription>
         <AlertActionSection>
@@ -57,7 +58,7 @@ function EntityOverview({
     return (
       <EntityCardGrid>
         {[1, 2, 3, 4].map((i) => (
-          <EntityCardPlaceholder key={i} />
+          <EntityCardSkeleton key={i} />
         ))}
       </EntityCardGrid>
     );
@@ -80,22 +81,11 @@ function EntityOverview({
   );
 }
 
-/** Stands in for a card while the profiles load: the icon tile, the title and the count line. */
-function EntityCardPlaceholder() {
-  return (
-    <EntityCard aria-hidden>
-      <Skeleton className="size-9" />
-      <Skeleton className="h-3 w-3/5" />
-      <Skeleton className="h-2.5 w-2/5" />
-    </EntityCard>
-  );
-}
-
 /** Shown when the profile lists no entities, or none the user can access. */
 function NoEntitiesState() {
   return (
     <div className="flex flex-col items-center gap-2.5 px-6 py-14 text-center text-muted-foreground">
-      <span className="grid size-14 place-items-center rounded-[14px] border-[1.5px] border-dashed border-ring/40 bg-selected text-primary">
+      <span className="grid size-14 place-items-center rounded-[14px] border-[1.5px] border-dashed border-info-line bg-info-tint text-primary">
         <StackIcon aria-hidden className="size-6" />
       </span>
       <h2 className="text-[17px] font-bold text-foreground">Nothing to show yet</h2>
@@ -135,7 +125,7 @@ function EntityCardConnected({
 /**
  * "1 item", "1 284 items", "about 1 204 items" for an estimate, "0 items"; a dash while the count
  * loads, and "Count not available" when there is none (the request failed, or the entity can't be
- * searched). The number is formatted as in the sidebar.
+ * searched).
  */
 function ItemCountLine({
   total,
@@ -151,8 +141,7 @@ function ItemCountLine({
   }
   return (
     <p className="mt-auto text-ui text-muted-foreground">
-      <span className="font-bold text-card-foreground">{count}</span>{" "}
-      {total.count === 1 && !total.isEstimated ? "item" : "items"}
+      <span className="font-bold text-card-foreground">{count}</span> {itemNoun(total)}
     </p>
   );
 }

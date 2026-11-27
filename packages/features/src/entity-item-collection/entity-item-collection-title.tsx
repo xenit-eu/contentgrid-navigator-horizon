@@ -1,5 +1,5 @@
 import { type ProfileEntity, useEntityItemCollection } from "@contentgrid/navigator-data";
-import { type CountLike, formatCount } from "@contentgrid/ui";
+import { type CountLike, formatCount, itemNoun } from "@contentgrid/ui";
 
 export interface EntityItemCollectionTitleProps {
   readonly profile: ProfileEntity;
@@ -58,7 +58,7 @@ function UnfilteredTotalLine({ profile }: Readonly<{ profile: ProfileEntity }>) 
 
   return (
     <p className="text-sm text-muted-foreground">
-      Filtered from {count} {total.count === 1 && !total.isEstimated ? "item" : "items"}
+      Filtered from {count} {itemNoun(total)}
     </p>
   );
 }

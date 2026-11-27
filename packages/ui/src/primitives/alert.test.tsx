@@ -70,7 +70,7 @@ describe("Alert", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it("renders an AlertButton that fires its own onClick and inherits the alert's tone", async () => {
+  it("renders an AlertButton that fires its own onClick", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
     render(

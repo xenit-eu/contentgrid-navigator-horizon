@@ -6,7 +6,11 @@ import {
   RecordingNavigationProvider,
   createRecordingNavigation,
 } from "../navigation/recording-navigation";
-import { OVERVIEW_ENTITY_NAMES, createEntityOverviewFixtureFetch } from "./entity-overview";
+import {
+  OVERVIEW_ENTITY_NAMES,
+  type OverviewProfileState,
+  createOverviewStateFetch,
+} from "./entity-overview";
 import { PROFILE_URL } from "./item-detail";
 
 /**
@@ -14,20 +18,32 @@ import { PROFILE_URL } from "./item-detail";
  * profiles load before the view mounts, so its cards appear in its first render; the box stays
  * `aria-busy` until the requests those cards start (the item counts) have finished, which is what
  * the visual harness's `async-content` wait looks for.
+ *
+ * `profileState` picks how the profile root answers. Only "loaded" preloads the profiles. The
+ * "loading" state is the picture itself, so its box is never busy; the query client doesn't retry,
+ * so "failed" shows its error at once.
  */
-export function OverviewStoryHarness({ children }: Readonly<{ children: ReactNode }>) {
-  const [apiFetch] = useState(() => createEntityOverviewFixtureFetch() as unknown as TypedFetch);
-  const [queryClient] = useState(() => new QueryClient());
+export function OverviewStoryHarness({
+  profileState = "loaded",
+  children,
+}: Readonly<{ profileState?: OverviewProfileState; children: ReactNode }>) {
+  const [apiFetch] = useState(
+    () => createOverviewStateFetch(profileState) as unknown as TypedFetch,
+  );
+  const [queryClient] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
   const [recording] = useState(() => createRecordingNavigation());
   const [profilesLoaded, setProfilesLoaded] = useState(false);
   const contentFetch = Object.assign(apiFetch, { withUploadProgress: () => apiFetch });
 
   useEffect(() => {
-    const loads = OVERVIEW_ENTITY_NAMES.map((name) =>
+    const names = profileState === "loaded" ? OVERVIEW_ENTITY_NAMES : [];
+    const loads = names.map((name) =>
       ensureProfileEntity(queryClient, apiFetch, PROFILE_URL, { name }),
     );
     void Promise.all(loads).then(() => setProfilesLoaded(true));
-  }, [queryClient, apiFetch]);
+  }, [queryClient, apiFetch, profileState]);
 
   return (
     <div className="overflow-hidden rounded-md border" style={{ width: 960, height: 600 }}>
@@ -39,7 +55,11 @@ export function OverviewStoryHarness({ children }: Readonly<{ children: ReactNod
             profileUrl={PROFILE_URL}
           >
             <RecordingNavigationProvider recording={recording}>
-              <BusyWhileFetching>{children}</BusyWhileFetching>
+              {profileState === "loading" ? (
+                <div className="h-full">{children}</div>
+              ) : (
+                <BusyWhileFetching>{children}</BusyWhileFetching>
+              )}
             </RecordingNavigationProvider>
           </NavigatorDataProvider>
         </QueryClientProvider>

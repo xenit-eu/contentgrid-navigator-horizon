@@ -46,7 +46,7 @@ export function EntityConfigurationOverview({
     content = (
       <EntityCardGrid>
         {[1, 2, 3, 4].map((i) => (
-          <EntityCardSkeleton key={i} className="h-28" />
+          <EntityCardSkeleton key={i} />
         ))}
       </EntityCardGrid>
     );
