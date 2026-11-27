@@ -1,4 +1,4 @@
-import { FileUploadZone } from "../file-upload-zone";
+import { type FileSummary, FileUploadZone } from "../file-upload-zone";
 import { FieldShell, fieldAriaProps } from "./field-shell";
 
 export interface FileRendererProps {
@@ -7,7 +7,8 @@ export interface FileRendererProps {
   readonly required: boolean;
   readonly readOnly: boolean;
   readonly description?: string;
-  readonly value: File | undefined;
+  /** The picked file, or a file already stored on the server. */
+  readonly value: FileSummary | undefined;
   readonly onChange: (value: File | undefined) => void;
   readonly error?: string;
   readonly onFocus?: () => void;
@@ -20,9 +21,11 @@ export interface FileRendererProps {
   readonly previewed?: boolean;
   /** See `FileUploadZone`'s `compact`. */
   readonly compact?: boolean;
+  /** See `FileUploadZone`'s `uploadProgress`. */
+  readonly uploadProgress?: number;
 }
 
-/** File picker field; the value is the picked `File`, or `undefined` when none is picked. */
+/** File picker field; `onChange` gets the picked `File`, or `undefined` when the file is removed. */
 export function FileRenderer({
   name,
   label,
@@ -38,6 +41,7 @@ export function FileRenderer({
   onFileClick,
   previewed,
   compact,
+  uploadProgress,
 }: Readonly<FileRendererProps>) {
   const file = value ?? null;
 
@@ -60,6 +64,7 @@ export function FileRenderer({
         onFileClick={onFileClick}
         previewed={previewed}
         compact={compact}
+        uploadProgress={uploadProgress}
         {...fieldAriaProps(name, error)}
       />
     </FieldShell>
