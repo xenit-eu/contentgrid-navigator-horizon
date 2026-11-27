@@ -136,3 +136,23 @@ export function createEntityOverviewFixtureFetch() {
     );
   };
 }
+
+/** How the profile root answers in a Home state story. */
+export type OverviewProfileState = "loaded" | "loading" | "empty" | "failed";
+
+/**
+ * The overview fetch for a profile state: "loaded" answers everything above, "loading" never
+ * answers, "empty" lists no entities, and "failed" answers the profile root with a 500.
+ */
+export function createOverviewStateFetch(state: OverviewProfileState) {
+  switch (state) {
+    case "loaded":
+      return createEntityOverviewFixtureFetch();
+    case "loading":
+      return () => new Promise<Response>(() => {});
+    case "empty":
+      return async () => json({ ...profileRootBody, _links: { self: { href: PROFILE_URL } } });
+    case "failed":
+      return async () => json({ title: "Internal Server Error", status: 500 }, 500);
+  }
+}

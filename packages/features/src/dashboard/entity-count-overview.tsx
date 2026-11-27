@@ -1,11 +1,16 @@
+import { StackIcon } from "@phosphor-icons/react";
 import {
   type CollectionTotalCount,
   type ProfileEntity,
-  toProblemDisplayModel,
   useEntityItemCollection,
   useLoadedProfileEntities,
 } from "@contentgrid/navigator-data";
 import {
+  Alert,
+  AlertActionSection,
+  AlertButton,
+  AlertDescription,
+  AlertTitle,
   EntityCard,
   EntityCardArrow,
   EntityCardDescription,
@@ -13,12 +18,13 @@ import {
   EntityCardSkeleton,
   EntityCardText,
   EntityCardTitle,
+  formatCount,
+  pluralize,
 } from "@contentgrid/ui";
 import { EntityIconBadge } from "../layout";
-import { ProblemAlert } from "../problem-details";
 
 // ---------------------------------------------------------------------------
-// EntityOverviewPage — index route component (grid of entity cards)
+// EntityCountOverview — the Home page body (grid of entity cards)
 // ---------------------------------------------------------------------------
 
 export function EntityCountOverview({
@@ -34,11 +40,17 @@ export function EntityCountOverview({
 function EntityOverview({
   onSelectEntity,
 }: Readonly<{ onSelectEntity: (profile: ProfileEntity) => void }>) {
-  const { profiles: loadedProfiles, isLoading, error } = useLoadedProfileEntities();
+  const { profiles: loadedProfiles, isLoading, error, refetch } = useLoadedProfileEntities();
 
   if (error) {
     return (
-      <ProblemAlert model={toProblemDisplayModel(error)} className="text-sm max-w-3xl mx-auto" />
+      <Alert tone="error">
+        <AlertTitle>The application couldn't be loaded</AlertTitle>
+        <AlertDescription>Try again in a moment.</AlertDescription>
+        <AlertActionSection>
+          <AlertButton onClick={refetch}>Try again</AlertButton>
+        </AlertActionSection>
+      </Alert>
     );
   }
 
@@ -46,19 +58,14 @@ function EntityOverview({
     return (
       <EntityCardGrid>
         {[1, 2, 3, 4].map((i) => (
-          <EntityCardSkeleton key={i} className="h-36" />
+          <EntityCardSkeleton key={i} />
         ))}
       </EntityCardGrid>
     );
   }
 
   if (loadedProfiles.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
-        <p className="text-lg font-medium">No entities found</p>
-        <p className="text-sm">Make sure your ContentGrid application has entities defined.</p>
-      </div>
-    );
+    return <NoEntitiesState />;
   }
 
   return (
@@ -71,6 +78,21 @@ function EntityOverview({
         />
       ))}
     </EntityCardGrid>
+  );
+}
+
+/** Shown when the profile lists no entities, or none the user can access. */
+function NoEntitiesState() {
+  return (
+    <div className="flex flex-col items-center gap-2.5 px-6 py-14 text-center text-muted-foreground">
+      <span className="grid size-14 place-items-center rounded-[14px] border-[1.5px] border-dashed border-info-border bg-info text-info-foreground">
+        <StackIcon aria-hidden className="size-6" />
+      </span>
+      <h2 className="text-[17px] font-bold text-foreground">Nothing to show yet</h2>
+      <p className="max-w-[44ch] text-sm">
+        This application has no entities, or you don't have access to any. Contact an administrator.
+      </p>
+    </div>
   );
 }
 
@@ -101,14 +123,16 @@ function EntityCardConnected({
 }
 
 /**
- * "1 item", "1,284 items", "about 1,204 items" for an estimate; a dash while the count loads, and
- * "Count not available" when there is none (the request failed, or the entity can't be searched).
+ * "1 item", "1 284 items", "about 1 204 items" for an estimate, "0 items"; a dash while the count
+ * loads, and "Count not available" when there is none (the request failed, or the entity can't be
+ * searched).
  */
 function ItemCountLine({
   total,
   loading,
 }: Readonly<{ total: CollectionTotalCount | undefined; loading: boolean }>) {
-  if (!total) {
+  const count = formatCount(total, { estimate: "word" });
+  if (!total || count === undefined) {
     return (
       <p className="mt-auto text-ui text-muted-foreground">
         {loading ? "—" : "Count not available"}
@@ -117,9 +141,8 @@ function ItemCountLine({
   }
   return (
     <p className="mt-auto text-ui text-muted-foreground">
-      {total.isEstimated && "about "}
-      <span className="font-bold text-card-foreground">{total.count.toLocaleString()}</span>{" "}
-      {total.count === 1 ? "item" : "items"}
+      <span className="font-bold text-card-foreground">{count}</span>{" "}
+      {pluralize(total.count, "item")}
     </p>
   );
 }

@@ -5,41 +5,44 @@ import {
   InfoIcon as Info,
   WarningIcon as Warning,
   XIcon as X,
-  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 
 type AlertTone = "info" | "warning" | "error";
 
+/**
+ * Per tone: the box (fill and border), the accent colour of the icon, the title and the title
+ * link, the icon, and the role. The description (dim) and buttons stay neutral in every tone.
+ */
 const toneConfig = {
   info: {
-    textClass: "text-[#084772] dark:text-[#7CCDF4]",
-    bgClass: "bg-[rgba(1,155,227,0.08)] dark:bg-[rgba(90,196,242,0.12)]",
-    borderClass: "border-[rgba(1,155,227,0.3)] dark:border-[rgba(90,196,242,0.34)]",
-    icon: <Info size={16} aria-hidden />,
+    boxClass: "bg-info border-info-border",
+    accentClass: "text-info-foreground",
+    titleClass: "text-foreground",
+    icon: <Info aria-hidden />,
     role: "status" as const,
   },
   warning: {
-    textClass: "text-warning-foreground",
-    bgClass: "bg-warning/10 dark:bg-warning/14",
-    borderClass: "border-warning/30 dark:border-warning/34",
-    icon: <Warning size={16} aria-hidden />,
+    boxClass: "bg-warning/10 dark:bg-warning/14 border-warning/30 dark:border-warning/34",
+    accentClass: "text-warning-foreground",
+    titleClass: "text-warning-foreground",
+    icon: <Warning aria-hidden />,
     role: "alert" as const,
   },
   error: {
-    textClass: "text-destructive",
-    bgClass: "bg-destructive/10",
-    borderClass: "border-destructive/50",
-    icon: <XCircle size={16} aria-hidden />,
+    boxClass: "bg-destructive/10 border-destructive/30",
+    accentClass: "text-destructive",
+    titleClass: "text-destructive",
+    icon: <Warning aria-hidden />,
     role: "alert" as const,
   },
 } satisfies Record<
   AlertTone,
   {
-    textClass: string;
-    bgClass: string;
-    borderClass: string;
+    boxClass: string;
+    accentClass: string;
+    titleClass: string;
     icon: React.ReactNode;
     role: "status" | "alert";
   }
@@ -49,10 +52,14 @@ const AlertToneContext = React.createContext<AlertTone>("info");
 
 interface AlertProps extends Omit<React.ComponentProps<"div">, "onClose"> {
   readonly tone?: AlertTone;
-  /** Renders a dismiss (×) button in the top-right corner when provided. */
+  /** Renders a dismiss (×) button at the end of the alert when provided. */
   readonly onClose?: () => void;
 }
 
+/**
+ * A tinted box with the tone's icon in its own column and the content beside it: an optional
+ * bold title in the tone's colour, a dim description, and neutral action buttons.
+ */
 function Alert({ tone = "info", onClose, className, children, ...props }: AlertProps) {
   const config = toneConfig[tone];
 
@@ -63,24 +70,22 @@ function Alert({ tone = "info", onClose, className, children, ...props }: AlertP
         data-tone={tone}
         role={config.role}
         className={cn(
-          "relative rounded-md border px-3 py-2 text-xs space-y-1",
-          config.textClass,
-          config.bgClass,
-          config.borderClass,
-          onClose && "pr-8",
+          "flex gap-2.5 rounded-md border px-3.5 py-3 text-ui text-foreground",
+          config.boxClass,
           className,
         )}
         {...props}
       >
-        {children}
+        <span className={cn("shrink-0 [&>svg]:size-5", config.accentClass)}>{config.icon}</span>
+        <div className="min-w-0 flex-1 space-y-1">{children}</div>
         {onClose && (
           <button
             type="button"
             aria-label="Dismiss"
             onClick={onClose}
-            className="absolute top-2 right-2 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+            className="-my-1 -mr-1 grid size-7 shrink-0 place-items-center self-start rounded-md opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         )}
       </div>
@@ -88,36 +93,24 @@ function Alert({ tone = "info", onClose, className, children, ...props }: AlertP
   );
 }
 
-function AlertTitle({ className, children, ...props }: React.ComponentProps<"div">) {
+function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   const tone = React.useContext(AlertToneContext);
   return (
     <div
       data-slot="alert-title"
-      className={cn("flex items-center gap-1.5 font-medium", className)}
+      className={cn("flex items-center gap-1.5 font-bold", toneConfig[tone].titleClass, className)}
       {...props}
-    >
-      <span className="flex-shrink-0">{toneConfig[tone].icon}</span>
-      {children}
-    </div>
+    />
   );
 }
 
 function AlertDescription({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="alert-description" className={cn(className)} {...props} />;
+  return <div data-slot="alert-description" className={cn("text-dim", className)} {...props} />;
 }
 
-/** A real, clickable action button — sized and colored to match the alert's tone. */
+/** A real, clickable action button — the neutral outlined button, the same in every tone. */
 function AlertButton({ className, ...props }: React.ComponentProps<typeof Button>) {
-  const tone = React.useContext(AlertToneContext);
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="xs"
-      className={cn(toneConfig[tone].textClass, className)}
-      {...props}
-    />
-  );
+  return <Button type="button" variant="outline" size="compact" className={className} {...props} />;
 }
 
 /** Row container for one or more {@link AlertButton}s. */
@@ -168,7 +161,7 @@ function AlertLinkButton({ href, label, className }: AlertLinkButtonProps) {
       asChild
       variant="ghost"
       size="icon-xs"
-      className={cn(toneConfig[tone].textClass, className)}
+      className={cn(toneConfig[tone].accentClass, className)}
     >
       <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
         <ArrowSquareOut size={14} />

@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { useEntityItemCollection, useLoadedProfileEntities } from "@contentgrid/navigator-data";
+import {
+  type ProfileEntity,
+  useEntityItemCollection,
+  useLoadedProfileEntities,
+} from "@contentgrid/navigator-data";
 import { makeProfileEntity } from "@contentgrid/navigator-data/test-fixtures/hal/profile-entity";
 import { EntityCountOverview } from "./entity-count-overview";
 
@@ -30,11 +34,13 @@ function invoiceProfile() {
   );
 }
 
-function mockProfiles(profiles: unknown[], isLoading = false) {
+function mockProfiles(profiles: readonly ProfileEntity[], error: Error | null = null) {
   vi.mocked(useLoadedProfileEntities).mockReturnValue({
     profiles,
-    isLoading,
-  } as unknown as ReturnType<typeof useLoadedProfileEntities>);
+    isLoading: false,
+    error,
+    refetch: vi.fn(),
+  });
 }
 
 describe("EntityCountOverview", () => {
@@ -70,22 +76,27 @@ describe("EntityCountOverview", () => {
 
   it.each([
     { name: "a single item", total: { count: 1, isEstimated: false }, text: "1 item" },
+    { name: "zero", total: { count: 0, isEstimated: false }, text: "0 items" },
     {
-      name: "a formatted count",
+      name: "a grouped count",
       total: { count: 1284, isEstimated: false },
-      text: `${(1284).toLocaleString()} items`,
+      text: "1\u202f284 items",
     },
     {
       name: "an estimate",
       total: { count: 1204, isEstimated: true },
-      text: `about ${(1204).toLocaleString()} items`,
+      text: "about 1\u202f204 items",
     },
+    { name: "an estimate of one", total: { count: 1, isEstimated: true }, text: "about 1 item" },
   ])("shows $name on the card's count line", ({ total, text }) => {
     mockCollection({ data: { totalItems: total }, isFetching: false });
     mockProfiles([invoiceProfile()]);
     render(<EntityCountOverview onOpenEntity={vi.fn()} />);
 
-    expect(screen.getByRole("button")).toHaveTextContent(new RegExp(`${text}$`));
+    // Whitespace kept as is, so the thin no-break space between digit groups is checked.
+    expect(screen.getByRole("button")).toHaveTextContent(new RegExp(`${text}$`), {
+      normalizeWhitespace: false,
+    });
   });
 
   it("shows a dash while the count loads, then says when there is none", () => {
@@ -103,6 +114,16 @@ describe("EntityCountOverview", () => {
     mockProfiles([]);
     render(<EntityCountOverview onOpenEntity={vi.fn()} />);
 
-    expect(screen.getByText("No entities found")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nothing to show yet" })).toBeInTheDocument();
+  });
+
+  it("offers to try again when the profile fails to load", () => {
+    mockProfiles([], new Error("Network error"));
+    render(<EntityCountOverview onOpenEntity={vi.fn()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The application couldn't be loaded" + "Try again in a moment.",
+    );
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });

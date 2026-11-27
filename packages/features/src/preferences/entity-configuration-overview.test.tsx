@@ -72,7 +72,12 @@ function makeProfile(entityName: string, pluralTitle: string): ProfileEntity {
 }
 
 function mockProfiles(profiles: readonly ProfileEntity[], isLoading = false) {
-  vi.mocked(useLoadedProfileEntities).mockReturnValue({ profiles, isLoading, error: null });
+  vi.mocked(useLoadedProfileEntities).mockReturnValue({
+    profiles,
+    isLoading,
+    error: null,
+    refetch: vi.fn(),
+  });
 }
 
 function renderOverview(onSelectEntity: (profile: ProfileEntity) => void = vi.fn()) {

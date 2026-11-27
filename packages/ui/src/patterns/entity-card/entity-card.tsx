@@ -112,7 +112,13 @@ export function EntityCardGrid({ className, ...props }: Readonly<ComponentProps<
   );
 }
 
-/** Stands in for an entity card while it loads; give it the height of the card it replaces. */
-export function EntityCardSkeleton({ className }: Readonly<{ className?: string }>) {
-  return <Skeleton className={cn("w-full rounded-lg", className)} />;
+/** Stands in for an entity card while it loads: the icon tile, the title and the line under it. */
+export function EntityCardSkeleton() {
+  return (
+    <EntityCard aria-hidden>
+      <Skeleton className="size-9" />
+      <Skeleton className="h-3 w-3/5" />
+      <Skeleton className="h-2.5 w-2/5" />
+    </EntityCard>
+  );
 }

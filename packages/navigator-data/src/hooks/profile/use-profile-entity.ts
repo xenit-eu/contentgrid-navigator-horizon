@@ -67,11 +67,14 @@ export function useProfileEntities(options?: UseProfileEntitiesOptions) {
  * empty result array alone can't distinguish "still loading" from "nothing to
  * load". Reading `profileRootQuery` here subscribes to the same cache entry
  * `useProfileEntities()` already reads internally — no extra fetch.
+ *
+ * `refetch` fetches the profile root again — the request whose failure `error` reports.
  */
 export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
   readonly profiles: readonly ProfileEntity[];
   readonly isLoading: boolean;
   readonly error: Error | null;
+  readonly refetch: () => void;
 } {
   const { apiFetch, profileUrl } = useNavigatorData();
   const rootQuery = useQuery(profileRootQuery(apiFetch, profileUrl));
@@ -88,6 +91,9 @@ export function useLoadedProfileEntities(options?: UseProfileEntitiesOptions): {
     profiles: profilesRef.current,
     isLoading: isAnyProfileLoading(rootQuery.isPending, results),
     error: rootQuery.error,
+    refetch: () => {
+      void rootQuery.refetch();
+    },
   };
 }
 

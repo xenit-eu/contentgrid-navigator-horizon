@@ -15,16 +15,16 @@ interface BannerProps {
 
 const toneConfig = {
   info: {
-    textClass: "text-[#084772] dark:text-[#7CCDF4]",
-    bgClass: "bg-[rgba(1,155,227,0.08)] dark:bg-[rgba(90,196,242,0.12)]",
-    borderClass: "border border-[rgba(1,155,227,0.3)] dark:border-[rgba(90,196,242,0.34)]",
+    textClass: "text-info-foreground",
+    bgClass: "bg-info",
+    borderClass: "border border-info-border",
     defaultIcon: <Info size={16} aria-hidden />,
     role: "status" as const,
   },
   edit: {
-    textClass: "text-[#084772] dark:text-[#7CCDF4]",
-    bgClass: "bg-[rgba(1,155,227,0.08)] dark:bg-[rgba(90,196,242,0.12)]",
-    borderClass: "border border-[rgba(1,155,227,0.3)] dark:border-[rgba(90,196,242,0.34)]",
+    textClass: "text-info-foreground",
+    bgClass: "bg-info",
+    borderClass: "border border-info-border",
     defaultIcon: <PencilSimpleLine size={16} aria-hidden />,
     role: "status" as const,
   },
