@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DeleteEntityItemButton } from "../../../entity-item-delete";
 import { RightSidePanelLayout } from "../../../layout";
 import { EntityItemSections } from "../../entity-item-sections";
@@ -21,7 +21,12 @@ export function EntityItemContentFocus({
   onDeleted,
   ...props
 }: Readonly<EntityItemVariationProps>) {
-  const sectionProps = useEntityItemSectionProps(props);
+  // Starting to edit from the page's toolbar must show the form, so it expands a collapsed panel.
+  const sidePanelRef = useRef<{ readonly expand: () => void }>(null);
+  const sectionProps = useEntityItemSectionProps({
+    ...props,
+    onStartEdit: () => sidePanelRef.current?.expand(),
+  });
   // The read-only copy when `allowEdit` is false: use it for everything shown below.
   const { item } = sectionProps;
   const { profileEntity } = item;
@@ -74,6 +79,7 @@ export function EntityItemContentFocus({
   return (
     <RightSidePanelLayout
       sidePanelTitle="Details"
+      sidePanelHandleRef={sidePanelRef}
       // Round-2 review: show which item this panel belongs to (icon, name, subtitle) instead of
       // a generic "Details" label — same reference row `EntityItemAttributeFocus` already shows
       // above its attributes/relations (`entity-item-attribute-focus.tsx`). `sm` to fit the panel's

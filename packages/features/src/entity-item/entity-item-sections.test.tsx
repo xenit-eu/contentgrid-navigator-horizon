@@ -190,6 +190,17 @@ describe("EntityItemSections", () => {
     expect(cancelEditForm).toHaveBeenCalledOnce();
   });
 
+  it("draws no Edit or Cancel edit button when the caller controls edit mode", () => {
+    const { rerender } = render(<Harness item={makeItem()} externalEditControl />);
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+
+    rerender(
+      <Harness item={makeItem()} editedItem={makeItem({ id: "item-1-v1" })} externalEditControl />,
+    );
+    expect(screen.getByText("editing item-1-v1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel edit" })).not.toBeInTheDocument();
+  });
+
   it("show=details renders only the attributes and audit trail", () => {
     render(<Harness item={makeItem({ toOne: ["customer"], audit: true })} show="details" />);
 

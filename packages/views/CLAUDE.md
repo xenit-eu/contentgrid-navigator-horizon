@@ -88,7 +88,11 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
   the toolbar, then hands the loaded `entityItem` to `EntityItemAutoVariation` from
   `@contentgrid/features/entity-item`. The toolbar is drawn from the `EntityItemTargetResult` in every state,
   each crumb as soon as it is known. `ViewProps`/`ViewToolbarConfiguration` live in `src/types/view.tsx`;
-  `EntityItemTarget`/`EntityItemTargetResult` next to the hook. The relation-problem dialog lives in the view; relation
+  `EntityItemTarget`/`EntityItemTargetResult` next to the hook. Edit and Delete are toolbar actions: Edit
+  (outline button, pencil; "Cancel edit" while editing) sits left of Delete, each only when the item has
+  its update (`isEditableEntityItem`) or delete template. The view owns the `EntityItemEditHandle` ref it
+  passes as `editHandleRef` and follows `onEditingChange` to swap the label and hide Delete; with
+  `toolbar={false}` the feature draws its own Edit and Delete. The relation-problem dialog lives in the view; relation
   "create new" goes through `navigation.openCreateItem`. `preloadEntityItemDetail` covers the by-name mode only.
 
 - `@contentgrid/views/entity-item-collection`: `EntityItemCollectionView(ViewProps & EntityItemCollectionTarget &
@@ -114,7 +118,9 @@ apps  ->  views  ->  features  ->  ui  (navigator-data is usable by every layer 
 
 - `src/breadcrumbs/` builds every trail from the same crumbs: `HomeBreadcrumb`, `SettingsBreadcrumb` (the root of
   the settings trails), `CollectionBreadcrumb` and `ItemBreadcrumb`, each rendering its `children` crumbs after
-  itself. A crumb with children is a link; the last one
+  itself. Crumbs are 13px plain text (no icon badge): muted links, the current page semibold in the
+  foreground colour. The bar around them (`BreadCrumbsToolBarLayout`) is white, at least 56px high, with
+  the actions on the right. A crumb with children is a link; the last one
   is the current page. A crumb draws nothing until its data is known, so pages nest them without conditions. Each
   page has its own export (`EntityItemCollectionBreadcrumbs`, `EntityItemDetailBreadcrumbs`,
   `EntityConfigurationBreadcrumbs`); each view draws its

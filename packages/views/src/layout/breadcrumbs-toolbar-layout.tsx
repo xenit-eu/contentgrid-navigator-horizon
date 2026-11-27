@@ -50,7 +50,7 @@ export function BreadCrumbsToolBarLayout({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div
-        className={`flex shrink-0 items-center justify-between gap-4 border-b bg-background py-3 ${PAGE_GUTTER_X}`}
+        className={`flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-background py-2 ${PAGE_GUTTER_X}`}
       >
         {breadcrumbs && <div className="flex min-w-0 items-center">{breadcrumbs}</div>}
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

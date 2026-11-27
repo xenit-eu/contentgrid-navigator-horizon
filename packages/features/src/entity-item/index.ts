@@ -56,3 +56,5 @@ export { EntityItemSections } from "./entity-item-sections";
 export type { EntityItemSectionsProps } from "./entity-item-sections";
 export { useEntityItemSectionProps } from "./use-entity-item-section-props";
 export type { UseEntityItemSectionPropsOptions } from "./use-entity-item-section-props";
+export { isEditableEntityItem } from "./edit/editable-entity-item";
+export type { EntityItemEditHandle } from "./edit/entity-item-edit-handle";

@@ -6,9 +6,11 @@
  * is stubbed too; with a toolbar the view draws it there, without one the variation draws its own
  * (`onDeleted`).
  */
+import { useImperativeHandle } from "react";
+import type { Ref } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createItemDetailTestHarness } from "../test-fixtures/item-detail-harness";
 import { EntityItemDetailView } from "./entity-item-detail-view";
 
@@ -18,8 +20,14 @@ vi.mock("@contentgrid/features/entity-item-delete", () => ({
   ),
 }));
 
+// Whether the stubbed item allows Edit (its update template, in the real feature).
+let itemIsEditable = false;
+// What the stubbed feature last did through the view's edit handle.
+const editHandleCalls: string[] = [];
+
 vi.mock("@contentgrid/features/entity-item", () => ({
   useEntityItemDetailPadding: () => true,
+  isEditableEntityItem: () => itemIsEditable,
   // The breadcrumbs draw the loaded item with it.
   EntityItemReference: () => <span>item-reference</span>,
   EntityItemAutoVariation: (props: {
@@ -30,28 +38,44 @@ vi.mock("@contentgrid/features/entity-item", () => ({
     onRequiredRelationClick?: (affectedRelation: string) => void;
     onDeleted?: () => void;
     onEditingChange?: (isEditing: boolean) => void;
-  }) => (
-    <div>
-      <button onClick={() => props.onEditingChange?.(true)}>start-editing</button>
-      <button onClick={() => props.onEditingChange?.(false)}>stop-editing</button>
-      <button onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}>
-        relation-click
-      </button>
-      <button onClick={() => props.onRelationItemCreateNew?.("company")}>relation-create</button>
-      <button onClick={() => props.onMissingRelationTargetClick?.("https://api.example.com/x")}>
-        missing
-      </button>
-      <button
-        onClick={() =>
-          props.onBlindRelationOverwriteClick?.({ existingItem: "https://api.example.com/e" })
-        }
-      >
-        blind
-      </button>
-      <button onClick={() => props.onRequiredRelationClick?.("owner")}>required</button>
-      <button onClick={() => props.onDeleted?.()}>deleted</button>
-    </div>
-  ),
+    editHandleRef?: Ref<{ startEdit: () => void; cancelEdit: () => void }>;
+  }) => {
+    // The same handle the real feature fills: starting and cancelling edit mode.
+    useImperativeHandle(props.editHandleRef, () => ({
+      startEdit: () => {
+        editHandleCalls.push("startEdit");
+        props.onEditingChange?.(true);
+      },
+      cancelEdit: () => {
+        editHandleCalls.push("cancelEdit");
+        props.onEditingChange?.(false);
+      },
+    }));
+    return (
+      <div>
+        <button onClick={() => props.onEditingChange?.(true)}>start-editing</button>
+        <button onClick={() => props.onEditingChange?.(false)}>stop-editing</button>
+        <button
+          onClick={() => props.onRelationItemClick?.({ entityName: "company", itemId: "c-1" })}
+        >
+          relation-click
+        </button>
+        <button onClick={() => props.onRelationItemCreateNew?.("company")}>relation-create</button>
+        <button onClick={() => props.onMissingRelationTargetClick?.("https://api.example.com/x")}>
+          missing
+        </button>
+        <button
+          onClick={() =>
+            props.onBlindRelationOverwriteClick?.({ existingItem: "https://api.example.com/e" })
+          }
+        >
+          blind
+        </button>
+        <button onClick={() => props.onRequiredRelationClick?.("owner")}>required</button>
+        <button onClick={() => props.onDeleted?.()}>deleted</button>
+      </div>
+    );
+  },
 }));
 
 const setup = createItemDetailTestHarness;
@@ -144,5 +168,59 @@ describe("EntityItemDetailView — feature callbacks", () => {
     });
     expect(await screen.findByText("relation-click")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Home" })).not.toBeInTheDocument();
+  });
+
+  describe("Edit in the toolbar", () => {
+    beforeEach(() => {
+      itemIsEditable = true;
+      editHandleCalls.length = 0;
+    });
+    afterEach(() => {
+      itemIsEditable = false;
+    });
+
+    it("draws an Edit button that starts the feature's edit mode, then reads Cancel edit", async () => {
+      const { Wrapper } = setup();
+      render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, {
+        wrapper: Wrapper,
+      });
+
+      await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+      expect(editHandleCalls).toEqual(["startEdit"]);
+      expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
+      expect(editHandleCalls).toEqual(["startEdit", "cancelEdit"]);
+      expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    });
+
+    it("draws Edit left of Delete", async () => {
+      const { Wrapper } = setup();
+      render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, {
+        wrapper: Wrapper,
+      });
+
+      const edit = await screen.findByRole("button", { name: "Edit" });
+      const del = screen.getByText("delete-Delete");
+      expect(edit.compareDocumentPosition(del) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("draws no Edit button without a toolbar", async () => {
+      const { Wrapper } = setup();
+      render(<EntityItemDetailView entityName={entityName} itemId={itemId} toolbar={false} />, {
+        wrapper: Wrapper,
+      });
+
+      await screen.findByText("start-editing");
+      expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("draws no Edit button when the item does not allow editing", async () => {
+    const { Wrapper } = setup();
+    render(<EntityItemDetailView entityName={entityName} itemId={itemId} />, { wrapper: Wrapper });
+
+    await screen.findByText("delete-Delete");
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   });
 });

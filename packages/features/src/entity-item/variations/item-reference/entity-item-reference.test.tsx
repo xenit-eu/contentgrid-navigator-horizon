@@ -215,6 +215,21 @@ describe("EntityItemReference", () => {
     expect(await screen.findByText(`${LONG_ID.slice(0, 40)}…`)).toBeInTheDocument();
   });
 
+  it("renders only the title as plain text with titleOnly, even when a subtitle is configured", async () => {
+    const [itemA] = await fetchItems();
+    useEntityDisplayPreferencesStore
+      .getState()
+      .setOverride(PROFILE_URL, "widget", { subtitleAttribute: "email" });
+
+    const { container } = render(<EntityItemReference item={itemA} titleOnly />, {
+      wrapper: makeWrapper(),
+    });
+
+    expect(await screen.findByText("Acme")).toBeInTheDocument();
+    expect(screen.queryByText("hello@acme.com")).not.toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
   it("renders as a clickable button and calls onClick", async () => {
     const user = userEvent.setup();
     const [itemA] = await fetchItems();

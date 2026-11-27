@@ -32,6 +32,8 @@ export interface DeleteEntityItemButtonProps {
   readonly onDeleted: () => void;
   readonly onRefresh: () => void;
   readonly label?: string;
+  /** Extra classes for the labelled button (ignored for the icon-only one). */
+  readonly className?: string;
 }
 
 export function DeleteEntityItemButton({
@@ -39,6 +41,7 @@ export function DeleteEntityItemButton({
   onDeleted,
   onRefresh,
   label,
+  className,
 }: Readonly<DeleteEntityItemButtonProps>) {
   const [open, setOpen] = useState(false);
   const deleteMutation = useDeleteEntityItem({
@@ -81,7 +84,7 @@ export function DeleteEntityItemButton({
       {/* No onclick on the buttons, that's what the wrapping AlertDialogTrigger is for */}
       {label ? (
         <AlertDialogTrigger asChild>
-          <Button type="button" variant="destructive-outline" size="sm">
+          <Button type="button" variant="destructive-outline" size="sm" className={className}>
             <TrashIcon />
             {label}
           </Button>

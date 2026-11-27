@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import type { EntityItem } from "@contentgrid/navigator-data";
+import type { EntityItemEditHandle } from "../edit/entity-item-edit-handle";
 import type {
   RelationItemClickHandler,
   RelationItemCreateHandler,
@@ -48,4 +49,10 @@ export type EntityItemVariationProps = RelationProblemHandlers & {
    * not an inline arrow.
    */
   readonly onEditingChange?: (isEditing: boolean) => void;
+  /**
+   * Lets the caller open and cancel edit mode from its own buttons (see `EntityItemEditHandle`).
+   * When given, the variation draws no Edit or Cancel edit button of its own. The caller gates
+   * Edit itself, with `isEditableEntityItem`.
+   */
+  readonly editHandleRef?: Ref<EntityItemEditHandle>;
 };
